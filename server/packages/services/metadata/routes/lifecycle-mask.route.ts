@@ -39,6 +39,10 @@ interface LifecycleMaskRow {
   can_delete: boolean;
   can_transition_to: string[] | null;
   disabled_reason: string | null;
+  state_name: string | null;
+  badge_variant: string | null;
+  ui_color: string | null;
+  icon_key: string | null;
 }
 
 export function createLifecycleMaskRoute(router: Router, deps: LifecycleMaskRouteDeps): Router {
@@ -55,6 +59,13 @@ export function createLifecycleMaskRoute(router: Router, deps: LifecycleMaskRout
 
       // Tenant-preferred lookup: when a (tenant_id, entity_name, record_status) row
       // exists, it wins over the platform default for the same (entity, status).
+      //
+      // Presentation join (chosen_lifecycle + ls): pulls per-state badge_variant /
+      // ui_color / icon_key from control.lifecycle_state.config so the chrome
+      // can render the status badge from seeded data instead of inferring intent
+      // via string matching. We pick the highest-priority binding (lowest
+      // priority value, tenant-preferred) — multiple lifecycles can apply to
+      // one entity but presentation reads from the dominant binding only.
       const rows = await sql<LifecycleMaskRow>`
         WITH preferred AS (
           SELECT
@@ -64,19 +75,60 @@ export function createLifecycleMaskRoute(router: Router, deps: LifecycleMaskRout
            WHERE entity_name = ${entityCode}
              AND (tenant_id = ${tenantId}::uuid OR tenant_id IS NULL)
            ORDER BY record_status, tenant_id NULLS LAST
+        ),
+        chosen_lifecycle AS (
+          SELECT DISTINCT ON (entity_name)
+                 entity_name, lifecycle_id
+            FROM control.entity_lifecycle
+           WHERE entity_name = ${entityCode}
+             AND (tenant_id = ${tenantId}::uuid OR tenant_id IS NULL)
+           ORDER BY entity_name, tenant_id NULLS LAST, priority ASC
         )
-        SELECT * FROM preferred
-        ORDER BY record_status
+        SELECT
+          p.record_status,
+          p.can_edit,
+          p.can_delete,
+          p.can_transition_to,
+          p.disabled_reason,
+          ls.name                       AS state_name,
+          ls.config->>'badge_variant'   AS badge_variant,
+          ls.config->>'ui_color'        AS ui_color,
+          ls.config->>'icon_key'        AS icon_key
+        FROM preferred p
+        LEFT JOIN chosen_lifecycle cl ON true
+        LEFT JOIN control.lifecycle_state ls
+               ON ls.lifecycle_id = cl.lifecycle_id
+              AND ls.code = p.record_status
+        ORDER BY p.record_status
       `.execute(db);
 
       // Project to the descriptor's MetaEntityLifecycleStateMask shape (camelCase).
-      const masks = rows.rows.map((row) => ({
-        recordStatus: row.record_status,
-        canEdit: row.can_edit,
-        canDelete: row.can_delete,
-        canTransitionTo: row.can_transition_to ?? undefined,
-        disabledReason: row.disabled_reason,
-      }));
+      // `presentation` is omitted entirely when none of the four DB columns
+      // carry a value — keeps the wire payload small for entities whose
+      // lifecycle hasn't been seeded with config metadata yet.
+      const masks = rows.rows.map((row) => {
+        const hasPresentation = row.state_name !== null
+          || row.badge_variant !== null
+          || row.ui_color !== null
+          || row.icon_key !== null;
+        return {
+          recordStatus: row.record_status,
+          canEdit: row.can_edit,
+          canDelete: row.can_delete,
+          canTransitionTo: row.can_transition_to ?? undefined,
+          disabledReason: row.disabled_reason,
+          ...(hasPresentation
+            ? {
+                presentation: {
+                  label: row.state_name,
+                  badgeVariant: row.badge_variant,
+                  color: row.ui_color,
+                  icon: row.icon_key,
+                },
+              }
+            : {}),
+        };
+      });
 
       res.json(masks);
     } catch (err) {

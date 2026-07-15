@@ -1,11 +1,7 @@
--- seed/platform/002_permission_model/016_plan_module_access.sql
--- Seed: Subscription plan version → module and feature access matrix
--- Schema: shared | Tables: subscription_plan_version, plan_module_access, plan_feature_access
--- Depends on: 012_module.sql, 013_enterprise_feature.sql, 014_subscription_plan.sql
--- Idempotent: ON CONFLICT DO NOTHING
+-- Subscription plan version → module + feature access matrix. Depends on 012/013/014.
 
--- One-time schema fix: if subscription_plan_version was created before the
--- GENERATED ALWAYS AS IDENTITY DDL landed, promote the column now.
+-- One-time backfill: promote version_number to GENERATED ALWAYS AS IDENTITY for tables
+-- created before the DDL change. Safe to leave in place after the next clean reset.
 DO $$
 BEGIN
   IF EXISTS (
@@ -20,11 +16,7 @@ BEGIN
   END IF;
 END $$;
 
--- ============================================================================
--- subscription_plan_version — create the initial active version for each plan
--- (one version per plan; the spv_active_uq partial index enforces at most one
--- active version per plan at any time)
--- ============================================================================
+-- Initial active version per plan. spv_active_uq partial index enforces at most one active.
 INSERT INTO shared.subscription_plan_version (plan_id, valid_from, status, created_by)
 SELECT
     sp.id,
@@ -37,9 +29,7 @@ WHERE NOT EXISTS (
     WHERE spv.plan_id = sp.id AND spv.valid_to IS NULL AND spv.status = 'active'
 );
 
--- ============================================================================
--- plan_module_access — driven by module tier in shared.module.config
--- ============================================================================
+-- plan_module_access matrix derived from module.config->>'tier'.
 INSERT INTO shared.plan_module_access (plan_version_id, module_id, is_included, is_addon, created_by)
 SELECT
     spv.id,
@@ -64,13 +54,10 @@ JOIN shared.subscription_plan_version spv
 CROSS JOIN shared.module m
 ON CONFLICT DO NOTHING;
 
--- ============================================================================
--- plan_feature_access — feature tier defined inline via VALUES
---
+-- plan_feature_access — feature → minimum tier:
 --   starter      → THEME_CHANGE
 --   professional → ADVANCED_ANALYTICS, CUSTOM_WORKFLOW, API_WEBHOOKS
 --   enterprise   → AI_FORECASTING, DIAGNOSTIC_TOOL, WHITE_LABEL
--- ============================================================================
 INSERT INTO shared.plan_feature_access (plan_version_id, feature_id, is_included, is_addon, created_by)
 SELECT
     spv.id,

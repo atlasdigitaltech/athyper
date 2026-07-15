@@ -1,7 +1,4 @@
--- LookupDomain/master/party_governance_role.sql
--- Lookup domain + values for: master.party_governance_role
--- Used by: master.party_governance_relation.relation_type
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by: master.party_governance_relation.relation_type.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

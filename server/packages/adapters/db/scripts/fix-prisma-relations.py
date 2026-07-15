@@ -5,13 +5,15 @@ fix-prisma-relations.py
 Re-applies manual Prisma schema relation fixes that `prisma db pull` always
 overwrites. Run this immediately after every `prisma db pull`.
 
-Fixes applied (9 total):
+Fixes applied (7 total):
   1-3. acct_profile_config back-refs → []
   4.   commitment.commitment_procurement back-ref → []
-  5-6. invoice_bank_snapshot / invoice_party_snapshot @@unique inject
-  7.   payment_term_discount_result self-ref back-ref → []
-  8.   brand_profile.tenant_profile back-ref → []
-  9.   letterhead.tenant_profile back-ref → []
+  5.   payment_term_discount_result self-ref back-ref → []
+  6.   brand_profile.tenant_profile back-ref → []
+  7.   letterhead.tenant_profile back-ref → []
+
+Phase D.4 — fixes 5+6 (invoice_{bank,party}_snapshot @@unique inject) were
+removed alongside the dropped tables.
 
 Usage:
     python3 scripts/fix-prisma-relations.py
@@ -61,51 +63,30 @@ def main():
     )
 
     # ── Fix 4: commitment.commitment_procurement back-ref → one-to-many ───────
-    text = replace_once(
-        text,
+    # Prisma introspects this back-ref with variable formatting depending on
+    # whether the relation has an explicit @relation("…") name. Try both.
+    fix4_variants = [
         'commitment_procurement?         @relation("commitment_procurement_tenant_id_commitment_idTocommitment")',
+        '  commitment_procurement                                                commitment_procurement?\n',
+    ]
+    fix4_replacements = [
         'commitment_procurement[]        @relation("commitment_procurement_tenant_id_commitment_idTocommitment")',
-        "commitment.commitment_procurement []",
-    )
+        '  commitment_procurement                                                commitment_procurement[]\n',
+    ]
+    applied = False
+    for old, new in zip(fix4_variants, fix4_replacements):
+        if old in text:
+            text = text.replace(old, new, 1)
+            print("  OK   [commitment.commitment_procurement []]")
+            applied = True
+            break
+    if not applied:
+        print("  WARN [commitment.commitment_procurement []] pattern not found — already fixed or schema changed")
 
-    # ── Fix 5: invoice_bank_snapshot — inject missing composite unique ────────
-    # DB only has @unique on purchase_invoice_id alone; Prisma needs the composite
-    # @@unique([tenant_id, purchase_invoice_id]) to accept the one-to-one relation.
-    # Deduplicate if db pull ever adds it again.
-    text = text.replace(
-        '  @@unique([tenant_id, purchase_invoice_id], map: "ibs_tenant_invoice_uq")\n'
-        '  @@unique([tenant_id, purchase_invoice_id], map: "ibs_tenant_invoice_uq")\n',
-        '  @@unique([tenant_id, purchase_invoice_id], map: "ibs_tenant_invoice_uq")\n',
-        1,
-    )
-    if '@@unique([tenant_id, purchase_invoice_id], map: "ibs_tenant_invoice_uq")' not in text:
-        text = text.replace(
-            '  @@unique([tenant_id, id], map: "ibs_tenant_id_uq")',
-            '  @@unique([tenant_id, purchase_invoice_id], map: "ibs_tenant_invoice_uq")\n'
-            '  @@unique([tenant_id, id], map: "ibs_tenant_id_uq")',
-            1,
-        )
-        print("  OK   [invoice_bank_snapshot @@unique inject]")
+    # (Phase D.4 — fixes 5+6 for invoice_{bank,party}_snapshot removed
+    # alongside the dropped tables.)
 
-    # ── Fix 6: invoice_party_snapshot — inject missing composite unique ────────
-    text = text.replace(
-        '  @@unique([tenant_id, purchase_invoice_id], map: "ips_tenant_invoice_uq")\n'
-        '  @@unique([tenant_id, purchase_invoice_id], map: "ips_tenant_invoice_uq")\n',
-        '  @@unique([tenant_id, purchase_invoice_id], map: "ips_tenant_invoice_uq")\n',
-        1,
-    )
-    if '@@unique([tenant_id, purchase_invoice_id], map: "ips_tenant_invoice_uq")' not in text:
-        text = text.replace(
-            '  @@unique([tenant_id, id], map: "ips_tenant_id_uq")\n'
-            '  @@index([tenant_id, supplier_id], map: "ips_supplier_idx"',
-            '  @@unique([tenant_id, purchase_invoice_id], map: "ips_tenant_invoice_uq")\n'
-            '  @@unique([tenant_id, id], map: "ips_tenant_id_uq")\n'
-            '  @@index([tenant_id, supplier_id], map: "ips_supplier_idx"',
-            1,
-        )
-        print("  OK   [invoice_party_snapshot @@unique inject]")
-
-    # ── Fix 7: payment_term_discount_result self-ref back-ref → [] ───────────
+    # ── Fix 5: payment_term_discount_result self-ref back-ref → [] ───────────
     text = replace_once(
         text,
         '  other_payment_term_discount_result payment_term_discount_result? @relation("payment_term_discount_resultTopayment_term_discount_result")',
@@ -113,7 +94,7 @@ def main():
         "payment_term_discount_result self-ref []",
     )
 
-    # ── Fix 8: brand_profile.tenant_profile back-ref → [] ────────────────────
+    # ── Fix 6: brand_profile.tenant_profile back-ref → [] ────────────────────
     text = replace_once(
         text,
         '  principal         principal       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "brand_profile_created_by_fk")\n'
@@ -125,7 +106,7 @@ def main():
         "brand_profile.tenant_profile []",
     )
 
-    # ── Fix 9: letterhead.tenant_profile back-ref → [] ───────────────────────
+    # ── Fix 7: letterhead.tenant_profile back-ref → [] ───────────────────────
     # The "one" side (tenant_profile.letterhead) keeps fields/references.
     # The "many" side (letterhead.tenant_profile) must be a plain back-reference [].
     # Two spacing variants — prisma db pull spacing varies between runs.

@@ -1,7 +1,4 @@
--- LookupDomain/master/supplier_business_type.sql
--- Lookup domain + values for: master.supplier_business_type
--- Used by: master.supplier.business_types (text[] — multi-value)
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by: master.supplier.business_types (text[] — multi-value).
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

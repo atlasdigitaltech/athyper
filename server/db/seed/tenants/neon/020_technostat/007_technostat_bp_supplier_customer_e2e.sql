@@ -19,7 +19,7 @@
 --   §GL3  Global Both      — Meridian Group International BV  → all 4 companies
 --
 -- Per-entity coverage (99-100% of writable columns):
---   master.business_partner, address ×3, address_link ×3
+--   master.business_partner, address, address_link (one BP default link)
 --   party_identifier ×5 (DUNS,LEI,CRN,TIN,VAT/PEPPOL)
 --   party_contact_person ×2, party_contact_role ×2, named contact channels
 --   via contact_link + contact_email/contact_phone
@@ -64,23 +64,29 @@ DECLARE
     v_tt   uuid;
     v_trs  uuid;
     v_tg   uuid;
+    v_ct_vat uuid;  -- master.condition_type: TAX_VAT
+    v_ct_wht uuid;  -- master.condition_type: WHT_GENERIC
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
     IF v_tid IS NULL THEN RAISE EXCEPTION 'technostat tenant not found'; END IF;
+
+    SELECT id INTO v_ct_vat FROM master.condition_type WHERE code = 'TAX_VAT' AND tenant_id IS NULL;
+    SELECT id INTO v_ct_wht FROM master.condition_type WHERE code = 'WHT_GENERIC' AND tenant_id IS NULL;
+
     -- ── SA: Tax jurisdiction ──────────────────────────────────────────────
     INSERT INTO master.tax_jurisdiction
         (tenant_id, code, name, jurisdiction_type, country_code, status, created_by)
-    SELECT v_tid,'SA-ZATCA','Zakat Tax and Customs Authority','COUNTRY','SA','active',v_sys
+    SELECT v_tid,'SA-ZATCA','Zakat Tax and Customs Authority','country','SA','active',v_sys
     WHERE NOT EXISTS (SELECT 1 FROM master.tax_jurisdiction WHERE tenant_id=v_tid AND code='SA-ZATCA');
 
     -- SA: VAT type (15% since July 2020)
-    INSERT INTO master.tax_type (tenant_id, code, name, category, is_recoverable, status, created_by)
-    SELECT v_tid,'VAT-SA','Saudi Arabia VAT 15%','INDIRECT',true,'active',v_sys
+    INSERT INTO master.tax_type (tenant_id, code, name, condition_type_id, status, created_by)
+    SELECT v_tid,'VAT-SA','Saudi Arabia VAT 15%',v_ct_vat,'active',v_sys
     WHERE NOT EXISTS (SELECT 1 FROM master.tax_type WHERE tenant_id=v_tid AND code='VAT-SA');
 
     -- SA: WHT on services (5%)
-    INSERT INTO master.tax_type (tenant_id, code, name, category, is_deducted_at_source, status, created_by)
-    SELECT v_tid,'WHT-SA-SVC','Saudi WHT on Services 5%','WITHHOLDING',true,'active',v_sys
+    INSERT INTO master.tax_type (tenant_id, code, name, condition_type_id, status, created_by)
+    SELECT v_tid,'WHT-SA-SVC','Saudi WHT on Services 5%',v_ct_wht,'active',v_sys
     WHERE NOT EXISTS (SELECT 1 FROM master.tax_type WHERE tenant_id=v_tid AND code='WHT-SA-SVC');
 
     -- SA: VAT rate schedule
@@ -93,23 +99,26 @@ BEGIN
         INSERT INTO control.tax_rate_schedule (
             tenant_id, jurisdiction_id, tax_type_id, tax_direction,
             component_code, rate_kind, rate_value, recoverability_mode, recoverability_percent,
-            calculation_basis, rounding_stage, effective_from, status, created_by
+            calculation_basis, effective_from, status, created_by
         ) VALUES (
             v_tid, v_jur, v_tt, 'PURCHASE',
             'MAIN','PERCENT',15.00,'FULL',100.00,
-            'LINE_NET','LINE','2020-07-01','active',v_sys
+            'LINE_NET','2020-07-01','active',v_sys
         ) RETURNING id INTO v_trs;
     END IF;
 
-    -- SA: VAT tax group
+    -- SA: VAT tax group (v_jur points at SA-ZATCA here)
     SELECT id INTO v_tg FROM control.tax_group WHERE tenant_id=v_tid AND code='TG-SA-VAT-15-IN';
     IF v_tg IS NULL THEN
-        INSERT INTO control.tax_group (tenant_id, code, name, status, created_by)
-        VALUES (v_tid,'TG-SA-VAT-15-IN','Saudi VAT 15% Input','active',v_sys)
+        INSERT INTO control.tax_group (tenant_id, code, name, jurisdiction_id, status, created_by)
+        VALUES (v_tid,'TG-SA-VAT-15-IN','Saudi VAT 15% Input', v_jur, 'active', v_sys)
         RETURNING id INTO v_tg;
         INSERT INTO control.tax_group_component (tenant_id, tax_group_id, tax_rate_schedule_id,
             calculation_seq, status, created_by)
         VALUES (v_tid, v_tg, v_trs, 10, 'active', v_sys);
+    ELSE
+        UPDATE control.tax_group SET jurisdiction_id = v_jur, updated_at = now(), updated_by = v_sys
+         WHERE id = v_tg AND jurisdiction_id IS DISTINCT FROM v_jur;
     END IF;
 
     -- SA: WHT rate schedule
@@ -121,38 +130,41 @@ BEGIN
         INSERT INTO control.tax_rate_schedule (
             tenant_id, jurisdiction_id, tax_type_id, tax_direction,
             component_code, rate_kind, rate_value, recoverability_mode,
-            calculation_basis, rounding_stage, wht_basis, wht_certificate_required,
+            calculation_basis, wht_basis,
             effective_from, status, created_by
         ) VALUES (
             v_tid, v_jur, v_tt, 'PAYMENT',
             'MAIN','PERCENT',5.00,'NONE',
-            'LINE_NET','LINE','GROSS',true,
+            'LINE_NET','GROSS',
             '2018-01-01','active',v_sys
         ) RETURNING id INTO v_trs;
     END IF;
 
     SELECT id INTO v_tg FROM control.tax_group WHERE tenant_id=v_tid AND code='TG-SA-WHT-5-SVC';
     IF v_tg IS NULL THEN
-        INSERT INTO control.tax_group (tenant_id, code, name, status, created_by)
-        VALUES (v_tid,'TG-SA-WHT-5-SVC','Saudi WHT 5% Services','active',v_sys)
+        INSERT INTO control.tax_group (tenant_id, code, name, jurisdiction_id, status, created_by)
+        VALUES (v_tid,'TG-SA-WHT-5-SVC','Saudi WHT 5% Services', v_jur, 'active', v_sys)
         RETURNING id INTO v_tg;
         INSERT INTO control.tax_group_component (tenant_id, tax_group_id, tax_rate_schedule_id,
             calculation_seq, status, created_by)
         VALUES (v_tid, v_tg, v_trs, 10, 'active', v_sys);
+    ELSE
+        UPDATE control.tax_group SET jurisdiction_id = v_jur, updated_at = now(), updated_by = v_sys
+         WHERE id = v_tg AND jurisdiction_id IS DISTINCT FROM v_jur;
     END IF;
 
     -- ── EG: Tax jurisdiction ──────────────────────────────────────────────
     INSERT INTO master.tax_jurisdiction
         (tenant_id, code, name, jurisdiction_type, country_code, status, created_by)
-    SELECT v_tid,'EG-ETA','Egyptian Tax Authority','COUNTRY','EG','active',v_sys
+    SELECT v_tid,'EG-ETA','Egyptian Tax Authority','country','EG','active',v_sys
     WHERE NOT EXISTS (SELECT 1 FROM master.tax_jurisdiction WHERE tenant_id=v_tid AND code='EG-ETA');
 
-    INSERT INTO master.tax_type (tenant_id, code, name, category, is_recoverable, status, created_by)
-    SELECT v_tid,'VAT-EG','Egypt VAT 14%','INDIRECT',true,'active',v_sys
+    INSERT INTO master.tax_type (tenant_id, code, name, condition_type_id, status, created_by)
+    SELECT v_tid,'VAT-EG','Egypt VAT 14%',v_ct_vat,'active',v_sys
     WHERE NOT EXISTS (SELECT 1 FROM master.tax_type WHERE tenant_id=v_tid AND code='VAT-EG');
 
-    INSERT INTO master.tax_type (tenant_id, code, name, category, is_deducted_at_source, status, created_by)
-    SELECT v_tid,'WHT-EG-SVC','Egypt WHT on Services 10%','WITHHOLDING',true,'active',v_sys
+    INSERT INTO master.tax_type (tenant_id, code, name, condition_type_id, status, created_by)
+    SELECT v_tid,'WHT-EG-SVC','Egypt WHT on Services 10%',v_ct_wht,'active',v_sys
     WHERE NOT EXISTS (SELECT 1 FROM master.tax_type WHERE tenant_id=v_tid AND code='WHT-EG-SVC');
 
     SELECT id INTO v_jur FROM master.tax_jurisdiction WHERE tenant_id=v_tid AND code='EG-ETA';
@@ -164,21 +176,24 @@ BEGIN
         INSERT INTO control.tax_rate_schedule (
             tenant_id, jurisdiction_id, tax_type_id, tax_direction,
             component_code, rate_kind, rate_value, recoverability_mode, recoverability_percent,
-            calculation_basis, rounding_stage, effective_from, status, created_by
+            calculation_basis, effective_from, status, created_by
         ) VALUES (
             v_tid, v_jur, v_tt, 'PURCHASE',
             'MAIN','PERCENT',14.00,'FULL',100.00,
-            'LINE_NET','LINE','2016-09-08','active',v_sys
+            'LINE_NET','2016-09-08','active',v_sys
         ) RETURNING id INTO v_trs;
     END IF;
     SELECT id INTO v_tg FROM control.tax_group WHERE tenant_id=v_tid AND code='TG-EG-VAT-14-IN';
     IF v_tg IS NULL THEN
-        INSERT INTO control.tax_group (tenant_id, code, name, status, created_by)
-        VALUES (v_tid,'TG-EG-VAT-14-IN','Egypt VAT 14% Input','active',v_sys)
+        INSERT INTO control.tax_group (tenant_id, code, name, jurisdiction_id, status, created_by)
+        VALUES (v_tid,'TG-EG-VAT-14-IN','Egypt VAT 14% Input', v_jur, 'active', v_sys)
         RETURNING id INTO v_tg;
         INSERT INTO control.tax_group_component (tenant_id, tax_group_id, tax_rate_schedule_id,
             calculation_seq, status, created_by)
         VALUES (v_tid, v_tg, v_trs, 10, 'active', v_sys);
+    ELSE
+        UPDATE control.tax_group SET jurisdiction_id = v_jur, updated_at = now(), updated_by = v_sys
+         WHERE id = v_tg AND jurisdiction_id IS DISTINCT FROM v_jur;
     END IF;
 
     SELECT id INTO v_tt FROM master.tax_type WHERE tenant_id=v_tid AND code='WHT-EG-SVC';
@@ -189,23 +204,26 @@ BEGIN
         INSERT INTO control.tax_rate_schedule (
             tenant_id, jurisdiction_id, tax_type_id, tax_direction,
             component_code, rate_kind, rate_value, recoverability_mode,
-            calculation_basis, rounding_stage, wht_basis, wht_certificate_required,
+            calculation_basis, wht_basis,
             effective_from, status, created_by
         ) VALUES (
             v_tid, v_jur, v_tt, 'PAYMENT',
             'MAIN','PERCENT',10.00,'NONE',
-            'LINE_NET','LINE','GROSS',true,
+            'LINE_NET','GROSS',
             '2016-09-08','active',v_sys
         ) RETURNING id INTO v_trs;
     END IF;
     SELECT id INTO v_tg FROM control.tax_group WHERE tenant_id=v_tid AND code='TG-EG-WHT-10-SVC';
     IF v_tg IS NULL THEN
-        INSERT INTO control.tax_group (tenant_id, code, name, status, created_by)
-        VALUES (v_tid,'TG-EG-WHT-10-SVC','Egypt WHT 10% Services','active',v_sys)
+        INSERT INTO control.tax_group (tenant_id, code, name, jurisdiction_id, status, created_by)
+        VALUES (v_tid,'TG-EG-WHT-10-SVC','Egypt WHT 10% Services', v_jur, 'active', v_sys)
         RETURNING id INTO v_tg;
         INSERT INTO control.tax_group_component (tenant_id, tax_group_id, tax_rate_schedule_id,
             calculation_seq, status, created_by)
         VALUES (v_tid, v_tg, v_trs, 10, 'active', v_sys);
+    ELSE
+        UPDATE control.tax_group SET jurisdiction_id = v_jur, updated_at = now(), updated_by = v_sys
+         WHERE id = v_tg AND jurisdiction_id IS DISTINCT FROM v_jur;
     END IF;
 
     -- ── Payment methods ───────────────────────────────────────────────────
@@ -329,7 +347,7 @@ BEGIN
         SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-int-tksa-hq';
     END IF;
     INSERT INTO master.address_link (tenant_id, owner_type, owner_id, address_id, purpose, is_primary, effective_from, metadata, created_by)
-    VALUES (v_tid,'business_partner',v_bp,v_addr,'hq',true,'2010-03-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
+    VALUES (v_tid,'business_partner',v_bp,v_addr,'default',true,'2010-03-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
     ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
 
     INSERT INTO master.address (
@@ -343,10 +361,6 @@ BEGIN
     WHERE NOT EXISTS (SELECT 1 FROM master.address WHERE tenant_id=v_tid AND code='addr-int-tksa-po')
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-int-tksa-po'; END IF;
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp,v_addr,'mailing',true,'2010-03-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
-
     -- TKSA: identifiers
     INSERT INTO master.party_identifier (tenant_id,owner_type,owner_id,scheme,value,issuing_authority,issued_at,is_verified,verified_at,is_primary,metadata,status,created_by)
     SELECT v_tid,'business_partner',v_bp,scheme,val,auth,issued::date,true,now(),pri,
@@ -375,8 +389,8 @@ BEGIN
         ON CONFLICT (tenant_id,party_contact_person_id,role_code) DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by)
         VALUES
-        (v_tid,'business_partner',v_bp,'email','m.alqahtani@technostat.com.sa','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966112341234','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','m.alqahtani@technostat.com.sa','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966112341234','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -443,7 +457,7 @@ BEGIN
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-int-ssk-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp,v_addr,'hq',true,'2014-06-20','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
+    VALUES (v_tid,'business_partner',v_bp,v_addr,'default',true,'2014-06-20','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
     ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
 
     INSERT INTO master.party_identifier (tenant_id,owner_type,owner_id,scheme,value,issuing_authority,issued_at,is_verified,verified_at,is_primary,metadata,status,created_by)
@@ -470,8 +484,8 @@ BEGIN
         VALUES (v_tid,v_cp,'main_contact',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by)
         VALUES
-        (v_tid,'business_partner',v_bp,'email','f.alharbi@ssk.com.sa','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966126543210','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','f.alharbi@ssk.com.sa','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966126543210','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -537,7 +551,7 @@ BEGIN
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-int-tegy-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp,v_addr,'hq',true,'2015-09-01','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
+    VALUES (v_tid,'business_partner',v_bp,v_addr,'default',true,'2015-09-01','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
     ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
 
     INSERT INTO master.party_identifier (tenant_id,owner_type,owner_id,scheme,value,issuing_authority,issued_at,is_verified,verified_at,is_primary,metadata,status,created_by)
@@ -564,8 +578,8 @@ BEGIN
         VALUES (v_tid,v_cp,'main_contact',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by)
         VALUES
-        (v_tid,'business_partner',v_bp,'email','a.nasser@technostat.com.eg','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20223456789','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','a.nasser@technostat.com.eg','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20223456789','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -631,7 +645,7 @@ BEGIN
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-int-sdtx-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp,v_addr,'hq',true,'2018-04-10','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
+    VALUES (v_tid,'business_partner',v_bp,v_addr,'default',true,'2018-04-10','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
     ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
 
     INSERT INTO master.party_identifier (tenant_id,owner_type,owner_id,scheme,value,issuing_authority,issued_at,is_verified,verified_at,is_primary,metadata,status,created_by)
@@ -658,8 +672,8 @@ BEGIN
         VALUES (v_tid,v_cp,'main_contact',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by)
         VALUES
-        (v_tid,'business_partner',v_bp,'email','r.ibrahim@sdtx.com.eg','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20226543210','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','r.ibrahim@sdtx.com.eg','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20226543210','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -782,25 +796,15 @@ BEGIN
 
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-TKSA-AMTS-001';
 
-    -- §Address links — HQ and billing anchored at BP (fn_resolve_party_address fallback chain)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2012-07-01',
            '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-amts-hq','hq',true),('addr-amts-billing','billing',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-amts-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (
         SELECT 1 FROM master.address_link
          WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
-
-    -- Logistics warehouse is supplier-operational, not a canonical BP address
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    SELECT v_tid,'business_partner',v_bp,a.id,'remittance',true,'2012-07-01',
-           '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM master.address a
-    WHERE a.tenant_id=v_tid AND a.code='addr-amts-wh'
-      AND NOT EXISTS (
-        SELECT 1 FROM master.address_link
-         WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose='remittance' AND address_id=a.id);
 
     -- §Bank account
     SELECT id INTO v_ba FROM master.bank_account WHERE tenant_id=v_tid AND code='ba-amts-sar-01';
@@ -917,8 +921,8 @@ BEGIN
         VALUES (v_tid,v_cp1,'bid_proposal_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by)
         VALUES
-        (v_tid,'business_partner',v_bp,'email','k.aldosari@almadar-tech.com.sa','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966114567890','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','k.aldosari@almadar-tech.com.sa','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966114567890','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
@@ -926,8 +930,8 @@ BEGIN
         VALUES (v_tid,v_cp2,'accounts_payable',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by)
         VALUES
-        (v_tid,'business_partner',v_bp,'email','ap@almadar-tech.com.sa','notification',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966114567891','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','ap@almadar-tech.com.sa','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966114567891','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -1090,24 +1094,15 @@ BEGIN
 
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-SSK-ANIC-001';
 
-    -- §Address links — HQ and billing anchored at BP; KAEC site stays at supplier (operational)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2016-02-15',
            '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-anic-hq','hq',true),('addr-anic-billing','billing',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-anic-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (
         SELECT 1 FROM master.address_link
          WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
-
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    SELECT v_tid,'business_partner',v_bp,a.id,'remittance',true,'2016-02-15',
-           '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM master.address a
-    WHERE a.tenant_id=v_tid AND a.code='addr-anic-site'
-      AND NOT EXISTS (
-        SELECT 1 FROM master.address_link
-         WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose='remittance' AND address_id=a.id);
 
     -- §Bank account
     SELECT id INTO v_ba FROM master.bank_account WHERE tenant_id=v_tid AND code='ba-anic-sar-01';
@@ -1210,15 +1205,15 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'bid_proposal_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','t.alghamdi@anic-sa.com','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966126789012','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','t.alghamdi@anic-sa.com','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966126789012','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp2,'accounts_payable',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','billing@anic-sa.com','notification',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966126789013','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','billing@anic-sa.com','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966126789013','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -1363,11 +1358,11 @@ BEGIN
 
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-TKSA-ARDS-001';
 
-    -- §Address links — all three anchored at BP (hq/billing/legal are canonical identity)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2017-05-01',
            '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-ards-hq','hq',true),('addr-ards-billing','billing',true),('addr-ards-legal','legal',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-ards-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (
         SELECT 1 FROM master.address_link
@@ -1427,15 +1422,15 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'finance_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','b.alsaud@ardigital.com.sa','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966114501234','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','b.alsaud@ardigital.com.sa','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966114501234','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp2,'customer_care_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','vendor.relations@ardigital.com.sa','notification',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966114501235','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','vendor.relations@ardigital.com.sa','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966114501235','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -1573,11 +1568,11 @@ BEGIN
 
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-SSK-STH-001';
 
-    -- §Address links — all three anchored at BP (hq/billing/legal are canonical identity)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2008-11-01',
            '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-sth-hq','hq',true),('addr-sth-billing','billing',true),('addr-sth-legal','legal',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-sth-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
 
@@ -1629,14 +1624,14 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'operations_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','w.almubarak@sth.com.sa','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966114441234','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
+        (v_tid,'business_partner',v_bp,'email','w.almubarak@sth.com.sa','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966114441234','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp2,'finance_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','finance@sth.com.sa','notification',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+966114441235','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
+        (v_tid,'business_partner',v_bp,'email','finance@sth.com.sa','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+966114441235','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
     END IF;
 
     INSERT INTO master.party_governance_relation (tenant_id,party_type,party_id,relation_type,member_name,member_type,company_name,business_title,ownership_pct,share_class,appointed_date,notes,metadata,status,created_by)
@@ -1776,20 +1771,13 @@ BEGIN
 
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-TEGY-NTP-001';
 
-    -- §Address links — HQ and billing anchored at BP; data centre stays at supplier (operational)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2013-03-01',
            '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-ntp-hq','hq',true),('addr-ntp-billing','billing',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-ntp-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
-
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    SELECT v_tid,'business_partner',v_bp,a.id,'remittance',true,'2013-03-01',
-           '{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM master.address a
-    WHERE a.tenant_id=v_tid AND a.code='addr-ntp-dc'
-      AND NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose='remittance' AND address_id=a.id);
 
     SELECT id INTO v_ba FROM master.bank_account WHERE tenant_id=v_tid AND code='ba-ntp-egp-01';
     IF v_ba IS NULL THEN
@@ -1861,15 +1849,15 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'bid_proposal_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','o.farouk@niletek.com.eg','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20223456001','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','o.farouk@niletek.com.eg','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20223456001','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp2,'accounts_payable',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','ap@niletek.com.eg','notification',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20223456002','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','ap@niletek.com.eg','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20223456002','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -1995,18 +1983,12 @@ BEGIN
 
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-SDTX-CSI-001';
 
-    -- §Address links — HQ and billing anchored at BP; Alexandria site stays at supplier (operational)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2017-08-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-csi-hq','hq',true),('addr-csi-billing','billing',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-csi-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
-
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    SELECT v_tid,'business_partner',v_bp,a.id,'remittance',true,'2017-08-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM master.address a
-    WHERE a.tenant_id=v_tid AND a.code='addr-csi-ops'
-      AND NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose='remittance' AND address_id=a.id);
 
     SELECT id INTO v_ba FROM master.bank_account WHERE tenant_id=v_tid AND code='ba-csi-egp-01';
     IF v_ba IS NULL THEN
@@ -2072,15 +2054,15 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'bid_proposal_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','h.abdelaziz@cairosystems.com.eg','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20226012345','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','h.abdelaziz@cairosystems.com.eg','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20226012345','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp2,'accounts_payable',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','finance@cairosystems.com.eg','notification',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20226012346','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','finance@cairosystems.com.eg','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20226012346','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -2200,18 +2182,18 @@ BEGIN
 
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-TEGY-ENI-001';
 
-    -- §Address links — HQ and billing anchored at BP; industrial plant stays at customer (operational delivery)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2005-06-01','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-eni-hq','hq',true),('addr-eni-billing','billing',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-eni-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
 
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    SELECT v_tid,'customer',v_cus,a.id,'shipping',true,'2005-06-01','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
+    SELECT v_tid,'customer',v_cus,a.id,'ship_to',true,'2005-06-01','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
     FROM master.address a
     WHERE a.tenant_id=v_tid AND a.code='addr-eni-plant'
-      AND NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='customer' AND owner_id=v_cus AND purpose='shipping' AND address_id=a.id);
+      AND NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='customer' AND owner_id=v_cus AND purpose='ship_to' AND address_id=a.id);
 
     INSERT INTO master.company_code_customer_profile (tenant_id,customer_id,company_code_id,currency_code,credit_limit,credit_limit_currency_code,credit_rating,default_accounting_profile_id,default_receipt_method_id,tax_group_id,statement_cycle_code,is_blocked,metadata,status,created_by)
     SELECT v_tid,v_cus,v_cc,'EGP',20000000.0000,'EGP','a',v_acct,v_pm_in,v_tg_vat,'monthly',false,
@@ -2251,14 +2233,14 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'finance_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','a.naguib@eni.com.eg','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20223001234','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
+        (v_tid,'business_partner',v_bp,'email','a.naguib@eni.com.eg','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20223001234','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp2,'operations_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','it.procurement@eni.com.eg','notification',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20223001235','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
+        (v_tid,'business_partner',v_bp,'email','it.procurement@eni.com.eg','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20223001235','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
     END IF;
 
     INSERT INTO master.party_governance_relation (tenant_id,party_type,party_id,relation_type,member_name,member_type,company_name,business_title,ownership_pct,share_class,appointed_date,notes,metadata,status,created_by)
@@ -2378,18 +2360,18 @@ BEGIN
 
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-SDTX-SCTC-001';
 
-    -- §Address links — HQ and billing anchored at BP; Port Said logistics hub stays at customer (operational)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2001-04-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-sctc-hq','hq',true),('addr-sctc-billing','billing',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-sctc-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
 
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    SELECT v_tid,'customer',v_cus,a.id,'shipping',true,'2001-04-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
+    SELECT v_tid,'customer',v_cus,a.id,'ship_to',true,'2001-04-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
     FROM master.address a
     WHERE a.tenant_id=v_tid AND a.code='addr-sctc-port'
-      AND NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='customer' AND owner_id=v_cus AND purpose='shipping' AND address_id=a.id);
+      AND NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='customer' AND owner_id=v_cus AND purpose='ship_to' AND address_id=a.id);
 
     INSERT INTO master.company_code_customer_profile (tenant_id,customer_id,company_code_id,currency_code,credit_limit,credit_limit_currency_code,credit_rating,default_accounting_profile_id,default_receipt_method_id,tax_group_id,statement_cycle_code,is_blocked,metadata,status,created_by)
     SELECT v_tid,v_cus,v_cc,'EGP',15000000.0000,'EGP','aa',v_acct,v_pm_in,v_tg_vat,'monthly',false,
@@ -2429,14 +2411,14 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'main_contact',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','gm@sctc.com.eg','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20623201234','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
+        (v_tid,'business_partner',v_bp,'email','gm@sctc.com.eg','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20623201234','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp2,'accounts_payable',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','ap@sctc.com.eg','notification',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+20623201235','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
+        (v_tid,'business_partner',v_bp,'email','ap@sctc.com.eg','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+20623201235','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
     END IF;
 
     INSERT INTO master.party_governance_relation (tenant_id,party_type,party_id,relation_type,member_name,member_type,company_name,business_title,ownership_pct,share_class,appointed_date,notes,metadata,status,created_by)
@@ -2559,10 +2541,10 @@ BEGIN
 
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-GLB-GPS-001';
 
-    -- §Address links — all three anchored at BP (London HQ, billing PO box, Dubai MENA hub are all canonical)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2009-01-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-gps-hq','hq',true),('addr-gps-billing','billing',true),('addr-gps-mena','office',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-gps-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
 
@@ -2689,15 +2671,15 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'bid_proposal_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','j.clarke@gps-global.com','billing',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+442071234567','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','j.clarke@gps-global.com','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+442071234567','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp2,'finance_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','p.sharma@gps-global.com','billing',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+97143456789','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','p.sharma@gps-global.com','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+97143456789','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -2815,10 +2797,10 @@ BEGIN
 
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-GLB-IBH-001';
 
-    -- §Address links — all three anchored at BP (DC HQ, NY billing, Dubai MENA hub are all canonical)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2003-09-01','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-ibh-hq','hq',true),('addr-ibh-billing','billing',true),('addr-ibh-mena','office',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-ibh-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
 
@@ -2873,14 +2855,14 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'main_contact',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','m.sullivan@ibh-global.com','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+12025551234','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
+        (v_tid,'business_partner',v_bp,'email','m.sullivan@ibh-global.com','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+12025551234','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
     END IF;
     IF v_cp2 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp2,'finance_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','t.siddiqui@ibh-global.com','notification',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+97144501234','support',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
+        (v_tid,'business_partner',v_bp,'email','t.siddiqui@ibh-global.com','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+97144501234','default',false,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys) ON CONFLICT DO NOTHING;
     END IF;
 
     INSERT INTO master.party_governance_relation (tenant_id,party_type,party_id,relation_type,member_name,member_type,company_name,business_title,ownership_pct,share_class,appointed_date,notes,metadata,status,created_by)
@@ -3016,10 +2998,10 @@ BEGIN
 
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-GLB-MGI-001';
 
-    -- §Address links — all three anchored at BP once (dual-role entity shares the same physical addresses)
+    -- §Address link — one canonical BP default address
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     SELECT v_tid,'business_partner',v_bp,a.id,al.purpose,al.is_primary,'2007-11-01','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys
-    FROM (VALUES ('addr-mgi-hq','hq',true),('addr-mgi-legal','legal',true),('addr-mgi-billing','billing',true)) AS al(code,purpose,is_primary)
+    FROM (VALUES ('addr-mgi-hq','default',true)) AS al(code,purpose,is_primary)
     JOIN master.address a ON a.tenant_id=v_tid AND a.code=al.code
     WHERE NOT EXISTS (SELECT 1 FROM master.address_link WHERE tenant_id=v_tid AND owner_type='business_partner' AND owner_id=v_bp AND purpose=al.purpose AND address_id=a.id);
 
@@ -3139,8 +3121,8 @@ BEGIN
     IF v_cp1 IS NOT NULL THEN
         INSERT INTO master.party_contact_role (tenant_id,party_contact_person_id,role_code,created_by) VALUES (v_tid,v_cp1,'bid_proposal_manager',v_sys) ON CONFLICT DO NOTHING;
         INSERT INTO master.contact_link (tenant_id,owner_type,owner_id,channel_type,value,purpose,is_primary,is_verified,verified_at,metadata,status,created_by) VALUES
-        (v_tid,'business_partner',v_bp,'email','h.mueller@meridian-group.com','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
-        (v_tid,'business_partner',v_bp,'phone','+496912345678','notification',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
+        (v_tid,'business_partner',v_bp,'email','h.mueller@meridian-group.com','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys),
+        (v_tid,'business_partner',v_bp,'phone','+496912345678','default',true,true,now(),'{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -3270,7 +3252,7 @@ BEGIN
             'active',
             v_sys
         )
-        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose)
+        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier)
         DO UPDATE SET
             code        = EXCLUDED.code,
             name        = EXCLUDED.name,

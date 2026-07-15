@@ -4,7 +4,7 @@
  *
  * Status state machine (§4.2 of implementation plan):
  *   blocked      — hard gates: DENY mapping, missing required fields,
- *                  FAILED intent with no category fallback, asset without category
+ *                  FAILED intent with no category fallback
  *   needs_review — soft gates: low confidence, user override, restricted intent,
  *                  CAPEX threshold breached, profile FAILED with category default
  *   resolved     — all gates clear, confidence ≥ 0.70
@@ -17,8 +17,7 @@ export interface DerivedFields {
   whtGroupId:      string | null;
   costCenterId:    string | null;
   profitCenterId:  string | null;
-  isAsset:         boolean;
-  assetCategoryId: string | null;
+  assetClassId:    string | null;
   isCrossBorder:   boolean;
   isIntercompany:  boolean;
 }
@@ -39,8 +38,6 @@ export function computeDecisionStatus(
   if (d.policy.classification_required && !d.selected.commodity_category_id) return "blocked";
 
   if (d.policy.hs_required && !d.selected.line_commodity_code) return "blocked";
-
-  if (derived.isAsset && !derived.assetCategoryId) return "blocked";
 
   // Intent FAILED with no fallback is a hard block
   if (

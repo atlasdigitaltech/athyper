@@ -1,11 +1,5 @@
--- LookupDomain/master/template_kind.sql
--- Lookup values for domain: master.template_kind
--- Idempotent: WHERE NOT EXISTS guard
---
--- NOTE: master.template.kind has NO inline CHECK constraint and NO
--- lookup-validation trigger. Codes are lowercase per lookup_value_code_fmt.
--- This domain provides the vocabulary for UI dropdowns and future trigger
--- attachment.
+-- master.template.kind has no CHECK and no lookup-validation trigger — this
+-- domain is advisory vocabulary only (UI dropdowns, future trigger attachment).
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

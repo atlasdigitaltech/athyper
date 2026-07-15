@@ -1,19 +1,8 @@
-/* ============================================================================
-   UNSPSC Commodity Codes (Full Hierarchy)
-   Schema: shared
-   Source: Oklahoma Open Data Portal (US Government Open Data, public domain)
-   URL: https://data.ok.gov/dataset/unspsc-codes
+-- UNSPSC v19.0501 commodity codes (77 337 rows across 4 levels).
+-- Source: Oklahoma Open Data Portal (public domain) https://data.ok.gov/dataset/unspsc-codes
+-- Levels: Segment XX000000 / Family XXXX0000 / Class XXXXXX00 / Commodity XXXXXXXX.
 
-   UNSPSC v19.0501 — 4-level hierarchy:
-     Level 1: Segment   (XX000000)  — 57 entries
-     Level 2: Family    (XXXX0000)  — 465 entries
-     Level 3: Class     (XXXXXX00)  — 5313 entries
-     Level 4: Commodity (XXXXXXXX)  — 71502 entries
-     Total: 77337 codes
-   ============================================================================ */
-
-
--- UNSPSC Segments (Level 1) — 57 entries
+-- Level 1: Segments
 INSERT INTO shared.commodity_code (domain_code, code, name, parent_code, level_no, is_leaf, status, created_by)
 VALUES
   ('unspsc', '10000000', 'Live Plant and Animal Material and Accessories and Supplies', NULL, 1, false, 'active', '00000000-0000-0000-0000-000000000000'),

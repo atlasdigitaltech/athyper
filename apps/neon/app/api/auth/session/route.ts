@@ -1,3 +1,4 @@
+// GET|PATCH|DELETE /api/auth/session — read session, switch context (org/workbench), or terminate the Neon session.
 import {
   createSessionDeleteHandler,
   createSessionGetHandler,

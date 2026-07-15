@@ -1,17 +1,9 @@
--- ============================================================================
--- FILE: blueprint/058_acct_profile_dimension_rule.sql
--- Purpose: Dimension derivation rules per AP Non-PO profile
--- Depends on: control.acct_profile_config (030), master.dimension_type (tenant)
--- Idempotent: DELETE pack rows + INSERT (table has no natural unique key)
--- ============================================================================
--- Seeded rules (skipped silently if the dimension_type code is not found):
---   COST_CENTER  — FROM_DOCUMENT, DERIVE_IF_MISSING, priority 10 (all events)
---   DEPARTMENT   — FROM_DOCUMENT, OPTIONAL,          priority 20 (all events)
---   PROJECT      — FROM_LINE,     OPTIONAL,           priority 30 (ORDER_APPROVAL + ADVANCE_PAID)
---
--- FROM_DOCUMENT: engine reads cost_center / department from the invoice header
--- FROM_LINE:     engine reads project dimension from each invoice line
--- ============================================================================
+-- Dimension derivation rules per profile (silently skips a dimension if its
+-- master.dimension_type code is not present in the tenant):
+--   COST_CENTER  FROM_DOCUMENT  DERIVE_IF_MISSING  p10  all events
+--   DEPARTMENT   FROM_DOCUMENT  OPTIONAL           p20  all events
+--   PROJECT      FROM_LINE      OPTIONAL           p30  ORDER_APPROVAL + ADVANCE_PAID
+-- Table has no natural unique key — idempotency = DELETE pack rows + re-INSERT.
 
 DO $seed_ap_dim_rules$
 DECLARE
@@ -28,7 +20,6 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
-    -- Resolve dimension_type IDs for this tenant
     SELECT id INTO v_dim_cc   FROM master.dimension_type WHERE tenant_id = v_tid AND code = 'COST_CENTER'  LIMIT 1;
     SELECT id INTO v_dim_dept FROM master.dimension_type WHERE tenant_id = v_tid AND code = 'DEPARTMENT'   LIMIT 1;
     SELECT id INTO v_dim_proj FROM master.dimension_type WHERE tenant_id = v_tid AND code = 'PROJECT'      LIMIT 1;
@@ -47,14 +38,12 @@ BEGIN
            AND ap.tenant_id = v_tid
            AND apc.is_active = true
     LOOP
-        -- Clean existing pack-owned dimension rules for this config before re-inserting
         DELETE FROM control.acct_profile_dimension_rule
          WHERE profile_config_id = v_cfg.config_id
            AND tenant_id         = v_cfg.tenant_id;
 
         GET DIAGNOSTICS v_deleted = ROW_COUNT;
 
-        -- COST_CENTER: derive from invoice header (all events)
         IF v_dim_cc IS NOT NULL THEN
             INSERT INTO control.acct_profile_dimension_rule (
                 tenant_id, profile_config_id,
@@ -70,7 +59,6 @@ BEGIN
             );
         END IF;
 
-        -- DEPARTMENT: derive from invoice header (all events)
         IF v_dim_dept IS NOT NULL THEN
             INSERT INTO control.acct_profile_dimension_rule (
                 tenant_id, profile_config_id,
@@ -86,7 +74,6 @@ BEGIN
             );
         END IF;
 
-        -- PROJECT: derive from invoice line (posting events only — no project on informational events)
         IF v_dim_proj IS NOT NULL THEN
             INSERT INTO control.acct_profile_dimension_rule (
                 tenant_id, profile_config_id,

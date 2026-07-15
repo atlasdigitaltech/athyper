@@ -9,7 +9,7 @@
 --           5 rows are linked to existing Technostat principals (cc001000-…).
 --           7 rows are HR-only records with no platform login.
 --           Each employee receives:
---             • a home address + address_link  (owner_type='employee', purpose='home')
+--             • a home address + address_link  (owner_type='employee', purpose='correspondence')
 --             • a work email contact_link + contact_email  (purpose='notification')
 --             • a work phone contact_link + contact_phone  (purpose='notification')
 -- Depends:  003_technostat_production_seed.sql
@@ -350,7 +350,7 @@ BEGIN
             purpose, is_primary, effective_from, created_by
         ) VALUES (
             v_tid, 'employee', v_emp_id, v_addr_id,
-            'home', true, rec.hire_date, v_su
+            'correspondence', true, rec.hire_date, v_su
         )
         ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
@@ -368,7 +368,7 @@ BEGIN
             true, true, now(),
             'active', v_su
         )
-        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
+        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
 
         SELECT id INTO v_cl_id FROM master.contact_link
         WHERE tenant_id    = v_tid
@@ -403,7 +403,7 @@ BEGIN
             true, true, now(),
             'active', v_su
         )
-        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
+        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
 
         SELECT id INTO v_cl_id FROM master.contact_link
         WHERE tenant_id    = v_tid

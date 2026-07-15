@@ -1,8 +1,4 @@
--- LookupDomain/control/resolution_event_code.sql
--- Lookup values for domain: resolution.event_code
--- Human labels for transaction flow lifecycle event codes (Engine 4.13).
--- Depends on: 000_lookup_domains.sql (domain row must exist)
--- Idempotent: WHERE NOT EXISTS guard
+-- Event codes per Engine spec 4.13.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

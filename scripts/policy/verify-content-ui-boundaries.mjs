@@ -1,21 +1,21 @@
 /**
- * Plan v5 amendment 10 — content-ui import + dependency boundary check.
+ * Plan v5 amendment 10 Ã¢â‚¬â€ content-ui import + dependency boundary check.
  *
- * Enforces the rule from cleanup plan v5 §3:
+ * Enforces the rule from cleanup plan v5 Ã‚Â§3:
  *
  *   content-ui (and its document-components/ subtree) is PRESENTATIONAL.
  *   It MUST NOT import:
- *     • @athyper/runtime-canvas      (orchestration; one-way dep)
- *     • @athyper/runtime-contracts   (descriptor contract types)
- *     • @tanstack/react-query        (queries/mutations live in runtime-canvas)
+ *     Ã¢â‚¬Â¢ @athyper/runtime-canvas      (orchestration; one-way dep)
+ *     Ã¢â‚¬Â¢ @athyper/runtime-contracts   (descriptor contract types)
+ *     Ã¢â‚¬Â¢ @tanstack/react-query        (queries/mutations live in runtime-canvas)
  *
  *   content-ui MAY import @athyper/api-contracts (types) and the usual peers
  *   (@athyper/theme, @athyper/ui, lucide-react, react).
  *
  * Two checks:
- *   1. package.json — content-ui's dependencies/peerDependencies/devDependencies
+ *   1. package.json Ã¢â‚¬â€ content-ui's dependencies/peerDependencies/devDependencies
  *      must not list any forbidden code package.
- *   2. Source scan — content-ui/src/** files must not `from "@athyper/runtime-canvas"`
+ *   2. Source scan Ã¢â‚¬â€ content-ui/src/** files must not `from "@athyper/runtime-canvas"`
  *      or similar.
  *
  * Run via:  pnpm policy:content-ui-boundaries
@@ -28,7 +28,7 @@ import { extname, join, relative } from "node:path";
 const repoRoot = process.cwd();
 const contentUiRoot = join(repoRoot, "packages", "shared", "content-ui");
 
-// ── Forbidden imports ─────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Forbidden imports Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 const forbiddenImports = [
   {
@@ -57,7 +57,7 @@ const forbiddenDeps = new Set([
 const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 const ignoredDirectories = new Set(["node_modules", ".next", "dist", ".turbo", ".cache", "coverage", "__tests__"]);
 
-// ── Walk + check ──────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Walk + check Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 function walkSourceFiles(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -115,15 +115,15 @@ function checkPackageJsonDeps() {
   return violations;
 }
 
-// ── Report ────────────────────────────────────────────────────────
+// Ã¢â€â‚¬Ã¢â€â‚¬ Report Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 const importViolations = checkSourceImports();
 const depViolations = checkPackageJsonDeps();
 
 if (importViolations.length === 0 && depViolations.length === 0) {
   console.log("[verify-content-ui-boundaries] OK");
-  console.log("  • content-ui sources scanned: no forbidden imports");
-  console.log("  • content-ui package.json: no forbidden deps");
+  console.log("  Ã¢â‚¬Â¢ content-ui sources scanned: no forbidden imports");
+  console.log("  Ã¢â‚¬Â¢ content-ui package.json: no forbidden deps");
   process.exit(0);
 }
 
@@ -150,5 +150,5 @@ if (depViolations.length > 0) {
   console.error("");
 }
 
-console.error("See packages/shared/content-ui plan v5 §3 (Package boundaries).");
+console.error("See packages/shared/ui-platform/content-ui plan v5 Ã‚Â§3 (Package boundaries).");
 process.exit(1);

@@ -1,7 +1,5 @@
--- LookupDomain/control/ai_action_code.sql
--- Lookup values for domain: control.ai_action_code
--- 8 platform-defined action codes matching §13.4 of the AI foundation design.
--- Idempotent: WHERE NOT EXISTS guard
+-- Action codes per AI foundation design §13.4 — each code must have a registered
+-- CapabilityHandler before it can be used.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

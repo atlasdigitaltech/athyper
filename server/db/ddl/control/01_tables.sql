@@ -512,6 +512,18 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_state (
     -- Extended config (ui_color, icon_key, sla_minutes, require_reason_on_entry)
     config          jsonb       NOT NULL DEFAULT '{}',
 
+    -- Behavioural flags (P4). Business-facing booleans read by services when
+    -- deciding which states qualify for a particular operation. Reserved keys:
+    --   is_transactable_source   — commitment header state accepts downstream
+    --                              receipt / SES / invoice creation
+    --   is_payable_source        — purchase_invoice state qualifies as an
+    --                              open payable (payment allocation target)
+    --   is_mutable               — record field-editing permitted (advisory;
+    --                              hard enforcement lives in write-descriptor)
+    -- Adding a new flag requires: (a) doc here, (b) seed rows that set it,
+    -- (c) consumer that calls getLifecycleStatesWithFlag.
+    state_flags     jsonb       NOT NULL DEFAULT '{}',
+
     -- Audit (L14: updated_at/updated_by added)
     created_at      timestamptz NOT NULL DEFAULT now(),
     created_by      uuid        NOT NULL,
@@ -525,6 +537,7 @@ CREATE TABLE IF NOT EXISTS control.lifecycle_state (
     CONSTRAINT ls_code_chk          CHECK (btrim(code) <> ''),
     CONSTRAINT ls_name_chk          CHECK (btrim(name) <> ''),
     CONSTRAINT ls_config_chk        CHECK (jsonb_typeof(config) = 'object'),
+    CONSTRAINT ls_state_flags_chk   CHECK (jsonb_typeof(state_flags) = 'object'),
     -- Terminal states cannot also be initial
     CONSTRAINT ls_terminal_initial_chk CHECK (
         NOT (is_initial = true AND is_terminal = true)
@@ -1576,7 +1589,9 @@ COMMENT ON TABLE control.budget_check_config IS
 -- │   §5   control.entity_field           All fields (canonical+versioned)   │
 -- │   §6   control.field_group            UI field groupings                 │
 -- │   §7   control.field_group_member     Group memberships                  │
--- │   §8   control.field_security_policy  PII/masking policies               │
+-- │   §8   control.entity_surface         Runtime surface declarations        │
+-- │   §9   control.entity_field_surface   Field behavior per surface          │
+-- │   §10  control.field_security_policy  PII/masking policies               │
 -- │                                                                           │
 -- │  OVERLAY SYSTEM                                                           │
 -- │   §9   control.overlay                Tenant customisation sets          │
@@ -1754,6 +1769,11 @@ CREATE TABLE IF NOT EXISTS control.entity (
     display_config              jsonb       NOT NULL DEFAULT '{}',
     feature_flags               jsonb       NOT NULL DEFAULT '{}',
 
+    -- Create lifecycle contract
+    create_mode                 text        NOT NULL DEFAULT 'FORM_ONLY',
+    draft_ttl_hours             integer,
+    numbering_strategy          text        NOT NULL DEFAULT 'none',
+
     -- Policy config
     data_policy                 jsonb       NOT NULL DEFAULT '{}',
     identity_config             jsonb       NOT NULL DEFAULT '{}',
@@ -1845,7 +1865,14 @@ CREATE TABLE IF NOT EXISTS control.entity (
     ])),
     CONSTRAINT entity_composite_idx_chk CHECK (jsonb_typeof(composite_indexes) = 'array'),
     CONSTRAINT entity_display_cfg_chk   CHECK (jsonb_typeof(display_config) = 'object'),
-    CONSTRAINT entity_feature_flags_chk CHECK (jsonb_typeof(feature_flags) = 'object')
+    CONSTRAINT entity_feature_flags_chk CHECK (jsonb_typeof(feature_flags) = 'object'),
+    CONSTRAINT entity_create_mode_chk    CHECK (create_mode = ANY (ARRAY[
+        'FORM_ONLY','EARLY_DRAFT','DIRECT_CREATE','SOURCE_DOCUMENT_CREATE'
+    ])),
+    CONSTRAINT entity_draft_ttl_chk      CHECK (draft_ttl_hours IS NULL OR draft_ttl_hours > 0),
+    CONSTRAINT entity_numbering_strategy_chk CHECK (numbering_strategy = ANY (ARRAY[
+        'none','manual','auto','auto_or_manual','AUTO_ON_CREATE','AUTO_ON_PROMOTE','AUTO_ON_SUBMIT'
+    ]))
     -- entity_class, ownership_model, kind, backing_type, governance_level,
     -- security_tier, mutability: validated by triggers against lookup_domain
 );
@@ -1870,6 +1897,27 @@ COMMENT ON COLUMN control.entity.composite_indexes IS
 COMMENT ON COLUMN control.entity.provisioned_at IS
     'Set when provision_tenant_extensions() executes CREATE TABLE for tenant entities. '
     'NULL = not yet provisioned (status=DRAFT). Only populated for ownership_model=tenant.';
+ALTER TABLE control.entity
+    ADD COLUMN IF NOT EXISTS create_mode text NOT NULL DEFAULT 'FORM_ONLY',
+    ADD COLUMN IF NOT EXISTS draft_ttl_hours integer,
+    ADD COLUMN IF NOT EXISTS numbering_strategy text NOT NULL DEFAULT 'none';
+
+ALTER TABLE control.entity DROP CONSTRAINT IF EXISTS entity_create_mode_chk;
+ALTER TABLE control.entity ADD CONSTRAINT entity_create_mode_chk
+    CHECK (create_mode = ANY (ARRAY['FORM_ONLY','EARLY_DRAFT','DIRECT_CREATE','SOURCE_DOCUMENT_CREATE']));
+DO $$ BEGIN ALTER TABLE control.entity ADD CONSTRAINT entity_draft_ttl_chk
+    CHECK (draft_ttl_hours IS NULL OR draft_ttl_hours > 0);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+ALTER TABLE control.entity DROP CONSTRAINT IF EXISTS entity_numbering_strategy_chk;
+ALTER TABLE control.entity ADD CONSTRAINT entity_numbering_strategy_chk
+    CHECK (numbering_strategy = ANY (ARRAY['none','manual','auto','auto_or_manual','AUTO_ON_CREATE','AUTO_ON_PROMOTE','AUTO_ON_SUBMIT']));
+
+COMMENT ON COLUMN control.entity.create_mode IS
+    'Create UX/runtime contract: FORM_ONLY creates on first save; EARLY_DRAFT initiates a provisional row; SOURCE_DOCUMENT_CREATE creates from source selection; DIRECT_CREATE is reserved.';
+COMMENT ON COLUMN control.entity.draft_ttl_hours IS
+    'TTL for EARLY_DRAFT provisional rows. NULL means no generic cleanup policy.';
+COMMENT ON COLUMN control.entity.numbering_strategy IS
+    'Business number strategy: none, manual, auto, or auto_or_manual. EARLY_DRAFT auto numbers on promotion/save, not draft initiation.';
 
 
 -- =============================================================================
@@ -2085,6 +2133,12 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     is_computed                 boolean     NOT NULL DEFAULT false,
     is_write_once               boolean     NOT NULL DEFAULT false,
     is_active                   boolean     NOT NULL DEFAULT true,
+    -- P5 primary-field markers — drives currency/amount detection in the
+    -- shared line-item runtime instead of hardcoded field-name candidate lists.
+    -- At most one of each per entity_version (guarded by partial UNIQUE
+    -- indexes in 04_indexes.sql).
+    is_primary_amount           boolean     NOT NULL DEFAULT false,
+    is_primary_currency         boolean     NOT NULL DEFAULT false,
 
     -- Compute
     compute_mode                text,
@@ -2104,6 +2158,25 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     json_config                 jsonb,
     money_config                jsonb,
     datetime_config             jsonb,
+
+    -- —— Temporal semantics (DatePicker v2) ————————————————————————————
+    -- temporal_kind locks how the value is stored AND displayed:
+    --   'businessDate'  → calendar date in company-code locale; no TZ; ideal storage DATE
+    --   'instant'       → absolute UTC moment; displayed in user TZ; storage TIMESTAMPTZ
+    --   'zonedDateTime' → wall-clock in a fixed zone; two-column TIMESTAMP + tz TEXT
+    --
+    -- display_mode is a UI-only override:
+    --   'date'     → render no time component
+    --   'dateTime' → render date and time
+    -- Typical use: timestamptz column whose business meaning is date-only
+    --   (temporal_kind='businessDate' + display_mode='date'). Prefer storage=DATE.
+    --
+    -- affects_posting_period: if true, runtime-canvas wires the field to the
+    --   period-gate predicate (@athyper/finance-rules::isPostingDateOpen).
+    --   Must imply temporal_kind='businessDate' (see ef_temporal_period_chk).
+    temporal_kind               text,
+    display_mode                text,
+    affects_posting_period      boolean     NOT NULL DEFAULT false,
 
     -- UI
     group_key                   text,
@@ -2217,6 +2290,38 @@ CREATE TABLE IF NOT EXISTS control.entity_field (
     ),
     CONSTRAINT ef_filter_config_obj_chk CHECK (
         filter_config IS NULL OR jsonb_typeof(filter_config) = 'object'
+    ),
+    -- Temporal kind enum (matches @athyper/temporal::TemporalKind)
+    CONSTRAINT ef_temporal_kind_chk     CHECK (
+        temporal_kind IS NULL OR temporal_kind = ANY (ARRAY[
+            'businessDate','instant','zonedDateTime'
+        ])
+    ),
+    -- Display mode enum (UI-only override)
+    CONSTRAINT ef_display_mode_chk      CHECK (
+        display_mode IS NULL OR display_mode = ANY (ARRAY['date','dateTime'])
+    ),
+    -- Temporal kind: enum membership is validated by ef_temporal_kind_chk above.
+    -- No "must be tagged" gate — every temporal data_type is safely inferable
+    -- by @athyper/temporal::resolveTemporalKind:
+    --   'date'        → businessDate
+    --   'timestamp'   → instant   (pre-normalisation; 045 maps to 'datetime')
+    --   'timestamptz' → instant
+    --   'datetime'    → instant   (post-normalisation)
+    -- Operator policy on requiring explicit tags belongs in the audit script
+    -- (server/scripts/audit-temporal-fields.ts) which can run in --strict mode
+    -- in CI for newly-added entities while keeping migrations themselves quiet.
+    -- affects_posting_period only applies to business dates
+    CONSTRAINT ef_temporal_period_chk   CHECK (
+        affects_posting_period = false
+        OR temporal_kind = 'businessDate'
+    ),
+    -- display_mode='date' requires temporal_kind='businessDate'
+    -- (datetimes that should render date-only are the Field A fallback path)
+    CONSTRAINT ef_display_mode_kind_chk CHECK (
+        display_mode IS NULL
+        OR display_mode = 'dateTime'
+        OR temporal_kind = 'businessDate'
     )
 );
 
@@ -2255,20 +2360,45 @@ CREATE TABLE IF NOT EXISTS control.field_group (
     columns                     smallint    NOT NULL DEFAULT 3,
     page_span                   text        NOT NULL DEFAULT 'half',
 
+    -- UI intent (P5) — the presentational role this group plays inside the
+    -- line-item / detail composer. Removes hardcoded SECTION_CONV / TAB_CONV
+    -- lookup tables in the shared line-item runtime.
+    --   what             — item identity fields (item_id, description)
+    --   how_much         — monetary / quantity / pricing fields
+    --   where_it_costs   — dimensions (cost_center, project, site)
+    --   classify         — commodity_category, intent, taxonomy
+    --   tax              — tax and withholding tax fields
+    --   discount         — discount pct / amount
+    --   retention        — retention pct / amount
+    --   charges          — freight, misc charges
+    --   reference_links  — matching / source-doc references
+    --   accounting       — journal / GL routing fields
+    ui_intent                   text,
+
     CONSTRAINT fg_pkey              PRIMARY KEY (group_key),
     CONSTRAINT fg_key_fmt_chk       CHECK (group_key ~ '^[a-z][a-z0-9_]*$'),
     CONSTRAINT fg_label_chk         CHECK (btrim(label) <> ''),
     CONSTRAINT fg_columns_chk       CHECK (columns IN (1, 2, 3)),
-    CONSTRAINT fg_page_span_chk     CHECK (page_span IN ('full', 'half'))
+    CONSTRAINT fg_page_span_chk     CHECK (page_span IN ('full', 'half')),
+    CONSTRAINT fg_ui_intent_chk     CHECK (ui_intent IS NULL OR ui_intent IN (
+        'what','how_much','where_it_costs','classify','tax','discount',
+        'retention','charges','delivery','budget','reference_links','accounting'
+    ))
 );
 
 -- Idempotent schema evolution for existing databases
 ALTER TABLE control.field_group ADD COLUMN IF NOT EXISTS columns   smallint NOT NULL DEFAULT 3;
 ALTER TABLE control.field_group ADD COLUMN IF NOT EXISTS page_span text     NOT NULL DEFAULT 'half';
+ALTER TABLE control.field_group ADD COLUMN IF NOT EXISTS ui_intent text;
 ALTER TABLE control.field_group DROP CONSTRAINT IF EXISTS fg_columns_chk;
 ALTER TABLE control.field_group DROP CONSTRAINT IF EXISTS fg_page_span_chk;
+ALTER TABLE control.field_group DROP CONSTRAINT IF EXISTS fg_ui_intent_chk;
 ALTER TABLE control.field_group ADD CONSTRAINT fg_columns_chk   CHECK (columns   IN (1, 2, 3));
 ALTER TABLE control.field_group ADD CONSTRAINT fg_page_span_chk CHECK (page_span IN ('full', 'half'));
+ALTER TABLE control.field_group ADD CONSTRAINT fg_ui_intent_chk CHECK (ui_intent IS NULL OR ui_intent IN (
+    'what','how_much','where_it_costs','classify','tax','discount',
+    'retention','charges','delivery','budget','reference_links','accounting'
+));
 
 COMMENT ON TABLE  control.field_group IS
     'ARCHETYPE=F;SCOPE=N. Logical UI sections grouping canonical fields. '
@@ -2306,7 +2436,207 @@ COMMENT ON TABLE  control.field_group_member IS
 
 
 -- =============================================================================
--- §8  control.field_security_policy
+-- §8  control.entity_surface
+-- =============================================================================
+-- Normalized runtime surface declarations for create/edit/view/list/print.
+--
+-- Ownership split:
+--   entity_field          = intrinsic field truth
+--   field_group           = semantic grouping
+--   entity_surface        = where/how a runtime mode renders
+--   entity_field_surface  = field behavior inside that surface
+--   entity_operation      = existing action registry
+--
+-- Surfaces are entity-scoped in v1. Field membership/versioning remains on
+-- control.entity_field via entity_version_id.
+
+CREATE TABLE IF NOT EXISTS control.entity_surface (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid,
+    entity_id                   uuid        NOT NULL,
+
+    mode                        text        NOT NULL,
+    surface_key                 text        NOT NULL,
+    kind                        text        NOT NULL,
+    placement                   text        NOT NULL DEFAULT 'main',
+
+    parent_surface_id           uuid,
+    slot_key                    text,
+
+    label                       text,
+    icon_key                    text,
+    group_keys                  text[]      NOT NULL DEFAULT '{}',
+    relation_name               text,
+
+    renderer_key                text,
+    composer_key                text,
+    strategy_key                text,
+
+    column_count                smallint,
+    print_span                  text,
+    density                     text,
+
+    required_permissions        text[]      NOT NULL DEFAULT '{}',
+    visibility_expr             jsonb,
+
+    sort_order                  smallint    NOT NULL DEFAULT 0,
+    is_enabled                  boolean     NOT NULL DEFAULT true,
+
+    config                      jsonb       NOT NULL DEFAULT '{}',
+
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT es_pkey                  PRIMARY KEY (id),
+    CONSTRAINT es_tenant_id_uq          UNIQUE NULLS NOT DISTINCT (tenant_id, id),
+    CONSTRAINT es_binding_uq            UNIQUE NULLS NOT DISTINCT (
+        tenant_id, entity_id, mode, surface_key
+    ),
+    CONSTRAINT es_mode_chk              CHECK (mode = ANY (ARRAY[
+        'create','edit','view','list','print'
+    ])),
+    CONSTRAINT es_kind_chk              CHECK (kind = ANY (ARRAY[
+        'fields',
+        'list',
+        'print',
+        'document_identity_summary',
+        'document_lines',
+        'document_rows',
+        'document_components',
+        'document_accounting',
+        'document_matching_panel',
+        'line_items',
+        'child_records',
+        'distributions',
+        'summary_cards',
+        'attachments',
+        'comments',
+        'workflow',
+        'lifecycle',
+        'versions',
+        'compare',
+        'activity_log',
+        'audit_trail',
+        'flow',
+        'postings_preview',
+        'custom'
+    ])),
+    CONSTRAINT es_placement_chk         CHECK (placement = ANY (ARRAY[
+        'main','header','context_panel','subroute','toolbar','action_only','mount_only'
+    ])),
+    CONSTRAINT es_surface_key_fmt_chk   CHECK (surface_key ~ '^[a-z][a-z0-9_]*$'),
+    CONSTRAINT es_slot_key_fmt_chk      CHECK (
+        slot_key IS NULL OR slot_key ~ '^[a-z][a-z0-9_]*$'
+    ),
+    CONSTRAINT es_icon_fmt_chk          CHECK (
+        icon_key IS NULL OR icon_key ~ '^[a-z][a-z0-9-]*$'
+    ),
+    CONSTRAINT es_column_count_chk      CHECK (
+        column_count IS NULL OR column_count IN (1, 2, 3, 4)
+    ),
+    CONSTRAINT es_print_span_chk        CHECK (
+        print_span IS NULL OR print_span = ANY (ARRAY['full','half'])
+    ),
+    CONSTRAINT es_density_chk           CHECK (
+        density IS NULL OR density = ANY (ARRAY['compact','comfortable','document'])
+    ),
+    CONSTRAINT es_visibility_expr_chk   CHECK (
+        visibility_expr IS NULL OR jsonb_typeof(visibility_expr) = 'object'
+    ),
+    CONSTRAINT es_config_chk            CHECK (jsonb_typeof(config) = 'object'),
+    CONSTRAINT es_parent_not_self_chk   CHECK (
+        parent_surface_id IS NULL OR parent_surface_id <> id
+    )
+);
+
+COMMENT ON TABLE control.entity_surface IS
+    'ARCHETYPE=C;SCOPE=G. Normalized runtime surface declarations for create/edit/view/list/print. '
+    'tenant_id NULL rows are platform defaults; tenant rows override the same entity_id + mode + surface_key. '
+    'kind is the semantic surface category; renderer_key is the concrete renderer override. '
+    'config is renderer-specific payload only, not generic layout or permission metadata.';
+COMMENT ON COLUMN control.entity_surface.mode IS
+    'Runtime mode: create, edit, view, list, or print.';
+COMMENT ON COLUMN control.entity_surface.kind IS
+    'Semantic surface category consumed by the descriptor compiler and runtime registry.';
+COMMENT ON COLUMN control.entity_surface.placement IS
+    'Mount placement. action_only participates in dispatch without rendering; mount_only is side-effect/provider style.';
+COMMENT ON COLUMN control.entity_surface.parent_surface_id IS
+    'Optional parent surface for sidecars and slots, e.g. payment terms mounted inside a document header.';
+COMMENT ON COLUMN control.entity_surface.required_permissions IS
+    'Permission codes required to render this surface. Empty array means no extra surface-level permission gate.';
+
+
+-- =============================================================================
+-- §9  control.entity_field_surface
+-- =============================================================================
+-- Field-specific behavior inside a normalized surface. This table is only for
+-- fields backed by control.entity_field. Non-field content such as KPI cards,
+-- identity strips, postings previews, and renderer-specific sidecars remain on
+-- control.entity_surface.config.
+
+CREATE TABLE IF NOT EXISTS control.entity_field_surface (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid,
+    entity_surface_id           uuid        NOT NULL,
+    entity_field_id             uuid        NOT NULL,
+
+    visible_override            boolean,
+    required_override           boolean,
+    readonly_override           boolean,
+
+    sort_order                  smallint,
+    column_span                 smallint,
+    density                     text,
+
+    renderer_key                text,
+    editor_key                  text,
+
+    visibility_expr             jsonb,
+    editability_expr            jsonb,
+    renderer_config             jsonb       NOT NULL DEFAULT '{}',
+
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT efsurf_pkey              PRIMARY KEY (id),
+    CONSTRAINT efsurf_tenant_id_uq      UNIQUE NULLS NOT DISTINCT (tenant_id, id),
+    CONSTRAINT efsurf_binding_uq        UNIQUE NULLS NOT DISTINCT (
+        tenant_id, entity_surface_id, entity_field_id
+    ),
+    CONSTRAINT efsurf_column_span_chk   CHECK (
+        column_span IS NULL OR column_span BETWEEN 1 AND 12
+    ),
+    CONSTRAINT efsurf_density_chk       CHECK (
+        density IS NULL OR density = ANY (ARRAY['compact','comfortable','document'])
+    ),
+    CONSTRAINT efsurf_visibility_expr_chk CHECK (
+        visibility_expr IS NULL OR jsonb_typeof(visibility_expr) = 'object'
+    ),
+    CONSTRAINT efsurf_editability_expr_chk CHECK (
+        editability_expr IS NULL OR jsonb_typeof(editability_expr) = 'object'
+    ),
+    CONSTRAINT efsurf_renderer_config_chk CHECK (jsonb_typeof(renderer_config) = 'object')
+);
+
+COMMENT ON TABLE control.entity_field_surface IS
+    'ARCHETYPE=C;SCOPE=G. Field behavior inside a runtime surface. '
+    'Nullable override booleans inherit from entity_field when NULL. '
+    'Use this for mode/surface-specific visibility, ordering, density, renderer/editor overrides; '
+    'keep intrinsic invariants on control.entity_field.';
+COMMENT ON COLUMN control.entity_field_surface.visible_override IS
+    'NULL = inherit compiler visibility; true/false force visibility for this field in this surface.';
+COMMENT ON COLUMN control.entity_field_surface.required_override IS
+    'NULL = inherit entity_field.is_required; true/false override required state for this surface.';
+COMMENT ON COLUMN control.entity_field_surface.readonly_override IS
+    'NULL = inherit entity_field.is_read_only/editability; true/false override readonly state for this surface.';
+
+
+-- =============================================================================
+-- §10  control.field_security_policy
 -- =============================================================================
 -- PII classification and field-level masking policies.
 
@@ -2529,6 +2859,9 @@ CREATE TABLE IF NOT EXISTS control.entity_operation (
     -- Handler
     handler_type                text        NOT NULL DEFAULT 'API',
     handler_target              text,
+    -- Server execution command. Kept separate from handler_target, which is
+    -- the UI interaction target (for example flow:submit_for_approval).
+    execution_target            text,
 
     -- Behaviour
     is_record_required          boolean     NOT NULL DEFAULT false,
@@ -2539,6 +2872,8 @@ CREATE TABLE IF NOT EXISTS control.entity_operation (
     icon_override               text,
     tcode_alias                 text,
     is_enabled                  boolean     NOT NULL DEFAULT true,
+    -- Context-selection behavior for list/grid floating action bars.
+    selection_config            jsonb,
 
     -- Audit
     created_at                  timestamptz NOT NULL DEFAULT now(),
@@ -2557,16 +2892,33 @@ CREATE TABLE IF NOT EXISTS control.entity_operation (
     CONSTRAINT eo_handler_chk       CHECK (handler_type = ANY (ARRAY[
         'NAVIGATE','API','MODAL','INLINE'
     ])),
+    CONSTRAINT eo_execution_target_chk CHECK (
+        execution_target IS NULL
+        OR execution_target ~ '^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$'
+    ),
+    CONSTRAINT eo_selection_config_object_chk CHECK (
+        selection_config IS NULL OR jsonb_typeof(selection_config) = 'object'
+    ),
     CONSTRAINT eo_surface_hidden_chk CHECK (
         surface <> 'HIDDEN' OR placement = 'COMMAND'
     )
 );
+
+-- Additive migration for databases created before execution_target was split
+-- from the UI handler_target contract.
+ALTER TABLE control.entity_operation
+    ADD COLUMN IF NOT EXISTS execution_target text;
 
 COMMENT ON TABLE  control.entity_operation IS
     'ARCHETYPE=C;SCOPE=G;DEVIATION. Manual is_enabled boolean NOT NULL DEFAULT true (not GENERATED). Registers operations on entity types with UI placement config. '
     'permission_code replaces operation_code — FK to shared.permission.code '
     '(control.operation eliminated; operations absorbed into shared.permission). '
     'Moved from association.entity_operation to control.*.';
+
+COMMENT ON COLUMN control.entity_operation.handler_target IS
+    'UI interaction target only: route, inline/modal name, or flow:<flow_code>.';
+COMMENT ON COLUMN control.entity_operation.execution_target IS
+    'Server execution command, independent of UI interaction; lifecycle operations use lifecycle:<operation_code>.';
 
 
 -- =============================================================================
@@ -2670,9 +3022,16 @@ CREATE TABLE IF NOT EXISTS control.entity_relation (
     name                        text        NOT NULL,
     relation_kind               text        NOT NULL,
     target_entity               text        NOT NULL,
+    resolution_kind             text        NOT NULL DEFAULT 'fk',
     fk_field                    text,
     target_key                  text        NOT NULL DEFAULT 'id',
+    source_type_field           text,
+    source_type_value           text,
+    source_id_field             text,
+    source_line_field           text,
+    runtime_role                text,
     on_delete                   text        NOT NULL DEFAULT 'restrict',
+    record_filter               jsonb       NOT NULL DEFAULT '{}',
     ui_behavior                 jsonb       NOT NULL DEFAULT '{}',
 
     -- Audit
@@ -2686,13 +3045,74 @@ CREATE TABLE IF NOT EXISTS control.entity_relation (
     CONSTRAINT er_kind_chk          CHECK (relation_kind = ANY (ARRAY[
         'belongs_to','has_many','m2m'
     ])),
+    CONSTRAINT er_resolution_kind_chk CHECK (resolution_kind = ANY (ARRAY[
+        'fk','polymorphic','join','array_fk'
+    ])),
+    CONSTRAINT er_resolution_config_chk CHECK (
+        (
+            resolution_kind = 'fk'
+            AND (relation_kind = 'm2m' OR fk_field IS NOT NULL)
+        )
+        OR (
+            resolution_kind = 'polymorphic'
+            AND source_type_field IS NOT NULL
+            AND source_type_value IS NOT NULL
+            AND source_id_field IS NOT NULL
+        )
+        OR (
+            -- array_fk: the source column is uuid[] (or similar array), and the
+            -- resolver runs `WHERE :target_id = ANY(source.<fk_field>)`. Enforces
+            -- has_many cardinality because a single source row can reference
+            -- many target rows.
+            resolution_kind = 'array_fk'
+            AND fk_field IS NOT NULL
+            AND relation_kind = 'has_many'
+        )
+        OR resolution_kind = 'join'
+    ),
     CONSTRAINT er_on_delete_chk     CHECK (on_delete = ANY (ARRAY[
         'restrict','cascade','set_null','set_default','no_action'
     ])),
     CONSTRAINT er_name_chk          CHECK (btrim(name) <> ''),
     CONSTRAINT er_target_chk        CHECK (btrim(target_entity) <> ''),
+    CONSTRAINT er_record_filter_chk CHECK (jsonb_typeof(record_filter) = 'object'),
     CONSTRAINT er_ui_chk            CHECK (jsonb_typeof(ui_behavior) = 'object')
 );
+
+ALTER TABLE control.entity_relation ADD COLUMN IF NOT EXISTS resolution_kind text NOT NULL DEFAULT 'fk';
+ALTER TABLE control.entity_relation ADD COLUMN IF NOT EXISTS source_type_field text;
+ALTER TABLE control.entity_relation ADD COLUMN IF NOT EXISTS source_type_value text;
+ALTER TABLE control.entity_relation ADD COLUMN IF NOT EXISTS source_id_field text;
+ALTER TABLE control.entity_relation ADD COLUMN IF NOT EXISTS source_line_field text;
+ALTER TABLE control.entity_relation ADD COLUMN IF NOT EXISTS runtime_role text;
+ALTER TABLE control.entity_relation ADD COLUMN IF NOT EXISTS record_filter jsonb NOT NULL DEFAULT '{}';
+
+DO $$ BEGIN ALTER TABLE control.entity_relation ADD CONSTRAINT er_resolution_kind_chk
+    CHECK (resolution_kind = ANY (ARRAY['fk','polymorphic','join','array_fk']));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_relation ADD CONSTRAINT er_resolution_config_chk
+    CHECK (
+        (
+            resolution_kind = 'fk'
+            AND (relation_kind = 'm2m' OR fk_field IS NOT NULL)
+        )
+        OR (
+            resolution_kind = 'polymorphic'
+            AND source_type_field IS NOT NULL
+            AND source_type_value IS NOT NULL
+            AND source_id_field IS NOT NULL
+        )
+        OR (
+            resolution_kind = 'array_fk'
+            AND fk_field IS NOT NULL
+            AND relation_kind = 'has_many'
+        )
+        OR resolution_kind = 'join'
+    ) NOT VALID;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_relation ADD CONSTRAINT er_record_filter_chk
+    CHECK (jsonb_typeof(record_filter) = 'object');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 COMMENT ON TABLE  control.entity_relation IS
     'ARCHETYPE=C;SCOPE=G. FK/join relationship declarations per entity version. '
@@ -3184,6 +3604,18 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_entry_template (
     amount_percentage       numeric(8,4),
     is_balancing_line       boolean     NOT NULL DEFAULT false,
 
+    -- Optional pricing-component selectors. COMPONENT_BUCKET expands the
+    -- resolver's accounting projection rather than reading a rolled-up header
+    -- amount. FROM_COMPONENT_POLICY resolves the posting role carried by that
+    -- projection.
+    component_bucket        text,
+    condition_type_id       uuid,
+    component_term_types    text[],
+    cost_effect_filter      text[],
+    posting_pattern_filter  text[],
+    distribution_behavior  text,
+    capitalization_behavior text,
+
     -- Dimension overrides
     override_cost_center    text,
     override_profit_center  text,
@@ -3211,7 +3643,7 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_entry_template (
     CONSTRAINT apet_pkey          PRIMARY KEY (id),
     CONSTRAINT apet_event_seq_uq  UNIQUE (profile_event_id, line_seq),
     CONSTRAINT apet_side_chk      CHECK (posting_side IN ('DEBIT','CREDIT')),
-    CONSTRAINT apet_source_chk    CHECK (account_source IN ('FIXED','FROM_INTENT','FROM_CATEGORY','POSTING_ROLE')),
+    CONSTRAINT apet_source_chk    CHECK (account_source IN ('FIXED','FROM_INTENT','FROM_CATEGORY','POSTING_ROLE','FROM_COMPONENT_POLICY')),
     CONSTRAINT apet_source_key_chk CHECK (account_source <> 'POSTING_ROLE' OR account_lookup_key IS NOT NULL),
     CONSTRAINT apet_amount_chk    CHECK (amount_source IN (
         'DOCUMENT_TOTAL','LINE_AMOUNT','TAX_AMOUNT','CALCULATED','REMAINDER',
@@ -3219,7 +3651,23 @@ CREATE TABLE IF NOT EXISTS control.acct_profile_entry_template (
         'REVENUE_AMOUNT','COGS_AMOUNT','DISCOUNT_AMOUNT',
         'ADVANCE_AMOUNT','ADVANCE_RECOVERY',
         'RETENTION_AMOUNT','RETENTION_BALANCE','PENALTY_AMOUNT','REBATE_AMOUNT',
-        'NET_PAYABLE','DISCOUNT_EARNED','NET_AFTER_DISCOUNT','SCF_FINANCIER_AMOUNT')),
+        'NET_PAYABLE','DISCOUNT_EARNED','NET_AFTER_DISCOUNT','SCF_FINANCIER_AMOUNT',
+        'COMPONENT_BUCKET')),
+    CONSTRAINT apet_component_bucket_chk CHECK (
+        (amount_source = 'COMPONENT_BUCKET' AND component_bucket IN (
+            'DISTRIBUTABLE_COST','BASE_COST','COST_REDUCTION','COST_ADDITION',
+            'SEPARATE_DEBIT','SEPARATE_CREDIT','RECOVERABLE_TAX',
+            'NONRECOVERABLE_TAX','WHT_LIABILITY','RETENTION_LIABILITY',
+            'SELF_ASSESSED_INPUT','SELF_ASSESSED_OUTPUT','SETTLEMENT_DISCOUNT','MEMO'))
+        OR (amount_source <> 'COMPONENT_BUCKET' AND component_bucket IS NULL)),
+    CONSTRAINT apet_component_account_chk CHECK (
+        account_source <> 'FROM_COMPONENT_POLICY' OR amount_source = 'COMPONENT_BUCKET'),
+    CONSTRAINT apet_distribution_behavior_chk CHECK (
+        distribution_behavior IS NULL OR distribution_behavior IN (
+            'INHERIT_LINE','APPORTION_TO_LINES','NO_COST_DISTRIBUTION')),
+    CONSTRAINT apet_capitalization_behavior_chk CHECK (
+        capitalization_behavior IS NULL OR capitalization_behavior IN (
+            'FOLLOW_LINE','ALWAYS_CAPITALIZE','NEVER_CAPITALIZE')),
     CONSTRAINT apet_pct_chk       CHECK (amount_percentage IS NULL OR amount_percentage BETWEEN 0 AND 100),
     CONSTRAINT apet_desc_nonempty CHECK (btrim(description) <> '')
 );
@@ -4188,7 +4636,7 @@ CREATE TABLE IF NOT EXISTS control.tax_rate_schedule (
     id                              uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                       uuid            NOT NULL,
 
-    -- Core identity (replaces traditional tax_code)
+    -- Core identity
     jurisdiction_id                 uuid            NOT NULL,
     tax_type_id                     uuid            NOT NULL,
 
@@ -4211,29 +4659,10 @@ CREATE TABLE IF NOT EXISTS control.tax_rate_schedule (
     -- Calculation
     calculation_basis               text            NOT NULL DEFAULT 'LINE_NET',
 
-    -- Rounding
-    rounding_stage                  text            NOT NULL DEFAULT 'LINE',
-    rounding_rule_id                uuid,
-
     -- WHT-specific
     wht_basis                       text,
-    wht_certificate_required        boolean         NOT NULL DEFAULT false,
-    treaty_country_code             character(2),
-    treaty_rate_value               numeric(18,6),
 
-    -- Scope filters (NULL = wildcard)
-    scope_company_code_id           uuid,
-    scope_commodity_category_id     uuid,
-    scope_commodity_domain_code     text,
-    scope_commodity_code            text,
-    scope_industry_domain_code      text,
-    scope_industry_code             text,
-    scope_counterparty_country      character(2),
-    scope_counterparty_tax_status   text,
-    scope_doc_type                  text,
-
-    -- Resolution
-    priority                        smallint        NOT NULL DEFAULT 0,
+    -- Description
     description                     text,
 
     -- Effectivity
@@ -4272,41 +4701,16 @@ CREATE TABLE IF NOT EXISTS control.tax_rate_schedule (
     CONSTRAINT trs_reverse_chk          CHECK (reverse_charge_mode IN ('NONE','SELF_ASSESS','FULL')),
     CONSTRAINT trs_basis_chk            CHECK (calculation_basis IN (
         'LINE_NET','LINE_GROSS','DOCUMENT_NET','DOCUMENT_GROSS','PAYMENT_AMOUNT')),
-    CONSTRAINT trs_round_stage_chk      CHECK (rounding_stage IN (
-        'LINE','COMPONENT','DOCUMENT','JURISDICTION_BUCKET')),
     CONSTRAINT trs_wht_basis_chk        CHECK (wht_basis IS NULL
-        OR wht_basis IN ('GROSS','NET_OF_INDIRECT_TAX','PAYMENT_ONLY')),
-    CONSTRAINT trs_treaty_rate_chk      CHECK (
-        treaty_rate_value IS NULL
-        OR (treaty_country_code IS NOT NULL AND treaty_rate_value >= 0
-            AND (rate_kind <> 'PERCENT' OR treaty_rate_value <= rate_value))),
-    CONSTRAINT trs_cp_status_chk        CHECK (
-        scope_counterparty_tax_status IS NULL
-        OR scope_counterparty_tax_status IN (
-            'REGISTERED','UNREGISTERED','EXEMPT','FOREIGN','TREATY'))
+        OR wht_basis IN ('GROSS','NET_OF_INDIRECT_TAX','PAYMENT_ONLY'))
 );
 COMMENT ON TABLE control.tax_rate_schedule IS
-    'ARCHETYPE=B;SCOPE=T. Unified tax rate table. tax_code eliminated — identity is structured: '
-    '(jurisdiction + tax_type + direction + component + scopes + priority + effective dates). '
+    'ARCHETYPE=B;SCOPE=T. Atomic tax rate. Identity: (jurisdiction + tax_type + direction + component + effective dates). '
+    'Scope-based resolution lives in control.tax_resolution_rule. tax_code eliminated. '
     'trs_tenant_id_uq enables tenant-composite FK from tax_group_component and tax_calculation. '
-    'Temporal EXCLUDE prevents overlapping active rules with same scope + priority.';
+    'Temporal EXCLUDE prevents overlapping active rates with same natural identity.';
 
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'control' AND table_name = 'tax_rate_schedule'
-          AND column_name = 'scope_spend_category_id'
-    ) AND NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'control' AND table_name = 'tax_rate_schedule'
-          AND column_name = 'scope_commodity_category_id'
-    ) THEN
-        ALTER TABLE control.tax_rate_schedule RENAME COLUMN scope_spend_category_id TO scope_commodity_category_id;
-    END IF;
-END $$;
-
--- Temporal non-overlap: two active rules with identical scope + priority cannot overlap in time.
+-- Temporal non-overlap: two active rates with identical natural identity cannot overlap in time.
 ALTER TABLE control.tax_rate_schedule DROP CONSTRAINT IF EXISTS trs_temporal_excl;
 ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_temporal_excl
     EXCLUDE USING gist (
@@ -4315,16 +4719,6 @@ ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_temporal_excl
         tax_type_id                                                                     WITH =,
         tax_direction                                                                   WITH =,
         COALESCE(component_code, '')                                                    WITH =,
-        priority                                                                        WITH =,
-        COALESCE(scope_company_code_id,         '00000000-0000-0000-0000-000000000000') WITH =,
-        COALESCE(scope_commodity_category_id,   '00000000-0000-0000-0000-000000000000') WITH =,
-        COALESCE(scope_commodity_domain_code,   '')                                     WITH =,
-        COALESCE(scope_commodity_code,          '')                                     WITH =,
-        COALESCE(scope_industry_domain_code,    '')                                     WITH =,
-        COALESCE(scope_industry_code,           '')                                     WITH =,
-        COALESCE(scope_counterparty_country,    '__')                                   WITH =,
-        COALESCE(scope_counterparty_tax_status, '')                                     WITH =,
-        COALESCE(scope_doc_type,                '')                                     WITH =,
         daterange(effective_from, COALESCE(effective_to, '9999-12-31'::date), '[]')     WITH &&
     ) WHERE (is_active = true);
 
@@ -4340,6 +4734,13 @@ CREATE TABLE IF NOT EXISTS control.tax_group (
     name                text            NOT NULL,
     description         text,
     is_compound         boolean         NOT NULL DEFAULT false,
+
+    -- Scope: where this bundle applies. NULL = jurisdiction-agnostic (rare).
+    -- Distinct from tax_rate_schedule.jurisdiction_id, which captures which
+    -- authority set each component rate. The group's jurisdiction is the
+    -- scope context (e.g. TG-IN-TN-GST-18-IN.jurisdiction_id = TJ-IN-TN, even
+    -- though its CGST component rate lives under TJ-IN authority).
+    jurisdiction_id     uuid,
 
     -- Metadata
     metadata            jsonb           NOT NULL DEFAULT '{}'::jsonb,
@@ -4363,7 +4764,9 @@ CREATE TABLE IF NOT EXISTS control.tax_group (
 );
 COMMENT ON TABLE control.tax_group IS
     'ARCHETYPE=B;SCOPE=T. Named collection of tax rate schedules applied as a unit to documents. '
-    'is_compound=true: components apply sequentially (each base = previous subtotal).';
+    'is_compound=true: components apply sequentially (each base = previous subtotal). '
+    'jurisdiction_id scopes the bundle (e.g. TG-IN-TN-GST-18-IN → TJ-IN-TN). '
+    'PC-facing handle: pricing_component.tax_group_id and tax_resolution_rule.resolved_tax_group_id point here.';
 
 
 -- ── control.tax_group_component ──────────────────────────────────────────────
@@ -4404,6 +4807,91 @@ COMMENT ON TABLE control.tax_group_component IS
     'ARCHETYPE=B_LITE;SCOPE=T. Bridge: tax_group → tax_rate_schedule. calculation_seq orders evaluation. '
     'rate_override allows group-level rate substitution without touching the global schedule. '
     'FK to tax_rate_schedule uses tenant-composite for cross-tenant isolation.';
+
+
+-- ── control.tax_resolution_rule ──────────────────────────────────────────────
+-- Resolver matrix: context (company, supplier, commodity, doc type, supplier
+-- tax status, intra/inter-state) → tax_group_id. Highest-priority active rule
+-- whose every non-NULL scope matches the context wins. Many rules may target
+-- the same group; one context picks one group via priority.
+CREATE TABLE IF NOT EXISTS control.tax_resolution_rule (
+    -- Identity
+    id                                      uuid          NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                               uuid          NOT NULL,
+    code                                    text          NOT NULL,
+    name                                    text          NOT NULL,
+    description                             text,
+
+    -- Outcome
+    resolved_tax_group_id                   uuid          NOT NULL,
+
+    -- Phase 3c: 4-jurisdiction scope model.
+    -- bill-side = OWNER tax registration (legal); ship-side = ADDRESS jurisdiction (geographic).
+    -- NULL = wildcard for that dimension.
+    scope_billto_jurisdiction_id            uuid,
+    scope_shipto_jurisdiction_id            uuid,
+    scope_billfrom_jurisdiction_id          uuid,
+    scope_shipfrom_jurisdiction_id          uuid,
+
+    -- Other scope filters (NULL = wildcard)
+    scope_counterparty_tax_status           text,
+    scope_commodity_category_id             uuid,
+    scope_supplier_industry_code            text,
+
+    -- Phase 3c: doc entity codes as array (single rule covers multiple entities)
+    -- e.g. ['purchase_invoice','purchase_order','receipt']
+    -- NULL = wildcard (rule fires for any entity)
+    scope_doc_entity_codes                  text[],
+
+    -- Phase 3c: renamed predicates (explicit about which pair compares).
+    -- Drives intra-state (match) vs inter-state (mismatch) GST distinction.
+    requires_shipto_shipfrom_match          boolean       NOT NULL DEFAULT false,
+    requires_shipto_shipfrom_mismatch       boolean       NOT NULL DEFAULT false,
+
+    -- Resolution priority (higher = more specific; tiebreak on effective_from DESC)
+    priority                                smallint      NOT NULL DEFAULT 100,
+
+    -- Effectivity
+    effective_from                          date          NOT NULL DEFAULT CURRENT_DATE,
+    effective_to                            date,
+
+    -- Metadata
+    metadata                                jsonb         NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Lifecycle
+    status                                  shared.active_inactive_d NOT NULL DEFAULT 'active',
+    is_active                               boolean       GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at                       timestamptz,
+    status_changed_by                       uuid,
+
+    -- Audit
+    created_at                              timestamptz   NOT NULL DEFAULT now(),
+    created_by                              uuid          NOT NULL,
+    updated_at                              timestamptz,
+    updated_by                              uuid,
+
+    CONSTRAINT trr_pkey               PRIMARY KEY (id),
+    CONSTRAINT trr_tenant_id_uq       UNIQUE (tenant_id, id),
+    CONSTRAINT trr_code_uq            UNIQUE (tenant_id, code),
+    CONSTRAINT trr_code_chk           CHECK (btrim(code) <> ''),
+    CONSTRAINT trr_name_chk           CHECK (btrim(name) <> ''),
+    CONSTRAINT trr_effective_chk      CHECK (effective_to IS NULL OR effective_to >= effective_from),
+    CONSTRAINT trr_priority_chk       CHECK (priority >= 0 AND priority <= 1000),
+    CONSTRAINT trr_shipto_shipfrom_excl CHECK (
+        NOT (requires_shipto_shipfrom_match AND requires_shipto_shipfrom_mismatch)),
+    CONSTRAINT trr_status_chk         CHECK (scope_counterparty_tax_status IS NULL
+        OR scope_counterparty_tax_status IN ('REGISTERED','UNREGISTERED','EXEMPT','FOREIGN','TREATY')),
+    CONSTRAINT trr_entity_codes_nonempty CHECK (
+        scope_doc_entity_codes IS NULL OR cardinality(scope_doc_entity_codes) >= 1)
+);
+
+COMMENT ON TABLE control.tax_resolution_rule IS
+    'ARCHETYPE=B;SCOPE=T. Phase 3c tax-group resolver matrix. 4 jurisdictional scope axes: '
+    'billto/shipto (BUYER context), billfrom/shipfrom (SELLER context). Bill-side derives from '
+    'owner tax registration (legal); ship-side from address jurisdiction (geographic). '
+    'scope_doc_entity_codes (text[]) lets a single rule cover multiple entities. '
+    'shipto/shipfrom match/mismatch predicates drive intra-state vs inter-state GST routing. '
+    'NULL scope = wildcard. Resolver picks highest priority active rule.';
 
 
 -- ── control.wht_threshold_config ─────────────────────────────────────────────
@@ -6168,13 +6656,13 @@ COMMENT ON COLUMN control.blueprint_registry.seed_files IS
 
 
 -- =============================================================================
--- §PROV-2  control.tenant_blueprint_application — provisioning audit log
+-- §PROV-2  control.blueprint_tenant_application — provisioning audit log
 -- =============================================================================
 -- Records which blueprint packs have been applied to each tenant, when, by whom,
 -- and with what outcome. Enables incremental pack additions and upgrade tracking.
 -- applied_by is nullable: automated provisioning runs may have no human actor.
 
-CREATE TABLE IF NOT EXISTS control.tenant_blueprint_application (
+CREATE TABLE IF NOT EXISTS control.blueprint_tenant_application (
     id               uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id        uuid        NOT NULL,
     blueprint_code   text        NOT NULL,
@@ -6196,18 +6684,18 @@ CREATE TABLE IF NOT EXISTS control.tenant_blueprint_application (
     CONSTRAINT tba_status_chk   CHECK (status IN ('applied', 'rolled_back', 'failed'))
 );
 
-COMMENT ON TABLE  control.tenant_blueprint_application IS
+COMMENT ON TABLE  control.blueprint_tenant_application IS
     'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Audit log of blueprint packs applied per tenant. '
     'applied_by: principal who triggered provisioning (NULL for automated runs). '
     'created_by: audit trail — use system sentinel for automated inserts. '
     'applied_version: snapshot of blueprint version at time of application; '
     'survives future registry updates. '
     'R6: migrated from seed file into main DDL bundle.';
-COMMENT ON COLUMN control.tenant_blueprint_application.blueprint_code IS
+COMMENT ON COLUMN control.blueprint_tenant_application.blueprint_code IS
     'References control.blueprint_registry.code.';
-COMMENT ON COLUMN control.tenant_blueprint_application.applied_version IS
+COMMENT ON COLUMN control.blueprint_tenant_application.applied_version IS
     'Snapshot of blueprint base_version at time of application.';
-COMMENT ON COLUMN control.tenant_blueprint_application.applied_by IS
+COMMENT ON COLUMN control.blueprint_tenant_application.applied_by IS
     'Principal who triggered provisioning. NULL when applied by automation.';
 
 
@@ -6553,6 +7041,17 @@ CREATE TABLE IF NOT EXISTS control.entity_flow_field (
     placeholder             text,
     sort_order              smallint     NOT NULL DEFAULT 0,
 
+    -- Binding-level metadata. Free-form jsonb but with reserved keys:
+    --   target.kind           — 'column' (default) | 'comment'
+    --   target.context_type   — master.comment_type code (when kind='comment')
+    --   target.comment_intent — master.comment_intent code (when kind='comment')
+    --   target.scope          — 'entity' | 'workflow_request' | 'lifecycle_event'
+    --   target.visibility     — 'public' | 'internal' | 'private'
+    -- Drives the generic flow handler dispatcher: a binding with
+    -- target.kind='comment' routes its value into master.comment instead of
+    -- writing to a doc column.
+    metadata                jsonb        NOT NULL DEFAULT '{}'::jsonb,
+
     created_at              timestamptz  NOT NULL DEFAULT now(),
     created_by              uuid         NOT NULL,
     updated_at              timestamptz,
@@ -6578,7 +7077,8 @@ CREATE TABLE IF NOT EXISTS control.entity_flow_field (
         'total','subtotal','addition','deduction','line_badge','warning','meta')),
     CONSTRAINT eff_span_chk           CHECK (span IN (1, 2, 3)),
     CONSTRAINT eff_visible_chk        CHECK (visible_when  IS NULL OR jsonb_typeof(visible_when)  = 'object'),
-    CONSTRAINT eff_required_chk       CHECK (required_when IS NULL OR jsonb_typeof(required_when) = 'object')
+    CONSTRAINT eff_required_chk       CHECK (required_when IS NULL OR jsonb_typeof(required_when) = 'object'),
+    CONSTRAINT eff_metadata_obj_chk   CHECK (jsonb_typeof(metadata) = 'object')
 );
 
 CREATE INDEX IF NOT EXISTS eff_step_idx  ON control.entity_flow_field (flow_step_id, sort_order);

@@ -205,6 +205,26 @@ COMMENT ON FUNCTION master.trg_normalize_contact_link_value() IS
     'Must fire BEFORE lookup-validation and uniqueness triggers.';
 
 
+-- Root/master owners keep one default contact bucket. Purposeful routing roles
+-- stay on role owners (supplier/customer/etc.) or document contact snapshots.
+CREATE OR REPLACE FUNCTION master.trg_contact_link_root_owner_default_purpose()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+BEGIN
+    IF NEW.owner_type IN ('tenant', 'legal_entity', 'company_code', 'site', 'business_partner') THEN
+        NEW.purpose := 'default';
+        NEW.role_qualifier := NULL;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_contact_link_root_owner_default_purpose() IS
+    'Normalizes contact_link purpose to default for tenant, legal_entity, '
+    'company_code, site, and business_partner owners. Role-specific contact '
+    'routing belongs on role owners or document contact snapshots.';
+
+
 -- Sync login_email cache on principal when contact_link changes.
 -- Fires after INSERT, UPDATE, or DELETE on contact_link.
 --
@@ -220,12 +240,21 @@ DECLARE
     v_new_relevant boolean := false;
     v_new_email    text;
 BEGIN
-    -- Determine relevance of OLD and NEW sides
+    -- Determine relevance of OLD and NEW sides.
+    -- Auth purposes (login/recovery/mfa/verification) forbid role_qualifier per
+    -- contact_link_auth_no_qualifier_chk; the explicit IS NULL filter here is
+    -- defensive documentation in case the CHECK is ever loosened.
     IF TG_OP IN ('UPDATE', 'DELETE') THEN
-        v_old_relevant := (OLD.owner_type = 'principal' AND OLD.channel_type = 'email' AND OLD.purpose = 'login');
+        v_old_relevant := (OLD.owner_type = 'principal'
+                       AND OLD.channel_type = 'email'
+                       AND OLD.purpose = 'login'
+                       AND OLD.role_qualifier IS NULL);
     END IF;
     IF TG_OP IN ('INSERT', 'UPDATE') THEN
-        v_new_relevant := (NEW.owner_type = 'principal' AND NEW.channel_type = 'email' AND NEW.purpose = 'login');
+        v_new_relevant := (NEW.owner_type = 'principal'
+                       AND NEW.channel_type = 'email'
+                       AND NEW.purpose = 'login'
+                       AND NEW.role_qualifier IS NULL);
     END IF;
 
     -- Early exit if neither side is a principal login email row
@@ -244,11 +273,12 @@ BEGIN
             SELECT lower(trim(cl.value))
               INTO v_new_email
               FROM master.contact_link cl
-             WHERE cl.tenant_id    = OLD.tenant_id
+             WHERE cl.tenant_id      = OLD.tenant_id
                AND cl.owner_id     = OLD.owner_id
                AND cl.owner_type   = 'principal'
                AND cl.channel_type = 'email'
                AND cl.purpose      = 'login'
+               AND cl.role_qualifier IS NULL
                AND cl.is_primary   = true
                AND cl.is_verified  = true
                AND cl.status       = 'active'
@@ -989,44 +1019,59 @@ RETURNS TABLE (
 LANGUAGE sql STABLE PARALLEL SAFE
 SET search_path = master
 AS $$
-    -- 1. Exact purpose match
-    SELECT
-        al.address_id,
-        al.purpose          AS purpose_matched,
-        false               AS is_fallback
-    FROM master.address_link al
-    WHERE al.tenant_id      = p_tenant_id
-      AND al.owner_type     = p_owner_type
-      AND al.owner_id       = p_owner_id
-      AND al.purpose        = p_purpose
-      AND al.is_primary     = true
-      AND al.effective_from <= CURRENT_DATE
-      AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+    -- Tie-break columns (is_primary, effective_from) must live in the UNION ALL
+    -- output for ORDER BY to reference them; outer SELECT trims back to the
+    -- RETURNS TABLE signature.
+    SELECT contact_link_addr_id, purpose_matched, is_fallback
+    FROM (
+        -- 1. Exact purpose match
+        SELECT
+            al.address_id     AS contact_link_addr_id,
+            al.purpose        AS purpose_matched,
+            false             AS is_fallback,
+            al.is_primary,
+            al.effective_from
+        FROM master.address_link al
+        WHERE al.tenant_id      = p_tenant_id
+          AND al.owner_type     = p_owner_type
+          AND al.owner_id       = p_owner_id
+          AND al.purpose        = p_purpose
+          AND al.is_primary     = true
+          AND al.effective_from <= CURRENT_DATE
+          AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
 
-    UNION ALL
+        UNION ALL
 
-    -- 2. Default fallback (only fires when p_purpose is not already 'default')
-    SELECT
-        al.address_id,
-        'default'           AS purpose_matched,
-        true                AS is_fallback
-    FROM master.address_link al
-    WHERE p_purpose         <> 'default'
-      AND al.tenant_id      = p_tenant_id
-      AND al.owner_type     = p_owner_type
-      AND al.owner_id       = p_owner_id
-      AND al.purpose        = 'default'
-      AND al.is_primary     = true
-      AND al.effective_from <= CURRENT_DATE
-      AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
-
-    ORDER BY is_fallback     -- exact (false) sorts before fallback (true)
+        -- 2. Default fallback (only fires when p_purpose is not already 'default')
+        SELECT
+            al.address_id,
+            'default'         AS purpose_matched,
+            true              AS is_fallback,
+            al.is_primary,
+            al.effective_from
+        FROM master.address_link al
+        WHERE p_purpose         <> 'default'
+          AND al.tenant_id      = p_tenant_id
+          AND al.owner_type     = p_owner_type
+          AND al.owner_id       = p_owner_id
+          AND al.purpose        = 'default'
+          AND al.is_primary     = true
+          AND al.effective_from <= CURRENT_DATE
+          AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+    ) candidates
+    -- Deterministic tie-breakers (defensive in case primary uniqueness is breached)
+    ORDER BY
+        is_fallback,                      -- exact (false) before fallback (true)
+        is_primary     DESC NULLS LAST,
+        effective_from DESC NULLS LAST,   -- recency proxy (address_link has no updated_at on hot path)
+        contact_link_addr_id
     LIMIT 1;
 $$;
 
 COMMENT ON FUNCTION master.fn_resolve_address(uuid, text, uuid, text) IS
   'Resolves the active primary address for owner + purpose. '
   'Chain: exact purpose match → purpose=''default'' fallback → NULL. '
+  'Deterministic tie-breakers: is_fallback, is_primary DESC, effective_from DESC, address_id. '
   'Returns (address_id, purpose_matched, is_fallback).';
 
 
@@ -1283,12 +1328,10 @@ COMMENT ON FUNCTION master.fn_create_owner_contact_address IS
 -- Resolution chain (supplier / customer):
 --   1. Role exact:   address_link (owner_type=<role>, purpose=p_purpose)
 --   2. Role default: address_link (owner_type=<role>, purpose='default')      [skipped if p_purpose='default']
---   3. BP exact:     address_link (owner_type='business_partner', purpose=p_purpose)
---   4. BP default:   address_link (owner_type='business_partner', purpose='default') [skipped if p_purpose='default']
---   5. BP fallback:  address_link (owner_type='business_partner', purpose IN ('registered','hq'))
---   6. NULL
+--   3. BP default:   address_link (owner_type='business_partner', purpose='default')
+--   4. NULL
 --
--- For owner_type='business_partner': delegates directly to fn_resolve_address.
+-- For owner_type='business_partner': resolves only the BP default address.
 -- Returns (address_id, purpose_matched, source, is_fallback).
 -- source = 'role' | 'business_partner'
 -- ============================================================================
@@ -1310,13 +1353,23 @@ AS $$
 DECLARE
     v_bp_id uuid;
 BEGIN
-    -- Business partner: delegate to the single-owner resolver
+    -- Business partner roots expose one canonical default address.
     IF p_owner_type = 'business_partner' THEN
         RETURN QUERY
-            SELECT r.address_id, r.purpose_matched,
-                   'business_partner'::text, r.is_fallback
-            FROM master.fn_resolve_address(
-                p_tenant_id, 'business_partner', p_owner_id, p_purpose) r;
+            SELECT al.address_id,
+                   'default'::text,
+                   'business_partner'::text,
+                   (COALESCE(p_purpose, 'default') <> 'default')::boolean
+            FROM master.address_link al
+            WHERE al.tenant_id      = p_tenant_id
+              AND al.owner_type     = 'business_partner'
+              AND al.owner_id       = p_owner_id
+              AND al.purpose        = 'default'
+              AND al.is_primary     = true
+              AND al.effective_from <= CURRENT_DATE
+              AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+            ORDER BY al.is_primary DESC NULLS LAST, al.effective_from DESC NULLS LAST, al.id
+            LIMIT 1;
         RETURN;
     END IF;
 
@@ -1331,6 +1384,7 @@ BEGIN
           AND al.is_primary     = true
           AND al.effective_from <= CURRENT_DATE
           AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+        ORDER BY al.is_primary DESC NULLS LAST, al.effective_from DESC NULLS LAST, al.id
         LIMIT 1;
 
     IF FOUND THEN RETURN; END IF;
@@ -1347,6 +1401,7 @@ BEGIN
               AND al.is_primary     = true
               AND al.effective_from <= CURRENT_DATE
               AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+            ORDER BY al.is_primary DESC NULLS LAST, al.effective_from DESC NULLS LAST, al.id
             LIMIT 1;
 
         IF FOUND THEN RETURN; END IF;
@@ -1367,89 +1422,156 @@ BEGIN
 
     IF v_bp_id IS NULL THEN RETURN; END IF;
 
-    -- 3. BP exact purpose
+    -- 3. BP default fallback
     RETURN QUERY
-        SELECT al.address_id, al.purpose, 'business_partner'::text, true::boolean
+        SELECT al.address_id, 'default'::text, 'business_partner'::text, true::boolean
         FROM master.address_link al
         WHERE al.tenant_id      = p_tenant_id
           AND al.owner_type     = 'business_partner'
           AND al.owner_id       = v_bp_id
-          AND al.purpose        = p_purpose
+          AND al.purpose        = 'default'
           AND al.is_primary     = true
           AND al.effective_from <= CURRENT_DATE
           AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
-        LIMIT 1;
-
-    IF FOUND THEN RETURN; END IF;
-
-    -- 4. BP default fallback
-    IF p_purpose <> 'default' THEN
-        RETURN QUERY
-            SELECT al.address_id, 'default'::text, 'business_partner'::text, true::boolean
-            FROM master.address_link al
-            WHERE al.tenant_id      = p_tenant_id
-              AND al.owner_type     = 'business_partner'
-              AND al.owner_id       = v_bp_id
-              AND al.purpose        = 'default'
-              AND al.is_primary     = true
-              AND al.effective_from <= CURRENT_DATE
-              AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
-            LIMIT 1;
-
-        IF FOUND THEN RETURN; END IF;
-    END IF;
-
-    -- 5. BP registered / hq last resort
-    RETURN QUERY
-        SELECT al.address_id, al.purpose, 'business_partner'::text, true::boolean
-        FROM master.address_link al
-        WHERE al.tenant_id      = p_tenant_id
-          AND al.owner_type     = 'business_partner'
-          AND al.owner_id       = v_bp_id
-          AND al.purpose        IN ('registered', 'hq')
-          AND al.is_primary     = true
-          AND al.effective_from <= CURRENT_DATE
-          AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
-        ORDER BY CASE al.purpose WHEN 'registered' THEN 0 ELSE 1 END
+        ORDER BY al.is_primary DESC NULLS LAST, al.effective_from DESC NULLS LAST, al.id
         LIMIT 1;
 END;
 $$;
 
 COMMENT ON FUNCTION master.fn_resolve_party_address(uuid, text, uuid, text) IS
   'BP-aware address resolver. '
-  'Chain: role purpose → role default → BP purpose → BP default → BP registered/hq → NULL. '
-  'owner_type=''business_partner'' delegates to fn_resolve_address. '
+  'Chain: role purpose -> role default -> BP default -> NULL. '
+  'Deterministic tie-breakers at each step: is_primary DESC, effective_from DESC, id. '
+  'owner_type=''business_partner'' resolves only the BP default address. '
   'Returns (address_id, purpose_matched, source, is_fallback).';
 
 
 -- ============================================================================
+-- fn_resolve_contact — single-owner contact resolver with role + qualifier.
+-- Mirror of fn_resolve_address for the contact_link table.
+--
+-- Resolution chain:
+--   1. Exact match  (purpose + role_qualifier + channel)
+--   2. Default fallback  (purpose='default', role_qualifier IS NULL) — only fires
+--      when p_purpose <> 'default'
+--   3. NULL
+--
+-- Deterministic tie-breakers across all branches:
+--   ORDER BY is_fallback, is_primary DESC NULLS LAST, updated_at DESC NULLS LAST, id
+--
+-- Returns (contact_link_id, value, purpose_matched, qualifier_matched, is_fallback).
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.fn_resolve_contact(
+    p_tenant_id     uuid,
+    p_owner_type    text,
+    p_owner_id      uuid,
+    p_purpose       text DEFAULT 'default',
+    p_channel_type  text DEFAULT 'email',     -- 'email' | 'phone' | 'whatsapp' …
+    p_qualifier     text DEFAULT NULL
+)
+RETURNS TABLE (
+    contact_link_id   uuid,
+    value             text,
+    purpose_matched   text,
+    qualifier_matched text,
+    is_fallback       boolean
+)
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path = master
+AS $$
+    -- Tie-break columns (is_primary, updated_at) must live in the UNION ALL
+    -- output for ORDER BY to reference them; outer SELECT trims back to the
+    -- RETURNS TABLE signature.
+    SELECT contact_link_id, value, purpose_matched, qualifier_matched, is_fallback
+    FROM (
+        -- 1. Exact (purpose + qualifier + channel) — preferred
+        SELECT
+            cl.id              AS contact_link_id,
+            cl.value,
+            cl.purpose         AS purpose_matched,
+            cl.role_qualifier  AS qualifier_matched,
+            false              AS is_fallback,
+            cl.is_primary,
+            cl.updated_at
+        FROM master.contact_link cl
+        WHERE cl.tenant_id      = p_tenant_id
+          AND cl.owner_type     = p_owner_type
+          AND cl.owner_id       = p_owner_id
+          AND cl.purpose        = p_purpose
+          AND cl.channel_type   = p_channel_type
+          AND (cl.role_qualifier IS NOT DISTINCT FROM p_qualifier)
+          AND cl.is_primary     = true
+          AND cl.status         = 'active'
+
+        UNION ALL
+
+        -- 2. Default fallback (only fires when p_purpose is not already 'default')
+        SELECT
+            cl.id,
+            cl.value,
+            'default'          AS purpose_matched,
+            NULL::text         AS qualifier_matched,
+            true               AS is_fallback,
+            cl.is_primary,
+            cl.updated_at
+        FROM master.contact_link cl
+        WHERE p_purpose         <> 'default'
+          AND cl.tenant_id      = p_tenant_id
+          AND cl.owner_type     = p_owner_type
+          AND cl.owner_id       = p_owner_id
+          AND cl.purpose        = 'default'
+          AND cl.channel_type   = p_channel_type
+          AND cl.role_qualifier IS NULL
+          AND cl.is_primary     = true
+          AND cl.status         = 'active'
+    ) candidates
+    -- Deterministic tie-breakers (defensive in case primary uniqueness is breached)
+    ORDER BY
+        is_fallback,
+        is_primary DESC NULLS LAST,
+        updated_at DESC NULLS LAST,
+        contact_link_id
+    LIMIT 1;
+$$;
+
+COMMENT ON FUNCTION master.fn_resolve_contact(uuid, text, uuid, text, text, text) IS
+  'Resolves the active primary contact for owner + role + channel. '
+  'Chain: exact (purpose+qualifier) → purpose=''default'' fallback → NULL. '
+  'Deterministic tie-breakers: is_fallback, is_primary DESC, updated_at DESC, id. '
+  'Returns (contact_link_id, value, purpose_matched, qualifier_matched, is_fallback).';
+
+
+-- ============================================================================
 -- fn_resolve_party_contact — BP-aware contact resolver for supplier/customer.
--- Mirrors fn_resolve_party_address for the contact_link table.
+-- Contact resolution keeps its channel/qualifier-aware fallback chain with
+-- default (NOT notification) as the universal fallback purpose. Business-partner
+-- identity contacts are default-only.
 --
 -- Resolution chain (supplier / customer):
---   1. Role exact:        contact_link (owner_type=<role>, channel=p_channel, purpose=p_purpose)
---   2. Role notification: contact_link (owner_type=<role>, channel=p_channel, purpose='notification') [skipped if p_purpose='notification']
---   3. BP exact:          contact_link (owner_type='business_partner', channel=p_channel, purpose=p_purpose)
---   4. BP notification:   contact_link (owner_type='business_partner', channel=p_channel, purpose='notification')
---   5. BP any primary:    contact_link (owner_type='business_partner', channel=p_channel, is_primary=true)
---   6. NULL
+--   1. Role exact:    contact_link (owner_type=<role>, channel=p_channel, purpose=p_purpose, qualifier=p_qualifier)
+--   2. Role default:  contact_link (owner_type=<role>, channel=p_channel, purpose='default')        [skipped if p_purpose='default']
+--   3. BP default:    contact_link (owner_type='business_partner', channel=p_channel, purpose='default')
+--   4. NULL
 --
--- For owner_type='business_partner': resolves directly (steps 3-5 only).
--- Returns (contact_link_id, value, purpose_matched, source, is_fallback).
+-- For owner_type='business_partner': resolves only purpose='default'.
+-- Returns (contact_link_id, value, purpose_matched, qualifier_matched, source, is_fallback).
+-- source = 'role' | 'business_partner'
 -- ============================================================================
 CREATE OR REPLACE FUNCTION master.fn_resolve_party_contact(
     p_tenant_id    uuid,
     p_owner_type   text,
     p_owner_id     uuid,
-    p_channel_type text,           -- 'email' | 'phone' | 'whatsapp' …
-    p_purpose      text DEFAULT 'notification'
+    p_channel_type text,
+    p_purpose      text DEFAULT 'default',
+    p_qualifier    text DEFAULT NULL
 )
 RETURNS TABLE (
-    contact_link_id uuid,
-    value           text,
-    purpose_matched text,
-    source          text,
-    is_fallback     boolean
+    contact_link_id   uuid,
+    value             text,
+    purpose_matched   text,
+    qualifier_matched text,
+    source            text,
+    is_fallback       boolean
 )
 LANGUAGE plpgsql STABLE PARALLEL SAFE
 SET search_path = master, pg_catalog
@@ -1457,89 +1579,74 @@ AS $$
 DECLARE
     v_bp_id uuid;
 BEGIN
-    -- Business partner: resolve directly
+    -- Business partner identity root: default contact only.
     IF p_owner_type = 'business_partner' THEN
-        -- BP exact purpose
         RETURN QUERY
-            SELECT cl.id, cl.value, cl.purpose, 'business_partner'::text, false::boolean
+            SELECT cl.id, cl.value, cl.purpose, cl.role_qualifier,
+                   'business_partner'::text,
+                   (p_purpose IS DISTINCT FROM 'default' OR p_qualifier IS NOT NULL)::boolean
             FROM master.contact_link cl
-            WHERE cl.tenant_id    = p_tenant_id
-              AND cl.owner_type   = 'business_partner'
-              AND cl.owner_id     = p_owner_id
-              AND cl.channel_type = p_channel_type
-              AND cl.purpose      = p_purpose
-              AND cl.is_primary   = true
-              AND cl.is_active    = true
+            WHERE cl.tenant_id      = p_tenant_id
+              AND cl.owner_type     = 'business_partner'
+              AND cl.owner_id       = p_owner_id
+              AND cl.channel_type   = p_channel_type
+              AND cl.purpose        = 'default'
+              AND cl.role_qualifier IS NULL
+              AND cl.is_primary     = true
+              AND cl.status         = 'active'
+            ORDER BY
+                cl.is_primary DESC NULLS LAST,
+                cl.updated_at DESC NULLS LAST,
+                cl.id
             LIMIT 1;
-
-        IF FOUND THEN RETURN; END IF;
-
-        -- BP notification fallback
-        IF p_purpose <> 'notification' THEN
-            RETURN QUERY
-                SELECT cl.id, cl.value, 'notification'::text, 'business_partner'::text, true::boolean
-                FROM master.contact_link cl
-                WHERE cl.tenant_id    = p_tenant_id
-                  AND cl.owner_type   = 'business_partner'
-                  AND cl.owner_id     = p_owner_id
-                  AND cl.channel_type = p_channel_type
-                  AND cl.purpose      = 'notification'
-                  AND cl.is_primary   = true
-                  AND cl.is_active    = true
-                LIMIT 1;
-
-            IF FOUND THEN RETURN; END IF;
-        END IF;
-
-        -- BP any primary
-        RETURN QUERY
-            SELECT cl.id, cl.value, cl.purpose, 'business_partner'::text, true::boolean
-            FROM master.contact_link cl
-            WHERE cl.tenant_id    = p_tenant_id
-              AND cl.owner_type   = 'business_partner'
-              AND cl.owner_id     = p_owner_id
-              AND cl.channel_type = p_channel_type
-              AND cl.is_primary   = true
-              AND cl.is_active    = true
-            ORDER BY cl.created_at
-            LIMIT 1;
-
         RETURN;
     END IF;
 
-    -- 1. Role exact purpose
+    -- 1. Role exact (purpose + qualifier)
     RETURN QUERY
-        SELECT cl.id, cl.value, cl.purpose, 'role'::text, false::boolean
+        SELECT cl.id, cl.value, cl.purpose, cl.role_qualifier,
+               'role'::text, false::boolean
         FROM master.contact_link cl
-        WHERE cl.tenant_id    = p_tenant_id
-          AND cl.owner_type   = p_owner_type
-          AND cl.owner_id     = p_owner_id
-          AND cl.channel_type = p_channel_type
-          AND cl.purpose      = p_purpose
-          AND cl.is_primary   = true
-          AND cl.is_active    = true
+        WHERE cl.tenant_id      = p_tenant_id
+          AND cl.owner_type     = p_owner_type
+          AND cl.owner_id       = p_owner_id
+          AND cl.channel_type   = p_channel_type
+          AND cl.purpose        = p_purpose
+          AND (cl.role_qualifier IS NOT DISTINCT FROM p_qualifier)
+          AND cl.is_primary     = true
+          AND cl.status         = 'active'
+        ORDER BY
+            cl.is_primary DESC NULLS LAST,
+            cl.updated_at DESC NULLS LAST,
+            cl.id
         LIMIT 1;
 
     IF FOUND THEN RETURN; END IF;
 
-    -- 2. Role notification fallback
-    IF p_purpose <> 'notification' THEN
+    -- 2. Role default fallback
+    IF p_purpose <> 'default' THEN
         RETURN QUERY
-            SELECT cl.id, cl.value, 'notification'::text, 'role'::text, true::boolean
+            SELECT cl.id, cl.value, 'default'::text, NULL::text,
+                   'role'::text, true::boolean
             FROM master.contact_link cl
-            WHERE cl.tenant_id    = p_tenant_id
-              AND cl.owner_type   = p_owner_type
-              AND cl.owner_id     = p_owner_id
-              AND cl.channel_type = p_channel_type
-              AND cl.purpose      = 'notification'
-              AND cl.is_primary   = true
-              AND cl.is_active    = true
+            WHERE cl.tenant_id      = p_tenant_id
+              AND cl.owner_type     = p_owner_type
+              AND cl.owner_id       = p_owner_id
+              AND cl.channel_type   = p_channel_type
+              AND cl.purpose        = 'default'
+              AND cl.role_qualifier IS NULL
+              AND cl.is_primary     = true
+              AND cl.status         = 'active'
+            ORDER BY
+                cl.is_primary DESC NULLS LAST,
+                cl.updated_at DESC NULLS LAST,
+                cl.id
             LIMIT 1;
 
         IF FOUND THEN RETURN; END IF;
     END IF;
 
-    -- Resolve the parent BP id
+    -- Resolve the parent BP id for this role
     CASE p_owner_type
         WHEN 'supplier' THEN
             SELECT s.business_partner_id INTO v_bp_id
@@ -1554,58 +1661,278 @@ BEGIN
 
     IF v_bp_id IS NULL THEN RETURN; END IF;
 
-    -- 3. BP exact purpose
+    -- 3. BP default fallback. BP identity contacts are default-only.
     RETURN QUERY
-        SELECT cl.id, cl.value, cl.purpose, 'business_partner'::text, true::boolean
+        SELECT cl.id, cl.value, cl.purpose, cl.role_qualifier,
+               'business_partner'::text, true::boolean
         FROM master.contact_link cl
-        WHERE cl.tenant_id    = p_tenant_id
-          AND cl.owner_type   = 'business_partner'
-          AND cl.owner_id     = v_bp_id
-          AND cl.channel_type = p_channel_type
-          AND cl.purpose      = p_purpose
-          AND cl.is_primary   = true
-          AND cl.is_active    = true
-        LIMIT 1;
-
-    IF FOUND THEN RETURN; END IF;
-
-    -- 4. BP notification fallback
-    IF p_purpose <> 'notification' THEN
-        RETURN QUERY
-            SELECT cl.id, cl.value, 'notification'::text, 'business_partner'::text, true::boolean
-            FROM master.contact_link cl
-            WHERE cl.tenant_id    = p_tenant_id
-              AND cl.owner_type   = 'business_partner'
-              AND cl.owner_id     = v_bp_id
-              AND cl.channel_type = p_channel_type
-              AND cl.purpose      = 'notification'
-              AND cl.is_primary   = true
-              AND cl.is_active    = true
-            LIMIT 1;
-
-        IF FOUND THEN RETURN; END IF;
-    END IF;
-
-    -- 5. BP any primary contact
-    RETURN QUERY
-        SELECT cl.id, cl.value, cl.purpose, 'business_partner'::text, true::boolean
-        FROM master.contact_link cl
-        WHERE cl.tenant_id    = p_tenant_id
-          AND cl.owner_type   = 'business_partner'
-          AND cl.owner_id     = v_bp_id
-          AND cl.channel_type = p_channel_type
-          AND cl.is_primary   = true
-          AND cl.is_active    = true
-        ORDER BY cl.created_at
+        WHERE cl.tenant_id      = p_tenant_id
+          AND cl.owner_type     = 'business_partner'
+          AND cl.owner_id       = v_bp_id
+          AND cl.channel_type   = p_channel_type
+          AND cl.purpose        = 'default'
+          AND cl.role_qualifier IS NULL
+          AND cl.is_primary     = true
+          AND cl.status         = 'active'
+        ORDER BY
+            cl.is_primary DESC NULLS LAST,
+            cl.updated_at DESC NULLS LAST,
+            cl.id
         LIMIT 1;
 END;
 $$;
 
-COMMENT ON FUNCTION master.fn_resolve_party_contact(uuid, text, uuid, text, text) IS
-  'BP-aware contact resolver. '
-  'Chain: role purpose → role notification → BP purpose → BP notification → BP any primary → NULL. '
-  'owner_type=''business_partner'' resolves directly. '
-  'Returns (contact_link_id, value, purpose_matched, source, is_fallback).';
+COMMENT ON FUNCTION master.fn_resolve_party_contact(uuid, text, uuid, text, text, text) IS
+  'BP-aware contact resolver with channel/qualifier fallback. '
+  'Chain: role purpose → role default → BP default → NULL. '
+  'owner_type=''business_partner'' resolves only the BP default contact. '
+  'Returns (contact_link_id, value, purpose_matched, qualifier_matched, source, is_fallback).';
+
+
+-- ============================================================================
+-- fn_resolve_bank_account — single-owner bank resolver with role→purpose translation.
+-- Mirror of fn_resolve_address for the bank_account_link table.
+--
+-- Role translation (document-side role → master-side purpose):
+--   remit_to        → 'disbursement'
+--   collection_to   → 'collection'
+--   house_bank      → 'default'   (tenant/LE/CC own banks)
+--   default         → 'default'
+--
+-- Resolution chain (after translation):
+--   1. Exact purpose match
+--   2. Default fallback  (purpose='default') — only fires when translated purpose <> 'default'
+--   3. NULL
+--
+-- Deterministic tie-breakers across all branches:
+--   ORDER BY is_fallback, is_primary DESC NULLS LAST, effective_from DESC NULLS LAST, id
+--
+-- Note: company_code scope (bank_account_link.company_code_id) is not yet
+-- consumed by this resolver. When a future doc requires per-CC bank routing,
+-- add a p_company_code_id parameter and prefer scoped rows over NULL-scoped.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.fn_resolve_bank_account(
+    p_tenant_id     uuid,
+    p_owner_type    text,
+    p_owner_id      uuid,
+    p_role          text DEFAULT 'default'
+)
+RETURNS TABLE (
+    bank_account_id     uuid,
+    bank_account_link_id uuid,
+    purpose_matched     text,
+    is_fallback         boolean
+)
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path = master
+AS $$
+    -- Tie-break columns (is_primary, effective_from) live in the UNION ALL
+    -- output so the outer ORDER BY can reference them; outer SELECT trims to
+    -- the RETURNS TABLE signature.
+    SELECT bank_account_id, bank_account_link_id, purpose_matched, is_fallback
+    FROM (
+        -- 1. Exact translated-purpose match
+        SELECT
+            bal.bank_account_id,
+            bal.id              AS bank_account_link_id,
+            bal.purpose         AS purpose_matched,
+            false               AS is_fallback,
+            bal.is_primary,
+            bal.effective_from
+        FROM master.bank_account_link bal
+        WHERE bal.tenant_id      = p_tenant_id
+          AND bal.owner_type     = p_owner_type
+          AND bal.owner_id       = p_owner_id
+          AND bal.purpose        = CASE p_role
+                                     WHEN 'remit_to'      THEN 'disbursement'
+                                     WHEN 'collection_to' THEN 'collection'
+                                     WHEN 'house_bank'    THEN 'default'
+                                     ELSE 'default'
+                                   END
+          AND bal.is_primary     = true
+          AND bal.effective_from <= CURRENT_DATE
+          AND (bal.effective_until IS NULL OR bal.effective_until > CURRENT_DATE)
+
+        UNION ALL
+
+        -- 2. Default fallback — only fires if translated purpose is not already 'default'
+        SELECT
+            bal.bank_account_id,
+            bal.id,
+            'default'           AS purpose_matched,
+            true                AS is_fallback,
+            bal.is_primary,
+            bal.effective_from
+        FROM master.bank_account_link bal
+        WHERE CASE p_role
+                WHEN 'remit_to'      THEN 'disbursement'
+                WHEN 'collection_to' THEN 'collection'
+                WHEN 'house_bank'    THEN 'default'
+                ELSE 'default'
+              END <> 'default'
+          AND bal.tenant_id      = p_tenant_id
+          AND bal.owner_type     = p_owner_type
+          AND bal.owner_id       = p_owner_id
+          AND bal.purpose        = 'default'
+          AND bal.is_primary     = true
+          AND bal.effective_from <= CURRENT_DATE
+          AND (bal.effective_until IS NULL OR bal.effective_until > CURRENT_DATE)
+    ) candidates
+    ORDER BY
+        is_fallback,
+        is_primary     DESC NULLS LAST,
+        effective_from DESC NULLS LAST,
+        bank_account_id
+    LIMIT 1;
+$$;
+
+COMMENT ON FUNCTION master.fn_resolve_bank_account(uuid, text, uuid, text) IS
+  'Resolves the active primary bank account for owner + document-side role. '
+  'Role→purpose translation: remit_to→disbursement, collection_to→collection, '
+  'house_bank/default→default. Chain: exact translated purpose → ''default'' fallback → NULL. '
+  'Deterministic tie-breakers: is_fallback, is_primary DESC, effective_from DESC, id. '
+  'Returns (bank_account_id, bank_account_link_id, purpose_matched, is_fallback).';
+
+
+-- ============================================================================
+-- fn_resolve_identity — paired address + email + phone resolver for one role.
+-- Combines fn_resolve_address + two fn_resolve_contact calls (email, phone) in
+-- one query, so callers needing "the identity record for owner+role" don't
+-- repeat the resolution dance. Each component returns an is_fallback flag so
+-- callers can detect when their requested role wasn't an exact match.
+--
+-- All three sub-resolvers are STABLE + PARALLEL SAFE; the planner can inline
+-- the joins. LEFT JOIN LATERAL ON true ensures missing components don't drop
+-- the row — the caller sees NULLs and the *_present booleans.
+--
+-- Note: qualifier is currently passed only to the contact resolvers. The
+-- address resolver does not yet take a qualifier parameter (its role_qualifier
+-- column is captured but not used in the resolution chain in Phase A).
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.fn_resolve_identity(
+    p_tenant_id   uuid,
+    p_owner_type  text,
+    p_owner_id    uuid,
+    p_role        text DEFAULT 'default',
+    p_qualifier   text DEFAULT NULL
+)
+RETURNS TABLE (
+    address_id          uuid,
+    address_link_id     uuid,  -- not exposed today; reserved for future
+    address_line1       text,
+    address_city        text,
+    address_region      text,
+    address_postal      text,
+    address_country     text,
+    address_formatted   text,
+    address_present     boolean,
+    is_address_fallback boolean,
+    email               text,
+    email_link_id       uuid,
+    email_qualifier     text,
+    email_present       boolean,
+    is_email_fallback   boolean,
+    phone               text,
+    phone_link_id       uuid,
+    phone_qualifier     text,
+    phone_present       boolean,
+    is_phone_fallback   boolean
+)
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path = master
+AS $$
+    SELECT
+        ra.address_id,
+        NULL::uuid                        AS address_link_id,
+        a.line1, a.city, a.region, a.postal_code, a.country_code, a.formatted_address,
+        (ra.address_id IS NOT NULL)       AS address_present,
+        COALESCE(ra.is_fallback, false)   AS is_address_fallback,
+
+        re.value, re.contact_link_id, re.qualifier_matched,
+        (re.contact_link_id IS NOT NULL)  AS email_present,
+        COALESCE(re.is_fallback, false)   AS is_email_fallback,
+
+        rp.value, rp.contact_link_id, rp.qualifier_matched,
+        (rp.contact_link_id IS NOT NULL)  AS phone_present,
+        COALESCE(rp.is_fallback, false)   AS is_phone_fallback
+    FROM (SELECT 1 AS dummy) seed
+    -- Address resolver — does not currently consume role_qualifier
+    LEFT JOIN LATERAL master.fn_resolve_address(
+        p_tenant_id, p_owner_type, p_owner_id, p_role
+    ) ra ON true
+    LEFT JOIN master.address a
+        ON  a.tenant_id = p_tenant_id
+        AND a.id        = ra.address_id
+    -- Email contact for the same role + qualifier
+    LEFT JOIN LATERAL master.fn_resolve_contact(
+        p_tenant_id, p_owner_type, p_owner_id, p_role, 'email', p_qualifier
+    ) re ON true
+    -- Phone contact for the same role + qualifier
+    LEFT JOIN LATERAL master.fn_resolve_contact(
+        p_tenant_id, p_owner_type, p_owner_id, p_role, 'phone', p_qualifier
+    ) rp ON true;
+$$;
+
+COMMENT ON FUNCTION master.fn_resolve_identity(uuid, text, uuid, text, text) IS
+  'Paired identity resolver — returns address + email + phone for one (owner, role) '
+  'in a single call. Combines fn_resolve_address + fn_resolve_contact(email) + '
+  'fn_resolve_contact(phone). Each component carries its own is_fallback flag. '
+  'Use for "show me the bill-to identity for this BP" type queries — eliminates '
+  'three round-trips. STABLE + PARALLEL SAFE.';
+
+
+-- ============================================================================
+-- fn_check_marketing_consent — gate function for marketing send-path.
+-- Returns true ONLY if the owner has an active opted_in row in
+-- master.contact_marketing_consent that covers the requested channel.
+--
+-- Marketing services MUST call this BEFORE resolving contact_link rows with
+-- purpose=marketing. The routing layer (contact_link) stays pure; the consent
+-- gate is the layer that respects GDPR/CASL/CAN-SPAM opt-out lifecycle.
+--
+-- channel_type semantics:
+--   NULL → check umbrella consent (channel_scope IS NULL means all channels)
+--   'email'/'phone'/... → check umbrella OR explicit channel_scope membership
+--
+-- Returns false (suppress) for ALL non-opted_in statuses — opted_out,
+-- pending_double_opt_in, unknown, and the implicit "no row exists" case all
+-- result in suppression. This is the correct legal default.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.fn_check_marketing_consent(
+    p_tenant_id     uuid,
+    p_owner_type    text,
+    p_owner_id      uuid,
+    p_channel_type  text DEFAULT NULL
+)
+RETURNS boolean
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path = master
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM master.contact_marketing_consent c
+        WHERE c.tenant_id  = p_tenant_id
+          AND c.owner_type = p_owner_type
+          AND c.owner_id   = p_owner_id
+          AND c.status     = 'opted_in'
+          AND (
+            -- Caller asked for umbrella → only succeed if scope is also umbrella
+            (p_channel_type IS NULL AND c.channel_scope IS NULL)
+            -- Caller asked for specific channel → succeed if umbrella OR channel matches
+            OR (p_channel_type IS NOT NULL AND (
+                  c.channel_scope IS NULL
+                  OR p_channel_type = ANY (c.channel_scope)
+            ))
+          )
+    );
+$$;
+
+COMMENT ON FUNCTION master.fn_check_marketing_consent(uuid, text, uuid, text) IS
+  'Marketing consent gate. Returns true ONLY when an opted_in consent row exists '
+  'for the owner and (the caller asked for umbrella consent OR the channel falls '
+  'within the consent scope). Suppression is the default for all other states '
+  '(opted_out, pending_double_opt_in, unknown, no row). Marketing send-path MUST '
+  'call this before resolving any contact_link with purpose=marketing.';
 
 
 -- ============================================================================
@@ -1686,7 +2013,8 @@ CREATE OR REPLACE FUNCTION master.fn_upsert_contact_link(
     p_value         text,
     p_purpose       text    DEFAULT NULL,
     p_is_primary    boolean DEFAULT false,
-    p_actor_id      uuid    DEFAULT NULL
+    p_actor_id      uuid    DEFAULT NULL,
+    p_qualifier     text    DEFAULT NULL
 )
 RETURNS uuid
 LANGUAGE plpgsql
@@ -1706,22 +2034,25 @@ BEGIN
         v_value := trim(p_value);
     END IF;
 
-    -- Identity/value upsert only — always is_primary = false here
+    -- Identity/value upsert only — always is_primary = false here.
+    -- ON CONFLICT target now includes role_qualifier so the same value can
+    -- coexist as (purpose=correspondence, qualifier=NULL) and
+    -- (purpose=correspondence, qualifier='legal_notice').
     INSERT INTO master.contact_link (
         tenant_id, owner_type, owner_id,
-        channel_type, value, purpose,
+        channel_type, value, purpose, role_qualifier,
         is_primary, is_verified, status, created_by
     )
     VALUES (
         p_tenant_id, p_owner_type, p_owner_id,
-        p_channel_type, v_value, p_purpose,
+        p_channel_type, v_value, p_purpose, p_qualifier,
         false, false, 'active', v_actor
     )
     -- PG 15+: column-list inference matches contact_link_value_uq including its
     -- NULLS NOT DISTINCT semantics. Adding NULLS NOT DISTINCT to the ON CONFLICT
     -- clause is valid PG 15 syntax but not required here — PG applies the
     -- index's null handling automatically during conflict detection.
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose)
+    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier)
     DO UPDATE SET
         updated_at = now()
     RETURNING id INTO v_id;
@@ -1736,7 +2067,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION master.fn_upsert_contact_link IS
-    'Canonical contact creation/update. Deduplicates on (owner, channel, value, purpose) '
+    'Canonical contact creation/update. Deduplicates on (owner, channel, value, purpose, role_qualifier) '
     'via contact_link_value_uq. When p_is_primary=true, delegates to '
     'fn_set_primary_contact_link() (locked path). Returns contact_link id. SECURITY DEFINER.';
 
@@ -1783,9 +2114,10 @@ COMMENT ON FUNCTION master.fn_verify_contact_link IS
 
 
 -- fn_set_primary_contact_link — promotes one contact to is_primary = true
--- and demotes all others in the same (owner, channel, purpose) bucket.
--- Uses SELECT ... FOR UPDATE to lock the bucket before mutation, preventing
--- concurrent callers from colliding on the partial unique index.
+-- and demotes all others in the same (owner, channel, purpose, role_qualifier)
+-- bucket. Uses SELECT ... FOR UPDATE to lock the bucket before mutation, preventing
+-- concurrent callers from colliding on the partial unique index
+-- ux_contact_link_one_primary (which now includes role_qualifier).
 CREATE OR REPLACE FUNCTION master.fn_set_primary_contact_link(
     p_tenant_id       uuid,
     p_contact_link_id uuid,
@@ -1801,13 +2133,14 @@ DECLARE
     v_owner_id    uuid;
     v_channel     text;
     v_purpose     text;
+    v_qualifier   text;
     v_actor       uuid := COALESCE(p_actor_id, '00000000-0000-0000-0000-000000000000');
 BEGIN
     PERFORM master.fn_require_tenant_session(p_tenant_id);
 
-    -- Lock the target row and fetch its bucket context
-    SELECT owner_type, owner_id, channel_type, purpose
-      INTO v_owner_type, v_owner_id, v_channel, v_purpose
+    -- Lock the target row and fetch its bucket context (now includes role_qualifier)
+    SELECT owner_type, owner_id, channel_type, purpose, role_qualifier
+      INTO v_owner_type, v_owner_id, v_channel, v_purpose, v_qualifier
       FROM master.contact_link
      WHERE id = p_contact_link_id AND tenant_id = p_tenant_id
        FOR UPDATE;
@@ -1819,25 +2152,28 @@ BEGIN
     END IF;
 
     -- Lock all rows in the bucket to prevent concurrent primary changes
+    -- (bucket key matches ux_contact_link_one_primary index columns)
     PERFORM id FROM master.contact_link
-     WHERE tenant_id    = p_tenant_id
-       AND owner_type   = v_owner_type
-       AND owner_id     = v_owner_id
-       AND channel_type = v_channel
-       AND (purpose IS NOT DISTINCT FROM v_purpose)
+     WHERE tenant_id      = p_tenant_id
+       AND owner_type     = v_owner_type
+       AND owner_id       = v_owner_id
+       AND channel_type   = v_channel
+       AND (purpose        IS NOT DISTINCT FROM v_purpose)
+       AND (role_qualifier IS NOT DISTINCT FROM v_qualifier)
        FOR UPDATE;
 
     -- Step 1: demote existing primaries (safe — removes the constraint conflict)
     UPDATE master.contact_link
        SET is_primary  = false,
            updated_by  = v_actor
-     WHERE tenant_id    = p_tenant_id
-       AND owner_type   = v_owner_type
-       AND owner_id     = v_owner_id
-       AND channel_type = v_channel
-       AND (purpose IS NOT DISTINCT FROM v_purpose)
-       AND is_primary   = true
-       AND id          <> p_contact_link_id;
+     WHERE tenant_id      = p_tenant_id
+       AND owner_type     = v_owner_type
+       AND owner_id       = v_owner_id
+       AND channel_type   = v_channel
+       AND (purpose        IS NOT DISTINCT FROM v_purpose)
+       AND (role_qualifier IS NOT DISTINCT FROM v_qualifier)
+       AND is_primary     = true
+       AND id            <> p_contact_link_id;
 
     -- Step 2: promote the target
     UPDATE master.contact_link
@@ -1849,8 +2185,9 @@ END;
 $$;
 
 COMMENT ON FUNCTION master.fn_set_primary_contact_link IS
-    'Promotes contact_link to is_primary via locked two-step: demote others, then '
-    'promote target. FOR UPDATE locking prevents concurrent collisions. SECURITY DEFINER.';
+    'Promotes contact_link to is_primary via locked two-step: demote others in the same '
+    '(owner, channel, purpose, role_qualifier) bucket, then promote target. FOR UPDATE '
+    'locking prevents concurrent collisions. SECURITY DEFINER.';
 
 
 -- fn_update_tenant_profile — tenant self-service display/metadata update.
@@ -5134,3 +5471,258 @@ COMMENT ON FUNCTION master.fn_resolve_le_subtree_companies IS
     'Recursive CTE walks master.legal_entity.parent_entity_id from the anchor LE down. '
     'Unlike fn_resolve_scope_companies(''legal_entity''), which returns only direct CCs, '
     'this walks the full tree. Used by resolve_allowed_companies().';
+
+
+-- ============================================================================
+-- Phase 3a: Address → Tax Jurisdiction derivation
+-- ============================================================================
+-- master.fn_derive_address_jurisdiction
+--   Resolves the most-specific master.tax_jurisdiction for the given
+--   (country_code, region) pair within a tenant.
+--
+--   Strategy:
+--     1. Build candidate state code:  country_code || dash || normalize(region)
+--     2. Look up state-level tax_jurisdiction WHERE state_region_code = candidate
+--     3. If no state match, look up country-level jurisdiction
+--     4. If no country match, return NULL (admin must add the jurisdiction first)
+--
+-- Used by trg_address_derive_jurisdiction (BEFORE INSERT/UPDATE on master.address).
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION master.fn_derive_address_jurisdiction(
+    p_tenant_id    uuid,
+    p_country_code text,
+    p_region       text
+) RETURNS uuid
+LANGUAGE plpgsql STABLE PARALLEL SAFE
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_country     text;
+    v_region_norm text;
+    v_state_code  text;
+    v_jur_id      uuid;
+BEGIN
+    IF p_country_code IS NULL OR btrim(p_country_code) = '' THEN
+        RETURN NULL;
+    END IF;
+
+    v_country := upper(btrim(p_country_code));
+
+    IF p_region IS NOT NULL AND btrim(p_region) <> '' THEN
+        v_region_norm := upper(btrim(p_region));
+
+        v_state_code := v_country || '-' || v_region_norm;
+        SELECT id INTO v_jur_id
+          FROM master.tax_jurisdiction
+         WHERE tenant_id = p_tenant_id
+           AND country_code = v_country
+           AND state_region_code = v_state_code
+           AND status = 'active'
+         LIMIT 1;
+        IF v_jur_id IS NOT NULL THEN RETURN v_jur_id; END IF;
+
+        v_state_code := (
+            SELECT sr.code FROM shared.state_region sr
+             WHERE sr.country_code = v_country
+               AND (upper(sr.name) = v_region_norm OR sr.code = v_state_code)
+             LIMIT 1
+        );
+        IF v_state_code IS NOT NULL THEN
+            SELECT id INTO v_jur_id
+              FROM master.tax_jurisdiction
+             WHERE tenant_id = p_tenant_id
+               AND country_code = v_country
+               AND state_region_code = v_state_code
+               AND status = 'active'
+             LIMIT 1;
+            IF v_jur_id IS NOT NULL THEN RETURN v_jur_id; END IF;
+        END IF;
+    END IF;
+
+    SELECT id INTO v_jur_id
+      FROM master.tax_jurisdiction
+     WHERE tenant_id = p_tenant_id
+       AND country_code = v_country
+       AND jurisdiction_type = 'country'
+       AND status = 'active'
+     LIMIT 1;
+
+    RETURN v_jur_id;
+END $$;
+
+COMMENT ON FUNCTION master.fn_derive_address_jurisdiction IS
+    'Phase 3a: derives master.tax_jurisdiction_id for an address from its '
+    '(country_code, region) pair. State-level first, country-level fallback, NULL if neither match. '
+    'Used by trg_address_derive_jurisdiction to auto-populate master.address.tax_jurisdiction_id.';
+
+
+-- ============================================================================
+-- Trigger function: derive address.tax_jurisdiction_id on INSERT/UPDATE
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.trg_address_derive_jurisdiction()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+BEGIN
+    IF (TG_OP = 'INSERT')
+       OR (TG_OP = 'UPDATE'
+           AND (NEW.country_code IS DISTINCT FROM OLD.country_code
+                OR NEW.region IS DISTINCT FROM OLD.region))
+    THEN
+        NEW.tax_jurisdiction_id := master.fn_derive_address_jurisdiction(
+            NEW.tenant_id, NEW.country_code, NEW.region
+        );
+    END IF;
+    RETURN NEW;
+END $$;
+
+COMMENT ON FUNCTION master.trg_address_derive_jurisdiction IS
+    'BEFORE INSERT/UPDATE on master.address: auto-derives tax_jurisdiction_id from '
+    '(country_code, region). Recomputes only when those columns change.';
+
+
+-- ============================================================================
+-- Phase 3: Address candidate loader
+-- master.fn_load_address_candidates
+--   Returns active addresses linked to an owner with matching purposes.
+--   Used by the AddressPicker component.
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.fn_load_address_candidates(
+    p_tenant_id   uuid,
+    p_owner_type  text,
+    p_owner_id    uuid,
+    p_purposes    text[]
+) RETURNS TABLE (
+    address_id          uuid,
+    purpose             text,
+    is_primary          boolean,
+    code                text,
+    name                text,
+    line1               text,
+    city                text,
+    region              text,
+    country_code        text,
+    formatted_address   text,
+    tax_jurisdiction_id uuid,
+    jurisdiction_name   text,
+    jurisdiction_code   text
+)
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path = master, pg_catalog
+AS $$
+    SELECT
+        al.address_id,
+        al.purpose,
+        al.is_primary,
+        a.code,
+        a.name,
+        a.line1,
+        a.city,
+        a.region,
+        a.country_code,
+        a.formatted_address,
+        a.tax_jurisdiction_id,
+        tj.name AS jurisdiction_name,
+        tj.code AS jurisdiction_code
+    FROM master.address_link al
+    JOIN master.address a
+      ON a.id = al.address_id AND a.tenant_id = al.tenant_id
+    LEFT JOIN master.tax_jurisdiction tj
+      ON tj.id = a.tax_jurisdiction_id AND tj.tenant_id = a.tenant_id
+   WHERE al.tenant_id  = p_tenant_id
+     AND al.owner_type = p_owner_type
+     AND al.owner_id   = p_owner_id
+     AND al.purpose    = ANY(p_purposes)
+     AND al.effective_from <= CURRENT_DATE
+     AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+     AND a.status      = 'active'
+   ORDER BY array_position(p_purposes, al.purpose),
+            al.is_primary DESC NULLS LAST,
+            a.line1;
+$$;
+
+COMMENT ON FUNCTION master.fn_load_address_candidates IS
+    'Returns active addresses linked to (owner_type, owner_id) with matching purposes. '
+    'Result ordered by purpose precedence (per p_purposes array order) then is_primary. '
+    'Used by the AddressPicker UI component (Phase 4).';
+
+
+-- ============================================================================
+-- Default address resolver
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.fn_resolve_default_address(
+    p_tenant_id  uuid,
+    p_owner_walk jsonb,
+    p_purposes   text[]
+) RETURNS TABLE (
+    address_id          uuid,
+    tax_jurisdiction_id uuid,
+    owner_type          text,
+    owner_id            uuid,
+    purpose             text
+)
+LANGUAGE plpgsql STABLE PARALLEL SAFE
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_step    jsonb;
+    v_otype   text;
+    v_oid     uuid;
+    v_purpose text;
+BEGIN
+    FOR v_step IN SELECT * FROM jsonb_array_elements(p_owner_walk) LOOP
+        v_otype := v_step->>'owner_type';
+        v_oid   := (v_step->>'owner_id')::uuid;
+        IF v_otype IS NULL OR v_oid IS NULL THEN CONTINUE; END IF;
+
+        FOREACH v_purpose IN ARRAY p_purposes LOOP
+            RETURN QUERY
+            SELECT
+                al.address_id,
+                a.tax_jurisdiction_id,
+                al.owner_type,
+                al.owner_id,
+                al.purpose
+              FROM master.address_link al
+              JOIN master.address a
+                ON a.id = al.address_id AND a.tenant_id = al.tenant_id
+             WHERE al.tenant_id  = p_tenant_id
+               AND al.owner_type = v_otype
+               AND al.owner_id   = v_oid
+               AND al.purpose    = v_purpose
+               AND al.effective_from <= CURRENT_DATE
+               AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+               AND a.status      = 'active'
+             ORDER BY al.is_primary DESC NULLS LAST,
+                      al.effective_from DESC NULLS LAST,
+                      al.created_at DESC
+             LIMIT 1;
+            IF FOUND THEN RETURN; END IF;
+        END LOOP;
+    END LOOP;
+END $$;
+
+COMMENT ON FUNCTION master.fn_resolve_default_address IS
+    'Walks owner_walk (jsonb array of owner_type/owner_id) cross purpose chain. '
+    'Returns first matching address_link with derived jurisdiction. Used by '
+    'AddressPicker mount-time default and snapshot stamping at document save.';
+
+
+-- ============================================================================
+-- Jurisdiction-only resolver
+-- ============================================================================
+CREATE OR REPLACE FUNCTION master.fn_resolve_owner_jurisdiction(
+    p_tenant_id  uuid,
+    p_owner_walk jsonb,
+    p_purposes   text[]
+) RETURNS uuid
+LANGUAGE sql STABLE PARALLEL SAFE
+SET search_path = master, pg_catalog
+AS $$
+    SELECT tax_jurisdiction_id
+      FROM master.fn_resolve_default_address(p_tenant_id, p_owner_walk, p_purposes)
+     LIMIT 1;
+$$;
+
+COMMENT ON FUNCTION master.fn_resolve_owner_jurisdiction IS
+    'Returns the derived tax_jurisdiction_id only (convenience wrapper). Used by '
+    'document services to snapshot ship-side jurisdictions on PI/PO/SI/SO lines.';

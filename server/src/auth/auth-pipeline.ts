@@ -389,8 +389,9 @@ export const DEFAULT_REQUIRED_ACTION_MATRIX: Record<string, readonly string[]> =
     "/api/finance/",
     "/api/ap/",
     "/api/ar/",
-    "/api/records/journal_entry",
-    "/api/records/invoice",
+    // Journal entries and invoices land in the GL — caller's email must be verified.
+    "/api/runtime/v1/entities/journal_entry",
+    "/api/runtime/v1/entities/invoice",
   ],
   CONFIGURE_TOTP: [
     "/api/workflow/",

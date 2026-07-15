@@ -6,10 +6,10 @@
 --           with audit details such as `remainingQtyAtSelection`,
 --           `currencyMismatch`, `unitPriceAtSelection`, etc.) that
 --           complements but does not duplicate the structural FK columns
---           (commitment_line_id, goods_receipt_line_id, ses_line_id).
+--           (commitment_line_id, receipt_line_id, service_sheet_line_id).
 --
 --           Shape matches `SourceBindingSchema` in
---           packages/shared/runtime-contracts/src/source-adapter.ts:
+--           packages/shared/runtime-domain/runtime-contracts/src/source-adapter.ts:
 --             {
 --               sourceType:   <registered adapter id>,
 --               sourceDocType: text?,
@@ -21,9 +21,9 @@
 --
 -- Modifies: document.purchase_invoice_line
 --
--- Idempotent: YES — uses ADD COLUMN IF NOT EXISTS + CREATE INDEX IF NOT EXISTS.
+-- Idempotent: YES â€” uses ADD COLUMN IF NOT EXISTS + CREATE INDEX IF NOT EXISTS.
 --
--- Apply order: Phase 7 follow-up DDL — 01s prefix guarantees execution after
+-- Apply order: Phase 7 follow-up DDL â€” 01s prefix guarantees execution after
 --              01e (purchase_invoice / purchase_invoice_line creation) and
 --              after 01f (invoice streamlining). Safe to run multiple times.
 --
@@ -36,7 +36,7 @@
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------
--- §1 Column
+-- Â§1 Column
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE document.purchase_invoice_line
@@ -46,10 +46,10 @@ COMMENT ON COLUMN document.purchase_invoice_line.source_binding IS
     'Source-adapter provenance metadata. Shape: { sourceType, sourceDocType?, sourceDocId?, sourceLineId?, sourceRef?, matchType? }. '
     'Populated by the @athyper/runtime-add-item framework at line-insert time. '
     'NULL for lines created outside the framework (e.g., historical imports, legacy create flows). '
-    'See packages/shared/runtime-contracts/src/source-adapter.ts SourceBindingSchema for the full Zod schema.';
+    'See packages/shared/runtime-domain/runtime-contracts/src/source-adapter.ts SourceBindingSchema for the full Zod schema.';
 
 -- ---------------------------------------------------------------------------
--- §2 Shape guard
+-- Â§2 Shape guard
 --   The framework guarantees `sourceType` is always present when the column
 --   is non-NULL. The check is a string-only minimum; full Zod validation
 --   happens at the application layer.
@@ -76,7 +76,7 @@ BEGIN
 END$$;
 
 -- ---------------------------------------------------------------------------
--- §3 Forensics index
+-- Â§3 Forensics index
 --   GIN index supports forensic queries like:
 --     SELECT * FROM document.purchase_invoice_line
 --      WHERE source_binding @> '{"sourceType":"open_po_line","sourceDocId":"<po-uuid>"}'

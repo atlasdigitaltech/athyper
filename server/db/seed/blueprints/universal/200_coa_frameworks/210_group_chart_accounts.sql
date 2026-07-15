@@ -1,14 +1,5 @@
--- ============================================================================
--- UNIVERSAL — INTERNAL GROUP REPORTING TAXONOMY
--- ============================================================================
--- File:     210_group_chart_accounts.sql
--- Schema:   master.gl_account
--- Purpose:  ~150 GL accounts for COA-GROUP (internal group reporting taxonomy)
---           5 class roots, ~30 L2 headers, ~115 L3 posting accounts per §19
--- Depends:  200_chart_catalog.sql (operating COA catalog)
--- Idempotent: Yes — ON CONFLICT (tenant_id, chart_of_account_id, code) DO UPDATE
--- Spec ref: Section 19 Group Reporting Taxonomy
--- ============================================================================
+-- COA-GROUP (internal group-reporting taxonomy): ~150 master.gl_account rows
+-- — 5 class roots, ~30 L2 headers, ~115 L3 posting accounts (per §19).
 
 DO $seed$
 DECLARE
@@ -23,7 +14,6 @@ DECLARE
     v_posting int;
     v_flag_missing int;
 BEGIN
-    -- ── STAGE A: Resolve tenant & chart ─────────────────────────────────
     v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
     IF v_tid IS NULL THEN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';

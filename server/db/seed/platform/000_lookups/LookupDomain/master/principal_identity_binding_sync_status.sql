@@ -1,8 +1,3 @@
--- LookupDomain/master/principal_identity_binding_sync_status.sql
--- Lookup values for domain: master.principal_identity_binding.sync_status
--- IdP synchronization health for principal identity bindings.
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,

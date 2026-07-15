@@ -1,7 +1,4 @@
--- LookupDomain/master/payment_term_trigger_event.sql
--- Lookup domain + values for master.payment_term_trigger_event
--- is_extensible = true — tenants may add custom trigger events.
--- Idempotent: WHERE NOT EXISTS guard on both domain and value inserts.
+-- is_extensible = true: tenants may add custom trigger events.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

@@ -1,0 +1,36 @@
+{
+  "name": "@athyper/icons",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./modules": "./src/module-icons.ts",
+    "./workspaces": "./src/workspace-icons.ts",
+    "./entity-classes": "./src/entity-class-icons.ts",
+    "./entity-icons": "./src/entity-icons.ts",
+    "./color-tokens": "./src/color-tokens.ts",
+    "./actions": "./src/action-icons.ts",
+    "./statuses": "./src/status-icons.ts",
+    "./custom/*": "./src/custom/*.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "lucide-react": "^1.8.0",
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@athyper/theme": "workspace:*",
+    "lucide-react": "^1.8.0",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

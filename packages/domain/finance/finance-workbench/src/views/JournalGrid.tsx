@@ -29,6 +29,7 @@ import {
   Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Skeleton,
 } from "@athyper/ui/primitives";
+import { DatePicker } from "@athyper/ui/composites";
 import { useJournalList, type JournalEntry } from "../hooks/useJournalList";
 import { useCreateJournal, type CreateJournalLine } from "../hooks/useCreateJournal";
 import { useReverseJournal } from "../hooks/useReverseJournal";
@@ -384,11 +385,10 @@ function NewJournalDialog({
 
           <div className="space-y-1.5">
             <Label className="text-xs">Posting Date</Label>
-            <Input
-              type="date"
-              className="h-8 text-xs"
-              value={postingDate}
-              onChange={(e) => setPostingDate(e.target.value)}
+            <DatePicker
+              kind="businessDate"
+              value={postingDate || null}
+              onChange={(next) => setPostingDate(next ?? "")}
             />
           </div>
 

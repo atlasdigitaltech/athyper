@@ -1,7 +1,4 @@
--- LookupDomain/master/fx_rate_type.sql
--- Lookup values for domain: master.fx_rate_type
--- Used by: fx_rate.rate_type
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: fx_rate.rate_type.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

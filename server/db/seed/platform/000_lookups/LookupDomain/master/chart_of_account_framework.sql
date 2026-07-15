@@ -1,7 +1,3 @@
--- LookupDomain/master/chart_of_account_framework.sql
--- Lookup values for domain: master.chart_of_account_framework
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order, true, 'active',

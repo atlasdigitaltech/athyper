@@ -34,7 +34,7 @@ importers:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../packages/shared/api-contracts
+        version: link:../../packages/shared/data-integration/api-contracts
       '@athyper/app-admin':
         specifier: workspace:*
         version: link:../../packages/apps/admin
@@ -49,70 +49,76 @@ importers:
         version: link:../../packages/apps/admin/shell
       '@athyper/auth-bff':
         specifier: workspace:*
-        version: link:../../packages/shared/auth-bff
+        version: link:../../packages/shared/platform-auth/auth-bff
       '@athyper/auth-common':
         specifier: workspace:*
-        version: link:../../packages/shared/auth-common
+        version: link:../../packages/shared/platform-auth/auth-common
       '@athyper/bff-relay':
         specifier: workspace:*
-        version: link:../../packages/shared/bff-relay
+        version: link:../../packages/shared/data-integration/bff-relay
       '@athyper/brand':
         specifier: workspace:*
-        version: link:../../packages/shared/brand
+        version: link:../../packages/shared/ui-platform/brand
       '@athyper/cascade':
         specifier: workspace:*
-        version: link:../../packages/shared/cascade
+        version: link:../../packages/shared/business-domain/cascade
       '@athyper/collaboration-ui':
         specifier: workspace:*
-        version: link:../../packages/shared/collaboration-ui
+        version: link:../../packages/shared/ui-platform/collaboration-ui
       '@athyper/finance-rules':
         specifier: workspace:*
-        version: link:../../packages/shared/finance-rules
+        version: link:../../packages/shared/business-domain/finance-rules
       '@athyper/i18n':
         specifier: workspace:*
-        version: link:../../packages/shared/i18n
+        version: link:../../packages/shared/shared-infrastructure/i18n
       '@athyper/icons':
         specifier: workspace:*
-        version: link:../../packages/shared/icons
+        version: link:../../packages/shared/ui-platform/icons
       '@athyper/identity-gate':
         specifier: workspace:*
-        version: link:../../packages/shared/identity-gate
+        version: link:../../packages/shared/platform-auth/identity-gate
       '@athyper/me-ui':
         specifier: workspace:*
-        version: link:../../packages/shared/me-ui
+        version: link:../../packages/shared/ui-platform/me-ui
       '@athyper/query':
         specifier: workspace:*
-        version: link:../../packages/shared/query
+        version: link:../../packages/shared/data-integration/query
+      '@athyper/route-manifest-core':
+        specifier: workspace:*
+        version: link:../../packages/shared/data-integration/route-manifest-core
       '@athyper/runtime-contracts':
         specifier: workspace:*
-        version: link:../../packages/shared/runtime-contracts
+        version: link:../../packages/shared/runtime-domain/runtime-contracts
       '@athyper/runtime-list':
         specifier: workspace:*
-        version: link:../../packages/shared/runtime-list
+        version: link:../../packages/shared/runtime-domain/runtime-list
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../../packages/shared/runtime-shared
+        version: link:../../packages/shared/runtime-domain/runtime-shared
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../packages/shared/session-plane
+        version: link:../../packages/shared/platform-auth/session-plane
       '@athyper/session-store':
         specifier: workspace:*
-        version: link:../../packages/shared/session-store
+        version: link:../../packages/shared/platform-auth/session-store
       '@athyper/shell':
         specifier: workspace:*
-        version: link:../../packages/shared/shell
+        version: link:../../packages/shared/ui-platform/shell
+      '@athyper/shell-runtime':
+        specifier: workspace:*
+        version: link:../../packages/shared/runtime-domain/shell-runtime
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../packages/shared/surface-kit
+        version: link:../../packages/shared/ui-platform/surface-kit
       '@athyper/temporal':
         specifier: workspace:*
-        version: link:../../packages/shared/temporal
+        version: link:../../packages/shared/business-domain/temporal
       '@athyper/theme':
         specifier: workspace:*
-        version: link:../../packages/shared/theme
+        version: link:../../packages/shared/ui-platform/theme
       '@athyper/ui':
         specifier: workspace:*
-        version: link:../../packages/shared/ui
+        version: link:../../packages/shared/ui-platform/ui
       '@tanstack/react-query':
         specifier: ^5.99.0
         version: 5.99.0(react@19.2.5)
@@ -134,7 +140,7 @@ importers:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../packages/shared/config
+        version: link:../../packages/shared/data-integration/config
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -170,43 +176,43 @@ importers:
         version: link:../../packages/apps/mesh/shell
       '@athyper/auth-bff':
         specifier: workspace:*
-        version: link:../../packages/shared/auth-bff
+        version: link:../../packages/shared/platform-auth/auth-bff
       '@athyper/bff-relay':
         specifier: workspace:*
-        version: link:../../packages/shared/bff-relay
+        version: link:../../packages/shared/data-integration/bff-relay
       '@athyper/brand':
         specifier: workspace:*
-        version: link:../../packages/shared/brand
+        version: link:../../packages/shared/ui-platform/brand
       '@athyper/i18n':
         specifier: workspace:*
-        version: link:../../packages/shared/i18n
+        version: link:../../packages/shared/shared-infrastructure/i18n
       '@athyper/identity-gate':
         specifier: workspace:*
-        version: link:../../packages/shared/identity-gate
+        version: link:../../packages/shared/platform-auth/identity-gate
       '@athyper/me-ui':
         specifier: workspace:*
-        version: link:../../packages/shared/me-ui
+        version: link:../../packages/shared/ui-platform/me-ui
       '@athyper/mesh-exchange-contracts':
         specifier: workspace:*
-        version: link:../../packages/shared/mesh-exchange-contracts
+        version: link:../../packages/shared/data-integration/mesh-exchange-contracts
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../../packages/shared/runtime-shared
+        version: link:../../packages/shared/runtime-domain/runtime-shared
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../packages/shared/session-plane
+        version: link:../../packages/shared/platform-auth/session-plane
       '@athyper/shell':
         specifier: workspace:*
-        version: link:../../packages/shared/shell
+        version: link:../../packages/shared/ui-platform/shell
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../packages/shared/surface-kit
+        version: link:../../packages/shared/ui-platform/surface-kit
       '@athyper/theme':
         specifier: workspace:*
-        version: link:../../packages/shared/theme
+        version: link:../../packages/shared/ui-platform/theme
       '@athyper/ui':
         specifier: workspace:*
-        version: link:../../packages/shared/ui
+        version: link:../../packages/shared/ui-platform/ui
       '@tanstack/react-query':
         specifier: ^5.99.0
         version: 5.99.0(react@19.2.5)
@@ -228,7 +234,7 @@ importers:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../packages/shared/config
+        version: link:../../packages/shared/data-integration/config
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -252,10 +258,10 @@ importers:
     dependencies:
       '@athyper/api-client':
         specifier: workspace:*
-        version: link:../../packages/shared/api-client
+        version: link:../../packages/shared/data-integration/api-client
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../packages/shared/api-contracts
+        version: link:../../packages/shared/data-integration/api-contracts
       '@athyper/app-neon':
         specifier: workspace:*
         version: link:../../packages/apps/neon
@@ -270,88 +276,88 @@ importers:
         version: link:../../packages/apps/neon/shell
       '@athyper/auth-bff':
         specifier: workspace:*
-        version: link:../../packages/shared/auth-bff
+        version: link:../../packages/shared/platform-auth/auth-bff
       '@athyper/auth-common':
         specifier: workspace:*
-        version: link:../../packages/shared/auth-common
+        version: link:../../packages/shared/platform-auth/auth-common
       '@athyper/bff-relay':
         specifier: workspace:*
-        version: link:../../packages/shared/bff-relay
+        version: link:../../packages/shared/data-integration/bff-relay
       '@athyper/brand':
         specifier: workspace:*
-        version: link:../../packages/shared/brand
+        version: link:../../packages/shared/ui-platform/brand
       '@athyper/cascade':
         specifier: workspace:*
-        version: link:../../packages/shared/cascade
+        version: link:../../packages/shared/business-domain/cascade
       '@athyper/collaboration-ui':
         specifier: workspace:*
-        version: link:../../packages/shared/collaboration-ui
+        version: link:../../packages/shared/ui-platform/collaboration-ui
       '@athyper/content-ui':
         specifier: workspace:*
-        version: link:../../packages/shared/content-ui
+        version: link:../../packages/shared/ui-platform/content-ui
       '@athyper/entity-print':
         specifier: workspace:*
-        version: link:../../packages/shared/entity-print
+        version: link:../../packages/shared/business-domain/entity-print
       '@athyper/finance-workbench':
         specifier: workspace:*
         version: link:../../packages/domain/finance/finance-workbench
       '@athyper/i18n':
         specifier: workspace:*
-        version: link:../../packages/shared/i18n
+        version: link:../../packages/shared/shared-infrastructure/i18n
       '@athyper/icons':
         specifier: workspace:*
-        version: link:../../packages/shared/icons
+        version: link:../../packages/shared/ui-platform/icons
       '@athyper/identity-gate':
         specifier: workspace:*
-        version: link:../../packages/shared/identity-gate
-      '@athyper/runtime-line-item':
-        specifier: workspace:*
-        version: link:../../packages/shared/runtime-line-item
+        version: link:../../packages/shared/platform-auth/identity-gate
       '@athyper/me-ui':
         specifier: workspace:*
-        version: link:../../packages/shared/me-ui
+        version: link:../../packages/shared/ui-platform/me-ui
       '@athyper/metadata-client':
         specifier: workspace:*
-        version: link:../../packages/shared/metadata-client
+        version: link:../../packages/shared/data-integration/metadata-client
       '@athyper/query':
         specifier: workspace:*
-        version: link:../../packages/shared/query
+        version: link:../../packages/shared/data-integration/query
       '@athyper/runtime-add-item':
         specifier: workspace:*
-        version: link:../../packages/shared/runtime-add-item
+        version: link:../../packages/shared/runtime-domain/runtime-add-item
       '@athyper/runtime-canvas':
         specifier: workspace:*
-        version: link:../../packages/shared/runtime-canvas
+        version: link:../../packages/shared/runtime-domain/runtime-canvas
       '@athyper/runtime-contracts':
         specifier: workspace:*
-        version: link:../../packages/shared/runtime-contracts
+        version: link:../../packages/shared/runtime-domain/runtime-contracts
+      '@athyper/runtime-line-item':
+        specifier: workspace:*
+        version: link:../../packages/shared/runtime-domain/runtime-line-item
       '@athyper/runtime-list':
         specifier: workspace:*
-        version: link:../../packages/shared/runtime-list
+        version: link:../../packages/shared/runtime-domain/runtime-list
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../../packages/shared/runtime-shared
+        version: link:../../packages/shared/runtime-domain/runtime-shared
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../packages/shared/session-plane
+        version: link:../../packages/shared/platform-auth/session-plane
       '@athyper/session-store':
         specifier: workspace:*
-        version: link:../../packages/shared/session-store
+        version: link:../../packages/shared/platform-auth/session-store
       '@athyper/shell':
         specifier: workspace:*
-        version: link:../../packages/shared/shell
+        version: link:../../packages/shared/ui-platform/shell
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../packages/shared/surface-kit
+        version: link:../../packages/shared/ui-platform/surface-kit
       '@athyper/temporal':
         specifier: workspace:*
-        version: link:../../packages/shared/temporal
+        version: link:../../packages/shared/business-domain/temporal
       '@athyper/theme':
         specifier: workspace:*
-        version: link:../../packages/shared/theme
+        version: link:../../packages/shared/ui-platform/theme
       '@athyper/ui':
         specifier: workspace:*
-        version: link:../../packages/shared/ui
+        version: link:../../packages/shared/ui-platform/ui
       '@tanstack/react-query':
         specifier: ^5.99.0
         version: 5.99.0(react@19.2.5)
@@ -373,7 +379,7 @@ importers:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../packages/shared/config
+        version: link:../../packages/shared/data-integration/config
       '@tailwindcss/postcss':
         specifier: ^4.2.2
         version: 4.2.2
@@ -400,20 +406,20 @@ importers:
     dependencies:
       '@athyper/collaboration-ui':
         specifier: workspace:*
-        version: link:../../shared/collaboration-ui
+        version: link:../../shared/ui-platform/collaboration-ui
       '@athyper/query':
         specifier: workspace:*
-        version: link:../../shared/query
+        version: link:../../shared/data-integration/query
       '@athyper/runtime-list':
         specifier: workspace:*
-        version: link:../../shared/runtime-list
+        version: link:../../shared/runtime-domain/runtime-list
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../shared/surface-kit
+        version: link:../../shared/ui-platform/surface-kit
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../shared/config
+        version: link:../../shared/data-integration/config
       react:
         specifier: ^19.2.5
         version: 19.2.5
@@ -425,11 +431,11 @@ importers:
     dependencies:
       '@athyper/brand':
         specifier: workspace:*
-        version: link:../../../shared/brand
+        version: link:../../../shared/ui-platform/brand
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -444,14 +450,14 @@ importers:
     dependencies:
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../../shared/session-plane
+        version: link:../../../shared/platform-auth/session-plane
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../../shared/surface-kit
+        version: link:../../../shared/ui-platform/surface-kit
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -466,11 +472,11 @@ importers:
     dependencies:
       '@athyper/i18n':
         specifier: workspace:*
-        version: link:../../../shared/i18n
+        version: link:../../../shared/shared-infrastructure/i18n
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -479,11 +485,11 @@ importers:
     dependencies:
       '@athyper/navigation-core':
         specifier: workspace:*
-        version: link:../../../shared/navigation-core
+        version: link:../../../shared/data-integration/navigation-core
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -492,11 +498,11 @@ importers:
     dependencies:
       '@athyper/route-manifest-core':
         specifier: workspace:*
-        version: link:../../../shared/route-manifest-core
+        version: link:../../../shared/data-integration/route-manifest-core
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -508,26 +514,26 @@ importers:
         version: link:../route-manifest
       '@athyper/brand':
         specifier: workspace:*
-        version: link:../../../shared/brand
+        version: link:../../../shared/ui-platform/brand
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../../shared/session-plane
+        version: link:../../../shared/platform-auth/session-plane
       '@athyper/shell':
         specifier: workspace:*
-        version: link:../../../shared/shell
+        version: link:../../../shared/ui-platform/shell
       '@athyper/shell-runtime':
         specifier: workspace:*
-        version: link:../../../shared/shell-runtime
+        version: link:../../../shared/runtime-domain/shell-runtime
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../../shared/surface-kit
+        version: link:../../../shared/ui-platform/surface-kit
       '@tanstack/react-query':
         specifier: '>=5 <6'
         version: 5.99.0(react@19.2.5)
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -545,26 +551,26 @@ importers:
     dependencies:
       '@athyper/collaboration-ui':
         specifier: workspace:*
-        version: link:../../shared/collaboration-ui
+        version: link:../../shared/ui-platform/collaboration-ui
       '@athyper/mesh-exchange-contracts':
         specifier: workspace:*
-        version: link:../../shared/mesh-exchange-contracts
+        version: link:../../shared/data-integration/mesh-exchange-contracts
       '@athyper/query':
         specifier: workspace:*
-        version: link:../../shared/query
+        version: link:../../shared/data-integration/query
       '@athyper/runtime-list':
         specifier: workspace:*
-        version: link:../../shared/runtime-list
+        version: link:../../shared/runtime-domain/runtime-list
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../shared/session-plane
+        version: link:../../shared/platform-auth/session-plane
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../shared/surface-kit
+        version: link:../../shared/ui-platform/surface-kit
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../shared/config
+        version: link:../../shared/data-integration/config
       react:
         specifier: ^19.2.5
         version: 19.2.5
@@ -576,11 +582,11 @@ importers:
     dependencies:
       '@athyper/brand':
         specifier: workspace:*
-        version: link:../../../shared/brand
+        version: link:../../../shared/ui-platform/brand
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -595,11 +601,11 @@ importers:
     dependencies:
       '@athyper/i18n':
         specifier: workspace:*
-        version: link:../../../shared/i18n
+        version: link:../../../shared/shared-infrastructure/i18n
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -608,11 +614,11 @@ importers:
     dependencies:
       '@athyper/navigation-core':
         specifier: workspace:*
-        version: link:../../../shared/navigation-core
+        version: link:../../../shared/data-integration/navigation-core
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -621,11 +627,11 @@ importers:
     dependencies:
       '@athyper/route-manifest-core':
         specifier: workspace:*
-        version: link:../../../shared/route-manifest-core
+        version: link:../../../shared/data-integration/route-manifest-core
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -637,26 +643,26 @@ importers:
         version: link:../route-manifest
       '@athyper/brand':
         specifier: workspace:*
-        version: link:../../../shared/brand
+        version: link:../../../shared/ui-platform/brand
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../../shared/session-plane
+        version: link:../../../shared/platform-auth/session-plane
       '@athyper/shell':
         specifier: workspace:*
-        version: link:../../../shared/shell
+        version: link:../../../shared/ui-platform/shell
       '@athyper/shell-runtime':
         specifier: workspace:*
-        version: link:../../../shared/shell-runtime
+        version: link:../../../shared/runtime-domain/shell-runtime
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../../shared/surface-kit
+        version: link:../../../shared/ui-platform/surface-kit
       '@tanstack/react-query':
         specifier: '>=5 <6'
         version: 5.99.0(react@19.2.5)
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -674,35 +680,35 @@ importers:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../shared/api-contracts
+        version: link:../../shared/data-integration/api-contracts
       '@athyper/collaboration-ui':
         specifier: workspace:*
-        version: link:../../shared/collaboration-ui
+        version: link:../../shared/ui-platform/collaboration-ui
       '@athyper/entity-print':
         specifier: workspace:*
-        version: link:../../shared/entity-print
+        version: link:../../shared/business-domain/entity-print
       '@athyper/query':
         specifier: workspace:*
-        version: link:../../shared/query
+        version: link:../../shared/data-integration/query
       '@athyper/runtime-contracts':
         specifier: workspace:*
-        version: link:../../shared/runtime-contracts
+        version: link:../../shared/runtime-domain/runtime-contracts
       '@athyper/runtime-list':
         specifier: workspace:*
-        version: link:../../shared/runtime-list
+        version: link:../../shared/runtime-domain/runtime-list
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../../shared/runtime-shared
+        version: link:../../shared/runtime-domain/runtime-shared
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../shared/session-plane
+        version: link:../../shared/platform-auth/session-plane
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../shared/surface-kit
+        version: link:../../shared/ui-platform/surface-kit
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../shared/config
+        version: link:../../shared/data-integration/config
       react:
         specifier: ^19.2.5
         version: 19.2.5
@@ -714,11 +720,11 @@ importers:
     dependencies:
       '@athyper/brand':
         specifier: workspace:*
-        version: link:../../../shared/brand
+        version: link:../../../shared/ui-platform/brand
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -733,14 +739,14 @@ importers:
     dependencies:
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../../shared/session-plane
+        version: link:../../../shared/platform-auth/session-plane
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../../shared/surface-kit
+        version: link:../../../shared/ui-platform/surface-kit
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -755,11 +761,11 @@ importers:
     dependencies:
       '@athyper/i18n':
         specifier: workspace:*
-        version: link:../../../shared/i18n
+        version: link:../../../shared/shared-infrastructure/i18n
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -768,20 +774,20 @@ importers:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../../shared/api-contracts
+        version: link:../../../shared/data-integration/api-contracts
       '@athyper/icons':
         specifier: workspace:*
-        version: link:../../../shared/icons
+        version: link:../../../shared/ui-platform/icons
       '@athyper/navigation-core':
         specifier: workspace:*
-        version: link:../../../shared/navigation-core
+        version: link:../../../shared/data-integration/navigation-core
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../../shared/session-plane
+        version: link:../../../shared/platform-auth/session-plane
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       lucide-react:
         specifier: ^1.8.0
         version: 1.8.0(react@19.2.5)
@@ -796,11 +802,11 @@ importers:
     dependencies:
       '@athyper/route-manifest-core':
         specifier: workspace:*
-        version: link:../../../shared/route-manifest-core
+        version: link:../../../shared/data-integration/route-manifest-core
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -812,26 +818,26 @@ importers:
         version: link:../route-manifest
       '@athyper/brand':
         specifier: workspace:*
-        version: link:../../../shared/brand
+        version: link:../../../shared/ui-platform/brand
       '@athyper/session-plane':
         specifier: workspace:*
-        version: link:../../../shared/session-plane
+        version: link:../../../shared/platform-auth/session-plane
       '@athyper/shell':
         specifier: workspace:*
-        version: link:../../../shared/shell
+        version: link:../../../shared/ui-platform/shell
       '@athyper/shell-runtime':
         specifier: workspace:*
-        version: link:../../../shared/shell-runtime
+        version: link:../../../shared/runtime-domain/shell-runtime
       '@athyper/surface-kit':
         specifier: workspace:*
-        version: link:../../../shared/surface-kit
+        version: link:../../../shared/ui-platform/surface-kit
       '@tanstack/react-query':
         specifier: '>=5 <6'
         version: 5.99.0(react@19.2.5)
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -849,23 +855,23 @@ importers:
     dependencies:
       '@athyper/finance-rules':
         specifier: workspace:*
-        version: link:../../../shared/finance-rules
+        version: link:../../../shared/business-domain/finance-rules
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../../../shared/runtime-shared
+        version: link:../../../shared/runtime-domain/runtime-shared
     devDependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../../shared/api-contracts
+        version: link:../../../shared/data-integration/api-contracts
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@athyper/theme':
         specifier: workspace:*
-        version: link:../../../shared/theme
+        version: link:../../../shared/ui-platform/theme
       '@athyper/ui':
         specifier: workspace:*
-        version: link:../../../shared/ui
+        version: link:../../../shared/ui-platform/ui
       '@tanstack/react-query':
         specifier: ^5.99.0
         version: 5.99.0(react@19.2.5)
@@ -886,44 +892,44 @@ importers:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../../shared/api-contracts
+        version: link:../../../shared/data-integration/api-contracts
       '@athyper/content-ui':
         specifier: workspace:*
-        version: link:../../../shared/content-ui
+        version: link:../../../shared/ui-platform/content-ui
       '@athyper/domain-widgets':
         specifier: workspace:*
-        version: link:../../../shared/domain-widgets
-      '@athyper/runtime-line-item':
-        specifier: workspace:*
-        version: link:../../../shared/runtime-line-item
+        version: link:../../../shared/business-domain/domain-widgets
       '@athyper/metadata-client':
         specifier: workspace:*
-        version: link:../../../shared/metadata-client
+        version: link:../../../shared/data-integration/metadata-client
+      '@athyper/runtime-line-item':
+        specifier: workspace:*
+        version: link:../../../shared/runtime-domain/runtime-line-item
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../../../shared/runtime-shared
+        version: link:../../../shared/runtime-domain/runtime-shared
       '@tanstack/react-virtual':
         specifier: ^3.13.0
         version: 3.14.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@athyper/entity-runtime':
         specifier: workspace:*
         version: link:../entity-runtime
       '@athyper/icons':
         specifier: workspace:*
-        version: link:../../../shared/icons
+        version: link:../../../shared/ui-platform/icons
       '@athyper/theme':
         specifier: workspace:*
-        version: link:../../../shared/theme
+        version: link:../../../shared/ui-platform/theme
       '@athyper/ui':
         specifier: workspace:*
-        version: link:../../../shared/ui
+        version: link:../../../shared/ui-platform/ui
       '@athyper/workflow-ui':
         specifier: workspace:*
-        version: link:../../../shared/workflow-ui
+        version: link:../../../shared/ui-platform/workflow-ui
       '@tanstack/react-query':
         specifier: ^5.99.0
         version: 5.99.0(react@19.2.5)
@@ -953,50 +959,50 @@ importers:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../../shared/api-contracts
+        version: link:../../../shared/data-integration/api-contracts
       '@athyper/collaboration-ui':
         specifier: workspace:*
-        version: link:../../../shared/collaboration-ui
+        version: link:../../../shared/ui-platform/collaboration-ui
       '@athyper/content-ui':
         specifier: workspace:*
-        version: link:../../../shared/content-ui
+        version: link:../../../shared/ui-platform/content-ui
       '@athyper/domain-widgets':
         specifier: workspace:*
-        version: link:../../../shared/domain-widgets
+        version: link:../../../shared/business-domain/domain-widgets
       '@athyper/entity-print':
         specifier: workspace:*
-        version: link:../../../shared/entity-print
+        version: link:../../../shared/business-domain/entity-print
       '@athyper/metadata-client':
         specifier: workspace:*
-        version: link:../../../shared/metadata-client
+        version: link:../../../shared/data-integration/metadata-client
       '@athyper/query':
         specifier: workspace:*
-        version: link:../../../shared/query
+        version: link:../../../shared/data-integration/query
       '@athyper/runtime-bulk-actions':
         specifier: workspace:*
-        version: link:../../../shared/runtime-bulk-actions
+        version: link:../../../shared/runtime-domain/runtime-bulk-actions
       '@athyper/runtime-canvas':
         specifier: workspace:*
-        version: link:../../../shared/runtime-canvas
+        version: link:../../../shared/runtime-domain/runtime-canvas
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../../../shared/runtime-shared
+        version: link:../../../shared/runtime-domain/runtime-shared
       '@athyper/workflow-ui':
         specifier: workspace:*
-        version: link:../../../shared/workflow-ui
+        version: link:../../../shared/ui-platform/workflow-ui
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       '@athyper/icons':
         specifier: workspace:*
-        version: link:../../../shared/icons
+        version: link:../../../shared/ui-platform/icons
       '@athyper/theme':
         specifier: workspace:*
-        version: link:../../../shared/theme
+        version: link:../../../shared/ui-platform/theme
       '@athyper/ui':
         specifier: workspace:*
-        version: link:../../../shared/ui
+        version: link:../../../shared/ui-platform/ui
       '@tanstack/react-query':
         specifier: ^5.99.0
         version: 5.99.0(react@19.2.5)
@@ -1017,7 +1023,7 @@ importers:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1026,12 +1032,124 @@ importers:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../../../shared/config
+        version: link:../../../shared/data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/shared/api-client:
+  packages/shared/business-domain/cascade:
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/shared/business-domain/domain-widgets:
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@athyper/theme':
+        specifier: workspace:*
+        version: link:../../ui-platform/theme
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/business-domain/entity-print:
+    dependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../data-integration/api-contracts
+      '@athyper/runtime-contracts':
+        specifier: workspace:*
+        version: link:../../runtime-domain/runtime-contracts
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../../runtime-domain/runtime-shared
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@athyper/theme':
+        specifier: workspace:*
+        version: link:../../ui-platform/theme
+      '@athyper/ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/ui
+      '@tanstack/react-query':
+        specifier: ^5.99.0
+        version: 5.99.0(react@19.2.5)
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/business-domain/finance-rules:
+    dependencies:
+      '@athyper/temporal':
+        specifier: workspace:*
+        version: link:../temporal
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^2.1.9
+        version: 2.1.9(@types/node@25.6.0)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.46.1)
+
+  packages/shared/business-domain/print-templates:
+    dependencies:
+      '@athyper/entity-print':
+        specifier: workspace:*
+        version: link:../entity-print
+    devDependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../data-integration/api-contracts
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/business-domain/temporal:
+    dependencies:
+      '@athyper/runtime-contracts':
+        specifier: workspace:*
+        version: link:../../runtime-domain/runtime-contracts
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^2.1.9
+        version: 2.1.9(@types/node@25.6.0)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.46.1)
+
+  packages/shared/data-integration/api-client:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
@@ -1047,7 +1165,7 @@ importers:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/shared/api-contracts:
+  packages/shared/data-integration/api-contracts:
     dependencies:
       zod:
         specifier: ^4.3.6
@@ -1066,14 +1184,143 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/shared/auth-bff:
+  packages/shared/data-integration/bff-relay:
+    dependencies:
+      '@athyper/auth-bff':
+        specifier: workspace:*
+        version: link:../../platform-auth/auth-bff
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+      next:
+        specifier: ^16.2.4
+        version: 16.2.4(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/data-integration/config:
+    dependencies:
+      '@athyper/tsconfig':
+        specifier: workspace:*
+        version: link:../../../../tooling/tsconfig
+
+  packages/shared/data-integration/core:
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/data-integration/mesh-exchange-contracts:
+    dependencies:
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/data-integration/metadata-client:
+    dependencies:
+      '@athyper/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../api-contracts
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/shared/data-integration/navigation-core:
+    dependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../api-contracts
+      '@athyper/icons':
+        specifier: workspace:*
+        version: link:../../ui-platform/icons
+      '@athyper/session-plane':
+        specifier: workspace:*
+        version: link:../../platform-auth/session-plane
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../config
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/data-integration/query:
+    dependencies:
+      '@athyper/api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../api-contracts
+      '@tanstack/react-query':
+        specifier: ^5.99.0
+        version: 5.99.0(react@19.2.5)
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../config
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/data-integration/route-manifest-core:
+    dependencies:
+      '@athyper/session-plane':
+        specifier: workspace:*
+        version: link:../../platform-auth/session-plane
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/platform-auth/auth-bff:
     dependencies:
       '@athyper/auth-common':
         specifier: workspace:*
         version: link:../auth-common
       '@athyper/runtime-contracts':
         specifier: workspace:*
-        version: link:../runtime-contracts
+        version: link:../../runtime-domain/runtime-contracts
       '@athyper/session-plane':
         specifier: workspace:*
         version: link:../session-plane
@@ -1083,7 +1330,7 @@ importers:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
@@ -1097,11 +1344,11 @@ importers:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/shared/auth-common:
+  packages/shared/platform-auth/auth-common:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1109,30 +1356,468 @@ importers:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/shared/bff-relay:
+  packages/shared/platform-auth/identity-gate:
     dependencies:
       '@athyper/auth-bff':
         specifier: workspace:*
         version: link:../auth-bff
+      '@athyper/brand':
+        specifier: workspace:*
+        version: link:../../ui-platform/brand
+      '@athyper/session-plane':
+        specifier: workspace:*
+        version: link:../session-plane
+      '@athyper/surface-kit':
+        specifier: workspace:*
+        version: link:../../ui-platform/surface-kit
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
-      '@types/node':
-        specifier: ^25.6.0
-        version: 25.6.0
-      next:
-        specifier: ^16.2.4
-        version: 16.2.4(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+        version: link:../../data-integration/config
+      '@tanstack/react-query':
+        specifier: ^5.0.0
+        version: 5.99.0(react@19.2.5)
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/shared/brand:
+  packages/shared/platform-auth/session-plane:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/platform-auth/session-store:
+    dependencies:
+      '@athyper/session-plane':
+        specifier: workspace:*
+        version: link:../session-plane
+      redis:
+        specifier: ^5.12.1
+        version: 5.12.1(@opentelemetry/api@1.9.1)
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/runtime-domain/runtime-add-item:
+    dependencies:
+      '@athyper/runtime-contracts':
+        specifier: workspace:*
+        version: link:../runtime-contracts
+      '@athyper/ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/ui
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@testing-library/dom':
+        specifier: ^10.4.0
+        version: 10.4.1
+      '@testing-library/jest-dom':
+        specifier: ^6.6.3
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.5(react@19.2.5)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/shared/runtime-domain/runtime-bulk-actions:
+    devDependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../data-integration/api-contracts
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@athyper/icons':
+        specifier: workspace:*
+        version: link:../../ui-platform/icons
+      '@athyper/metadata-client':
+        specifier: workspace:*
+        version: link:../../data-integration/metadata-client
+      '@athyper/theme':
+        specifier: workspace:*
+        version: link:../../ui-platform/theme
+      '@athyper/ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/ui
+      '@testing-library/dom':
+        specifier: ^10.4.0
+        version: 10.4.1
+      '@testing-library/jest-dom':
+        specifier: ^6.6.3
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.5(react@19.2.5)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/shared/runtime-domain/runtime-canvas:
+    dependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../data-integration/api-contracts
+      '@athyper/cascade':
+        specifier: workspace:*
+        version: link:../../business-domain/cascade
+      '@athyper/collaboration-ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/collaboration-ui
+      '@athyper/content-ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/content-ui
+      '@athyper/entity-print':
+        specifier: workspace:*
+        version: link:../../business-domain/entity-print
+      '@athyper/finance-rules':
+        specifier: workspace:*
+        version: link:../../business-domain/finance-rules
+      '@athyper/icons':
+        specifier: workspace:*
+        version: link:../../ui-platform/icons
+      '@athyper/query':
+        specifier: workspace:*
+        version: link:../../data-integration/query
+      '@athyper/runtime-contracts':
+        specifier: workspace:*
+        version: link:../runtime-contracts
+      '@athyper/runtime-line-item':
+        specifier: workspace:*
+        version: link:../runtime-line-item
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../runtime-shared
+      '@athyper/session-plane':
+        specifier: workspace:*
+        version: link:../../platform-auth/session-plane
+      '@athyper/surface-kit':
+        specifier: workspace:*
+        version: link:../../ui-platform/surface-kit
+      '@athyper/temporal':
+        specifier: workspace:*
+        version: link:../../business-domain/temporal
+      '@athyper/theme':
+        specifier: workspace:*
+        version: link:../../ui-platform/theme
+      '@athyper/ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/ui
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@tanstack/react-query':
+        specifier: ^5.99.0
+        version: 5.99.0(react@19.2.5)
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/shared/runtime-domain/runtime-contracts:
+    dependencies:
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/shared/runtime-domain/runtime-line-item:
+    dependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../data-integration/api-contracts
+      '@athyper/content-ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/content-ui
+      '@athyper/domain-widgets':
+        specifier: workspace:*
+        version: link:../../business-domain/domain-widgets
+      '@athyper/metadata-client':
+        specifier: workspace:*
+        version: link:../../data-integration/metadata-client
+      '@athyper/query':
+        specifier: workspace:*
+        version: link:../../data-integration/query
+      '@athyper/runtime-add-item':
+        specifier: workspace:*
+        version: link:../runtime-add-item
+      '@athyper/runtime-contracts':
+        specifier: workspace:*
+        version: link:../runtime-contracts
+      '@athyper/runtime-list':
+        specifier: workspace:*
+        version: link:../runtime-list
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../runtime-shared
+      '@athyper/surface-kit':
+        specifier: workspace:*
+        version: link:../../ui-platform/surface-kit
+      '@athyper/theme':
+        specifier: workspace:*
+        version: link:../../ui-platform/theme
+      '@tanstack/react-virtual':
+        specifier: ^3.13.0
+        version: 3.14.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@athyper/icons':
+        specifier: workspace:*
+        version: link:../../ui-platform/icons
+      '@athyper/ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/ui
+      '@tanstack/react-query':
+        specifier: ^5.99.0
+        version: 5.99.0(react@19.2.5)
+      '@testing-library/dom':
+        specifier: ^10.4.0
+        version: 10.4.1
+      '@testing-library/jest-dom':
+        specifier: ^6.6.3
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
+      next:
+        specifier: ^16.2.4
+        version: 16.2.4(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.5(react@19.2.5)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/shared/runtime-domain/runtime-list:
+    dependencies:
+      '@athyper/query':
+        specifier: workspace:*
+        version: link:../../data-integration/query
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@athyper/ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/ui
+      '@tanstack/react-query':
+        specifier: ^5.99.0
+        version: 5.99.0(react@19.2.5)
+      '@testing-library/dom':
+        specifier: ^10.4.0
+        version: 10.4.1
+      '@testing-library/jest-dom':
+        specifier: ^6.6.3
+        version: 6.9.1
+      '@testing-library/react':
+        specifier: ^16.1.0
+        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
+      next:
+        specifier: ^16.2.4
+        version: 16.2.4(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.5(react@19.2.5)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/shared/runtime-domain/runtime-shared:
+    dependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../data-integration/api-contracts
+      '@athyper/cascade':
+        specifier: workspace:*
+        version: link:../../business-domain/cascade
+      '@athyper/runtime-contracts':
+        specifier: workspace:*
+        version: link:../runtime-contracts
+      '@athyper/session-plane':
+        specifier: workspace:*
+        version: link:../../platform-auth/session-plane
+      '@athyper/temporal':
+        specifier: workspace:*
+        version: link:../../business-domain/temporal
+      '@athyper/theme':
+        specifier: workspace:*
+        version: link:../../ui-platform/theme
+      '@tanstack/react-query':
+        specifier: ^5.99.0
+        version: 5.99.0(react@19.2.5)
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@athyper/ui':
+        specifier: workspace:*
+        version: link:../../ui-platform/ui
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+
+  packages/shared/runtime-domain/shell-runtime:
+    dependencies:
+      '@athyper/session-plane':
+        specifier: workspace:*
+        version: link:../../platform-auth/session-plane
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
+      react:
+        specifier: ^19.2.5
+        version: 19.2.5
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/shared-infrastructure/i18n:
+    dependencies:
+      '@formatjs/intl':
+        specifier: ^4.1.6
+        version: 4.1.6
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/shared/ui-platform/brand:
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -1140,26 +1825,14 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/shared/cascade:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/shared/collaboration-ui:
+  packages/shared/ui-platform/collaboration-ui:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../api-contracts
+        version: link:../../data-integration/api-contracts
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../runtime-shared
+        version: link:../../runtime-domain/runtime-shared
       '@tiptap/core':
         specifier: ^2.11.0
         version: 2.27.2(@tiptap/pm@2.27.2)
@@ -1196,7 +1869,7 @@ importers:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@athyper/theme':
         specifier: workspace:*
         version: link:../theme
@@ -1219,27 +1892,21 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/shared/config:
-    dependencies:
-      '@athyper/tsconfig':
-        specifier: workspace:*
-        version: link:../../../tooling/tsconfig
-
-  packages/shared/content-ui:
+  packages/shared/ui-platform/content-ui:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../api-contracts
+        version: link:../../data-integration/api-contracts
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../runtime-shared
+        version: link:../../runtime-domain/runtime-shared
       '@tanstack/react-virtual':
         specifier: ^3.13.0
         version: 3.14.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@athyper/theme':
         specifier: workspace:*
         version: link:../theme
@@ -1277,104 +1944,11 @@ importers:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/shared/core:
+  packages/shared/ui-platform/icons:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/domain-widgets:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@athyper/theme':
-        specifier: workspace:*
-        version: link:../theme
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/entity-print:
-    dependencies:
-      '@athyper/api-contracts':
-        specifier: workspace:*
-        version: link:../api-contracts
-      '@athyper/runtime-contracts':
-        specifier: workspace:*
-        version: link:../runtime-contracts
-      '@athyper/runtime-shared':
-        specifier: workspace:*
-        version: link:../runtime-shared
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@athyper/theme':
-        specifier: workspace:*
-        version: link:../theme
-      '@athyper/ui':
-        specifier: workspace:*
-        version: link:../ui
-      '@tanstack/react-query':
-        specifier: ^5.99.0
-        version: 5.99.0(react@19.2.5)
-      lucide-react:
-        specifier: ^1.8.0
-        version: 1.8.0(react@19.2.5)
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/finance-rules:
-    dependencies:
-      '@athyper/temporal':
-        specifier: workspace:*
-        version: link:../temporal
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^2.1.9
-        version: 2.1.9(@types/node@25.6.0)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.46.1)
-
-  packages/shared/i18n:
-    dependencies:
-      '@formatjs/intl':
-        specifier: ^4.1.6
-        version: 4.1.6
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@types/node':
-        specifier: ^25.6.0
-        version: 25.6.0
-      tsx:
-        specifier: ^4.19.2
-        version: 4.21.0
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/icons:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@athyper/theme':
         specifier: workspace:*
         version: link:../theme
@@ -1391,137 +1965,21 @@ importers:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/shared/identity-gate:
-    dependencies:
-      '@athyper/auth-bff':
-        specifier: workspace:*
-        version: link:../auth-bff
-      '@athyper/brand':
-        specifier: workspace:*
-        version: link:../brand
-      '@athyper/session-plane':
-        specifier: workspace:*
-        version: link:../session-plane
-      '@athyper/surface-kit':
-        specifier: workspace:*
-        version: link:../surface-kit
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@tanstack/react-query':
-        specifier: ^5.0.0
-        version: 5.99.0(react@19.2.5)
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/runtime-line-item:
+  packages/shared/ui-platform/me-ui:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../api-contracts
-      '@athyper/content-ui':
-        specifier: workspace:*
-        version: link:../content-ui
-      '@athyper/domain-widgets':
-        specifier: workspace:*
-        version: link:../domain-widgets
-      '@athyper/metadata-client':
-        specifier: workspace:*
-        version: link:../metadata-client
-      '@athyper/query':
-        specifier: workspace:*
-        version: link:../query
-      '@athyper/runtime-add-item':
-        specifier: workspace:*
-        version: link:../runtime-add-item
-      '@athyper/runtime-contracts':
-        specifier: workspace:*
-        version: link:../runtime-contracts
-      '@athyper/runtime-list':
-        specifier: workspace:*
-        version: link:../runtime-list
+        version: link:../../data-integration/api-contracts
       '@athyper/runtime-shared':
         specifier: workspace:*
-        version: link:../runtime-shared
-      '@athyper/surface-kit':
-        specifier: workspace:*
-        version: link:../surface-kit
-      '@athyper/theme':
-        specifier: workspace:*
-        version: link:../theme
-      '@tanstack/react-virtual':
-        specifier: ^3.13.0
-        version: 3.14.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@athyper/icons':
-        specifier: workspace:*
-        version: link:../icons
-      '@athyper/ui':
-        specifier: workspace:*
-        version: link:../ui
-      '@tanstack/react-query':
-        specifier: ^5.99.0
-        version: 5.99.0(react@19.2.5)
-      '@testing-library/dom':
-        specifier: ^10.4.0
-        version: 10.4.1
-      '@testing-library/jest-dom':
-        specifier: ^6.6.3
-        version: 6.9.1
-      '@testing-library/react':
-        specifier: ^16.1.0
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      jsdom:
-        specifier: ^25.0.1
-        version: 25.0.1
-      lucide-react:
-        specifier: ^1.8.0
-        version: 1.8.0(react@19.2.5)
-      next:
-        specifier: ^16.2.4
-        version: 16.2.4(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      react-dom:
-        specifier: ^19.2.5
-        version: 19.2.5(react@19.2.5)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/shared/me-ui:
-    dependencies:
-      '@athyper/api-contracts':
-        specifier: workspace:*
-        version: link:../api-contracts
-      '@athyper/runtime-shared':
-        specifier: workspace:*
-        version: link:../runtime-shared
+        version: link:../../runtime-domain/runtime-shared
       lucide-react:
         specifier: ^1.8.0
         version: 1.8.0(react@19.2.5)
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@athyper/theme':
         specifier: workspace:*
         version: link:../theme
@@ -1547,428 +2005,14 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/shared/mesh-exchange-contracts:
-    dependencies:
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
+  packages/shared/ui-platform/shell:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/metadata-client:
-    dependencies:
-      '@athyper/api-client':
-        specifier: workspace:*
-        version: link:../api-client
-      '@athyper/api-contracts':
-        specifier: workspace:*
-        version: link:../api-contracts
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/shared/navigation-core:
-    dependencies:
-      '@athyper/api-contracts':
-        specifier: workspace:*
-        version: link:../api-contracts
-      '@athyper/icons':
-        specifier: workspace:*
-        version: link:../icons
-      '@athyper/session-plane':
-        specifier: workspace:*
-        version: link:../session-plane
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      lucide-react:
-        specifier: ^1.8.0
-        version: 1.8.0(react@19.2.5)
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/print-templates:
-    dependencies:
-      '@athyper/entity-print':
-        specifier: workspace:*
-        version: link:../entity-print
-    devDependencies:
-      '@athyper/api-contracts':
-        specifier: workspace:*
-        version: link:../api-contracts
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/query:
-    dependencies:
-      '@athyper/api-client':
-        specifier: workspace:*
-        version: link:../api-client
-      '@athyper/api-contracts':
-        specifier: workspace:*
-        version: link:../api-contracts
-      '@tanstack/react-query':
-        specifier: ^5.99.0
-        version: 5.99.0(react@19.2.5)
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/route-manifest-core:
-    dependencies:
-      '@athyper/session-plane':
-        specifier: workspace:*
-        version: link:../session-plane
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/runtime-add-item:
-    dependencies:
-      '@athyper/runtime-contracts':
-        specifier: workspace:*
-        version: link:../runtime-contracts
-      '@athyper/ui':
-        specifier: workspace:*
-        version: link:../ui
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@testing-library/dom':
-        specifier: ^10.4.0
-        version: 10.4.1
-      '@testing-library/jest-dom':
-        specifier: ^6.6.3
-        version: 6.9.1
-      '@testing-library/react':
-        specifier: ^16.1.0
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      jsdom:
-        specifier: ^25.0.1
-        version: 25.0.1
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      react-dom:
-        specifier: ^19.2.5
-        version: 19.2.5(react@19.2.5)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/shared/runtime-bulk-actions:
-    devDependencies:
-      '@athyper/api-contracts':
-        specifier: workspace:*
-        version: link:../api-contracts
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@athyper/icons':
-        specifier: workspace:*
-        version: link:../icons
-      '@athyper/metadata-client':
-        specifier: workspace:*
-        version: link:../metadata-client
-      '@athyper/theme':
-        specifier: workspace:*
-        version: link:../theme
-      '@athyper/ui':
-        specifier: workspace:*
-        version: link:../ui
-      '@testing-library/dom':
-        specifier: ^10.4.0
-        version: 10.4.1
-      '@testing-library/jest-dom':
-        specifier: ^6.6.3
-        version: 6.9.1
-      '@testing-library/react':
-        specifier: ^16.1.0
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      jsdom:
-        specifier: ^25.0.1
-        version: 25.0.1
-      lucide-react:
-        specifier: ^1.8.0
-        version: 1.8.0(react@19.2.5)
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      react-dom:
-        specifier: ^19.2.5
-        version: 19.2.5(react@19.2.5)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/shared/runtime-canvas:
-    dependencies:
-      '@athyper/api-contracts':
-        specifier: workspace:*
-        version: link:../api-contracts
-      '@athyper/cascade':
-        specifier: workspace:*
-        version: link:../cascade
-      '@athyper/collaboration-ui':
-        specifier: workspace:*
-        version: link:../collaboration-ui
-      '@athyper/content-ui':
-        specifier: workspace:*
-        version: link:../content-ui
-      '@athyper/entity-print':
-        specifier: workspace:*
-        version: link:../entity-print
-      '@athyper/finance-rules':
-        specifier: workspace:*
-        version: link:../finance-rules
-      '@athyper/icons':
-        specifier: workspace:*
-        version: link:../icons
-      '@athyper/runtime-line-item':
-        specifier: workspace:*
-        version: link:../runtime-line-item
-      '@athyper/query':
-        specifier: workspace:*
-        version: link:../query
-      '@athyper/runtime-contracts':
-        specifier: workspace:*
-        version: link:../runtime-contracts
-      '@athyper/runtime-shared':
-        specifier: workspace:*
-        version: link:../runtime-shared
-      '@athyper/session-plane':
-        specifier: workspace:*
-        version: link:../session-plane
-      '@athyper/surface-kit':
-        specifier: workspace:*
-        version: link:../surface-kit
-      '@athyper/temporal':
-        specifier: workspace:*
-        version: link:../temporal
-      '@athyper/theme':
-        specifier: workspace:*
-        version: link:../theme
-      '@athyper/ui':
-        specifier: workspace:*
-        version: link:../ui
-      lucide-react:
-        specifier: ^1.8.0
-        version: 1.8.0(react@19.2.5)
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@tanstack/react-query':
-        specifier: ^5.99.0
-        version: 5.99.0(react@19.2.5)
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/shared/runtime-contracts:
-    dependencies:
-      zod:
-        specifier: ^4.3.6
-        version: 4.3.6
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/shared/runtime-list:
-    dependencies:
-      '@athyper/query':
-        specifier: workspace:*
-        version: link:../query
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@athyper/ui':
-        specifier: workspace:*
-        version: link:../ui
-      '@tanstack/react-query':
-        specifier: ^5.99.0
-        version: 5.99.0(react@19.2.5)
-      '@testing-library/dom':
-        specifier: ^10.4.0
-        version: 10.4.1
-      '@testing-library/jest-dom':
-        specifier: ^6.6.3
-        version: 6.9.1
-      '@testing-library/react':
-        specifier: ^16.1.0
-        version: 16.3.2(@testing-library/dom@10.4.1)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      jsdom:
-        specifier: ^25.0.1
-        version: 25.0.1
-      lucide-react:
-        specifier: ^1.8.0
-        version: 1.8.0(react@19.2.5)
-      next:
-        specifier: ^16.2.4
-        version: 16.2.4(@opentelemetry/api@1.9.1)(@playwright/test@1.60.0)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      react-dom:
-        specifier: ^19.2.5
-        version: 19.2.5(react@19.2.5)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/shared/runtime-shared:
-    dependencies:
-      '@athyper/api-contracts':
-        specifier: workspace:*
-        version: link:../api-contracts
-      '@athyper/cascade':
-        specifier: workspace:*
-        version: link:../cascade
-      '@athyper/runtime-contracts':
-        specifier: workspace:*
-        version: link:../runtime-contracts
-      '@athyper/session-plane':
-        specifier: workspace:*
-        version: link:../session-plane
-      '@athyper/temporal':
-        specifier: workspace:*
-        version: link:../temporal
-      '@athyper/theme':
-        specifier: workspace:*
-        version: link:../theme
-      '@tanstack/react-query':
-        specifier: ^5.99.0
-        version: 5.99.0(react@19.2.5)
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@athyper/ui':
-        specifier: workspace:*
-        version: link:../ui
-      lucide-react:
-        specifier: ^1.8.0
-        version: 1.8.0(react@19.2.5)
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^4.1.4
-        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-
-  packages/shared/session-plane:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/session-store:
-    dependencies:
-      '@athyper/session-plane':
-        specifier: workspace:*
-        version: link:../session-plane
-      redis:
-        specifier: ^5.12.1
-        version: 5.12.1(@opentelemetry/api@1.9.1)
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      '@types/node':
-        specifier: ^25.6.0
-        version: 25.6.0
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/shell:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@athyper/i18n':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../shared-infrastructure/i18n
       '@athyper/icons':
         specifier: workspace:*
         version: link:../icons
@@ -1988,33 +2032,11 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/shared/shell-runtime:
-    dependencies:
-      '@athyper/session-plane':
-        specifier: workspace:*
-        version: link:../session-plane
+  packages/shared/ui-platform/surface-kit:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      lucide-react:
-        specifier: ^1.8.0
-        version: 1.8.0(react@19.2.5)
-      react:
-        specifier: ^19.2.5
-        version: 19.2.5
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/shared/surface-kit:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -2025,23 +2047,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/shared/temporal:
-    dependencies:
-      '@athyper/runtime-contracts':
-        specifier: workspace:*
-        version: link:../runtime-contracts
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../config
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-      vitest:
-        specifier: ^2.1.9
-        version: 2.1.9(@types/node@25.6.0)(jsdom@25.0.1)(lightningcss@1.32.0)(terser@5.46.1)
-
-  packages/shared/theme:
+  packages/shared/ui-platform/theme:
     dependencies:
       clsx:
         specifier: ^2.1.0
@@ -2055,7 +2061,7 @@ importers:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
@@ -2066,17 +2072,17 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/shared/ui:
+  packages/shared/ui-platform/ui:
     dependencies:
       '@athyper/finance-rules':
         specifier: workspace:*
-        version: link:../finance-rules
+        version: link:../../business-domain/finance-rules
       '@athyper/runtime-contracts':
         specifier: workspace:*
-        version: link:../runtime-contracts
+        version: link:../../runtime-domain/runtime-contracts
       '@athyper/temporal':
         specifier: workspace:*
-        version: link:../temporal
+        version: link:../../business-domain/temporal
       '@radix-ui/react-checkbox':
         specifier: ^1.1.0
         version: 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -2128,7 +2134,7 @@ importers:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@athyper/icons':
         specifier: workspace:*
         version: link:../icons
@@ -2160,15 +2166,15 @@ importers:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  packages/shared/workflow-ui:
+  packages/shared/ui-platform/workflow-ui:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../api-contracts
+        version: link:../../data-integration/api-contracts
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
-        version: link:../config
+        version: link:../../data-integration/config
       '@athyper/icons':
         specifier: workspace:*
         version: link:../icons
@@ -2196,18 +2202,18 @@ importers:
       '@athyper/adapter-db':
         specifier: workspace:*
         version: link:packages/adapters/db
-      '@athyper/adapter-memorycache':
+      '@athyper/adapter-memory-cache':
         specifier: workspace:*
-        version: link:packages/adapters/memorycache
-      '@athyper/adapter-objectstorage':
+        version: link:packages/adapters/memory-cache
+      '@athyper/adapter-object-storage':
         specifier: workspace:*
-        version: link:packages/adapters/objectstorage
+        version: link:packages/adapters/object-storage
       '@athyper/auth-common':
         specifier: workspace:*
-        version: link:../packages/shared/auth-common
+        version: link:../packages/shared/platform-auth/auth-common
       '@athyper/runtime-contracts':
         specifier: workspace:*
-        version: link:../packages/shared/runtime-contracts
+        version: link:../packages/shared/runtime-domain/runtime-contracts
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:packages/foundation
@@ -2226,9 +2232,9 @@ importers:
       '@athyper/svc-content':
         specifier: workspace:*
         version: link:packages/services/content
-      '@athyper/svc-docservices':
+      '@athyper/svc-doc-services':
         specifier: workspace:*
-        version: link:packages/services/docservices
+        version: link:packages/services/doc-services
       '@athyper/svc-documents':
         specifier: workspace:*
         version: link:packages/services/documents
@@ -2411,7 +2417,7 @@ importers:
     dependencies:
       '@athyper/core':
         specifier: workspace:*
-        version: link:../../../../packages/shared/core
+        version: link:../../../../packages/shared/data-integration/core
       exceljs:
         specifier: ^4.4.0
         version: 4.4.0
@@ -2444,7 +2450,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  server/packages/adapters/memorycache:
+  server/packages/adapters/memory-cache:
     dependencies:
       ioredis:
         specifier: ^5.9.2
@@ -2463,7 +2469,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  server/packages/adapters/objectstorage:
+  server/packages/adapters/object-storage:
     dependencies:
       '@aws-sdk/client-s3':
         specifier: ^3.1032.0
@@ -2492,7 +2498,7 @@ importers:
     dependencies:
       '@athyper/core':
         specifier: workspace:*
-        version: link:../../../../packages/shared/core
+        version: link:../../../../packages/shared/data-integration/core
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.1
@@ -2509,12 +2515,15 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
   server/packages/foundation:
     dependencies:
-      '@athyper/adapter-objectstorage':
+      '@athyper/adapter-object-storage':
         specifier: workspace:*
-        version: link:../adapters/objectstorage
+        version: link:../adapters/object-storage
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.1
@@ -2564,9 +2573,9 @@ importers:
 
   server/packages/runtime:
     dependencies:
-      '@athyper/adapter-objectstorage':
+      '@athyper/adapter-object-storage':
         specifier: workspace:*
-        version: link:../adapters/objectstorage
+        version: link:../adapters/object-storage
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.1
@@ -2650,9 +2659,9 @@ importers:
 
   server/packages/services/audit:
     dependencies:
-      '@athyper/adapter-objectstorage':
+      '@athyper/adapter-object-storage':
         specifier: workspace:*
-        version: link:../../adapters/objectstorage
+        version: link:../../adapters/object-storage
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
@@ -2695,7 +2704,7 @@ importers:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../../../packages/shared/api-contracts
+        version: link:../../../../packages/shared/data-integration/api-contracts
       '@athyper/svc-ai':
         specifier: workspace:*
         version: link:../ai
@@ -2770,9 +2779,9 @@ importers:
 
   server/packages/services/content:
     dependencies:
-      '@athyper/adapter-objectstorage':
+      '@athyper/adapter-object-storage':
         specifier: workspace:*
-        version: link:../../adapters/objectstorage
+        version: link:../../adapters/object-storage
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
@@ -2811,14 +2820,14 @@ importers:
         specifier: ^4.1.4
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  server/packages/services/docservices:
+  server/packages/services/doc-services:
     dependencies:
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../../../packages/shared/api-contracts
+        version: link:../../../../packages/shared/data-integration/api-contracts
       '@athyper/entity-print':
         specifier: workspace:*
-        version: link:../../../../packages/shared/entity-print
+        version: link:../../../../packages/shared/business-domain/entity-print
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
@@ -2856,9 +2865,12 @@ importers:
 
   server/packages/services/documents:
     dependencies:
-      '@athyper/adapter-objectstorage':
+      '@athyper/adapter-object-storage':
         specifier: workspace:*
-        version: link:../../adapters/objectstorage
+        version: link:../../adapters/object-storage
+      '@athyper/svc-iam':
+        specifier: workspace:*
+        version: link:../iam
       '@athyper/svc-jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -2904,7 +2916,7 @@ importers:
     dependencies:
       '@athyper/finance-rules':
         specifier: workspace:*
-        version: link:../../../../packages/shared/finance-rules
+        version: link:../../../../packages/shared/business-domain/finance-rules
       '@athyper/svc-business':
         specifier: workspace:*
         version: link:../business
@@ -3105,9 +3117,12 @@ importers:
 
   server/packages/services/metadata:
     dependencies:
+      '@athyper/adapter-telemetry':
+        specifier: workspace:*
+        version: link:../../adapters/telemetry
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../../../packages/shared/api-contracts
+        version: link:../../../../packages/shared/data-integration/api-contracts
       '@athyper/svc-iam':
         specifier: workspace:*
         version: link:../iam
@@ -3117,6 +3132,9 @@ importers:
       '@athyper/svc-workflow':
         specifier: workspace:*
         version: link:../workflow
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -3225,15 +3243,18 @@ importers:
 
   server/packages/services/records:
     dependencies:
+      '@athyper/adapter-telemetry':
+        specifier: workspace:*
+        version: link:../../adapters/telemetry
       '@athyper/api-contracts':
         specifier: workspace:*
-        version: link:../../../../packages/shared/api-contracts
+        version: link:../../../../packages/shared/data-integration/api-contracts
       '@athyper/cascade':
         specifier: workspace:*
-        version: link:../../../../packages/shared/cascade
+        version: link:../../../../packages/shared/business-domain/cascade
       '@athyper/finance-rules':
         specifier: workspace:*
-        version: link:../../../../packages/shared/finance-rules
+        version: link:../../../../packages/shared/business-domain/finance-rules
       '@athyper/svc-business':
         specifier: workspace:*
         version: link:../business
@@ -3243,6 +3264,9 @@ importers:
       '@athyper/svc-iam':
         specifier: workspace:*
         version: link:../iam
+      '@athyper/svc-metadata':
+        specifier: workspace:*
+        version: link:../metadata
       '@athyper/svc-platform':
         specifier: workspace:*
         version: link:../platform
@@ -3257,7 +3281,7 @@ importers:
         version: link:../workflow
       '@athyper/temporal':
         specifier: workspace:*
-        version: link:../../../../packages/shared/temporal
+        version: link:../../../../packages/shared/business-domain/temporal
       busboy:
         specifier: ^1.6.0
         version: 1.6.0
@@ -3331,10 +3355,10 @@ importers:
     dependencies:
       '@athyper/cascade':
         specifier: workspace:*
-        version: link:../../../../packages/shared/cascade
+        version: link:../../../../packages/shared/business-domain/cascade
       '@athyper/temporal':
         specifier: workspace:*
-        version: link:../../../../packages/shared/temporal
+        version: link:../../../../packages/shared/business-domain/temporal
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*

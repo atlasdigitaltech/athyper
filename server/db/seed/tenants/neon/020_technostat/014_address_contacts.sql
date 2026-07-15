@@ -6,6 +6,9 @@
 --           master.contact_link, master.contact_email, master.contact_phone
 -- Purpose:  Seed HQ addresses and primary support contacts (email + phone) for
 --           the Technostat tenant, 4 legal entities, and 4 company codes.
+--           Master address links for tenant/legal_entity/company_code/site use
+--           only purpose = 'default'. Document roles are resolved at document
+--           selection time.
 --
 --   Riyadh HQ  (P.O. Box 305099, 11361)  ← tenant + LE-TKSA + CC-TKSA + LE-SSK + CC-SSK
 --   New Cairo Office (11835)              ← LE-TEGY + CC-TEGY + LE-SDTX + CC-SDTX
@@ -108,17 +111,33 @@ BEGIN
 
     INSERT INTO master.address_link (tenant_id, owner_type, owner_id, address_id, purpose, is_primary, created_by)
     VALUES
-        -- Riyadh (5 links)
-        (v_tid, 'tenant',       v_tid,      v_addr_riyadh, 'hq', true, v_su),
-        (v_tid, 'legal_entity', v_le_tksa,  v_addr_riyadh, 'hq', true, v_su),
-        (v_tid, 'company_code', v_cc_tksa,  v_addr_riyadh, 'hq', true, v_su),
-        (v_tid, 'legal_entity', v_le_ssk,   v_addr_riyadh, 'hq', true, v_su),
-        (v_tid, 'company_code', v_cc_ssk,   v_addr_riyadh, 'hq', true, v_su),
-        -- Cairo (4 links)
-        (v_tid, 'legal_entity', v_le_tegy,  v_addr_cairo,  'hq', true, v_su),
-        (v_tid, 'company_code', v_cc_tegy,  v_addr_cairo,  'hq', true, v_su),
-        (v_tid, 'legal_entity', v_le_sdtx,  v_addr_cairo,  'hq', true, v_su),
-        (v_tid, 'company_code', v_cc_sdtx,  v_addr_cairo,  'hq', true, v_su)
+        (v_tid, 'tenant',       v_tid,      v_addr_riyadh, 'default', true, v_su),
+        (v_tid, 'legal_entity', v_le_tksa,  v_addr_riyadh, 'default', true, v_su),
+        (v_tid, 'company_code', v_cc_tksa,  v_addr_riyadh, 'default', true, v_su),
+        (v_tid, 'legal_entity', v_le_ssk,   v_addr_riyadh, 'default', true, v_su),
+        (v_tid, 'company_code', v_cc_ssk,   v_addr_riyadh, 'default', true, v_su),
+        (v_tid, 'legal_entity', v_le_tegy,  v_addr_cairo,  'default', true, v_su),
+        (v_tid, 'company_code', v_cc_tegy,  v_addr_cairo,  'default', true, v_su),
+        (v_tid, 'legal_entity', v_le_sdtx,  v_addr_cairo,  'default', true, v_su),
+        (v_tid, 'company_code', v_cc_sdtx,  v_addr_cairo,  'default', true, v_su)
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+
+    INSERT INTO master.address_link (tenant_id, owner_type, owner_id, address_id, purpose, is_primary, created_by)
+    SELECT
+        v_tid,
+        'site',
+        s.id,
+        CASE WHEN cc.code IN ('TKSA', 'SSK') THEN v_addr_riyadh ELSE v_addr_cairo END,
+        'default',
+        true,
+        v_su
+    FROM master.site s
+    JOIN master.company_code cc
+      ON cc.tenant_id = s.tenant_id
+     AND cc.id = s.company_code_id
+    WHERE s.tenant_id = v_tid
+      AND s.status = 'active'
+      AND cc.code IN ('TKSA', 'SSK', 'TEGY', 'SDTX')
     ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
     -- =========================================================================
@@ -126,253 +145,89 @@ BEGIN
     -- =========================================================================
 
     INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'tenant', v_tid, 'email', 'contactus@technostat.net', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
+    VALUES (v_tid, 'tenant', v_tid, 'email', 'contactus@technostat.net', 'default', true, true, now(), 'active', v_su)
+    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
 
     SELECT id INTO v_cl_id FROM master.contact_link
     WHERE tenant_id = v_tid AND owner_type = 'tenant' AND owner_id = v_tid
-      AND channel_type = 'email' AND value = 'contactus@technostat.net' AND purpose = 'support';
+      AND channel_type = 'email' AND value = 'contactus@technostat.net' AND purpose = 'default';
 
     INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
     VALUES (v_tid, v_cl_id, 'contactus', 'technostat.net', true, v_su)
     ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
 
     INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'tenant', v_tid, 'phone', '+966112455534', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
+    VALUES (v_tid, 'tenant', v_tid, 'phone', '+966112455534', 'default', true, true, now(), 'active', v_su)
+    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
 
     SELECT id INTO v_cl_id FROM master.contact_link
     WHERE tenant_id = v_tid AND owner_type = 'tenant' AND owner_id = v_tid
-      AND channel_type = 'phone' AND value = '+966112455534' AND purpose = 'support';
+      AND channel_type = 'phone' AND value = '+966112455534' AND purpose = 'default';
 
     INSERT INTO master.contact_phone (tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by)
     VALUES (v_tid, v_cl_id, '+966112455534', '966', '112455534', 'landline', v_su)
     ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
 
     -- =========================================================================
-    -- CONTACTS: LE-TKSA (Technostat Group KSA — holding)
+    -- CONTACTS: LE & CC entities (loop-driven)
+    --   • Emails/phones -> purpose='default' for LE/CC root owners
+    --   Per owner_type.allowed_contact_purposes matrix from 001_owner_type.sql
     -- =========================================================================
 
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'legal_entity', v_le_tksa, 'email', 'group@technostat.net', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
+    DECLARE
+        rec record;
+    BEGIN
+        FOR rec IN
+            SELECT * FROM (VALUES
+                ('legal_entity', v_le_tksa, 'group@technostat.net',     'group',     '+966112455534', '966', '112455534'),
+                ('company_code', v_cc_tksa, 'ops.tksa@technostat.net',  'ops.tksa',  '+966112455535', '966', '112455535'),
+                ('legal_entity', v_le_ssk,  'ssk@technostat.net',       'ssk',       '+966112455536', '966', '112455536'),
+                ('company_code', v_cc_ssk,  'ops.ssk@technostat.net',   'ops.ssk',   '+966112455537', '966', '112455537'),
+                ('legal_entity', v_le_tegy, 'egypt@technostat.net',     'egypt',     '+20223456789',  '20',  '223456789'),
+                ('company_code', v_cc_tegy, 'ops.egypt@technostat.net', 'ops.egypt', '+20223456790',  '20',  '223456790'),
+                ('legal_entity', v_le_sdtx, 'sdtx@technostat.net',      'sdtx',      '+20223456791',  '20',  '223456791'),
+                ('company_code', v_cc_sdtx, 'ops.sdtx@technostat.net',  'ops.sdtx',  '+20223456792',  '20',  '223456792')
+            ) AS t(owner_type, owner_id, email, email_local, phone_e164, phone_cc, phone_national)
+        LOOP
+            v_cl_id := NULL;
 
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_tksa
-      AND channel_type = 'email' AND value = 'group@technostat.net' AND purpose = 'support';
+            -- Email channel -> 'default'
+            INSERT INTO master.contact_link (
+                tenant_id, owner_type, owner_id, channel_type, value,
+                purpose, is_primary, is_verified, verified_at, status, created_by
+            ) VALUES (v_tid, rec.owner_type, rec.owner_id::uuid, 'email', rec.email,
+                'default', true, true, now(), 'active', v_su)
+            ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
 
-    INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
-    VALUES (v_tid, v_cl_id, 'group', 'technostat.net', true, v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
+            SELECT id INTO v_cl_id FROM master.contact_link
+            WHERE tenant_id = v_tid AND owner_type = rec.owner_type AND owner_id = rec.owner_id::uuid
+              AND channel_type = 'email' AND value = rec.email AND purpose = 'default';
 
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'legal_entity', v_le_tksa, 'phone', '+966112455534', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
+            INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
+            VALUES (v_tid, v_cl_id, rec.email_local, 'technostat.net', true, v_su)
+            ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
 
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_tksa
-      AND channel_type = 'phone' AND value = '+966112455534' AND purpose = 'support';
+            v_cl_id := NULL;
 
-    INSERT INTO master.contact_phone (tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by)
-    VALUES (v_tid, v_cl_id, '+966112455534', '966', '112455534', 'landline', v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
+            -- Phone channel -> 'default'
+            INSERT INTO master.contact_link (
+                tenant_id, owner_type, owner_id, channel_type, value,
+                purpose, is_primary, is_verified, verified_at, status, created_by
+            ) VALUES (v_tid, rec.owner_type, rec.owner_id::uuid, 'phone', rec.phone_e164,
+                'default', true, true, now(), 'active', v_su)
+            ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
 
-    -- =========================================================================
-    -- CONTACTS: CC-TKSA
-    -- =========================================================================
+            SELECT id INTO v_cl_id FROM master.contact_link
+            WHERE tenant_id = v_tid AND owner_type = rec.owner_type AND owner_id = rec.owner_id::uuid
+              AND channel_type = 'phone' AND value = rec.phone_e164 AND purpose = 'default';
 
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'company_code', v_cc_tksa, 'email', 'ops.tksa@technostat.net', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
+            INSERT INTO master.contact_phone (
+                tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by
+            ) VALUES (v_tid, v_cl_id, rec.phone_e164, rec.phone_cc, rec.phone_national, 'landline', v_su)
+            ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
+        END LOOP;
+    END;
 
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_tksa
-      AND channel_type = 'email' AND value = 'ops.tksa@technostat.net' AND purpose = 'support';
-
-    INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
-    VALUES (v_tid, v_cl_id, 'ops.tksa', 'technostat.net', true, v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'company_code', v_cc_tksa, 'phone', '+966112455535', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_tksa
-      AND channel_type = 'phone' AND value = '+966112455535' AND purpose = 'support';
-
-    INSERT INTO master.contact_phone (tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by)
-    VALUES (v_tid, v_cl_id, '+966112455535', '966', '112455535', 'landline', v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    -- =========================================================================
-    -- CONTACTS: LE-SSK (SSK Saudi — construction subsidiary)
-    -- =========================================================================
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'legal_entity', v_le_ssk, 'email', 'ssk@technostat.net', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_ssk
-      AND channel_type = 'email' AND value = 'ssk@technostat.net' AND purpose = 'support';
-
-    INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
-    VALUES (v_tid, v_cl_id, 'ssk', 'technostat.net', true, v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'legal_entity', v_le_ssk, 'phone', '+966112455536', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_ssk
-      AND channel_type = 'phone' AND value = '+966112455536' AND purpose = 'support';
-
-    INSERT INTO master.contact_phone (tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by)
-    VALUES (v_tid, v_cl_id, '+966112455536', '966', '112455536', 'landline', v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    -- =========================================================================
-    -- CONTACTS: CC-SSK
-    -- =========================================================================
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'company_code', v_cc_ssk, 'email', 'ops.ssk@technostat.net', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_ssk
-      AND channel_type = 'email' AND value = 'ops.ssk@technostat.net' AND purpose = 'support';
-
-    INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
-    VALUES (v_tid, v_cl_id, 'ops.ssk', 'technostat.net', true, v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'company_code', v_cc_ssk, 'phone', '+966112455537', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_ssk
-      AND channel_type = 'phone' AND value = '+966112455537' AND purpose = 'support';
-
-    INSERT INTO master.contact_phone (tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by)
-    VALUES (v_tid, v_cl_id, '+966112455537', '966', '112455537', 'landline', v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    -- =========================================================================
-    -- CONTACTS: LE-TEGY (Technostat Egypt — trading subsidiary)
-    -- =========================================================================
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'legal_entity', v_le_tegy, 'email', 'egypt@technostat.net', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_tegy
-      AND channel_type = 'email' AND value = 'egypt@technostat.net' AND purpose = 'support';
-
-    INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
-    VALUES (v_tid, v_cl_id, 'egypt', 'technostat.net', true, v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'legal_entity', v_le_tegy, 'phone', '+20223456789', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_tegy
-      AND channel_type = 'phone' AND value = '+20223456789' AND purpose = 'support';
-
-    INSERT INTO master.contact_phone (tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by)
-    VALUES (v_tid, v_cl_id, '+20223456789', '20', '223456789', 'landline', v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    -- =========================================================================
-    -- CONTACTS: CC-TEGY
-    -- =========================================================================
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'company_code', v_cc_tegy, 'email', 'ops.egypt@technostat.net', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_tegy
-      AND channel_type = 'email' AND value = 'ops.egypt@technostat.net' AND purpose = 'support';
-
-    INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
-    VALUES (v_tid, v_cl_id, 'ops.egypt', 'technostat.net', true, v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'company_code', v_cc_tegy, 'phone', '+20223456790', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_tegy
-      AND channel_type = 'phone' AND value = '+20223456790' AND purpose = 'support';
-
-    INSERT INTO master.contact_phone (tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by)
-    VALUES (v_tid, v_cl_id, '+20223456790', '20', '223456790', 'landline', v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    -- =========================================================================
-    -- CONTACTS: LE-SDTX (Satellites for Digital Transformation)
-    -- =========================================================================
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'legal_entity', v_le_sdtx, 'email', 'sdtx@technostat.net', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_sdtx
-      AND channel_type = 'email' AND value = 'sdtx@technostat.net' AND purpose = 'support';
-
-    INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
-    VALUES (v_tid, v_cl_id, 'sdtx', 'technostat.net', true, v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'legal_entity', v_le_sdtx, 'phone', '+20223456791', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_sdtx
-      AND channel_type = 'phone' AND value = '+20223456791' AND purpose = 'support';
-
-    INSERT INTO master.contact_phone (tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by)
-    VALUES (v_tid, v_cl_id, '+20223456791', '20', '223456791', 'landline', v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    -- =========================================================================
-    -- CONTACTS: CC-SDTX
-    -- =========================================================================
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'company_code', v_cc_sdtx, 'email', 'ops.sdtx@technostat.net', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_sdtx
-      AND channel_type = 'email' AND value = 'ops.sdtx@technostat.net' AND purpose = 'support';
-
-    INSERT INTO master.contact_email (tenant_id, contact_link_id, local_part, domain, mx_valid, created_by)
-    VALUES (v_tid, v_cl_id, 'ops.sdtx', 'technostat.net', true, v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (tenant_id, owner_type, owner_id, channel_type, value, purpose, is_primary, is_verified, verified_at, status, created_by)
-    VALUES (v_tid, 'company_code', v_cc_sdtx, 'phone', '+20223456792', 'support', true, true, now(), 'active', v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
-
-    SELECT id INTO v_cl_id FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_sdtx
-      AND channel_type = 'phone' AND value = '+20223456792' AND purpose = 'support';
-
-    INSERT INTO master.contact_phone (tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by)
-    VALUES (v_tid, v_cl_id, '+20223456792', '20', '223456792', 'landline', v_su)
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    RAISE NOTICE '[014_address_contacts] Technostat: tenant + 4 LEs + 4 CCs — addresses and contacts seeded (2 addresses, 9 address_links, 18 contact_links)';
+    RAISE NOTICE '[014_address_contacts] Technostat: tenant + 4 LEs + 4 CCs + sites - default address links and default contacts seeded';
 
 END $tstat_addr$;

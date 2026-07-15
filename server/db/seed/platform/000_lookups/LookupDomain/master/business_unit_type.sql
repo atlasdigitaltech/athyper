@@ -1,7 +1,4 @@
--- LookupDomain/master/business_unit_type.sql
--- Lookup values for domain: master.business_unit_type
--- Used by: business_unit.bu_type
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: business_unit.bu_type.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

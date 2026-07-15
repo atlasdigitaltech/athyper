@@ -28,6 +28,9 @@
  *     Mirrors eo_binding_uq but surfaces a clearer error than "DUP_VAL"
  *     when a seed re-INSERT collides.
  *
+ *   Check 6: lifecycle UI flows declare an independent execution_target
+ *     Prevents flow:* modal metadata from being treated as a server command.
+ *
  * Usage:
  *   DATABASE_URL=postgres://... pnpm --dir server/db run db:verify:entity-operations
  *
@@ -141,6 +144,39 @@ async function runChecks(sql: ReturnType<typeof postgres>): Promise<Violation[]>
     violations.push({
       check: "no_duplicate_binding",
       detail: `${row.n} active entity_operation rows share (tenant=${row.tenant_id ?? "platform"}, entity=${row.entity_name}, code=${row.permission_code})`,
+      row,
+    });
+  }
+
+  // Check 6: the registered lifecycle operations must carry an explicit
+  // lifecycle command while retaining their independently configurable flow UI.
+  const missingExecutionTargets = await sql<{
+    tenant_id: string | null; entity_name: string; permission_code: string;
+    handler_target: string | null; execution_target: string | null;
+  }[]>`
+    WITH expected(entity_name, permission_code, execution_target) AS (
+      VALUES
+        ('purchase_requisition', 'submit',  'lifecycle:submit'),
+        ('receipt',              'submit',  'lifecycle:submit'),
+        ('service_sheet',        'submit',  'lifecycle:submit'),
+        ('purchase_invoice',     'submit',  'lifecycle:submit'),
+        ('purchase_invoice',     'post',    'lifecycle:post'),
+        ('purchase_invoice',     'reverse', 'lifecycle:reverse')
+    )
+    SELECT eo.tenant_id::text AS tenant_id, eo.entity_name, eo.permission_code,
+           eo.handler_target, eo.execution_target
+      FROM control.entity_operation eo
+      JOIN expected x
+        ON x.entity_name = eo.entity_name
+       AND x.permission_code = eo.permission_code
+     WHERE eo.is_enabled = true
+       AND eo.handler_target LIKE 'flow:%'
+       AND eo.execution_target IS DISTINCT FROM x.execution_target
+  `;
+  for (const row of missingExecutionTargets) {
+    violations.push({
+      check: "lifecycle_flow_has_execution_target",
+      detail: `UI target '${row.handler_target ?? "NULL"}' requires execution target for ${row.entity_name}.${row.permission_code}`,
       row,
     });
   }

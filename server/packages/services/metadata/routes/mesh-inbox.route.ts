@@ -114,7 +114,7 @@ const PARTNER_SAFE_COLUMNS: Record<string, readonly string[]> = {
     "order_date", "expected_delivery_date", "currency_code",
     "amount_total", "status",
   ],
-  goods_receipt_note: [
+  receipt: [
     "id", "code", "supplier_id", "po_id",
     "receipt_date", "status",
   ],

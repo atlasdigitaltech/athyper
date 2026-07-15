@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { scopeCacheKey, type FinanceScope } from "../lib/scope";
 import type { FiscalPeriodStatus } from "../lib/period";
+import type { PeriodGateDecision } from "@athyper/finance-rules";
 
 export interface PeriodStatusData {
   companyCode: string;
@@ -10,8 +11,12 @@ export interface PeriodStatusData {
   periodNumber: number;
   fiscalPeriodStatus: FiscalPeriodStatus | null;
   bookPeriodStatus: FiscalPeriodStatus | null;
+  bookPeriodStatusSource?: "row" | "missing_treated_as_future" | "not_requested";
   /** Combined effective status (most restrictive of the two) */
   effectiveStatus: FiscalPeriodStatus | null;
+  periodGateDecision?: PeriodGateDecision;
+  postability?: "postable" | "adjustment_only" | "read_only" | "locked";
+  postabilityReasonCode?: PeriodGateDecision["reason"];
   openedAt: string | null;
   softClosedAt: string | null;
   hardClosedAt: string | null;

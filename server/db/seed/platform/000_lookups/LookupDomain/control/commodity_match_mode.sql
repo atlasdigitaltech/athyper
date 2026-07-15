@@ -1,8 +1,5 @@
--- LookupDomain/control/commodity_match_mode.sql
--- Lookup values for domain: control.commodity_match_mode
--- Code matching precision for commodity_code_to_category_rule.match_mode.
--- Stored as UPPERCASE (EXACT, PREFIX); EnumRenderer does case-insensitive matching.
--- Idempotent: WHERE NOT EXISTS guard
+-- Codes are lowercase; commodity_code_to_category_rule.match_mode stores uppercase
+-- (EnumRenderer does case-insensitive matching).
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, sort_order, is_system, status, created_by)

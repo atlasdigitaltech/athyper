@@ -347,20 +347,6 @@ CREATE POLICY tenant_update ON document.commitment FOR UPDATE USING     (tenant_
 CREATE POLICY admin_read    ON document.commitment FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON document.commitment FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
--- document.commitment_procurement: 1:1 procurement child of commitment.
-ALTER TABLE document.commitment_procurement ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.commitment_procurement FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON document.commitment_procurement;
-DROP POLICY IF EXISTS tenant_insert ON document.commitment_procurement;
-DROP POLICY IF EXISTS tenant_update ON document.commitment_procurement;
-DROP POLICY IF EXISTS admin_read    ON document.commitment_procurement;
-DROP POLICY IF EXISTS admin_write   ON document.commitment_procurement;
-CREATE POLICY tenant_read   ON document.commitment_procurement FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON document.commitment_procurement FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON document.commitment_procurement FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON document.commitment_procurement FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON document.commitment_procurement FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
 -- document.commitment_line: mutable operational line while commitment is editable.
 ALTER TABLE document.commitment_line ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.commitment_line FORCE  ROW LEVEL SECURITY;
@@ -428,3 +414,33 @@ CREATE POLICY tenant_read   ON document.payment_entry_allocation FOR SELECT USIN
 CREATE POLICY tenant_insert ON document.payment_entry_allocation FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON document.payment_entry_allocation FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON document.payment_entry_allocation FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- document.schedule_line: polymorphic P2P schedule carrier (delivery / billing / release).
+ALTER TABLE document.schedule_line ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.schedule_line FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.schedule_line;
+DROP POLICY IF EXISTS tenant_insert ON document.schedule_line;
+DROP POLICY IF EXISTS tenant_update ON document.schedule_line;
+DROP POLICY IF EXISTS admin_read    ON document.schedule_line;
+DROP POLICY IF EXISTS admin_write   ON document.schedule_line;
+CREATE POLICY tenant_read   ON document.schedule_line FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.schedule_line FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.schedule_line FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.schedule_line FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.schedule_line FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- document.seed_gift: ATHQ-only prototype gift seed records with import support.
+ALTER TABLE document.seed_gift ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.seed_gift FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.seed_gift;
+DROP POLICY IF EXISTS tenant_insert ON document.seed_gift;
+DROP POLICY IF EXISTS tenant_update ON document.seed_gift;
+DROP POLICY IF EXISTS tenant_delete ON document.seed_gift;
+DROP POLICY IF EXISTS admin_read    ON document.seed_gift;
+DROP POLICY IF EXISTS admin_write   ON document.seed_gift;
+CREATE POLICY tenant_read   ON document.seed_gift FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.seed_gift FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.seed_gift FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON document.seed_gift FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.seed_gift FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.seed_gift FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

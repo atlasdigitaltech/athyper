@@ -1,14 +1,6 @@
--- seed/platform/002_permission_model/018_persona_permission.sql
--- Seed: Persona by permission category + plane grants.
--- Schema: shared | Table: persona_permission
--- Depends on: 010_persona.sql, 015_permission_category.sql, 017_permission.sql
--- Idempotent: ON CONFLICT (persona_id, permission_id) DO UPDATE
---
--- Design:
---  1) plane_eligibility gates persona reachability (neon / mesh / admin).
---  2) Persona grants are derived per cluster:
---       viewer < reporter < requester < agent < manager < owner < admin
---  3) owner/admin include admin-plane permissions.
+-- Persona × permission grants. Depends on 010 / 015 / 017.
+-- Persona ladder: viewer < reporter < requester < agent < manager < owner < admin.
+-- Each tier UNIONs the prior; owner/admin pick up everything tagged 'admin' in plane_eligibility.
 
 WITH permission_catalog AS (
   SELECT p.id AS permission_id, p.code, p.plane_eligibility, pc.code AS category_code
@@ -23,7 +15,7 @@ viewer_permissions AS (
   WHERE 'neon' = ANY(plane_eligibility)
     AND (
       (category_code = 'entity' AND code IN ('read'))
-      OR (category_code = 'collaboration' AND code IN ('follow', 'tag'))
+      OR (category_code = 'collaboration' AND code IN ('follow', 'tag', 'attachment.read'))
       OR (category_code = 'utility' AND code IN ('report', 'print', 'export'))
     )
 ),
@@ -34,7 +26,7 @@ reporter_permissions AS (
   FROM permission_catalog
   WHERE 'neon' = ANY(plane_eligibility)
     AND category_code IN ('collaboration', 'special')
-    AND code IN ('add_comment', 'add_attachment', 'approve', 'deny')
+    AND code IN ('add_comment', 'add_attachment', 'attachment.create', 'attachment.update', 'approve', 'deny')
 ),
 requester_permissions AS (
   SELECT permission_id FROM reporter_permissions
@@ -99,8 +91,19 @@ manager_permissions AS (
       'share_edit',
       'del_others_comment',
       'del_others_attach',
-      'approve'
+      'attachment.delete',
+      'attachment.reindex',
+      'approve',
+      'deny',
+      'request_info'
     )
+  UNION
+  -- Draft session discard — manager-tier op. Common revision flow; not as
+  -- destructive as snapshot restore (only reverts to the last submitted
+  -- baseline, never an arbitrary historical snapshot).
+  SELECT permission_id
+  FROM permission_catalog
+  WHERE code IN ('PI.DISCARD_SESSION', 'PI.REVERT_TO_BASELINE')
   UNION
   SELECT permission_id
   FROM permission_catalog
@@ -112,6 +115,13 @@ owner_permissions AS (
   SELECT permission_id
   FROM permission_catalog
   WHERE 'admin' = ANY(plane_eligibility)
+  UNION
+  -- Snapshot restore is destructive replay of an arbitrary historical
+  -- graph. Owner+ only; never granted to manager/agent. Wired in
+  -- snapshots.route.ts:restoreHandler via checkPermission + requireAllow.
+  SELECT permission_id
+  FROM permission_catalog
+  WHERE code IN ('PI.SNAPSHOT_RESTORE')
 ),
 admin_permissions AS (
   SELECT permission_id FROM owner_permissions

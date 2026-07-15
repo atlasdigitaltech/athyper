@@ -45,6 +45,21 @@ export { buildEffectivePermissionContext } from "./context-builder.js";
 
 export {
   createPermissionContextMiddleware,
+  ensureEffectivePermissionContext,
+  EffectivePermissionContextMismatchError,
   readEffectivePermissionContext,
   type PermissionContextMiddlewareDeps,
 } from "./middleware.js";
+
+export {
+  composeVerifiedRequestContext,
+  readVerifiedRequestContext,
+  requireVerifiedContext,
+  requireVerifiedRequestContext,
+  storeVerifiedRequestContext,
+  VerifiedRequestContextRequiredError,
+  type ComposeVerifiedRequestContextInput,
+  type ComposeVerifiedRequestContextResult,
+  type VerifiedIdentityInput,
+  type VerifiedRequestContext,
+} from "./verified-request-context.js";

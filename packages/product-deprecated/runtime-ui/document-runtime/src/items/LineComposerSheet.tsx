@@ -6,7 +6,7 @@ import { DrawerShell } from "@athyper/ui/primitives";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
-import { useEditSessionContext } from "@athyper/content-ui";
+import { useEditDraftContext } from "@athyper/content-ui";
 import {
   type LineRecord,
   MetaLineForm,
@@ -86,7 +86,7 @@ export function LineComposerSheet({
   // bundle (addLine for new, updateLine for existing) so changes commit atomically
   // alongside header + other line edits on action-bar Save. Without a session,
   // fall back to the existing per-line REST POST/PATCH path.
-  const editSession = useEditSessionContext();
+  const editSession = useEditDraftContext();
 
   useEffect(() => {
     if (!open || !resolvedEntity) return;

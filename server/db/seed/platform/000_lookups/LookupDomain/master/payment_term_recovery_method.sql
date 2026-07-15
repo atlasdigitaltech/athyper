@@ -1,7 +1,4 @@
--- LookupDomain/master/payment_term_recovery_method.sql
--- Lookup domain + values for master.payment_term_recovery_method
--- is_extensible = true — tenants may add custom recovery methods.
--- Idempotent: WHERE NOT EXISTS guard on both domain and value inserts.
+-- is_extensible = true: tenants may add custom recovery methods.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

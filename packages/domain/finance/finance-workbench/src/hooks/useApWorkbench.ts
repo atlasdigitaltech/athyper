@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import { scopeCacheKey, scopeToParams, type FinanceScope } from "../lib/scope";
 
 
@@ -102,11 +103,10 @@ export interface ApInvoiceLine {
   profit_center_id: string | null;
   project_id: string | null;
   site_id: string | null;
-  is_asset: boolean;
-  asset_category_id: string | null;
+  asset_class_id: string | null;
   commitment_line_id: string | null;
-  goods_receipt_line_id: string | null;
-  ses_line_id: string | null;
+  receipt_line_id: string | null;
+  service_sheet_line_id: string | null;
   matched_quantity: number;
   match_status: string;
   notes: string | null;
@@ -583,10 +583,9 @@ export interface CreateApInvoiceLinePayload {
   profit_center_id?:          string;
   project_id?:                string;
   site_id?:                   string;
-  is_asset?:                  boolean;
-  asset_category_id?:         string;
+  asset_class_id?:            string;
   commitment_line_id?:        string;
-  goods_receipt_line_id?:     string;
+  receipt_line_id?:     string;
   notes?:                     string;
 }
 
@@ -674,7 +673,7 @@ export function usePromoteProforma(invoiceId: string) {
 
   return useMutation<{ ok: boolean; record: ApInvoiceDetail }, Error, PromoteProformaPayload>({
     mutationFn: async (payload) => {
-      const res = await fetch(`/api/records/purchase_invoice/${invoiceId}/action/promote_proforma`, {
+      const res = await fetch(runtimePath.action("purchase_invoice", invoiceId, "promote_proforma"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

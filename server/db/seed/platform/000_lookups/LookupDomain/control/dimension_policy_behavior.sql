@@ -1,8 +1,3 @@
--- LookupDomain/control/dimension_policy_behavior.sql
--- Lookup domain + values for control.dimension_policy.behavior
--- is_extensible = false — behaviors are engine-governed.
--- Idempotent: WHERE NOT EXISTS guard on both domain and value inserts.
-
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)
 SELECT 'control.dimension_policy_behavior',

@@ -11,6 +11,9 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:route-suites:phase4": "node scripts/run-ci-route-suites.mjs \"app/api/runtime/v1/entities/[entity]/[id]/edit/open/__tests__/route.suite.test.ts\" \"app/api/runtime/v1/entities/[entity]/[id]/edit/open/__tests__/route.test.ts\" \"app/api/auth/session/__tests__/route.test.ts\" \"app/api/notifications/**/__tests__/route.test.ts\"",
+    "test:route-suites:open": "node scripts/run-ci-route-suites.mjs \"app/api/runtime/v1/entities/[entity]/[id]/edit/open/__tests__/route.suite.test.ts\" \"app/api/runtime/v1/entities/[entity]/[id]/edit/open/__tests__/route.test.ts\"",
+    "test:route-suites:auth-notifications": "node scripts/run-ci-route-suites.mjs \"app/api/auth/session/__tests__/route.test.ts\" \"app/api/notifications/**/__tests__/route.test.ts\"",
     "runtime:path-check": "tsx scripts/check-runtime-api-paths.ts --strict"
   },
   "dependencies": {

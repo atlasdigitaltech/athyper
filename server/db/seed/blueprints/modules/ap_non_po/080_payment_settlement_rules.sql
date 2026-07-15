@@ -1,25 +1,8 @@
--- ============================================================================
--- FILE: blueprint/080_payment_settlement_rules.sql
--- Purpose: payment_settlement_rule rows per (company × method × book)
--- Depends on: master.company_code, master.payment_method,
---             posting role lookup values (010)
--- Idempotent: WHERE NOT EXISTS guard
--- ============================================================================
--- One rule per combination of:
---   company_code × OUTBOUND-capable payment_method × STAT book
---
--- Each rule wires 6 posting roles:
---   clearing_posting_role_code   = ap_clearing           (Dr on settlement post)
---   settlement_posting_role_code = ap_trade_payable      (Cr on settlement post)
---   bank_fee_posting_role_code   = bank_fee              (Dr on bank fee)
---   discount_posting_role_code   = discount_earned       (Cr on discount taken)
---   fx_gain_posting_role_code    = fx_gain               (Cr on fav FX)
---   fx_loss_posting_role_code    = fx_loss               (Dr on adv FX)
---
--- The rule does NOT hold GL accounts directly — Engine 4.13 resolves roles
--- at posting time via resolve_posting_role_account() against the company's
--- book-specific role→account map, falling back to the role's fallback GL.
--- ============================================================================
+-- One payment_settlement_rule per (company_code × OUTBOUND payment_method × STAT book).
+-- Wires 6 posting roles (clearing/settlement/bank_fee/discount/fx_gain/fx_loss).
+-- Rule holds role codes — NOT GL accounts. Engine 4.13 resolves accounts at posting
+-- time via resolve_posting_role_account() against the company's book-specific
+-- role→account map (falls back to the role's default GL).
 
 DO $seed_payment_settlement_rules$
 DECLARE
@@ -40,7 +23,6 @@ BEGIN
                AND upper(direction) IN ('OUTBOUND','BOTH')
                AND status = 'active'
         LOOP
-            -- STAT (statutory) book — default
             INSERT INTO control.payment_settlement_rule (
                 tenant_id,
                 company_code_id, payment_method_id, direction, book_code,

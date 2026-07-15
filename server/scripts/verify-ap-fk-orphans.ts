@@ -2,7 +2,7 @@
 /**
  * AP FK Orphan Pre-Check (H1 gate)
  *
- * Runs BEFORE the operator validation script. For each of the 23 FK candidates
+ * Runs BEFORE the operator validation script. For each of the 18 FK candidates
  * declared in:
  *   server/db/ddl/document/03b_constraints_ap_closure.sql   (initial set)
  *   server/db/ddl/document/03f_constraints_pea_pta_restrict.sql (HF2-2 reshape)
@@ -18,7 +18,7 @@
  *   psql "$DATABASE_URL" -f server/db/scripts/run-ap-fk-validate.sql
  *
  * Exit:
- *   0 — all 23 FKs have zero orphans; safe to VALIDATE
+ *   0 — all 18 FKs have zero orphans; safe to VALIDATE
  *   1 — orphans found; triage before VALIDATE
  *
  * Spec: AP Schema Hardening Plan §H1; Hardening Sprint H-Fix-2 §HF2-4
@@ -53,10 +53,8 @@ interface FkCandidate {
 const FKS: FkCandidate[] = [
   // §1
   { constraint: "pil_invoice_fk",        child_table: "document.purchase_invoice_line",   child_cols: { tenant: "tenant_id", ref: "purchase_invoice_id" }, parent_table: "document.purchase_invoice", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: false },
-  // §2
-  { constraint: "ipsnap_pi_fk",          child_table: "document.invoice_party_snapshot",   child_cols: { tenant: "tenant_id", ref: "purchase_invoice_id" }, parent_table: "document.purchase_invoice", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: false },
-  { constraint: "iasnap_pi_fk",          child_table: "document.invoice_address_snapshot", child_cols: { tenant: "tenant_id", ref: "purchase_invoice_id" }, parent_table: "document.purchase_invoice", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: false },
-  { constraint: "ibsnap_pi_fk",          child_table: "document.invoice_bank_snapshot",    child_cols: { tenant: "tenant_id", ref: "purchase_invoice_id" }, parent_table: "document.purchase_invoice", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: false },
+  // §2 — Phase D.4 dropped the three identity FKs (ipsnap/iasnap/ibsnap)
+  // along with the legacy tables. Only the tax snapshot FKs remain.
   { constraint: "itsnap_pi_fk",          child_table: "document.invoice_tax_snapshot",     child_cols: { tenant: "tenant_id", ref: "purchase_invoice_id" }, parent_table: "document.purchase_invoice", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: false },
   { constraint: "itsnap_pil_fk",         child_table: "document.invoice_tax_snapshot",     child_cols: { tenant: "tenant_id", ref: "invoice_line_id" },     parent_table: "document.purchase_invoice_line", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: true },
   // §3
@@ -79,9 +77,6 @@ const FKS: FkCandidate[] = [
   { constraint: "jl_je_fk",              child_table: "document.journal_line",             child_cols: { tenant: "tenant_id", ref: "journal_entry_id" },    parent_table: "document.journal_entry", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: false },
   { constraint: "jlr_jl_fk",             child_table: "document.journal_line_reference",   child_cols: { tenant: "tenant_id", ref: "journal_line_id" },     parent_table: "document.journal_line", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: false },
   // §9
-  { constraint: "ad_resolution_audit_ad_fk", child_table: "document.accounting_distribution_resolution_audit", child_cols: { tenant: "tenant_id", ref: "accounting_distribution_id" }, parent_table: "document.accounting_distribution", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: false },
-  { constraint: "ad_resolution_audit_gl_fk", child_table: "document.accounting_distribution_resolution_audit", child_cols: { tenant: "tenant_id", ref: "resolved_gl_account_id" },    parent_table: "master.gl_account", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: false },
-  // §10
   { constraint: "pe_bsl_fk",             child_table: "document.payment_entry",            child_cols: { tenant: "tenant_id", ref: "bank_statement_line_id" }, parent_table: "document.bank_statement_line", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: true },
   { constraint: "bsl_recon_case_fk",     child_table: "document.bank_statement_line",      child_cols: { tenant: "tenant_id", ref: "recon_case_id" },        parent_table: "document.bank_recon_case", parent_cols: { tenant: "tenant_id", id: "id" }, child_nullable: true },
 ];
@@ -106,11 +101,7 @@ async function main(): Promise<void> {
         ? `AND c.${fk.child_cols.ref} IS NOT NULL`
         : "";
 
-      // accounting_distribution_resolution_audit uses accounting_distribution_id
-      // as its PK — no separate id column. Fall back to the FK column for sample IDs.
-      const sampleCol = fk.child_table.endsWith("_resolution_audit")
-        ? fk.child_cols.ref
-        : "id";
+      const sampleCol = "id";
       const query = `
         SELECT c.${sampleCol}::text AS id
           FROM ${fk.child_table} c

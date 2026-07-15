@@ -1,7 +1,4 @@
--- LookupDomain/master/business_partner_category.sql
--- Lookup values for domain: master.business_partner_category
--- Mirrors CHECK constraint on master.business_partner.partner_category
--- Idempotent: WHERE NOT EXISTS guard
+-- Must stay in sync with the CHECK constraint on master.business_partner.partner_category.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

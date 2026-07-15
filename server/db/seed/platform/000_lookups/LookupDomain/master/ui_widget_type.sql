@@ -1,8 +1,4 @@
--- LookupDomain/master/ui_widget_type.sql
--- Lookup values for domain: ui.widget_type
--- Widget type codes for master.dashboard_widget.widget_type_code.
--- Tenant-extensible: tenants may register custom widget types.
--- Idempotent: WHERE NOT EXISTS guard
+-- Tenant-extensible: tenants may register custom widget types; front-end routes by widget_code.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)

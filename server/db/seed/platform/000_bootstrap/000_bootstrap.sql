@@ -1,7 +1,6 @@
--- 900_seed_data/000_public/000_bootstrap.sql
--- Bootstrap: system tenant + system principal (self-referential)
--- Must execute FIRST — before all other seeds.
--- Uses session_replication_role = replica to bypass FK/CHECK triggers during bootstrap.
+-- Bootstrap: system tenant + system principal (both self-referential).
+-- MUST execute FIRST — every other seed depends on this principal.
+-- session_replication_role = replica bypasses FK/CHECK triggers so the self-refs can be inserted.
 
 BEGIN;
 

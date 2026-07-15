@@ -1,16 +1,5 @@
--- ============================================================================
--- UNIVERSAL — IFRS OPERATING CHART OF ACCOUNTS
--- ============================================================================
--- File:     211_framework_ifrs_accounts.sql
--- Schema:   master.gl_account
--- Purpose:  ~300 GL accounts for COA-IFRS (full IFRS operating chart)
---           5 class roots, ~35 L2 headers, ~260 L3 posting accounts
---           Used by 12 of 17 companies as the primary operating chart
--- Depends:  200_chart_catalog.sql (COA-IFRS chart)
---           210_group_chart_accounts.sql (COA-GROUP taxonomy)
--- Idempotent: Yes — ON CONFLICT (tenant_id, chart_of_account_id, code) DO UPDATE
--- Spec ref: IFRS Operating Chart
--- ============================================================================
+-- COA-IFRS operating chart: ~300 master.gl_account rows — 5 class roots,
+-- ~35 L2 headers, ~260 L3 posting accounts. Default chart for 12/17 demo companies.
 
 DO $seed$
 DECLARE

@@ -106,14 +106,18 @@ done
 phase 5 "Constraints (all schemas)"
 
 for schema in "${SCHEMAS[@]}"; do
-    run_file "$SQL_DIR/${schema}/03_constraints.sql"
+    for f in "$SQL_DIR/${schema}"/03*.sql; do
+        run_file "$f"
+    done
 done
 
 # ─── Phase 6: Indexes — ALL schemas ───────────────────────────────────────────
 phase 6 "Indexes (all schemas)"
 
 for schema in "${SCHEMAS[@]}"; do
-    run_file "$SQL_DIR/${schema}/04_indexes.sql"
+    for f in "$SQL_DIR/${schema}"/04*.sql; do
+        run_file "$f"
+    done
 done
 
 # ─── Phase 7: Functions — ALL schemas ─────────────────────────────────────────
@@ -141,7 +145,9 @@ done
 phase 10 "RLS policies (all schemas)"
 
 for schema in "${SCHEMAS[@]}"; do
-    run_file "$SQL_DIR/${schema}/08_rls.sql"
+    for f in "$SQL_DIR/${schema}"/08*.sql; do
+        run_file "$f"
+    done
 done
 
 # ─── Phase 11: Security hardening ─────────────────────────────────────────────

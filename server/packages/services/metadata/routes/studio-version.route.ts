@@ -39,6 +39,7 @@ import { sql } from "kysely";
 import type { RequestHandler, Router } from "express";
 
 import { verifyBearer } from "@athyper/svc-shared";
+import { ExecutionDescriptorActivationError } from "../src/execution-descriptor/validation.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<any>;
@@ -50,6 +51,7 @@ export interface StudioVersionRoutesDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     warn?(event: string, fields?: Record<string, unknown>): void;
   };
+  validateEntityVersionActivation?: (versionId: string) => Promise<unknown>;
 }
 
 // ─── Helpers (mirror metadata-admin.route.ts conventions) ──────────────────────
@@ -313,6 +315,20 @@ export function createStudioVersionRoutes(router: Router, deps: StudioVersionRou
         return conflict(res as never, `Version is in '${row.status}'; only IN_REVIEW can be approved.`);
       }
 
+      try {
+        await deps.validateEntityVersionActivation?.(id);
+      } catch (error) {
+        if (error instanceof ExecutionDescriptorActivationError) {
+          res.status(422).json({
+            error: "METADATA_ACTIVATION_INVALID",
+            message: "Execution descriptor validation failed; activation was not applied.",
+            diagnostics: error.diagnostics,
+          });
+          return;
+        }
+        throw error;
+      }
+
       // Run the supersede + promote inside a single transaction so the
       // (entity_id, EFFECTIVE) invariant is never violated mid-flight.
       // Phase 5 (R-P4-1): we also write a `version_publish` row into
@@ -354,6 +370,18 @@ export function createStudioVersionRoutes(router: Router, deps: StudioVersionRou
               'control.entity_version',
               ${id}::uuid,
               ${ctx.pId}::uuid
+          )
+        `.execute(trx);
+
+        await sql`
+          SELECT pg_notify(
+            'desc_invalidate',
+            json_build_object(
+              'tenant_id', NULL,
+              'entity_code', (SELECT entity_code FROM control.entity WHERE id = ${row.entity_id}::uuid),
+              'reason', 'version_publish',
+              'source', 'control.entity_version'
+            )::text
           )
         `.execute(trx);
       });

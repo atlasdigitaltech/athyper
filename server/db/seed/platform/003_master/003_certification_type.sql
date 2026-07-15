@@ -1,20 +1,6 @@
--- ============================================================================
--- FILE: platform/003_master/003_certification_type.sql
--- Purpose: Canonical platform-wide certification type registry.
---          Covers all 11 certification categories defined in
---          000_lookups/LookupDomain/master/certification_category.sql.
---
--- Scope:    tenant_id = NULL  →  available to all tenants.
---           Tenant-specific types (is_custom = true, tenant_id = <uuid>)
---           are seeded by individual tenant files.
---
--- Not included (tenant-scoped):
---   zatca-einv — Saudi ZATCA Phase 2 (regulatory mandate, KSA-only)
---   Any jurisdiction-specific compliance registrations
---
--- Idempotent: WHERE NOT EXISTS on (tenant_id IS NULL, code).
--- Created by: system user (00000000-0000-0000-0000-000000000000)
--- ============================================================================
+-- Platform-wide certification types (tenant_id = NULL = available to all tenants).
+-- Covers the 11 categories in 000_lookups/master/certification_category.sql.
+-- Jurisdiction-specific items (e.g. ZATCA-einv for KSA) are deliberately left to tenant seeds.
 
 INSERT INTO master.certification_type (
     tenant_id, code, name, issuing_body, category, description,
@@ -27,7 +13,7 @@ SELECT NULL, v.code, v.name, v.issuing_body, v.category, v.description,
        '00000000-0000-0000-0000-000000000000'
 FROM (VALUES
 
-    -- ── quality ──────────────────────────────────────────────────────────────
+    -- quality
     ('iso-9001',
      'ISO 9001 Quality Management Systems',
      'International Organization for Standardization',
@@ -36,7 +22,7 @@ FROM (VALUES
      'consistent provision of conforming products and services and enhance customer satisfaction.',
      'active'),
 
-    -- ── information_security ─────────────────────────────────────────────────
+    -- information_security
     ('iso-27001',
      'ISO/IEC 27001 Information Security Management',
      'International Organization for Standardization',
@@ -53,7 +39,7 @@ FROM (VALUES
      'confidentiality, and privacy at service organisations.',
      'active'),
 
-    -- ── esg ──────────────────────────────────────────────────────────────────
+    -- esg
     ('iso-26000',
      'ISO 26000 Social Responsibility',
      'International Organization for Standardization',
@@ -63,7 +49,7 @@ FROM (VALUES
      'and community involvement.',
      'active'),
 
-    -- ── safety ───────────────────────────────────────────────────────────────
+    -- safety
     ('iso-45001',
      'ISO 45001 Occupational Health and Safety Management',
      'International Organization for Standardization',
@@ -80,7 +66,7 @@ FROM (VALUES
      'Legacy certifications may still be in use during the transition period.',
      'deprecated'),
 
-    -- ── food_safety ───────────────────────────────────────────────────────────
+    -- food_safety
     ('iso-22000',
      'ISO 22000 Food Safety Management Systems',
      'International Organization for Standardization',
@@ -97,7 +83,7 @@ FROM (VALUES
      'and biological hazards in production processes.',
      'active'),
 
-    -- ── halal ─────────────────────────────────────────────────────────────────
+    -- halal
     ('halal-gsas',
      'GSAS Halal Certification',
      'Gulf Standardization Organization',
@@ -114,7 +100,7 @@ FROM (VALUES
      'and major Halal import markets globally.',
      'active'),
 
-    -- ── financial ─────────────────────────────────────────────────────────────
+    -- financial
     ('pci-dss',
      'PCI DSS Payment Card Industry Data Security Standard',
      'PCI Security Standards Council',
@@ -131,7 +117,7 @@ FROM (VALUES
      'organisations, used by auditors of user entity financial statements.',
      'active'),
 
-    -- ── environmental ─────────────────────────────────────────────────────────
+    -- environmental
     ('iso-14001',
      'ISO 14001 Environmental Management Systems',
      'International Organization for Standardization',
@@ -148,7 +134,7 @@ FROM (VALUES
      'efficiency, and conservation.',
      'active'),
 
-    -- ── trade_compliance ──────────────────────────────────────────────────────
+    -- trade_compliance
     ('aeo',
      'AEO Authorised Economic Operator',
      'World Customs Organization',
@@ -166,7 +152,7 @@ FROM (VALUES
      'security and improve US border security for participating trade partners.',
      'active'),
 
-    -- ── data_privacy ──────────────────────────────────────────────────────────
+    -- data_privacy
     ('iso-27701',
      'ISO/IEC 27701 Privacy Information Management',
      'International Organization for Standardization',

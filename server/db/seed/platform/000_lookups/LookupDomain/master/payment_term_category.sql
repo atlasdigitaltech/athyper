@@ -1,7 +1,4 @@
--- LookupDomain/master/payment_term_category.sql
--- Lookup domain + values for master.payment_term_category
--- is_extensible = true — tenants may add custom categories.
--- Idempotent: WHERE NOT EXISTS guard on both domain and value inserts.
+-- is_extensible = true: tenants may add custom categories beyond the seeded ones.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

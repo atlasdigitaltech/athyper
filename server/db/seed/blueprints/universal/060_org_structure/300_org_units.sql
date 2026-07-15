@@ -1,12 +1,5 @@
--- ============================================================================
--- UNIVERSAL ORG FOUNDATION - ORG UNITS
--- ============================================================================
--- File:     blueprints/universal/060_org_structure/300_org_units.sql
--- Schema:   master.org_unit
--- Purpose:  Simple, tenant-neutral organization hierarchy per active company.
--- Depends:  tenant legal entities and company codes.
--- Run:      After tenant company_code rows exist.
--- ============================================================================
+-- Tenant-neutral master.org_unit hierarchy per active company_code.
+-- Industry-specific leaves are added later by industry/200_org_structure/000.
 
 DO $seed$
 DECLARE

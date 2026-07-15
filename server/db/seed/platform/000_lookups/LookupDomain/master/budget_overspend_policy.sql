@@ -1,7 +1,4 @@
--- LookupDomain/master/budget_overspend_policy.sql
--- Lookup values for domain: master.budget_overspend_policy
--- Used by: budget_profile.overspend_policy, budget_allocation.overspend_policy
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: budget_profile.overspend_policy, budget_allocation.overspend_policy.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

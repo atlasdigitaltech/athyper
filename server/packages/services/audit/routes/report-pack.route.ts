@@ -13,7 +13,7 @@
 
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
-import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
 import {
   verifyBearer,
   resolveTenantId,
@@ -204,3 +204,4 @@ export function createReportPackRoutes(
   router.get("/governance/report-packs/:id",         getHandler);
   router.get("/governance/report-packs/:id/download", downloadHandler);
 }
+

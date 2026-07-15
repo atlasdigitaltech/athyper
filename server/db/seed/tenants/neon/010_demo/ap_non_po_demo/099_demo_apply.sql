@@ -19,6 +19,7 @@
 --     \i demo/007_scenario_supplier_advance.sql
 --     \i demo/008_scenario_a1_workflow_approvers.sql
 --     \i demo/009_activity_log.sql
+--     \i demo/011_scenario_a5_wht_pc_line_scope.sql
 --     \i demo/099_demo_apply.sql
 -- ============================================================================
 
@@ -70,8 +71,8 @@ BEGIN
     -- ── Count scenario documents ────────────────────────────────────────────
     SELECT count(*) INTO v_inv_cnt FROM document.purchase_invoice
      WHERE tenant_id = v_tenant_id
-       AND invoice_number IN ('INV-A1-0001','INV-A3-0001','INV-A4-0001',
-                              'INV-A7-0001','INV-A8-0001');
+       AND code IN ('INV-A1-0001','INV-A3-0001','INV-A4-0001',
+                              'INV-A5-0001','INV-A7-0001','INV-A8-0001');
 
     SELECT count(*) INTO v_adv_cnt FROM document.payment_entry
      WHERE tenant_id = v_tenant_id
@@ -102,7 +103,7 @@ BEGIN
     RAISE NOTICE '    tax_group (VAT + WHT)              : % (of 2)', v_tg_cnt;
     RAISE NOTICE '';
     RAISE NOTICE '  Scenario documents:';
-    RAISE NOTICE '    purchase_invoice (A1,A3,A4,A7,A8)  : % (of 5)', v_inv_cnt;
+    RAISE NOTICE '    purchase_invoice (A1,A3,A4,A5,A7,A8): % (of 6)', v_inv_cnt;
     RAISE NOTICE '    payment_entry (A7 advance, VA)     : % (of 2)', v_adv_cnt;
     RAISE NOTICE '    activity_log (all invoices)        : % rows', v_act_cnt;
     RAISE NOTICE '';
@@ -110,20 +111,28 @@ BEGIN
     -- ── Per-scenario detail ─────────────────────────────────────────────────
     RAISE NOTICE '  Invoice detail:';
     FOR v_rec IN
-        SELECT invoice_number, status,
-               subtotal_amount, tax_amount, withholding_tax_amount,
-               retention_amount, advance_deduction_amount,
-               total_amount, payable_amount
-          FROM document.purchase_invoice
-         WHERE tenant_id = v_tenant_id
-           AND invoice_number LIKE 'INV-A%'
-         ORDER BY invoice_number
+        SELECT pi.code, pi.status,
+               pi.currency_code, pi.match_type, pi.match_status, pi.due_date,
+               COALESCE((
+                   SELECT SUM(pil.net_amount)
+                     FROM document.purchase_invoice_line pil
+                    WHERE pil.tenant_id = pi.tenant_id
+                      AND pil.purchase_invoice_id = pi.id
+               ), 0) AS subtotal_amount,
+               pi.tax_amount, pi.withholding_tax_amount,
+               pi.retention_amount, pi.advance_deduction_amount,
+               pi.total_amount, pi.payable_amount, pi.outstanding_amount
+          FROM document.purchase_invoice pi
+         WHERE pi.tenant_id = v_tenant_id
+           AND pi.code LIKE 'INV-A%'
+         ORDER BY pi.code
     LOOP
-        RAISE NOTICE '    % | status=% | subtotal=% tax=% wht=% retention=% adv_ded=% total=% payable=%',
-            rpad(v_rec.invoice_number, 12), rpad(v_rec.status, 8),
+        RAISE NOTICE '    % | status=% | % | match=%/% | due=% | subtotal=% tax=% wht=% retention=% adv_ded=% total=% payable=% outstanding=%',
+            rpad(v_rec.code, 12), rpad(v_rec.status, 16),
+            v_rec.currency_code, v_rec.match_type, v_rec.match_status, v_rec.due_date,
             v_rec.subtotal_amount, v_rec.tax_amount, v_rec.withholding_tax_amount,
             v_rec.retention_amount, v_rec.advance_deduction_amount,
-            v_rec.total_amount, v_rec.payable_amount;
+            v_rec.total_amount, v_rec.payable_amount, v_rec.outstanding_amount;
     END LOOP;
 
     RAISE NOTICE '';
@@ -147,7 +156,7 @@ BEGIN
     RAISE NOTICE '════════════════════════════════════════════════════════════════';
     RAISE NOTICE '  1. Submit each draft invoice for approval:';
     RAISE NOTICE '       UPDATE document.purchase_invoice SET status=''pending_approval''';
-    RAISE NOTICE '        WHERE invoice_number IN (''INV-A1-0001'',...);';
+    RAISE NOTICE '        WHERE code IN (''INV-A1-0001'',...);';
     RAISE NOTICE '  2. Approve (or use entity_operation handler_target=''approve'').';
     RAISE NOTICE '  3. Post — invokes control.generate_event_entries()';
     RAISE NOTICE '       for event_code=''ORDER_APPROVAL'' → produces JE lines per §6.';
@@ -155,8 +164,8 @@ BEGIN
     RAISE NOTICE '       every posted invoice has a balanced JE (sum = 0).';
     RAISE NOTICE '';
 
-    IF v_inv_cnt < 5 OR v_adv_cnt < 2 THEN
-        RAISE WARNING 'Demo apply: expected 5 invoices + 2 payments; got % + %. Re-run any missing scenario files.',
+    IF v_inv_cnt < 6 OR v_adv_cnt < 2 THEN
+        RAISE WARNING 'Demo apply: expected 6 invoices + 2 payments; got % + %. Re-run any missing scenario files.',
             v_inv_cnt, v_adv_cnt;
     END IF;
 END $demo_summary$;

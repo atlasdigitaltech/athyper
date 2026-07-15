@@ -1,27 +1,5 @@
-/* ============================================================================
-   Commodity Code Keyword Population (UNSPSC + HS)
-   Schema: shared
-   Table:  commodity_code
-
-   Populates the `keywords text[]` column for all commodity codes by
-   algorithmically extracting meaningful tokens from:
-     1. The code's own name
-     2. Its parent's name (adds hierarchical context)
-
-   Stop words, punctuation, and short tokens (≤2 chars) are stripped.
-   All keywords are lowercased and deduplicated.
-
-   Idempotent: safe to re-run — overwrites previous keywords.
-   Depends on: 008a (UNSPSC), 008b (HS) having been seeded first.
-   ============================================================================ */
-
-
--- ---------------------------------------------------------------------------
--- Step 1: Helper function — extract keyword tokens from a text string
--- ---------------------------------------------------------------------------
--- Splits on whitespace/punctuation, lowercases, strips stop words and short
--- tokens, returns a deduplicated sorted array.
--- ---------------------------------------------------------------------------
+-- Populates commodity_code.keywords[] from the code's own name + its parent's name
+-- (hierarchical context). Depends on 008a (UNSPSC) and 008b (HS) being loaded first.
 
 CREATE OR REPLACE FUNCTION pg_temp.extract_keywords(input_text text)
 RETURNS text[]
@@ -62,15 +40,6 @@ AS $$
 $$;
 
 
--- ---------------------------------------------------------------------------
--- Step 2: Populate keywords for ALL commodity codes (both UNSPSC and HS)
--- ---------------------------------------------------------------------------
--- For each code, keywords are derived from:
---   (a) Its own name
---   (b) Its parent's name (if it has a parent)
--- The two arrays are concatenated, then deduplicated and sorted.
--- ---------------------------------------------------------------------------
-
 UPDATE shared.commodity_code AS cc
 SET
   keywords = (
@@ -93,14 +62,10 @@ SET
   updated_by = '00000000-0000-0000-0000-000000000000'::uuid;
 
 
--- ---------------------------------------------------------------------------
--- Step 3: Enrich segment-level UNSPSC codes with domain-category tags
--- ---------------------------------------------------------------------------
--- Adds broad category tags (goods, services, intangible) to segment-level
--- entries so searches for "services" or "goods" filter correctly.
--- ---------------------------------------------------------------------------
+-- Segment-level domain tags so free-text "services"/"goods" filters land on UNSPSC L1.
+-- UNSPSC convention: segments < 64000000 are goods, >= 64000000 are services/intangibles.
 
--- Tag goods segments (10–60) with 'goods' keyword
+-- Goods segments (10-60)
 UPDATE shared.commodity_code
 SET
   keywords = array(
@@ -112,7 +77,7 @@ WHERE domain_code = 'unspsc'
   AND level_no = 1
   AND code < '64000000';
 
--- Tag service/intangible segments (64–95) with 'services' keyword
+-- Service/intangible segments (64-95)
 UPDATE shared.commodity_code
 SET
   keywords = array(
@@ -124,7 +89,7 @@ WHERE domain_code = 'unspsc'
   AND level_no = 1
   AND code >= '64000000';
 
--- Tag all HS codes with 'goods', 'trade', 'customs' for domain clarity
+-- HS chapters
 UPDATE shared.commodity_code
 SET
   keywords = array(
@@ -136,14 +101,9 @@ WHERE domain_code = 'hs'
   AND level_no = 1;
 
 
--- ---------------------------------------------------------------------------
--- Step 4: Enrich HS chapter-level codes with section grouping keywords
--- ---------------------------------------------------------------------------
--- HS chapters are grouped into 21 sections. Adding section-level keywords
--- improves discoverability for broad searches like "metals" or "textiles".
--- ---------------------------------------------------------------------------
+-- HS chapters → 21 sections — adds section-level synonyms (metals, textiles, …) for FTS.
 
--- Section I: Live animals, animal products (Ch 01–05)
+-- Section I: Live animals, animal products (Ch 01-05)
 UPDATE shared.commodity_code SET keywords = array(SELECT DISTINCT unnest(keywords || ARRAY['animal', 'livestock', 'biological']) ORDER BY 1)
 WHERE domain_code = 'hs' AND level_no = 1 AND code IN ('01','02','03','04','05');
 
@@ -228,11 +188,7 @@ UPDATE shared.commodity_code SET keywords = array(SELECT DISTINCT unnest(keyword
 WHERE domain_code = 'hs' AND level_no = 1 AND code = '97';
 
 
--- ---------------------------------------------------------------------------
--- Step 5: Enrich UNSPSC segment-level codes with industry-domain keywords
--- ---------------------------------------------------------------------------
--- Adds search-friendly synonyms and industry terms to each UNSPSC segment.
--- ---------------------------------------------------------------------------
+-- UNSPSC segment-level industry synonyms.
 
 -- Segment 10: Live animals & plants
 UPDATE shared.commodity_code SET keywords = array(SELECT DISTINCT unnest(keywords || ARRAY['agriculture', 'livestock', 'horticulture', 'botanical', 'farming']) ORDER BY 1)
@@ -463,10 +419,3 @@ UPDATE shared.commodity_code SET keywords = array(SELECT DISTINCT unnest(keyword
 WHERE domain_code = 'unspsc' AND code = '95000000';
 
 
--- ---------------------------------------------------------------------------
--- Done. Summary:
---   - ~84,276 commodity codes now have algorithmically derived keywords
---   - Segment-level entries enriched with domain-specific synonyms
---   - HS chapters enriched with section-grouping and trade keywords
---   - All keywords: lowercased, deduplicated, sorted, >2 chars
--- ---------------------------------------------------------------------------

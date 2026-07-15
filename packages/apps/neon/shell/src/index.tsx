@@ -111,18 +111,23 @@ function resolveActiveRailKey({
 
 export function PlaneShell({
   children,
+  initialSession,
   supportMode = false,
   inboxCount = 0,
+  notificationCount = 0,
   FavoritesPanelComponent,
 }: {
   children: ReactNode;
+  initialSession?: unknown;
   supportMode?: boolean;
   inboxCount?: number;
+  /** Unread in-app notification count for the Topbar bell badge. */
+  notificationCount?: number;
   FavoritesPanelComponent?: ComponentType<FavoritesPanelSlotProps>;
 }) {
   const brandAssets = getPublicBrandAssets(PLANE);
   const pathname = useBrowserPathname();
-  const { activeOrg, activeUser, warningSeconds, continuePending, continueSession, logoutNow } = usePlaneSessionLifecycle(PLANE);
+  const { activeOrg, activeUser, warningSeconds, continuePending, continueSession, logoutNow } = usePlaneSessionLifecycle(PLANE, initialSession);
   const [panelTab, setPanelTab] = useState<PanelTab>(null);
   const closePanel = useCallback(() => setPanelTab(null), []);
 
@@ -178,6 +183,7 @@ export function PlaneShell({
             </a>
           }
           tenantSlot={<TenantSlot org={activeOrg} />}
+          notificationCount={notificationCount}
           onNotificationClick={() => { window.location.assign("/notifications"); }}
           userSlot={<ProfileSlot user={activeUser} />}
         />

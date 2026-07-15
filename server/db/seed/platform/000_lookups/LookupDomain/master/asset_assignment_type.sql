@@ -1,8 +1,4 @@
--- LookupDomain/master/asset_assignment_type.sql
--- Lookup values for domain: master.asset_assignment_type
--- Idempotent: WHERE NOT EXISTS guard for inserts; explicit DELETE for retired entries
-
--- Retire the 'operating_unit' entry (replaced by company_code model)
+-- Retire the 'operating_unit' entry (replaced by company_code model).
 DELETE FROM control.lookup_value
 WHERE domain_code = 'master.asset_assignment_type'
   AND code        = 'operating_unit'

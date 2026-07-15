@@ -1,7 +1,4 @@
--- LookupDomain/master/holiday_weekend_pattern.sql
--- Lookup values for domain: master.holiday_weekend_pattern
--- Used by: holiday_calendar.weekend_pattern
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: holiday_calendar.weekend_pattern.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

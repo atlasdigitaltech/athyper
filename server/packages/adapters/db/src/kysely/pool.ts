@@ -44,6 +44,13 @@ export type PoolConfig = {
  * This pool is configured to work safely with these constraints.
  */
 export function createPool(config: PoolConfig): pg.Pool {
+  // Normalize before pg/libpq reads process settings while constructing a
+  // connection. Windows commonly exposes TZ as "GMT+0800", which PostgreSQL
+  // does not recognize. The connect-event SET below is only a secondary guard:
+  // EventEmitter does not await its promise before the pool leases the client.
+  process.env["TZ"] = "UTC";
+  process.env["PGTZ"] = "UTC";
+
   const pool = new Pool({
     connectionString: config.connectionString,
     max: config.max ?? 10,

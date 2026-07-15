@@ -7,7 +7,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@athyper/adapter-objectstorage": "workspace:*",
+    "@athyper/adapter-object-storage": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.73.0",
     "@opentelemetry/exporter-trace-otlp-grpc": "^0.215.0",
@@ -25,3 +25,4 @@
     "typescript": "^6.0.3"
   }
 }
+

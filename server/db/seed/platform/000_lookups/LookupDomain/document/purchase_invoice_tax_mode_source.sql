@@ -1,8 +1,3 @@
--- LookupDomain/document/purchase_invoice_tax_mode_source.sql
--- Lookup values for domain: document.purchase_invoice_tax_mode_source
--- How tax_mode was determined on an AP invoice (audit trail + UI attribution).
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,

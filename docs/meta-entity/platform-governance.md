@@ -9,7 +9,7 @@ Platform governance tables control tenant provisioning, runtime feature flags, m
 | Table | Purpose |
 |---|---|
 | `control.blueprint_registry` | Catalogue of available blueprint packs (platform-global) |
-| `control.tenant_blueprint_application` | Audit log of blueprints applied per tenant |
+| `control.blueprint_tenant_application` | Audit log of blueprints applied per tenant |
 | `control.feature_flag` | Platform feature flag registry with rollout support |
 | `control.metadata_change_request` | Metadata Studio change approval workflow |
 | `control.metadata_change_application_log` | Append-only compiler run audit for applied changes |
@@ -56,7 +56,7 @@ Catalogue of available blueprint packs selectable during tenant provisioning. Pl
 
 ---
 
-## `control.tenant_blueprint_application`
+## `control.blueprint_tenant_application`
 
 Audit log of blueprint packs applied to each tenant. Enables incremental pack additions and upgrade tracking. `ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET`.
 
@@ -383,7 +383,7 @@ Runner resolves dependency order
         ▼
 For each blueprint in order:
   → execute seed_files[] against tenant DB
-  → INSERT INTO tenant_blueprint_application (status='applied')
+  → INSERT INTO blueprint_tenant_application (status='applied')
   → on failure: status='failed', error_detail set
         │
         ▼

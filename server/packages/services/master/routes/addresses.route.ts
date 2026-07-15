@@ -21,7 +21,7 @@
  */
 
 import type { Router } from "express";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { verifyBearer, isUuid, resolveTenantId } from "@athyper/svc-shared";
 
 // ── Deps ──────────────────────────────────────────────────────────────────────
@@ -394,4 +394,174 @@ export function registerMasterAddressRoutes(router: Router, deps: MasterAddresse
       return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to end-date address link" });
     }
   });
+
+  // ── Phase 4 endpoints: candidates / default / for AddressPicker ─────────────
+
+  /**
+   * GET /api/master/addresses/candidates?owner_type=...&owner_id=...&purposes=ship_to,default
+   *
+   * Returns active addresses linked to (owner_type, owner_id) with matching
+   * purposes. Used by the AddressPicker UI to populate dropdown tiers.
+   */
+  router.get("/master/addresses/candidates", async (req, res) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg    = req.headers["x-org"]   as string | undefined;
+      const xRealm  = req.headers["x-realm"] as string | undefined;
+      const tenantId = await resolveTenantId(db, xOrg ?? "", xRealm ?? "athyper");
+      if (!tenantId) return res.status(400).json({ error: "TENANT_RESOLUTION_FAILED" });
+
+      const ownerType = (req.query["owner_type"] as string ?? "").trim();
+      const ownerId   = (req.query["owner_id"]   as string ?? "").trim();
+      const purposes  = ((req.query["purposes"]  as string ?? "")
+                          .split(",").map(s => s.trim()).filter(Boolean));
+
+      if (!ownerType || !isUuid(ownerId) || purposes.length === 0) {
+        return res.status(400).json({
+          error: "INVALID_PARAMS",
+          message: "owner_type, owner_id (uuid), and purposes (csv) are required",
+        });
+      }
+
+      const r = ownerType === "supplier"
+        ? await sql<{
+          address_id: string; purpose: string; is_primary: boolean;
+          code: string | null; name: string | null;
+          line1: string | null; city: string | null; region: string | null;
+          country_code: string | null; formatted_address: string | null;
+          tax_jurisdiction_id: string | null;
+          jurisdiction_name: string | null; jurisdiction_code: string | null;
+        }>`
+          SELECT
+            vsa.address_id,
+            vsa.purpose,
+            vsa.is_primary,
+            vsa.code,
+            vsa.name,
+            vsa.line1,
+            vsa.city,
+            vsa.region,
+            vsa.country_code,
+            vsa.formatted_address,
+            vsa.tax_jurisdiction_id,
+            tj.name AS jurisdiction_name,
+            tj.code AS jurisdiction_code
+          FROM master.v_supplier_address vsa
+          LEFT JOIN master.tax_jurisdiction tj
+            ON tj.id = vsa.tax_jurisdiction_id
+           AND tj.tenant_id = vsa.tenant_id
+         WHERE vsa.tenant_id = ${tenantId}::uuid
+           AND vsa.supplier_id = ${ownerId}::uuid
+           AND vsa.purpose = ANY(${purposes}::text[])
+         ORDER BY array_position(${purposes}::text[], vsa.purpose),
+                  vsa.is_primary DESC NULLS LAST,
+                  vsa.line1
+        `.execute(db)
+        : await sql<{
+        address_id: string; purpose: string; is_primary: boolean;
+        code: string | null; name: string | null;
+        line1: string | null; city: string | null; region: string | null;
+        country_code: string | null; formatted_address: string | null;
+        tax_jurisdiction_id: string | null;
+        jurisdiction_name: string | null; jurisdiction_code: string | null;
+      }>`
+        SELECT * FROM master.fn_load_address_candidates(
+          ${tenantId}::uuid, ${ownerType}, ${ownerId}::uuid, ${purposes}::text[]
+        )
+      `.execute(db);
+
+      return res.json({ data: r.rows });
+    } catch (err) {
+      logger?.error("master.addresses.candidates", { error: String(err) });
+      return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to load candidates" });
+    }
+  });
+
+  /**
+   * POST /api/master/addresses/default
+   *
+   * Body: { owner_walk: [{owner_type, owner_id}, ...], purposes: string[] }
+   *
+   * Walks owner_walk × purposes; returns first matching address + jurisdiction.
+   * Used by AddressPicker mount-time default and document snapshot stamping.
+   */
+  router.post("/master/addresses/default", async (req, res) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg    = req.headers["x-org"]   as string | undefined;
+      const xRealm  = req.headers["x-realm"] as string | undefined;
+      const tenantId = await resolveTenantId(db, xOrg ?? "", xRealm ?? "athyper");
+      if (!tenantId) return res.status(400).json({ error: "TENANT_RESOLUTION_FAILED" });
+
+      const body = req.body as { owner_walk?: unknown; purposes?: unknown };
+      const ownerWalk = body.owner_walk;
+      const purposes  = body.purposes;
+
+      if (!Array.isArray(ownerWalk) || ownerWalk.length === 0 ||
+          !Array.isArray(purposes)  || purposes.length === 0) {
+        return res.status(400).json({
+          error: "INVALID_BODY",
+          message: "owner_walk (jsonb array) and purposes (string[]) required",
+        });
+      }
+
+      const expandedOwnerWalk = await expandSupplierOwnerWalk(db, tenantId, ownerWalk);
+
+      const r = await sql<{
+        address_id: string | null;
+        tax_jurisdiction_id: string | null;
+        owner_type: string | null;
+        owner_id: string | null;
+        purpose: string | null;
+      }>`
+        SELECT * FROM master.fn_resolve_default_address(
+          ${tenantId}::uuid,
+          ${JSON.stringify(expandedOwnerWalk)}::jsonb,
+          ${purposes}::text[]
+        )
+        LIMIT 1
+      `.execute(db);
+
+      const hit = r.rows[0] ?? null;
+      return res.json({ data: hit });
+    } catch (err) {
+      logger?.error("master.addresses.default", { error: String(err) });
+      return res.status(500).json({ error: "INTERNAL_ERROR", message: "Failed to resolve default address" });
+    }
+  });
+}
+
+async function expandSupplierOwnerWalk(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  ownerWalk: unknown[],
+): Promise<unknown[]> {
+  const expanded: unknown[] = [];
+
+  for (const step of ownerWalk) {
+    expanded.push(step);
+    if (!step || typeof step !== "object") continue;
+
+    const owner = step as { owner_type?: unknown; owner_id?: unknown };
+    if (owner.owner_type !== "supplier" || typeof owner.owner_id !== "string" || !isUuid(owner.owner_id)) {
+      continue;
+    }
+
+    const supplier = await sql<{ business_partner_id: string | null }>`
+      SELECT business_partner_id
+        FROM master.supplier
+       WHERE tenant_id = ${tenantId}::uuid
+         AND id = ${owner.owner_id}::uuid
+       LIMIT 1
+    `.execute(db);
+    const businessPartnerId = supplier.rows[0]?.business_partner_id;
+    if (businessPartnerId) {
+      expanded.push({ owner_type: "business_partner", owner_id: businessPartnerId });
+    }
+  }
+
+  return expanded;
 }

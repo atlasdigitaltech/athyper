@@ -816,7 +816,7 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
         .selectFrom("control.entity_operation as eo")
         .select([
           "eo.id", "eo.entity_name", "eo.permission_code",
-          "eo.surface", "eo.placement", "eo.handler_type", "eo.handler_target",
+          "eo.surface", "eo.placement", "eo.handler_type", "eo.handler_target", "eo.execution_target",
           "eo.is_record_required", "eo.sort_order",
           "eo.label_override", "eo.icon_override", "eo.tcode_alias", "eo.is_enabled",
           "eo.created_at", "eo.updated_at",
@@ -880,6 +880,7 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
             placement: r.placement as string,
             handler_type: r.handler_type as string,
             handler_target: (r.handler_target ?? null) as string | null,
+            execution_target: (r.execution_target ?? null) as string | null,
             is_record_required: Boolean(r.is_record_required),
             sort_order: Number(r.sort_order ?? 0),
             label_override: (r.label_override ?? null) as string | null,
@@ -913,18 +914,22 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
 
       const {
         entity_name, permission_code, surface, placement,
-        handler_type, handler_target, is_record_required,
+        handler_type, handler_target, execution_target, is_record_required,
         sort_order, label_override, icon_override, tcode_alias,
       } = req.body as {
         entity_name?: string; permission_code?: string;
         surface?: string; placement?: string;
-        handler_type?: string; handler_target?: string;
+        handler_type?: string; handler_target?: string; execution_target?: string | null;
         is_record_required?: boolean; sort_order?: number;
         label_override?: string; icon_override?: string; tcode_alias?: string;
       };
 
       if (!entity_name?.trim()) return badRequest(res as never, "entity_name is required");
       if (!permission_code?.trim()) return badRequest(res as never, "permission_code is required");
+      if (execution_target != null
+        && !/^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$/.test(execution_target)) {
+        return badRequest(res as never, "execution_target must use namespace:command format");
+      }
 
       const inserted = await db
         .insertInto("control.entity_operation")
@@ -935,6 +940,7 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
           placement: placement ?? "TOOLBAR",
           handler_type: handler_type ?? "API",
           handler_target: handler_target ?? null,
+          execution_target: execution_target ?? null,
           is_record_required: is_record_required ?? false,
           sort_order: sort_order ?? 0,
           label_override: label_override ?? null,
@@ -964,8 +970,14 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
       const row = await db.selectFrom("control.entity_operation").select("id").where("id", "=", id).executeTakeFirst();
       if (!row) return notFound(res as never, `Operation '${id}' not found`);
 
-      const { surface, placement, handler_type, handler_target, is_record_required,
+      const { surface, placement, handler_type, handler_target, execution_target, is_record_required,
               sort_order, label_override, icon_override, tcode_alias, is_enabled } = req.body as Record<string, unknown>;
+
+      if (execution_target != null
+        && (typeof execution_target !== "string"
+          || !/^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$/.test(execution_target))) {
+        return badRequest(res as never, "execution_target must use namespace:command format");
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updates: Record<string, any> = { updated_by: ctx.pId, updated_at: new Date() };
@@ -973,6 +985,7 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
       if (placement !== undefined) updates["placement"] = placement;
       if (handler_type !== undefined) updates["handler_type"] = handler_type;
       if (handler_target !== undefined) updates["handler_target"] = handler_target;
+      if (execution_target !== undefined) updates["execution_target"] = execution_target;
       if (is_record_required !== undefined) updates["is_record_required"] = is_record_required;
       if (sort_order !== undefined) updates["sort_order"] = sort_order;
       if (label_override !== undefined) updates["label_override"] = label_override;

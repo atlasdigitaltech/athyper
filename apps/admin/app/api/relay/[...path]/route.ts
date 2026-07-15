@@ -9,7 +9,7 @@ const handler = buildRelayHandler({
   resolveSession: () => getAdminServerSession(),
   runtimeApiUrl: RUNTIME_API_URL,
   appLabel: "admin:relay",
-  passthroughHeaders: ["Idempotency-Key", "X-Idempotency-Key"],
+  passthroughHeaders: ["Idempotency-Key", "X-Idempotency-Key", "If-Match"],
 });
 
 export const GET = handler;

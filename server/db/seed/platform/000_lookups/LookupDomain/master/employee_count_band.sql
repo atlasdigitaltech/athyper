@@ -1,8 +1,5 @@
--- LookupDomain/master/employee_count_band.sql
--- Lookup domain + values for: master.employee_count_band
--- Used by: master.supplier.employee_count_band
--- Codes: e prefix ensures all codes start with a letter
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by: master.supplier.employee_count_band.
+-- 'e' prefix on every code is intentional — lookup_value_code_fmt requires codes to start with a letter.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

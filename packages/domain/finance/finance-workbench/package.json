@@ -16,6 +16,7 @@
     "./lib/invoice-orchestrator-mock": "./src/lib/invoice-orchestrator-mock.ts"
   },
   "dependencies": {
+    "@athyper/finance-rules": "workspace:*",
     "@athyper/runtime-shared": "workspace:*"
   },
   "scripts": {

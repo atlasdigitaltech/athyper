@@ -1,15 +1,7 @@
--- 900_seed_data/003_master/002_party_risk_registry.sql
--- Seed: Platform risk registries — dimensions, driver types, sources, and models.
--- Schema: master
--- Tables: risk_dimension, risk_driver_registry, risk_source, risk_model, risk_model_dimension
--- Depends on: master/01j_tables_party_risk.sql
--- Idempotent: yes — ON CONFLICT DO NOTHING / DO UPDATE throughout
--- ============================================================================
+-- Platform risk registries: dimensions, driver types, sources, and scoring models.
+-- §5 invariant: master.risk_model_dimension weights MUST sum to 1.00 per (model_code, model_version).
 
-
--- ============================================================================
 -- §1  master.risk_dimension — dimension taxonomy
--- ============================================================================
 
 INSERT INTO master.risk_dimension
     (code, name, description, category, applicable_contexts, is_knockout, ordinal, is_system_defined, status)
@@ -49,9 +41,7 @@ VALUES
 ON CONFLICT (code) DO NOTHING;
 
 
--- ============================================================================
 -- §2  master.risk_driver_registry — common driver type definitions
--- ============================================================================
 
 INSERT INTO master.risk_driver_registry
     (code, name, description, default_dimension_code, default_severity,
@@ -142,9 +132,7 @@ VALUES
 ON CONFLICT (code) DO NOTHING;
 
 
--- ============================================================================
 -- §3  master.risk_source — signal origin registry
--- ============================================================================
 
 INSERT INTO master.risk_source
     (code, name, description, source_type, provider_category, trust_level, refresh_mode, status)
@@ -184,9 +172,7 @@ VALUES
 ON CONFLICT (code) DO NOTHING;
 
 
--- ============================================================================
 -- §4  master.risk_model — scoring model registry
--- ============================================================================
 
 INSERT INTO master.risk_model
     (code, version, name, description, applicable_context, scoring_algorithm,
@@ -223,10 +209,7 @@ VALUES
 ON CONFLICT (code, version) DO NOTHING;
 
 
--- ============================================================================
--- §5  master.risk_model_dimension — dimension weights per model
--- Weight sum must equal 1.0 per (model_code, model_version).
--- ============================================================================
+-- §5  master.risk_model_dimension — weights per model (must sum to 1.00 per model/version)
 
 -- standard_org v1.0  (6 dimensions, sum = 1.00)
 INSERT INTO master.risk_model_dimension

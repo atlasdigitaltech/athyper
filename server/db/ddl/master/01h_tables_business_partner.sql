@@ -62,6 +62,12 @@ CREATE TABLE master.business_partner (
     registration_no               text,
     registration_country_code     char(2),
     tax_residence_country_code    char(2),
+    -- Declared tax registration jurisdiction (legal fact, manually declared).
+    -- Distinct from the geographic jurisdiction of any address. Used for
+    -- bill-from snapshot when this BP is the seller (supplier role) or
+    -- bill-to snapshot when this BP is the buyer (customer role).
+    -- FK to master.tax_jurisdiction (tenant-composite) added in 03_constraints.
+    tax_jurisdiction_id           uuid,
     website_url                   text,
 
     -- Group hierarchy (BP-level, not role-level)
@@ -135,6 +141,10 @@ CREATE INDEX IF NOT EXISTS bpart_category_idx
 CREATE INDEX IF NOT EXISTS bpart_parent_idx
     ON master.business_partner (tenant_id, parent_business_partner_id)
     WHERE parent_business_partner_id IS NOT NULL;
+-- Phase 3a: declared tax jurisdiction reverse lookup
+CREATE INDEX IF NOT EXISTS bpart_tax_jurisdiction_pidx
+    ON master.business_partner (tenant_id, tax_jurisdiction_id)
+    WHERE tax_jurisdiction_id IS NOT NULL AND is_active = true;
 CREATE UNIQUE INDEX IF NOT EXISTS bpart_external_ref_uidx
     ON master.business_partner (tenant_id, external_ref)
     WHERE external_ref IS NOT NULL;

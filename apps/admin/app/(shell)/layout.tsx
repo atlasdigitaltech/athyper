@@ -15,13 +15,17 @@ export default async function ShellLayout({ children }: { children: ReactNode })
     cookies: cookieStore,
     headers: headerStore,
   });
+  const returnUrl = currentReturnPath(headerStore, plane.defaultPath);
 
   if (!validation.ok) {
-    const returnUrl = currentReturnPath(headerStore, plane.defaultPath);
     if (validation.reason === "MFA_REQUIRED") {
       redirect(`/mfa/challenge?returnUrl=${encodeURIComponent(returnUrl)}`);
     }
     redirect(`${plane.loginPath}?returnUrl=${encodeURIComponent(returnUrl)}`);
+  }
+
+  if (!hasActiveTenantContext(validation.session)) {
+    redirect(contextSelectPath(returnUrl));
   }
 
   // Phase I — surface pending KC required-actions inline above the shell.
@@ -38,5 +42,24 @@ export default async function ShellLayout({ children }: { children: ReactNode })
 
 function currentReturnPath(headers: { get(name: string): string | null }, fallback: string): string {
   const pathname = headers.get("x-pathname");
-  return pathname?.startsWith("/") === true ? pathname : fallback;
+  if (pathname?.startsWith("/") !== true) return fallback;
+
+  const search = headers.get("x-search");
+  return search?.startsWith("?") === true ? `${pathname}${search}` : pathname;
+}
+
+function hasActiveTenantContext(session: {
+  activeOrg: string | null;
+  activeWorkbench: string | null;
+  organizations: Record<string, { tenantId?: string; roles: string[] }>;
+}): boolean {
+  if (!session.activeOrg || !session.activeWorkbench) return false;
+
+  const membership = session.organizations[session.activeOrg];
+  return Boolean(membership?.tenantId && membership.roles.includes(session.activeWorkbench));
+}
+
+function contextSelectPath(returnUrl: string): string {
+  const params = new URLSearchParams({ returnUrl });
+  return `/auth/select?${params.toString()}`;
 }

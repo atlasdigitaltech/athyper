@@ -34,7 +34,7 @@ import { DrawerShell } from "@athyper/ui/primitives";
 import type { AccountingDistribution, DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
-import { useEditSessionContext } from "@athyper/content-ui";
+import { useEditDraftContext } from "@athyper/content-ui";
 import { appEntityDetailHref, fmtAmount } from "@athyper/runtime-shared/core";
 import { cn } from "@athyper/theme/utils";
 import { SplitAccountingPanel, type SplitAccountingPanelHandle } from "./SplitAccountingPanel";
@@ -2199,7 +2199,7 @@ export function ProcureLineEditorSheet({
   // Phase 6d: same fork as LineEditorSheet — when an Edit Session is active
   // (object-page mode, editing), Save queues the change into the bundle
   // instead of calling the per-line REST endpoint.
-  const editSession = useEditSessionContext();
+  const editSession = useEditDraftContext();
 
   const tabs     = useMemo(() => resolveProcureEditorTabs(resolvedEntity),      [resolvedEntity]);
   const refCfg   = useMemo(() => resolveReferenceTabConfig(resolvedEntity),     [resolvedEntity]);

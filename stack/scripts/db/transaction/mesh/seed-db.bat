@@ -12,7 +12,11 @@ REM   seed-db.bat --ddl-only      Run only Mesh DDL
 REM   seed-db.bat --seed-only     Run only shared ref + Mesh seed data
 REM   seed-db.bat --status        Show checksum status, no data changes
 REM   seed-db.bat --reset         Drop shared/mesh schemas, then re-run
+REM                               #   --keep-shared also supported for dev workflows (preserve shared schema).
+REM                               #   --skip-shared also supported to avoid reseeding shared DDL.
 REM   seed-db.bat --drop-only     Drop shared/mesh schemas only
+REM                               #   --keep-shared also supported for dev workflows (preserve shared schema).
+REM                               #   --skip-shared also supported to avoid reseeding shared DDL.
 REM   seed-db.bat --force         Re-run even when checksums match
 REM   seed-db.bat --discover      Print the Mesh file set
 REM

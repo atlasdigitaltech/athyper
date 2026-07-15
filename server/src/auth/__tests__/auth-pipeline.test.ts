@@ -303,7 +303,7 @@ describe("enforceRequiredActions", () => {
   it("blocks UPDATE_PASSWORD on any mutating /api/* route", () => {
     const result = enforceRequiredActions({
       claims: { required_actions: ["UPDATE_PASSWORD"] },
-      route: { path: "/api/records/foo", method: "POST" },
+      route: { path: "/api/runtime/v1/entities/foo", method: "POST" },
       matrix,
     });
     expect(result.ok).toBe(false);
@@ -314,7 +314,7 @@ describe("enforceRequiredActions", () => {
   it("allows GET on a blocked path (reads stay open)", () => {
     const result = enforceRequiredActions({
       claims: { required_actions: ["UPDATE_PASSWORD"] },
-      route: { path: "/api/records/foo", method: "GET" },
+      route: { path: "/api/runtime/v1/entities/foo", method: "GET" },
       matrix,
     });
     expect(result.ok).toBe(true);
@@ -330,7 +330,7 @@ describe("enforceRequiredActions", () => {
 
     const allowed = enforceRequiredActions({
       claims: { required_actions: ["VERIFY_EMAIL"] },
-      route: { path: "/api/records/foo", method: "POST" },
+      route: { path: "/api/runtime/v1/entities/foo", method: "POST" },
       matrix,
     });
     expect(allowed.ok).toBe(true);
@@ -348,7 +348,7 @@ describe("enforceRequiredActions", () => {
   it("ignores actions not in matrix", () => {
     const result = enforceRequiredActions({
       claims: { required_actions: ["UNKNOWN_ACTION"] },
-      route: { path: "/api/records/foo", method: "POST" },
+      route: { path: "/api/runtime/v1/entities/foo", method: "POST" },
       matrix,
     });
     expect(result.ok).toBe(true);
@@ -382,7 +382,7 @@ describe("enforceAuthPipeline composition", () => {
         claims: makeClaims(),
         ctx: { planeKey: "neon", realmKey: "athyper", tenantId: TENANT_A, requestId: "req-1" },
         headers: { xOrg: "acme--cc1", xRealm: "athyper" },
-        route: { path: "/api/records/foo", method: "POST" },
+        route: { path: "/api/runtime/v1/entities/foo", method: "POST" },
       },
       { mode: "on", resolveTenant: true, enforceAuthorized: true, enforceRequiredActions: true, requiredActionsMatrix: {} },
       {
@@ -456,7 +456,7 @@ describe("enforceAuthPipeline composition", () => {
         claims: makeClaims({ required_actions: ["UPDATE_PASSWORD"] }),
         ctx: { planeKey: "neon", realmKey: "athyper", tenantId: TENANT_A, requestId: "req-4" },
         headers: {},
-        route: { path: "/api/records/foo", method: "POST" },
+        route: { path: "/api/runtime/v1/entities/foo", method: "POST" },
       },
       {
         mode: "on",

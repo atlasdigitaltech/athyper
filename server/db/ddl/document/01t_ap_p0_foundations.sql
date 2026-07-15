@@ -1,11 +1,10 @@
 -- ============================================================================
 -- document/01t_ap_p0_foundations.sql
--- Concept: AP P0 Foundations (v1.2) — column additions, sidecar table,
+-- Concept: AP P0 Foundations (v1.2) — column additions,
 --          CHECK constraints (NOT VALID), validation functions
 -- Depends on: 01e_tables_invoice.sql, 01b_tables_journal.sql, 01c_tables_extended.sql (master.budget_allocation)
 -- Spec: docs/specs/purchase_invoice_field_design.md §3 (P0)
 -- Triggers: see 06z_ap_p0_triggers.sql
--- RLS: see 08z_ap_p0_rls.sql
 -- ============================================================================
 --
 -- This file is idempotent. Constraints are added NOT VALID first; the operator
@@ -14,133 +13,39 @@
 --
 -- v1.2 changelog (vs. v1.1):
 --   • row_version on PIL and AD moved to 01z_row_version.sql
---   • account_source/lookup_key/fallback NOT moved to sidecar — they are
---     strategy input on AD, not forensic trace
+--   • AD account-resolution strategy fields (posting_role_code, account_code,
+--     account_lookup_key, account_fallback) removed — AD is allocation +
+--     resolved-account snapshot only. Resolution strategy lives in
+--     control.acct_profile_entry_template and document.pricing_component.
 --   • Sidecar captures resolution DECISIONS only (which fallback hit, what
 --     resolved to what GL ID, resolver version)
 -- ============================================================================
 
 
 -- =============================================================================
--- §P0.2  AD base-currency columns (Stage 3 frozen amounts)
+-- P0.2  AD allocation rows stay in document currency only
 -- =============================================================================
--- distributed_amount_base + exchange_rate_snapshot are populated by the
--- posting service during the Stage 3 final UPDATE. Nullable today; SET NOT NULL
--- after the backfill script `server/scripts/backfill-ad-base-amounts.ts` is run
--- and verified for the relevant tenant scope.
+-- Base-currency amounts and FX rates are owned by document lifecycle/posting
+-- snapshots and journal/posting artifacts, not duplicated on AD rows.
 -- =============================================================================
 
-ALTER TABLE document.accounting_distribution
-    ADD COLUMN IF NOT EXISTS distributed_amount_base numeric(18,4),
-    ADD COLUMN IF NOT EXISTS exchange_rate_snapshot  numeric(20,10);
-
-COMMENT ON COLUMN document.accounting_distribution.distributed_amount_base IS
-    'Base-currency amount frozen at posting (Stage 3). '
-    'Computed by posting service: distributed_amount × parent PI.exchange_rate. '
-    'Nullable in Stages 1+2; required after Stage 3. '
-    'Backfill: server/scripts/backfill-ad-base-amounts.ts.';
-
-COMMENT ON COLUMN document.accounting_distribution.exchange_rate_snapshot IS
-    'Exchange rate frozen at posting (Stage 3). '
-    'Snapshot of parent PI.exchange_rate at the moment of GL projection. '
-    'Nullable in Stages 1+2; required after Stage 3.';
-
-
 -- =============================================================================
--- §P0.3  PIL budget_allocation_id (line-level override)
+-- §P0.3  PIL budget_allocation_id — REMOVED (now AD-only, per AD-dims refactor)
 -- =============================================================================
--- Line cascade default from PI.budget_allocation_id; UI cascade interpretation
--- via control.entity_field.defaults (see §P0.10). FK to master.budget_allocation
--- (NOT control.budget_allocation — corrected v1.1).
+-- Accounting dimensions (cost_center, profit_center, project, budget_allocation,
+-- dimension_set) live on document.accounting_distribution. The PIL column was
+-- retired together with cost_center_id/profit_center_id/project_id. Defensive
+-- drop covers existing dev DBs that pre-date the refactor.
 -- =============================================================================
 
-ALTER TABLE document.purchase_invoice_line
-    ADD COLUMN IF NOT EXISTS budget_allocation_id uuid;
-
--- Tenant-scoped FK (matches Athyper composite-FK convention).
--- H1.B fix: column-scoped SET NULL (PG 15+) so only budget_allocation_id is
--- nulled, not the NOT NULL tenant_id. Fallback to RESTRICT on older PG.
 DO $$
 BEGIN
     ALTER TABLE document.purchase_invoice_line
         DROP CONSTRAINT IF EXISTS pil_budget_allocation_fk;
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 
-DO $$
-BEGIN
-    ALTER TABLE document.purchase_invoice_line
-        ADD CONSTRAINT pil_budget_allocation_fk
-        FOREIGN KEY (tenant_id, budget_allocation_id)
-        REFERENCES master.budget_allocation (tenant_id, id)
-        ON DELETE SET NULL (budget_allocation_id)
-        DEFERRABLE INITIALLY DEFERRED;
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-    WHEN syntax_error THEN
-        ALTER TABLE document.purchase_invoice_line
-            ADD CONSTRAINT pil_budget_allocation_fk
-            FOREIGN KEY (tenant_id, budget_allocation_id)
-            REFERENCES master.budget_allocation (tenant_id, id)
-            ON DELETE RESTRICT
-            DEFERRABLE INITIALLY DEFERRED;
-END $$;
-
-COMMENT ON COLUMN document.purchase_invoice_line.budget_allocation_id IS
-    'Line-level budget allocation override. Cascade default = PI.budget_allocation_id, '
-    'applied at row-create by the form runtime via control.entity_field.defaults. '
-    'If null at submit, AD-level RESOLVE(dimensions, period, amount) fills.';
-
-
--- =============================================================================
--- §P0.4  Accounting Distribution Resolution Audit Sidecar
--- =============================================================================
--- 1:1 with accounting_distribution. INSERTed by the posting service during
--- the Stage 3 final UPDATE. Captures the resolver decision path, NOT the
--- strategy fields (those stay on AD: account_source, posting_role_code,
--- account_code, account_lookup_key, account_fallback, business_intent_id).
---
--- Append-only — log.trg_prevent_mutation() attached in 06z_ap_p0_triggers.sql.
--- RLS in 08z_ap_p0_rls.sql.
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS document.accounting_distribution_resolution_audit (
-    -- Identity (1:1 with AD)
-    accounting_distribution_id  uuid          NOT NULL,
-    tenant_id                   uuid          NOT NULL,
-
-    -- Resolution decision trace
-    resolution_steps            jsonb         NOT NULL DEFAULT '[]'::jsonb,
-    --   Example: [
-    --     {"step":1,"strategy":"FROM_INTENT","intent_id":"...","matched_rule":"...","gl_account_id":"..."},
-    --     {"step":2,"fallback":"company_default","gl_account_id":"..."}
-    --   ]
-
-    resolved_gl_account_id      uuid          NOT NULL,
-    resolution_path             text          NOT NULL,
-    --   'direct' | 'fallback_1' | 'fallback_2' | 'company_default'
-
-    resolver_version            text          NOT NULL,
-    -- semver of the resolver service that produced this row, e.g. 'resolver-v2.3.1'
-
-    resolved_at                 timestamptz   NOT NULL DEFAULT now(),
-
-    -- Metadata
-    metadata                    jsonb         NOT NULL DEFAULT '{}'::jsonb,
-
-    CONSTRAINT ad_resolution_audit_pkey          PRIMARY KEY (accounting_distribution_id),
-    CONSTRAINT ad_resolution_audit_tenant_uq     UNIQUE (tenant_id, accounting_distribution_id),
-    CONSTRAINT ad_resolution_audit_path_chk      CHECK (resolution_path IN (
-        'direct','fallback_1','fallback_2','fallback_3','company_default','tenant_default')),
-    CONSTRAINT ad_resolution_audit_resolver_chk  CHECK (btrim(resolver_version) <> '')
-);
-
-COMMENT ON TABLE document.accounting_distribution_resolution_audit IS
-    'ARCHETYPE=C;SCOPE=T. Forensic trace of account resolution at Stage 3 posting. '
-    'INSERTed by posting service in the same transaction as the Stage 3 final UPDATE on AD. '
-    'Append-only (log.trg_prevent_mutation in 06z_ap_p0_triggers.sql). '
-    'Strategy fields (account_source, posting_role_code, account_code, account_lookup_key, '
-    'account_fallback, business_intent_id, commodity_category_id) stay on accounting_distribution — '
-    'those are inputs the user (or service) set in Stages 1+2; this table captures the resolution OUTCOME.';
+ALTER TABLE document.purchase_invoice_line
+    DROP COLUMN IF EXISTS budget_allocation_id;
 
 
 -- =============================================================================
@@ -213,8 +118,30 @@ $$;
 
 COMMENT ON FUNCTION shared.trg_dimension_set_hash_refresh() IS
     'BEFORE INSERT OR UPDATE OF (cost_center_id, profit_center_id, project_id, site_id) '
-    'on PI, PIL, AD: recomputes dimension_set_id via shared.fn_dimension_set_hash. '
-    'Decision #2 (v1.2): scalars canonical; dim_set derived.';
+    'on PI, PIL: recomputes dimension_set_id via shared.fn_dimension_set_hash. '
+    'Decision #2 (v1.2): scalars canonical; dim_set derived. '
+    'AD uses document.trg_ad_dimension_set_hash_refresh() instead (no site_id on AD).';
+
+
+-- AD variant: site_id was removed from accounting_distribution (sourced from the
+-- P2P line). Pass NULL for the site argument so dimension_set_id stays in sync
+-- with the three remaining scalar dimensions.
+CREATE OR REPLACE FUNCTION document.trg_ad_dimension_set_hash_refresh()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    NEW.dimension_set_id := shared.fn_dimension_set_hash(
+        NEW.cost_center_id,
+        NEW.profit_center_id,
+        NEW.project_id,
+        NULL
+    );
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION document.trg_ad_dimension_set_hash_refresh() IS
+    'AD-specific dimension hash refresh. Site dimension is sourced from the P2P '
+    'line, not stored on AD, so site is passed as NULL to fn_dimension_set_hash.';
 
 
 -- =============================================================================
@@ -224,11 +151,11 @@ COMMENT ON FUNCTION shared.trg_dimension_set_hash_refresh() IS
 -- table per source_doc_type at INSERT and UPDATE time.
 --
 -- Constrained to the existing AD sealed CHECK source types (ad_source_type_chk):
---   PURCHASE_REQUISITION_LINE, COMMITMENT_LINE, PURCHASE_INVOICE_LINE,
---   GOODS_RECEIPT_LINE, SERVICE_ENTRY_SHEET_LINE.
+--   purchase_requisition_line, commitment_line, purchase_invoice_line,
+--   receipt_line, service_sheet_line.
 --
--- For PURCHASE_REQUISITION_LINE, COMMITMENT_LINE, GOODS_RECEIPT_LINE,
--- SERVICE_ENTRY_SHEET_LINE: validation is best-effort — the tables exist but
+-- For purchase_requisition_line, commitment_line, receipt_line,
+-- service_sheet_line: validation is best-effort — the tables exist but
 -- their AD usage may pre-date this trigger. Soft-fail with NOTICE for those
 -- types until each source domain wires its own audit.
 -- =============================================================================
@@ -238,8 +165,8 @@ RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
     parent_tenant uuid;
 BEGIN
-    -- PURCHASE_INVOICE_LINE — primary scope, hard-validated
-    IF NEW.source_doc_type = 'PURCHASE_INVOICE_LINE' THEN
+    -- purchase_invoice_line — primary scope, hard-validated
+    IF NEW.source_doc_type = 'purchase_invoice_line' THEN
         SELECT pil.tenant_id INTO parent_tenant
           FROM document.purchase_invoice_line pil
          WHERE pil.id = NEW.source_line_id
@@ -253,7 +180,7 @@ BEGIN
 
         -- source_doc_id must point at the parent PI (Athyper convention from
         -- invoice-posting.service.ts): source_doc_id = parent PI.id when
-        -- source_doc_type = PURCHASE_INVOICE_LINE.
+        -- source_doc_type = purchase_invoice_line.
         IF NOT EXISTS (
             SELECT 1 FROM document.purchase_invoice_line pil
              WHERE pil.id = NEW.source_line_id
@@ -267,8 +194,8 @@ BEGIN
 
     -- Other source types — soft validation (NOTICE on missing) until wired
     ELSIF NEW.source_doc_type IN (
-        'COMMITMENT_LINE','GOODS_RECEIPT_LINE',
-        'SERVICE_ENTRY_SHEET_LINE','PURCHASE_REQUISITION_LINE'
+        'commitment_line','receipt_line',
+        'service_sheet_line','purchase_requisition_line'
     ) THEN
         -- Phase 2: tighten per source domain
         NULL;
@@ -282,7 +209,7 @@ COMMENT ON FUNCTION document.fn_ad_validate_polymorphic_source() IS
     'BEFORE INSERT/UPDATE OF source_doc_type, source_doc_id, source_line_id on '
     'accounting_distribution: validates that the parent row exists in the correct '
     'table per source_doc_type, with matching tenant_id, and that source_doc_id '
-    '(header) owns source_line_id. Hard-validates PURCHASE_INVOICE_LINE (primary AP '
+    '(header) owns source_line_id. Hard-validates purchase_invoice_line (primary AP '
     'scope); other source types soft-validated pending per-domain wiring.';
 
 
@@ -297,9 +224,8 @@ COMMENT ON FUNCTION document.fn_ad_validate_polymorphic_source() IS
 -- Posting transaction order (enforced by service, not trigger):
 --   1. UPDATE accounting_distribution SET gl_account_id=..., ... (multiple AD rows)
 --      → trigger sees OLD pi.status='approved' → ALLOWED
---   2. INSERT into accounting_distribution_resolution_audit
---   3. INSERT journal_entry + journal_lines
---   4. UPDATE purchase_invoice SET status='posted'
+--   2. INSERT journal_entry + journal_lines
+--   3. UPDATE purchase_invoice SET status='posted'
 --      → this is the LAST write; subsequent AD UPDATEs see OLD='posted' → REJECTED
 -- =============================================================================
 
@@ -309,7 +235,7 @@ DECLARE
     old_parent_status text;
 BEGIN
     -- Resolve OLD parent status via OLD's source_doc reference
-    IF OLD.source_doc_type = 'PURCHASE_INVOICE_LINE' THEN
+    IF OLD.source_doc_type = 'purchase_invoice_line' THEN
         SELECT pi.status INTO old_parent_status
           FROM document.purchase_invoice_line pil
           JOIN document.purchase_invoice pi ON pi.id = pil.purchase_invoice_id
@@ -345,16 +271,10 @@ COMMENT ON FUNCTION document.fn_ad_status_gated_mutation() IS
 -- Safe — jurisdiction-neutral. Pre-check script verifies zero violations.
 -- =============================================================================
 
-DO $$
-BEGIN
-    ALTER TABLE document.purchase_invoice
-        ADD CONSTRAINT pi_reversal_pair_chk CHECK (
-            (is_reversal = false AND reversal_of_id IS NULL)
-            OR (is_reversal = true AND reversal_of_id IS NOT NULL)
-        ) NOT VALID;
-EXCEPTION WHEN duplicate_object THEN
-    NULL;
-END $$;
+-- Phase 1 reset: purchase_invoice.is_reversal and purchase_invoice.reversal_of_id
+-- were dropped from the canonical invoice header. Reversal-pair enforcement remains
+-- on accounting artifacts that still own those columns, such as journal entries
+-- and payment documents.
 
 -- Validation step — run only after pre-check confirms no violations:
 --   SELECT COUNT(*) FROM document.purchase_invoice
@@ -369,15 +289,18 @@ END $$;
 -- §P0.8b  PI Currency Triad CHECK (NOT VALID then VALIDATE)
 -- =============================================================================
 -- Enforces: currency_code = base_currency_code ⇒ exchange_rate = 1.0
---           currency_code ≠ base_currency_code ⇒ exchange_rate > 0
+--           currency_code ≠ base_currency_code ⇒ exchange_rate IS NOT NULL AND > 0
 -- =============================================================================
 
 DO $$
 BEGIN
     ALTER TABLE document.purchase_invoice
         ADD CONSTRAINT pi_currency_triad_chk CHECK (
-            (currency_code = base_currency_code AND exchange_rate = 1.0)
-            OR (currency_code <> base_currency_code AND exchange_rate > 0)
+            status = 'draft'
+            OR (
+                (currency_code = base_currency_code AND exchange_rate = 1.0)
+                OR (currency_code <> base_currency_code AND exchange_rate IS NOT NULL AND exchange_rate > 0)
+            )
         ) NOT VALID;
 EXCEPTION WHEN duplicate_object THEN
     NULL;
@@ -386,8 +309,11 @@ END $$;
 -- VALIDATE separately after pre-check:
 --   SELECT COUNT(*) FROM document.purchase_invoice
 --    WHERE NOT (
---      (currency_code = base_currency_code AND exchange_rate = 1.0)
---      OR (currency_code <> base_currency_code AND exchange_rate > 0)
+--      status = 'draft'
+--      OR (
+--        (currency_code = base_currency_code AND exchange_rate = 1.0)
+--        OR (currency_code <> base_currency_code AND exchange_rate IS NOT NULL AND exchange_rate > 0)
+--      )
 --    );
 -- Then:
 --   ALTER TABLE document.purchase_invoice VALIDATE CONSTRAINT pi_currency_triad_chk;
@@ -424,7 +350,12 @@ DECLARE
     computed_total  numeric(18,4);
     drift           numeric(18,4);
 BEGIN
-    SELECT pi.subtotal_amount,
+    SELECT COALESCE((
+               SELECT SUM(pil.net_amount)
+                 FROM document.purchase_invoice_line pil
+                WHERE pil.purchase_invoice_id = pi.id
+                  AND pil.tenant_id = pi.tenant_id
+           ), 0) AS subtotal_amount,
            pi.tax_amount,
            coalesce(pi.withholding_tax_amount, 0) AS wht,
            coalesce(pi.retention_amount,       0) AS ret,

@@ -11,7 +11,7 @@ import {
 } from "@athyper/api-client";
 import { setClients } from "@athyper/query";
 import { registerDefaultFieldRenderers } from "@athyper/runtime-canvas/fields";
-import { setBffClientPlane } from "@athyper/runtime-shared/client";
+import { getCsrfToken, setBffClientPlane } from "@athyper/runtime-shared/client";
 // Cleanup-plan v5 P5.5 — top-level import runs the document-runtime
 // registry bootstrap (composer / sidecar / strategy registrations).
 // Idempotent + HMR-safe per amendment 8.
@@ -27,7 +27,7 @@ setBffClientPlane(PLANE_KEY);
 // Relay-based fetch — no access token needed client-side; the relay BFF at
 // /api/relay/[...path] injects Authorization + all org-context headers server-side.
 async function relayFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`/api/relay${path}`, options);
+  const response = await fetch(`/api/relay${path}`, withCsrfForMutation(options));
   if (!response.ok) {
     const body = await response.json().catch(() => ({})) as Record<string, unknown>;
     throw new ApiError(
@@ -36,7 +36,32 @@ async function relayFetch<T>(path: string, options: RequestInit = {}): Promise<T
       typeof body["message"] === "string" ? body["message"] : response.statusText,
     );
   }
-  return response.json() as Promise<T>;
+  if (response.status === 204 || response.status === 205) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+  if (!text) return undefined as T;
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return JSON.parse(text) as T;
+  }
+  return text as T;
+}
+
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function withCsrfForMutation(options: RequestInit): RequestInit {
+  const method = (options.method ?? "GET").toUpperCase();
+  if (!MUTATING_METHODS.has(method)) return options;
+
+  const headers = new Headers(options.headers);
+  if (!headers.has("X-CSRF-Token")) {
+    const token = getCsrfToken();
+    if (token) headers.set("X-CSRF-Token", token);
+  }
+  return { ...options, headers };
 }
 
 // Initialize once at module load — safe because relayFetch is stateless.

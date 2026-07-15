@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS document.journal_line (
     base_debit       numeric(18,4) NOT NULL DEFAULT 0,
     base_credit      numeric(18,4) NOT NULL DEFAULT 0,
     exchange_rate    numeric(18,10),
+    fx_rate_snapshot jsonb,
 
     -- First-class dimensions
     cost_center_id   uuid,
@@ -226,10 +227,15 @@ CREATE TABLE IF NOT EXISTS document.journal_line (
         OR (transaction_credit > 0 AND base_credit > 0)
     ),
     CONSTRAINT jl_fx_rate_chk CHECK (
-        transaction_currency = base_currency OR exchange_rate IS NOT NULL
-    ),
-    CONSTRAINT jl_fx_rate_positive_chk CHECK (
-        exchange_rate IS NULL OR exchange_rate > 0
+        (
+            transaction_currency = base_currency
+            AND (exchange_rate IS NULL OR exchange_rate = 1.0)
+        )
+        OR (
+            transaction_currency <> base_currency
+            AND exchange_rate IS NOT NULL
+            AND exchange_rate > 0
+        )
     ),
     CONSTRAINT jl_party_chk CHECK (
         (party_type IS NULL AND party_id IS NULL)
@@ -246,6 +252,9 @@ COMMENT ON TABLE document.journal_line IS
 -- §JLR  document.journal_line_reference — allocation / application tracking
 -- ============================================================================
 
+COMMENT ON COLUMN document.journal_line.fx_rate_snapshot IS
+    'Explains how journal_line.exchange_rate was resolved or inherited. Source-generated JE lines inherit source document FX; standalone JE lines use fx.resolve_rate.';
+
 CREATE TABLE IF NOT EXISTS document.journal_line_reference (
     -- Identity
     id               uuid         NOT NULL DEFAULT shared.uuidv7(),
@@ -260,6 +269,15 @@ CREATE TABLE IF NOT EXISTS document.journal_line_reference (
     ref_doc_id       uuid         NOT NULL,
     ref_doc_line_id  uuid,
     ref_doc_number   text,
+
+    -- Pricing/accounting provenance. Nullable for ordinary settlement and
+    -- matching references; populated by component-aware procurement posting.
+    pricing_component_id       uuid,
+    accounting_distribution_id uuid,
+    condition_type_id          uuid,
+    component_bucket           text,
+    posting_role_code          text,
+    policy_snapshot            jsonb        NOT NULL DEFAULT '{}'::jsonb,
 
     -- Allocation amount
     allocated_amount numeric(18,4) NOT NULL,
@@ -281,7 +299,13 @@ CREATE TABLE IF NOT EXISTS document.journal_line_reference (
     created_by       uuid         NOT NULL,
 
     CONSTRAINT journal_line_reference_pkey PRIMARY KEY (id),
-    CONSTRAINT jlr_amount_pos_chk CHECK (allocated_amount > 0)
+    CONSTRAINT jlr_amount_pos_chk CHECK (allocated_amount > 0),
+    CONSTRAINT jlr_component_bucket_chk CHECK (
+        component_bucket IS NULL OR component_bucket IN (
+            'DISTRIBUTABLE_COST','BASE_COST','COST_REDUCTION','COST_ADDITION',
+            'SEPARATE_DEBIT','SEPARATE_CREDIT','RECOVERABLE_TAX',
+            'NONRECOVERABLE_TAX','WHT_LIABILITY','RETENTION_LIABILITY',
+            'SELF_ASSESSED_INPUT','SELF_ASSESSED_OUTPUT','SETTLEMENT_DISCOUNT','MEMO'))
 );
 
 -- G3: Widened uniqueness — include ref_doc_line_id for line-level allocation.
@@ -407,30 +431,30 @@ CREATE TABLE IF NOT EXISTS document.accounting_distribution (
     -- Distributed amount
     distributed_amount      numeric(18,4)   NOT NULL,
     currency_code           character(3)    NOT NULL,
+    amount_status           text            NOT NULL DEFAULT 'PROVISIONAL',
+    amount_calculated_at    timestamptz,
+    amount_calculation_hash text,
 
-    -- Engine-aligned resolution inputs (drives control.resolve_entry_account())
-    account_source          text            NOT NULL DEFAULT 'FROM_CATEGORY',
-    posting_role_code       text,
-    account_code            text,
-    account_lookup_key      text,
-    account_fallback        text,
+    -- Provenance of the final gl_account_id.
+    -- PENDING   = AD row created, GL not yet resolved (pre-posting state).
+    -- OVERRIDE  = user-authored GL on the AD row (set via the distribution
+    --             drawer). Skips profile resolution at posting and keeps the
+    --             user-chosen account.
+    -- PROFILE   = resolved at posting via control.acct_profile_entry_template.
+    -- FALLBACK  = resolved at posting via the hardcoded resolvePostingAccount path.
+    -- Resolution strategy itself lives in profile/pricing-component layers,
+    -- not on AD. AD is allocation + resolved-account snapshot only.
+    account_source          text            NOT NULL DEFAULT 'PENDING',
     gl_account_id           uuid,
-    business_intent_id      uuid,
-    commodity_category_id   uuid,
 
     -- Dimensions
     cost_center_id          uuid,
     profit_center_id        uuid,
     project_id              uuid,
-    site_id                 uuid,
     dimension_set_id        uuid,
 
-    -- CapEx flag
-    is_capex                boolean         NOT NULL DEFAULT false,
-    asset_class_id          uuid,
-
-    -- Tax override
-    tax_treatment_override  text,
+    -- Asset linkage (NULL = non-asset split or class-pending; non-NULL = specific master.asset this split capitalizes against)
+    asset_id                uuid,
 
     -- Budget linkage
     budget_allocation_id    uuid,
@@ -442,7 +466,8 @@ CREATE TABLE IF NOT EXISTS document.accounting_distribution (
     -- Narrative
     description             text,
 
-    -- Metadata
+    -- Tags & Metadata
+    tags                    jsonb           NOT NULL DEFAULT '[]'::jsonb,
     metadata                jsonb           NOT NULL DEFAULT '{}'::jsonb,
 
     -- Audit
@@ -466,47 +491,28 @@ CREATE TABLE IF NOT EXISTS document.accounting_distribution (
     CONSTRAINT ad_qty_chk           CHECK (
         distribution_basis <> 'QUANTITY' OR split_quantity IS NOT NULL),
     CONSTRAINT ad_distributed_nonneg CHECK (distributed_amount >= 0),
+    CONSTRAINT ad_amount_status_chk  CHECK (amount_status IN (
+        'PROVISIONAL','FINAL','POSTED')),
     CONSTRAINT ad_source_type_chk   CHECK (source_doc_type IN (
-        'PURCHASE_REQUISITION_LINE',
-        'COMMITMENT_LINE',
-        'PURCHASE_INVOICE_LINE',
-        'GOODS_RECEIPT_LINE',
-        'SERVICE_ENTRY_SHEET_LINE')),
+        'purchase_requisition_line',
+        'commitment_line',
+        'purchase_invoice_line',
+        'receipt_line',
+        'service_sheet_line')),
     CONSTRAINT ad_source_chk        CHECK (account_source IN (
-        'POSTING_ROLE','FIXED','FROM_INTENT','FROM_CATEGORY')),
-    CONSTRAINT ad_posting_role_req  CHECK (
-        account_source <> 'POSTING_ROLE' OR posting_role_code IS NOT NULL),
-    CONSTRAINT ad_fixed_req         CHECK (
-        account_source <> 'FIXED'
-        OR gl_account_id IS NOT NULL OR account_code IS NOT NULL),
-    CONSTRAINT ad_intent_req        CHECK (
-        account_source <> 'FROM_INTENT' OR business_intent_id IS NOT NULL),
-    CONSTRAINT ad_category_req      CHECK (
-        account_source <> 'FROM_CATEGORY' OR commodity_category_id IS NOT NULL),
+        'PENDING','OVERRIDE','PROFILE','FALLBACK')),
     CONSTRAINT ad_budget_chk        CHECK (budget_check_result IS NULL OR budget_check_result IN (
-        'passed','warned','override','blocked','exempt')),
-    CONSTRAINT ad_tax_override_chk  CHECK (tax_treatment_override IS NULL OR
-        tax_treatment_override IN (
-            'STANDARD','ZERO_RATED','EXEMPT','REVERSE_CHARGE','OUT_OF_SCOPE'))
+        'passed','warned','override','blocked','exempt'))
 );
 
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'document' AND table_name = 'accounting_distribution'
-          AND column_name = 'spend_category_id'
-    ) AND NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'document' AND table_name = 'accounting_distribution'
-          AND column_name = 'commodity_category_id'
-    ) THEN
-        ALTER TABLE document.accounting_distribution RENAME COLUMN spend_category_id TO commodity_category_id;
-    END IF;
-END $$;
-
 COMMENT ON TABLE document.accounting_distribution IS
-    'ARCHETYPE=C;SCOPE=T. Split-charge distribution. account_source drives control.resolve_entry_account() at posting time. '
-    'Default: FROM_CATEGORY (commodity_category -> intent -> GL). '
-    'POSTING_ROLE for system rows (GRIR_CLEARING, PRICE_VARIANCE, ADVANCE_PREPAID, AP_TRADE, AP_RETENTION). '
+    'ARCHETYPE=C;SCOPE=T. Split-charge distribution + resolved-account snapshot. '
+    'account_source is the provenance of gl_account_id: PENDING (pre-posting), '
+    'OVERRIDE (user-authored via the distribution drawer; skips profile resolution), '
+    'PROFILE (resolved via acct_profile_entry_template), FALLBACK (resolved via '
+    'hardcoded posting-service path). '
+    'Resolution strategy itself lives in control.acct_profile_entry_template and '
+    'document.pricing_component — not on AD. '
+    'Resolution inputs (commodity_category_id, business_intent_id) and the site dimension live on the '
+    'source line (purchase_invoice_line, commitment_line, etc.) — not duplicated here. '
     'PAYMENT_ENTRY excluded – payments allocate AP liabilities, not P&L charges.';

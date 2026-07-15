@@ -1,11 +1,12 @@
 import type { Transaction } from "kysely";
+import { emitOutboxEvent } from "@athyper/svc-shared";
 
 export interface WorkflowSourceEntityCompletion {
   tenantId: string;
   workflowRequestId: string;
   entityType: string;
   entityId: string;
-  outcome: "approved" | "rejected";
+  outcome: "approved" | "rejected" | "returned";
   actorId: string;
 }
 
@@ -29,11 +30,31 @@ interface EntityCompletionConfig {
   hasApprovalStamp: boolean;
 }
 
+export interface WorkflowSourceEntityCompletionHooks {
+  beforeComplete?(
+    trx: Transaction<any>,
+    completion: WorkflowSourceEntityCompletion,
+    targetStatus: string,
+  ): Promise<void>;
+  afterComplete?(
+    trx: Transaction<any>,
+    completion: WorkflowSourceEntityCompletion,
+    targetStatus: string,
+  ): Promise<void>;
+}
+
 const DOCUMENT_ENTITY_COMPLETION: Record<string, EntityCompletionConfig> = {
   purchase_invoice: {
     table: "document.purchase_invoice",
     hasWorkflowRequestId: true,
     hasApprovalStamp: true,
+  },
+  purchase_order: {
+    table: "document.commitment",
+    hasWorkflowRequestId: true,
+    // The ORDER_APPROVAL lifecycle hook owns approval stamping together with
+    // schedule materialization and budget commit.
+    hasApprovalStamp: false,
   },
   payment_entry: {
     table: "document.payment_entry",
@@ -53,6 +74,7 @@ export class ConventionWorkflowSourceEntityAdapter implements WorkflowSourceEnti
       warn?(event: string, fields?: Record<string, unknown>): void;
       info?(event: string, fields?: Record<string, unknown>): void;
     },
+    private readonly hooks: WorkflowSourceEntityCompletionHooks = {},
   ) {}
 
   async completeWorkflow(
@@ -73,8 +95,12 @@ export class ConventionWorkflowSourceEntityAdapter implements WorkflowSourceEnti
     }
 
     const now = new Date();
+    const targetStatus = completion.outcome === "approved"
+      ? "approved"
+      : completion.outcome === "returned" ? "draft" : "rejected";
+    await this.hooks.beforeComplete?.(trx, completion, targetStatus);
     const patch: Record<string, unknown> = {
-      status: completion.outcome === "approved" ? "approved" : "rejected",
+      status: targetStatus,
       status_changed_at: now,
       status_changed_by: completion.actorId,
       updated_at: now,
@@ -91,12 +117,36 @@ export class ConventionWorkflowSourceEntityAdapter implements WorkflowSourceEnti
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (trx.updateTable(config.table as never) as any)
+    const result = await (trx.updateTable(config.table as never) as any)
       .set(patch as never)
       .where("id", "=", completion.entityId)
       .where("tenant_id", "=", completion.tenantId)
       .where("status", "=", "pending_approval")
-      .execute();
+      .executeTakeFirst();
+
+    if (result) await this.hooks.afterComplete?.(trx, completion, targetStatus);
+
+    if (result && entityName === "purchase_order") {
+      await emitOutboxEvent(trx, {
+        tenantId: completion.tenantId,
+        topic: "purchase_order.lifecycle",
+        eventType: `purchase_order.${completion.outcome}`,
+        eventKey: `purchase_order.${completion.outcome}:${completion.entityId}:${completion.workflowRequestId}`,
+        entityType: "purchase_order",
+        entityId: completion.entityId,
+        aggregateType: "commitment",
+        aggregateId: completion.entityId,
+        actorId: completion.actorId,
+        payload: {
+          public_entity_type: "purchase_order",
+          aggregate_root_type: "commitment",
+          commitment_type: "purchase_order",
+          aggregate_root_id: completion.entityId,
+          workflow_request_id: completion.workflowRequestId,
+          outcome: completion.outcome,
+        },
+      });
+    }
   }
 }
 

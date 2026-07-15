@@ -1,34 +1,12 @@
--- ============================================================================
--- FILE: blueprint/040_acct_profile_events.sql
--- Purpose: Bridge profile_config → transaction_flow_template event_code
--- Depends on: control.acct_profile_config (030), transaction_flow_template events
--- Idempotent: ON CONFLICT (profile_config_id, event_code) DO NOTHING
--- ============================================================================
--- Events registered per profile:
---
--- AP_NON_PO_STANDARD:
---   INVOICE_RECEIVED   → creates_je=false (informational only; JE fires on approval)
---   ORDER_APPROVAL     → creates_je=true  (invoice post — the AP JE)
---   SETTLEMENT         → creates_je=true  (payment post — AP→Bank Clearing)
---
--- AP_NON_PO_CAPEX:
---   Same 3 events — only the entry templates differ (Dr Fixed Asset vs Dr Expense)
---
--- AP_ADVANCE_SUPPLIER:
---   ADVANCE_PAID       → creates_je=true  (advance post — AP Advance asset created)
---
--- AP_RETENTION_RELEASE:
---   RETENTION_RELEASED → creates_je=true  (retention release payment — Dr AP Retention / Cr Bank)
--- ============================================================================
+-- Bridges profile_config to transaction_flow_template event codes (9 events total).
+-- INVOICE_RECEIVED has creates_je=false on purpose — JE fires on ORDER_APPROVAL.
+-- ADVANCE_RECOVERED is fired by a downstream invoice, not by the advance profile itself.
 
 DO $seed_ap_events$
 DECLARE
     v_cfg   record;
     v_sys   uuid := '00000000-0000-0000-0000-000000000000';
 BEGIN
-    -- ────────────────────────────────────────────────────────────────────────
-    -- AP_NON_PO_STANDARD events
-    -- ────────────────────────────────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
@@ -70,9 +48,6 @@ BEGIN
             updated_by        = v_sys;
     END LOOP;
 
-    -- ────────────────────────────────────────────────────────────────────────
-    -- AP_NON_PO_CAPEX events (same 3 events, different entry templates later)
-    -- ────────────────────────────────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
@@ -111,9 +86,6 @@ BEGIN
             updated_by        = v_sys;
     END LOOP;
 
-    -- ────────────────────────────────────────────────────────────────────────
-    -- AP_ADVANCE_SUPPLIER events
-    -- ────────────────────────────────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
@@ -147,9 +119,6 @@ BEGIN
             updated_by        = v_sys;
     END LOOP;
 
-    -- ────────────────────────────────────────────────────────────────────────
-    -- AP_RETENTION_RELEASE events
-    -- ────────────────────────────────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc

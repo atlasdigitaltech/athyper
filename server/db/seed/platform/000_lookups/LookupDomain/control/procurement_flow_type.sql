@@ -1,8 +1,5 @@
--- LookupDomain/control/procurement_flow_type.sql
--- Lookup values for domain: control.procurement_flow_type
--- P2P flow type codes stored in commodity_classification_to_intent_rule.applies_to_flows (text[]).
--- Stored as UPPERCASE (NON_PO, DIRECT_PURCHASE); EnumRenderer does case-insensitive matching.
--- Idempotent: WHERE NOT EXISTS guard
+-- Codes are lowercase; commodity_classification_to_intent_rule.applies_to_flows (text[])
+-- stores uppercase (NON_PO, DIRECT_PURCHASE) — EnumRenderer does case-insensitive matching.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, sort_order, is_system, status, created_by)

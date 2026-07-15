@@ -790,6 +790,7 @@ async function scheduleNotificationRetry(
   agg: DeliveryAggregate,
   logger?: JobLogger,
 ): Promise<void> {
+  // eslint-disable-next-line no-direct-date-parse -- reason: nextRetryAt is a UTC ISO from the delivery aggregate; NaN handled below.
   const retryAtMs = agg.nextRetryAt ? Date.parse(agg.nextRetryAt) : Date.now() + 60_000;
   const delay = Math.max(1_000, Number.isNaN(retryAtMs) ? 60_000 : retryAtMs - Date.now());
   const bucket = Number.isNaN(retryAtMs) ? Date.now() + delay : retryAtMs;

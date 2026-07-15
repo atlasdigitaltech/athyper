@@ -1,9 +1,3 @@
--- LookupDomain/document/purchase_order.sql
--- Lookup values for Purchase Order non-status domains
--- Idempotent: WHERE NOT EXISTS guard on every INSERT
--- =============================================================================
-
--- ── Purchase order type ───────────────────────────────────────────────────────
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,

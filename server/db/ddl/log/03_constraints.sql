@@ -24,6 +24,13 @@ DO $$ BEGIN ALTER TABLE log.audit_log ADD CONSTRAINT audit_log_cc_fk
     FOREIGN KEY (company_code_id) REFERENCES master.company_code (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- reason_code → master.change_reason_code. SET NULL so deleting a custom tenant
+-- reason doesn't cascade-corrupt historical audit rows (the row still tells
+-- you "someone overrode an account here", just without the controlled label).
+DO $$ BEGIN ALTER TABLE log.audit_log ADD CONSTRAINT audit_log_reason_code_fk
+    FOREIGN KEY (reason_code) REFERENCES master.change_reason_code (id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 
 -- —— §2  security_event_log ——————————————————————————————————————————————
 DO $$ BEGIN ALTER TABLE log.security_event_log ADD CONSTRAINT sel_tenant_fk

@@ -88,6 +88,46 @@ jobs:
           CI: 'true'
           FORCE_COLOR: '1'
 
+      - name: Document-open rollout CI gates
+        env:
+          DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH: ${{ vars.DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH }}
+          DOCUMENT_OPEN_RAW_TRACE_PATH: ${{ vars.DOCUMENT_OPEN_RAW_TRACE_PATH }}
+          DOCUMENT_OPEN_ROLLOUT_MINIMUM_SAMPLES: ${{ vars.DOCUMENT_OPEN_ROLLOUT_MINIMUM_SAMPLES }}
+          DOCUMENT_OPEN_ROLLOUT_PROGRESS_SNAPSHOT: ${{ vars.DOCUMENT_OPEN_ROLLOUT_PROGRESS_SNAPSHOT }}
+        run: |
+          if [ -n "$DOCUMENT_OPEN_RAW_TRACE_PATH" ]; then
+            if [ ! -f "$DOCUMENT_OPEN_RAW_TRACE_PATH" ]; then
+              echo "Missing document-open raw trace input: $DOCUMENT_OPEN_RAW_TRACE_PATH"
+              exit 1
+            fi
+            snapshot_output="${DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH:-/tmp/document-open-rollout.snapshot.json}"
+            export_args="--input=$DOCUMENT_OPEN_RAW_TRACE_PATH --output=$snapshot_output"
+            if [ -n "$DOCUMENT_OPEN_ROLLOUT_MINIMUM_SAMPLES" ]; then
+              export_args="$export_args --minimum-samples=$DOCUMENT_OPEN_ROLLOUT_MINIMUM_SAMPLES"
+            fi
+
+            pnpm document-open-rollout-snapshot-export $export_args
+            echo "DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH=$snapshot_output"
+            export DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH="$snapshot_output"
+          fi
+
+          if [ -n "$DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH" ]; then
+            if [ ! -f "$DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH" ]; then
+              echo "Missing document-open gate snapshot file: $DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH"
+              exit 1
+            fi
+            pnpm document-open-rollout-ci-gate --snapshot="$DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH"
+            exit 0
+          fi
+
+          if [ -n "$DOCUMENT_OPEN_ROLLOUT_PROGRESS_SNAPSHOT" ]; then
+            pnpm document-open-rollout-ci-gate
+            exit 0
+          fi
+
+          echo "No document-open snapshot input found; skipping rollout CI gate check."
+          echo "Set DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH (preferred) or DOCUMENT_OPEN_ROLLOUT_PROGRESS_SNAPSHOT to enable."
+
       - name: Fetch base branch for changeset
         if: github.event_name == 'pull_request'
         run: git fetch origin ${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
@@ -122,6 +162,89 @@ jobs:
       - name: Verify port hardening (F8 Phase 2)
         continue-on-error: true
         run: bash stack/scripts/setup/verify-port-hardening.sh
+
+      # Seed drift lint (Batch 5C). Static check that legacy column names
+      # (removed/renamed during DDL evolution) do not reappear in seed
+      # contracts. Complements the in-DB 042o pre-quarantine and 100_
+      # post-quarantine assertions. Zero deps, no DB. See
+      # server/scripts/lint-seed-drift.ts for the rule list.
+      - name: Verify seed drift
+        run: npx tsx server/scripts/lint-seed-drift.ts
+
+      # Pricing-component hot-path guard (v3.1 Phase 0). Static check that
+      # each PC mutator calls refreshInvoiceCaches at most once per service
+      # entry, and that apportionToLines does NOT loop createComponent.
+      # Catches the O(N²) regression class fixed in Phase 0 where adding
+      # one header charge fired the PIL cache refresh N times.
+      - name: Verify PC refresh call-count budget
+        run: npx tsx server/scripts/verify-pc-refresh-call-count.ts
+
+      # PC affordance matrix parity (v3.1 Phase 1). Diffs the canonical
+      # matrix in @athyper/api-contracts/pc-affordance-matrix against the
+      # DDL trigger fn_pc_supersede_only_update + the AP route status sets.
+      # Catches drift where the UI offers an action the DB blocks, or the
+      # DB allows an action the UI hides.
+      - name: Verify PC affordance parity
+        run: npx tsx server/scripts/verify-pc-affordance-parity.ts
+
+      - name: Verify meta-entity kernel governance
+        run: pnpm policy:meta-entity
+
+      - name: Verify records identity-boundary ratchet
+        run: pnpm policy:records-identity-boundary
+
+  # P0 performance baseline. Advisory until two stable captured runs have
+  # been reviewed. Enable by setting the PERF_BASE_URL repository variable.
+  performance-baseline:
+    name: P0 Performance Baseline (Advisory)
+    runs-on: ubuntu-latest
+    needs: quality
+    if: ${{ vars.PERF_BASE_URL != '' }}
+    continue-on-error: true
+    env:
+      PERF_BASE_URL: ${{ vars.PERF_BASE_URL }}
+      PERF_DATASET_PROFILE: ${{ vars.PERF_DATASET_PROFILE }}
+      PERF_API_REPLICAS: ${{ vars.PERF_API_REPLICAS }}
+      PERF_POSTGRES_TOPOLOGY: ${{ vars.PERF_POSTGRES_TOPOLOGY }}
+      PERF_REDIS_TOPOLOGY: ${{ vars.PERF_REDIS_TOPOLOGY }}
+      PERF_LIFECYCLE_SCRIPT: ${{ vars.PERF_LIFECYCLE_SCRIPT }}
+      PERF_POOL_PRESSURE_SCRIPT: ${{ vars.PERF_POOL_PRESSURE_SCRIPT }}
+      PERF_PG_TOP_SQL_COMMAND: ${{ vars.PERF_PG_TOP_SQL_COMMAND }}
+      TOKEN_TENANT_A: ${{ secrets.PERF_TOKEN }}
+      ORG_TENANT_A: ${{ secrets.PERF_ORG }}
+      ENTITY: ${{ vars.PERF_ENTITY }}
+      RECORD_ID: ${{ vars.PERF_RECORD_ID }}
+      PERF_OUTPUT_DIR: perf/artifacts/p0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+      - name: Capture three real baseline runs
+        run: pnpm perf:capture:p0
+        env:
+          PERF_REPETITIONS: '3'
+      - name: Upload P0 performance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: athyper-p0-performance-${{ github.sha }}
+          path: perf/artifacts/p0/
+          if-no-files-found: error
+          retention-days: 30
 
   # ─── Screenshot Regression (PI) ──────────────────────────────────
   # Cleanup-plan v5 P5c. Visual diff against a pinned reference
@@ -321,6 +444,85 @@ jobs:
       - name: Verify RLS under non-superuser role
         run: pnpm --filter @athyper/runtime-server run rls:verify
 
+      # Audit P3-S1 — entity_policy coverage gate. Asserts that every active
+      # tenant has policy rows for every entity in MUST_HAVE_POLICY_ENTITIES
+      # (the canonical P2P + finance posting surfaces). Tenant entity_policy
+      # rows are seeded under server/db/seed/tenants/*/entity_engine/*.sql;
+      # this check guarantees those were applied. Inherits the parent job's
+      # continue-on-error policy while tenant-seed loading is wired into CI.
+      - name: Verify entity_policy coverage
+        run: npx tsx server/scripts/verify-entity-policy.ts
+
+      # Audit P0-S6 — budget lifecycle integration suite. Exercises the
+      # RESERVE → COMMIT → CONSUME → RELEASE ladder, idempotency under
+      # retry, parallel-FOR-UPDATE serialisation, failure branches
+      # (period closed, allocation inactive, insufficient + WARN/BLOCK,
+      # no-match policy switch), the dispatcher's outer-transaction
+      # rollback contract, and the strict-required hook-runner gates.
+      #
+      # Tests are gated on DATABASE_URL inside the file and create
+      # per-test fresh tenants (cleaned up by tenant_id in afterEach),
+      # so they share this job's DB without polluting other steps.
+      #
+      # Advisory at first per the Wave 2 plan (`continue-on-error: true`).
+      # Remove that line to promote to blocking once green for 5
+      # consecutive runs. The strict-flag prod flip (P0-S5) gates on
+      # this being blocking.
+      - name: Verify budget lifecycle integration (P0-S6)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run budget-lifecycle.integration
+
+      # Audit AP-S3 / rb-19 closure — stub-regression guard. Fails when
+      # the *_REVERSAL_NOT_IMPLEMENTED return codes reappear in the
+      # posting services. Cheap, fast, zero deps. Not advisory: any
+      # regression here is a real release blocker.
+      - name: Verify reversal handlers are not stubbed
+        run: npx tsx server/scripts/verify-reversal-implementations.ts
+
+      # Reference-relation coverage gate. Every entity_field that declares
+      # reference_config.target_entity must have a matching belongs_to/fk
+      # row in control.entity_relation. The runtime label enricher reads
+      # the relation row to resolve target tables for FK companion-label
+      # hydration; descriptor/relation drift produces UUIDs in the UI.
+      - name: Verify reference-relation coverage
+        run: npx tsx server/scripts/verify-reference-relation-coverage.ts
+
+      # Audit AP-S2a + AP-S3 — receipt + SS reversal integration tests.
+      # Same gating + advisory posture as the budget lifecycle suite;
+      # promote to blocking once green for 5 consecutive runs.
+      - name: Verify receipt + SS reversal integration (AP-S2a + AP-S3)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run reversal.integration
+
+      # Audit AP-S1a + AP-S1b — AP master fixture smoke tests. Exercises
+      # handlePostReceipt + handlePostInvoice end-to-end against the live
+      # DB. The first sustained pass here is also the first signal that
+      # the receipt/SS posting bug fixes (book lookup, JE INSERT shape,
+      # inventory_movement INSERT shape) actually work in practice.
+      # Same advisory posture; promote to blocking after 5 green runs.
+      - name: Verify AP posting smoke tests (AP-S1a + AP-S1b)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run ap-receipt-posting ap-pi-posting
+
+      # Workstream A — Phase 4 accounting-profile-engine path coverage.
+      # Asserts handlePostInvoice resolves Dr accounts through the profile
+      # chain (FROM_INTENT + POSTING_ROLE), exercises credit-note inversion,
+      # intent routing (intent_to_accounting_profile_rule), and that the
+      # legacy fallback still reaches accounting_distribution.account_source='FALLBACK'.
+      # Advisory until 5 green main runs; then promote to blocking.
+      - name: Verify PI profile-path integration (Workstream A)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run ap-pi-profile-path
+
+      # Workstream B — PO-based PI smoke with matching. Exercises
+      # INVOICE_MATCHED dispatcher branch, matchInvoice three-way logic,
+      # commitment_line.invoiced_quantity bookkeeping, and rollback
+      # semantics under match exceptions (qty / price variance).
+      # Advisory until 5 green main runs; promote to blocking.
+      - name: Verify PO-based PI integration (Workstream B)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run ap-pi-po-based
+
       # F9 — SECURITY DEFINER hardening contract: every prosecdef=true
       # function must be owned by athyperadmin, REVOKED from PUBLIC, GRANTed
       # to athyperapp, and carry an explicit search_path. Runs against the
@@ -466,6 +668,12 @@ jobs:
 
       - name: Run system seed (phase 2)
         run: pnpm --filter @athyper/db run db:setup:system
+
+      - name: Verify strict seed and effective P2P lifecycle contracts
+        run: pnpm --filter @athyper/db run db:verify:seed-contracts
+
+      - name: Verify strict seed and effective P2P lifecycle contracts (blocking)
+        run: pnpm --filter @athyper/db run db:verify:seed-contracts
 
       - name: Verify three-plane invariants (Phase 6)
         run: pnpm --filter @athyper/db run db:verify:three-plane

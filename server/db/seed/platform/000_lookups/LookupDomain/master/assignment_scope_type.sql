@@ -1,7 +1,4 @@
--- LookupDomain/master/assignment_scope_type.sql
--- Lookup values for domain: master.assignment_scope_type
--- Shared by: auth_group_role.assignment_scope_type, access_grant.assignment_scope_type
--- Idempotent: WHERE NOT EXISTS guard
+-- Shared by: auth_group_role.assignment_scope_type, access_grant.assignment_scope_type.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

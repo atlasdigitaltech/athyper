@@ -31,6 +31,7 @@ export interface EntityOperationMetadata {
   permissionCode: string;
   handlerType: string;
   handlerTarget: string | null;
+  executionTarget?: string | null;
   isRecordRequired: boolean;
   isEnabled: boolean;
 }
@@ -115,6 +116,7 @@ export class OperationAuthorizer {
         "eo.permission_code",
         "eo.handler_type",
         "eo.handler_target",
+        "eo.execution_target",
         "eo.is_record_required",
         "eo.is_enabled",
       ] as never[])
@@ -139,6 +141,7 @@ export class OperationAuthorizer {
         permission_code: string;
         handler_type: string;
         handler_target: string | null;
+        execution_target: string | null;
         is_record_required: boolean;
         is_enabled: boolean;
       } | undefined;
@@ -148,6 +151,7 @@ export class OperationAuthorizer {
       permissionCode: row.permission_code,
       handlerType: row.handler_type,
       handlerTarget: row.handler_target,
+      executionTarget: row.execution_target,
       isRecordRequired: row.is_record_required,
       isEnabled: row.is_enabled,
     };

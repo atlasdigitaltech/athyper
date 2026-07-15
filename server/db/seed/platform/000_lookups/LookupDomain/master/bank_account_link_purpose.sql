@@ -1,7 +1,3 @@
--- LookupDomain/master/bank_account_link_purpose.sql
--- Lookup values for domain: master.bank_account_link_purpose
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('default',       'Default',       'master.bank_account_link_purpose', 'General-purpose payment account',      10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

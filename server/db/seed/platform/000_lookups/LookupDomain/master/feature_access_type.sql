@@ -1,7 +1,4 @@
--- LookupDomain/master/feature_access_type.sql
--- Lookup values for domain: master.feature_access_type
--- Shared by: group_feature_grant.access_type, principal_feature_grant.access_type
--- Idempotent: WHERE NOT EXISTS guard
+-- Shared by: group_feature_grant.access_type, principal_feature_grant.access_type.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

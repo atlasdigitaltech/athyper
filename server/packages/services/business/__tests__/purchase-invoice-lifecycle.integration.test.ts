@@ -2,8 +2,8 @@
  * Purchase Invoice Full Lifecycle Integration Test
  *
  * Tests the complete AP invoice lifecycle against a live PostgreSQL database:
- *   draft → (add line) → submit (auto-approve via inv_self_approval) → approved
- *       → post invoice (GL JE created) → posted
+ *   draft → (add line) → lifecycle transition → approved
+ *       → lifecycle transition → posted → posting hook (GL JE created)
  *       → create payment → submit payment → approved
  *       → post payment → posted → invoice fully_paid
  *
@@ -14,11 +14,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { Kysely, PostgresDialect, sql, type RawBuilder } from "kysely";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   handleAddInvoiceLine,
-  handleSubmitForApproval,
   handlePostInvoice,
   handleSubmitPayment,
   handlePostPayment,
@@ -30,6 +31,47 @@ const LIVE_DATABASE_URL =
 const maybeDescribe = LIVE_DATABASE_URL ? describe : describe.skip;
 
 const SYSTEM_ACTOR = "00000000-0000-0000-0000-000000000000";
+
+// Phase 1 red characterization contracts run even when the live-DB scenario
+// below is skipped. They turn green only after PI has one transition owner.
+describe("Purchase Invoice lifecycle ownership characterization", () => {
+  const actionDispatcher = readFileSync(resolve(
+    process.cwd(),
+    "packages/services/records/routes/action-dispatcher.route.ts",
+  ), "utf8");
+  const transactionDispatcher = readFileSync(resolve(
+    process.cwd(),
+    "packages/services/business/p2p/transaction-flow-dispatcher.service.ts",
+  ), "utf8");
+  const lifecycleRegistry = readFileSync(resolve(
+    process.cwd(),
+    "packages/services/records/routes/lifecycle-command.registry.ts",
+  ), "utf8");
+
+  it.each([
+    ["submit", "submit_for_approval", "handleSubmitForApproval"],
+    ["post", "post_invoice", "handlePostInvoice"],
+    ["reverse", "reverse_invoice", "handleReverseInvoice"],
+  ] as const)("routes PI %s through the lifecycle orchestrator exactly once", (operationCode, flowCode, directHandler) => {
+    expect(lifecycleRegistry).toMatch(
+      new RegExp(`entityCode:\\s*"purchase_invoice"[\\s\\S]*?operationCode:\\s*"${operationCode}"[\\s\\S]*?allowedFlowCodes:\\s*\\["${flowCode}"\\]`),
+    );
+    const commandBranchStart = actionDispatcher.indexOf("if (lifecycleCommand) {");
+    const commandBranchEnd = actionDispatcher.indexOf(
+      "const lifecycleTransition = await resolveLifecycleTransitionForAction",
+      commandBranchStart,
+    );
+    const commandBranch = actionDispatcher.slice(commandBranchStart, commandBranchEnd);
+    expect(commandBranch.match(/executeLifecycleTransition\(/g)?.length ?? 0).toBe(1);
+    expect(actionDispatcher).not.toContain(`${directHandler}(`);
+  });
+
+  it("has one PI posting entry point and one transaction-flow execution", () => {
+    expect(actionDispatcher.includes("handlePostInvoice(")).toBe(false);
+    expect(transactionDispatcher.match(/handlePostInvoice\(/g)?.length ?? 0).toBe(1);
+    expect(transactionDispatcher).toContain('hookActionKey:      "transaction_flow.dispatch"');
+  });
+});
 
 // ── Scenario shape ────────────────────────────────────────────────────────────
 
@@ -121,28 +163,44 @@ async function runLifecycle(s: PiLifecycleScenario): Promise<void> {
   const afterLine = await queryInvoice(s);
   expect(Number(afterLine.line_count ?? 0)).toBe(1);
 
-  // ── Step 3: Submit for approval (inv_self_approval → auto-approve) ────────
-  const submitResult = await handleSubmitForApproval(
-    anyDb,
-    s.tenantId,
-    s.invoiceId,
-    s.principalId,
-    {},
-  );
-  expect(submitResult.status).toBe(200);
-  expect(submitResult.body["ok"]).toBe(true);
+  // ── Step 3: Simulate the lifecycle-owned approval boundary ───────────────
+  // The records suite covers orchestration. This business fixture starts at
+  // the financial AFTER-hook boundary.
+  await sql`
+    update document.purchase_invoice
+       set status = 'approved',
+           approved_by = ${s.principalId}::uuid,
+           approved_at = now()
+     where tenant_id = ${s.tenantId}::uuid
+       and id = ${s.invoiceId}::uuid
+  `.execute(mustDb());
 
   const afterSubmit = await queryInvoice(s);
   expect(afterSubmit.status).toBe("approved");
   expect(afterSubmit.approved_by).toBe(s.principalId);
 
-  // ── Step 4: Post invoice → GL journal entry ───────────────────────────────
+  // ── Step 4: Lifecycle transition, then AFTER-hook materialization ─────────
+  await sql`
+    update document.purchase_invoice
+       set status = 'posted'
+     where tenant_id = ${s.tenantId}::uuid
+       and id = ${s.invoiceId}::uuid
+  `.execute(mustDb());
+
   const postResult = await handlePostInvoice(
     anyDb,
     s.tenantId,
     s.invoiceId,
     s.principalId,
     {},
+    undefined,
+    undefined,
+    {
+      executionMode: "lifecycle_hook",
+      executionToken: `test:post:${s.invoiceId}`,
+      transitionId: "00000000-0000-0000-0000-000000000001",
+      transitionEventSeq: 1,
+    },
   );
   expect(postResult.status).toBe(200);
   expect(postResult.body["ok"]).toBe(true);
@@ -629,7 +687,7 @@ async function seedInvoice(s: PiLifecycleScenario, suffix: string): Promise<void
   await sql`
     insert into document.purchase_invoice (
       id, tenant_id, code, name, company_code_id,
-      invoice_number,
+      code,
       invoice_source, invoice_type, match_type,
       supplier_id,
       supplier_invoice_number, supplier_invoice_date,

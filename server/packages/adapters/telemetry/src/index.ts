@@ -46,3 +46,4 @@ export function createTelemetryAdapter(
 
 // Export trace-context utilities (getOtelTraceContext, legacy withSpan)
 export * from "./trace-context.js";
+export * from "./framework-performance.js";

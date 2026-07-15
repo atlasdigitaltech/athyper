@@ -1,33 +1,6 @@
-/* ============================================================================
-   Industry Code Keyword Population (ISIC + NAICS)
-   Schema: shared
-   Table:  industry_code
-
-   Populates the `keywords text[]` column for all industry codes by
-   algorithmically extracting meaningful tokens from:
-     1. The code's own name
-     2. The code's description (richer detail than name alone)
-     3. Its parent's name (adds hierarchical context)
-
-   Stop words, punctuation, and short tokens (≤2 chars) are stripped.
-   All keywords are lowercased, deduplicated, and sorted.
-
-   Coverage:
-     ISIC Rev.4  — 766 codes  (21 sections + 88 divisions + 238 groups + 419 classes)
-     NAICS 2022  — 426 codes  (24 sectors  + 96 subsectors + 306 industry groups)
-     Total       — 1,192 industry codes
-
-   Idempotent: safe to re-run — overwrites previous keywords.
-   Depends on: 009b (ISIC), 009c (NAICS) having been seeded first.
-   ============================================================================ */
-
-
--- ---------------------------------------------------------------------------
--- Step 1: Helper function — extract keyword tokens from a text string
--- ---------------------------------------------------------------------------
--- Same logic as 008d_commodity_code_keywords.sql but recreated in pg_temp
--- so this file is self-contained and order-independent.
--- ---------------------------------------------------------------------------
+-- Populates industry_code.keywords[] (ISIC Rev.4 + NAICS 2022) from name + description
+-- + parent name. Depends on 009b and 009c being loaded first.
+-- pg_temp.extract_keywords is intentionally duplicated from 008d so this file is order-independent.
 
 CREATE OR REPLACE FUNCTION pg_temp.extract_keywords(input_text text)
 RETURNS text[]
@@ -69,15 +42,6 @@ AS $$
 $$;
 
 
--- ---------------------------------------------------------------------------
--- Step 2: Populate keywords for ALL industry codes (ISIC + NAICS)
--- ---------------------------------------------------------------------------
--- For each code, keywords are derived from:
---   (a) Its own name
---   (b) Its own description (if present)
---   (c) Its parent's name (hierarchical context)
--- The three arrays are concatenated, then deduplicated and sorted.
--- ---------------------------------------------------------------------------
 
 UPDATE shared.industry_code AS ic
 SET
@@ -105,14 +69,9 @@ SET
   updated_by = '00000000-0000-0000-0000-000000000000'::uuid;
 
 
--- ---------------------------------------------------------------------------
--- Step 3: Add domain-provenance tags
--- ---------------------------------------------------------------------------
--- Helps downstream searches identify which classification system a code
--- belongs to, especially useful in cross-domain lookups.
--- ---------------------------------------------------------------------------
+-- Provenance tags on top-level rows so cross-domain queries can filter by classification system.
 
--- ISIC: tag all top-level sections with provenance keywords
+-- ISIC sections
 UPDATE shared.industry_code
 SET
   keywords = array(
@@ -123,7 +82,7 @@ SET
 WHERE domain_code = 'isic'
   AND level_no = 1;
 
--- NAICS: tag all top-level sectors with provenance keywords
+-- NAICS sectors
 UPDATE shared.industry_code
 SET
   keywords = array(
@@ -135,9 +94,7 @@ WHERE domain_code = 'naics'
   AND level_no = 1;
 
 
--- ---------------------------------------------------------------------------
--- Step 4: Enrich ISIC sections (A–U) with industry-domain synonyms
--- ---------------------------------------------------------------------------
+-- ISIC section synonyms (A-U)
 
 -- Section A: Agriculture, Forestry and Fishing
 UPDATE shared.industry_code SET keywords = array(SELECT DISTINCT unnest(keywords || ARRAY['agriculture', 'farming', 'livestock', 'crops', 'aquaculture', 'timber', 'primary-sector']) ORDER BY 1)
@@ -224,9 +181,7 @@ UPDATE shared.industry_code SET keywords = array(SELECT DISTINCT unnest(keywords
 WHERE domain_code = 'isic' AND code = 'U';
 
 
--- ---------------------------------------------------------------------------
--- Step 5: Enrich NAICS sectors with industry-domain synonyms
--- ---------------------------------------------------------------------------
+-- NAICS sector synonyms
 
 -- Sector 11: Agriculture, Forestry, Fishing and Hunting
 UPDATE shared.industry_code SET keywords = array(SELECT DISTINCT unnest(keywords || ARRAY['agriculture', 'farming', 'livestock', 'crops', 'aquaculture', 'timber', 'primary-sector']) ORDER BY 1)
@@ -325,15 +280,9 @@ UPDATE shared.industry_code SET keywords = array(SELECT DISTINCT unnest(keywords
 WHERE domain_code = 'naics' AND code = '92';
 
 
--- ---------------------------------------------------------------------------
--- Step 6: Cross-reference enrichment — add ISIC↔NAICS bridging keywords
--- ---------------------------------------------------------------------------
--- Since 009d_industry_crosswalk.sql maps ISIC↔NAICS, we add the partner
--- domain's common industry terms to aid cross-system search. This only
--- enriches top-level codes where the mapping is well-established.
--- ---------------------------------------------------------------------------
+-- ISIC↔NAICS bridging keywords for top-level codes (mirrors 009d crosswalk).
 
--- Tag ISIC manufacturing divisions (10–33) with 'manufacturing' umbrella keyword
+-- ISIC manufacturing divisions (10-33)
 UPDATE shared.industry_code
 SET
   keywords = array(
@@ -345,7 +294,7 @@ WHERE domain_code = 'isic'
   AND level_no = 2
   AND parent_code = 'C';
 
--- Tag NAICS manufacturing subsectors with ISIC-familiar terminology
+-- NAICS manufacturing subsectors
 UPDATE shared.industry_code
 SET
   keywords = array(
@@ -357,7 +306,7 @@ WHERE domain_code = 'naics'
   AND level_no = 2
   AND parent_code IN ('31', '32', '33');
 
--- Tag all financial-sector codes with common cross-domain search terms
+-- Financial sector
 UPDATE shared.industry_code
 SET
   keywords = array(
@@ -368,7 +317,7 @@ SET
 WHERE (domain_code = 'isic' AND parent_code = 'K')
    OR (domain_code = 'naics' AND parent_code = '52');
 
--- Tag all healthcare codes with common cross-domain search terms
+-- Healthcare
 UPDATE shared.industry_code
 SET
   keywords = array(
@@ -379,7 +328,7 @@ SET
 WHERE (domain_code = 'isic' AND parent_code = 'Q')
    OR (domain_code = 'naics' AND parent_code = '62');
 
--- Tag all construction codes with common cross-domain search terms
+-- Construction
 UPDATE shared.industry_code
 SET
   keywords = array(
@@ -390,7 +339,7 @@ SET
 WHERE (domain_code = 'isic' AND parent_code = 'F')
    OR (domain_code = 'naics' AND parent_code = '23');
 
--- Tag all IT/telecom codes with common cross-domain search terms
+-- IT / telecom
 UPDATE shared.industry_code
 SET
   keywords = array(
@@ -402,14 +351,3 @@ WHERE (domain_code = 'isic' AND parent_code = 'J')
    OR (domain_code = 'naics' AND parent_code = '51');
 
 
--- ---------------------------------------------------------------------------
--- Done. Summary:
---   - 1,192 industry codes now have algorithmically derived keywords
---   - Keywords sourced from: name + description + parent name (3 sources)
---   - ISIC sections (A–U) enriched with 21 domain-specific synonym sets
---   - NAICS sectors enriched with 24 domain-specific synonym sets
---   - Top-level codes tagged with domain-provenance identifiers
---   - Cross-domain bridging keywords for manufacturing, finance,
---     healthcare, construction, and IT sectors
---   - All keywords: lowercased, deduplicated, sorted, >2 chars
--- ---------------------------------------------------------------------------

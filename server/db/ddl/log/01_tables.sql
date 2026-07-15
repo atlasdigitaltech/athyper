@@ -75,6 +75,7 @@ CREATE TABLE IF NOT EXISTS log.audit_log (
     old_values              jsonb,
     new_values              jsonb,
     changed_fields          text[],
+    reason_code             uuid,
     correlation_id          uuid,
     request_id              text,
     ip_address              inet,
@@ -89,10 +90,12 @@ CREATE TABLE IF NOT EXISTS log.audit_log (
     )),
     CONSTRAINT audit_log_entity_chk CHECK (btrim(entity_type) <> '')
     -- actor_type: 09_triggers — control.trg_validate_lookup_columns('log.actor_type')
+    -- reason_code FK to master.change_reason_code: see log/03_constraints.sql
 ) PARTITION BY RANGE (created_at);
 COMMENT ON TABLE  log.audit_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_LOG. Generic entity mutation trail. actor_type in log.actor_type lookup. Partitioned monthly.';
 COMMENT ON COLUMN log.audit_log.old_values IS 'Column snapshot before operation. NULL for inserts.';
 COMMENT ON COLUMN log.audit_log.new_values IS 'Column snapshot after operation. NULL for deletes.';
+COMMENT ON COLUMN log.audit_log.reason_code IS 'Optional FK to master.change_reason_code. Required on high-risk paths (manual GL override, posting adjustment, restore_snapshot) — enforced by service layer, not DB.';
 COMMENT ON COLUMN log.audit_log.correlation_id IS 'Links to event.outbox id for end-to-end trace.';
 CREATE TABLE IF NOT EXISTS log.audit_log_default PARTITION OF log.audit_log DEFAULT;
 

@@ -1,7 +1,3 @@
--- LookupDomain/control/bank_format_rule_payment_network.sql
--- Lookup values for domain: control.bank_format_rule_payment_network
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('swift',          'SWIFT',          'control.bank_format_rule_payment_network', 'SWIFT international wire',     10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

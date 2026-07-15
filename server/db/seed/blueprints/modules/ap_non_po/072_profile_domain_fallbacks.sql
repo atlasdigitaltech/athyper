@@ -1,29 +1,8 @@
--- ============================================================================
--- FILE: blueprints/modules/ap_non_po/072_profile_domain_fallbacks.sql
--- Purpose: Wildcard domain-level fallback rules so classification-derived
---          intents (all resolved through canonical BI-* domain IDs)
---          still resolve to an accounting profile.
---
--- Problem solved: intent_to_accounting_profile_rule only carries specific
---   intent_id rows. Classification
---   rules may resolve intents like SC-IT-HW → CAPEX which have their own
---   business_intent IDs.  These wildcards (intent_id IS NULL) catch any intent
---   whose domain matches, regardless of the specific intent UUID.
---
--- 6 rules per tenant:
---   Wildcard-1: any OPEX         intent → AP_NON_PO_STANDARD
---   Wildcard-2: any CAPEX        intent → AP_NON_PO_CAPEX
---   Wildcard-3: any ADMIN        intent → AP_NON_PO_STANDARD
---   Wildcard-4: any COST_OF_SALES intent → AP_NON_PO_STANDARD
---              (COGS-classified AP invoices still post through the AP subledger)
---   Wildcard-5: any REGULATORY   intent → AP_NON_PO_STANDARD
---              (tax authority invoices, statutory fees route via AP)
---   Wildcard-6: any TRANSFER     intent → AP_NON_PO_STANDARD
---              (intercompany AP charges route via AP)
---
--- Priority: 900 (lowest — only fires when no specific-intent rule matched)
--- Idempotent: WHERE NOT EXISTS guard on (tenant_id, intent_id IS NULL, intent_domain)
--- ============================================================================
+-- Domain-level wildcard fallbacks (intent_id IS NULL) covering classification-
+-- derived intents that don't match a specific 070 rule. Priority 900 — only
+-- fires when no specific-intent rule matched.
+-- Domain → profile: OPEX/ADMIN/COGS/REGULATORY/TRANSFER → AP_NON_PO_STANDARD,
+-- CAPEX → AP_NON_PO_CAPEX. COGS/REG/TRANSFER all route through the AP subledger.
 
 DO $seed_profile_domain_fallbacks$
 DECLARE
@@ -62,7 +41,6 @@ BEGIN
            AND apc.is_active = true
          LIMIT 1;
 
-        -- ── Wildcard-1: any OPEX intent → AP_NON_PO_STANDARD ─────────────────
         IF v_apc_std IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -85,7 +63,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Wildcard-2: any CAPEX intent → AP_NON_PO_CAPEX ───────────────────
         IF v_apc_capex IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -108,7 +85,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Wildcard-3: any ADMIN intent → AP_NON_PO_STANDARD ────────────────
         IF v_apc_std IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -131,9 +107,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Wildcard-4: any COST_OF_SALES intent → AP_NON_PO_STANDARD ────────
-        -- COGS-classified AP invoices (raw materials, freight, contract mfg)
-        -- still post through the AP subledger — accounting profile is AP standard.
         IF v_apc_std IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -156,9 +129,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Wildcard-5: any REGULATORY intent → AP_NON_PO_STANDARD ──────────
-        -- Tax authority invoices, statutory levies, and compliance billings
-        -- are processed through the AP subledger using the standard profile.
         IF v_apc_std IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -181,9 +151,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Wildcard-6: any TRANSFER intent → AP_NON_PO_STANDARD ─────────────
-        -- Intercompany AP charges and cost re-allocations received as invoices
-        -- route through the standard AP profile.
         IF v_apc_std IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,

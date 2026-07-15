@@ -14,7 +14,7 @@ import {
 import type { AccountingDistribution, DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
-import { useEditSessionContext } from "@athyper/content-ui";
+import { useEditDraftContext } from "@athyper/content-ui";
 import { ItemsGrid } from "./ItemsGrid";
 import { LineComposerSheet } from "./LineComposerSheet";
 import { LineEditorSheet } from "./LineEditorSheet";
@@ -580,7 +580,7 @@ export function LinesGrid(props: LinesGridProps) {
   // Phase 6d: when LinesGrid is mounted inside an active Edit Session, mass
   // delete and duplicate queue into the bundle instead of hitting per-line
   // REST endpoints. Returns null outside object-page edit mode.
-  const editSession = useEditSessionContext();
+  const editSession = useEditDraftContext();
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");

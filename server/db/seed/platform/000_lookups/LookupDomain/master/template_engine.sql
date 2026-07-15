@@ -1,14 +1,6 @@
--- LookupDomain/master/template_engine.sql
--- Lookup values for domain: master.template_engine
--- Idempotent: WHERE NOT EXISTS guard
---
--- NOTE: master.template.engine has an inline CHECK constraint that uses
--- UPPERCASE values: CHECK (engine IN ('handlebars', 'MJML', 'REACT_PDF')).
--- These lookup codes are lowercase because lookup_value_code_fmt requires it.
--- The lookup domain serves as a UI vocabulary (dropdown labels, descriptions);
--- the inline CHECK on master.template.engine handles DB-level validation
--- independently. No trigger-based lookup validation is attached to
--- master.template.engine.
+-- Codes are lowercase (lookup_value_code_fmt) but master.template.engine CHECK uses
+-- mixed case ('handlebars','MJML','REACT_PDF'). No lookup-validation trigger attached —
+-- this domain only supplies UI labels; the inline CHECK is the source of truth.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

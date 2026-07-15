@@ -1,11 +1,8 @@
--- ============================================================================
--- COMMON TENANT ONBOARDING ASSERTIONS
--- ============================================================================
--- Purpose:
---   Final tenant-scoped guardrail for common onboarding data. This runs once per
---   tenant folder after tenant-specific files and verifies that universal data
---   exists for every active legal entity/company code.
--- ============================================================================
+-- Final guardrail for tenant onboarding. Runs once per tenant folder after all
+-- tenant-specific files and asserts that the universal data (frameworks, charts,
+-- org/cost/profit centres, payment terms, asset classes, tax jurisdictions,
+-- FX rates) exists and links correctly to every active legal entity/company_code.
+-- Any failure here is fatal — tenant is not safely usable yet.
 
 DO $seed$
 DECLARE
@@ -147,7 +144,7 @@ BEGIN
 
     IF (SELECT count(*) FROM master.tax_jurisdiction
         WHERE tenant_id = v_tid
-          AND level_no = 1
+          AND jurisdiction_type = 'country'
           AND status = 'active') < 14
     THEN
         RAISE EXCEPTION '[common_onboarding_assertions] Missing universal country-level tax jurisdictions';
@@ -159,6 +156,19 @@ BEGIN
           AND metadata->'_seed'->>'pack' = '330_org') < 150
     THEN
         RAISE EXCEPTION '[common_onboarding_assertions] Missing universal FX rates to MYR';
+    END IF;
+
+    -- Phase 2: every active tax_group must carry a scoping jurisdiction.
+    -- Catches tenant seeds that forget to set jurisdiction_id at INSERT.
+    IF EXISTS (
+        SELECT 1 FROM control.tax_group
+        WHERE tenant_id = v_tid
+          AND status = 'active'
+          AND jurisdiction_id IS NULL
+    ) THEN
+        RAISE EXCEPTION '[common_onboarding_assertions] active tax_group(s) without jurisdiction_id: %',
+            (SELECT string_agg(code, ', ' ORDER BY code) FROM control.tax_group
+              WHERE tenant_id = v_tid AND status = 'active' AND jurisdiction_id IS NULL);
     END IF;
 
     RAISE NOTICE '[common_onboarding_assertions] tenant % passed common onboarding assertions', v_tid;

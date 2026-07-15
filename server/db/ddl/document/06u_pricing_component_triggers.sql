@@ -41,6 +41,65 @@ COMMENT ON TRIGGER trg_pc_supersede_only_update ON document.pricing_component IS
     'tuple may mutate. In terminal states: all edits blocked.';
 
 
+-- §PC  PIL delete guard (P1.5)
+-- ---------------------------------------------------------------------------
+-- pricing_component.source_line_id is polymorphic and therefore not protected
+-- by a real FK. Without this trigger a raw DELETE on purchase_invoice_line —
+-- or any line-handler that bypasses the application-level guard in
+-- handleDeleteInvoiceLine — can leave active line-scope PC rows pointing at
+-- a vanished parent line. The PC_APPORTION_SUM_DRIFT invariant cannot detect
+-- those orphans when the children still sum to the header parent, so DB-side
+-- enforcement is the only durable defense.
+--
+-- This trigger blocks the DELETE; callers must first remove or supersede the
+-- referencing PC rows. The application returns 409 LINE_HAS_ACTIVE_PRICING_COMPONENTS
+-- with the PC ids; this trigger is the belt-and-suspenders that also covers
+-- raw SQL, migrations, and any future handler that forgets the guard.
+CREATE OR REPLACE FUNCTION document.fn_pil_block_delete_with_active_pc()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    active_pc_count integer;
+    sample_ids      uuid[];
+BEGIN
+    SELECT count(*), array_agg(pc.id ORDER BY pc.id)
+      INTO active_pc_count, sample_ids
+      FROM (
+          SELECT id
+            FROM document.pricing_component
+           WHERE tenant_id        = OLD.tenant_id
+             AND source_doc_type  = 'purchase_invoice_line'
+             AND source_line_id   = OLD.id
+             AND superseded_by_id IS NULL
+           LIMIT 10
+      ) pc;
+
+    IF active_pc_count > 0 THEN
+        RAISE EXCEPTION
+          'PIL_DELETE_BLOCKED_BY_ACTIVE_PC: cannot delete purchase_invoice_line %; % active pricing_component row(s) reference it via source_line_id (sample ids: %)',
+          OLD.id, active_pc_count, sample_ids
+          USING ERRCODE = 'PC005';
+    END IF;
+
+    RETURN OLD;
+END;
+$$;
+
+COMMENT ON FUNCTION document.fn_pil_block_delete_with_active_pc() IS
+    'AFTER DELETE on document.purchase_invoice_line: blocks the delete when '
+    'active (non-superseded) line-scope PC rows reference the row via '
+    'source_line_id. Polymorphic FK substitute; pairs with the application '
+    'guard in handleDeleteInvoiceLine (returns 409 LINE_HAS_ACTIVE_PRICING_COMPONENTS).';
+
+DROP TRIGGER IF EXISTS trg_pil_block_delete_with_active_pc ON document.purchase_invoice_line;
+CREATE TRIGGER trg_pil_block_delete_with_active_pc
+    AFTER DELETE ON document.purchase_invoice_line
+    FOR EACH ROW EXECUTE FUNCTION document.fn_pil_block_delete_with_active_pc();
+
+COMMENT ON TRIGGER trg_pil_block_delete_with_active_pc ON document.purchase_invoice_line IS
+    'Belt-and-suspenders DB-side guard against orphaning PC rows on line delete. '
+    'Raises PC005 with sample PC ids when violated.';
+
+
 -- =============================================================================
 -- End of 06u_pricing_component_triggers.sql
 -- =============================================================================

@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@athyper/theme/utils";
-import { periodLabel, periodStatusColor, periodStatusLabel, type FiscalPeriodStatus } from "../lib/period";
+import { AccountingPeriodStatusChip } from "@athyper/ui";
+import { periodLabel, type FiscalPeriodStatus } from "../lib/period";
 
 interface PeriodStatusBarProps {
   fiscalYear: number;
@@ -31,9 +32,7 @@ export function PeriodStatusBar({
       )}
       <span>{label}</span>
       {status && (
-        <span className={cn("rounded-full border px-2 py-0.5 font-medium leading-none", periodStatusColor(status))}>
-          {periodStatusLabel(status)}
-        </span>
+        <AccountingPeriodStatusChip status={status} className="px-2 py-0.5" />
       )}
       {(status === "hard_close") && (
         <span className="text-destructive">Read only</span>

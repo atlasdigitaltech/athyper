@@ -731,14 +731,14 @@ function entityRecordValue(record: unknown, names: string[]): unknown {
 
 async function fetchEntityRecordList(entityCode: string, params: URLSearchParams): Promise<unknown[]> {
   const query = params.toString();
-  const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}${query ? `?${query}` : ""}`, { cache: "no-store" });
+  const res = await fetch(`/api/runtime/v1/entities/${encodeURIComponent(entityCode)}${query ? `?${query}` : ""}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Failed to load ${entityCode}`);
   const body = await res.json() as { data?: unknown[] };
   return Array.isArray(body.data) ? body.data : [];
 }
 
 async function fetchEntityRecordDetail(entityCode: string, id: string): Promise<unknown | null> {
-  const res = await fetch(`/api/relay/api/records/${encodeURIComponent(entityCode)}/${encodeURIComponent(id)}`, { cache: "no-store" });
+  const res = await fetch(`/api/runtime/v1/entities/${encodeURIComponent(entityCode)}/${encodeURIComponent(id)}`, { cache: "no-store" });
   if (!res.ok) return null;
   const body = await res.json() as { data?: unknown; record?: unknown };
   return body.data ?? body.record ?? body;

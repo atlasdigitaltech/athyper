@@ -1,7 +1,4 @@
--- LookupDomain/control/document_sequence_doc_type.sql
--- Legacy lookup values retained for historical migration compatibility.
--- is_extensible = true — tenants may register custom document types.
--- Idempotent: WHERE NOT EXISTS guard on both domain and value inserts.
+-- is_extensible = true: tenants may register custom document types beyond the seeded ones.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)
@@ -50,10 +47,10 @@ FROM (VALUES
      'control.document_sequence_doc_type',
      'Manual general ledger journal entry.',
      60),
-    ('goods_receipt',
-     'Goods Receipt',
+    ('receipt',
+     'Receipt',
      'control.document_sequence_doc_type',
-     'Goods receipt note (GRN) for inventory or asset inbound.',
+     'Receipt for inventory or asset inbound.',
      70),
     ('purchase_order',
      'Purchase Order',

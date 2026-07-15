@@ -1,7 +1,4 @@
--- LookupDomain/master/supplier_legal_form.sql
--- Lookup domain + values for: master.supplier_legal_form
--- Used by: master.supplier.legal_form
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by: master.supplier.legal_form.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

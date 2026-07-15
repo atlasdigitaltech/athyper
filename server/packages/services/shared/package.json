@@ -29,6 +29,10 @@
     "test": "vitest",
     "lint": "eslint ."
   },
+  "dependencies": {
+    "@athyper/cascade": "workspace:*",
+    "@athyper/temporal": "workspace:*"
+  },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",
     "@types/express": "^5.0.1",

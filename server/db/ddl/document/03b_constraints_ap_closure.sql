@@ -36,36 +36,15 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 -- =============================================================================
--- §2  Invoice snapshots → PI / PIL
+-- §2  Invoice tax snapshot → PI / PIL
 -- HF-4: snapshots are append-only (06x triggers) so CASCADE conflicts with
 -- immutability. Use RESTRICT so the DDL expresses the intent: "PI cannot be
 -- deleted while a snapshot exists." This makes the failure mode clearer than
 -- a trigger-rejected cascade.
+--
+-- Identity now uses direct document header fields and live master joins; the
+-- legacy invoice identity snapshot FK closure was removed with those tables.
 -- =============================================================================
-DO $$ BEGIN
-    ALTER TABLE document.invoice_party_snapshot
-        ADD CONSTRAINT ipsnap_pi_fk
-        FOREIGN KEY (tenant_id, purchase_invoice_id)
-        REFERENCES document.purchase_invoice (tenant_id, id)
-        ON DELETE RESTRICT NOT VALID;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TABLE document.invoice_address_snapshot
-        ADD CONSTRAINT iasnap_pi_fk
-        FOREIGN KEY (tenant_id, purchase_invoice_id)
-        REFERENCES document.purchase_invoice (tenant_id, id)
-        ON DELETE RESTRICT NOT VALID;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TABLE document.invoice_bank_snapshot
-        ADD CONSTRAINT ibsnap_pi_fk
-        FOREIGN KEY (tenant_id, purchase_invoice_id)
-        REFERENCES document.purchase_invoice (tenant_id, id)
-        ON DELETE RESTRICT NOT VALID;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
 DO $$ BEGIN
     ALTER TABLE document.invoice_tax_snapshot
         ADD CONSTRAINT itsnap_pi_fk
@@ -235,27 +214,6 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 -- =============================================================================
--- §9  AD resolution audit → AD / gl_account (RESTRICT, forensic)
--- =============================================================================
--- ON DELETE RESTRICT (NOT CASCADE) — forensic data must not silently disappear
-DO $$ BEGIN
-    ALTER TABLE document.accounting_distribution_resolution_audit
-        ADD CONSTRAINT ad_resolution_audit_ad_fk
-        FOREIGN KEY (tenant_id, accounting_distribution_id)
-        REFERENCES document.accounting_distribution (tenant_id, id)
-        ON DELETE RESTRICT NOT VALID;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TABLE document.accounting_distribution_resolution_audit
-        ADD CONSTRAINT ad_resolution_audit_gl_fk
-        FOREIGN KEY (tenant_id, resolved_gl_account_id)
-        REFERENCES master.gl_account (tenant_id, id)
-        ON DELETE RESTRICT NOT VALID;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-
--- =============================================================================
 -- §10  Bank statement cross-tenant FK closure (H3 mirror)
 -- =============================================================================
 -- payment_entry.bank_statement_line_id was single-column FK; widen to composite.
@@ -302,6 +260,23 @@ EXCEPTION
             REFERENCES document.bank_recon_case (tenant_id, id)
             ON DELETE RESTRICT NOT VALID;
 END $$;
+
+
+-- =============================================================================
+-- §11  WHT source-line + tax-group FK closure (WS-A · Plan v2)
+-- =============================================================================
+-- purchase_invoice_line.withholding_tax_group_id is the legacy flat handle.
+-- WS-COMPAT backfill writes pricing_component rows; the flat column remains
+-- as a read-only cache and must reference an actual tax_group row.
+DO $$ BEGIN
+    ALTER TABLE document.purchase_invoice_line
+        ADD CONSTRAINT pil_wht_tax_group_fk
+        FOREIGN KEY (tenant_id, withholding_tax_group_id)
+        REFERENCES control.tax_group (tenant_id, id)
+        ON DELETE RESTRICT
+        DEFERRABLE INITIALLY DEFERRED
+        NOT VALID;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 -- =============================================================================

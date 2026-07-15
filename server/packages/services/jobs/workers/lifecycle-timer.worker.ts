@@ -1,27 +1,27 @@
-/**
+﻿/**
  * Lifecycle Timer Worker
  *
  * Queue: jobs:lifecycle-timers
  *
  * Two job names:
  *
- *   JOB_NAME.SWEEP  — runs every LIFECYCLE_TIMER_SWEEP_MS (default 60 s).
+ *   JOB_NAME.SWEEP  â€” runs every LIFECYCLE_TIMER_SWEEP_MS (default 60 s).
  *                     Scans event.lifecycle_timer_schedule WHERE status='scheduled'
  *                     AND fire_at <= now(). For each due timer enqueues a FIRE job
  *                     with jobId=`timer:{id}` so BullMQ deduplicates concurrent sweeps.
  *
- *   JOB_NAME.FIRE   — executes one timer action. Uses a single UPDATE...RETURNING to
+ *   JOB_NAME.FIRE   â€” executes one timer action. Uses a single UPDATE...RETURNING to
  *                     atomically claim the row (status='fired') and read the payload,
  *                     avoiding a separate SELECT. If the timer was already fired or
- *                     cancelled (0 rows updated), the job exits early — idempotent.
+ *                     cancelled (0 rows updated), the job exits early â€” idempotent.
  *
  *                     Actions:
- *                       reminder         → INSERT into event.notification_message
+ *                       reminder         â†’ INSERT into event.notification_message
  *                       auto_transition
- *                       auto_close       → INSERT into event.outbox (topic='lifecycle')
+ *                       auto_close       â†’ INSERT into event.outbox (topic='lifecycle')
  *                       auto_cancel        for the lifecycle event consumer
  *
- * Concurrency: 10 — fire jobs are short DB writes; sweep produces up to 200 jobs/run.
+ * Concurrency: 10 â€” fire jobs are short DB writes; sweep produces up to 200 jobs/run.
  */
 
 import { Worker, Queue } from "bullmq";
@@ -34,6 +34,7 @@ import {
   SYSTEM_ACTOR_ID,
   type FireTimerJobData,
   type SweepJobData,
+  type OrphanCleanupJobData,
   type JobLogger,
 } from "../jobs.types.js";
 
@@ -49,11 +50,11 @@ interface DueTimer {
   policy_snapshot: Record<string, unknown> | null;
 }
 
-// ─── Sweep ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Sweep â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function sweep(
   db: DB,
-  queue: Queue<FireTimerJobData | SweepJobData>,
+  queue: Queue<FireTimerJobData | SweepJobData | OrphanCleanupJobData>,
   logger?: JobLogger,
 ): Promise<void> {
   const BATCH = 200;
@@ -92,13 +93,13 @@ async function sweep(
   logger?.info("lifecycle_timer_sweep", { found: result.rows.length });
 }
 
-// ─── Fire ─────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Fire â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function fire(db: DB, data: FireTimerJobData, logger?: JobLogger): Promise<void> {
   const { timerId, tenantId, timerType, entityName, entityId } = data;
 
   // Atomically claim the timer row: mark fired and read payload in one UPDATE...RETURNING.
-  // If the timer was already fired or cancelled (0 rows), the job exits — idempotent.
+  // If the timer was already fired or cancelled (0 rows), the job exits â€” idempotent.
   const claimed = await sql<{ policy_snapshot: Record<string, unknown> | null }>`
     UPDATE event.lifecycle_timer_schedule
     SET    status     = 'fired',
@@ -139,7 +140,7 @@ async function fire(db: DB, data: FireTimerJobData, logger?: JobLogger): Promise
   logger?.info("lifecycle_timer_fired", { timerId, timerType, entityName, entityId });
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function insertNotification(
   db: DB,
@@ -181,23 +182,124 @@ async function insertLifecycleOutboxEvent(
   `.execute(db);
 }
 
-// ─── Factory ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+
+type OrphanCleanupCandidate = {
+  attachmentId: string;
+  tenantId: string;
+  storageKey: string | null;
+  status: "quarantined" | "failed";
+  scanAttempts: number | null;
+};
+
+const ORPHAN_CLEANUP_BATCH_SIZE = 100;
+const ORPHAN_CLEANUP_GRACE_HOURS = 1;
+const SCAN_RETRY_EXHAUSTED = 3;
+
+async function cleanOrphans(args: {
+  db: DB;
+  attachmentStorage?: {
+    delete: (key: string) => Promise<void>;
+  };
+  logger?: JobLogger;
+}): Promise<void> {
+  const { db, attachmentStorage, logger } = args;
+
+  const rows = await sql<OrphanCleanupCandidate>`
+    SELECT
+      a.id AS "attachmentId",
+      a.tenant_id AS "tenantId",
+      a.storage_key AS "storageKey",
+      a.status AS "status",
+      (a.metadata -> 'scan' ->> 'attempts')::int AS "scanAttempts"
+    FROM master.attachment AS a
+    WHERE a.status IN ('quarantined', 'failed')
+      AND COALESCE(a.reference_count, 0) = 0
+      AND NOT EXISTS (
+        SELECT 1
+        FROM master.entity_document_link AS l
+        WHERE l.attachment_id = a.id
+          AND l.tenant_id = a.tenant_id
+      )
+      AND COALESCE(a.status_changed_at, a.created_at, now()) < (now() - interval '${ORPHAN_CLEANUP_GRACE_HOURS} hours')
+      AND (
+        a.text_extraction_status = 'failed'
+        OR a.metadata IS NULL
+        OR a.metadata = '{}'::jsonb
+        OR a.metadata -> 'scan' IS NULL
+        OR COALESCE((a.metadata -> 'scan' ->> 'attempts')::int, 0) >= ${SCAN_RETRY_EXHAUSTED}
+      )
+    ORDER BY COALESCE(a.status_changed_at, a.created_at, now()) ASC
+    LIMIT ${ORPHAN_CLEANUP_BATCH_SIZE}
+  `.execute(db);
+
+  if (rows.rows.length === 0) {
+    logger?.info("lifecycle_orphan_cleanup_noop", {});
+    return;
+  }
+
+  for (const row of rows.rows) {
+    const updated = await sql<{ attachment_id: string }>`
+      UPDATE master.attachment
+      SET status            = 'orphaned',
+          status_changed_at  = now(),
+          status_changed_by  = ${SYSTEM_ACTOR_ID}::uuid,
+          is_active         = false,
+          updated_at         = now()
+      WHERE id = ${row.attachmentId}::uuid
+        AND tenant_id = ${row.tenantId}::uuid
+        AND status IN ('quarantined', 'failed')
+      RETURNING id
+    `.execute(db);
+
+    if (updated.rows.length === 0) continue;
+
+    logger?.warn("lifecycle_attachment_marked_orphan", {
+      attachmentId: row.attachmentId,
+      tenantId: row.tenantId,
+      status: row.status,
+      scanAttempts: row.scanAttempts,
+    });
+
+    if (!attachmentStorage || !row.storageKey) {
+      continue;
+    }
+
+    try {
+      await attachmentStorage.delete(row.storageKey);
+      logger?.info("lifecycle_orphan_attachment_object_deleted", {
+        attachmentId: row.attachmentId,
+        tenantId: row.tenantId,
+      });
+    } catch (err) {
+      logger?.error("lifecycle_orphan_attachment_object_delete_failed", {
+        attachmentId: row.attachmentId,
+        tenantId: row.tenantId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+}
 export interface LifecycleTimerWorkerDeps {
   db:         DB;
-  queue:      Queue<FireTimerJobData | SweepJobData>;
+  queue:      Queue<FireTimerJobData | SweepJobData | OrphanCleanupJobData>;
   connection: ConnectionOptions;
+  attachmentStorage?: {
+    delete: (key: string) => Promise<void>;
+  };
   logger?:    JobLogger;
 }
 
 export function createLifecycleTimerWorker(deps: LifecycleTimerWorkerDeps): Worker {
-  const { db, queue, connection, logger } = deps;
+  const { db, queue, connection, attachmentStorage, logger } = deps;
 
-  return new Worker<FireTimerJobData | SweepJobData>(
+  return new Worker<FireTimerJobData | SweepJobData | OrphanCleanupJobData>(
     QUEUE_NAME.LIFECYCLE_TIMERS,
     async (job: Job) => {
       if (job.name === JOB_NAME.SWEEP)      await sweep(db, queue, logger);
       else if (job.name === JOB_NAME.FIRE)  await fire(db, job.data as FireTimerJobData, logger);
+      else if (job.name === JOB_NAME.CLEAN_ORPHANS) await cleanOrphans({ db, attachmentStorage, logger });
       else logger?.warn("lifecycle_timer_unknown_job", { name: job.name });
     },
     { connection, concurrency: 10 },

@@ -16,7 +16,7 @@
 --   §CUS2  LAT-001 — Latitude Consulting Ltd     (Manchester, professional svcs)
 --
 -- Child table coverage per entity:
---   master.business_partner, address ×3, address_link ×3
+--   master.business_partner, address, address_link (one BP default link)
 --   party_identifier (CRN, VAT, DUNS, LEI where applicable)
 --   party_contact_person ×2, party_contact_role ×2
 --   contact_link (email + phone per contact, billing channel)
@@ -80,8 +80,13 @@ DECLARE
     v_cp    uuid;
     v_ba    uuid;
 
+    -- Condition_type catalog refs (system rows)
+    v_ct_vat  uuid;
+
     v_seed  jsonb := '{"_seed":{"pack":"001_ca_party_master","version":"1.0.0"}}'::jsonb;
 BEGIN
+    SELECT id INTO v_ct_vat FROM master.condition_type
+     WHERE code = 'TAX_VAT' AND tenant_id IS NULL;
 
     -- ── Resolve tenant ───────────────────────────────────────────────────────
     SELECT id INTO v_tid
@@ -107,15 +112,15 @@ BEGIN
     -- UK: HMRC tax jurisdiction
     INSERT INTO master.tax_jurisdiction
         (tenant_id, code, name, jurisdiction_type, country_code, status, created_by)
-    SELECT v_tid,'GB-HMRC','HM Revenue & Customs','COUNTRY','GB','active',v_sys
+    SELECT v_tid,'GB-HMRC','HM Revenue & Customs','country','GB','active',v_sys
     WHERE NOT EXISTS (
         SELECT 1 FROM master.tax_jurisdiction WHERE tenant_id=v_tid AND code='GB-HMRC'
     );
 
-    -- UK: VAT (standard rate 20%)
+    -- UK: VAT (kind classified via condition_type_id → TAX_VAT)
     INSERT INTO master.tax_type
-        (tenant_id, code, name, category, is_recoverable, status, created_by)
-    SELECT v_tid,'VAT-GB','UK VAT 20%','INDIRECT',true,'active',v_sys
+        (tenant_id, code, name, condition_type_id, status, created_by)
+    SELECT v_tid,'VAT-GB','UK VAT 20%',v_ct_vat,'active',v_sys
     WHERE NOT EXISTS (SELECT 1 FROM master.tax_type WHERE tenant_id=v_tid AND code='VAT-GB');
 
     SELECT id INTO v_jur_hmrc FROM master.tax_jurisdiction WHERE tenant_id=v_tid AND code='GB-HMRC';
@@ -130,11 +135,11 @@ BEGIN
             tenant_id, jurisdiction_id, tax_type_id, tax_direction,
             component_code, rate_kind, rate_value,
             recoverability_mode, recoverability_percent,
-            calculation_basis, rounding_stage, effective_from, status, created_by
+            calculation_basis, effective_from, status, created_by
         ) VALUES (
             v_tid, v_jur_hmrc, v_tt_vat, 'PURCHASE',
             'MAIN','PERCENT',20.00,'FULL',100.00,
-            'LINE_NET','LINE','2011-01-04','active',v_sys
+            'LINE_NET','2011-01-04','active',v_sys
         ) RETURNING id INTO v_trs_vat;
     END IF;
 
@@ -255,7 +260,7 @@ BEGIN
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-brt-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_brt,v_addr,'legal',true,'2008-04-22',v_seed,v_sys)
+    VALUES (v_tid,'business_partner',v_bp_brt,v_addr,'default',true,'2008-04-22',v_seed,v_sys)
     ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
 
     INSERT INTO master.address (
@@ -270,10 +275,6 @@ BEGIN
     WHERE NOT EXISTS (SELECT 1 FROM master.address WHERE tenant_id=v_tid AND code='addr-brt-wh')
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-brt-wh'; END IF;
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_brt,v_addr,'default',true,'2008-04-22',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
-
     INSERT INTO master.address (
         tenant_id, code, name, address_type, attention_line,
         line1, city, postal_code, country_code,
@@ -286,10 +287,6 @@ BEGIN
     WHERE NOT EXISTS (SELECT 1 FROM master.address WHERE tenant_id=v_tid AND code='addr-brt-rem')
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-brt-rem'; END IF;
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_brt,v_addr,'remittance',true,'2008-04-22',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
-
     -- BRT-001: Identifiers
     INSERT INTO master.party_identifier (
         tenant_id,owner_type,owner_id,scheme,value,
@@ -381,9 +378,9 @@ BEGIN
             metadata,status,created_by)
         VALUES
         (v_tid,'business_partner',v_bp_brt,'email','s.whitfield@brighttech.co.uk',
-         'notification',true,true,now(),v_seed,'active',v_sys),
+         'default',true,true,now(),v_seed,'active',v_sys),
         (v_tid,'business_partner',v_bp_brt,'phone','+44 20 7946 0100',
-         'notification',true,false,NULL,v_seed,'active',v_sys)
+         'default',true,false,NULL,v_seed,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -417,9 +414,9 @@ BEGIN
             metadata,status,created_by)
         VALUES
         (v_tid,'business_partner',v_bp_brt,'email','finance@brighttech.co.uk',
-         'billing',true,true,now(),v_seed,'active',v_sys),
+         'default',false,true,now(),v_seed,'active',v_sys),
         (v_tid,'business_partner',v_bp_brt,'phone','+44 20 7946 0101',
-         'notification',false,false,NULL,v_seed,'active',v_sys)
+         'default',false,false,NULL,v_seed,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -590,7 +587,7 @@ BEGIN
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-csm-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_csm,v_addr,'legal',true,'2015-09-10',v_seed,v_sys)
+    VALUES (v_tid,'business_partner',v_bp_csm,v_addr,'default',true,'2015-09-10',v_seed,v_sys)
     ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
 
     INSERT INTO master.address (
@@ -605,10 +602,6 @@ BEGIN
     WHERE NOT EXISTS (SELECT 1 FROM master.address WHERE tenant_id=v_tid AND code='addr-csm-dc')
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-csm-dc'; END IF;
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_csm,v_addr,'default',false,'2018-01-01',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
-
     INSERT INTO master.address (
         tenant_id, code, name, address_type, attention_line,
         line1, city, postal_code, country_code,
@@ -621,10 +614,6 @@ BEGIN
     WHERE NOT EXISTS (SELECT 1 FROM master.address WHERE tenant_id=v_tid AND code='addr-csm-rem')
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-csm-rem'; END IF;
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_csm,v_addr,'remittance',true,'2015-09-10',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
-
     -- CSM-001: Identifiers
     INSERT INTO master.party_identifier (
         tenant_id,owner_type,owner_id,scheme,value,
@@ -716,9 +705,9 @@ BEGIN
             metadata,status,created_by)
         VALUES
         (v_tid,'business_partner',v_bp_csm,'email','p.nair@cloudserve.co.uk',
-         'notification',true,true,now(),v_seed,'active',v_sys),
+         'default',true,true,now(),v_seed,'active',v_sys),
         (v_tid,'business_partner',v_bp_csm,'phone','+44 121 496 0200',
-         'notification',true,false,NULL,v_seed,'active',v_sys)
+         'default',true,false,NULL,v_seed,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -745,9 +734,9 @@ BEGIN
             metadata,status,created_by)
         VALUES
         (v_tid,'business_partner',v_bp_csm,'email','accounts@cloudserve.co.uk',
-         'billing',true,true,now(),v_seed,'active',v_sys),
+         'default',false,true,now(),v_seed,'active',v_sys),
         (v_tid,'business_partner',v_bp_csm,'phone','+44 121 496 0201',
-         'notification',false,false,NULL,v_seed,'active',v_sys)
+         'default',false,false,NULL,v_seed,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -917,7 +906,7 @@ BEGIN
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-apx-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_apx,v_addr,'legal',true,'2001-06-15',v_seed,v_sys)
+    VALUES (v_tid,'business_partner',v_bp_apx,v_addr,'default',true,'2001-06-15',v_seed,v_sys)
     ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
 
     INSERT INTO master.address (
@@ -932,10 +921,6 @@ BEGIN
     WHERE NOT EXISTS (SELECT 1 FROM master.address WHERE tenant_id=v_tid AND code='addr-apx-ops')
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-apx-ops'; END IF;
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_apx,v_addr,'default',true,'2010-01-01',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
-
     INSERT INTO master.address (
         tenant_id, code, name, address_type, attention_line,
         line1, city, postal_code, country_code,
@@ -957,10 +942,6 @@ BEGIN
                    AND city='London' AND country_code='GB' AND status='active'))
         LIMIT 1;
     END IF;
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_apx,v_addr,'billing',true,'2001-06-15',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
-
     -- APX-001: Identifiers
     INSERT INTO master.party_identifier (
         tenant_id,owner_type,owner_id,scheme,value,
@@ -1052,9 +1033,9 @@ BEGIN
             metadata,status,created_by)
         VALUES
         (v_tid,'business_partner',v_bp_apx,'email','c.sinclair@apexdigitalgroup.com',
-         'notification',true,true,now(),v_seed,'active',v_sys),
+         'default',true,true,now(),v_seed,'active',v_sys),
         (v_tid,'business_partner',v_bp_apx,'phone','+44 20 7946 0500',
-         'notification',true,false,NULL,v_seed,'active',v_sys)
+         'default',true,false,NULL,v_seed,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -1081,9 +1062,9 @@ BEGIN
             metadata,status,created_by)
         VALUES
         (v_tid,'business_partner',v_bp_apx,'email','m.webb@apexdigitalgroup.com',
-         'billing',true,true,now(),v_seed,'active',v_sys),
+         'default',false,true,now(),v_seed,'active',v_sys),
         (v_tid,'business_partner',v_bp_apx,'phone','+44 20 7946 0501',
-         'notification',false,false,NULL,v_seed,'active',v_sys)
+         'default',false,false,NULL,v_seed,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -1234,7 +1215,7 @@ BEGIN
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-lat-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_lat,v_addr,'legal',true,'2013-02-14',v_seed,v_sys)
+    VALUES (v_tid,'business_partner',v_bp_lat,v_addr,'default',true,'2013-02-14',v_seed,v_sys)
     ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
 
     INSERT INTO master.address (
@@ -1249,10 +1230,6 @@ BEGIN
     WHERE NOT EXISTS (SELECT 1 FROM master.address WHERE tenant_id=v_tid AND code='addr-lat-op')
     RETURNING id INTO v_addr;
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-lat-op'; END IF;
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_lat,v_addr,'default',false,'2020-06-01',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
-
     INSERT INTO master.address (
         tenant_id, code, name, address_type, attention_line,
         line1, city, region, postal_code, country_code,
@@ -1274,10 +1251,6 @@ BEGIN
                    AND city='Manchester' AND country_code='GB' AND status='active'))
         LIMIT 1;
     END IF;
-    INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
-    VALUES (v_tid,'business_partner',v_bp_lat,v_addr,'billing',true,'2013-02-14',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
-
     -- LAT-001: Identifiers
     INSERT INTO master.party_identifier (
         tenant_id,owner_type,owner_id,scheme,value,
@@ -1353,9 +1326,9 @@ BEGIN
             metadata,status,created_by)
         VALUES
         (v_tid,'business_partner',v_bp_lat,'email','e.cartwright@latitudeconsulting.co.uk',
-         'notification',true,true,now(),v_seed,'active',v_sys),
+         'default',true,true,now(),v_seed,'active',v_sys),
         (v_tid,'business_partner',v_bp_lat,'phone','+44 161 850 3300',
-         'notification',true,false,NULL,v_seed,'active',v_sys)
+         'default',true,false,NULL,v_seed,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 
@@ -1382,9 +1355,9 @@ BEGIN
             metadata,status,created_by)
         VALUES
         (v_tid,'business_partner',v_bp_lat,'email','finance@latitudeconsulting.co.uk',
-         'billing',true,true,now(),v_seed,'active',v_sys),
+         'default',false,true,now(),v_seed,'active',v_sys),
         (v_tid,'business_partner',v_bp_lat,'phone','+44 161 850 3301',
-         'notification',false,false,NULL,v_seed,'active',v_sys)
+         'default',false,false,NULL,v_seed,'active',v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
 

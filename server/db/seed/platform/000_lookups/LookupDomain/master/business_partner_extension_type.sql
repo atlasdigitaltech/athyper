@@ -1,7 +1,3 @@
--- LookupDomain/master/business_partner_extension_type.sql
--- Lookup values for BP extension metadata flows.
--- Idempotent: domain upsert + value WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)
 VALUES

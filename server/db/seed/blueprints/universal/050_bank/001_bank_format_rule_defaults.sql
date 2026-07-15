@@ -1,10 +1,4 @@
--- ============================================================================
--- Platform default bank format rules
--- ============================================================================
--- Country + payment rail validation policies. tenant_id IS NULL = global.
--- Tenant overrides can be seeded separately per tenant setup.
--- Idempotent: WHERE NOT EXISTS guard on code.
--- ============================================================================
+-- Platform default bank format rules. tenant_id IS NULL = global; tenants override per-code in their own seed.
 
 INSERT INTO control.bank_format_rule (
     tenant_id, code, name, country_code, payment_network, direction, currency_code,
@@ -51,8 +45,6 @@ WHERE NOT EXISTS (
     SELECT 1 FROM control.bank_format_rule x WHERE x.code = v.code AND x.tenant_id IS NULL
 );
 
-
--- ── Non-bank rail format rules (added by payment method engine) ──────────────
 
 INSERT INTO control.bank_format_rule (
     tenant_id, code, name, country_code, payment_network, direction, currency_code,

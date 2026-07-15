@@ -1,7 +1,4 @@
--- LookupDomain/master/party_contact_role.sql
--- Lookup domain + values for: master.party_contact_role
--- Used by: master.party_contact_role.role_code
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by: master.party_contact_role.role_code.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

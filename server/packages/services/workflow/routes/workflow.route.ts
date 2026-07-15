@@ -23,6 +23,7 @@ import {
   withDomainSpan,
 } from "@athyper/svc-shared";
 import { createWorkflowEngine } from "../engine-factory.js";
+import type { WorkflowSourceEntityAdapter } from "../source-entity-adapter.js";
 
 // ── Deps ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ export interface WorkflowRouteDeps {
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
   };
+  sourceEntityAdapter?: WorkflowSourceEntityAdapter;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -51,7 +53,7 @@ function engineError(err: unknown): { status: number; body: { error: string; mes
 
 export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): void {
   const { db, auth, logger } = deps;
-  const engine = createWorkflowEngine({ db, logger });
+  const engine = createWorkflowEngine({ db, logger, sourceEntityAdapter: deps.sourceEntityAdapter });
 
   // ── GET /workflow/inbox/count ─────────────────────────────────────────────
 
@@ -154,7 +156,7 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
         res.status(400).json({ error: "MISSING_WORK_ITEM_ID", message: "work_item_id is required" });
         return;
       }
-      const VALID_ACTIONS = new Set(["approve", "reject", "escalate", "delegate", "acknowledge", "flag", "read", "request_info", "comment"]);
+      const VALID_ACTIONS = new Set(["approve", "reject", "return", "escalate", "delegate", "acknowledge", "flag", "read", "request_info", "comment"]);
       if (!action || !VALID_ACTIONS.has(action)) {
         res.status(400).json({ error: "INVALID_ACTION", message: `action must be one of: ${[...VALID_ACTIONS].join(", ")}` });
         return;
@@ -435,7 +437,7 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
       const comment    = (body["remarks"]     as string | undefined) ?? (body["comment"] as string | undefined);
       const delegateTo = body["delegate_to"]  as string | undefined;
 
-      const VALID_ACTIONS = new Set(["approve", "reject", "escalate", "delegate", "acknowledge", "flag", "read", "request_info", "comment"]);
+      const VALID_ACTIONS = new Set(["approve", "reject", "return", "escalate", "delegate", "acknowledge", "flag", "read", "request_info", "comment"]);
       if (!action || !VALID_ACTIONS.has(action)) {
         res.status(400).json({ error: "INVALID_ACTION", message: `action must be one of: ${[...VALID_ACTIONS].join(", ")}` });
         return;

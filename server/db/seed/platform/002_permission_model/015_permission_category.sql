@@ -1,7 +1,4 @@
--- seed/platform/002_permission_model/015_permission_category.sql
--- Seed: Permission categories
--- Schema: shared | Table: permission_category
--- Idempotent: on conflict (code) do nothing
+-- Permission categories. `code` values are referenced by shared.permission.category_code.
 
 insert into shared.permission_category (code, name, sort_order, created_by) values
   ('entity',        'Entity Operations',        10, '00000000-0000-0000-0000-000000000000'),

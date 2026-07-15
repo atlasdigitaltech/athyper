@@ -6,6 +6,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Skeleton,
 } from "@athyper/ui/primitives";
+import { DatePicker } from "@athyper/ui/composites";
 import { cn } from "@athyper/theme/utils";
 import type { FinanceScope } from "../lib/scope";
 import { statusTextClass } from "../lib/statusColors";
@@ -321,12 +322,13 @@ function ReceivePaymentDialog({ scope, onClose, onSuccess }: ReceivePaymentDialo
           {/* Value date */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">Value Date</label>
-            <input
-              type="date"
-              value={valueDate}
-              onChange={(e) => setValueDate(e.target.value)}
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5 text-sm"
-            />
+            <div className="mt-1">
+              <DatePicker
+                kind="businessDate"
+                value={valueDate || null}
+                onChange={(next) => setValueDate(next ?? "")}
+              />
+            </div>
           </div>
 
           {/* Reference */}

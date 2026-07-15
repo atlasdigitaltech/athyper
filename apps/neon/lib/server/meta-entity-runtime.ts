@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cache } from "react";
+import type { V4Session } from "@athyper/auth-bff";
 import {
   CompiledEntitySchema,
   EntityOperationSchema,
@@ -9,20 +10,64 @@ import {
 } from "@athyper/api-contracts/metadata";
 import {
   compileMetaEntityRuntimeDescriptor,
+  MetaEntityRecordOperationOverlayV1Schema,
+  MetaEntityRuntimeBootstrapV1Schema,
   MetaEntityLifecycleStateMaskSchema,
   type EntityRelationInput,
   type MetaEntityField,
   type MetaEntityLifecycleStateMask,
   type MetaEntityRuntimeDescriptor,
+  type MetaEntityRuntimeBootstrapV1,
 } from "@athyper/runtime-contracts";
 import type { RuntimeCanvasFlags } from "@athyper/runtime-canvas/surfaces";
 import { logDescriptorHealthInDev } from "@/lib/server/meta-entity-descriptor-health";
 import { getNeonServerSession } from "@/lib/server/session";
 import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";
-import { buildPurchaseInvoiceDocumentRuntimeSurfaces } from "@/lib/server/pi-document-runtime-surfaces";
+import { isDocumentSaveAndTransitionEnabled } from "@/lib/server/document-edit-submit-policy";
+import { buildDocumentEditPermissionStamp } from "@/lib/server/document-edit-coordinator-identity";
+import { resolveDocumentOpenRollout } from "@/lib/server/document-runtime-feature-flags";
+import { runtimeDescriptorParity } from "@/lib/server/runtime-descriptor-parity";
+import {
+  ensureMetaEntityRuntimeInvalidationSubscriber,
+  type MetaEntityRuntimeInvalidationEvent,
+} from "@/lib/server/meta-entity-runtime-cache-events";
+import {
+  ScopedRuntimeCache,
+  type RuntimeCacheIdentity,
+  type RuntimeCacheInvalidationScope,
+} from "@/lib/server/scoped-runtime-cache";
 
-const METADATA_REVALIDATE_SECONDS = 300;
+// Runtime metadata already has server-side cache validation keyed by descriptor
+// fingerprints, including entity_field.defaults. A second Next fetch cache here
+// can serve stale descriptors after metadata reseeds, which makes client-side
+// field dependency triggers disappear until the 300s window expires.
 const warnedRuntimeMetadata = new Set<string>();
+const DESCRIPTOR_CACHE_LIMIT = 200;
+const DESCRIPTOR_CACHE_TTL_MS = 60_000;
+const COMPILED_CACHE_LIMIT = 300;
+const COMPILED_CACHE_TTL_MS = 30_000;
+const childRuntimeProjections = new WeakMap<MetaEntityRuntimeDescriptor, ReadonlyMap<string, ChildRuntimeProjection>>();
+const descriptorCacheStates = new WeakMap<MetaEntityRuntimeDescriptor, "cold" | "warm">();
+const descriptorSharedCache = new ScopedRuntimeCache<MetaEntityRuntimeDescriptor>({
+  limit: DESCRIPTOR_CACHE_LIMIT,
+  ttlMs: DESCRIPTOR_CACHE_TTL_MS,
+  onEvict: (descriptor) => {
+    childRuntimeProjections.delete(descriptor);
+    descriptorCacheStates.delete(descriptor);
+  },
+});
+const compiledSharedCache = new ScopedRuntimeCache<CompiledEntity>({
+  limit: COMPILED_CACHE_LIMIT,
+  ttlMs: COMPILED_CACHE_TTL_MS,
+});
+
+export interface ChildRuntimeProjection {
+  compiled: CompiledEntity;
+  descriptor: MetaEntityRuntimeDescriptor;
+}
+const ENTITY_CODE_ALIASES: Record<string, string> = {
+  unit_of_measure: "uom",
+};
 
 /**
  * Rollout registry for descriptor-driven canvas features.
@@ -37,12 +82,6 @@ const warnedRuntimeMetadata = new Set<string>();
  *   groupedForms           — enables grouped WorkPanel sections in create/edit forms
  *                            (requires fieldGroups in the compiled descriptor)
  */
-const CANVAS_FLAGS_REGISTRY: Record<string, RuntimeCanvasFlags> = {
-  site:             { descriptorSurfaceShell: true, groupedForms: true },
-  warehouse:        { descriptorSurfaceShell: true, groupedForms: true },
-  purchase_invoice: { descriptorSurfaceShell: true, groupedForms: true, operationDispatch: true },
-};
-
 type PrototypeReferenceExpectation = {
   entity: string;
   valueField: string;
@@ -167,60 +206,229 @@ const PROTOTYPE_ENTITY_CONTRACTS: Record<string, PrototypeContractExpectation> =
 };
 
 export const getMetaEntityRuntimeDescriptor = cache(
-  async (routeEntity: string): Promise<MetaEntityRuntimeDescriptor | undefined> => {
+  async (
+    routeEntity: string,
+    recordId?: string,
+  ): Promise<MetaEntityRuntimeDescriptor | undefined> => {
+    // recordId is the optional record-context hint. When provided, the
+    // entity-operations fetch passes it through so the server's
+    // active-approver gate (server/packages/services/workflow/
+    // active-approver.service.ts) emits workflow_task ops only when the
+    // caller can actually act on the record's current workflow step.
+    // React `cache()` dedupes by argument tuple — list-page callers with no
+    // recordId share one entry; each record page gets its own.
     const entityCode = normalizeEntityCode(routeEntity);
     if (!entityCode) return undefined;
 
     const session = await getNeonServerSession();
     if (!session) return undefined;
+    ensureMetaEntityRuntimeInvalidationSubscriber(handleMetaEntityRuntimeInvalidationEvent);
 
     const headers = buildRuntimeHeaders(session);
-    const compiled = await fetchCompiledEntity(entityCode, headers);
-    if (!compiled) return undefined;
-
-    // Phase 4: in addition to the legacy three fetches we now pull
-    //   - control.entity_lifecycle_state_mask rows for this entity (per-status
-    //     capability masks that the compiler embeds into the descriptor)
-    //   - control.permission_alias map (allows entity_operation rows that still
-    //     reference legacy codes like `edit` to resolve to canonical `update`)
-    // Both are best-effort; on failure the compiler degrades gracefully to its
-    // pre-Phase-4 behaviour.
-    const [operations, entityPolicy, lifecycleStateMasks, permissionAliasMap] = await Promise.all([
-      fetchEntityOperations(entityCode, headers),
-      fetchEntityPolicy(entityCode, headers),
-      fetchLifecycleStateMasks(entityCode, headers),
-      fetchPermissionAliasMap(headers),
-    ]);
-
-    try {
-      const canvasFlags = CANVAS_FLAGS_REGISTRY[entityCode] ?? {};
-      const descriptor = compileMetaEntityRuntimeDescriptor(compiled, {
-        operations,
-        relations: inferRuntimeRelations(compiled),
-        entityPolicy,
-        lifecycleStateMasks,
-        permissionAliasMap,
-        compiledAt: compiled.compiled_at,
-        extensions: {
-          displayConfig: compiled.display_config,
-          searchConfig: compiled.search_config,
-          dataPolicy: compiled.data_policy,
-          runtimeCanvasFlags: Object.keys(canvasFlags).length > 0 ? canvasFlags : undefined,
-          bridge: {
-            source: "neon.server.meta-entity-runtime",
-            relationSource: "compiled-metadata-plus-current-ddl-overrides",
-          },
-        },
+    const cacheIdentity = buildRuntimeCacheIdentity(session, entityCode);
+    const cacheGeneration = currentRuntimeCacheGeneration();
+    const rollout = resolveDocumentOpenRollout({ session, entityCode });
+    if (rollout.openDescriptorCacheV2) {
+      const projected = await loadBootstrapRuntimeDescriptor({
+        entityCode, recordId, session, headers, cacheIdentity, cacheGeneration,
       });
-      warnIfPrototypeContractDriftInDev(entityCode, compiled, descriptor);
-      logDescriptorHealthInDev(descriptor, canvasFlags);
-      return injectDocumentRuntimeSurfaces(entityCode, descriptor);
-    } catch (error) {
-      warnIfDescriptorCompileFailedInDev(entityCode, error);
-      return undefined;
+      if (!projected) {
+        return loadLegacyRuntimeDescriptor({
+          entityCode, recordId, session, headers, cacheIdentity, cacheGeneration,
+          cacheEnabled: false,
+        });
+      }
+      if (rollout.shadowRuntimeBootstrap === true) {
+        const legacy = await loadLegacyRuntimeDescriptor({
+          entityCode, recordId, session, headers, cacheIdentity, cacheGeneration,
+          cacheEnabled: false,
+        });
+        if (!legacy || !runtimeDescriptorParity(projected, legacy)) {
+          reportRuntimeBootstrapParity(entityCode, projected, legacy);
+          return legacy;
+        }
+      }
+      return projected;
     }
+    return loadLegacyRuntimeDescriptor({
+      entityCode, recordId, session, headers, cacheIdentity, cacheGeneration,
+      cacheEnabled: false,
+    });
   },
 );
+
+type RuntimeLoadInput = {
+  entityCode: string;
+  recordId?: string;
+  session: V4Session;
+  headers: Record<string, string>;
+  cacheIdentity: RuntimeCacheIdentity;
+  cacheGeneration: number;
+};
+
+async function loadBootstrapRuntimeDescriptor(input: RuntimeLoadInput): Promise<MetaEntityRuntimeDescriptor | undefined> {
+  const response = await fetchMetadata(
+    `/api/metadata/entities/${encodeURIComponent(input.entityCode)}/runtime-bootstrap`,
+    input.headers,
+  );
+  const parsed = MetaEntityRuntimeBootstrapV1Schema.safeParse(response ? await readJson(response) : null);
+  if (!parsed.success) return undefined;
+  const bootstrap = parsed.data as MetaEntityRuntimeBootstrapV1;
+  const compiledResult = CompiledEntitySchema.safeParse(bootstrap.compiledEntity);
+  const operationResult = EntityOperationSchema.array().safeParse(bootstrap.operations);
+  if (!compiledResult.success || !operationResult.success) return undefined;
+
+  let operations = operationResult.data;
+  if (input.recordId) {
+    const overlayResponse = await fetchMetadata(
+      `/api/metadata/entities/${encodeURIComponent(input.entityCode)}/record-operations?recordId=${encodeURIComponent(input.recordId)}`,
+      input.headers,
+    );
+    const overlay = MetaEntityRecordOperationOverlayV1Schema.safeParse(overlayResponse ? await readJson(overlayResponse) : null);
+    if (overlay.success) {
+      const overlayOperations = EntityOperationSchema.array().safeParse(overlay.data.operations);
+      if (overlayOperations.success) operations = [...operations, ...overlayOperations.data];
+    }
+  }
+
+  const descriptorKey = buildDescriptorCacheKey(
+    input.session,
+    input.entityCode,
+    input.recordId,
+    bootstrap.bootstrapHash,
+  );
+  const cached = descriptorSharedCache.get(descriptorKey);
+  if (cached) {
+    descriptorCacheStates.set(cached, "warm");
+    return cached;
+  }
+
+  const relationProjections = projectBootstrapChildren(bootstrap);
+  const descriptor = compileProjectedDescriptor({
+    entityCode: input.entityCode,
+    session: input.session,
+    compiled: compiledResult.data,
+    operations,
+    entityPolicy: (bootstrap.policy ?? undefined) as RuntimeEntityPolicy | undefined,
+    lifecycleStateMasks: bootstrap.lifecycleStateMasks,
+    permissionAliasMap: bootstrap.permissionAliases,
+    relationProjections,
+  });
+  if (!descriptor) return undefined;
+  childRuntimeProjections.set(descriptor, relationProjections);
+  descriptorCacheStates.set(descriptor, "cold");
+  descriptorSharedCache.set(descriptorKey, descriptor, input.cacheIdentity, input.cacheGeneration);
+  return descriptor;
+}
+
+async function loadLegacyRuntimeDescriptor(
+  input: RuntimeLoadInput & { cacheEnabled: boolean },
+): Promise<MetaEntityRuntimeDescriptor | undefined> {
+  const compiled = await fetchCompiledEntityCached(
+    input.entityCode, input.session, input.headers, input.cacheIdentity, input.cacheGeneration,
+  );
+  if (!compiled) return undefined;
+  const descriptorKey = buildDescriptorCacheKey(
+    input.session, input.entityCode, input.recordId, compiled.compiled_hash ?? compiled.version_hash,
+  );
+  const cached = input.cacheEnabled ? descriptorSharedCache.get(descriptorKey) : undefined;
+  if (cached) { descriptorCacheStates.set(cached, "warm"); return cached; }
+  const [operations, entityPolicy, lifecycleStateMasks, permissionAliasMap, relationProjections] = await Promise.all([
+    fetchEntityOperations(input.entityCode, input.headers, input.recordId),
+    fetchEntityPolicy(input.entityCode, input.headers),
+    fetchLifecycleStateMasks(input.entityCode, input.headers),
+    fetchPermissionAliasMap(input.headers),
+    fetchRelationRuntimeProjections(compiled.relations, input.headers),
+  ]);
+  const descriptor = compileProjectedDescriptor({
+    entityCode: input.entityCode,
+    session: input.session,
+    compiled,
+    operations,
+    entityPolicy,
+    lifecycleStateMasks,
+    permissionAliasMap,
+    relationProjections,
+  });
+  if (!descriptor) return undefined;
+  childRuntimeProjections.set(descriptor, relationProjections);
+  descriptorCacheStates.set(descriptor, "cold");
+  if (input.cacheEnabled) descriptorSharedCache.set(descriptorKey, descriptor, input.cacheIdentity, input.cacheGeneration);
+  return descriptor;
+}
+
+function projectBootstrapChildren(
+  bootstrap: MetaEntityRuntimeBootstrapV1,
+): ReadonlyMap<string, ChildRuntimeProjection> {
+  const entries: Array<readonly [string, ChildRuntimeProjection]> = [];
+  for (const child of bootstrap.childProjections) {
+    const compiled = CompiledEntitySchema.safeParse(child.compiledEntity);
+    const operations = EntityOperationSchema.array().safeParse(child.operations);
+    if (!compiled.success || !operations.success) continue;
+    try {
+      const descriptor = compileMetaEntityRuntimeDescriptor(compiled.data, {
+        operations: operations.data,
+        entityPolicy: (child.policy ?? undefined) as RuntimeEntityPolicy | undefined,
+        lifecycleStateMasks: child.lifecycleStateMasks,
+        permissionAliasMap: bootstrap.permissionAliases,
+        relations: [],
+        compiledAt: compiled.data.compiled_at,
+      });
+      entries.push([normalizeEntityCode(child.entityCode), { compiled: compiled.data, descriptor }]);
+    } catch { /* a malformed optional child is fetched lazily when opened */ }
+  }
+  return new Map(entries);
+}
+
+function compileProjectedDescriptor(input: {
+  entityCode: string;
+  session: V4Session;
+  compiled: CompiledEntity;
+  operations: EntityOperation[];
+  entityPolicy?: RuntimeEntityPolicy;
+  lifecycleStateMasks: MetaEntityLifecycleStateMask[];
+  permissionAliasMap: Record<string, string>;
+  relationProjections: ReadonlyMap<string, ChildRuntimeProjection>;
+}): MetaEntityRuntimeDescriptor | undefined {
+  const relationCapabilities = Object.fromEntries([...input.relationProjections].map(([code, projection]) => [code, {
+    canCreate: projection.descriptor.capabilities.canCreate,
+    canEdit: projection.descriptor.capabilities.canEdit,
+    canDelete: projection.descriptor.capabilities.canDelete,
+  }]));
+  try {
+    const tenantId = input.session.activeOrg
+      ? input.session.organizations[input.session.activeOrg]?.tenantId : undefined;
+    const descriptor = compileMetaEntityRuntimeDescriptor(input.compiled, {
+      operations: input.operations,
+      relations: input.compiled.relations,
+      relationCapabilities,
+      entityPolicy: input.entityPolicy,
+      lifecycleStateMasks: input.lifecycleStateMasks,
+      permissionAliasMap: input.permissionAliasMap,
+      documentSaveAndTransitionEnabled: isDocumentSaveAndTransitionEnabled({ tenantId, entityCode: input.entityCode }),
+      compiledAt: input.compiled.compiled_at,
+    });
+    const canvasFlags = (descriptor.extensions?.["runtimeCanvasFlags"] ?? {}) as RuntimeCanvasFlags;
+    warnIfPrototypeContractDriftInDev(input.entityCode, input.compiled, descriptor);
+    logDescriptorHealthInDev(descriptor, canvasFlags, input.compiled.capability_manifest);
+    return descriptor;
+  } catch (error) {
+    warnIfDescriptorCompileFailedInDev(input.entityCode, error);
+    return undefined;
+  }
+}
+
+function reportRuntimeBootstrapParity(
+  entityCode: string,
+  projected: MetaEntityRuntimeDescriptor,
+  legacy: MetaEntityRuntimeDescriptor | undefined,
+): void {
+  console.error("meta_entity_runtime_bootstrap_parity_mismatch", {
+    entityCode,
+    projectedHash: projected.audit.descriptorHash,
+    legacyHash: legacy?.audit.descriptorHash ?? null,
+  });
+}
 
 async function fetchCompiledEntity(
   entityCode: string,
@@ -238,16 +446,145 @@ async function fetchCompiledEntity(
     return null;
   }
 
-  const entity = withRuntimeDisplayDefaults(parsed.data);
+  const entity = parsed.data;
   warnIfMisconfiguredInDev(entityCode, entity);
   return entity;
+}
+
+export async function getCompiledEntityRuntimeMetadata(
+  entityCode: string,
+  session: V4Session,
+): Promise<CompiledEntity | null> {
+  const normalized = normalizeEntityCode(entityCode);
+  ensureMetaEntityRuntimeInvalidationSubscriber(handleMetaEntityRuntimeInvalidationEvent);
+  const identity = buildRuntimeCacheIdentity(session, normalized);
+  return fetchCompiledEntityCached(
+    normalized,
+    session,
+    buildRuntimeHeaders(session),
+    identity,
+    currentRuntimeCacheGeneration(),
+  );
+}
+
+async function fetchRelationRuntimeProjections(
+  relations: EntityRelationInput[],
+  headers: Record<string, string>,
+): Promise<ReadonlyMap<string, ChildRuntimeProjection>> {
+  const targets = [...new Set(relations.map((relation) =>
+    relation.target_entity ?? relation.targetEntity,
+  ).filter((value): value is string => typeof value === "string" && value.length > 0))];
+  const entries = await Promise.all(targets.map(async (targetEntity) => {
+    const [compiled, operations, entityPolicy] = await Promise.all([
+      fetchCompiledEntity(targetEntity, headers),
+      fetchEntityOperations(targetEntity, headers),
+      fetchEntityPolicy(targetEntity, headers),
+    ]);
+    if (!compiled) return null;
+    try {
+      const child = compileMetaEntityRuntimeDescriptor(compiled, {
+        operations,
+        entityPolicy,
+        relations: [],
+        compiledAt: compiled.compiled_at,
+      });
+      return [targetEntity, { compiled, descriptor: child }] as const;
+    } catch {
+      return null;
+    }
+  }));
+  return new Map(entries.filter((entry): entry is readonly [string, ChildRuntimeProjection] => entry !== null));
+}
+
+export function getChildRuntimeProjection(
+  parentDescriptor: MetaEntityRuntimeDescriptor,
+  childEntityCode: string,
+): ChildRuntimeProjection | undefined {
+  return childRuntimeProjections.get(parentDescriptor)?.get(normalizeEntityCode(childEntityCode));
+}
+
+export function getMetaEntityRuntimeDescriptorCacheState(
+  descriptor: MetaEntityRuntimeDescriptor,
+): "cold" | "warm" {
+  return descriptorCacheStates.get(descriptor) ?? "cold";
+}
+
+export function invalidateMetaEntityRuntimeCaches(
+  scope: RuntimeCacheInvalidationScope,
+  generation?: number,
+): { descriptors: number; compiled: number } {
+  return {
+    descriptors: descriptorSharedCache.invalidate(scope, generation),
+    compiled: compiledSharedCache.invalidate(scope, generation),
+  };
+}
+
+function handleMetaEntityRuntimeInvalidationEvent(event: MetaEntityRuntimeInvalidationEvent): void {
+  invalidateMetaEntityRuntimeCaches(event, event.generation);
+}
+
+async function fetchCompiledEntityCached(
+  entityCode: string,
+  session: V4Session,
+  headers: Record<string, string>,
+  identity: RuntimeCacheIdentity,
+  generation: number,
+): Promise<CompiledEntity | null> {
+  const key = buildSecurityScopeKey(session, entityCode);
+  const cached = compiledSharedCache.get(key);
+  if (cached) return cached;
+  const compiled = await fetchCompiledEntity(entityCode, headers);
+  if (compiled) compiledSharedCache.set(key, compiled, identity, generation);
+  return compiled;
+}
+
+function buildDescriptorCacheKey(session: V4Session, entityCode: string, recordId: string | undefined, compiledHash: string): string {
+  return `${buildSecurityScopeKey(session, entityCode)}\u0000${recordId ?? "entity"}\u0000${compiledHash}`;
+}
+
+function buildSecurityScopeKey(session: V4Session, entityCode: string): string {
+  const identity = buildRuntimeCacheIdentity(session, entityCode);
+  return [
+    identity.tenant,
+    identity.plane,
+    identity.realm,
+    identity.principal,
+    identity.permissionStamp,
+    identity.entity,
+  ].join("\u0000");
+}
+
+function buildRuntimeCacheIdentity(session: V4Session, entityCode: string): RuntimeCacheIdentity {
+  const membership = session.activeOrg ? session.organizations[session.activeOrg] : undefined;
+  return {
+    tenant: membership?.tenantId ?? "",
+    plane: session.planeKey ?? "",
+    realm: session.realmKey ?? "",
+    entity: entityCode,
+    principal: session.userId,
+    permissionStamp: buildDocumentEditPermissionStamp(session),
+  };
+}
+
+function currentRuntimeCacheGeneration(): number {
+  return Math.max(descriptorSharedCache.generation, compiledSharedCache.generation);
 }
 
 async function fetchEntityOperations(
   entityCode: string,
   headers: Record<string, string>,
+  recordId?: string,
 ): Promise<EntityOperation[]> {
-  const response = await fetchMetadata(`/api/metadata/entities/${encodeURIComponent(entityCode)}/operations`, headers);
+  // recordId is an optional record-context hint. When provided, the server
+  // emits workflow_task ops (approve / deny / request_info) only if the
+  // caller is the active approver for that specific record. When absent,
+  // workflow_task ops are dropped — entity-level callers (list views, bulk
+  // pages) have no record to gate against.
+  const query = recordId ? `?recordId=${encodeURIComponent(recordId)}` : "";
+  const response = await fetchMetadata(
+    `/api/metadata/entities/${encodeURIComponent(entityCode)}/operations${query}`,
+    headers,
+  );
   if (!response) return [];
 
   const json = await readJson(response);
@@ -320,7 +657,7 @@ async function fetchMetadata(
   try {
     const response = await fetch(buildRuntimeUrl(pathname), {
       headers,
-      next: { revalidate: METADATA_REVALIDATE_SECONDS },
+      cache: "no-store",
     });
 
     return response.ok ? response : null;
@@ -345,163 +682,9 @@ function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
-function inferRuntimeRelations(entity: CompiledEntity): EntityRelationInput[] {
-  return [
-    ...inferLineItemRelations(entity),
-    ...(CURRENT_DDL_RELATION_BRIDGE[entity.entity_code] ?? []),
-  ];
-}
-
-function inferLineItemRelations(entity: CompiledEntity): EntityRelationInput[] {
-  if (entity.feature_flags.has_lines !== true) return [];
-
-  const lineEntityCode = entity.display_config.line_entity_code;
-  if (!lineEntityCode) return [];
-
-  return [
-    {
-      name: "lines",
-      relation_kind: "has_many",
-      target_entity: lineEntityCode,
-      fk_field: `${entity.entity_code}_id`,
-      ui_behavior: {
-        surface: "lines_tab",
-        label: "Line Items",
-        display_mode: "grid",
-      },
-    },
-  ];
-}
-
-const CURRENT_DDL_RELATION_BRIDGE: Record<string, EntityRelationInput[]> = {
-  site: [
-    {
-      name: "warehouses",
-      relation_kind: "has_many",
-      target_entity: "warehouse",
-      fk_field: "site_id",
-      on_delete: "restrict",
-      ui_behavior: {
-        surface: "child_records",
-        label: "Warehouses",
-        display_mode: "table",
-      },
-    },
-    {
-      name: "cost_centers",
-      relation_kind: "has_many",
-      target_entity: "cost_center",
-      fk_field: "site_id",
-      on_delete: "set_null",
-      ui_behavior: {
-        surface: "child_records",
-        label: "Cost Centers",
-        display_mode: "table",
-      },
-    },
-  ],
-  warehouse: [
-    {
-      name: "site",
-      relation_kind: "belongs_to",
-      target_entity: "site",
-      fk_field: "site_id",
-      on_delete: "restrict",
-      ui_behavior: {
-        surface: "reference",
-        label: "Site",
-      },
-    },
-  ],
-};
-
 function normalizeEntityCode(routeEntity: string): string {
-  return routeEntity.trim().replace(/-/g, "_");
-}
-
-function withRuntimeDisplayDefaults(entity: CompiledEntity): CompiledEntity {
-  const titleField = entity.display_config.title_field ?? deriveTitleField(entity);
-  if (!titleField) return entity;
-  const listColumns = entity.display_config.list_columns?.length
-    ? entity.display_config.list_columns
-    : deriveListColumns(entity, titleField);
-
-  return {
-    ...entity,
-    display_config: {
-      ...entity.display_config,
-      title_field: titleField,
-      subtitle_field: entity.display_config.subtitle_field ?? deriveSubtitleField(entity, titleField),
-      default_sort_field: entity.display_config.default_sort_field ?? titleField,
-      default_sort_order: entity.display_config.default_sort_order ?? "asc",
-      list_columns: listColumns,
-    },
-  };
-}
-
-function deriveTitleField(entity: CompiledEntity): string | undefined {
-  return firstExistingField(entity, [
-    "name",
-    "display_name",
-    "code",
-    "document_no",
-    "number",
-    "id",
-  ]);
-}
-
-function deriveSubtitleField(entity: CompiledEntity, titleField: string): string | undefined {
-  return firstExistingField(entity, ["code", "name", "description", "status"], titleField);
-}
-
-function deriveListColumns(entity: CompiledEntity, titleField: string): string[] {
-  const fieldNames = new Set(entity.fields.map((field) => field.name));
-  const preferredColumns = [
-    "id",
-    "code",
-    titleField,
-    "name",
-    "company_code_id",
-    "site_id",
-    "site_type",
-    "warehouse_type",
-    "country_code",
-    "timezone_code",
-    "status",
-    "is_active",
-    "updated_at",
-  ];
-  const columns = uniqueExistingFields(fieldNames, preferredColumns);
-  if (columns.length >= 2) return columns.slice(0, 8);
-
-  const descriptiveColumns = entity.fields
-    .filter((field) => field.is_searchable || field.is_filterable || field.is_sortable)
-    .map((field) => field.name);
-
-  return uniqueExistingFields(fieldNames, [
-    ...columns,
-    ...descriptiveColumns,
-    ...entity.fields.map((field) => field.name),
-  ]).slice(0, 8);
-}
-
-function firstExistingField(
-  entity: CompiledEntity,
-  candidates: string[],
-  exclude?: string,
-): string | undefined {
-  const fieldNames = new Set(entity.fields.map((field) => field.name));
-  return candidates.find((field) => field !== exclude && fieldNames.has(field));
-}
-
-function uniqueExistingFields(fieldNames: Set<string>, candidates: string[]): string[] {
-  const result: string[] = [];
-  for (const candidate of candidates) {
-    if (fieldNames.has(candidate) && !result.includes(candidate)) {
-      result.push(candidate);
-    }
-  }
-  return result;
+  const entityCode = routeEntity.trim().replace(/-/g, "_");
+  return ENTITY_CODE_ALIASES[entityCode] ?? entityCode;
 }
 
 function warnIfPrototypeContractDriftInDev(
@@ -643,44 +826,4 @@ function warnIfCompiledEntityParseFailedInDev(entityCode: string, error: unknown
     `[neon-meta-entity-runtime] ${entityCode}: compiled metadata contract parse failed`,
     error,
   );
-}
-
-/**
- * Cleanup Plan v5 §P6 — descriptor surface injection for the document
- * runtime cutover.
- *
- * Appends the four PI document-runtime surfaces (document_header,
- * polymorphic_pc_lines, header_scope_pc_strip, postings_preview) so the
- * generic `[entity]/[id]` renderer mounts the descriptor-driven PI view.
- * Also drops the compiler-emitted `line_items` surface for PI — it would
- * otherwise render alongside `polymorphic_pc_lines` (both ask the user
- * to view document lines, the former fetching its own copy via the
- * standard records API and the latter reading from the canonical
- * DocumentRuntimeContext slice).
- *
- * Injection happens here (rather than via a stored entity_surface row)
- * because there is no `control.entity_surface` table — surfaces are
- * compiler outputs, not stored rows. A real registry is P7+ scope.
- *
- * Sprint 7 deleted the legacy PI route + client; Sprint 8 PR5 dropped
- * the `PI_VIA_DESCRIPTOR` flag (no fallback = no rollback to gate).
- * New document families (SI, GR, …) add their own branch here when
- * their composer + strategy + surfaces ship.
- */
-function injectDocumentRuntimeSurfaces(
-  entityCode: string,
-  descriptor: MetaEntityRuntimeDescriptor,
-): MetaEntityRuntimeDescriptor {
-  if (entityCode !== "purchase_invoice") return descriptor;
-
-  return {
-    ...descriptor,
-    surfaces: [
-      // The compiler-emitted `line_items` surface is replaced by the
-      // injected `polymorphic_pc_lines` below — single canonical lines
-      // section per amendment 2 (no duplicate fetches, no duplicate UI).
-      ...descriptor.surfaces.filter((s) => s.kind !== "line_items"),
-      ...buildPurchaseInvoiceDocumentRuntimeSurfaces(),
-    ],
-  };
 }

@@ -17,6 +17,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@athyper/api-contracts": "workspace:*",
     "@athyper/collaboration-ui": "workspace:*",
     "@athyper/entity-print": "workspace:*",
     "@athyper/query": "workspace:*",

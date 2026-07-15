@@ -109,7 +109,7 @@ const rules = [
     roots: [
       "packages/shared",
       "packages/product/design",
-      "packages/product/runtime-ui",
+      "packages/product-deprecated/runtime-ui",
     ],
     bannedPackages: [
       ...neonOnlyPackages,
@@ -199,8 +199,8 @@ const legacyRuntimeImportScanRoots = [
 ] as const;
 
 const legacyRuntimeImportIgnoredRoots = [
-  "packages/product/runtime-ui/entity-runtime",
-  "packages/product/runtime-ui/document-runtime",
+  "packages/product-deprecated/runtime-ui/entity-runtime",
+  "packages/product-deprecated/runtime-ui/document-runtime",
 ] as const;
 
 const legacyRuntimeImportAllowlist = new Set([
@@ -208,12 +208,12 @@ const legacyRuntimeImportAllowlist = new Set([
   "apps/neon/next.config.mjs",
   "apps/neon/package.json",
   "packages/domain/finance/finance-workbench/package.json",
-  "packages/shared/runtime-canvas/package.json",
-  "packages/shared/runtime-canvas/src/fields/runtime-field-value-view.tsx",
-  "packages/shared/runtime-canvas/src/header/header-chrome.ts",
-  "packages/shared/runtime-canvas/src/header/types.ts",
-  "packages/shared/runtime-canvas/src/record/runtime-record-chrome.tsx",
-  "packages/shared/runtime-canvas/src/record/runtime-record-workspace.tsx",
+  "packages/shared/runtime-domain/runtime-canvas/package.json",
+  "packages/shared/runtime-domain/runtime-canvas/src/fields/runtime-field-value-view.tsx",
+  "packages/shared/runtime-domain/runtime-canvas/src/header/header-chrome.ts",
+  "packages/shared/runtime-domain/runtime-canvas/src/header/types.ts",
+  "packages/shared/runtime-domain/runtime-canvas/src/record/runtime-record-chrome.tsx",
+  "packages/shared/runtime-domain/runtime-canvas/src/record/runtime-record-workspace.tsx",
 ]);
 
 function fail(message: string): never {

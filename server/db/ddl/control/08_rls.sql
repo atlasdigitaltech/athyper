@@ -361,6 +361,7 @@ DO $body$ DECLARE t text; BEGIN
     FOR t IN SELECT unnest(ARRAY[
         'control.entity','control.entity_publish_state','control.entity_version',
         'control.entity_field','control.field_group','control.field_group_member',
+        'control.entity_surface','control.entity_field_surface',
         'control.field_security_policy','control.overlay','control.overlay_change',
         'control.entity_lifecycle','control.entity_operation',
         'control.entity_policy','control.entity_relation',
@@ -385,7 +386,8 @@ END $body$;
 DO $body$ DECLARE t text; BEGIN
     FOR t IN SELECT unnest(ARRAY[
         'control.entity','control.entity_publish_state','control.entity_version',
-        'control.entity_field','control.entity_lifecycle','control.entity_operation',
+        'control.entity_field','control.entity_surface','control.entity_field_surface',
+        'control.entity_lifecycle','control.entity_operation',
         'control.entity_relation','snapshot.entity_compiled',
         'snapshot.entity_compiled_overlay'
     ]) LOOP
@@ -517,6 +519,25 @@ CREATE POLICY tenant_write ON control.wht_threshold_config
     FOR ALL USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())
     WITH CHECK (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY admin_write  ON control.wht_threshold_config
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- ============================================================================
+-- R7-B  control.tax_resolution_rule
+--       Tenant-scoped. Resolver rules belong to the tenant that owns them.
+-- ============================================================================
+ALTER TABLE control.tax_resolution_rule ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.tax_resolution_rule FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read   ON control.tax_resolution_rule;
+DROP POLICY IF EXISTS tenant_write  ON control.tax_resolution_rule;
+DROP POLICY IF EXISTS admin_write   ON control.tax_resolution_rule;
+CREATE POLICY tenant_read  ON control.tax_resolution_rule
+    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_write ON control.tax_resolution_rule
+    FOR ALL USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY admin_write  ON control.tax_resolution_rule
     FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
 
@@ -985,17 +1006,17 @@ CREATE POLICY open_read   ON control.blueprint_registry FOR SELECT USING (true);
 CREATE POLICY admin_write ON control.blueprint_registry FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
 
--- ── tenant_blueprint_application ──────────────────────────────────────────────
+-- ── blueprint_tenant_application ──────────────────────────────────────────────
 -- R6: tenant-scoped provisioning audit log. Tenants read their own applications.
 -- athyperadmin has full cross-tenant access for provisioning operations.
-ALTER TABLE control.tenant_blueprint_application ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.tenant_blueprint_application FORCE  ROW LEVEL SECURITY;
+ALTER TABLE control.blueprint_tenant_application ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.blueprint_tenant_application FORCE  ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS scoped_read  ON control.tenant_blueprint_application;
-DROP POLICY IF EXISTS admin_write  ON control.tenant_blueprint_application;
-CREATE POLICY scoped_read ON control.tenant_blueprint_application
+DROP POLICY IF EXISTS scoped_read  ON control.blueprint_tenant_application;
+DROP POLICY IF EXISTS admin_write  ON control.blueprint_tenant_application;
+CREATE POLICY scoped_read ON control.blueprint_tenant_application
     FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY admin_write ON control.tenant_blueprint_application
+CREATE POLICY admin_write ON control.blueprint_tenant_application
     FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
 
@@ -1080,7 +1101,7 @@ CREATE POLICY admin_write   ON control.metadata_change_application_log
 
 -- =============================================================================
 -- control.record_edit_lock
--- Tenant-scoped pessimistic edit-session locks.
+-- Tenant-scoped pessimistic document edit locks.
 -- Principals may read, acquire, heartbeat, and release their own tenant's locks.
 -- Force-release (admin) handled by permission check in the API route, not by RLS.
 -- =============================================================================
@@ -1117,5 +1138,40 @@ CREATE POLICY tenant_delete ON control.record_edit_lock
 
 -- Admin: full access for seeding, migrations, and force-unlock operations
 CREATE POLICY admin_write ON control.record_edit_lock
+    FOR ALL TO athyperadmin
+    USING (true) WITH CHECK (true);
+
+
+-- =============================================================================
+-- control.lifecycle_transition_execution
+-- Tenant-scoped idempotency carrier for posting hook handlers.
+-- Hook handlers INSERT on the first run (under tenant context); subsequent
+-- runs hit ON CONFLICT DO NOTHING and no-op. Tenants may read their own
+-- transition execution history (drives the per-record audit + replay UI).
+-- =============================================================================
+
+ALTER TABLE control.lifecycle_transition_execution ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.lifecycle_transition_execution FORCE  ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS tenant_read   ON control.lifecycle_transition_execution;
+DROP POLICY IF EXISTS tenant_insert ON control.lifecycle_transition_execution;
+DROP POLICY IF EXISTS tenant_update ON control.lifecycle_transition_execution;
+DROP POLICY IF EXISTS admin_write   ON control.lifecycle_transition_execution;
+
+CREATE POLICY tenant_read   ON control.lifecycle_transition_execution
+    FOR SELECT
+    USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY tenant_insert ON control.lifecycle_transition_execution
+    FOR INSERT
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+-- UPDATE allowed only for completion / failure marking by the same tenant
+CREATE POLICY tenant_update ON control.lifecycle_transition_execution
+    FOR UPDATE
+    USING (tenant_id = shared.current_tenant_id())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY admin_write   ON control.lifecycle_transition_execution
     FOR ALL TO athyperadmin
     USING (true) WITH CHECK (true);

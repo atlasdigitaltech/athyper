@@ -307,6 +307,34 @@ DO $$ BEGIN ALTER TABLE control.field_group_member ADD CONSTRAINT fgm_field_fk
     FOREIGN KEY (entity_field_id) REFERENCES control.entity_field(id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- control.entity_surface
+DO $$ BEGIN ALTER TABLE control.entity_surface ADD CONSTRAINT es_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_surface ADD CONSTRAINT es_entity_fk
+    FOREIGN KEY (entity_id) REFERENCES control.entity(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_surface ADD CONSTRAINT es_parent_surface_fk
+    FOREIGN KEY (parent_surface_id) REFERENCES control.entity_surface(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_surface ADD CONSTRAINT es_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- control.entity_field_surface
+DO $$ BEGIN ALTER TABLE control.entity_field_surface ADD CONSTRAINT efsurf_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_field_surface ADD CONSTRAINT efsurf_surface_fk
+    FOREIGN KEY (entity_surface_id) REFERENCES control.entity_surface(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_field_surface ADD CONSTRAINT efsurf_field_fk
+    FOREIGN KEY (entity_field_id) REFERENCES control.entity_field(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.entity_field_surface ADD CONSTRAINT efsurf_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- control.field_security_policy
 DO $$ BEGIN ALTER TABLE control.field_security_policy ADD CONSTRAINT fsp_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
@@ -337,6 +365,9 @@ DO $$ BEGIN ALTER TABLE control.entity_lifecycle ADD CONSTRAINT el_lifecycle_fk
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- control.entity_operation
+DO $$ BEGIN ALTER TABLE control.entity_operation ADD CONSTRAINT eo_execution_target_chk
+  CHECK (execution_target IS NULL OR execution_target ~ '^[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE control.entity_operation ADD CONSTRAINT eo_permission_fk
     FOREIGN KEY (permission_code) REFERENCES shared.permission(code) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -924,6 +955,15 @@ DO $$ BEGIN ALTER TABLE control.rounding_rule ADD CONSTRAINT rr_created_by_fk
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── control.tax_rate_schedule ────────────────────────────────────────────────
+-- Phase 2: dropped scope_company_code_id / scope_commodity_category_id /
+-- rounding_rule_id and their FKs. Resolver scopes now live in
+-- control.tax_resolution_rule. Drop legacy FKs explicitly so a re-run of a
+-- clean schema doesn't try to recreate them.
+DO $$ BEGIN ALTER TABLE control.tax_rate_schedule DROP CONSTRAINT IF EXISTS trs_rounding_fk; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_rate_schedule DROP CONSTRAINT IF EXISTS trs_company_fk; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_rate_schedule DROP CONSTRAINT IF EXISTS trs_commodity_category_fk; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_rate_schedule DROP CONSTRAINT IF EXISTS trs_spend_cat_fk; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+
 DO $$ BEGIN ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -935,20 +975,6 @@ DO $$ BEGIN ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_type_fk
     FOREIGN KEY (tenant_id, tax_type_id)
     REFERENCES master.tax_type (tenant_id, id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_rounding_fk
-    FOREIGN KEY (tenant_id, rounding_rule_id)
-    REFERENCES control.rounding_rule (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_company_fk
-    FOREIGN KEY (tenant_id, scope_company_code_id)
-    REFERENCES master.company_code (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN
-ALTER TABLE control.tax_rate_schedule DROP CONSTRAINT IF EXISTS trs_spend_cat_fk;
-ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_commodity_category_fk
-    FOREIGN KEY (tenant_id, scope_commodity_category_id)
-    REFERENCES master.commodity_category (tenant_id, id);
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE control.tax_rate_schedule ADD CONSTRAINT trs_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -957,7 +983,50 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE control.tax_group ADD CONSTRAINT tg_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_group ADD CONSTRAINT tg_jurisdiction_fk
+    FOREIGN KEY (tenant_id, jurisdiction_id)
+    REFERENCES master.tax_jurisdiction (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE control.tax_group ADD CONSTRAINT tg_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- ── control.tax_resolution_rule ──────────────────────────────────────────────
+-- Phase 3c: drop the prior 2-jurisdiction FKs and add 4-jurisdiction FKs.
+-- The old company/counterparty FKs are dropped explicitly so a fresh schema
+-- doesn't try to recreate them.
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule DROP CONSTRAINT IF EXISTS trr_company_jur_fk; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule DROP CONSTRAINT IF EXISTS trr_counterparty_jur_fk; EXCEPTION WHEN undefined_table THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule ADD CONSTRAINT trr_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule ADD CONSTRAINT trr_tax_group_fk
+    FOREIGN KEY (tenant_id, resolved_tax_group_id)
+    REFERENCES control.tax_group (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- 4-jurisdiction FKs
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule ADD CONSTRAINT trr_billto_jur_fk
+    FOREIGN KEY (tenant_id, scope_billto_jurisdiction_id)
+    REFERENCES master.tax_jurisdiction (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule ADD CONSTRAINT trr_shipto_jur_fk
+    FOREIGN KEY (tenant_id, scope_shipto_jurisdiction_id)
+    REFERENCES master.tax_jurisdiction (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule ADD CONSTRAINT trr_billfrom_jur_fk
+    FOREIGN KEY (tenant_id, scope_billfrom_jurisdiction_id)
+    REFERENCES master.tax_jurisdiction (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule ADD CONSTRAINT trr_shipfrom_jur_fk
+    FOREIGN KEY (tenant_id, scope_shipfrom_jurisdiction_id)
+    REFERENCES master.tax_jurisdiction (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule ADD CONSTRAINT trr_commodity_category_fk
+    FOREIGN KEY (tenant_id, scope_commodity_category_id)
+    REFERENCES master.commodity_category (tenant_id, id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE control.tax_resolution_rule ADD CONSTRAINT trr_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
@@ -1225,27 +1294,27 @@ DO $$ BEGIN ALTER TABLE control.blueprint_registry ADD CONSTRAINT br_updated_by_
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
--- ── §PROV-2  control.tenant_blueprint_application ────────────────────────────
--- R6: FKs for tenant_blueprint_application (DDL migrated from seed file)
+-- ── §PROV-2  control.blueprint_tenant_application ────────────────────────────
+-- R6: FKs for blueprint_tenant_application (DDL migrated from seed file)
 -- blueprint_code FK was previously an inline constraint on the seed-file table.
 
-DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_tenant_fk
+DO $$ BEGIN ALTER TABLE control.blueprint_tenant_application ADD CONSTRAINT tba_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_blueprint_fk
+DO $$ BEGIN ALTER TABLE control.blueprint_tenant_application ADD CONSTRAINT tba_blueprint_fk
     FOREIGN KEY (blueprint_code) REFERENCES control.blueprint_registry (code) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_applied_by_fk
+DO $$ BEGIN ALTER TABLE control.blueprint_tenant_application ADD CONSTRAINT tba_applied_by_fk
     FOREIGN KEY (applied_by) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_created_by_fk
+DO $$ BEGIN ALTER TABLE control.blueprint_tenant_application ADD CONSTRAINT tba_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-DO $$ BEGIN ALTER TABLE control.tenant_blueprint_application ADD CONSTRAINT tba_updated_by_fk
+DO $$ BEGIN ALTER TABLE control.blueprint_tenant_application ADD CONSTRAINT tba_updated_by_fk
     FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 

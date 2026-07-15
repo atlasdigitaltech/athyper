@@ -1,14 +1,8 @@
--- ============================================================================
--- FILE: blueprint/055_acct_profile_settlement_config.sql
--- Purpose: Settlement + dynamic discounting config per AP Non-PO profile
--- Depends on: control.acct_profile_config (030_acct_profile_configs.sql)
--- Idempotent: ON CONFLICT (profile_config_id) DO UPDATE
--- ============================================================================
--- AP_NON_PO_STANDARD   — PAYMENT, 1% tolerance, BUYER_FUNDED discount (18% APR)
--- AP_NON_PO_CAPEX      — PAYMENT, 1% tolerance, no discount (fixed-price contracts)
--- AP_ADVANCE_SUPPLIER  — PAYMENT, 0% tolerance (advances must match exactly)
--- AP_RETENTION_RELEASE — PAYMENT, 0% tolerance (contractual milestone, no flex)
--- ============================================================================
+-- Settlement + dynamic discounting matrix (tolerance / discount APR):
+--   AP_NON_PO_STANDARD   1%  BUYER_FUNDED 18% APR / 10 days / $500 min
+--   AP_NON_PO_CAPEX      1%  no discount (CAPEX contracts are fixed-price)
+--   AP_ADVANCE_SUPPLIER  0%  advances must match exactly
+--   AP_RETENTION_RELEASE 0%  contractual milestone, no flex
 
 DO $seed_ap_settlement$
 DECLARE
@@ -21,7 +15,6 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
-    -- ── AP_NON_PO_STANDARD ────────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
@@ -58,7 +51,6 @@ BEGIN
             updated_by           = v_sys;
     END LOOP;
 
-    -- ── AP_NON_PO_CAPEX ───────────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
@@ -91,7 +83,6 @@ BEGIN
             updated_by           = v_sys;
     END LOOP;
 
-    -- ── AP_ADVANCE_SUPPLIER ───────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
@@ -124,7 +115,6 @@ BEGIN
             updated_by           = v_sys;
     END LOOP;
 
-    -- ── AP_RETENTION_RELEASE ──────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc

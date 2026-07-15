@@ -433,6 +433,7 @@ CREATE TABLE IF NOT EXISTS shared.workspace (
     -- Table-specific
     description     text,
     sort_order      smallint          NOT NULL DEFAULT 0,
+    is_shared_infrastructure boolean  NOT NULL DEFAULT false,
 
     -- Metadata
     metadata        jsonb             DEFAULT '{}'::jsonb NOT NULL,
@@ -457,6 +458,8 @@ CREATE TABLE IF NOT EXISTS shared.workspace (
 
 COMMENT ON TABLE shared.workspace IS
   'ARCHETYPE=A;SCOPE=N. Global workspace containers for product modules. No tenant_id.';
+COMMENT ON COLUMN shared.workspace.is_shared_infrastructure IS
+  'When true, descriptor reads (compiled-entity, runtime-options reference targets) bypass the module-access gate for any module in this workspace. Records APIs, writes, navigation, and admin consoles still enforce normal module access. Used for CORE-class workspaces whose modules expose shared dictionaries (address, country, currency, etc.) that any tenant principal must be able to resolve as reference targets.';
 
 -- §11 module
 CREATE TABLE IF NOT EXISTS shared.module (

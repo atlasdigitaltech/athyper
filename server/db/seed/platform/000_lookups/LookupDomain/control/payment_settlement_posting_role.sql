@@ -1,6 +1,3 @@
--- LookupDomain/control/payment_settlement_posting_role.sql
--- Lookup values for domain: control.payment_settlement_posting_role
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('ap_clearing',        'AP Clearing',          'control.payment_settlement_posting_role', 'Accounts payable clearing',                   10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

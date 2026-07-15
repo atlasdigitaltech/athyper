@@ -76,10 +76,6 @@ const VALID_TYPES = new Set([
 
 const VALID_TAX_MODES = new Set(["inclusive", "exclusive", "no_tax"]);
 
-const VALID_TAX_MODE_SOURCES = new Set([
-  "supplier_profile", "tax_group", "company_default", "user_override", "cannot_infer",
-]);
-
 export async function handleCreateApInvoice(
   db:          AnyDb,
   tenantId:    string,
@@ -97,17 +93,6 @@ export async function handleCreateApInvoice(
   if (body.invoice_type && !VALID_TYPES.has(body.invoice_type)) {
     return { status: 400, body: { error: "VALIDATION_ERROR", message: `invoice_type '${body.invoice_type}' is not valid. Must be one of: ${[...VALID_TYPES].join(", ")}` } };
   }
-  const invoiceType = body.invoice_type ?? "standard";
-  const requestedReferenceInvoiceId = resolveReferenceInvoiceId(body);
-  if (invoiceType === "credit_note" && !requestedReferenceInvoiceId) {
-    return { status: 400, body: { error: "VALIDATION_ERROR", message: "credited_invoice_id is required for credit_note invoices" } };
-  }
-  if (invoiceType === "debit_note" && !requestedReferenceInvoiceId) {
-    return { status: 400, body: { error: "VALIDATION_ERROR", message: "debited_invoice_id is required for debit_note invoices" } };
-  }
-  if (invoiceType === "retention_release" && !requestedReferenceInvoiceId) {
-    return { status: 400, body: { error: "VALIDATION_ERROR", message: "retention_invoice_id is required for retention_release invoices" } };
-  }
 
   // Non-PO invoices must carry supplier invoice identity and tax mode at create time
   // (DDL CHECK constraints pi_supplier_invoice_number_req, pi_supplier_invoice_date_req, pi_tax_mode_req
@@ -118,9 +103,6 @@ export async function handleCreateApInvoice(
     }
     if (!body.supplier_invoice_date) {
       return { status: 400, body: { error: "VALIDATION_ERROR", message: "supplier_invoice_date is required for non_po and one_time_supplier invoices" } };
-    }
-    if (body.tax_mode_source && !VALID_TAX_MODE_SOURCES.has(body.tax_mode_source)) {
-      return { status: 400, body: { error: "VALIDATION_ERROR", message: `tax_mode_source must be one of: ${[...VALID_TAX_MODE_SOURCES].join(", ")}` } };
     }
   }
 
@@ -244,23 +226,14 @@ export async function handleCreateApInvoice(
         return { status: 400, body: { error: "VALIDATION_ERROR", message: "tax_mode is required for non_po and one_time_supplier invoices; must be: inclusive, exclusive, or no_tax" } };
       }
     }
-    const reversalOfId = typeof effectiveBody.reversal_of_id === "string"
-      ? effectiveBody.reversal_of_id
-      : requestedReferenceInvoiceId;
-    if (reversalOfId) {
-      const referenceValidation = await validateReferenceInvoice(db, tenantId, reversalOfId, {
-        companyCodeId: effectiveBody.company_code_id,
-        supplierId:    effectiveBody.supplier_id,
-      });
-      if (!referenceValidation.ok) {
-        return { status: referenceValidation.status, body: { error: referenceValidation.error, message: referenceValidation.message } };
-      }
-    }
-
     // ── Derive dates ──────────────────────────────────────────────────────
     const now          = new Date();
-    const documentDate = body.document_date  ? new Date(body.document_date)  : now;
-    const resolvedPostingDate  = body.posting_date   ? new Date(body.posting_date)  : documentDate;
+    const invoiceDate = body.supplier_invoice_date
+      ? new Date(body.supplier_invoice_date)
+      : body.document_date
+      ? new Date(body.document_date)
+      : now;
+    const resolvedPostingDate  = body.posting_date   ? new Date(body.posting_date)  : invoiceDate;
     const resolvedReceivedDate = body.received_date  ? new Date(body.received_date) : now;
     const supplierInvoiceDate  = !isPOBased && body.supplier_invoice_date
       ? new Date(body.supplier_invoice_date)
@@ -272,27 +245,21 @@ export async function handleCreateApInvoice(
     const insertValues: Record<string, unknown> = {
       tenant_id:               tenantId,
       company_code_id:         resolvedCompanyId,
+      name:                    "Purchase Invoice",
       invoice_source:          body.invoice_source,
       invoice_type:            body.invoice_type ?? "standard",
       // In AP: both credit_note (supplier credit memo) and debit_note (buyer debit memo to
       // supplier) reduce AP liability and use inverted JE sign at posting time.
-      is_credit_note:          invoiceType === "credit_note" || invoiceType === "debit_note",
-      is_reversal:             Boolean(reversalOfId),
-      reversal_of_id:          reversalOfId ?? null,
       // Non-PO invoices have no commitment to match against; set match_type immediately
       // so matchInvoice() and the posting pre-flight always find a consistent value.
       match_type:              isPOBased ? (effectiveBody.match_type ?? undefined) : "no_match",
       supplier_id:             effectiveBody.supplier_id ?? null,
       commitment_id:           effectiveBody.commitment_id ?? null,
-      billto_address_id:        effectiveBody.billto_address_id ?? null,
-      billfrom_address_id:      effectiveBody.billfrom_address_id ?? null,
-      remitto_address_id:       effectiveBody.remitto_address_id ?? null,
       // code set by trg_pi_before_insert — empty string satisfies NOT NULL until trigger fires
       code:                    "",
       // Proforma defers these; non-PO must supply them (validated above)
       supplier_invoice_number: isPOBased ? null : body.supplier_invoice_number!.trim(),
       supplier_invoice_date:   supplierInvoiceDate,
-      document_date:           documentDate,
       posting_date:            resolvedPostingDate,
       received_date:           resolvedReceivedDate,
       currency_code:           currencyCode,
@@ -301,13 +268,11 @@ export async function handleCreateApInvoice(
       fiscal_year:             fp.fiscal_year,
       period_number:           fp.period_number,
       payment_term_id:         effectiveBody.payment_term_id  ?? null,
-      payment_method_id:       effectiveBody.payment_method_id ?? null,
       // tax_mode required for non-proforma; proforma defers (status-aware CHECK allows NULL)
       tax_mode:                isPOBased ? null : effectiveBody.tax_mode,
-      tax_mode_source:         isPOBased ? null : (effectiveBody.tax_mode_source ?? "user_override"),
-      notes:                   body.notes ?? null,
       tags:                    JSON.stringify(body.tags ?? []),
       status:                  initialStatus,
+      requested_by:            principalId ?? "00000000-0000-0000-0000-000000000000",
       created_by:              principalId ?? "00000000-0000-0000-0000-000000000000",
     };
 
@@ -355,68 +320,8 @@ export async function handleCreateApInvoice(
   }
 }
 
-function resolveReferenceInvoiceId(body: CreateInvoiceBody): string | null {
-  const invoiceType = body.invoice_type ?? "standard";
-  if (invoiceType === "credit_note") {
-    return readString(body.credited_invoice_id) ?? readString(body.reversal_of_id);
-  }
-  if (invoiceType === "debit_note") {
-    return readString(body.debited_invoice_id) ?? readString(body.reversal_of_id);
-  }
-  if (invoiceType === "retention_release") {
-    return readString(body.retention_invoice_id) ?? readString(body.reversal_of_id);
-  }
-  return readString(body.reversal_of_id);
-}
-
 function readString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed || null;
-}
-
-async function validateReferenceInvoice(
-  db: AnyDb,
-  tenantId: string,
-  referenceInvoiceId: string,
-  effective: { companyCodeId: unknown; supplierId: unknown },
-): Promise<
-  | { ok: true }
-  | { ok: false; status: number; error: string; message: string }
-> {
-  const row = await sql<{
-    company_code_id: string;
-    supplier_id:     string | null;
-    status:          string;
-    is_posted:       boolean;
-  }>`
-    SELECT company_code_id, supplier_id, status, is_posted
-      FROM document.purchase_invoice
-     WHERE id        = ${referenceInvoiceId}::uuid
-       AND tenant_id = ${tenantId}::uuid
-     LIMIT 1
-  `.execute(db);
-
-  const ref = row.rows[0];
-  if (!ref) {
-    return { ok: false, status: 404, error: "REFERENCE_INVOICE_NOT_FOUND", message: "Referenced invoice was not found." };
-  }
-  if (ref.status === "cancelled" || ref.status === "reversed") {
-    return { ok: false, status: 422, error: "REFERENCE_INVOICE_INVALID_STATUS", message: "Referenced invoice cannot be cancelled or reversed." };
-  }
-  if (!ref.is_posted) {
-    return { ok: false, status: 422, error: "REFERENCE_INVOICE_NOT_POSTED", message: "Referenced invoice must be posted before it can be credited, debited, or released." };
-  }
-
-  const companyCodeId = readString(effective.companyCodeId);
-  if (companyCodeId && companyCodeId !== ref.company_code_id) {
-    return { ok: false, status: 422, error: "REFERENCE_COMPANY_MISMATCH", message: "Referenced invoice belongs to a different company code." };
-  }
-
-  const supplierId = readString(effective.supplierId);
-  if (supplierId && ref.supplier_id && supplierId !== ref.supplier_id) {
-    return { ok: false, status: 422, error: "REFERENCE_SUPPLIER_MISMATCH", message: "Referenced invoice belongs to a different supplier." };
-  }
-
-  return { ok: true };
 }

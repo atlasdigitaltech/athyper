@@ -25,7 +25,9 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@athyper/finance-rules": "workspace:*",
     "@athyper/svc-business": "workspace:*",
+    "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-policy": "workspace:*",
     "@athyper/svc-shared": "workspace:*",
     "@athyper/svc-workflow": "workspace:*"

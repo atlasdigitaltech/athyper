@@ -4,18 +4,18 @@
 // Tests the pure decision helper used by apps/web/middleware.ts.
 //
 // This test lives in server (not apps/web) because apps/web has no vitest
-// harness — setting one up is out of scope for an infra finding closeout.
+// harness â€” setting one up is out of scope for an infra finding closeout.
 // Vitest's esbuild loader resolves the cross-tree import at test time even
 // though server's tsconfig "include" does not cover apps/web.
 //
-// SUT: packages/shared/session-plane/src/index.ts
+// SUT: packages/shared/platform-auth/session-plane/src/index.ts
 // Consumers: apps/{neon,mesh,admin}/proxy.ts
 
 import { describe, expect, it } from "vitest";
 
-import { decideHostGuard } from "../../../packages/shared/session-plane/src/index.js";
+import { decideHostGuard } from "../../../packages/shared/platform-auth/session-plane/src/index.js";
 
-describe("F8 Phase 1 — decideHostGuard", () => {
+describe("F8 Phase 1 â€” decideHostGuard", () => {
   const allowed = new Set(["neon.athyper.local", "api.athyper.local"]);
 
   it("passes when ALLOW_DIRECT_ACCESS=true, regardless of host", () => {

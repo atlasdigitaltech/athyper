@@ -1,79 +1,26 @@
--- ============================================================================
--- blueprints/universal/070_people/330_leave_management.sql
--- Universal Leave Management Seed
+-- leave_type + leave_plan + leave_plan_rule. 17 leave types, 14 generic plans
+-- (no legal_entity/company binding), ~28 rules.
+-- employee_leave_enrollment is intentionally NOT seeded — needs live employee_id
+-- + leave_plan_id and is therefore handled by onboarding scripts/UI.
 --
--- Covers: leave_type · leave_plan · leave_plan_rule
+-- eligibility_condition JSONB shape:
+--   { after_probation: bool, min_tenure_days: int, employment_types: [string],
+--     gender: string|null, requires_approval: bool, requires_documentation: bool,
+--     tenure_condition: {operator, min_years, max_years}|null, max_per_year: int|null }
 --
--- NOTE — employee_leave_enrollment (LVENTR) is NOT seeded here.
---   Enrollment is tenant-specific: it requires live employee_id and
---   leave_plan_id records which only exist after people are hired.
---   Use a dedicated onboarding script or the UI to enrol employees.
---
--- Leave types (17):
---   Annual, Sick, Maternity, Paternity, Shared Parental, Adoption,
---   Bereavement, Study, Unpaid, Compensatory/TOIL, Marriage,
---   Jury Duty, Military/Reserve, Emergency, Sabbatical,
---   Medical Appointment (hourly), Blood Donation (hourly)
---
--- Leave plans (14 generic templates — no legal_entity / company binding):
---   std_annual_20d · std_annual_15d · tenure_annual ·
---   std_sick_10d · unlimited_sick ·
---   maternity_16w · paternity_2w · shared_parental · adoption_16w ·
---   std_bereavement · std_study_5d · compensatory_toil ·
---   emergency_3d · unpaid_loa
---
--- Leave plan rules (~28 rules covering all 14 plans):
---   eligibility_condition JSONB uses a canonical schema:
---   {
---     "after_probation"      : bool,
---     "min_tenure_days"      : int,
---     "employment_types"     : [string, ...],
---     "gender"               : string | null,
---     "requires_approval"    : bool,
---     "requires_documentation": bool,
---     "tenure_condition"     : {operator, min_years, max_years} | null,
---     "max_per_year"         : int | null
+-- carry_forward_policy JSONB shape:
+--   { max_carry_days: int, carry_expiry_months: int,
+--     payout_on_exit: bool,
+--     payout_capped_days: int|null  -- null when payout_on_exit=false; int = day cap when true
 --   }
 --
--- carry_forward_policy JSONB schema:
---   {
---     "max_carry_days"    : int,
---     "carry_expiry_months": int,
---     "payout_on_exit"    : bool,
---     "payout_capped_days": int | null   -- null = not applicable (use when payout_on_exit=false)
---                                        -- int  = cap on days paid out (use when payout_on_exit=true)
---   }
---
--- eligibility_condition extended JSONB schema (all keys, some rule-type-specific):
---   {
---     "after_probation"                  : bool,
---     "min_tenure_days"                  : int,
---     "employment_types"                 : [string, ...],
---     "gender"                           : string | null,
---     "requires_approval"                : bool,
---     "requires_documentation"           : bool,
---     "tenure_condition"                 : {operator, min_years, max_years} | null,
---     "max_per_year"                     : int | null,
---     -- sick-leave specific:
---     "cert_required_after_consecutive_days": int,
---     "cert_type"                        : string,
---     -- bereavement-specific:
---     "relationship_tier"                : string,
---     -- parental-specific:
---     "is_primary_caregiver"             : bool,
---     -- TOIL-specific:
---     "accrual_ratio"                    : string,          -- e.g. "1:1"
---     -- study-specific:
---     "doc_type"                         : string,
---     -- LOA-specific:
---     "approvers"                        : [string, ...],
---     "min_duration_days"                : int
---   }
---
--- Usage:
---   SET app.seed_tenant_id = '<tenant-uuid>';
---   \i 330_leave_management.sql
--- ============================================================================
+-- eligibility_condition rule-type-specific extras:
+--   sick: cert_required_after_consecutive_days, cert_type
+--   bereavement: relationship_tier
+--   parental: is_primary_caregiver
+--   TOIL: accrual_ratio (e.g. "1:1")
+--   study: doc_type
+--   LOA: approvers[], min_duration_days
 
 DO $seed$
 DECLARE
@@ -90,19 +37,14 @@ BEGIN
 
     RAISE NOTICE '[%] Starting leave management seed for tenant %', v_pack, v_tid;
 
-    -- ========================================================================
-    -- LEAVE TYPES  (17 globally recognised categories)
-    -- leave_category CHECK: annual · sick · maternity · paternity ·
-    --   bereavement · unpaid · compensatory · study · other
-    -- unit CHECK: day · hour
-    -- ========================================================================
+    -- leave_category CHECK: annual / sick / maternity / paternity /
+    -- bereavement / unpaid / compensatory / study / other.  unit CHECK: day / hour.
     INSERT INTO master.leave_type (
         id, tenant_id, code, name,
         leave_category, unit, is_paid, requires_attachment,
         status, created_by
     )
     VALUES
-        -- ── Statutory / statutory-equivalent ─────────────────────────────
         (shared.uuidv7(), v_tid, 'annual_leave',          'Annual Leave',
          'annual',       'day',  true,  false, 'active', v_su),
 

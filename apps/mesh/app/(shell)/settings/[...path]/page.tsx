@@ -1,7 +1,6 @@
-import { MeshSettingsPage } from "@athyper/app-mesh/console";
-import { PLANE_KEY } from "@/lib/plane";
+import { SettingsClient } from "../SettingsClient";
 
 export default async function SettingsPathRoute({ params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
-  return <MeshSettingsPage plane={PLANE_KEY} path={path} />;
+  return <SettingsClient path={path} />;
 }

@@ -83,7 +83,11 @@ CREATE TABLE IF NOT EXISTS control.match_tolerance_config (
     updated_by       uuid,
 
     CONSTRAINT mtc_pkey          PRIMARY KEY (id),
-    CONSTRAINT mtc_match_chk     CHECK (match_type IN ('three_way','two_way','no_match','evaluated_receipt')),
+    CONSTRAINT mtc_match_chk     CHECK (match_type IN (
+        'three_way','two_way','no_match','evaluated_receipt',
+        'commitment_delivery',   -- PO over/under delivery tolerance
+        'commitment_price'       -- PO catalog/supplier-price variance
+    )),
     CONSTRAINT mtc_type_chk      CHECK (tolerance_type IN ('quantity_pct','price_pct','amount_abs')),
     CONSTRAINT mtc_value_pos_chk CHECK (tolerance_value >= 0),
     CONSTRAINT mtc_scope_chk     CHECK (
@@ -94,4 +98,16 @@ CREATE TABLE IF NOT EXISTS control.match_tolerance_config (
 COMMENT ON TABLE control.match_tolerance_config IS
     'Per-company or tenant-wide AP matching tolerances. '
     'Resolution: company-specific > tenant-wide > global (tenant_id IS NULL). '
-    'quantity_pct and price_pct are percentages (3.00 = 3%). amount_abs is absolute currency.';
+    'quantity_pct and price_pct are percentages (3.00 = 3%). amount_abs is absolute currency. '
+    'match_type also carries PO-side tolerances: commitment_delivery (over/under) and '
+    'commitment_price (catalog/supplier price variance).';
+
+-- Idempotent constraint refresh — allows the extended match_type set
+-- (commitment_delivery / commitment_price) to land on databases where the
+-- table already exists from a prior seed pass.
+ALTER TABLE control.match_tolerance_config DROP CONSTRAINT IF EXISTS mtc_match_chk;
+ALTER TABLE control.match_tolerance_config ADD  CONSTRAINT mtc_match_chk CHECK (match_type IN (
+    'three_way','two_way','no_match','evaluated_receipt',
+    'commitment_delivery',
+    'commitment_price'
+));

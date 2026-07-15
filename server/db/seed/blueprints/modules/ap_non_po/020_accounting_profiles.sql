@@ -1,19 +1,7 @@
--- ============================================================================
--- FILE: blueprint/020_accounting_profiles.sql
--- Purpose: Seed 4 accounting profiles for the Non-PO AP cycle
--- Depends on: master.accounting_profile (005_accounting_profile_ddl.sql)
--- Idempotent: ON CONFLICT (tenant_id, code) DO NOTHING
--- ============================================================================
--- This seed is per-tenant — profiles live in the tenant's master data.
--- The block below runs once per tenant at provisioning time (invoked by
--- 099_apply.sql which iterates over master.tenant).
---
--- 4 profiles created:
---   AP_NON_PO_STANDARD   — OPEX Non-PO invoices (consulting, utilities, etc.)
---   AP_NON_PO_CAPEX      — CAPEX Non-PO invoices (IT equipment, furniture, etc.)
---   AP_ADVANCE_SUPPLIER    — Supplier-level advance (prepayment; no invoice yet)
---   AP_RETENTION_RELEASE — Release of AP Retention Payable on milestone
--- ============================================================================
+-- AP Non-PO accounting profiles (4 codes). Per-tenant seed driven by
+-- app.seed_tenant_id; invoked from 099_apply.sql per tenant row.
+-- Codes (referenced by 030/040/050 configs/events/templates):
+--   AP_NON_PO_STANDARD, AP_NON_PO_CAPEX, AP_ADVANCE_SUPPLIER, AP_RETENTION_RELEASE
 
 DO $seed_ap_profiles$
 DECLARE

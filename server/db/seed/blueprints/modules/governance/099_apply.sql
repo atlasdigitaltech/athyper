@@ -1,10 +1,6 @@
--- ============================================================================
--- FILE: blueprints/modules/governance/099_apply.sql
--- Purpose: Record application of pack_finance_close_governance for the tenant
--- Depends: 010_finance_close_governance_templates.sql
--- Idempotent: ON CONFLICT (tenant_id, blueprint_code) DO UPDATE
--- Session var: SET app.seed_tenant_id = '<tenant_uuid>'
--- ============================================================================
+﻿-- Receipt for pack_finance_close_governance. Counts seeded rows and writes
+-- a tenant_application record with warnings (not exceptions) for retry safety.
+-- Requires SET app.seed_tenant_id = '<uuid>'.
 
 DO $apply_finance_close_governance$
 DECLARE
@@ -34,8 +30,9 @@ BEGIN
         RAISE EXCEPTION '[pack_finance_close_governance] No tenant found for app.seed_tenant_id = %', v_tid;
     END IF;
 
-    -- Safety net for stage-3-only runs. The canonical registry row is also
-    -- seeded in platform/003_control/090_blueprint_registry.sql.
+    -- Safety net: the canonical registry row also lives in
+    -- platform/003_control/090_control_blueprint_registry_contract.sql but stage-3-only runs
+    -- never see that file, so we re-upsert it here.
     INSERT INTO control.blueprint_registry (
         code, name, category, industry_vertical, framework,
         base_version, status, dependencies, seed_files, description,
@@ -156,7 +153,7 @@ BEGIN
         v_warnings := v_warnings || 'No active company codes found; task templates were not expanded.';
     END IF;
 
-    INSERT INTO control.tenant_blueprint_application (
+    INSERT INTO control.blueprint_tenant_application (
         tenant_id, blueprint_code, applied_version,
         applied_at, applied_by, status, error_detail, metadata,
         created_by
@@ -198,3 +195,5 @@ BEGIN
             v_tenant_code, v_company_count, v_template_count, v_dependency_count;
     END IF;
 END $apply_finance_close_governance$;
+
+

@@ -1,12 +1,6 @@
--- ============================================================================
--- 340_holiday_calendars.sql — Holiday calendars + days for 14 supported jurisdictions
--- ============================================================================
--- Tables: master.holiday_calendar, master.holiday_calendar_day
--- Scope: 1 tenant-default calendar + 14 country-level calendars
---        Public holidays for 2025 and 2026 (5-10 per country per year)
--- Idempotency: UPSERT headers; delete-owned-then-reinsert days
--- Depends: master.tenant, shared.country
--- ============================================================================
+-- master.holiday_calendar + holiday_calendar_day for 14 supported jurisdictions
+-- (1 tenant-default calendar + 14 country-level; public holidays 2025-2026,
+-- 5-10 per country per year). Header rows UPSERT; day rows delete-owned + reinsert.
 
 DO $seed$
 DECLARE

@@ -40,6 +40,7 @@ type MeshSqlFile = {
 type MeshOptions = {
   phases: MeshPhase[];
   force: boolean;
+  skipShared?: boolean;
 };
 
 function log(data: Record<string, unknown>): void {
@@ -236,6 +237,23 @@ function discoverMeshSqlFiles(): MeshSqlFile[] {
     };
   });
 
+  // Mesh-only platform catalog: workspace + module rows scoped to the mesh app
+  // (CORE + PTR only). Parked under `_mesh/` so provision.ts's directory walker
+  // skips it; loaded here by explicit path.
+  const meshPlatformSeedRelPaths = [
+    "seed/platform/002_permission_model/_mesh/workspace_module.sql",
+  ];
+
+  const meshPlatformSeedFiles = meshPlatformSeedRelPaths.map((relPath) => {
+    const absPath = join(DB_ROOT, ...relPath.split("/"));
+    return {
+      relPath,
+      key: relPath.replace(/\.sql$/, ""),
+      absPath,
+      phase: "Seed" as const,
+    };
+  });
+
   const seedRoot = join(DB_ROOT, "seed", "tenants", "mesh", "000_exchange");
   const seedFiles = collectSqlFiles(seedRoot).map((absPath) => {
     // Keep "mesh/900_exchange/" prefix so schema_provisions tracking keys are stable.
@@ -260,7 +278,14 @@ function discoverMeshSqlFiles(): MeshSqlFile[] {
     );
   }
 
-  return [...ddlFiles, ...referenceSeedFiles, ...seedFiles];
+  const missingMeshPlatformSeeds = meshPlatformSeedFiles.filter((file) => !existsSync(file.absPath));
+  if (missingMeshPlatformSeeds.length > 0) {
+    throw new Error(
+      `Missing required Mesh platform seed file(s): ${missingMeshPlatformSeeds.map((f) => f.relPath).join(", ")}`,
+    );
+  }
+
+  return [...ddlFiles, ...referenceSeedFiles, ...meshPlatformSeedFiles, ...seedFiles];
 }
 
 function checksum(sql: string): string {
@@ -269,6 +294,13 @@ function checksum(sql: string): string {
     hash = ((hash << 5) + hash + sql.charCodeAt(i)) | 0;
   }
   return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function isSharedProvisionFile(file: MeshSqlFile): boolean {
+  return (
+    file.relPath.startsWith("ddl/shared/")
+    || file.relPath.startsWith("seed/platform/001_global_reference/")
+  );
 }
 
 async function ensureTrackingTable(client: pg.Client): Promise<void> {
@@ -301,7 +333,10 @@ async function markExecuted(client: pg.Client, key: string, hash: string): Promi
   );
 }
 
-async function resetMeshDatabase(client: pg.Client): Promise<void> {
+async function resetMeshDatabase(
+  client: pg.Client,
+  options: { keepSharedSchema?: boolean } = {},
+): Promise<void> {
   log({ msg: "mesh_reset_start" });
   await client.query("DROP SCHEMA IF EXISTS mesh CASCADE");
   log({ msg: "mesh_reset_drop_schema", schema: "mesh" });
@@ -309,8 +344,12 @@ async function resetMeshDatabase(client: pg.Client): Promise<void> {
   log({ msg: "mesh_reset_drop_schema", schema: "mesh_log" });
   await client.query("DROP SCHEMA IF EXISTS mesh_control CASCADE");
   log({ msg: "mesh_reset_drop_schema", schema: "mesh_control" });
-  await client.query("DROP SCHEMA IF EXISTS shared CASCADE");
-  log({ msg: "mesh_reset_drop_schema", schema: "shared" });
+  if (options.keepSharedSchema) {
+    log({ msg: "mesh_reset_keep_schema", schema: "shared" });
+  } else {
+    await client.query("DROP SCHEMA IF EXISTS shared CASCADE");
+    log({ msg: "mesh_reset_drop_schema", schema: "shared" });
+  }
   await client.query("DROP TABLE IF EXISTS public.mesh_schema_provisions CASCADE");
   log({ msg: "mesh_reset_complete" });
 }
@@ -344,7 +383,10 @@ async function runStatus(client: pg.Client, files: MeshSqlFile[]): Promise<void>
 async function runFiles(client: pg.Client, files: MeshSqlFile[], opts: MeshOptions): Promise<void> {
   await ensureTrackingTable(client);
   const executed = await getExecuted(client);
-  const selectedFiles = files.filter((file) => opts.phases.includes(file.phase));
+  const selectedFiles = files.filter((file) => (
+    opts.phases.includes(file.phase)
+    && !(opts.skipShared && isSharedProvisionFile(file))
+  ));
 
   if (selectedFiles.length === 0) {
     log({ msg: "mesh_provision_noop", reason: "no matching SQL files" });
@@ -430,7 +472,11 @@ async function main(): Promise<void> {
   loadProvisionEnvDefaults();
 
   const args = process.argv.slice(2);
-  const files = discoverMeshSqlFiles();
+  const keepShared = args.includes("--keep-shared");
+  const skipShared = args.includes("--skip-shared") || keepShared;
+  const files = discoverMeshSqlFiles().filter((file) => (
+    !skipShared || !isSharedProvisionFile(file)
+  ));
 
   if (args.includes("--discover")) {
     printDiscoveredFiles(files);
@@ -475,11 +521,11 @@ async function main(): Promise<void> {
     }
 
     if (reset || dropOnly) {
-      await resetMeshDatabase(client);
+      await resetMeshDatabase(client, { keepSharedSchema: keepShared });
       if (dropOnly) return;
     }
 
-    await runFiles(client, files, { phases, force });
+    await runFiles(client, files, { phases, force, skipShared });
   } finally {
     await client.end();
   }

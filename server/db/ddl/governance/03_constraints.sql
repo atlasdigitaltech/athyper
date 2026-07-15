@@ -31,6 +31,9 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE governance.book_period_status ADD CONSTRAINT bps_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE governance.book_period_status ADD CONSTRAINT bps_status_chk
+    CHECK (status IN ('future', 'open', 'soft_close', 'hard_close'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 -- ============================================================================

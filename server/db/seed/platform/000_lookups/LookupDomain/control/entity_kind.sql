@@ -1,7 +1,3 @@
--- LookupDomain/control/entity_kind.sql
--- Lookup values for domain: entity.kind
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.sort, true, 'active',

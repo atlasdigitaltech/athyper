@@ -1,18 +1,18 @@
 @config "../tailwind.config.ts";
 
-@import "@athyper/theme/presets/base.css";
-@import "@athyper/theme/presets/neon-base.css";
-@import "@athyper/theme/presets/neon-modern.css";
-@import "@athyper/theme/presets/neon-mono.css";
-@import "@athyper/theme/presets/neon-tangerine.css";
-@import "@athyper/theme/presets/mesh-night.css";
-@import "@athyper/theme/presets/mesh-bloom.css";
-@import "@athyper/theme/presets/athyper-pop.css";
-@import "@athyper/theme/presets/athyper-bubble.css";
-@import "@athyper/theme/presets/atlas-neo.css";
-@import "@athyper/theme/presets/atlas-doom.css";
-@import "@athyper/theme/presets/atlas-vintage.css";
-@import "@athyper/theme/base.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/base.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/neon-base.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/neon-modern.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/neon-mono.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/neon-tangerine.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/mesh-night.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/mesh-bloom.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/athyper-pop.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/athyper-bubble.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/atlas-neo.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/atlas-doom.css";
+@import "../../../packages/shared/ui-platform/theme/src/presets/atlas-vintage.css";
+@import "../../../packages/shared/ui-platform/theme/src/base.css";
 
 /*
  * Neon treats user theme presets as color skins. Keep the product chrome shape

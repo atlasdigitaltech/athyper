@@ -1,7 +1,3 @@
--- LookupDomain/event/task_type.sql
--- Lookup values for domain: work_item.task_type
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status,
      metadata, created_by)
@@ -17,7 +13,7 @@ FROM (VALUES
      'Blocking — the workflow stage cannot advance until quorum is met or rejection is final. '
      'Decision: approve (proceed) | reject (halt) | escalate (raise to next level).',
      10,
-     '{"valid_decisions": ["approve", "reject", "escalate"],
+     '{"valid_decisions": ["approve", "reject", "return", "escalate"],
        "requires_decision": true,
        "is_blocking": true,
        "allows_reassignment": true,

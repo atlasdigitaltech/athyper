@@ -4,7 +4,7 @@
  * Verifies the invariants added in Sprint 2.3:
  *   1. Header subtotal/total drift vs line aggregates
  *   2. AD split-totals per basis
- *   3. CapEx interlock (line.is_asset ⇒ AD.is_capex + asset_class)
+ *   3. Asset interlock (line.asset_class_id NULL ⇒ AD.asset_id must be NULL)
  *   4. Reversal interlock
  *   5. PO commitment requirement
  *   6. Snapshot existence at approve/post
@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { validatePurchaseInvoiceInvariants } from "../ap/invoice-invariants.service.js";
+import { validatePurchaseInvoiceInvariants } from "../p2p/purchase_invoice/invoice-invariants.service.js";
 
 describe("validatePurchaseInvoiceInvariants — contract", () => {
   it("returns InvariantResult shape (ok + violations)", () => {
@@ -61,9 +61,9 @@ maybeDescribe("validatePurchaseInvoiceInvariants — integration (live DB)", () 
   it.todo("QUANTITY splits drifting → AD_SPLIT_QUANTITY_MISMATCH");
 
   // Invariant 4
-  it.todo("asset line with is_capex=true AD rows passes");
-  it.todo("asset line with non-capex AD rows → ASSET_LINE_AD_MISSING_CAPEX");
-  it.todo("asset line with AD rows missing asset_class_id → ASSET_LINE_AD_MISSING_CAPEX");
+  it.todo("line with asset_class_id set + AD.asset_id set passes");
+  it.todo("line with asset_class_id set + AD.asset_id NULL passes (class-pending)");
+  it.todo("line with asset_class_id NULL + AD.asset_id set → ASSET_LINE_AD_MISSING_CAPEX");
 
   // Invariant 5
   it.todo("is_reversal=true with posted reversal_of_id passes");
@@ -76,12 +76,6 @@ maybeDescribe("validatePurchaseInvoiceInvariants — integration (live DB)", () 
   it.todo("non_po invoice with NULL commitment_id passes");
 
   // Invariant 7
-  it.todo("submit phase: snapshot check skipped");
-  it.todo("approve phase + snapshot exists: passes");
-  it.todo("approve phase + no snapshot: PARTY_SNAPSHOT_MISSING");
-  it.todo("post phase + no snapshot: PARTY_SNAPSHOT_MISSING");
-
-  // Invariant 8
   it.todo("approved_at + approved_by both null: passes");
   it.todo("approved_at + approved_by both set: passes");
   it.todo("approved_at set + approved_by null → APPROVAL_AUDIT_PAIR_MISMATCH");

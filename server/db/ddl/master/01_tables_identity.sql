@@ -473,7 +473,8 @@ CREATE TABLE IF NOT EXISTS master.contact_link (
     -- Table-specific (channel)
     channel_type    text              NOT NULL,
     value           text              NOT NULL,
-    purpose         text,
+    purpose         text,                              -- lookup: master.contact_link_purpose (15-value role enum)
+    role_qualifier  text,                              -- optional sub-classification within purpose (e.g. 'legal_notice', 'tax_filing', 'emergency')
 
     -- Table-specific (state)
     is_primary      boolean           NOT NULL DEFAULT false,
@@ -498,11 +499,39 @@ CREATE TABLE IF NOT EXISTS master.contact_link (
     CONSTRAINT contact_link_pkey              PRIMARY KEY (id),
     CONSTRAINT contact_link_tenant_id_uq      UNIQUE (tenant_id, id),
     CONSTRAINT contact_link_value_nonempty    CHECK (btrim(value) <> ''),
-    CONSTRAINT contact_link_verified_at_chk   CHECK (is_verified = false OR verified_at IS NOT NULL)
+    CONSTRAINT contact_link_verified_at_chk   CHECK (is_verified = false OR verified_at IS NOT NULL),
+    CONSTRAINT contact_link_root_owner_default_purpose_chk CHECK (
+        owner_type NOT IN ('tenant', 'legal_entity', 'company_code', 'site', 'business_partner')
+        OR (purpose = 'default' AND role_qualifier IS NULL)
+    ),
+    -- Auth purposes forbid role_qualifier to protect the principal.login_email cache
+    -- and to keep auth resolution semantics simple. The trg_contact_link_sync_login_email
+    -- trigger and ux_contact_link_principal_login index both assume no qualifier on auth rows.
+    CONSTRAINT contact_link_auth_no_qualifier_chk CHECK (
+        purpose IS NULL
+        OR purpose NOT IN ('login', 'recovery', 'mfa', 'verification')
+        OR role_qualifier IS NULL
+    )
 );
 
 COMMENT ON TABLE  master.contact_link IS
-  'ARCHETYPE=B;SCOPE=T. Polymorphic canonical address store. One row per owner+channel+purpose. Detail in contact_email/contact_phone.';
+  'ARCHETYPE=B;SCOPE=T. Polymorphic canonical address store. One row per owner+channel+purpose+role_qualifier. Detail in contact_email/contact_phone.';
+
+COMMENT ON COLUMN master.contact_link.purpose IS
+  'Canonical business role this contact channel plays. '
+  'Lookup: master.contact_link_purpose (15 values across auth, business, generic). '
+  'Auth bucket (login/recovery/mfa/verification) is reserved for principal/employee. '
+  'Business bucket mirrors address vocabulary (bill_to/remit_to/bill_from/ship_to/ship_from/place_of_service/correspondence). '
+  'Generic: support/notification/marketing/default. '
+  'Tenant, legal_entity, company_code, site, and business_partner owners are forced to purpose=''default'' with no role_qualifier. '
+  'Reserved ''default'' = universal fallback resolved by fn_resolve_contact().';
+
+COMMENT ON COLUMN master.contact_link.role_qualifier IS
+  'Optional sub-classification within purpose. Free text snake_case. '
+  'Examples: purpose=correspondence + role_qualifier=legal_notice / tax_filing / '
+  'account_statement / payslip / emergency. NULL means the role applies generically. '
+  'Lookup-validated against master.contact_role_qualifier (advisory only). '
+  'FORBIDDEN on auth purposes (login/recovery/mfa/verification) — see contact_link_auth_no_qualifier_chk.';
 
 -- §5 contact_email — 1:1 extension of contact_link for channel_type=email
 CREATE TABLE IF NOT EXISTS master.contact_email (
@@ -819,6 +848,10 @@ CREATE TABLE IF NOT EXISTS master.address (
     -- Table-specific (display cache)
     formatted_address text,
 
+    -- Tax jurisdiction (derived by trigger from country_code + region)
+    -- See: master/06_triggers.sql trg_address_derive_jurisdiction
+    tax_jurisdiction_id uuid,
+
     -- Metadata
     metadata        jsonb             DEFAULT '{}'::jsonb NOT NULL,
 
@@ -895,7 +928,8 @@ CREATE TABLE IF NOT EXISTS master.address_link (
     address_id      uuid              NOT NULL,
 
     -- Table-specific (classification)
-    purpose         text              NOT NULL,     -- lookup: master.address_purpose
+    purpose         text              NOT NULL,     -- lookup: master.address_purpose (8-value role enum)
+    role_qualifier  text,                           -- optional sub-classification within purpose (e.g. 'legal_notice', 'tax_filing', 'emergency')
 
     -- Table-specific (state)
     is_primary      boolean           NOT NULL DEFAULT false,
@@ -915,6 +949,12 @@ CREATE TABLE IF NOT EXISTS master.address_link (
 
     CONSTRAINT address_link_pkey
         PRIMARY KEY (id),
+    -- Composite uniqueness for cross-table tenant-aware FKs (parallels
+    -- master.address.address_tenant_id_uq, master.contact_link.contact_link_tenant_id_uq,
+    -- master.bank_account_link.bank_account_link_tenant_id_uq). Required so
+    -- tenant-aware consumers can FK via (tenant_id, source_link_id).
+    CONSTRAINT address_link_tenant_id_uq
+        UNIQUE (tenant_id, id),
     CONSTRAINT address_link_owner_purpose_address_uq
         UNIQUE (tenant_id, owner_type, owner_id, purpose, address_id),
     CONSTRAINT address_link_temporal_chk
@@ -952,8 +992,17 @@ COMMENT ON TABLE master.address_link IS
 COMMENT ON COLUMN master.address_link.owner_type IS
   'Polymorphic discriminator. FK to master.owner_type.code.';
 COMMENT ON COLUMN master.address_link.purpose IS
-  'Business intent of this owner → address relationship. '
-  'Lookup: master.address_purpose. Reserved ''default'' = catch-all fallback.';
+  'Canonical business role this owner → address relationship plays. '
+  'Lookup: master.address_purpose (8 values: ship_to, bill_to, place_of_service, '
+  'bill_from, remit_to, ship_from, correspondence, default). '
+  'Reserved ''default'' = universal fallback resolved by fn_resolve_address(). '
+  'Document address selections (PR/PO/GR/SE/PI) share this exact vocabulary.';
+COMMENT ON COLUMN master.address_link.role_qualifier IS
+  'Optional sub-classification within purpose. Free text snake_case. '
+  'Examples: purpose=correspondence + role_qualifier=legal_notice / tax_filing / '
+  'account_statement / regulatory_filing / emergency. '
+  'NULL means the role applies generically. Lookup-validated only if '
+  'master.address_role_qualifier seed has the value (advisory).';
 COMMENT ON COLUMN master.address_link.is_primary IS
   'Canonical link when multiple addresses exist for the same owner+purpose. '
   'Enforced: at most one is_primary=true per owner+purpose per time period.';
@@ -967,6 +1016,100 @@ COMMENT ON COLUMN master.address_link.effective_until IS
 -- Table dropped. See 13_patches/002_drop_operating_unit.sql.
 -- ou_type lookup domain and 19 seed values removed alongside it.
 DROP TABLE IF EXISTS master.operating_unit CASCADE;
+
+
+-- ============================================================================
+-- §12a  contact_marketing_consent — marketing opt-in/opt-out per owner
+-- ============================================================================
+-- Marketing-send path MUST check this table BEFORE resolving any contact_link
+-- with purpose='marketing'. The routing layer (contact_link) stays pure; consent
+-- lifecycle (GDPR/CASL/CAN-SPAM provenance, opt-in/opt-out, double-opt-in) lives
+-- here and is keyed on the OWNER, not the link — a person opts out of marketing
+-- for the BP/customer, not just one email row.
+--
+-- Design notes:
+--   • One row per (tenant_id, owner_type, owner_id) — UNIQUE constraint.
+--   • status: lookup-validated against master.marketing_consent_status.
+--     ('opted_in' | 'opted_out' | 'pending_double_opt_in' | 'unknown')
+--   • channel_scope: NULL = umbrella applies to all channels.
+--     Non-null array = partial scope (e.g. ARRAY['email'] for email-only opt-out
+--     while phone-marketing remains active per local jurisdiction rules).
+--   • Provenance fields capture legal-defence audit trail; consent_text records
+--     the EXACT consent string the owner agreed to (translations matter).
+--   • status_changed_at is updated on every status transition for legal hold.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS master.contact_marketing_consent (
+    -- Identity
+    id                uuid              NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id         uuid              NOT NULL,
+
+    -- Table-specific (owner key — polymorphic; matches contact_link/address_link)
+    owner_type        text              NOT NULL,        -- FK → owner_type.code
+    owner_id          uuid              NOT NULL,
+
+    -- Table-specific (consent state)
+    status            text              NOT NULL,        -- lookup: master.marketing_consent_status
+    status_changed_at timestamptz       NOT NULL DEFAULT now(),
+    status_changed_by uuid,
+
+    -- Table-specific (channel scope — NULL = applies to ALL marketing channels)
+    channel_scope     text[],
+
+    -- Table-specific (provenance / GDPR evidence)
+    consent_source    text,                              -- 'web_form' | 'email_link' | 'admin' | 'import' | 'api'
+    evidence_url      text,                              -- signed URL of double-opt-in proof, e.g. tracked email
+    consent_text      text,                              -- EXACT text the owner agreed to (legal record)
+    consent_locale    text,                              -- BCP 47 locale of the consent_text
+    captured_ip       inet,                              -- IP at time of capture (web/api flow)
+    captured_ua       text,                              -- User-Agent string (web/api flow)
+
+    -- Metadata
+    metadata          jsonb             DEFAULT '{}'::jsonb NOT NULL,
+
+    -- Audit
+    created_at        timestamptz       NOT NULL DEFAULT now(),
+    created_by        uuid              NOT NULL,
+    updated_at        timestamptz,
+    updated_by        uuid,
+
+    CONSTRAINT contact_marketing_consent_pkey
+        PRIMARY KEY (id),
+    CONSTRAINT contact_marketing_consent_tenant_uq
+        UNIQUE (tenant_id, id),
+    CONSTRAINT contact_marketing_consent_owner_uq
+        UNIQUE (tenant_id, owner_type, owner_id),
+    CONSTRAINT contact_marketing_consent_consent_source_chk
+        CHECK (consent_source IS NULL OR consent_source IN
+            ('web_form', 'email_link', 'admin', 'import', 'api', 'mobile_app', 'csv')),
+    CONSTRAINT contact_marketing_consent_channel_scope_chk
+        CHECK (channel_scope IS NULL OR array_length(channel_scope, 1) > 0)
+    -- Status lookup: validated by trg_marketing_consent_status_lookup trigger (deferred to 06_triggers).
+    -- Owner type: validated by trg_marketing_consent_owner_type_guard (deferred to 06_triggers).
+    -- Owner id reference: validated by trg_marketing_consent_owner_ref (deferred to 06_triggers).
+);
+
+COMMENT ON TABLE master.contact_marketing_consent IS
+  'ARCHETYPE=B;SCOPE=T. Marketing consent state per owner. Send-path MUST check '
+  'this BEFORE resolving any contact_link with purpose=marketing. Status=opted_in '
+  'is the ONLY value that permits sending. Consent provenance is a legal record — '
+  'updates always set status_changed_at; do not hard-delete (use status=opted_out '
+  'or status=unknown). Polymorphic owner key matches contact_link / address_link.';
+
+COMMENT ON COLUMN master.contact_marketing_consent.owner_type IS
+  'Polymorphic discriminator. FK to master.owner_type.code. Typical values: '
+  'business_partner, customer, supplier, employee, principal.';
+COMMENT ON COLUMN master.contact_marketing_consent.status IS
+  'Consent state. Lookup: master.marketing_consent_status. Marketing send-path '
+  'must check status = ''opted_in'' before resolving a marketing-purpose contact.';
+COMMENT ON COLUMN master.contact_marketing_consent.channel_scope IS
+  'Channel-specific scope. NULL = umbrella (all marketing channels). '
+  'Non-null array = partial: e.g. ARRAY[''email''] means email-only opt-out, '
+  'phone-marketing still allowed under jurisdiction-specific rules.';
+COMMENT ON COLUMN master.contact_marketing_consent.consent_text IS
+  'EXACT text the owner agreed to at capture time. Required for GDPR/CASL audits.';
+COMMENT ON COLUMN master.contact_marketing_consent.evidence_url IS
+  'URL to double-opt-in confirmation evidence (e.g. tracked email click, signed PDF).';
 
 
 -- ============================================================================
@@ -1970,7 +2113,7 @@ CREATE TABLE IF NOT EXISTS master.attachment (
                                                 OR retention_until IS NULL
                                                 OR expires_at <= retention_until),
     CONSTRAINT attachment_status_chk        CHECK (status IN (
-        'active', 'archived', 'quarantined', 'deleted'
+        'uploaded', 'active', 'archived', 'quarantined', 'deleted', 'failed', 'orphaned'
     ))
     -- kind: 09_triggers — control.trg_validate_lookup_columns('master.attachment_kind')
 );
@@ -2150,6 +2293,11 @@ CREATE TABLE IF NOT EXISTS master.comment (
     entity_type         text        NOT NULL,
     entity_id           uuid        NOT NULL,
 
+    -- Semantic role (lookup: master.comment_intent)
+    -- Orthogonal to context_type. general, submission_note, approval_note,
+    -- rejection_reason, query, clarification, audit_note, system_event.
+    comment_intent      text        NOT NULL DEFAULT 'general',
+
     -- Content
     commenter_id        uuid        NOT NULL,
     comment_text        text        NOT NULL,
@@ -2191,6 +2339,7 @@ CREATE TABLE IF NOT EXISTS master.comment (
     CONSTRAINT comment_text_chk         CHECK (btrim(comment_text) <> ''),
     CONSTRAINT comment_entity_chk       CHECK (btrim(entity_type) <> ''),
     CONSTRAINT comment_visibility_chk   CHECK (visibility IN ('public', 'internal', 'private')),
+    CONSTRAINT comment_intent_chk       CHECK (btrim(comment_intent) <> ''),
     CONSTRAINT comment_delete_chk       CHECK (
         (deleted_at IS NULL AND deleted_by IS NULL)
         OR (deleted_at IS NOT NULL AND deleted_by IS NOT NULL)
@@ -2198,7 +2347,8 @@ CREATE TABLE IF NOT EXISTS master.comment (
     CONSTRAINT comment_mentions_chk     CHECK (
         mentions IS NULL OR jsonb_typeof(mentions) = 'array'
     )
-    -- context_type: 09_triggers — control.trg_validate_lookup_columns('master.comment_type')
+    -- context_type:   09_triggers — control.trg_validate_lookup_columns('master.comment_type')
+    -- comment_intent: 09_triggers — control.trg_validate_lookup_columns('master.comment_intent')
 );
 
 COMMENT ON TABLE  master.comment IS
@@ -2217,6 +2367,9 @@ COMMENT ON COLUMN master.comment.mentions IS
 COMMENT ON COLUMN master.comment.thread_depth IS
     'Nesting depth. 0=root, 1=reply, max 5. '
     'Enforced by CHECK constraint AND trg_comment_hierarchy_guard trigger.';
+COMMENT ON COLUMN master.comment.comment_intent IS
+    'Semantic role (lookup: master.comment_intent). Orthogonal to context_type. '
+    'Set by entity_flow_field.metadata.target when a flow writes the comment.';
 
 
 -- ============================================================================

@@ -1,34 +1,13 @@
--- 900_seed_data/001_shared/007_uom.sql
--- Seed: UN/ECE Rec 20 units of measure
--- Schema: shared | Table: uom
---
--- Best-practice notes
--- ───────────────────
--- quantity_type values must exist in control.lookup_value (domain: shared.uom_quantity_type).
--- on conflict do update → re-running propagates name/symbol/quantity_type corrections.
--- Codes follow UN/ECE Recommendation 20 where available; custom codes noted inline.
--- BA note: UN/ECE Rec 20 code BA = "Ball" (textile/sports), not "Barrel". The entry
---   below uses BA as a container/drum barrel (packaging context). Application code
---   should distinguish from BLL (Barrel, petroleum, volume). Consider migrating to
---   a custom code (e.g. DRM for drum) in a future revision.
--- YDQ removed: not a UN/ECE code and duplicates CYD (Cubic Yard, yd³).
--- TNK: classified as 'service' (transport KPI), not 'quantity'.
--- MYR: Man-year code collides with ISO 4217 MYR (Malaysian Ringgit) — different tables,
---   but application code that resolves UOM codes should be aware of this overlap.
--- NULL symbol policy
---   Some UOM codes carry a NULL symbol because no internationally standardised
---   abbreviation exists for that unit. Two categories apply here:
---   • Composite groupings (SET, KIT): their "size" is defined by their contents,
---     not by the grouping concept itself; no standard symbol is defined in UN/ECE
---     Rec 20 or any ISO standard.
---   • Variable-dimension containers (PK, BX, CT, CS, PL, RL, SH, BA): physical
---     dimensions vary by product and supplier, so a fixed symbol would be
---     misleading (e.g. a "box" can be 0.1 kg or 50 kg). Rendering code must
---     treat NULL symbol as "display name only" — show the UOM name instead.
+-- UN/ECE Rec 20 units of measure.
+-- quantity_type values must exist in control.lookup_value (domain shared.uom_quantity_type).
+-- Code gotchas: BA repurposed from "Ball" to drum/barrel packaging — distinct from BLL (petroleum volume).
+-- MYR (man-year) collides with ISO 4217 MYR (Malaysian Ringgit); different tables but watch in code lookups.
+-- TNK classified as 'service' (transport KPI), not 'quantity'.
+-- NULL symbol policy: composite groupings (SET/KIT) and variable-dimension containers
+-- (PK/BX/CT/CS/PL/RL/SH/BA) have NULL symbol because no fixed abbreviation applies;
+-- rendering must show the UOM name instead.
 
--- ============================================================================
 -- quantity — Count / Dimensionless
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('C62','One (unit)','1','quantity','00000000-0000-0000-0000-000000000000'),
@@ -61,9 +40,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- mass — Weight
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('MC','Microgram','µg','mass','00000000-0000-0000-0000-000000000000'),
@@ -86,9 +63,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- length — Distance
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('A11','Micrometre','µm','length','00000000-0000-0000-0000-000000000000'),
@@ -111,9 +86,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- area — Surface
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('INK','Square Inch','in²','area','00000000-0000-0000-0000-000000000000'),
@@ -132,9 +105,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- volume — Capacity
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('MLT','Millilitre','mL','volume','00000000-0000-0000-0000-000000000000'),
@@ -164,9 +135,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- time — Duration
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('SEC','Second','s','time','00000000-0000-0000-0000-000000000000'),
@@ -184,9 +153,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- temperature
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('CEL','Degree Celsius','°C','temperature','00000000-0000-0000-0000-000000000000'),
@@ -199,9 +166,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- speed — Velocity
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('MTS','Metre per Second','m/s','speed','00000000-0000-0000-0000-000000000000'),
@@ -215,9 +180,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- force
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('NEW','Newton','N','force','00000000-0000-0000-0000-000000000000'),
@@ -229,9 +192,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- pressure
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('PAL','Pascal','Pa','pressure','00000000-0000-0000-0000-000000000000'),
@@ -247,9 +208,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- energy
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('JOU','Joule','J','energy','00000000-0000-0000-0000-000000000000'),
@@ -266,9 +225,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- power
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('WTT','Watt','W','power','00000000-0000-0000-0000-000000000000'),
@@ -281,9 +238,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- electrical
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('AMP','Ampere','A','electrical','00000000-0000-0000-0000-000000000000'),
@@ -301,9 +256,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- frequency
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('HTZ','Hertz','Hz','frequency','00000000-0000-0000-0000-000000000000'),
@@ -317,9 +270,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- density
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('KMQ','Kilogram per Cubic Metre','kg/m³','density','00000000-0000-0000-0000-000000000000'),
@@ -331,9 +282,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- digital — Data
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('E68','Bit','bit','digital','00000000-0000-0000-0000-000000000000'),
@@ -349,9 +298,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- angle
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('DD','Degree (angle)','°','angle','00000000-0000-0000-0000-000000000000'),
@@ -364,9 +311,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- service — Labour, Manpower, IT, Logistics, Billing
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   -- Labour / Manpower
@@ -416,11 +361,9 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- ratio — Dimensionless
 -- Pure ratios with no physical dimension. P1 is the UN/ECE Rec 20 code for
 -- percent and is the primary dimensionless ratio unit.
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('P1', 'Percent',             '%',     'ratio', '00000000-0000-0000-0000-000000000000'),
@@ -433,11 +376,9 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- concentration — Amount per unit volume or mass
 -- Used in chemistry, pharmaceuticals, food safety, and environmental reporting.
 -- UN/ECE Rec 20 codes where available; MGL/C37 are standard.
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('MRL', 'Milligram per Litre',        'mg/L',   'concentration', '00000000-0000-0000-0000-000000000000'),
@@ -454,10 +395,8 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ============================================================================
 -- luminosity — Light intensity and flux
 -- UN/ECE Rec 20 codes: B52 (candela), B55 (lumen), B62 (lux).
--- ============================================================================
 insert into shared.uom (code, name, symbol, quantity_type, created_by)
 values
   ('B52', 'Candela',             'cd',   'luminosity', '00000000-0000-0000-0000-000000000000'),

@@ -1,8 +1,5 @@
--- LookupDomain/control/accounting_domain.sql
--- Lookup values for domain: control.accounting_domain
--- Economic domain classification resolved by commodity_classification_to_intent_rule.resolved_domain.
--- Lookup codes are lowercase; commodity_classification_to_intent_rule stores uppercase.
--- Idempotent: WHERE NOT EXISTS guard
+-- Codes are lowercase; commodity_classification_to_intent_rule.resolved_domain stores uppercase
+-- (rule resolves via lower(rule_value) = lookup.code).
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, sort_order, is_system, status, created_by)

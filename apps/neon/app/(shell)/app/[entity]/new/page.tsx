@@ -4,6 +4,9 @@ import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import { getMetaEntityRecordDetail } from "@/lib/server/meta-entity-records";
 import { getMetaEntityRuntimeDescriptor } from "@/lib/server/meta-entity-runtime";
 import { PLANE_KEY } from "@/lib/plane";
+import { EarlyDraftLauncher } from "./EarlyDraftLauncher";
+import { DirectCreateLauncher } from "./DirectCreateLauncher";
+import { SourceDocumentCreateLauncher } from "./SourceDocumentCreateLauncher";
 
 export default async function RuntimeNewRoute({
   params,
@@ -14,6 +17,23 @@ export default async function RuntimeNewRoute({
 }) {
   const { entity } = await params;
   const descriptor = await getMetaEntityRuntimeDescriptor(entity);
+  if (descriptor?.createMode === "EARLY_DRAFT") {
+    return <EarlyDraftLauncher entity={descriptor.entityCode} />;
+  }
+  if (descriptor?.createMode === "DIRECT_CREATE") {
+    return <DirectCreateLauncher entity={descriptor.entityCode} editAfterCreate={descriptor.renderer === "document"} />;
+  }
+  if (descriptor?.createMode === "SOURCE_DOCUMENT_CREATE") {
+    const resolvedSearchParams = await searchParams;
+    return (
+      <SourceDocumentCreateLauncher
+        entity={descriptor.entityName}
+        sourceEntity={firstSearchParam(resolvedSearchParams["sourceEntity"])
+          ?? resolveSourceEntity(resolveSourceCreateOperation(descriptor.operations)?.key)}
+        operation={resolveSourceCreateOperation(descriptor.operations)}
+      />
+    );
+  }
   const resolvedSearchParams = await searchParams;
   const copyFrom = firstSearchParam(resolvedSearchParams["copyFrom"]);
   const copyDetail = copyFrom && descriptor
@@ -29,6 +49,23 @@ export default async function RuntimeNewRoute({
       initialRecord={descriptor ? buildInitialRecord(descriptor, resolvedSearchParams) : undefined}
     />
   );
+}
+
+function resolveSourceEntity(operationKey: string | undefined): string | undefined {
+  const source = operationKey?.split("_from_")[1];
+  if (!source) return undefined;
+  // commitment is the internal aggregate; purchase_order is its public meta entity.
+  return source === "commitment" ? "purchase_order" : source;
+}
+
+function resolveSourceCreateOperation(operations: MetaEntityRuntimeDescriptor["operations"]): { key: string; label?: string | null; href: string } | undefined {
+  const operation = operations.find((candidate) => candidate.enabled
+    && candidate.handlerType === "API"
+    && (candidate.key.includes("_from_") || candidate.handlerTarget?.includes("_from_")));
+  const target = operation?.handlerTarget ?? operation?.key;
+  return operation && target
+    ? { key: operation.key, label: operation.label, href: `/p2p/${target.replace(/_/g, "-")}` }
+    : undefined;
 }
 
 function firstSearchParam(value: string | string[] | undefined): string | undefined {

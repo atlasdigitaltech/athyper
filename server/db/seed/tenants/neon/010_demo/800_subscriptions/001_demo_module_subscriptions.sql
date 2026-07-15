@@ -1,8 +1,7 @@
 -- 900_seed_data/030_tenant/800_subscriptions/001_demo_module_subscriptions.sql
--- Seed: Subscribe all tenants to all modules
+-- Seed: Subscribe all tenants to non-partner modules
 -- Schema: master | Table: tenant_module_subscription
 -- Strategy: cross-join all tenants × all modules, status = 'active'
--- Updated: PRM workspace added (PCON, OMI, IMO, CCON, SOO, SII, LOGX)
 -- Idempotent: ON CONFLICT (tenant_id, module_id) DO NOTHING
 
 INSERT INTO master.tenant_module_subscription (id, tenant_id, module_id, status, created_by)
@@ -13,7 +12,8 @@ SELECT
   'active',
   '00000000-0000-0000-0000-000000000000'
 FROM master.tenant t
-CROSS JOIN shared.module m
+  CROSS JOIN shared.module m
+WHERE m.code NOT IN ('PCON', 'OMI', 'IMO', 'CCON', 'SOO', 'SII', 'LOGX')
 ON CONFLICT (tenant_id, module_id) DO NOTHING;
 
 DO $$ DECLARE cnt int; BEGIN

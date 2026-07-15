@@ -1,16 +1,6 @@
--- ============================================================================
--- UNIVERSAL — COMMODITY CLASSIFICATION (UNSPSC BRIDGE)
--- ============================================================================
--- File:     024_commodity_classification.sql
--- Schema:   master.commodity_classification
--- Purpose:  Links each commodity category to its primary UNSPSC segment/family.
---           owner_type='commodity_category', classification_type='commodity',
---           domain_code='unspsc'.
--- Depends:  023_commodity_category (categories must exist)
---           shared.commodity_code (UNSPSC codes must exist)
--- Idempotent: Yes — ON CONFLICT (tenant_id, owner_type, owner_id,
---             classification_type, domain_code, code_id) DO NOTHING
--- ============================================================================
+-- Links every master.commodity_category to its primary UNSPSC segment/family
+-- (owner_type='commodity_category', classification_type='commodity', domain_code='unspsc').
+-- Rows whose UNSPSC code is not yet loaded in shared.commodity_code are silently skipped.
 
 DO $seed$
 DECLARE
@@ -31,10 +21,6 @@ BEGIN
         RAISE EXCEPTION '[024] commodity_category not seeded — run 023 first';
     END IF;
 
-    -- ── Stage UNSPSC segment mappings ─────────────────────────────────────
-    -- Each row: (category_code, unspsc_code, mapping_type, confidence, is_primary)
-    -- Codes reference shared.commodity_code where domain_code='unspsc'.
-    -- If a code does not exist in shared.commodity_code the row is silently skipped.
     CREATE TEMP TABLE tmp_cc_bridge (
         cc_code        text    NOT NULL,
         unspsc_code    text    NOT NULL,
@@ -43,11 +29,7 @@ BEGIN
         is_primary     boolean NOT NULL DEFAULT true
     ) ON COMMIT DROP;
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER A — Universal cross-functional mappings
-    -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_cc_bridge (cc_code, unspsc_code, mapping_type, confidence) VALUES
-    -- IT & Digital
     ('SC-IT-HW',        '43210000', 'broad',  85),   -- Computer Equipment and Accessories
     ('SC-IT-SW',        '43230000', 'broad',  85),   -- Software
     ('SC-IT-CLOUD',     '81110000', 'broad',  80),   -- Computer services
@@ -125,11 +107,7 @@ BEGIN
     ('SC-SUBS-MEMB',    '86100000', 'broad',  80),   -- Membership organizations
     ('SC-SUBS-PUB',     '82110000', 'broad',  75);   -- Publishing and subscriptions
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER B — Direct-operations mappings
-    -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_cc_bridge (cc_code, unspsc_code, mapping_type, confidence) VALUES
-    -- Raw Materials
     ('SC-RAW-METAL',        '11100000', 'broad',  90),   -- Ores, minerals and metals
     ('SC-RAW-CHEM',         '12100000', 'broad',  90),   -- Organic chemicals
     ('SC-RAW-AGRI',         '10100000', 'broad',  85),   -- Agricultural products
@@ -178,7 +156,6 @@ BEGIN
     ('SC-PROCNRG-STEAM',    '15110000', 'broad',  80),   -- Fuels and energy
     ('SC-PROCNRG-COMP',     '13100000', 'broad',  80);   -- Industrial gases
 
-    -- ── Insert bridge rows ────────────────────────────────────────────────
     WITH mapped AS (
         SELECT
             cc.id   AS owner_id,

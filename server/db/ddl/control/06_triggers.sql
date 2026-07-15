@@ -567,7 +567,7 @@ CREATE TRIGGER trg_tec_updated_at
 -- =============================================================================
 -- §PROV  updated_at maintenance for blueprint tables
 -- =============================================================================
--- R6: blueprint_registry and tenant_blueprint_application migrated from seed
+-- R6: blueprint_registry and blueprint_tenant_application migrated from seed
 -- file into main DDL; updated_at triggers added here to match schema convention.
 
 DROP TRIGGER IF EXISTS trg_br_updated_at ON control.blueprint_registry;
@@ -575,9 +575,9 @@ CREATE TRIGGER trg_br_updated_at
     BEFORE UPDATE ON control.blueprint_registry
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_tba_updated_at ON control.tenant_blueprint_application;
+DROP TRIGGER IF EXISTS trg_tba_updated_at ON control.blueprint_tenant_application;
 CREATE TRIGGER trg_tba_updated_at
-    BEFORE UPDATE ON control.tenant_blueprint_application
+    BEFORE UPDATE ON control.blueprint_tenant_application
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 

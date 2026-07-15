@@ -1,19 +1,5 @@
-import "server-only";
+// {GET|POST|PUT|PATCH|DELETE} /api/me/[...path] — BFF relay to runtime /api/me/*. Identity, preferences, MFA self-service, delegations.
+// BUG FIX (Phase 1 review): previously inlined buildRelayHandler; normalized to makeModuleRelay("me") for parity with the other module catchalls.
+import { makeModuleRelay } from "@/lib/server/make-module-relay";
 
-import { buildRelayHandler } from "@athyper/bff-relay";
-import { getNeonServerSession } from "@/lib/server/session";
-
-const RUNTIME_API_URL = process.env.RUNTIME_API_URL ?? "http://localhost:4000";
-
-const handler = buildRelayHandler({
-  resolveSession: () => getNeonServerSession(),
-  runtimeApiUrl: RUNTIME_API_URL,
-  appLabel: "neon:me",
-  routePrefix: "me",
-});
-
-export const GET = handler;
-export const POST = handler;
-export const PUT = handler;
-export const PATCH = handler;
-export const DELETE = handler;
+export const { GET, POST, PUT, PATCH, DELETE } = makeModuleRelay("me");

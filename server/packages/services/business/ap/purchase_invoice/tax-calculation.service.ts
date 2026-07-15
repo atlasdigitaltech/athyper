@@ -550,7 +550,7 @@ export async function postInvoiceTaxCalculations(
   const now  = new Date();
 
   const hdrResult = await sql<{ invoice_date: string; tax_mode: string | null }>`
-    SELECT COALESCE(supplier_invoice_date, document_date) AS invoice_date,
+    SELECT COALESCE(supplier_invoice_date, CURRENT_DATE) AS invoice_date,
            tax_mode
       FROM document.purchase_invoice
      WHERE id = ${invoiceId} AND tenant_id = ${tenantId}
@@ -697,7 +697,7 @@ export async function postInvoiceTaxCalculations(
        AND snap.is_withholding       = true
        AND snap.tax_section_code IS NULL
        AND pc.tenant_id              = snap.tenant_id
-       AND pc.source_doc_type        = 'PURCHASE_INVOICE_LINE'
+       AND pc.source_doc_type        = 'purchase_invoice_line'
        AND pc.source_line_id         = snap.invoice_line_id
        AND pc.tax_group_id           = snap.tax_group_id
        AND pc.term_type              = 'withholding'

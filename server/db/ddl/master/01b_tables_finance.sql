@@ -123,7 +123,17 @@ CREATE TABLE IF NOT EXISTS master.company_code (
     fiscal_year_variant      text          DEFAULT 'calendar',
     default_ledger_book_id   uuid,
     regulatory_framework     text,
+
+    -- Temporal profile (business clock for documents owned by this company code).
+    -- Resolution chain at runtime: company_code > tenant_profile > principal_ui_profile > browser.
+    -- timezone_code: IANA zone (FK shared.timezone); business "today", period gates.
+    -- locale_code:   BCP-47 tag (FK shared.locale); date display for documents owned by this CC.
+    -- date_format:   sprintf-style template; overrides tenant default. See @athyper/temporal.
+    -- week_start:    0=Sun, 1=Mon, 6=Sat; drives calendar layout + weekend tinting.
     timezone_code            text,
+    locale_code              text,
+    date_format              text,
+    week_start               smallint,
 
     -- Tax
     tax_registration_number  text,
@@ -158,7 +168,17 @@ CREATE TABLE IF NOT EXISTS master.company_code (
     CONSTRAINT company_code_status_chk        CHECK (status IN (
                                                   'draft', 'active', 'inactive', 'archived')),
     CONSTRAINT company_code_country_fmt_chk   CHECK (country_code IS NULL
-                                                     OR country_code ~ '^[A-Z]{2}$')
+                                                     OR country_code ~ '^[A-Z]{2}$'),
+    CONSTRAINT company_code_week_start_chk    CHECK (week_start IS NULL
+                                                     OR week_start IN (0, 1, 6)),
+    CONSTRAINT company_code_date_format_chk   CHECK (date_format IS NULL
+                                                     OR date_format = ANY (ARRAY[
+                                                         '%d %b %Y',
+                                                         '%d-%b-%Y',
+                                                         '%d/%m/%Y',
+                                                         '%m/%d/%Y',
+                                                         '%Y-%m-%d'
+                                                     ]))
 );
 
 COMMENT ON TABLE master.company_code IS
@@ -850,6 +870,7 @@ CREATE TABLE IF NOT EXISTS master.fiscal_period (
         UNIQUE (tenant_id, company_code_id, fiscal_year, period_number),
     CONSTRAINT fiscal_period_dates_chk CHECK (start_date <= end_date),
     CONSTRAINT fiscal_period_period_range_chk CHECK (period_number BETWEEN 0 AND 16),
+    CONSTRAINT fiscal_period_status_chk CHECK (status IN ('future', 'open', 'soft_close', 'hard_close')),
     CONSTRAINT fiscal_period_code_nonempty CHECK (btrim(code) <> ''),
     CONSTRAINT fiscal_period_name_nonempty CHECK (btrim(name) <> '')
 );

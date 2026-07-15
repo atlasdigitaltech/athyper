@@ -1,10 +1,5 @@
--- ============================================================================
--- UNIVERSAL - LEGACY SPEND CATEGORY RETIREMENT
--- ============================================================================
--- File:     023b_spend_category.sql
--- Purpose:  Retired compatibility slot. master.commodity_category is seeded by
---           023_commodity_category.sql and now owns procurement taxonomy.
--- ============================================================================
+-- Retired ordering slot. master.commodity_category is now seeded by
+-- 023_commodity_category.sql and owns the procurement taxonomy.
 
 DO $seed$
 BEGIN

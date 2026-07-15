@@ -80,3 +80,14 @@ DROP TRIGGER IF EXISTS trg_content_item_version_immutable ON snapshot.content_it
 CREATE TRIGGER trg_content_item_version_immutable
     BEFORE UPDATE OR DELETE ON snapshot.content_item_version
     FOR EACH ROW EXECUTE FUNCTION snapshot.trg_content_item_version_immutable();
+
+
+-- ============================================================================
+-- snapshot.document_snapshot — append-only immutability guard
+-- ============================================================================
+-- Function defined in snapshot/05_functions.sql (snapshot.trg_document_snapshot_immutable).
+
+DROP TRIGGER IF EXISTS trg_document_snapshot_immutable ON snapshot.document_snapshot;
+CREATE TRIGGER trg_document_snapshot_immutable
+    BEFORE UPDATE OR DELETE ON snapshot.document_snapshot
+    FOR EACH ROW EXECUTE FUNCTION snapshot.trg_document_snapshot_immutable();

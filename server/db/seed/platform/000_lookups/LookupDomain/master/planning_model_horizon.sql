@@ -1,7 +1,4 @@
--- LookupDomain/master/planning_model_horizon.sql
--- Lookup values for domain: master.planning_model_horizon
--- Used by: planning_model.planning_horizon
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: planning_model.planning_horizon.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

@@ -28,7 +28,14 @@ DECLARE
     v_trs_wht_id     uuid;
     v_jur_id         uuid;
     v_pt_net30_id    uuid;
+    v_ct_vat_id      uuid;  -- condition_type catalog: TAX_VAT
+    v_ct_wht_id      uuid;  -- condition_type catalog: WHT_GENERIC
 BEGIN
+    -- Resolve system condition_type catalog rows (tenant_id IS NULL)
+    SELECT id INTO v_ct_vat_id FROM master.condition_type
+     WHERE code = 'TAX_VAT' AND tenant_id IS NULL;
+    SELECT id INTO v_ct_wht_id FROM master.condition_type
+     WHERE code = 'WHT_GENERIC' AND tenant_id IS NULL;
 
     SELECT id INTO v_tenant_id FROM master.tenant WHERE realm_key = 'athyper' AND code = 'athyper';
     IF v_tenant_id IS NULL THEN
@@ -79,18 +86,18 @@ BEGIN
     IF v_jur_id IS NULL THEN
         INSERT INTO master.tax_jurisdiction (
             tenant_id, code, name, jurisdiction_type, country_code, status, created_by
-        ) VALUES (v_tenant_id, 'US-FED', 'US Federal', 'COUNTRY', 'US', 'active', v_sys)
+        ) VALUES (v_tenant_id, 'US-FED', 'US Federal', 'country', 'US', 'active', v_sys)
         RETURNING id INTO v_jur_id;
     END IF;
 
-    -- ── 3. Tax types: VAT (INDIRECT) + WHT (WITHHOLDING) ────────────────────
+    -- ── 3. Tax types: VAT + WHT (kind classified via condition_type_id) ─────
     SELECT id INTO v_tt_vat_id FROM master.tax_type
      WHERE tenant_id = v_tenant_id AND code = 'VAT-STD';
     IF v_tt_vat_id IS NULL THEN
         INSERT INTO master.tax_type (
-            tenant_id, code, name, category, is_recoverable, status, created_by
+            tenant_id, code, name, condition_type_id, status, created_by
         ) VALUES (v_tenant_id, 'VAT-STD', 'Standard VAT/GST',
-                  'INDIRECT', true, 'active', v_sys)
+                  v_ct_vat_id, 'active', v_sys)
         RETURNING id INTO v_tt_vat_id;
     END IF;
 
@@ -98,9 +105,9 @@ BEGIN
      WHERE tenant_id = v_tenant_id AND code = 'WHT-CONSULT';
     IF v_tt_wht_id IS NULL THEN
         INSERT INTO master.tax_type (
-            tenant_id, code, name, category, is_deducted_at_source, status, created_by
+            tenant_id, code, name, condition_type_id, status, created_by
         ) VALUES (v_tenant_id, 'WHT-CONSULT', 'WHT on Consulting Services',
-                  'WITHHOLDING', true, 'active', v_sys)
+                  v_ct_wht_id, 'active', v_sys)
         RETURNING id INTO v_tt_wht_id;
     END IF;
 
@@ -117,13 +124,13 @@ BEGIN
             tenant_id, jurisdiction_id, tax_type_id, tax_direction,
             component_code, rate_kind, rate_value,
             recoverability_mode, recoverability_percent,
-            calculation_basis, rounding_stage,
+            calculation_basis,
             effective_from, status, created_by
         ) VALUES (
             v_tenant_id, v_jur_id, v_tt_vat_id, 'PURCHASE',
             'MAIN', 'PERCENT', 7.00,
             'FULL', 100.00,
-            'LINE_NET', 'LINE',
+            'LINE_NET',
             CURRENT_DATE, 'active', v_sys
         ) RETURNING id INTO v_trs_vat_id;
     END IF;
@@ -140,27 +147,28 @@ BEGIN
             tenant_id, jurisdiction_id, tax_type_id, tax_direction,
             component_code, rate_kind, rate_value,
             recoverability_mode,
-            calculation_basis, rounding_stage,
-            wht_basis, wht_certificate_required,
+            calculation_basis,
+            wht_basis,
             effective_from, status, created_by
         ) VALUES (
             v_tenant_id, v_jur_id, v_tt_wht_id, 'PAYMENT',
             'MAIN', 'PERCENT', 10.00,
             'NONE',
-            'LINE_NET', 'LINE',
-            'GROSS', true,
+            'LINE_NET',
+            'GROSS',
             CURRENT_DATE, 'active', v_sys
         ) RETURNING id INTO v_trs_wht_id;
     END IF;
 
     -- ── 5. Tax groups bundling the schedules ────────────────────────────────
+    -- v_jur_id points at the US-FED jurisdiction resolved earlier in this seed.
     SELECT id INTO v_tg_vat_id FROM control.tax_group
      WHERE tenant_id = v_tenant_id AND code = 'VAT_STD_US_7PCT';
     IF v_tg_vat_id IS NULL THEN
         INSERT INTO control.tax_group (
-            tenant_id, code, name, status, created_by
+            tenant_id, code, name, jurisdiction_id, status, created_by
         ) VALUES (v_tenant_id, 'VAT_STD_US_7PCT', 'US Standard VAT 7%',
-                  'active', v_sys)
+                  v_jur_id, 'active', v_sys)
         RETURNING id INTO v_tg_vat_id;
 
         INSERT INTO control.tax_group_component (
@@ -170,15 +178,34 @@ BEGIN
             v_tenant_id, v_tg_vat_id, v_trs_vat_id,
             10, NULL, 'active', v_sys
         );
+    ELSE
+        UPDATE control.tax_group SET jurisdiction_id = v_jur_id, updated_at = now(), updated_by = v_sys
+         WHERE id = v_tg_vat_id AND jurisdiction_id IS DISTINCT FROM v_jur_id;
     END IF;
 
     SELECT id INTO v_tg_wht_id FROM control.tax_group
      WHERE tenant_id = v_tenant_id AND code = 'WHT_CONSULT_10PCT';
+    -- WS-D: WHT-discriminator metadata. Populated so the pi_wht_groups
+    -- lookup can surface this row in WhtDrawer's tax-group picker (the
+    -- client adapter toWhtGroupOptions filters by metadata.wht_basis +
+    -- metadata.rate_schedule_id presence). Mirrors what a server-side
+    -- view-as-entity would surface, without registering a new entity.
     IF v_tg_wht_id IS NULL THEN
         INSERT INTO control.tax_group (
-            tenant_id, code, name, status, created_by
-        ) VALUES (v_tenant_id, 'WHT_CONSULT_10PCT', 'WHT on Consulting 10%',
-                  'active', v_sys)
+            tenant_id, code, name, jurisdiction_id, status, metadata, created_by
+        ) VALUES (
+            v_tenant_id, 'WHT_CONSULT_10PCT', 'WHT on Consulting 10%',
+            v_jur_id, 'active',
+            jsonb_build_object(
+                'wht_basis',             'GROSS',
+                'rate_schedule_id',      v_trs_wht_id::text,
+                'default_rate',          10.0,
+                'default_section_code',  '194C',
+                'wht_section_required',  false,
+                'is_wht_group',          true
+            ),
+            v_sys
+        )
         RETURNING id INTO v_tg_wht_id;
 
         INSERT INTO control.tax_group_component (
@@ -188,6 +215,19 @@ BEGIN
             v_tenant_id, v_tg_wht_id, v_trs_wht_id,
             10, NULL, 'active', v_sys
         );
+    ELSE
+        UPDATE control.tax_group
+           SET jurisdiction_id = v_jur_id,
+               metadata = metadata || jsonb_build_object(
+                   'wht_basis',             'GROSS',
+                   'rate_schedule_id',      v_trs_wht_id::text,
+                   'default_rate',          10.0,
+                   'default_section_code',  '194C',
+                   'wht_section_required',  false,
+                   'is_wht_group',          true
+               ),
+               updated_at = now(), updated_by = v_sys
+         WHERE id = v_tg_wht_id;
     END IF;
 
     -- ── 6. Payment method (WIRE-USD, OUTBOUND) ──────────────────────────────
@@ -281,8 +321,7 @@ BEGIN
 
     -- ── 9. Address at BP level ────────────────────────────────────────────────
     -- Create a single canonical address for ACME-CONSULT-US and link it to the
-    -- business_partner as 'legal' + 'default'. fn_resolve_party_address will
-    -- fall through to these BP links when no supplier-role address is present.
+    -- business_partner as default. Supplier-specific roles belong on supplier.
     SELECT id INTO v_bp_addr_id FROM master.address
      WHERE tenant_id = v_tenant_id AND code = 'addr-acme-nyc-hq';
     IF v_bp_addr_id IS NULL THEN
@@ -308,11 +347,10 @@ BEGIN
     INSERT INTO master.address_link (
         tenant_id, owner_type, owner_id, address_id, purpose,
         is_primary, effective_from, metadata, created_by
-    ) VALUES
-    (v_tenant_id, 'business_partner', v_bp_id, v_bp_addr_id, 'legal',
-     true, CURRENT_DATE, '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_bp_id, v_bp_addr_id, 'default',
-     true, CURRENT_DATE, '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, v_sys)
+    ) VALUES (
+        v_tenant_id, 'business_partner', v_bp_id, v_bp_addr_id, 'default',
+        true, CURRENT_DATE, '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, v_sys
+    )
     ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
     -- ── 10. Contact at BP level ───────────────────────────────────────────────
@@ -340,11 +378,11 @@ BEGIN
             metadata, status, created_by
         ) VALUES
         (v_tenant_id, 'business_partner', v_bp_id,
-         'email', 'ap@acmeconsulting.com', 'notification',
+         'email', 'ap@acmeconsulting.com', 'default',
          true, true, now(),
          '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_bp_id,
-         'phone', '+12125551234', 'notification',
+         'phone', '+12125551234', 'default',
          true, true, now(),
          '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, 'active', v_sys)
         ON CONFLICT DO NOTHING;

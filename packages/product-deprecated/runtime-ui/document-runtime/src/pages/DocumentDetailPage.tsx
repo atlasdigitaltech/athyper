@@ -27,23 +27,21 @@ import type { HeaderAction, PlatformPanelIcon } from "@athyper/entity-runtime/he
 import {
   DocumentObjectPage,
   DocumentSectionSkeleton,
-  EditSessionProvider,
+  EditDraftProvider,
   composeRegisterSectionRef,
-  useDocumentChangeStream,
   useDocumentDirtyMap,
-  useDocumentEditSession,
+  useDocumentEditDraft,
   useDocumentPageController,
   useLazyDocumentSections,
   usePinOnScroll,
-  type DocumentChangeEvent,
   type DocumentSectionDescriptor,
 } from "@athyper/content-ui";
 import type {
-  DocumentEditContext,
-  EditSessionPatchBody,
+  DocumentWorkspaceDraftContext,
   FieldMask,
-} from "@athyper/api-contracts/edit-session";
-import { readAutosaveConfig, readPendingDeltaMode } from "@athyper/api-contracts/edit-session";
+} from "@athyper/api-contracts/document-edit-draft";
+import { readAutosaveConfig, readPendingDeltaMode } from "@athyper/api-contracts/document-edit-draft";
+import type { DocumentEditSubmitRequestV1 } from "@athyper/api-contracts/document-edit-submit";
 import { resolveLinesRenderer } from "@athyper/runtime-shared/renderer-registry";
 import {
   entityRowToPickerOption,
@@ -874,6 +872,17 @@ function getCsrfToken(): string {
   return m ? decodeURIComponent(m[1]!) : "";
 }
 
+function createDeprecatedWorkspaceTabId(): string {
+  return `deprecated_document_tab_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function createDeprecatedSubmitIdempotencyKey(sourceTabId: string, clientSeq: number): string {
+  const nonce = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+  return `document_submit_${sourceTabId}_${clientSeq}_${nonce}`;
+}
+
 type LineAggregateOp = "sum" | "count";
 
 interface LineAggregateConfig {
@@ -1214,7 +1223,7 @@ function DocumentEditableFieldsPanel({
   fieldErrors: Record<string, string>;
   onFieldChange: (name: string, value: unknown) => void;
   /**
-   * Phase 12 #1: server-truthed field mask from `useDocumentEditSession`.
+   * Server-truthed field mask from `useDocumentEditDraft`.
    * When provided, the mask drives BOTH which fields render AND whether
    * each is editable. Fields present in the mask render; absent fields
    * are filtered out. Locked entries (`mask[name].editable === false`)
@@ -1223,7 +1232,7 @@ function DocumentEditableFieldsPanel({
    * When undefined (classic mode), the local `isDocumentEditableField()`
    * filter selects rendered fields and all of them are editable. This
    * preserves backward compat with classic-tabs pages that have no
-   * Edit Session backing.
+   * Workspace draft backing.
    */
   fieldMask?: FieldMask;
 }) {
@@ -1528,10 +1537,9 @@ export function DocumentDetailPage({
   // with the fresh errors. One-shot — cleared inside the effect.
   const [pendingJumpToError, setPendingJumpToError] = useState(false);
 
-  // ── Edit Session (Phase 4a) ──────────────────────────────────────────────
-  // Server-truthed Edit Mode for object-page DOCUMENT pages. Routes to:
-  //   GET   /api/relay/api/records/:entity/:id/edit-context
-  //   PATCH /api/relay/api/records/:entity/:id/edit-session  (If-Match: etag)
+  // ── Workspace draft adapter ──────────────────────────────────────────────
+  // The deprecated shell keeps useDocumentEditDraft as workspace draft state while all
+  // writes use the workspace OPEN/SUBMIT lifecycle.
   //
   // Phase 4a wires the hook with functional fetch callbacks but does NOT
   // yet replace the existing `?mode=edit` URL flow. Phase 4b activates the
@@ -1545,66 +1553,139 @@ export function DocumentDetailPage({
   // Phase 10 #4: per-entity pending-delta preview mode from
   // display_config.pending_delta. "off" by default (safe for AP).
   const pendingDeltaMode = readPendingDeltaMode(entity.display_config as Record<string, unknown>);
+  const workspaceTokenRef = useRef<string | null>(null);
+  const workspaceDraftContextRef = useRef<DocumentWorkspaceDraftContext | null>(null);
+  const workspaceSourceTabRef = useRef<string>(createDeprecatedWorkspaceTabId());
+  const workspaceSubmitSeqRef = useRef(0);
+  const pendingWorkspaceSubmitRef = useRef(new Map<string, { idempotencyKey: string; clientSeq: number }>());
 
-  const editSession = useDocumentEditSession({
+  useEffect(() => {
+    workspaceTokenRef.current = null;
+    workspaceDraftContextRef.current = null;
+    pendingWorkspaceSubmitRef.current.clear();
+  }, [entity.entity_code, record.id]);
+
+  const openDeprecatedWorkspace = async (force = false): Promise<string> => {
+    if (!force && workspaceTokenRef.current) return workspaceTokenRef.current;
+    const response = await fetch(
+      `/api/runtime/v1/entities/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/edit/open`,
+      {
+        method: "POST",
+        headers: { "X-CSRF-Token": getCsrfToken() },
+        credentials: "include",
+      },
+    );
+    const body = await response.json().catch(() => null) as { workspace?: { id?: unknown }; core?: { draftContext?: unknown }; message?: unknown } | null;
+    if (!response.ok || typeof body?.workspace?.id !== "string") {
+      throw new Error(typeof body?.message === "string" ? body.message : `workspace OPEN ${response.status}`);
+    }
+    workspaceTokenRef.current = body.workspace.id;
+    workspaceDraftContextRef.current = body.core?.draftContext as DocumentWorkspaceDraftContext;
+    return body.workspace.id;
+  };
+
+  const editSession = useDocumentEditDraft({
     enabled: isObjectPage,
     autosave: isObjectPage ? autosaveConfig : undefined,
-    loadContext: async (): Promise<DocumentEditContext> => {
-      const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/edit-context`,
-        { method: "GET" },
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-        const message = typeof body["message"] === "string" ? body["message"] : `edit-context ${res.status}`;
-        throw new Error(message);
-      }
-      return res.json() as Promise<DocumentEditContext>;
+    loadWorkspaceContext: async (): Promise<DocumentWorkspaceDraftContext> => {
+      await openDeprecatedWorkspace();
+      if (!workspaceDraftContextRef.current) throw new Error("workspace OPEN did not return draft context");
+      return workspaceDraftContextRef.current;
     },
-    saveChanges: async (body: EditSessionPatchBody, etag: string) => {
-      const res = await fetch(
-        `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/edit-session`,
+    submitWorkspaceChanges: async (body: DocumentEditSubmitRequestV1["changes"], etag: string) => {
+      let initialWorkspace: string;
+      try {
+        initialWorkspace = await openDeprecatedWorkspace();
+      } catch (error) {
+        return { type: "error" as const, message: error instanceof Error ? error.message : String(error) };
+      }
+      const signature = JSON.stringify({ etag, changes: body });
+      let attempt = pendingWorkspaceSubmitRef.current.get(signature);
+      if (!attempt) {
+        workspaceSubmitSeqRef.current += 1;
+        attempt = {
+          idempotencyKey: createDeprecatedSubmitIdempotencyKey(
+            workspaceSourceTabRef.current,
+            workspaceSubmitSeqRef.current,
+          ),
+          clientSeq: workspaceSubmitSeqRef.current,
+        };
+        pendingWorkspaceSubmitRef.current.set(signature, attempt);
+      }
+
+      const submit = async (workspaceId: string) => fetch(
+        `/api/runtime/v1/entities/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/edit/submit`,
         {
-          method:  "PATCH",
+          method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
-            "If-Match":     etag,
+            "If-Match": etag,
+            "Idempotency-Key": attempt.idempotencyKey,
+            "X-Document-Edit-Workspace": workspaceId,
             "X-CSRF-Token": getCsrfToken(),
           },
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            intent: "save",
+            changes: body,
+            sourceTabId: workspaceSourceTabRef.current,
+            clientSeq: attempt.clientSeq,
+          }),
         },
       );
 
-      if (res.ok) {
-        const response = await res.json() as import("@athyper/api-contracts/edit-session").EditSessionPatchResponse;
-        return { type: "ok" as const, response };
+      let res: Response;
+      try {
+        res = await submit(initialWorkspace);
+        if (res.status === 409) {
+          const staleBody = await res.clone().json().catch(() => null) as { error?: unknown } | null;
+          if (staleBody?.error === "STALE_WORKSPACE") {
+            workspaceTokenRef.current = null;
+            const refreshedWorkspace = await openDeprecatedWorkspace(true);
+            res = await submit(refreshedWorkspace);
+          }
+        }
+      } catch (error) {
+        // Ambiguous transport failure: retain the attempt so the next Save
+        // retries SUBMIT with the same idempotency key.
+        return { type: "error" as const, message: error instanceof Error ? error.message : String(error) };
       }
 
-      if (res.status === 409) {
-        const errBody = await res.json().catch(() => ({})) as Record<string, unknown>;
+      const responseBody = await res.json().catch(() => ({})) as Record<string, unknown>;
+      if (responseBody["error"] !== "IDEMPOTENCY_IN_PROGRESS") {
+        pendingWorkspaceSubmitRef.current.delete(signature);
+      }
+
+      if (res.ok) {
+        const response = responseBody as unknown as import("@athyper/api-contracts/document-edit-submit").DocumentEditSubmitResponseV1;
+        return {
+          type: "ok" as const,
+          response,
+        };
+      }
+
+      if (res.status === 412) {
         return {
           type: "conflict" as const,
-          currentEtag: typeof errBody["currentEtag"] === "string" ? errBody["currentEtag"] : undefined,
-          message: typeof errBody["message"] === "string" ? errBody["message"] : undefined,
+          currentEtag: typeof responseBody["currentEtag"] === "string" ? responseBody["currentEtag"] : undefined,
+          message: typeof responseBody["message"] === "string" ? responseBody["message"] : undefined,
         };
       }
 
       if (res.status === 422 || res.status === 400) {
-        const errBody = await res.json().catch(() => ({})) as Record<string, unknown>;
-        const fieldErrors = fieldErrorsFromApiErrorBody(errBody);
+        const fieldErrors = fieldErrorsFromApiErrorBody(responseBody);
         if (Object.keys(fieldErrors).length > 0) {
           return {
             type: "validation" as const,
-            message: typeof errBody["message"] === "string" ? errBody["message"] : undefined,
+            message: typeof responseBody["message"] === "string" ? responseBody["message"] : undefined,
             fieldErrors,
           };
         }
       }
 
-      const errBody = await res.json().catch(() => ({})) as Record<string, unknown>;
-      const message = typeof errBody["message"] === "string"
-        ? errBody["message"]
-        : `edit-session ${res.status}`;
+      const message = typeof responseBody["message"] === "string"
+        ? responseBody["message"]
+        : `workspace submit ${res.status}`;
       return { type: "error" as const, message };
     },
   });
@@ -1644,7 +1725,7 @@ export function DocumentDetailPage({
 
   // editSession is now active in object-page mode. Activation map:
   //   - DocumentActionBar Edit     → editSession.enterEdit()      (no URL navigation)
-  //   - DocumentActionBar Save     → editSession.save()           (uses /edit-session, If-Match etag)
+  //   - DocumentActionBar Save     → editSession.save()           (uses workspace SUBMIT + If-Match)
   //   - DocumentActionBar Discard  → editSession.discard() + editSession.exitEdit({ discardDirty: true })
   //   - effectiveEditMode          → editSession.isEditing        (when isObjectPage)
   //   - Header chip                → editSession.saveStatus       (saving / saved / saveFailed / conflict)
@@ -1679,7 +1760,7 @@ export function DocumentDetailPage({
   // effectiveEditMode source: editSession in object-page mode, URL in classic.
   // canEditDraft remains the client-side affordance gate (controls whether
   // the Edit button appears at all). isObjectPage skips canEditDraft because
-  // the server's edit-context endpoint enforces canUpdate directly.
+  // workspace OPEN supplies the authoritative canUpdate decision.
   const effectiveEditMode = isObjectPage
     ? editSession.isEditing
     : (editMode && canEditDraft);
@@ -1804,37 +1885,8 @@ export function DocumentDetailPage({
 
   // Phase 11 #2: live recovery on status-changed-by-another-user. Opens
   // an SSE stream while editing; on a `record.statusChanged` event whose
-  // etag differs from ours, sets `streamConflict` to trigger a banner.
   // The banner offers Reload (re-enter edit with fresh context) or
   // Discard (exit cleanly).
-  const [streamConflict, setStreamConflict] = useState<{
-    newStatus?: string;
-    serverEtag?: string;
-    actorId?:   string;
-  } | null>(null);
-  useDocumentChangeStream({
-    url:     `/api/relay/api/records/${encodeURIComponent(entity.entity_code)}/${encodeURIComponent(record.id)}/stream`,
-    enabled: isObjectPage && editSession.isEditing && !!editSession.etag,
-    onEvent: (event: DocumentChangeEvent) => {
-      if (event.type === "record.statusChanged" && event.data.etag) {
-        if (event.data.etag !== editSession.etag) {
-          // Phase 12 #2: park autosave for the duration of the recovery
-          // dialog so a queued save doesn't fire mid-resolution and race
-          // the user's button click into a reactive 409.
-          editSession.pauseAutosave();
-          setStreamConflict({
-            newStatus:  event.data.newStatus,
-            serverEtag: event.data.etag,
-            actorId:    event.data.actorId,
-          });
-        }
-      } else if (event.type === "record.deleted") {
-        editSession.pauseAutosave();
-        setStreamConflict({ actorId: event.data.actorId });
-      }
-    },
-  });
-
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   const refFields = useMemo(() => {
@@ -2325,7 +2377,7 @@ export function DocumentDetailPage({
   async function saveDraftChanges(): Promise<boolean> {
     if (isObjectPage) {
       // Object-page mode routes through editSession.save(), which uses the
-      // transactional /edit-session endpoint with If-Match. Triggered from
+      // transactional workspace SUBMIT endpoint with If-Match. Triggered from
       // handleHeaderAction; this function stays classic-only.
       const ok = await editSession.save();
       if (ok) {
@@ -2697,14 +2749,14 @@ export function DocumentDetailPage({
         activePlatformIcon={activePanel ?? undefined}
       />
       {isObjectPage ? (
-        <EditSessionProvider value={editSession.isEditing ? editSession : null}>
+        <EditDraftProvider value={editSession.isEditing ? editSession : null}>
           <DocumentObjectPage
             sections={sections}
             registerSectionRef={registerSectionRef}
             renderSection={(s) => renderForId(s.id)}
             chromeSlot={<ValidationBanner notices={orchestrator.validationNotices ?? []} />}
           />
-        </EditSessionProvider>
+        </EditDraftProvider>
       ) : (
         <>
           <ValidationBanner notices={orchestrator.validationNotices ?? []} />
@@ -2785,17 +2837,13 @@ export function DocumentDetailPage({
         />
       )}
 
-      {/* Edit Session conflict (412/409) — Phase 4b. Triggered when another
+      {/* Workspace conflict (412/409). Triggered when another
           user wrote to the document between enterEdit and save. Reload
           refetches and re-enters the session with the fresh etag; Discard
           drops local changes and exits Edit Mode.
-
-          Phase 12 #2: suppress when the proactive SSE recovery dialog is
-          already open. SSE arrived first, so it owns the resolution flow;
-          a piggy-back 409 from an in-flight save would otherwise stack on
-          top of it. */}
+          */}
       <Dialog
-        open={isObjectPage && editSession.saveStatus === "conflict" && streamConflict === null}
+        open={isObjectPage && editSession.saveStatus === "conflict"}
         onOpenChange={(open) => { if (!open) editSession.discard(); }}
       >
         <DialogContent>
@@ -2831,68 +2879,6 @@ export function DocumentDetailPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Phase 11 #2: live recovery on status-changed-by-another-user.
-          Fires PROACTIVELY (before the user tries to save) via the SSE
-          stream. Distinct from the 409 conflict dialog above which fires
-          REACTIVELY on save failure. Both can theoretically race; the
-          first dialog to open wins (the user resolves it, then state
-          resets and the other dialog won't have anything to fire on). */}
-      <Dialog
-        open={isObjectPage && streamConflict !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            // Phase 12 #2: dismissing the dialog (via X / overlay) resumes
-            // autosave so the user keeps a working session. Discard / Reload
-            // buttons exit edit mode entirely, which clears the pause via
-            // exitEdit's own resume; this path is the only one that needs it.
-            editSession.resumeAutosave();
-            setStreamConflict(null);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {streamConflict?.newStatus
-                ? "This document was just updated"
-                : "This document was just deleted"}
-            </DialogTitle>
-            <DialogDescription>
-              {streamConflict?.newStatus
-                ? `Another user moved this document to "${streamConflict.newStatus}" while you were editing. Your unsaved changes are preserved — reload to merge their version, or discard yours and exit.`
-                : "Another user deleted this document. Your unsaved changes cannot be saved."}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                editSession.discard();
-                editSession.exitEdit({ discardDirty: true });
-                setStreamConflict(null);
-                void refreshRecordState();
-              }}
-            >
-              Discard my changes
-            </Button>
-            {streamConflict?.newStatus && (
-              <Button
-                onClick={async () => {
-                  editSession.discard();
-                  editSession.exitEdit({ discardDirty: true });
-                  setStreamConflict(null);
-                  await refreshRecordState();
-                  await editSession.enterEdit();
-                }}
-              >
-                Reload &amp; keep editing
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
     </>
   );
 }

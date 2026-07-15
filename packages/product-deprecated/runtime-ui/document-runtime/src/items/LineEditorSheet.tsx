@@ -6,7 +6,7 @@ import { DrawerShell } from "@athyper/ui/primitives";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
-import { useEditSessionContext } from "@athyper/content-ui";
+import { useEditDraftContext } from "@athyper/content-ui";
 import {
   type LineRecord,
   MetaLineForm,
@@ -92,7 +92,7 @@ export function LineEditorSheet(props: LineEditorSheetProps) {
   // bundle so changes commit atomically with header + other line edits when
   // the user clicks Save in the action bar. Outside an active session, fall
   // back to the existing per-line REST PATCH.
-  const editSession = useEditSessionContext();
+  const editSession = useEditDraftContext();
 
   const lineKey = recordId(line as LineRecord);
   const title = useMemo(() => lineTitle(resolvedEntity, line), [resolvedEntity, line]);

@@ -1,8 +1,6 @@
--- LookupDomain/master/annual_revenue_band.sql
--- Lookup domain + values for: master.annual_revenue_band
--- Used by: master.supplier.annual_revenue_band
--- Codes: lt_ = less than, r_ = range, gt_ = greater than (all start with letter)
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by: master.supplier.annual_revenue_band.
+-- Code prefix scheme: lt_ = less than, r_ = range, gt_ = greater than.
+-- All codes must start with a letter (lookup_value_code_fmt).
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

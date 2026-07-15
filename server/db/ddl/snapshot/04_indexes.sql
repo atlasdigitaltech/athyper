@@ -41,3 +41,25 @@ CREATE INDEX IF NOT EXISTS template_version_effective_range_idx
         template_id,
         daterange(effective_from, effective_to, '[)')
     );
+
+
+-- =============================================================================
+-- §8  snapshot.document_snapshot — generic document snapshot indexes
+-- =============================================================================
+
+-- Primary read: latest snapshot per entity, most-recent-first
+CREATE INDEX IF NOT EXISTS ds_entity_recent_idx
+    ON snapshot.document_snapshot (tenant_id, entity_type, entity_id, captured_at DESC);
+
+-- Audit-by-activity-log: drives v_p2p_audit_timeline join
+CREATE INDEX IF NOT EXISTS ds_activity_log_idx
+    ON snapshot.document_snapshot (tenant_id, activity_log_id)
+    WHERE activity_log_id IS NOT NULL;
+
+-- Chain traversal: walk backwards from a snapshot
+CREATE INDEX IF NOT EXISTS ds_chain_idx
+    ON snapshot.document_snapshot (tenant_id, entity_id, chain_seq DESC);
+
+-- Gate-event filtering: e.g. all financial_post snapshots in a tenant
+CREATE INDEX IF NOT EXISTS ds_gate_kind_idx
+    ON snapshot.document_snapshot (tenant_id, gate_event_kind, captured_at DESC);

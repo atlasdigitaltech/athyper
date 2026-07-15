@@ -1,16 +1,9 @@
--- 900_seed_data/001_shared/001_country.sql
--- Seed: ISO 3166-1 countries + phone/postal/address rendering profiles
--- Schema: shared | Table: country
--- Idempotent: ON CONFLICT (code) DO UPDATE throughout
---
--- Countries with phone/postal/address profiles are in §2 (full column list).
--- All other countries are in §1 (base columns — new columns use table defaults).
+-- ISO 3166-1 countries.
+-- §1 base rows (ISO columns only); §2 rows carry phone/postal/address profiles.
 
--- ============================================================================
--- §1  BASE COUNTRIES (ISO columns only — defaults apply for phone/postal)
--- ============================================================================
+-- §1  BASE COUNTRIES
 
--- ── AFRICA ──
+-- AFRICA
 insert into shared.country (code, code3, numeric3, name, official_name, region, subregion, created_by)
 values
   ('DZ','DZA','012','Algeria','People''s Democratic Republic of Algeria','Africa','Northern Africa','00000000-0000-0000-0000-000000000000'),
@@ -78,7 +71,7 @@ on conflict (code) do update set
     updated_at    = now(),
     updated_by    = excluded.created_by;
 
--- ── AMERICAS ──
+-- AMERICAS
 insert into shared.country (code, code3, numeric3, name, official_name, region, subregion, created_by)
 values
   -- Caribbean
@@ -147,7 +140,7 @@ on conflict (code) do update set
     updated_at    = now(),
     updated_by    = excluded.created_by;
 
--- ── ASIA (base — countries without extended profile) ──
+-- ASIA (base — countries without extended profile)
 insert into shared.country (code, code3, numeric3, name, official_name, region, subregion, created_by)
 values
   -- Central Asia
@@ -205,7 +198,7 @@ on conflict (code) do update set
     updated_at    = now(),
     updated_by    = excluded.created_by;
 
--- ── EUROPE ──
+-- EUROPE
 insert into shared.country (code, code3, numeric3, name, official_name, region, subregion, created_by)
 values
   -- Eastern Europe
@@ -270,7 +263,7 @@ on conflict (code) do update set
     updated_at    = now(),
     updated_by    = excluded.created_by;
 
--- ── OCEANIA (without AU, which is in §2) ──
+-- OCEANIA (without AU; AU is in §2)
 insert into shared.country (code, code3, numeric3, name, official_name, region, subregion, created_by)
 values
   ('CX','CXR','162','Christmas Island',null,'Oceania','Australia and New Zealand','00000000-0000-0000-0000-000000000000'),
@@ -311,7 +304,7 @@ on conflict (code) do update set
     updated_at    = now(),
     updated_by    = excluded.created_by;
 
--- ── ANTARCTICA ──
+-- ANTARCTICA
 insert into shared.country (code, code3, numeric3, name, official_name, region, subregion, created_by)
 values
   ('AQ','ATA','010','Antarctica',null,'Antarctica',null,'00000000-0000-0000-0000-000000000000'),
@@ -327,12 +320,8 @@ on conflict (code) do update set
     updated_by    = excluded.created_by;
 
 
--- ============================================================================
 -- §2  COUNTRIES WITH EXTENDED PROFILE (phone + postal + address rendering)
--- ============================================================================
--- These 13 countries include full phone dialing, postal validation, and
--- address rendering metadata. Each appears only here — not in §1.
--- ============================================================================
+-- These 13 rows are NOT duplicated in §1.
 
 insert into shared.country (
     code, code3, numeric3, name, official_name, region, subregion,
@@ -453,14 +442,9 @@ on conflict (code) do update set
     updated_by             = excluded.created_by;
 
 
--- ============================================================================
--- §3  EXTENDED PROFILES — all remaining countries (§1 base rows)
--- UPDATE only; base INSERT from §1 already set the ISO columns.
--- Idempotent: always runs; re-running propagates any corrections.
--- §2 countries (MY, SG, ID, US, GB, DE, JP, CN, IN, AU, HK, AE, MO) are
--- included in the VALUES list but will simply overwrite with identical data
--- on re-runs — harmless, keeps this list as the single source of truth.
--- ============================================================================
+-- §3  EXTENDED PROFILES — UPDATE only; §1 already set ISO columns.
+-- §2 countries are intentionally re-listed here so this VALUES list stays the
+-- single source of truth for phone/postal data (overwrite is harmless).
 
 UPDATE shared.country SET
     calling_code            = v.calling_code,

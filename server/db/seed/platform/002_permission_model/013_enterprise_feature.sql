@@ -1,7 +1,4 @@
--- 900_seed_data/001_shared/013_enterprise_feature.sql
--- Seed: Enterprise feature registry (Special Ops toggles)
--- Schema: shared | Table: enterprise_feature
--- Idempotent: on conflict (code) do nothing
+-- Enterprise feature registry (Special Ops toggles surfaced in tenant admin).
 
 insert into shared.enterprise_feature (code, name, description, view_key, edit_key, sort_order, created_by) values
   ('THEME_CHANGE',       'Theme Change',             'Customisable UI theming',       'feature:theme:view',     'feature:theme:edit',     10, '00000000-0000-0000-0000-000000000000'),

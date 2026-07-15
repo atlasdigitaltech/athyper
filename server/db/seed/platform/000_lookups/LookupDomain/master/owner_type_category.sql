@@ -1,7 +1,4 @@
--- LookupDomain/master/owner_type_category.sql
--- Lookup values for domain: master.owner_type_category
--- Used by: owner_type.category
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: owner_type.category.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

@@ -1,9 +1,3 @@
--- 010_ai_lookup_domains.sql
--- Registers two AI-specific lookup domains: action codes and document classes.
--- Schema: control | Table: lookup_domain
--- Depends on: 000_lookup_domains.sql
--- Idempotent: ON CONFLICT (code) DO NOTHING
-
 INSERT INTO control.lookup_domain (code, name, description, source_schema, is_extensible, status, created_by)
 VALUES
     ('control.ai_action_code',

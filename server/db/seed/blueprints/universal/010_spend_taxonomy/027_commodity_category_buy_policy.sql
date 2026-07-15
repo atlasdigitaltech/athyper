@@ -1,15 +1,7 @@
--- ============================================================================
--- UNIVERSAL — COMMODITY CATEGORY BUY POLICY
--- ============================================================================
--- File:     027_commodity_category_buy_policy.sql
--- Schema:   control.commodity_category_buy_policy
--- Purpose:  Seeds tenant-level default buy policies for all 95 leaf commodity
---           categories. Each leaf category gets one TENANT-scope ALLOW policy
---           with the appropriate default business intent.
---           scope_type=TENANT, mapping_mode=ALLOW, is_default=true.
--- Depends:  021_business_intents, 023_commodity_category
--- Idempotent: DELETE-then-INSERT by pack metadata tag.
--- ============================================================================
+-- Tenant-default buy policy per leaf commodity_category (95 rows).
+-- scope_type=TENANT, mapping_mode=ALLOW, is_default=true.
+-- This row supplies the UI display default for the taxonomy browser;
+-- runtime routing still goes through the 025 FALLBACK intent rules.
 
 DO $seed$
 DECLARE
@@ -30,25 +22,16 @@ BEGIN
         RAISE EXCEPTION '[027] commodity_categories not seeded — run 023 first';
     END IF;
 
-    -- ── Remove previous pack rows ─────────────────────────────────────────
     DELETE FROM control.commodity_category_buy_policy
     WHERE tenant_id = v_tid
       AND metadata->'_seed'->>'pack' = v_pack;
 
-    -- ── Default intent mapping ────────────────────────────────────────────
-    -- Maps each commodity category code to its canonical default business intent.
-    -- FALLBACK intent rules in 025 handle dynamic routing; this table supplies
-    -- the UI display default (what shows in the taxonomy browser for each category).
     CREATE TEMP TABLE tmp_cc_intent (
         cc_code         text NOT NULL,
         bi_code         text NOT NULL
     ) ON COMMIT DROP;
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER A leaf defaults
-    -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_cc_intent (cc_code, bi_code) VALUES
-    -- IT & Digital
     ('SC-IT-HW',         'BI-OPEX'),   -- default OPEX; CAPEX threshold handled at runtime
     ('SC-IT-SW',         'BI-OPEX'),
     ('SC-IT-CLOUD',      'BI-OPEX'),
@@ -126,11 +109,7 @@ BEGIN
     ('SC-SUBS-MEMB',     'BI-OPEX'),
     ('SC-SUBS-PUB',      'BI-OPEX');
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER B leaf defaults
-    -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_cc_intent (cc_code, bi_code) VALUES
-    -- Raw Materials
     ('SC-RAW-METAL',        'BI-COGS'),
     ('SC-RAW-CHEM',         'BI-COGS'),
     ('SC-RAW-AGRI',         'BI-COGS'),
@@ -179,7 +158,6 @@ BEGIN
     ('SC-PROCNRG-STEAM',    'BI-OPEX'),
     ('SC-PROCNRG-COMP',     'BI-OPEX');
 
-    -- ── INSERT buy policy rows ────────────────────────────────────────────
     INSERT INTO control.commodity_category_buy_policy (
         tenant_id,
         commodity_category_id, business_intent_id,

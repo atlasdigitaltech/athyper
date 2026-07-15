@@ -14,7 +14,7 @@
  * getEffectiveEntitlement() / setEffectiveEntitlement() — used by read handlers.
  */
 
-import type { RedisClient } from "@athyper/adapter-memorycache";
+import type { RedisClient } from "@athyper/adapter-memory-cache";
 
 const ENT_TTL_SECONDS = 3600;
 
@@ -48,3 +48,4 @@ export async function getPlanTenants(redis: RedisClient, planCode: string): Prom
 export async function setPlanTenants(redis: RedisClient, planCode: string, tenantIds: string[]): Promise<void> {
   await redis.set(`plan_tenants:${planCode}`, JSON.stringify(tenantIds), "EX", ENT_TTL_SECONDS);
 }
+

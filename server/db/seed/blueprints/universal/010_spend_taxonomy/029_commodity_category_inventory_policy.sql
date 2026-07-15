@@ -1,16 +1,7 @@
--- ============================================================================
--- UNIVERSAL — COMMODITY CATEGORY INVENTORY POLICY
--- ============================================================================
--- File:     029_commodity_category_inventory_policy.sql
--- Schema:   control.commodity_category_inventory_policy
--- Purpose:  Seeds tenant-level inventory policy overrides for stockable categories.
---           Only categories with inventory_allowed=true get rows here.
---           Provides valuation method, tracking requirements, and reorder method
---           at TENANT scope. Company- or warehouse-specific overrides are added
---           by tenant setup scripts.
--- Depends:  023_commodity_category
--- Idempotent: DELETE-then-INSERT by pack metadata tag.
--- ============================================================================
+-- Tenant-default inventory policy for stockable commodity_category rows only
+-- (inventory_allowed=true). Covers valuation method, tracking requirements,
+-- reorder method, warehouse class. Company/warehouse-specific overrides come
+-- from tenant setup scripts.
 
 DO $seed$
 DECLARE
@@ -28,15 +19,10 @@ BEGIN
         RAISE EXCEPTION '[029] commodity_categories not seeded — run 023 first';
     END IF;
 
-    -- ── Remove previous pack rows ─────────────────────────────────────────
     DELETE FROM control.commodity_category_inventory_policy
     WHERE tenant_id = v_tid
       AND metadata->'_seed'->>'pack' = v_pack;
 
-    -- ── Stage inventory policy overrides ─────────────────────────────────
-    -- (cc_code, valuation_method, reorder_method,
-    --  lot_allowed, lot_required, serial_allowed, serial_required,
-    --  warehouse_class)
     CREATE TEMP TABLE tmp_inv_policy (
         cc_code             text NOT NULL,
         valuation_method    text,
@@ -48,13 +34,8 @@ BEGIN
         warehouse_class     text
     ) ON COMMIT DROP;
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER A stockable categories
-    -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_inv_policy VALUES
-    -- IT Hardware — serial-tracked, specific ID valuation
     ('SC-IT-HW',        'weighted_avg', 'MANUAL',   false, false, true,  true,  'ELECTRONICS'),
-    -- Office Supplies — consumable, average cost, min-max reorder
     ('SC-OFFICE-SUP',   'weighted_avg', 'MIN_MAX',  false, false, false, false, 'GENERAL'),
     ('SC-OFFICE-FURN',  'weighted_avg', 'MANUAL',   false, false, false, false, 'GENERAL'),
     ('SC-OFFICE-EQUIP', 'weighted_avg', 'MANUAL',   false, false, false, false, 'ELECTRONICS'),
@@ -62,11 +43,7 @@ BEGIN
     ('SC-FLEET-VEH',    'specific_id',  'MANUAL',   false, false, true,  true,  'FLEET'),
     ('SC-FLEET-FUEL',   'weighted_avg', 'MIN_MAX',  false, false, false, false, 'BULK_LIQUID');
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER B stockable categories
-    -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_inv_policy VALUES
-    -- Raw Materials
     ('SC-RAW-METAL',        'weighted_avg', 'MIN_MAX',  false, false, false, false, 'RAW_MATERIAL'),
     ('SC-RAW-CHEM',         'fifo',         'MIN_MAX',  true,  true,  false, false, 'HAZMAT'),
     ('SC-RAW-AGRI',         'fifo',         'MIN_MAX',  true,  true,  false, false, 'PERISHABLE'),
@@ -91,7 +68,6 @@ BEGIN
     ('SC-CAPEQUIP-LINE',    'specific_id',  'MANUAL',   false, false, true,  true,  'HEAVY_EQUIPMENT'),
     ('SC-CAPEQUIP-TOOL',    'weighted_avg', 'MANUAL',   false, false, false, false, 'TOOLING');
 
-    -- ── INSERT inventory policy rows ──────────────────────────────────────
     INSERT INTO control.commodity_category_inventory_policy (
         tenant_id,
         commodity_category_id,

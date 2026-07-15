@@ -61,6 +61,13 @@ interface SyncRow {
   failed: string | number | bigint | null;
 }
 
+interface OutboxHealthRow {
+  topic: string | null;
+  oldest_unpublished_seconds: string | number | null;
+  retry_count: string | number | null;
+  poison_event_count: string | number | null;
+}
+
 interface MetricSectionResult {
   name: string;
   ok: boolean;
@@ -112,6 +119,12 @@ const HELP = [
   "# TYPE fin_doc_registry_trigger_sync_count gauge",
   "# HELP fin_doc_registry_trigger_sync_failed_count Current registry sync outbox rows failed or dead-lettered",
   "# TYPE fin_doc_registry_trigger_sync_failed_count gauge",
+  "# HELP athyper_outbox_oldest_unpublished_seconds Age of the oldest pending, failed, or processing outbox event",
+  "# TYPE athyper_outbox_oldest_unpublished_seconds gauge",
+  "# HELP athyper_outbox_retry_count Total delivery retries represented by current outbox rows",
+  "# TYPE athyper_outbox_retry_count gauge",
+  "# HELP athyper_outbox_poison_event_count Current dead-lettered outbox events",
+  "# TYPE athyper_outbox_poison_event_count gauge",
   "# HELP fin_doc_registry_status_mapping_fallbacks Source document statuses without an active canonical_status lookup mapping",
   "# TYPE fin_doc_registry_status_mapping_fallbacks gauge",
   "# HELP athyper_platform_metric_section_up Whether a platform metric collection section succeeded on the last scrape",
@@ -174,8 +187,8 @@ async function collectLegalHoldMetrics(db: DB, samples: MetricSample[]): Promise
           ('all'::text),
           ('purchase_invoice'::text),
           ('payment_entry'::text),
-          ('goods_receipt'::text),
-          ('service_entry_sheet'::text)
+          ('receipt'::text),
+          ('service_sheet'::text)
       ) AS known(scope)
       UNION
       SELECT DISTINCT COALESCE(scope_entity_type, 'all') AS scope
@@ -389,11 +402,11 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
       SELECT tenant_id, company_code_id, 'payment_entry'::text AS doc_type, id AS doc_id, payment_je_id AS je_id, status, is_posted, posted_at
       FROM document.payment_entry
       UNION ALL
-      SELECT tenant_id, company_code_id, 'goods_receipt'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
-      FROM document.goods_receipt
+      SELECT tenant_id, company_code_id, 'receipt'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
+      FROM document.receipt
       UNION ALL
-      SELECT tenant_id, company_code_id, 'service_entry_sheet'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
-      FROM document.service_entry_sheet
+      SELECT tenant_id, company_code_id, 'service_sheet'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
+      FROM document.service_sheet
     )
     SELECT
       t.code AS tenant,
@@ -432,11 +445,11 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
       SELECT tenant_id, 'payment_entry'::text AS doc_type, status, is_posted, approved_at
       FROM document.payment_entry
       UNION ALL
-      SELECT tenant_id, 'goods_receipt'::text AS doc_type, status, is_posted, approved_at
-      FROM document.goods_receipt
+      SELECT tenant_id, 'receipt'::text AS doc_type, status, is_posted, approved_at
+      FROM document.receipt
       UNION ALL
-      SELECT tenant_id, 'service_entry_sheet'::text AS doc_type, status, is_posted, approved_at
-      FROM document.service_entry_sheet
+      SELECT tenant_id, 'service_sheet'::text AS doc_type, status, is_posted, approved_at
+      FROM document.service_sheet
     )
     SELECT
       t.code AS tenant,
@@ -465,11 +478,11 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
       SELECT tenant_id, company_code_id, 'payment_entry'::text AS doc_type, id AS doc_id, payment_je_id AS je_id, status, is_posted, posted_at
       FROM document.payment_entry
       UNION ALL
-      SELECT tenant_id, company_code_id, 'goods_receipt'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
-      FROM document.goods_receipt
+      SELECT tenant_id, company_code_id, 'receipt'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
+      FROM document.receipt
       UNION ALL
-      SELECT tenant_id, company_code_id, 'service_entry_sheet'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
-      FROM document.service_entry_sheet
+      SELECT tenant_id, company_code_id, 'service_sheet'::text AS doc_type, id AS doc_id, accrual_je_id AS je_id, status, is_posted, posted_at
+      FROM document.service_sheet
     )
     SELECT
       t.code AS tenant,
@@ -502,11 +515,11 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
       SELECT tenant_id, 'payment_entry'::text AS doc_type, payment_je_id AS je_id, status, is_posted, posted_at
       FROM document.payment_entry
       UNION ALL
-      SELECT tenant_id, 'goods_receipt'::text AS doc_type, accrual_je_id AS je_id, status, is_posted, posted_at
-      FROM document.goods_receipt
+      SELECT tenant_id, 'receipt'::text AS doc_type, accrual_je_id AS je_id, status, is_posted, posted_at
+      FROM document.receipt
       UNION ALL
-      SELECT tenant_id, 'service_entry_sheet'::text AS doc_type, accrual_je_id AS je_id, status, is_posted, posted_at
-      FROM document.service_entry_sheet
+      SELECT tenant_id, 'service_sheet'::text AS doc_type, accrual_je_id AS je_id, status, is_posted, posted_at
+      FROM document.service_sheet
     )
     SELECT
       t.code AS tenant,
@@ -549,7 +562,7 @@ async function collectDocumentRegistryComplianceMetrics(db: DB, samples: MetricS
      AND bps.fiscal_year = je.fiscal_year
      AND bps.period_number = je.period_number
     WHERE je.status = 'posted'
-      AND je.source_doc_type IN ('purchase_invoice', 'payment_entry', 'goods_receipt', 'service_entry_sheet')
+      AND je.source_doc_type IN ('purchase_invoice', 'payment_entry', 'receipt', 'service_sheet')
       AND (je.posted_at IS NULL OR je.posted_at >= now() - interval '90 days')
       AND je.close_override_id IS NULL
       AND (
@@ -620,11 +633,11 @@ async function collectDocumentRegistrySyncMetrics(db: DB, samples: MetricSample[
       SELECT tenant_id, 'payment_entry'::text AS doc_type, status
       FROM document.payment_entry
       UNION ALL
-      SELECT tenant_id, 'goods_receipt'::text AS doc_type, status
-      FROM document.goods_receipt
+      SELECT tenant_id, 'receipt'::text AS doc_type, status
+      FROM document.receipt
       UNION ALL
-      SELECT tenant_id, 'service_entry_sheet'::text AS doc_type, status
-      FROM document.service_entry_sheet
+      SELECT tenant_id, 'service_sheet'::text AS doc_type, status
+      FROM document.service_sheet
     )
     SELECT
       t.code AS tenant,
@@ -649,6 +662,26 @@ async function collectDocumentRegistrySyncMetrics(db: DB, samples: MetricSample[
       ...tenantLabels(row),
       doc_type: row.doc_type ?? "unknown",
     }, row.value);
+  }
+}
+
+async function collectOutboxHealthMetrics(db: DB, samples: MetricSample[]): Promise<void> {
+  const rows = await queryRows<OutboxHealthRow>(db, sql<OutboxHealthRow>`
+    SELECT
+      topic,
+      COALESCE(EXTRACT(EPOCH FROM (
+        now() - MIN(created_at) FILTER (WHERE status IN ('pending', 'failed', 'processing'))
+      )), 0)::text AS oldest_unpublished_seconds,
+      COALESCE(SUM(GREATEST(attempts - 1, 0)), 0)::text AS retry_count,
+      COUNT(*) FILTER (WHERE status = 'dead_letter')::text AS poison_event_count
+    FROM event.outbox
+    GROUP BY topic
+  `);
+  for (const row of rows) {
+    const labels = { topic: row.topic ?? "unknown" };
+    addSample(samples, "athyper_outbox_oldest_unpublished_seconds", labels, row.oldest_unpublished_seconds);
+    addSample(samples, "athyper_outbox_retry_count", labels, row.retry_count);
+    addSample(samples, "athyper_outbox_poison_event_count", labels, row.poison_event_count);
   }
 }
 
@@ -693,7 +726,8 @@ export function createPlatformMetricCollector(db: DB): () => Promise<string[]> {
       collectGovernanceMetrics(db),
       collectDocumentRegistryMetrics(db),
     ]);
-    const sectionResults = [...governanceResults, ...documentRegistryResults];
+    const outboxResult = await collectSection(db, "outbox_health", collectOutboxHealthMetrics);
+    const sectionResults = [...governanceResults, ...documentRegistryResults, outboxResult];
 
     for (const result of sectionResults) {
       addSample(samples, "athyper_platform_metric_section_up", { section: result.name }, result.ok ? 1 : 0);

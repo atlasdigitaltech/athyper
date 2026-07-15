@@ -31,7 +31,7 @@
 --   master.supplier_qualification         (all cols per supplier)
 --   master.customer_qualification         (all cols per customer)
 --   master.address                        (HQ address per BP)
---   master.address_link                   (legal + default + AP/AR purpose)
+--   master.address_link                   (one BP default address per party)
 --
 -- Supporting (created if absent — idempotent):
 --   master.payment_method                 (WIRE-USD for international)
@@ -155,7 +155,7 @@ BEGIN
         INSERT INTO master.tax_jurisdiction (
             tenant_id, code, name, jurisdiction_type, country_code, status, created_by
         ) VALUES (
-            v_tenant_id, 'QA-FED', 'Qatar Federal', 'COUNTRY', 'QA', 'active', v_sys
+            v_tenant_id, 'QA-FED', 'Qatar Federal', 'country', 'QA', 'active', v_sys
         ) RETURNING id INTO v_jur_qa_id;
     END IF;
 
@@ -401,16 +401,16 @@ BEGIN
             is_primary, is_verified, verified_at, metadata, status, created_by
         ) VALUES
         (v_tenant_id, 'business_partner', v_psm_bp_id, 'email',
-         'hassan.albalushi@pinnaclefm.ae', 'notification',
+         'hassan.albalushi@pinnaclefm.ae', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_psm_bp_id, 'phone',
-         '+97126789012', 'notification',
+         '+97126789012', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_psm_bp_id, 'email',
-         'accounts@pinnaclefm.ae', 'billing',
-         true, true, now(),
+         'accounts@pinnaclefm.ae', 'default',
+         false, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
@@ -509,16 +509,11 @@ BEGIN
     INSERT INTO master.address_link (
         tenant_id, owner_type, owner_id, address_id, purpose,
         is_primary, effective_from, metadata, created_by
-    ) VALUES
-    (v_tenant_id, 'business_partner', v_psm_bp_id, v_psm_addr_id, 'legal',
-     true, '2012-05-15'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_psm_bp_id, v_psm_addr_id, 'default',
-     true, '2012-05-15'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_psm_bp_id, v_psm_addr_id, 'remittance',
-     true, '2023-01-01'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys)
+    ) VALUES (
+        v_tenant_id, 'business_partner', v_psm_bp_id, v_psm_addr_id, 'default',
+        true, '2012-05-15'::date,
+        '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
+    )
     ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Supplier SUP-ATHQ-PSM-001 seeded (id=%)', v_psm_id;
@@ -747,16 +742,16 @@ BEGIN
             is_primary, is_verified, verified_at, metadata, status, created_by
         ) VALUES
         (v_tenant_id, 'business_partner', v_gfl_bp_id, 'email',
-         'm.alqahtani@gulffreight.qa', 'notification',
+         'm.alqahtani@gulffreight.qa', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_gfl_bp_id, 'phone',
-         '+97444556677', 'notification',
+         '+97444556677', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_gfl_bp_id, 'email',
-         'finance@gulffreight.qa', 'billing',
-         true, true, now(),
+         'finance@gulffreight.qa', 'default',
+         false, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
@@ -854,16 +849,11 @@ BEGIN
     INSERT INTO master.address_link (
         tenant_id, owner_type, owner_id, address_id, purpose,
         is_primary, effective_from, metadata, created_by
-    ) VALUES
-    (v_tenant_id, 'business_partner', v_gfl_bp_id, v_gfl_addr_id, 'legal',
-     true, '2006-03-20'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_gfl_bp_id, v_gfl_addr_id, 'default',
-     true, '2006-03-20'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_gfl_bp_id, v_gfl_addr_id, 'remittance',
-     true, '2022-07-01'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys)
+    ) VALUES (
+        v_tenant_id, 'business_partner', v_gfl_bp_id, v_gfl_addr_id, 'default',
+        true, '2006-03-20'::date,
+        '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
+    )
     ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Supplier SUP-ATHQ-GFL-001 seeded (id=%)', v_gfl_id;
@@ -1075,16 +1065,16 @@ BEGIN
             is_primary, is_verified, verified_at, metadata, status, created_by
         ) VALUES
         (v_tenant_id, 'business_partner', v_nic_bp_id, 'email',
-         'priya.sharma@nexusic.ae', 'notification',
+         'priya.sharma@nexusic.ae', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_nic_bp_id, 'phone',
-         '+97145678901', 'notification',
+         '+97145678901', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_nic_bp_id, 'email',
-         'billing@nexusic.ae', 'billing',
-         true, true, now(),
+         'billing@nexusic.ae', 'default',
+         false, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
@@ -1182,16 +1172,11 @@ BEGIN
     INSERT INTO master.address_link (
         tenant_id, owner_type, owner_id, address_id, purpose,
         is_primary, effective_from, metadata, created_by
-    ) VALUES
-    (v_tenant_id, 'business_partner', v_nic_bp_id, v_nic_addr_id, 'legal',
-     true, '2015-09-01'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_nic_bp_id, v_nic_addr_id, 'default',
-     true, '2015-09-01'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_nic_bp_id, v_nic_addr_id, 'remittance',
-     true, '2024-01-01'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys)
+    ) VALUES (
+        v_tenant_id, 'business_partner', v_nic_bp_id, v_nic_addr_id, 'default',
+        true, '2015-09-01'::date,
+        '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
+    )
     ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Supplier SUP-ATHQ-NIC-001 seeded (id=%)', v_nic_id;
@@ -1381,16 +1366,16 @@ BEGIN
             is_primary, is_verified, verified_at, metadata, status, created_by
         ) VALUES
         (v_tenant_id, 'business_partner', v_aeh_bp_id, 'email',
-         's.aldhaheri@aeh.ae', 'notification',
+         's.aldhaheri@aeh.ae', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_aeh_bp_id, 'phone',
-         '+97124556789', 'notification',
+         '+97124556789', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_aeh_bp_id, 'email',
-         'ar@aeh.ae', 'billing',
-         true, true, now(),
+         'ar@aeh.ae', 'default',
+         false, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
@@ -1482,19 +1467,11 @@ BEGIN
     INSERT INTO master.address_link (
         tenant_id, owner_type, owner_id, address_id, purpose,
         is_primary, effective_from, metadata, created_by
-    ) VALUES
-    (v_tenant_id, 'business_partner', v_aeh_bp_id, v_aeh_addr_id, 'legal',
-     true, '2010-07-01'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_aeh_bp_id, v_aeh_addr_id, 'default',
-     true, '2010-07-01'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_aeh_bp_id, v_aeh_addr_id, 'billing',
-     true, '2010-07-01'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_aeh_bp_id, v_aeh_addr_id, 'statements',
-     true, '2010-07-01'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys)
+    ) VALUES (
+        v_tenant_id, 'business_partner', v_aeh_bp_id, v_aeh_addr_id, 'default',
+        true, '2010-07-01'::date,
+        '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
+    )
     ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Customer CUS-ATHQ-AEH-001 seeded (id=%)', v_aeh_id;
@@ -1649,16 +1626,16 @@ BEGIN
             is_primary, is_verified, verified_at, metadata, status, created_by
         ) VALUES
         (v_tenant_id, 'business_partner', v_qnp_bp_id, 'email',
-         'a.althani@qnp.qa', 'notification',
+         'a.althani@qnp.qa', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_qnp_bp_id, 'phone',
-         '+97444123456', 'notification',
+         '+97444123456', 'default',
          true, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_qnp_bp_id, 'email',
-         'finance@qnp.qa', 'billing',
-         true, true, now(),
+         'finance@qnp.qa', 'default',
+         false, true, now(),
          '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, 'active', v_sys)
         ON CONFLICT DO NOTHING;
     END IF;
@@ -1750,19 +1727,11 @@ BEGIN
     INSERT INTO master.address_link (
         tenant_id, owner_type, owner_id, address_id, purpose,
         is_primary, effective_from, metadata, created_by
-    ) VALUES
-    (v_tenant_id, 'business_partner', v_qnp_bp_id, v_qnp_addr_id, 'legal',
-     true, '2002-01-15'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_qnp_bp_id, v_qnp_addr_id, 'default',
-     true, '2002-01-15'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_qnp_bp_id, v_qnp_addr_id, 'billing',
-     true, '2002-01-15'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_qnp_bp_id, v_qnp_addr_id, 'mailing',
-     true, '2002-01-15'::date,
-     '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys)
+    ) VALUES (
+        v_tenant_id, 'business_partner', v_qnp_bp_id, v_qnp_addr_id, 'default',
+        true, '2002-01-15'::date,
+        '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
+    )
     ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Customer CUS-ATHQ-QNP-001 seeded (id=%)', v_qnp_id;

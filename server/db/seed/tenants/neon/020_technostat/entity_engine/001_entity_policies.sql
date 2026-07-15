@@ -5,7 +5,7 @@
 -- Schema:   control.entity_policy
 -- Purpose:  Seed one entity_policy per system-owned master.*, document.*, and log.* entity for
 --           Technostat. Uses safe defaults (default_deny / audit enabled).
--- Depends:  003_technostat_production_seed.sql, seed/platform/004_entity_engine/
+-- Depends:  003_technostat_production_seed.sql, seed/platform/003_control/
 -- Idempotent: Yes — ON CONFLICT (tenant_id, entity_id, entity_version_id) DO NOTHING
 -- ============================================================================
 

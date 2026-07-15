@@ -31,6 +31,43 @@ export function readEffectivePermissionContext(
     | undefined;
 }
 
+export class EffectivePermissionContextMismatchError extends Error {
+  readonly code = "AUTH_CONTEXT_MISMATCH";
+  readonly status = 403;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "EffectivePermissionContextMismatchError";
+  }
+}
+
+/**
+ * Reuse the request's permission snapshot when it already matches the verified
+ * resolver input, otherwise build it once. An existing mismatched snapshot is
+ * rejected rather than silently replaced.
+ */
+export async function ensureEffectivePermissionContext(
+  res: Response,
+  registry: PermissionResolverRegistry,
+  input: ResolverInput,
+): Promise<EffectivePermissionContext> {
+  const existing = readEffectivePermissionContext(res);
+  if (existing) {
+    if (existing.planeKey !== input.planeKey
+      || existing.tenantId !== input.tenantId
+      || existing.principalId !== input.principalId) {
+      throw new EffectivePermissionContextMismatchError(
+        "Existing permission context does not match the verified request identity.",
+      );
+    }
+    return existing;
+  }
+
+  const context = await buildEffectivePermissionContext(registry, input);
+  (res.locals as Record<string, unknown>)["effectivePermissionContext"] = context;
+  return context;
+}
+
 export interface PermissionContextMiddlewareDeps {
   registry: PermissionResolverRegistry;
   /**
@@ -67,8 +104,7 @@ export function createPermissionContextMiddleware(
         return;
       }
 
-      const ctx = await buildEffectivePermissionContext(registry, input);
-      (res.locals as Record<string, unknown>)["effectivePermissionContext"] = ctx;
+      const ctx = await ensureEffectivePermissionContext(res, registry, input);
       onResolved?.(ctx, req);
       next();
     } catch (err) {

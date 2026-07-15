@@ -1,6 +1,6 @@
-# Entity Field Definition — `control.entity_field`
+# Entity Field Definition â€” `control.entity_field`
 
-`control.entity_field` is the single store for every field definition in the platform — canonical standard fields, version-specific fields, and tenant custom fields. Seeded in `server/db/seed/platform/003_control/042_entity_field.sql`.
+`control.entity_field` is the single store for every field definition in the platform â€” canonical standard fields, version-specific fields, and tenant custom fields. Seeded in `server/db/seed/platform/003_control/042_control_entity_field_contract.sql`.
 
 ---
 
@@ -10,18 +10,18 @@ The same table serves three distinct roles, discriminated by `entity_version_id`
 
 | Role | `entity_version_id` | `origin` | `column_name` prefix | Description |
 |---|---|---|---|---|
-| **Canonical / standard field** | `IS NULL` | `system` or `standard` | any | Global field dictionary — shared across entity classes. Replaces `control.entity_canonical_field`. |
+| **Canonical / standard field** | `IS NULL` | `system` or `standard` | any | Global field dictionary â€” shared across entity classes. Replaces `control.entity_canonical_field`. |
 | **Version-specific field** | `IS NOT NULL` | any | any | Field on a specific entity version. Compiled into the runtime descriptor. |
 | **Custom tenant field** | `IS NOT NULL` | `business` | `cus_` | Tenant-provisioned column added by `ALTER TABLE ADD COLUMN`. Replaces `control.field_extension`. |
 
 > **Partial unique indexes** (not inline constraints) enforce name uniqueness per role:
-> - `ef_canonical_name_uidx` — unique `name` where `entity_version_id IS NULL`
-> - `ef_version_name_uidx` — unique `(entity_version_id, name)` where `entity_version_id IS NOT NULL`
+> - `ef_canonical_name_uidx` â€” unique `name` where `entity_version_id IS NULL`
+> - `ef_version_name_uidx` â€” unique `(entity_version_id, name)` where `entity_version_id IS NOT NULL`
 > Both defined in `server/db/ddl/07_indexes/016_entity_engine.sql`.
 
 ---
 
-## Table: `control.entity_field` — All Columns
+## Table: `control.entity_field` â€” All Columns
 
 ### Identity
 
@@ -29,7 +29,7 @@ The same table serves three distinct roles, discriminated by `entity_version_id`
 |---|---|---|---|
 | `id` | `uuid PK` | `shared.uuidv7()` | |
 | `tenant_id` | `uuid` | `NULL` | `NULL` for canonical/standard fields; NOT NULL for tenant-scoped fields |
-| `entity_version_id` | `uuid` | `NULL` | Discriminator — `NULL` = canonical field; `NOT NULL` = version field |
+| `entity_version_id` | `uuid` | `NULL` | Discriminator â€” `NULL` = canonical field; `NOT NULL` = version field |
 
 ---
 
@@ -37,10 +37,10 @@ The same table serves three distinct roles, discriminated by `entity_version_id`
 
 | Column | Type | Default | Notes |
 |---|---|---|---|
-| `name` | `text NOT NULL` | — | Logical field name (e.g. `document_no`, `supplier_id`) |
+| `name` | `text NOT NULL` | â€” | Logical field name (e.g. `document_no`, `supplier_id`) |
 | `column_name` | `text NOT NULL` | `''` | Physical DB column name (empty for virtual/computed fields) |
-| `label` | `text` | — | Display label shown in form headers and grid columns |
-| `description` | `text` | — | Admin description in Metadata Studio |
+| `label` | `text` | â€” | Display label shown in form headers and grid columns |
+| `description` | `text` | â€” | Admin description in Metadata Studio |
 
 ---
 
@@ -59,13 +59,13 @@ The same table serves three distinct roles, discriminated by `entity_version_id`
 
 | Column | Type | Default | Allowed Values |
 |---|---|---|---|
-| `cardinality` | `text NOT NULL` | `one` | `one` · `many` · `zero_or_one` |
-| `origin` | `text NOT NULL` | `business` | `system` · `standard` · `business` |
+| `cardinality` | `text NOT NULL` | `one` | `one` Â· `many` Â· `zero_or_one` |
+| `origin` | `text NOT NULL` | `business` | `system` Â· `standard` Â· `business` |
 
 **Origin semantics:**
-- `system` — injected by the platform engine (e.g. `tenant_id`, `status`, `created_at`)
-- `standard` — canonical cross-entity field (e.g. `description`, `reference_no`)
-- `business` — entity-specific business field; custom tenant fields use `business` with `cus_` column prefix
+- `system` â€” injected by the platform engine (e.g. `tenant_id`, `status`, `created_at`)
+- `standard` â€” canonical cross-entity field (e.g. `description`, `reference_no`)
+- `business` â€” entity-specific business field; custom tenant fields use `business` with `cus_` column prefix
 
 ---
 
@@ -77,7 +77,7 @@ Auto-set by `trg_field_flag_defaults` from `entity_class_profile.field_flag_rule
 |---|---|---|---|
 | `is_required` | `boolean` | `false` | Field is mandatory on create/edit |
 | `is_unique` | `boolean` | `false` | Value must be unique (with `unique_scope`) |
-| `unique_scope` | `text` | `NULL` | `global` · `tenant` · `entity_instance` (required when `is_unique = true`) |
+| `unique_scope` | `text` | `NULL` | `global` Â· `tenant` Â· `entity_instance` (required when `is_unique = true`) |
 | `is_searchable` | `boolean` | `false` | Included in full-text search index |
 | `is_filterable` | `boolean` | `false` | Exposed in the filter drawer |
 | `is_sortable` | `boolean` | `false` | Sortable in grid columns |
@@ -85,7 +85,7 @@ Auto-set by `trg_field_flag_defaults` from `entity_class_profile.field_flag_rule
 | `is_aggregatable` | `boolean` | `false` | Available for SUM/COUNT aggregation |
 | `is_read_only` | `boolean` | `false` | Always displayed but never editable |
 | `is_deprecated` | `boolean` | `false` | Hidden from UI; still accessible via API |
-| `is_computed` | `boolean` | `false` | Value is derived — must have `compute_mode` |
+| `is_computed` | `boolean` | `false` | Value is derived â€” must have `compute_mode` |
 | `is_write_once` | `boolean` | `false` | Can only be written on CREATE; immutable after |
 | `is_active` | `boolean` | `true` | Manual active flag (not GENERATED) |
 
@@ -120,7 +120,7 @@ Auto-set by `trg_field_flag_defaults` from `entity_class_profile.field_flag_rule
 | Column | Type | Default | Notes |
 |---|---|---|---|
 | `applies_to_classes` | `text[]` | `{}` | Which entity classes this canonical field applies to |
-| `synonym_cluster` | `text` | — | Cluster identifier for field synonyms (e.g. `name_cluster`) |
+| `synonym_cluster` | `text` | â€” | Cluster identifier for field synonyms (e.g. `name_cluster`) |
 | `is_required_default` | `boolean` | `false` | Default `is_required` when this canonical field is added to an entity |
 | `is_filterable_default` | `boolean` | `false` | Default `is_filterable` when added to an entity |
 
@@ -140,7 +140,7 @@ Auto-set by `trg_field_flag_defaults` from `entity_class_profile.field_flag_rule
 | Column | Type | Default | Notes |
 |---|---|---|---|
 | `sort_order` | `smallint` | `0` | Display order within a field group or form section |
-| `group_key` | `text` | — | FK to `control.field_group.group_key`; format `^[a-z][a-z0-9_]*$` |
+| `group_key` | `text` | â€” | FK to `control.field_group.group_key`; format `^[a-z][a-z0-9_]*$` |
 
 ---
 
@@ -185,13 +185,13 @@ Source: `control.lookup_value WHERE domain_code = 'entity_field.data_type'`
 
 ## JSONB Config Properties
 
-Each JSONB column has a contract definition in `packages/shared/api-contracts/src/schemas/field-contract-registry-core.ts` and a Zod schema in `packages/shared/api-contracts/src/schemas/metadata.ts`.
+Each JSONB column has a contract definition in `packages/shared/data-integration/api-contracts/src/schemas/field-contract-registry-core.ts` and a Zod schema in `packages/shared/data-integration/api-contracts/src/schemas/metadata.ts`.
 
 ---
 
-### `reference_config` — Reference / FK Target
+### `reference_config` â€” Reference / FK Target
 
-Owner: `value_semantics` · Compile target: `client_stripped`
+Owner: `value_semantics` Â· Compile target: `client_stripped`
 
 Used when `data_type = 'reference'` or `data_type = 'uuid'` with a FK target.
 
@@ -232,9 +232,9 @@ Used when `data_type = 'reference'` or `data_type = 'uuid'` with a FK target.
 
 ---
 
-### `enum_config` — Inline Enum Values (Grandfathered)
+### `enum_config` â€” Inline Enum Values (Grandfathered)
 
-Owner: `value_semantics` · Phase: `grandfathered` · New authoring should use `enum_domain_code`.
+Owner: `value_semantics` Â· Phase: `grandfathered` Â· New authoring should use `enum_domain_code`.
 
 ```json
 { "values": ["DRAFT", "SUBMITTED", "APPROVED"], "options": [{"value": "DRAFT", "label": "Draft"}] }
@@ -242,9 +242,9 @@ Owner: `value_semantics` · Phase: `grandfathered` · New authoring should use `
 
 **Preferred approach:** set `enum_domain_code` to a `control.lookup_domain.code` instead of embedding values inline.
 
-### `enum_domain_code` — Lookup Domain Reference
+### `enum_domain_code` â€” Lookup Domain Reference
 
-Text FK to `control.lookup_domain(code)`. Mutually exclusive with `enum_config` — CHECK constraint `ef_enum_xor_chk` enforces this.
+Text FK to `control.lookup_domain(code)`. Mutually exclusive with `enum_config` â€” CHECK constraint `ef_enum_xor_chk` enforces this.
 
 ---
 
@@ -254,32 +254,32 @@ Text FK to `control.lookup_domain(code)`. Mutually exclusive with `enum_config` 
 |---|---|---|
 | `fk_target_entity_id` | `uuid` | FK to `control.entity.id` for the referenced entity |
 | `fk_target_field` | `text` | Target column name |
-| `fk_on_delete` | `text` | `restrict` · `cascade` · `set_null` · `set_default` · `no_action` |
+| `fk_on_delete` | `text` | `restrict` Â· `cascade` Â· `set_null` Â· `set_default` Â· `no_action` |
 | `fk_on_update` | `text` | Same values as `fk_on_delete` |
 | `fk_relationship_class` | `text` | Relationship category hint for UI graph rendering |
 
 ---
 
-### `money_config` — Monetary Value Semantics
+### `money_config` â€” Monetary Value Semantics
 
-Owner: `value_semantics` · Compile target: `client_stripped`
+Owner: `value_semantics` Â· Compile target: `client_stripped`
 
 Used when `data_type = 'money'`.
 
 | Key | Type | Description |
 |---|---|---|
-| `currency_source` | `string` | `field` · `header` · `constant` · `tenant` · `system` |
+| `currency_source` | `string` | `field` Â· `header` Â· `constant` Â· `tenant` Â· `system` |
 | `currency_field` | `string` | Field on the same record holding the currency code (when `currency_source = 'field'`) |
 | `currency_code` | `string` | Fixed ISO 4217 code (when `currency_source = 'constant'`) |
-| `currency_code_position` | `string` | `prefix` · `suffix` · `hidden` |
-| `minor_units` | `number` | Decimal places for this currency (0–6) |
+| `currency_code_position` | `string` | `prefix` Â· `suffix` Â· `hidden` |
+| `minor_units` | `number` | Decimal places for this currency (0â€“6) |
 | `fallback_minor_units` | `number` | Used when currency not resolved |
 
 ---
 
-### `filter_config` — Filter Drawer Integration
+### `filter_config` â€” Filter Drawer Integration
 
-Owner: `presentation` · Compile target: `client`
+Owner: `presentation` Â· Compile target: `client`
 
 Drives the filter panel in `runtime-list`.
 
@@ -299,11 +299,18 @@ Drives the filter panel in `runtime-list`.
 
 ---
 
-### `ui_hint` — Display Hints
+### `ui_hint` â€” Display Hints
 
-Owner: `presentation` · Compile target: `client_stripped`
+Owner: `presentation` Â· Compile target: `client_stripped`
 
 Controls visual presentation in forms, grids, and read-only views.
+
+Mode/surface-specific layout should be authored in
+`control.entity_field_surface`, not as new `ui_hint` keys. Keep `ui_hint` for
+field-local hints that are valid across modes, such as placeholder, tooltip,
+input mode, prefix/suffix, and copy behavior. During migration,
+`ui_hint.display.hide_in` remains a compatibility input that the compiler can
+project into surface-specific field visibility.
 
 | Key | Type | Description |
 |---|---|---|
@@ -323,16 +330,16 @@ Controls visual presentation in forms, grids, and read-only views.
 | `autocomplete` | `string` | HTML `autocomplete` attribute |
 
 **Deprecated keys** (normalized at compile time, removed during migration):
-- `filter` → `filter_config`
-- `copy_behavior` → `ui_hint.copy.behavior`
-- `group_key` → top-level `group_key` column
-- `visible_when` → `ui_hint.display.visible_when`
+- `filter` â†’ `filter_config`
+- `copy_behavior` â†’ `ui_hint.copy.behavior`
+- `group_key` â†’ top-level `group_key` column
+- `visible_when` â†’ `ui_hint.display.visible_when`
 
 ---
 
-### `visibility` — Dynamic Visibility Rules
+### `visibility` â€” Dynamic Visibility Rules
 
-Owner: `presentation` · Compile target: `client`
+Owner: `presentation` Â· Compile target: `client`
 
 JSONLogic expression evaluated against the current record state to show/hide the field.
 
@@ -340,13 +347,13 @@ JSONLogic expression evaluated against the current record state to show/hide the
 { "and": [{ "!": [{ "var": "is_intercompany" }] }] }
 ```
 
-Evaluated by `packages/shared/runtime-shared/src/meta-entity/field-visibility.ts`.
+Evaluated by `packages/shared/runtime-domain/runtime-shared/src/meta-entity/field-visibility.ts`.
 
 ---
 
-### `editability` — Edit Rules
+### `editability` â€” Edit Rules
 
-Owner: `authorization` · Compile target: `client`
+Owner: `authorization` Â· Compile target: `client`
 
 | Key | Type | Description |
 |---|---|---|
@@ -362,9 +369,9 @@ Also enforced server-side by `server/packages/services/records/routes/entity-mut
 
 ---
 
-### `lookup_config` — Lookup Behavior
+### `lookup_config` â€” Lookup Behavior
 
-Owner: `lookup` · Compile target: `client_stripped`
+Owner: `lookup` Â· Compile target: `client_stripped`
 
 Controls static filters and dependent (cascading) lookups for `reference` and `enum` fields.
 
@@ -373,18 +380,101 @@ Controls static filters and dependent (cascading) lookups for `reference` and `e
 | `filters` | `object` | Static filter applied to every lookup request: `{"is_active": true}` |
 | `dependent_filter.source_field` | `string` | Field on the same record whose value drives the filter |
 | `dependent_filter.target_field` | `string` | Field on the target entity to filter by |
-| `dependent_filter.empty_behavior` | `string` | `none` (return nothing) · `all` (return all) when source is empty |
+| `dependent_filter.empty_behavior` | `string` | `none` (return nothing) Â· `all` (return all) when source is empty |
 | `dependent_filter.through_entity` | `string` | Intermediate entity for a join-based dependent filter |
-| `value_case` | `string` | `preserve` · `upper` · `lower` |
+| `value_case` | `string` | `preserve` Â· `upper` Â· `lower` |
 | `value_label_map` | `{[value]: label}` | Display label overrides for specific values |
 
-**Deprecated aliases:** `depends_on` → `dependent_filter`, `dependency` → `dependent_filter`
+**Deprecated aliases:** `depends_on` â†’ `dependent_filter`, `dependency` â†’ `dependent_filter`
+
+> **Pairing rule:** every field with `dependent_filter` MUST declare an
+> `on_source_change` rule in `defaults` covering the same `source_field`.
+> CI-enforced by `server/scripts/verify-cascade-rule-coverage.ts`. See
+> [`defaults`](#defaults--cascade-and-on_source_change) below.
 
 ---
 
-### `validation` — Scalar Validation Rules
+### `defaults` â€” Cascade and `on_source_change`
 
-Owner: `validation` · Compile target: `client`
+Owner: `cascade` Â· Compile target: `client`
+
+Drives the cascade system: parent-row inheritance (header â†’ line), same-row
+field dependencies (`on_source_change`), and UI override-detection labels.
+Consumed by `@athyper/cascade` in the form runtime and the BFF projection.
+
+Full grammar: [docs/specs/entity_field_defaults.md](../specs/entity_field_defaults.md).
+
+| Key | Type | Description |
+|---|---|---|
+| `default_value_source` | `object` | Parent-row default fill (kind: `parent_field` \| `tenant_config` \| `supplier_config` \| `static`) |
+| `override_detection` | `object` | UI label config (`compare_to`, `label_when_inherited`, `label_when_overridden`) |
+| `on_parent_change` | `string` | Parent-row change behavior: `preserve` Â· `prompt` Â· `inherit` Â· `recompute` |
+| `on_source_change` | `array` | Same-row field-dependency rules (see below) |
+| `ui_affordance` | `object` | `show_reset_to_default`, `show_inheritance_chip`, `chip_position` |
+
+#### `on_source_change[]` â€” Same-row field dependency rules
+
+| Key | Type | Description |
+|---|---|---|
+| `sources` | `string[]` | Source field names on the same row that trigger this rule |
+| `action` | `string` | `clear` Â· `rederive` Â· `refilter` Â· `validate` Â· `warn` Â· `lock` |
+| `layers` | `string[]` | One or more of `client_on_change`, `bff_on_load_hydrate`, `server_on_save` |
+| `when` | `object` | Optional predicate: `source_changed`, `source_value_in`, `target_was_user_overridden`, `status_in` |
+| `resolver` | `string` | Required when `action="rederive"` â€” typed code (see [resolver registry](../specs/source-change-resolver-registry.md)) |
+| `mode` | `string` | For `rederive`: `if_empty_or_derived` (default) \| `always` |
+| `message` | `string` | UI text for warn/error surfacing |
+
+The owning `entity_field` row IS the target â€” there is no `target` key in
+storage. The pure evaluator (`@athyper/cascade/source-change`) emits intents
+with an explicit `target` for caller convenience.
+
+**Action Ã— layer matrix** and **stale-submit behavior** are defined in
+[entity_field_defaults.md Â§5â€“Â§6](../specs/entity_field_defaults.md). The
+server enforces Â§6 deterministically â€” no config flags.
+
+**Example (PI Remit-To address, clear-on-supplier-change):**
+
+```jsonc
+{
+  "on_source_change": [
+    {
+      "sources": ["supplier_id"],
+      "action":  "clear",
+      "layers":  ["client_on_change", "server_on_save"],
+      "message": "Cleared because supplier changed"
+    }
+  ]
+}
+```
+
+**Example (rederive + warn-if-overridden pair for payment term):**
+
+```jsonc
+{
+  "on_source_change": [
+    {
+      "sources":  ["supplier_id"],
+      "action":   "rederive",
+      "mode":     "if_empty_or_derived",
+      "resolver": "supplier.default_payment_term",
+      "layers":   ["client_on_change"]
+    },
+    {
+      "sources": ["supplier_id"],
+      "action":  "warn",
+      "layers":  ["client_on_change"],
+      "when":    { "target_was_user_overridden": true },
+      "message": "Supplier changed â€” verify payment term"
+    }
+  ]
+}
+```
+
+---
+
+### `validation` â€” Scalar Validation Rules
+
+Owner: `validation` Â· Compile target: `client`
 
 | Key | Type | Description |
 |---|---|---|
@@ -398,9 +488,9 @@ Owner: `validation` · Compile target: `client`
 
 ---
 
-### `constraints` — DB-Level Constraints
+### `constraints` â€” DB-Level Constraints
 
-Owner: `validation` · Compile target: `client`
+Owner: `validation` Â· Compile target: `client`
 
 | Key | Type | Description |
 |---|---|---|
@@ -415,19 +505,19 @@ Owner: `validation` · Compile target: `client`
 
 ### `default_value`
 
-Owner: `value_semantics` · Compile target: `client`
+Owner: `value_semantics` Â· Compile target: `client`
 
 Type-aware default value for new records. Can be any JSON value matching the field's `data_type`. Rendered by the edit form as the pre-filled value on new-record creation.
 
 ---
 
-### `json_config` — JSON/JSONB Shape Hints
+### `json_config` â€” JSON/JSONB Shape Hints
 
 Used for `data_type = 'json'` or `'jsonb'` fields. Documents the expected shape for the JSON editor.
 
 ---
 
-### `datetime_config` — Date/Time Display Config
+### `datetime_config` â€” Date/Time Display Config
 
 Used for `data_type = 'date'`, `'datetime'`, or `'timestamptz'` fields. Controls timezone display, relative labels, calendar constraints.
 
@@ -443,7 +533,7 @@ Used for `data_type = 'date'`, `'datetime'`, or `'timestamptz'` fields. Controls
 
 ---
 
-## Runtime Field Contract — `MetaEntityField`
+## Runtime Field Contract â€” `MetaEntityField`
 
 Produced at compile time and served from the descriptor cache.
 
@@ -491,18 +581,18 @@ Produced at compile time and served from the descriptor cache.
 }
 ```
 
-### `optionSource` — Dynamic Option Resolution
+### `optionSource` â€” Dynamic Option Resolution
 
 Discriminated union on `kind`:
 
 | Kind | When Used | Key Fields |
 |---|---|---|
-| `none` | No options | — |
+| `none` | No options | â€” |
 | `static` | Inline options array | `options: [{value, label}]` |
 | `lookup` | Lookup domain dropdown | `domainCode`, `valueField`, `ownershipMode` |
 | `reference` | FK reference picker | `entity`, `valueField`, `labelField`, `scopeMode` |
 
-### `editor` — Edit Control Config
+### `editor` â€” Edit Control Config
 
 ```ts
 {
@@ -514,7 +604,7 @@ Discriminated union on `kind`:
 }
 ```
 
-### `display` — Read-Only Renderer Config
+### `display` â€” Read-Only Renderer Config
 
 ```ts
 {
@@ -535,13 +625,13 @@ Logical UI sections that group canonical fields into form panels. Renamed from `
 
 | Column | Type | Default | Notes |
 |---|---|---|---|
-| `group_key` | `text PK` | — | Format `^[a-z][a-z0-9_]*$` (e.g. `identity`, `financial`, `governance`) |
-| `label` | `text NOT NULL` | — | Section heading |
-| `description` | `text` | — | Admin description |
+| `group_key` | `text PK` | â€” | Format `^[a-z][a-z0-9_]*$` (e.g. `identity`, `financial`, `governance`) |
+| `label` | `text NOT NULL` | â€” | Section heading |
+| `description` | `text` | â€” | Admin description |
 | `applies_to_classes` | `text[]` | `{}` | Which entity classes use this group |
 | `sort_order` | `smallint` | `0` | Section order in the form |
 | `columns` | `smallint` | `3` | Field grid column count: `1`, `2`, or `3` |
-| `page_span` | `text` | `half` | Print mode: `half` (participates in left/right split) · `full` (spans the page) |
+| `page_span` | `text` | `half` | Print mode: `half` (participates in left/right split) Â· `full` (spans the page) |
 
 **Consumed by:** `FieldsRenderer` (form layout) and `EntityPrintTemplate` (print layout).
 
@@ -573,11 +663,11 @@ FK/join relationship declarations per entity version. Renamed from `association.
 | `tenant_id` | `uuid` | | `NULL` = platform-global |
 | `entity_version_id` | `uuid NOT NULL` | | FK to the owning entity version |
 | `name` | `text NOT NULL` | | Relation identifier (unique per version) |
-| `relation_kind` | `text NOT NULL` | | `belongs_to` · `has_many` · `m2m` |
+| `relation_kind` | `text NOT NULL` | | `belongs_to` Â· `has_many` Â· `m2m` |
 | `target_entity` | `text NOT NULL` | | `entity_code` of the related entity |
 | `fk_field` | `text` | | FK column on this entity (for `belongs_to`) or on the target (for `has_many`) |
 | `target_key` | `text NOT NULL` | `id` | Column on the target entity the FK points to |
-| `on_delete` | `text NOT NULL` | `restrict` | `restrict` · `cascade` · `set_null` · `set_default` · `no_action` |
+| `on_delete` | `text NOT NULL` | `restrict` | `restrict` Â· `cascade` Â· `set_null` Â· `set_default` Â· `no_action` |
 | `ui_behavior` | `jsonb` | `{}` | Runtime display hints: `{display_mode: "table", can_navigate: true}` |
 | `created_at`, `created_by`, `updated_at`, `updated_by` | standard | |
 
@@ -587,8 +677,8 @@ FK/join relationship declarations per entity version. Renamed from `association.
 
 | Kind | Description |
 |---|---|
-| `belongs_to` | Many-to-one: this entity holds the FK (e.g. `journal_line.journal_entry_id → journal_entry`) |
-| `has_many` | One-to-many: target entity holds the FK (e.g. `journal_entry → journal_line`) |
+| `belongs_to` | Many-to-one: this entity holds the FK (e.g. `journal_line.journal_entry_id â†’ journal_entry`) |
+| `has_many` | One-to-many: target entity holds the FK (e.g. `journal_entry â†’ journal_line`) |
 | `m2m` | Many-to-many via a junction table |
 
 ---
@@ -603,9 +693,9 @@ Access, audit, and retention policy per entity (or entity version). Moved from `
 | `tenant_id` | `uuid NOT NULL` | | |
 | `entity_id` | `uuid NOT NULL` | | FK to `control.entity` |
 | `entity_version_id` | `uuid` | `NULL` | `NULL` = applies to all versions |
-| `access_mode` | `text NOT NULL` | `default_deny` | `default_deny` · `default_allow` · `explicit` |
-| `company_scope_mode` | `text NOT NULL` | `none` | Row-scope axis: `none` · `single` · `subtree` · `full` |
-| `audit_mode` | `text NOT NULL` | `enabled` | `enabled` · `disabled` · `sampling` |
+| `access_mode` | `text NOT NULL` | `default_deny` | `default_deny` Â· `default_allow` Â· `explicit` |
+| `company_scope_mode` | `text NOT NULL` | `none` | Row-scope axis: `none` Â· `single` Â· `subtree` Â· `full` |
+| `audit_mode` | `text NOT NULL` | `enabled` | `enabled` Â· `disabled` Â· `sampling` |
 | `retention_policy` | `jsonb` | `{}` | `{retention_days: 2555, legal_hold_eligible: true}` |
 | `default_filters` | `jsonb` | `{}` | Default query filters applied to all reads: `{"is_active": true}` |
 | `cache_flags` | `jsonb` | `{}` | Cache control hints: `{ttl_seconds: 300, vary_by_company: true}` |
@@ -637,15 +727,15 @@ PII classification and field-level masking policies. Applied after row-level fil
 | `tenant_id` | `uuid NOT NULL` | | |
 | `entity_id` | `uuid NOT NULL` | | FK to `control.entity` |
 | `field_path` | `text NOT NULL` | | Field name or JSON path (e.g. `tax_id`, `address.line1`) |
-| `policy_type` | `text NOT NULL` | | `read` · `write` · `mask` · `redact` |
+| `policy_type` | `text NOT NULL` | | `read` Â· `write` Â· `mask` Â· `redact` |
 | `role_list` | `text[]` | `{}` | Roles exempt from masking |
 | `abac_condition` | `jsonb` | | Attribute-based condition (JSONLogic) |
 | `mask_strategy` | `text NOT NULL` | `null` | See below |
 | `mask_config` | `jsonb` | `{}` | Strategy-specific config |
-| `scope` | `text NOT NULL` | `global` | `global` · `module` · `tenant` |
+| `scope` | `text NOT NULL` | `global` | `global` Â· `module` Â· `tenant` |
 | `scope_ref` | `text` | | Scope reference value |
 | `priority` | `smallint` | `100` | Lower fires first when multiple policies match |
-| `pii_classification` | `text` | | `none` · `quasi` · `direct` · `sensitive` · `special_category` |
+| `pii_classification` | `text` | | `none` Â· `quasi` Â· `direct` Â· `sensitive` Â· `special_category` |
 | `privacy_metadata` | `jsonb` | `{}` | GDPR/regulatory metadata for compliance reporting |
 | `version` | `integer` | `1` | Policy version for audit trail |
 | `is_active` | `boolean` | `true` | Manual active flag |
@@ -675,7 +765,7 @@ Tenant customisation sets applied on top of a base entity version to produce a t
 | `base_entity_id` | `uuid NOT NULL` | | FK to base `control.entity` |
 | `base_version_id` | `uuid` | | Target base version (`NULL` = latest effective) |
 | `priority` | `integer` | `100` | Stacking precedence when multiple overlays apply |
-| `conflict_mode` | `text` | `fail` | `fail` · `overwrite` · `merge` |
+| `conflict_mode` | `text` | `fail` | `fail` Â· `overwrite` Â· `merge` |
 | `version` | `integer` | `1` | Internal version counter |
 | `is_active` | `boolean` | `true` | |
 
@@ -736,10 +826,10 @@ interface PropertyContractDefinition {
 ```
 
 `compileTarget` determines what is included in the compiled descriptor served to clients:
-- `client` — included in full
-- `client_stripped` — included but sensitive keys stripped before serialization
-- `server_only` — never sent to client
-- `omit` — not compiled into the descriptor
+- `client` â€” included in full
+- `client_stripped` â€” included but sensitive keys stripped before serialization
+- `server_only` â€” never sent to client
+- `omit` â€” not compiled into the descriptor
 
 ---
 
@@ -747,12 +837,12 @@ interface PropertyContractDefinition {
 
 | Seed File | Coverage |
 |---|---|
-| `003_control/040_entity.sql` | All ~111 system entity registrations |
-| `003_control/042_entity_field.sql` | Schema-derived field registrations + curated overrides |
+| `003_control/040_control_entity_contract.sql` | All ~111 system entity registrations |
+| `003_control/042_control_entity_field_contract.sql` | Schema-derived field registrations + curated overrides |
 | `003_control/042c_entity_field_data_type_fix.sql` | Data type corrections |
-| `003_control/045_entity_field_data_type_normalization.sql` | Normalization pass |
+| `003_control/045_control_entity_field_data_type_normalization_contract.sql` | Normalization pass |
 | `003_control/049_entity_flow_field.sql` | Flow engine field registrations |
-| `003_control/010_entity_class_profile.sql` | 11 class profiles with `field_flag_rules` |
+| `003_control/010_control_entity_class_profile_contract.sql` | 11 class profiles with `field_flag_rules` |
 
 ---
 
@@ -763,3 +853,5 @@ interface PropertyContractDefinition {
 - [Lifecycle Engine](./lifecycle.md)
 - [Policy Engine](./policy.md)
 - [Entity Operations](./entity-operations.md)
+
+

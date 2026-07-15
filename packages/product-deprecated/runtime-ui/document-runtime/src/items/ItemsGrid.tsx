@@ -4,7 +4,7 @@ import React, { useLayoutEffect, useRef, useState } from "react";
 import { FileText, RotateCcw, X } from "lucide-react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "@athyper/theme/utils";
-import { useEditSessionContext } from "@athyper/content-ui";
+import { useEditDraftContext } from "@athyper/content-ui";
 import type { AccountingDistribution, DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import {
@@ -294,10 +294,10 @@ export function ItemsGrid({
   // deletes so the user can see what will be committed on Save without
   // scrolling away or opening detail sheets.
   //
-  // Returns `null` outside an EditSessionProvider OR when the provider value
+  // Returns `null` outside an EditDraftProvider OR when the provider value
   // is `null` (object-page mode but not actively editing). Classic-tabs and
   // read-only renders see no behavior change.
-  const editSession = useEditSessionContext();
+  const editSession = useEditDraftContext();
   const pendingLineDeletes = editSession?.pendingLineDeletes;
   const pendingLineUpdates = editSession?.pendingLineUpdates;
   const pendingLineCreates = editSession?.pendingLineCreates;

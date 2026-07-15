@@ -111,7 +111,7 @@ export interface ProcessActionParams {
   workItemId: string;
   actorId: string;
   tenantId: string;
-  /** approve | reject | escalate | delegate | acknowledge | flag | read | request_info | comment */
+  /** approve | reject | return | escalate | delegate | acknowledge | flag | read | request_info | comment */
   action: string;
   comment?: string;
   /** Required when action === 'delegate'. */
@@ -122,9 +122,9 @@ export interface ProcessActionParams {
 
 const SYSTEM_ACTOR = "00000000-0000-0000-0000-000000000000";
 const TERMINAL_STATUSES = new Set(["completed", "skipped", "escalated"]);
-const DECISION_ACTIONS = new Set(["approve", "reject"]);
+const DECISION_ACTIONS = new Set(["approve", "reject", "return"]);
 const POSITIVE_DECISIONS = new Set(["approve"]);
-const NEGATIVE_DECISIONS = new Set(["reject"]);
+const NEGATIVE_DECISIONS = new Set(["reject", "return"]);
 const SIDE_EFFECT_ACTIONS = new Set(["acknowledge", "read", "request_info", "flag", "comment", "escalate"]);
 
 // ── Engine ────────────────────────────────────────────────────────────────────
@@ -273,18 +273,51 @@ export class WorkflowEngine {
         { code: 422 },
       );
     }
-    if (!template.compiled_hash) {
-      throw Object.assign(
-        new Error(`TEMPLATE_NOT_COMPILED: '${wfReq.templateCode}' must be compiled before use`),
-        { code: 422 },
-      );
-    }
-
-    const compiledJson = (
+    let compiledJson = (
       typeof template.compiled_json === "string"
         ? JSON.parse(template.compiled_json)
         : template.compiled_json
-    ) as CompiledTemplate;
+    ) as CompiledTemplate | null;
+
+    // Platform seed templates are intentionally stored in normalized stage/rule
+    // tables. Build an immutable request snapshot from those rows when a
+    // precompiled artifact has not been published yet.
+    if (!compiledJson?.stages?.length) {
+      const stageRows = await this.db
+        .selectFrom("control.workflow_template_stage as wts")
+        .select(["wts.id", "wts.stage_no", "wts.name", "wts.mode", "wts.quorum", "wts.sla_policy_id"])
+        .where("wts.workflow_template_id", "=", template.id)
+        .orderBy("wts.stage_no", "asc")
+        .execute();
+      const ruleRows = await this.db
+        .selectFrom("control.workflow_template_rule as wtr")
+        .select(["wtr.stage_no", "wtr.priority", "wtr.conditions", "wtr.assign_to"])
+        .where("wtr.workflow_template_id", "=", template.id)
+        .orderBy("wtr.priority", "asc")
+        .execute();
+      compiledJson = {
+        behaviors: {},
+        stages: stageRows.map((stage) => ({
+          stage_no: Number(stage.stage_no),
+          name: stage.name as string,
+          mode: stage.mode as string,
+          quorum: parseJsonValue(stage.quorum) as CompiledStage["quorum"],
+          sla_policy_id: stage.sla_policy_id as string | null,
+          template_stage_id: stage.id as string,
+          rules: ruleRows
+            .filter((rule) => rule.stage_no == null || Number(rule.stage_no) === Number(stage.stage_no))
+            .map((rule) => ({
+              priority: Number(rule.priority),
+              conditions: parseJsonValue(rule.conditions),
+              assign_to: parseJsonValue(rule.assign_to) as CompiledRule["assign_to"],
+            })),
+        })),
+      };
+    }
+
+    if (!compiledJson.stages.length) {
+      throw Object.assign(new Error(`TEMPLATE_EMPTY: '${wfReq.templateCode}' has no stages`), { code: 422 });
+    }
 
     const behaviors = (
       typeof template.behaviors === "string"
@@ -301,7 +334,7 @@ export class WorkflowEngine {
           workflow_type: wfReq.workflowType ?? "approval",
           workflow_definition_id: wfReq.definitionId,
           workflow_template_id: template.id,
-          template_snapshot: JSON.stringify(compiledJson),
+          template_snapshot: JSON.stringify({ ...compiledJson, behaviors }),
           entity_type: entityType,
           entity_id: entityId,
           entity_version_id: entityVersionId ?? null,
@@ -934,12 +967,30 @@ export class WorkflowEngine {
       .where("id", "=", requestId)
       .execute();
 
+    if (outcome === "rejected") {
+      await (trx.updateTable("event.work_item") as any)
+        .set({
+          status: "skipped",
+          completed_at: new Date(),
+          updated_at: new Date(),
+          updated_by: actorId,
+        })
+        .where("workflow_request_id", "=", requestId)
+        .where("status", "in", ["pending", "assigned", "in_progress"])
+        .execute();
+    }
+
+    const sourceOutcome = outcome === "rejected"
+      && items.some((item) => (item as Record<string, unknown>).decision === "return")
+      ? "returned" as const
+      : outcome;
+
     await this.sourceEntityAdapter.completeWorkflow(trx, {
       tenantId,
       workflowRequestId: requestId,
       entityType,
       entityId: sourceEntityId,
-      outcome,
+      outcome: sourceOutcome,
       actorId,
     });
 
@@ -951,7 +1002,7 @@ export class WorkflowEngine {
       actorId,
       instanceId: requestId,
       toStatus: requestStatus,
-      detail: { outcome, final_stage_no: stageNo },
+      detail: { outcome: sourceOutcome, workflow_outcome: outcome, final_stage_no: stageNo },
     });
   }
 
@@ -1440,7 +1491,7 @@ function readableEntityLabel(entityType: string): string {
 }
 
 function documentNumberFromPayload(payload: Record<string, unknown>, fallback: string): string {
-  for (const key of ["invoice_number", "document_number", "code", "name"]) {
+  for (const key of ["code", "invoice_number", "document_number", "name"]) {
     const value = payload[key];
     if (typeof value === "string" && value.trim()) return value.trim();
   }
@@ -1458,6 +1509,11 @@ function escapeHtml(value: string): string {
 
 function isKyselyTransaction(db: unknown): boolean {
   return (db as { isTransaction?: unknown }).isTransaction === true;
+}
+
+function parseJsonValue(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  try { return JSON.parse(value); } catch { return value; }
 }
 
 async function setTransactionPrincipal(

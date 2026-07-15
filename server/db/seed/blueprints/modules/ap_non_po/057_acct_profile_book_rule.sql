@@ -1,16 +1,6 @@
--- ============================================================================
--- FILE: blueprint/057_acct_profile_book_rule.sql
--- Purpose: Per-book posting behaviour for all AP Non-PO profiles
--- Depends on: control.acct_profile_config (030_acct_profile_configs.sql)
--- Idempotent: ON CONFLICT (profile_config_id, book_code) DO UPDATE
--- ============================================================================
--- Seeds one IFRS MIRROR rule per profile (posting_method = MIRROR).
--- MIRROR = engine generates identical journal entries in the IFRS book as the
--- primary book — no account remapping required for standard IFRS AP treatment.
---
--- Companies running dual books (IFRS + LOCAL_GAAP) add a second row per
--- profile via admin UI or a separate tenant-specific seed file.
--- ============================================================================
+-- One IFRS MIRROR book rule per AP Non-PO profile.
+-- MIRROR = identical JE in IFRS book as primary; no account remapping.
+-- Dual-book tenants (IFRS + LOCAL_GAAP) add a second row per profile via admin UI.
 
 DO $seed_ap_book_rules$
 DECLARE

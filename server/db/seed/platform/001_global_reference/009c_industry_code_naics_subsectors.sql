@@ -1,12 +1,6 @@
--- 900_seed_data/001_shared/009c_industry_code_naics_subsectors.sql
--- Seed: NAICS 2022 — Complete hierarchy (Sectors → Subsectors → Industry Groups)
--- Schema: shared | Table: industry_code
--- Self-contained: no external dependencies for NAICS data
--- Idempotent: ON CONFLICT (domain_code, code) DO UPDATE throughout
+-- NAICS 2022 — Sectors → Subsectors → Industry Groups.
 
--- ============================================================================
--- NAICS 2022 — Sectors (Level 1)
--- ============================================================================
+-- Sectors (Level 1)
 insert into shared.industry_code (domain_code, code, name, description, level_no, is_leaf, status, created_by)
 values
   ('naics','11','Agriculture, Forestry, Fishing and Hunting','Crop production, animal production, forestry, fishing, hunting',1,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -42,9 +36,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- NAICS 2022 — Subsectors (Level 2, 3-digit codes)
--- ============================================================================
 
 -- Sector 11: Agriculture, Forestry, Fishing and Hunting
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
@@ -382,9 +374,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- NAICS 2022 — Industry Groups (Level 3, 4-digit codes)
--- ============================================================================
 
 -- Subsector 111: Crop Production
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)

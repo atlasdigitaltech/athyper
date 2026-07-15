@@ -1,14 +1,7 @@
--- ============================================================================
--- FILE: blueprint/056_acct_profile_commitment_config.sql
--- Purpose: Commitment / encumbrance behaviour per AP Non-PO profile
--- Depends on: control.acct_profile_config (030_acct_profile_configs.sql)
--- Idempotent: ON CONFLICT (profile_config_id) DO UPDATE
--- ============================================================================
--- AP_NON_PO_STANDARD   — creates_commitment=true; obligation at approval; released on SETTLEMENT
--- AP_NON_PO_CAPEX      — creates_commitment=true; capital obligation; released on SETTLEMENT
--- AP_ADVANCE_SUPPLIER  — creates_commitment=true; 100% prepayment; released on ADVANCE_RECOVERED
--- AP_RETENTION_RELEASE — creates_commitment=false; releases existing retention encumbrance
--- ============================================================================
+-- Commitment / encumbrance behaviour per AP Non-PO profile:
+--   AP_NON_PO_STANDARD/CAPEX   create commitment at approval; release on SETTLEMENT
+--   AP_ADVANCE_SUPPLIER        100% prepayment commitment; release on ADVANCE_RECOVERED
+--   AP_RETENTION_RELEASE       no new commitment — releases existing retention encumbrance
 
 DO $seed_ap_commitment$
 DECLARE
@@ -21,7 +14,6 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
-    -- ── AP_NON_PO_STANDARD ────────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
@@ -60,7 +52,6 @@ BEGIN
             updated_by              = v_sys;
     END LOOP;
 
-    -- ── AP_NON_PO_CAPEX ───────────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
@@ -99,7 +90,6 @@ BEGIN
             updated_by              = v_sys;
     END LOOP;
 
-    -- ── AP_ADVANCE_SUPPLIER ───────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc
@@ -140,7 +130,6 @@ BEGIN
             updated_by              = v_sys;
     END LOOP;
 
-    -- ── AP_RETENTION_RELEASE ──────────────────────────────────────────────
     FOR v_cfg IN
         SELECT apc.id AS config_id, apc.tenant_id
           FROM control.acct_profile_config apc

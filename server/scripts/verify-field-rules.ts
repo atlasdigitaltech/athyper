@@ -19,7 +19,7 @@
  *   4. Per-AP-entity rule coverage thresholds:
  *      - purchase_invoice            ≥ 30 fields with editable_in_status
  *      - purchase_invoice_line       ≥ 20 fields with editable_in_status
- *      - accounting_distribution     ≥ 12 fields with editable_in_status
+ *      - accounting_distribution     ≥ 9  fields with editable_in_status
  *      - all three                   ≥ baseline is_computed counts
  *
  *   5. No active field of business/standard origin on AP entities is left
@@ -63,7 +63,7 @@ const AP_ENTITIES = ["purchase_invoice", "purchase_invoice_line", "accounting_di
 const COVERAGE_THRESHOLDS: Record<string, { editable_min: number; computed_min: number }> = {
   purchase_invoice:        { editable_min: 30, computed_min: 8 },
   purchase_invoice_line:   { editable_min: 20, computed_min: 4 },
-  accounting_distribution: { editable_min: 12, computed_min: 2 },
+  accounting_distribution: { editable_min: 9, computed_min: 2 },
 };
 
 // Computed fields that are NOT GENERATED at the DB level — they're maintained

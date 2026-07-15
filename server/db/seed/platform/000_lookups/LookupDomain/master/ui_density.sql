@@ -1,8 +1,3 @@
--- LookupDomain/master/ui_density.sql
--- Lookup values for domain: ui.density
--- Information density preference for master.principal_ui_profile.density_code.
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,

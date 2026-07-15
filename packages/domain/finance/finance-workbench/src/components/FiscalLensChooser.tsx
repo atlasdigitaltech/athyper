@@ -14,6 +14,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@athyper/ui/primitives";
+import { DatePicker } from "@athyper/ui/composites";
 import type { FinanceScope } from "../lib/scope";
 import {
   periodLabel,
@@ -478,20 +479,18 @@ export function FiscalLensChooser({
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1 text-xs font-medium text-muted-foreground">
                   From
-                  <input
-                    type="date"
-                    value={draftFrom}
-                    onChange={(event) => setDraftFrom(event.target.value)}
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm font-normal text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  <DatePicker
+                    kind="businessDate"
+                    value={draftFrom || null}
+                    onChange={(next) => setDraftFrom(next ?? "")}
                   />
                 </label>
                 <label className="space-y-1 text-xs font-medium text-muted-foreground">
                   To
-                  <input
-                    type="date"
-                    value={draftTo}
-                    onChange={(event) => setDraftTo(event.target.value)}
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm font-normal text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  <DatePicker
+                    kind="businessDate"
+                    value={draftTo || null}
+                    onChange={(next) => setDraftTo(next ?? "")}
                   />
                 </label>
               </div>

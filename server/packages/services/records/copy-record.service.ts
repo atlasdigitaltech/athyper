@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { sql, type Kysely } from "kysely";
+import {
+  copyCommitmentLineInTransaction,
+  refreshCommitmentHeaderAmounts,
+} from "@athyper/svc-business";
+import { mergeFieldProvenance, resolveEntityIdentity } from "./entity-identity-policy.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -33,11 +38,15 @@ interface EntityDescriptor {
   tableName: string;
   displayConfig: unknown;
   identityConfig: unknown;
+  createMode: string;
+  numberingStrategy: string;
+  draftTtlHours: number | null;
 }
 
 interface EntityFieldRow {
   name: string;
   columnName: string;
+  dataType: string;
   origin: string;
   isRequired: boolean;
   isUnique: boolean;
@@ -157,6 +166,22 @@ function cloneJsonValue(value: unknown): unknown {
   return value;
 }
 
+function normalizeDateOnly(value: unknown): string | null {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+}
+
+function copyValueForField(field: EntityFieldRow, value: unknown): unknown {
+  if (field.dataType.toLowerCase() === "date") return normalizeDateOnly(value);
+  return cloneJsonValue(value);
+}
+
 function defaultValueForField(field: EntityFieldRow): { hasValue: boolean; value?: unknown } {
   const value = field.defaultValue;
   if (value === null || value === undefined) return { hasValue: false };
@@ -192,7 +217,7 @@ function buildInsertValues(params: BuildValuesParams): Record<string, unknown> {
     switch (policy) {
       case "preserve":
         if (Object.prototype.hasOwnProperty.call(params.sourceRecord, field.columnName)) {
-          values[field.columnName] = params.sourceRecord[field.columnName];
+          values[field.columnName] = copyValueForField(field, params.sourceRecord[field.columnName]);
         }
         break;
       case "default": {
@@ -265,6 +290,9 @@ async function loadEntityDescriptor(db: AnyDb, entityCode: string, tenantId: str
       "e.table_name as tableName",
       "e.display_config as displayConfig",
       "e.identity_config as identityConfig",
+      "e.create_mode as createMode",
+      "e.numbering_strategy as numberingStrategy",
+      "e.draft_ttl_hours as draftTtlHours",
     ] as never[])
     .where("e.entity_code" as never, "=", entityCode as never)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -297,6 +325,7 @@ async function loadEntityFields(db: AnyDb, versionId: string): Promise<EntityFie
     .select([
       "ef.name as name",
       "ef.column_name as columnName",
+      "ef.data_type as dataType",
       "ef.origin as origin",
       "ef.is_required as isRequired",
       "ef.is_unique as isUnique",
@@ -381,7 +410,10 @@ async function generateDocumentNumber(
   if (!numberingEnabled(entity)) return null;
 
   const displayConfig = asObject(entity.displayConfig);
-  const numberFieldName = asObject(displayConfig["document_header"])["number_field"];
+  const identityConfig = asObject(entity.identityConfig);
+  const numberFieldName = asObject(displayConfig["document_header"])["number_field"]
+    ?? asObject(identityConfig["numbering"])["field"]
+    ?? asObject(asObject(identityConfig["header"])["primary"])["field"];
   if (typeof numberFieldName !== "string" || !numberFieldName) return null;
 
   const numberColumn = resolveColumn(fields, numberFieldName);
@@ -392,24 +424,39 @@ async function generateDocumentNumber(
   const separator = typeof copyConfig["separator"] === "string" ? copyConfig["separator"] : "-";
   const fiscalYear = fiscalYearFromRecord(sourceRecord);
   const periodNumber = Number.parseInt(String(sourceRecord["period_number"] ?? ""), 10);
+  const effectiveDate = normalizeDateOnly(sourceRecord["posting_date"] ?? sourceRecord["document_date"]);
+  const companyCodeId = typeof sourceRecord["company_code_id"] === "string"
+    ? sourceRecord["company_code_id"]
+    : null;
 
-  try {
+  const config = await sql<{ available: boolean }>`
+    SELECT EXISTS (
+      SELECT 1
+        FROM control.entity_numbering_config c
+        JOIN control.entity e ON e.id = c.entity_id
+       WHERE e.entity_code = ${entity.entityCode}
+         AND c.is_active = true
+         AND (c.tenant_id IS NULL OR c.tenant_id = ${tenantId}::uuid)
+         AND c.number_field = ${numberFieldName}
+         AND (c.company_code_id IS NULL OR c.company_code_id = ${companyCodeId}::uuid)
+    ) AS available
+  `.execute(db);
+
+  if (config.rows[0]?.available) {
     const result = await sql<{ value: string }>`
       SELECT control.next_entity_number(
         ${tenantId}::uuid,
         ${entity.entityCode},
         ${numberFieldName},
-        ${typeof sourceRecord["company_code_id"] === "string" ? sourceRecord["company_code_id"] : null}::uuid,
+        ${companyCodeId}::uuid,
         ${fiscalYear}::smallint,
         ${Number.isFinite(periodNumber) ? periodNumber : null}::smallint,
         NULL,
-        ${sourceRecord["posting_date"] ?? sourceRecord["document_date"] ?? null}::date
+        ${effectiveDate}::date
       ) AS value
     `.execute(db);
     const value = result.rows[0]?.value;
     if (value) return { column: numberColumn, value };
-  } catch {
-    // Fall through to the copy-local numbering behavior.
   }
 
   const fullTable = qualifiedTable(entity);
@@ -530,7 +577,36 @@ export async function copyRecordFromMetadata(
       targetStatus,
     });
 
-    const generatedNumber = await generateDocumentNumber(trx, entity, fields, sourceRecord, tenantId);
+    const naming = resolveEntityIdentity({
+      identityConfig: entity.identityConfig,
+      context: "copy",
+      entityLabel: entity.entityCode.split("_").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" "),
+      sourceRecord,
+      targetRecord: insertValues,
+    });
+    Object.assign(insertValues, naming.values);
+    if (Object.keys(naming.provenance).length > 0) {
+      insertValues["metadata"] = mergeFieldProvenance(insertValues["metadata"], naming.provenance);
+    }
+
+    const numbering = asObject(asObject(entity.identityConfig)["numbering"]);
+    const allocationStrategy = String(numbering["strategy"] ?? entity.numberingStrategy ?? "");
+    const numberField = typeof numbering["field"] === "string" ? numbering["field"] : "code";
+    const numberColumn = resolveColumn(fields, numberField);
+    if (allocationStrategy === "AUTO_ON_PROMOTE") {
+      insertValues[numberColumn] = "";
+      if (fields.some((field) => field.columnName === "is_provisional")) insertValues["is_provisional"] = true;
+      if (fields.some((field) => field.columnName === "draft_started_by")) insertValues["draft_started_by"] = actorId;
+      if (fields.some((field) => field.columnName === "draft_started_at")) insertValues["draft_started_at"] = new Date();
+      if (fields.some((field) => field.columnName === "draft_expires_at")) {
+        const ttlHours = entity.draftTtlHours && entity.draftTtlHours > 0 ? entity.draftTtlHours : 24;
+        insertValues["draft_expires_at"] = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+      }
+    }
+
+    const generatedNumber = allocationStrategy === "AUTO_ON_PROMOTE"
+      ? null
+      : await generateDocumentNumber(trx, entity, fields, sourceRecord, tenantId);
     if (generatedNumber) {
       insertValues[generatedNumber.column] = generatedNumber.value;
     }
@@ -546,7 +622,56 @@ export async function copyRecordFromMetadata(
 
     const newRecordId = String(inserted["id"]);
     const copiedChildren: Record<string, number> = {};
-    for (const relation of relations.filter((relation) => shouldCopyRelation(entity, relation))) {
+    if (entity.entityCode === "purchase_order") {
+      const sourceLines = await sql<{ id: string }>`
+        SELECT id
+          FROM document.commitment_line
+         WHERE tenant_id = ${tenantId}::uuid
+           AND commitment_id = ${recordId}::uuid
+         ORDER BY line_no
+      `.execute(trx);
+      const graphTotals = {
+        lines: 0,
+        accountingDistributions: 0,
+        pricingComponents: 0,
+        schedules: 0,
+      };
+      for (const sourceLine of sourceLines.rows) {
+        const copied = await copyCommitmentLineInTransaction(trx, {
+          tenantId,
+          sourceCommitmentId: recordId,
+          commitmentId: newRecordId,
+          lineId: sourceLine.id,
+          principalId: actorId,
+          includeChildren: {
+            accountingDistributions: true,
+            pricingComponents: true,
+            schedules: true,
+          },
+        });
+        graphTotals.lines += 1;
+        graphTotals.accountingDistributions += copied.children.accountingDistributions;
+        graphTotals.pricingComponents += copied.children.pricingComponents;
+        graphTotals.schedules += copied.children.schedules;
+      }
+      copiedChildren["lines"] = graphTotals.lines;
+      copiedChildren["accounting_distributions"] = graphTotals.accountingDistributions;
+      copiedChildren["pricing_components"] = graphTotals.pricingComponents;
+      copiedChildren["schedules"] = graphTotals.schedules;
+      await refreshCommitmentHeaderAmounts(trx, {
+        tenantId,
+        commitmentId: newRecordId,
+        principalId: actorId,
+      });
+    }
+
+    const controlledPurchaseOrderRelations = new Set([
+      "lines", "accounting_distributions", "pricing_components", "schedules",
+    ]);
+    for (const relation of relations.filter((relation) =>
+      shouldCopyRelation(entity, relation)
+      && !(entity.entityCode === "purchase_order" && controlledPurchaseOrderRelations.has(relation.name)),
+    )) {
       copiedChildren[relation.name] = await cloneChildRelation(trx, {
         parent: entity,
         relation,

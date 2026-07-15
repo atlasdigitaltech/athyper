@@ -22,7 +22,7 @@
  * Thumbnail size: 400×400 (fit: inside, background: white).
  */
 
-import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
 import type { PdfRendererClient } from "@athyper/server-foundation/render/pdf-renderer-client";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -221,3 +221,4 @@ export function createContentPreviewService(
 ): ContentPreviewService {
   return new ContentPreviewService(storage, renderer);
 }
+

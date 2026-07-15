@@ -1,14 +1,7 @@
--- ============================================================================
--- UNIVERSAL — DOMAIN BUSINESS INTENTS
--- ============================================================================
--- File:     021_business_intents.sql
--- Schema:   master.business_intent
--- Purpose:  Seed the 8 canonical domain-level business intents.
---           Posting, tax, approval, asset, and capex defaults are owned by
---           control.commodity_category_buy_policy / sell_policy — not here.
--- Depends:  platform/099_tenant_bootstrap (tenant must exist)
--- Idempotent: Yes — ON CONFLICT (tenant_id, code) DO UPDATE
--- ============================================================================
+-- Seeds the 8 canonical domain-level business_intent rows
+-- (BI-OPEX/CAPEX/COGS/ADMIN/REG/TRANSFER/REV/DEFREV).
+-- Posting, tax, approval, asset, capex defaults live in
+-- control.commodity_category_buy_policy / sell_policy — not on business_intent itself.
 
 DO $seed$
 DECLARE
@@ -33,10 +26,10 @@ BEGIN
         s.name,
         s.description,
         s.domain,
-        NULL,   -- subtype
-        NULL,   -- parent_id (domain-level, no parent)
-        s.code, -- path = code for root intents
-        0,      -- depth
+        NULL,
+        NULL,
+        s.code, -- domain-level roots use code as path
+        0,
         s.sort_order,
         s.visibility,
         jsonb_build_object('_seed', jsonb_build_object(

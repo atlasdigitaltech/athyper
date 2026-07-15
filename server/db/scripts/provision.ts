@@ -31,6 +31,8 @@
 //   tsx db/seed/migrate.ts --no-mesh         # Explicitly keep Mesh/Mesh-log/Mesh-control out of NEON provisioning (default)
 //   tsx db/seed/migrate.ts --reset           # Drop all schemas then re-run all stages
 //   tsx db/seed/migrate.ts --drop-only       # Drop all schemas only (no re-seed)
+//   tsx db/seed/migrate.ts --keep-shared      # Use with --reset/--drop-only to keep `shared`
+//   tsx db/seed/migrate.ts --skip-shared      # Skip reseeding shared DDL (`ddl/shared/*`) during seed runs
 //   tsx db/seed/migrate.ts --status          # Show status of all SQL files
 //   tsx db/seed/migrate.ts --force           # Re-run even if checksum unchanged
 //   tsx db/seed/migrate.ts --rebuild-entity-metadata
@@ -127,6 +129,8 @@ export type DiscoveryOptions = {
   skipTenants?: boolean;
   /** Cutover gate — when true, skip Mesh/Mesh-log/Mesh-control DDL and Mesh plane seed files */
   skipMesh?: boolean;
+  /** Phase 1 only — when true, skip shared/* DDL and reseeding of that schema */
+  skipShared?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -373,6 +377,7 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
   if (existsSync(DDL_DIR)) {
     for (const absPath of collectSqlFiles(DDL_DIR)) {
       const relPath = `ddl/${relative(DDL_DIR, absPath).replace(/\\/g, "/")}`;
+      if (opts.skipShared && relPath.startsWith("ddl/shared/")) continue;
       if (
         opts.skipMesh
         && (
@@ -414,6 +419,7 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
       for (const absPath of collectSqlFiles(dirPath)) {
         const relFromSeed = relative(SEED_DIR, absPath).replace(/\\/g, "/");
         const relPath = `seed/${relFromSeed}`;
+        if (opts.skipShared && relPath.startsWith("seed/platform/001_global_reference/")) continue;
         const isFinalTenantSeed =
           relFromSeed === "blueprints/universal/060_org_structure/303_company_code_tax_fx_links.sql"
           || relFromSeed.startsWith("blueprints/universal/990_validation/");
@@ -878,6 +884,24 @@ async function runPhases(
     // Runtime sessions never set this GUC; the lock remains enforced for users.
     await client.query(`SET app.bypass_version_lock = 'true'`);
 
+    // Batch 6F — seed-contract assertions strict mode is OPT-IN. 042o
+    // (pre-quarantine) and 100_ (post-quarantine) both gate on this GUC:
+    // 'on' -> RAISE EXCEPTION, anything else -> RAISE WARNING.
+    //
+    // Default is off because there is pre-existing drift outside the P2P
+    // batch scope (business_partner / customer entity_field rows; a handful
+    // of entity_relation targets like business_unit /
+    // company_code_supplier_intent_policy). Promoting strict by default would
+    // block every local reset until that separate cleanup batch lands. CI
+    // opts in via SEED_STRICT=on once the non-P2P drift is cleared.
+    const seedStrict = (process.env["SEED_STRICT"] ?? "off").toLowerCase();
+    if (seedStrict === "on" || seedStrict === "true" || seedStrict === "1") {
+      await client.query(`SET app.assert_seed_contracts = 'on'`);
+      log({ msg: "migrate_seed_strict_enabled" });
+    } else {
+      log({ msg: "migrate_seed_strict_disabled" });
+    }
+
     if (opts.rebuildEntityMetadata) {
       await client.query(`SET app.rebuild_entity_metadata = 'true'`);
       log({ msg: "migrate_rebuild_entity_metadata_enabled" });
@@ -1197,7 +1221,10 @@ async function runPhases(
   }
 }
 
-async function runReset(connectionString: string): Promise<void> {
+async function runReset(
+  connectionString: string,
+  options: { keepSharedSchema?: boolean } = {},
+): Promise<void> {
   const client = await connectClient(connectionString);
 
   try {
@@ -1221,6 +1248,10 @@ async function runReset(connectionString: string): Promise<void> {
     ];
 
     for (const schema of schemas) {
+      if (schema === "shared" && options.keepSharedSchema) {
+        log({ msg: "reset_keep_schema", schema });
+        continue;
+      }
       await client.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
       log({ msg: "reset_drop_schema", schema });
     }
@@ -1399,6 +1430,7 @@ async function main(): Promise<void> {
     || /^(1|true|on|yes)$/i.test(process.env.REBUILD_ENTITY_METADATA ?? "");
   const reset = args.includes("--reset");
   const dropOnly = args.includes("--drop-only");
+  const keepShared = args.includes("--keep-shared");
   const status = args.includes("--status");
 
   // --invalidate=<substring>  Remove matching schema_provisions rows so the
@@ -1429,6 +1461,7 @@ async function main(): Promise<void> {
   const discover = args.includes("--discover");
   const skipTenants = args.includes("--skip-tenants");
   const skipMesh = args.includes("--no-mesh") || !args.includes("--with-mesh");
+  const skipShared = args.includes("--skip-shared") || keepShared;
 
   const tenantArg = args.find((a) => a.startsWith("--tenant="));
   const tenantFolder = tenantArg ? tenantArg.split("=").slice(1).join("=") : undefined;
@@ -1448,6 +1481,7 @@ async function main(): Promise<void> {
     ...(industryPacks ? { industryPacks } : {}),
     ...(modules ? { modules } : {}),
     ...(skipTenants ? { skipTenants: true } : {}),
+    ...(skipShared ? { skipShared: true } : {}),
     ...(skipMesh ? { skipMesh: true } : {}),
   };
 
@@ -1473,7 +1507,7 @@ async function main(): Promise<void> {
     }
 
     if (dropOnly) {
-      await runReset(connectionString);
+      await runReset(connectionString, { keepSharedSchema: keepShared });
       return;
     }
 
@@ -1483,7 +1517,7 @@ async function main(): Promise<void> {
     }
 
     if (reset) {
-      await runReset(connectionString);
+      await runReset(connectionString, { keepSharedSchema: keepShared });
       // After reset, always fall through to re-run all stages from scratch
     }
 

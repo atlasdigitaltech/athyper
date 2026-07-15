@@ -143,7 +143,7 @@ export async function seedRetentionFromPricingComponents(
            pc.currency_code
       FROM document.pricing_component pc
      WHERE pc.tenant_id        = ${tenantId}::uuid
-       AND pc.source_doc_type  = 'PURCHASE_INVOICE_LINE'
+       AND pc.source_doc_type  = 'purchase_invoice_line'
        AND pc.source_doc_id    = ${invoiceId}::uuid
        AND pc.term_type        IN ('retention','withholding')
        AND pc.superseded_by_id IS NULL

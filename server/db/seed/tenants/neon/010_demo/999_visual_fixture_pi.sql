@@ -89,56 +89,70 @@ BEGIN
         id,
         tenant_id, company_code_id,
         code, name,
-        invoice_number, invoice_source, invoice_type,
+        invoice_source, invoice_type,
         supplier_id, supplier_invoice_number, supplier_invoice_date,
-        document_date, posting_date, received_date,
+        posting_date, received_date, baseline_date, due_date,
         currency_code, base_currency_code, exchange_rate,
-        subtotal_amount, tax_amount, withholding_tax_amount,
-        total_amount, retention_amount, advance_deduction_amount,
-        description, status, tax_mode, tax_mode_source, created_by,
+        tax_amount, withholding_tax_amount,
+        total_amount, retention_amount, advance_deduction_amount, paid_amount,
+        match_type, match_status,
+        status, tax_mode, requested_by, created_by,
         fiscal_year, period_number
     ) VALUES (
         v_invoice_id,
         v_tenant_id, v_cc_id,
         'PI-VISUAL-FIXTURE-001', 'Visual Regression Fixture',
-        'PI-VISUAL-FIXTURE-001', 'non_po', 'standard',
+        'non_po', 'standard',
         v_supplier_id, 'VISUAL-FIXTURE-2026-00001', DATE '2026-06-01',
-        DATE '2026-06-01', DATE '2026-06-01', DATE '2026-06-01',
+        DATE '2026-06-01', DATE '2026-06-01', DATE '2026-06-01', DATE '2026-07-01',
         'INR', 'INR', 1.0,
-        10000.00, 1800.00, 1000.00,
-        11800.00, 200.00, 0.00,
-        'Pinned PI for tests/visual/pi-fixture.spec.ts. DO NOT MODIFY '
-        'without regenerating the reference snapshot.',
-        -- tax_mode/source values constrained by pi_tax_mode_chk +
-        -- pi_tax_mode_source_chk (see DDL 01f). `exclusive` matches a
+        1800.00, 1000.00,
+        11800.00, 200.00, 0.00, 0.00,
+        'three_way', 'unmatched',
+        -- tax_mode value constrained by pi_tax_mode_chk. `exclusive` matches a
         -- non-zero tax_amount + lets IGST 18% flow when the line-scope
         -- tax PC INSERT is authored at the TODO marker below.
-        'draft', 'exclusive', 'tax_group', v_sys,
+        'draft', 'exclusive', v_sys, v_sys,
         extract(year FROM CURRENT_DATE)::smallint,
         extract(month FROM CURRENT_DATE)::smallint
     );
 
     -- ── Lines (3 rows, mixed UoMs) ───────────────────────────────────────
     INSERT INTO document.purchase_invoice_line (
-        tenant_id, purchase_invoice_id, line_no,
+        tenant_id, company_code_id, purchase_invoice_id, line_no,
         item_description, procurement_type,
         commodity_category_id, business_intent_id,
-        uom_code, quantity, unit_price,
-        tax_amount, withholding_tax_amount, gross_amount,
+        uom_code, quantity, unit_price, currency_code,
+        tax_amount, withholding_tax_amount,
         created_by
     ) VALUES
-        (v_tenant_id, v_invoice_id, 1,
+        (v_tenant_id, v_cc_id, v_invoice_id, 1,
          'Visual Fixture — Each item (EA)', 'goods',
          v_sc_opex_id, v_bi_opex_id,
-         'EA', 10, 500.00, 0.00, 0.00, 5000.00, v_sys),
-        (v_tenant_id, v_invoice_id, 2,
+         'EA', 10, 500.00, 'INR', 0.00, 0.00, v_sys),
+        (v_tenant_id, v_cc_id, v_invoice_id, 2,
          'Visual Fixture — Mass item (KG)', 'goods',
          v_sc_opex_id, v_bi_opex_id,
-         'KG', 20, 150.00, 0.00, 0.00, 3000.00, v_sys),
-        (v_tenant_id, v_invoice_id, 3,
+         'KG', 20, 150.00, 'INR', 0.00, 0.00, v_sys),
+        (v_tenant_id, v_cc_id, v_invoice_id, 3,
          'Visual Fixture — Length item (M)', 'goods',
          v_sc_opex_id, v_bi_opex_id,
-         'M', 40, 50.00, 0.00, 0.00, 2000.00, v_sys);
+         'M', 40, 50.00, 'INR', 0.00, 0.00, v_sys);
+
+    UPDATE document.purchase_invoice
+       SET tax_amount = 1800.00,
+           withholding_tax_amount = 1000.00,
+           retention_amount = 200.00,
+           advance_deduction_amount = 0.00,
+           total_amount = 11800.00,
+           paid_amount = 0.00,
+           match_type = 'three_way',
+           match_status = 'unmatched',
+           baseline_date = DATE '2026-06-01',
+           due_date = DATE '2026-07-01',
+           updated_by = v_sys,
+           updated_at = now()
+     WHERE id = v_invoice_id;
 
     -- ── Pricing components — TODO(activation) ───────────────────────────
     -- Author against `server/db/ddl/document/` DDL once the activation PR
@@ -157,8 +171,8 @@ BEGIN
     --   L1 gross 5000 → 60/40 between Exp-A and Exp-B
     --   L2 gross 3000 → 50/50
     --   L3 gross 2000 → 100/0
-    -- See `server/db/ddl/document/01o_tables_accounting_distribution.sql`
-    -- for the column shape.
+    -- See `server/db/ddl/document/01b_tables_journal.sql` (§12) for the
+    -- column shape.
 
     RAISE NOTICE 'visual fixture PI %: header + 3 lines seeded (PC + AD pending activation)', v_invoice_id;
 END $visual_fixture$;

@@ -44,6 +44,8 @@ export interface OutboxWorkerCache {
    *   - Backend session invalidation via principal_sessions:{sub} sets (P2)
    */
   smembers(key: string): Promise<string[]>;
+  incr?(key: string): Promise<number>;
+  publish?(channel: string, message: string): Promise<number>;
 }
 
 export interface OutboxWorkerLogger {
@@ -91,6 +93,8 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
   } = deps;
 
   const TOPIC = "iam";
+  const RUNTIME_INVALIDATION_CHANNEL = "descriptor-runtime:invalidate:v1";
+  const RUNTIME_GENERATION_KEY = "descriptor-runtime:generation:v1";
   const LOCK_OWNER = `iam-worker-${process.pid}`;
   const RETRY_DELAY_MS = 30_000;
   const uniqueSessionNamespaces = [...new Set(sessionNamespaces)];
@@ -281,7 +285,10 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
     return invalidated;
   }
 
-  async function invalidatePrincipalSessions(principalId: string): Promise<number> {
+  async function invalidatePrincipalSessions(principalId: string): Promise<{
+    invalidated: number;
+    effectivePrincipals: string[];
+  }> {
     // Cache keys use KC subjects, so expand the principal id through bindings.
     const subjects = new Set([principalId, ...(await subjectIdsForPrincipal(principalId))]);
     let invalidated = 0;
@@ -294,7 +301,24 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
       invalidated += backendCount + frontendCount;
     }
 
-    return invalidated;
+    return { invalidated, effectivePrincipals: [...subjects] };
+  }
+
+  async function publishRuntimeInvalidation(
+    tenantId: string,
+    effectivePrincipal: string,
+    reason: string,
+  ): Promise<void> {
+    if (!cache.incr || !cache.publish) return;
+    const generation = await cache.incr(RUNTIME_GENERATION_KEY);
+    await cache.publish(RUNTIME_INVALIDATION_CHANNEL, JSON.stringify({
+      tenant: tenantId,
+      principal: effectivePrincipal,
+      reason,
+      generation,
+      emittedAt: Date.now(),
+      origin: LOCK_OWNER,
+    }));
   }
 
   // ─── Security cleanup ────────────────────────────────────────────────────
@@ -386,7 +410,15 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
 
         const principalIds = await affectedPrincipalIds(event);
         for (const principalId of principalIds) {
-          invalidated += await invalidatePrincipalSessions(principalId);
+          const result = await invalidatePrincipalSessions(principalId);
+          invalidated += result.invalidated;
+          for (const effectivePrincipal of result.effectivePrincipals) {
+            await publishRuntimeInvalidation(
+              event.tenant_id,
+              effectivePrincipal,
+              event.event_type ?? "permission_change",
+            );
+          }
 
           // On deactivation or lock: revoke all trusted devices.
           // Trusted devices grant step-up bypass — an inactive/locked principal

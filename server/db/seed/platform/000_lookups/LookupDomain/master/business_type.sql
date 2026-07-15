@@ -1,8 +1,5 @@
--- LookupDomain/master/business_type.sql
--- Lookup domain + values for: master.business_type
--- Used by: master.legal_entity.business_types, master.supplier.business_types, master.customer.business_types
--- Multi-value (text[] column) — a record can carry more than one type.
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by (text[] multi-value columns): master.legal_entity.business_types,
+-- master.supplier.business_types, master.customer.business_types.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

@@ -1,7 +1,4 @@
--- LookupDomain/master/payment_term_application_scope.sql
--- Lookup values for domain: master.payment_term_application_scope
--- Used by: payment_term_clause.application_scope
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: payment_term_clause.application_scope.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

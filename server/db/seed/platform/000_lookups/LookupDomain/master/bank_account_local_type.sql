@@ -1,7 +1,3 @@
--- LookupDomain/master/bank_account_local_type.sql
--- Lookup values for domain: master.bank_account_local_type
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('current',    'Current Account', 'master.bank_account_local_type', 'Checking / current account',   10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

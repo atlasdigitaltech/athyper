@@ -2,27 +2,27 @@
  * Line-source picker routes (P2P plan Plan E1)
  *
  * Backs the four source-adapter pickers exposed in
- *   packages/shared/runtime-line-item/src/adapters/{catalog,open-po-line,
+ *   packages/shared/runtime-domain/runtime-line-item/src/adapters/{catalog,open-po-line,
  *   open-receipt-line,open-service-sheet-line}.ts
- * with real data so the in-app "Add from …" dropdowns stop returning
+ * with real data so the in-app "Add from â€¦" dropdowns stop returning
  * empty pages. The neon app fetches from the BFF relay; the relay forwards
  * to the routes below.
  *
  * Endpoints:
- *   GET /api/p2p/open-po-lines             — open commitment_line picker
- *   GET /api/p2p/open-receipt-lines        — open receipt_line picker (for invoicing)
- *   GET /api/p2p/open-service-sheet-lines  — open service_sheet_line picker (for invoicing)
- *   GET /api/p2p/catalog/items             — catalog item picker (empty until catalog tables land)
+ *   GET /api/p2p/open-po-lines             â€” open commitment_line picker
+ *   GET /api/p2p/open-receipt-lines        â€” open receipt_line picker (for invoicing)
+ *   GET /api/p2p/open-service-sheet-lines  â€” open service_sheet_line picker (for invoicing)
+ *   GET /api/p2p/catalog/items             â€” catalog item picker (empty until catalog tables land)
  *
  * Guardrails enforced at the SQL layer (NOT trusted from the client):
- *   - Tenant filter      — always WHERE tenant_id = :session_tenant_id
- *   - Lifecycle filter   — exclude terminal_status IS NOT NULL rows;
+ *   - Tenant filter      â€” always WHERE tenant_id = :session_tenant_id
+ *   - Lifecycle filter   â€” exclude terminal_status IS NOT NULL rows;
  *                          enforce parent status allowlist per consumer
- *   - Remaining-qty      — only show rows with remaining > 0 where applicable
- *   - Pagination         — default 25, max 100; cursor-less offset paging
+ *   - Remaining-qty      â€” only show rows with remaining > 0 where applicable
+ *   - Pagination         â€” default 25, max 100; cursor-less offset paging
  *
  * The response shape matches the Page<Selection> contract from
- *   packages/shared/runtime-add-item/src/adapter/types.ts
+ *   packages/shared/runtime-domain/runtime-add-item/src/adapter/types.ts
  * so the source-adapter `fetchLines` callback can pass it through unchanged.
  */
 
@@ -34,8 +34,11 @@ import {
   resolveTenantId,
   extractOrgHeaders,
   resolvePrincipalIdWithJit,
+  extractVerifiedRequestContextHints,
+  resolveVerifiedRequestContext,
   getLifecycleStatesWithFlag,
 } from "@athyper/svc-shared";
+import { createCompanyCodeScopeService } from "@athyper/svc-iam";
 import {
   createCommitmentFromRequisition,
   createReceiptFromCommitment,
@@ -139,7 +142,7 @@ async function loadServiceSheetCompanyCode(
   return result.rows[0]?.company_code_id ?? null;
 }
 
-// ─── Selection-shape rows (match the adapter contracts) ──────────────────────
+// â”€â”€â”€ Selection-shape rows (match the adapter contracts) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface OpenPoLineRow {
   poId:          string;
@@ -216,7 +219,7 @@ interface OpenServiceSheetLineRow {
   currencyCode:       string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const DEFAULT_LIMIT = 25;
 const MAX_LIMIT     = 100;
@@ -240,25 +243,70 @@ async function requireTenantAuth(
   req:  Parameters<RequestHandler>[0],
   res:  Parameters<RequestHandler>[1],
   deps: LineSourceRouteDeps,
-): Promise<{ tenantId: string } | null> {
+): Promise<{
+  tenantId: string;
+  principalId: string;
+  companyCodeId?: string;
+  legalEntityId?: string;
+  /** null is an unrestricted tenant scope; [] is explicitly no access. */
+  readableCompanyCodeIds: string[] | null;
+} | null> {
   const claims = await verifyBearer(req.headers.authorization ?? "", deps.auth, res);
   if (!claims) return null;
-  const { xOrg, xRealm } = extractOrgHeaders(req);
-  const tenantId = await resolveTenantId(deps.db, xOrg, xRealm);
-  if (!tenantId) {
-    res.status(400).json({ error: "MISSING_TENANT", message: "X-Org header is required" });
+  const verified = await resolveVerifiedRequestContext(
+    deps.db,
+    claims,
+    extractVerifiedRequestContextHints(req),
+  );
+  if (!verified.ok) {
+    res.status(verified.status).json({ error: verified.error, message: verified.message });
     return null;
   }
-  return { tenantId };
+
+  const context = verified.context;
+  const scope = await createCompanyCodeScopeService(deps.db)
+    .resolveScope(context.principalId, context.tenantId);
+
+  // An active company is a routing selection, never an authorization grant.
+  // It must also lie inside the principal's resolved company scope.
+  if (context.companyCodeId && !scope.isUnrestricted && !scope.companyCodeIds.includes(context.companyCodeId)) {
+    res.status(403).json({
+      error: "COMPANY_SCOPE_DENIED",
+      message: "The active company is outside the principal's authorized company scope.",
+    });
+    return null;
+  }
+
+  let readableCompanyCodeIds: string[] | null = scope.isUnrestricted
+    ? null
+    : scope.companyCodeIds;
+  if (context.companyCodeId) {
+    readableCompanyCodeIds = [context.companyCodeId];
+  }
+  if (context.legalEntityId) {
+    const legalEntityCompanies = await deps.db
+      .selectFrom("master.company_code as cc")
+      .select("cc.id")
+      .where("cc.tenant_id", "=", context.tenantId)
+      .where("cc.legal_entity_id", "=", context.legalEntityId)
+      .where("cc.status", "=", "active")
+      .execute();
+    const legalEntityIds = legalEntityCompanies.map((row) => row.id as string);
+    readableCompanyCodeIds = readableCompanyCodeIds === null
+      ? legalEntityIds
+      : readableCompanyCodeIds.filter((id) => legalEntityIds.includes(id));
+  }
+
+  return { ...context, readableCompanyCodeIds };
 }
 
-// ─── Route factory ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Route factory â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps): Router {
   const { db, logger } = deps;
 
-  // ── GET /api/p2p/open-po-lines ─────────────────────────────────────────
-  // Open commitment_line rows (PO — standard or blanket) the user can add to
+  // â”€â”€ GET /api/p2p/open-po-lines â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Open commitment_line rows (PO â€” standard or blanket) the user can add to
   // a downstream document (Receipt / SES / Invoice). Filters to commitments
   // in transactable states; excludes terminal lines; only returns lines
   // with remaining_quantity > 0.
@@ -268,7 +316,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     try {
       const auth = await requireTenantAuth(req, res, deps);
       if (!auth) return;
-      const { tenantId } = auth;
+      const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
       const supplierId    = typeof req.query["supplierId"]   === "string" ? req.query["supplierId"]   : null;
       const commitmentId  = typeof req.query["commitmentId"] === "string" ? req.query["commitmentId"] : null;
@@ -302,6 +350,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
           JOIN document.commitment        c  ON c.id  = cl.commitment_id AND c.tenant_id = cl.tenant_id
           LEFT JOIN master.supplier_app_index s ON s.supplier_id = c.party_id AND s.tenant_id = c.tenant_id
          WHERE cl.tenant_id = ${tenantId}::uuid
+           AND (${readableCompanyCodeIds}::uuid[] IS NULL OR c.company_code_id = ANY(${readableCompanyCodeIds}::uuid[]))
            AND c.commitment_type = 'purchase_order'
            AND c.party_type      = 'SUPPLIER'
            AND c.status = ANY(${transactableStates}::text[])
@@ -324,7 +373,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     }
   };
 
-  // ── GET /api/p2p/open-receipt-lines ────────────────────────────────────
+  // â”€â”€ GET /api/p2p/open-receipt-lines â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // receipt_line rows from POSTED receipts where accepted_quantity > 0.
   // Used by the open-receipt-line picker during invoice creation for
   // three-way matching (PO + GR + Invoice).
@@ -334,7 +383,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     try {
       const auth = await requireTenantAuth(req, res, deps);
       if (!auth) return;
-      const { tenantId } = auth;
+      const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
       const supplierId    = typeof req.query["supplierId"]    === "string" ? req.query["supplierId"]    : null;
       const commitmentId  = typeof req.query["commitmentId"]  === "string" ? req.query["commitmentId"]  : null;
@@ -367,6 +416,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
           JOIN document.commitment   c  ON c.id  = r.commitment_id AND c.tenant_id = r.tenant_id
           LEFT JOIN document.commitment_line cl ON cl.id = rcpl.commitment_line_id AND cl.tenant_id = rcpl.tenant_id
          WHERE rcpl.tenant_id = ${tenantId}::uuid
+           AND (${readableCompanyCodeIds}::uuid[] IS NULL OR r.company_code_id = ANY(${readableCompanyCodeIds}::uuid[]))
            AND r.status = 'posted'
            AND r.terminal_status IS NULL
            AND rcpl.accepted_quantity > 0
@@ -389,7 +439,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     }
   };
 
-  // ── GET /api/p2p/open-service-sheet-lines ──────────────────────────────
+  // â”€â”€ GET /api/p2p/open-service-sheet-lines â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // service_sheet_line rows from posted SES headers. Used during invoice
   // creation for services (SES + Invoice two-way match, no GRN equivalent).
   //
@@ -398,7 +448,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     try {
       const auth = await requireTenantAuth(req, res, deps);
       if (!auth) return;
-      const { tenantId } = auth;
+      const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
       const supplierId    = typeof req.query["supplierId"]    === "string" ? req.query["supplierId"]    : null;
       const commitmentId  = typeof req.query["commitmentId"]  === "string" ? req.query["commitmentId"]  : null;
@@ -428,6 +478,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
           JOIN document.commitment         c   ON c.id   = ssh.commitment_id     AND c.tenant_id   = ssh.tenant_id
           LEFT JOIN document.commitment_line cl ON cl.id = sshl.commitment_line_id AND cl.tenant_id = sshl.tenant_id
          WHERE sshl.tenant_id = ${tenantId}::uuid
+           AND (${readableCompanyCodeIds}::uuid[] IS NULL OR ssh.company_code_id = ANY(${readableCompanyCodeIds}::uuid[]))
            AND ssh.status = 'posted'
            AND ssh.terminal_status IS NULL
            AND sshl.quantity > 0
@@ -448,7 +499,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     }
   };
 
-  // ── GET /api/p2p/open-invoices ─────────────────────────────────────────
+  // â”€â”€ GET /api/p2p/open-invoices â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Posted / partially_paid AP-posted purchase_invoices grouped by
   // supplier. Used by the payment-from-invoice prefill grid to let users
   // multi-select invoices to pay in one payment_entry. Each row carries:
@@ -457,9 +508,9 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
   //   - remainingAmount = payable - already
   //
   // Query: ?supplierId=<uuid>&seedInvoiceId=<uuid>&q=&limit=&offset=
-  //   - supplierId   — narrow to this supplier (recommended; single
+  //   - supplierId   â€” narrow to this supplier (recommended; single
   //                    payment can only target one supplier)
-  //   - seedInvoiceId — when set without supplierId, the query resolves
+  //   - seedInvoiceId â€” when set without supplierId, the query resolves
   //                     the seed invoice's supplier_id and narrows by it
   //                     automatically (page entry point convenience).
   interface OpenInvoiceRow {
@@ -481,7 +532,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     try {
       const auth = await requireTenantAuth(req, res, deps);
       if (!auth) return;
-      const { tenantId } = auth;
+      const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
       let supplierId      = typeof req.query["supplierId"]      === "string" ? req.query["supplierId"]      : null;
       const seedInvoiceId = typeof req.query["seedInvoiceId"]   === "string" ? req.query["seedInvoiceId"]   : null;
@@ -489,7 +540,9 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
       if (!supplierId && seedInvoiceId) {
         const seed = await sql<{ supplier_id: string }>`
           SELECT supplier_id FROM document.purchase_invoice
-           WHERE id = ${seedInvoiceId}::uuid AND tenant_id = ${tenantId}::uuid
+           WHERE id = ${seedInvoiceId}::uuid
+             AND tenant_id = ${tenantId}::uuid
+             AND (${readableCompanyCodeIds}::uuid[] IS NULL OR company_code_id = ANY(${readableCompanyCodeIds}::uuid[]))
            LIMIT 1
         `.execute(db);
         supplierId = seed.rows[0]?.supplier_id ?? null;
@@ -536,6 +589,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
           LEFT JOIN master.supplier_app_index s
             ON s.tenant_id = pi.tenant_id AND s.supplier_id = pi.supplier_id
          WHERE pi.tenant_id = ${tenantId}::uuid
+           AND (${readableCompanyCodeIds}::uuid[] IS NULL OR pi.company_code_id = ANY(${readableCompanyCodeIds}::uuid[]))
            AND pi.terminal_status IS NULL
            AND pi.status = ANY(${payableStates}::text[])
            AND pi.invoice_type NOT IN ('credit_note','debit_note')
@@ -558,7 +612,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     }
   };
 
-  // ── GET /api/p2p/open-requisition-lines ────────────────────────────────
+  // â”€â”€ GET /api/p2p/open-requisition-lines â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Open purchase_requisition_line rows the user can convert into a PO.
   // Filters to PRs in convertible status (approved | partially_converted),
   // excludes lines that are 'converted' or 'cancelled', and only returns
@@ -569,7 +623,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     try {
       const auth = await requireTenantAuth(req, res, deps);
       if (!auth) return;
-      const { tenantId } = auth;
+      const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
       const requisitionId = typeof req.query["requisitionId"] === "string" ? req.query["requisitionId"] : null;
 
@@ -593,6 +647,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
           JOIN document.purchase_requisition      pr
             ON pr.id = prl.purchase_requisition_id AND pr.tenant_id = prl.tenant_id
          WHERE prl.tenant_id = ${tenantId}::uuid
+           AND (${readableCompanyCodeIds}::uuid[] IS NULL OR pr.company_code_id = ANY(${readableCompanyCodeIds}::uuid[]))
            AND pr.status     IN ('approved','partially_converted')
            AND prl.status    IN ('open','partially_converted')
            AND prl.remaining_quantity > 0
@@ -612,7 +667,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     }
   };
 
-  // ── GET /api/p2p/catalog/items ─────────────────────────────────────────
+  // â”€â”€ GET /api/p2p/catalog/items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Stub until master.catalog_item lands. Returns a tenant-scoped empty
   // page so the picker UI mounts cleanly. When the catalog table ships,
   // swap this handler for a real query against master.catalog_item +
@@ -624,12 +679,12 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     res.json(body);
   };
 
-  // ── POST /api/p2p/receipts/from-commitment ─────────────────────────────
+  // â”€â”€ POST /api/p2p/receipts/from-commitment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Single-TX create of a receipt header + N receipt_line rows from a
   // chosen commitment + line-acceptance grid. Allocates receipt_number
   // through control.next_entity_number, resolves fiscal_year/period_number
   // from document_date (Gregorian fallback when no fiscal_period covers
-  // the date — see records.route.ts AUDIT NOTE), then delegates to
+  // the date â€” see records.route.ts AUDIT NOTE), then delegates to
   // createReceiptFromCommitment which does the validation + atomic write.
   //
   // Body shape:
@@ -765,7 +820,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     }
   };
 
-  // ── POST /api/p2p/service-sheets/from-commitment ───────────────────────
+  // â”€â”€ POST /api/p2p/service-sheets/from-commitment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Mirror of receiptFromCommitmentHandler for the SES document. Same
   // company-code / fiscal-period (strict) / document-number resolution
   // through the shared helpers; same atomic header + lines write through
@@ -903,7 +958,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     }
   };
 
-  // ── POST /api/p2p/invoices/from-receipt ────────────────────────────────
+  // â”€â”€ POST /api/p2p/invoices/from-receipt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Closes the 3-way match loop: user picks receipt_lines + supplies the
   // supplier's invoice metadata, and the service writes a draft PI header
   // + N PI lines back-referenced to the receipt_lines (for downstream
@@ -1186,7 +1241,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     }
   };
 
-  // ── POST /api/p2p/payments/from-invoice ────────────────────────────────
+  // â”€â”€ POST /api/p2p/payments/from-invoice â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Closes the P2P chain: user picks one or more invoices + supplies per-
   // allocation amounts, and the service writes a draft payment_entry +
   // payment_entry_allocation rows atomically. Cross-row supplier +
@@ -1322,7 +1377,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
     }
   };
 
-  // ── POST /api/p2p/commitments/from-requisition ─────────────────────────
+  // â”€â”€ POST /api/p2p/commitments/from-requisition â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Single-TX create of a commitment (PO) + commitment_procurement +
   // commitment_line rows from an approved purchase_requisition + a per-line
   // quantity grid + supplier choice. Allocates commitment_number through
@@ -1470,7 +1525,7 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
   router.get("/p2p/open-requisition-lines",         openRequisitionLinesHandler);
   router.get("/p2p/open-invoices",                  openInvoicesHandler);
   router.get("/p2p/catalog/items",                  catalogItemsHandler);
-  // ─── P2P chain-transition POST endpoints (deprecated — see P6) ───────────
+  // â”€â”€â”€ P2P chain-transition POST endpoints (deprecated â€” see P6) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Replaced by generic op dispatcher:
   //   POST /records/purchase_order/op/commitment_from_requisition
   //   POST /records/receipt/op/receipt_from_commitment
@@ -1482,12 +1537,10 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
   // The handlers below are preserved for backward compatibility. Migrate
   // clients to /records/:entity/op/:code and remove these mounts in P6b.
   // See server/packages/services/records/routes/entity-op.registry.ts.
-  router.post("/p2p/commitments/from-requisition",  commitmentFromRequisitionHandler);
-  router.post("/p2p/receipts/from-commitment",      receiptFromCommitmentHandler);
-  router.post("/p2p/service-sheets/from-commitment", serviceSheetFromCommitmentHandler);
-  router.post("/p2p/invoices/from-receipt",         invoiceFromReceiptHandler);
-  router.post("/p2p/invoices/from-service-sheet",   invoiceFromServiceSheetHandler);
-  router.post("/p2p/payments/from-invoice",         paymentFromInvoiceHandler);
+  // P2P conversion writes are intentionally not mounted here. They are served
+  // only by POST /runtime/v1/entities/:entity/op/:operation, which applies
+  // verified context, source/target authorization, company scope, workspace
+  // capability, and idempotency before invoking the registered handler.
 
   return router;
 }

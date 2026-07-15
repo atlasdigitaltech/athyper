@@ -1,8 +1,5 @@
--- LookupDomain/control/classification_source.sql
--- Lookup values for domain: control.classification_source
--- Entity type providing the classification signal (commodity_classification_to_intent_rule.classification_source).
--- Lookup codes are lowercase; commodity_classification_to_intent_rule stores uppercase.
--- Idempotent: WHERE NOT EXISTS guard
+-- Codes are lowercase; commodity_classification_to_intent_rule.classification_source stores uppercase
+-- (EnumRenderer does case-insensitive matching).
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, sort_order, is_system, status, created_by)

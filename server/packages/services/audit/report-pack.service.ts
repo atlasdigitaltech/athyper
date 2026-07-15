@@ -15,7 +15,7 @@
  */
 
 import type { Kysely } from "kysely";
-import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -335,3 +335,4 @@ export function createReportPackService(
 ): ReportPackService {
   return new ReportPackService(db, storage, presignedTtlSeconds);
 }
+

@@ -18,6 +18,7 @@
     "@athyper/app-mesh": "workspace:*",
     "@athyper/i18n": "workspace:*",
     "@athyper/identity-gate": "workspace:*",
+    "@athyper/me-ui": "workspace:*",
     "@athyper/mesh-exchange-contracts": "workspace:*",
     "@athyper/app-mesh-route-manifest": "workspace:*",
     "@athyper/runtime-shared": "workspace:*",

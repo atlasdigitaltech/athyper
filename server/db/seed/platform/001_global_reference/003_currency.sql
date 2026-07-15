@@ -1,20 +1,10 @@
--- 900_seed_data/001_shared/003_currency.sql
--- Seed: ISO 4217 currencies
--- Schema: shared | Table: currency
---
--- Best-practice notes
--- ───────────────────
--- on conflict (code) do update   → re-running this seed propagates corrections
---                                  (name typos, symbol fixes, minor_units changes)
--- minor_units                    → ISO 4217 authoritative exponent (decimal places)
--- metadata rounding_increment    → actual smallest commercial unit where it differs
---                                  from 10^-minor_units (e.g. CHF rounds to 0.05 cash)
--- PSE omitted                    → not an ISO 4217 currency code (PSE is ISO 3166 country)
--- Precious metals (XAU …)        → minor_units NULL per ISO 4217 (no subunit defined)
+-- ISO 4217 currencies.
+-- PSE omitted: it is an ISO 3166 country code, not an ISO 4217 currency.
+-- Precious metals (XAU/XAG/XPT/XPD): minor_units NULL per ISO 4217 (no subunit).
+-- metadata.rounding_increment overrides 10^-minor_units where commercial rounding differs
+-- (e.g. CHF cash rounds to 0.05).
 
--- ============================================================================
 -- Major World Currencies
--- ============================================================================
 insert into shared.currency (code, name, symbol, minor_units, numeric3, created_by)
 values
   ('USD','US Dollar','$',2,'840','00000000-0000-0000-0000-000000000000'),
@@ -36,9 +26,7 @@ on conflict (code) do update set
   updated_at  = now(),
   updated_by  = excluded.created_by;
 
--- ============================================================================
 -- Middle East & North Africa
--- ============================================================================
 insert into shared.currency (code, name, symbol, minor_units, numeric3, created_by)
 values
   ('SAR','Saudi Riyal','﷼',2,'682','00000000-0000-0000-0000-000000000000'),
@@ -68,9 +56,7 @@ on conflict (code) do update set
   updated_at  = now(),
   updated_by  = excluded.created_by;
 
--- ============================================================================
 -- Europe (non-EUR)
--- ============================================================================
 insert into shared.currency (code, name, symbol, minor_units, numeric3, created_by)
 values
   ('ALL','Albanian Lek','L',2,'008','00000000-0000-0000-0000-000000000000'),
@@ -101,9 +87,7 @@ on conflict (code) do update set
   updated_at  = now(),
   updated_by  = excluded.created_by;
 
--- ============================================================================
 -- Asia & Pacific
--- ============================================================================
 insert into shared.currency (code, name, symbol, minor_units, numeric3, created_by)
 values
   ('AFN','Afghan Afghani','؋',2,'971','00000000-0000-0000-0000-000000000000'),
@@ -149,9 +133,7 @@ on conflict (code) do update set
   updated_at  = now(),
   updated_by  = excluded.created_by;
 
--- ============================================================================
 -- Africa
--- ============================================================================
 insert into shared.currency (code, name, symbol, minor_units, numeric3, created_by)
 values
   ('AOA','Angolan Kwanza','Kz',2,'973','00000000-0000-0000-0000-000000000000'),
@@ -208,9 +190,7 @@ update shared.currency
 set status = 'deprecated', updated_at = now(), updated_by = '00000000-0000-0000-0000-000000000000'
 where code = 'ZWL';
 
--- ============================================================================
 -- CFA Franc Zones & Supranational
--- ============================================================================
 insert into shared.currency (code, name, symbol, minor_units, numeric3, created_by)
 values
   ('XAF','CFA Franc BEAC','FCFA',0,'950','00000000-0000-0000-0000-000000000000'),
@@ -225,9 +205,7 @@ on conflict (code) do update set
   updated_at  = now(),
   updated_by  = excluded.created_by;
 
--- ============================================================================
 -- Americas (non-USD)
--- ============================================================================
 insert into shared.currency (code, name, symbol, minor_units, numeric3, created_by)
 values
   ('ARS','Argentine Peso','$',2,'032','00000000-0000-0000-0000-000000000000'),
@@ -267,10 +245,8 @@ on conflict (code) do update set
   updated_at  = now(),
   updated_by  = excluded.created_by;
 
--- ============================================================================
 -- Special / Precious Metals (valid ISO 4217)
 -- minor_units intentionally NULL — ISO 4217 defines no subunit for metals/SDR
--- ============================================================================
 insert into shared.currency (code, name, symbol, minor_units, numeric3, status, created_by)
 values
   ('XAU','Gold (troy ounce)',null,null,'959','active','00000000-0000-0000-0000-000000000000'),
@@ -286,9 +262,7 @@ on conflict (code) do update set
   updated_at  = now(),
   updated_by  = excluded.created_by;
 
--- ============================================================================
 -- Financial Rounding Metadata
--- ============================================================================
 -- Applied after inserts so they do not interfere with the idempotent upsert above.
 -- Only currencies where the commercial rounding increment differs from
 -- the ISO 4217 implied value (10^-minor_units) receive an explicit entry.

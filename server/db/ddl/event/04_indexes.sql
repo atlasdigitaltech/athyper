@@ -18,6 +18,12 @@ CREATE INDEX IF NOT EXISTS outbox_topic_status_idx
 CREATE INDEX IF NOT EXISTS outbox_tenant_status_idx
     ON event.outbox (tenant_id, status);
 
+-- Deterministic mutation keys make producer retries idempotent. NULL remains
+-- available for legacy/non-deduplicated events during migration.
+CREATE UNIQUE INDEX IF NOT EXISTS outbox_tenant_event_key_uq
+    ON event.outbox (tenant_id, event_key)
+    WHERE event_key IS NOT NULL;
+
 -- outbox: dead letter review — topic + status for dead letter queue inspection
 CREATE INDEX IF NOT EXISTS outbox_dead_letter_pidx
     ON event.outbox (topic, created_at)

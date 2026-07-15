@@ -1,7 +1,3 @@
--- LookupDomain/master/conversation_type.sql
--- Lookup values for domain: master.conversation_type
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status,
      metadata, created_by)

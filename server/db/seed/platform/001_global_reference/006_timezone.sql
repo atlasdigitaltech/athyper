@@ -1,22 +1,10 @@
--- 900_seed_data/001_shared/006_timezone.sql
--- Seed: IANA tzdb time zones
--- Schema: shared | Table: timezone
---
--- Best-practice notes
--- ───────────────────
--- utc_offset_minutes  → standard (non-DST) offset. DST-observing zones should
---   use AT TIME ZONE at query time; the stored offset is for reference/display.
--- is_alias / canonical_code → alias entries point to their canonical IANA code.
---   Always insert canonicals before aliases so application code can resolve them.
--- on conflict do update → re-running propagates name fixes and offset corrections.
--- IANA 2020b: America/Godthab renamed → America/Nuuk (canonical). Godthab → alias.
--- IANA 2022b: Europe/Kiev renamed → Europe/Kyiv (canonical). Kiev → alias.
--- IANA 2022g: America/Ciudad_Juarez added (UTC-7 year-round, no DST).
--- US/Hawaii fix: correct canonical is Pacific/Honolulu, not America/Adak.
+-- IANA tzdb time zones.
+-- utc_offset_minutes is standard (non-DST) offset; DST zones must use AT TIME ZONE at query time.
+-- Canonicals must be inserted before aliases (alias rows FK to canonical_code).
+-- Watch-outs: America/Godthab→Nuuk (2020b), Europe/Kiev→Kyiv (2022b), America/Ciudad_Juarez added 2022g.
+-- US/Hawaii canonical is Pacific/Honolulu, not America/Adak.
 
--- ============================================================================
 -- Etc (must come first — referenced by GMT/UTC aliases)
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('Etc/GMT','GMT',0,false,'00000000-0000-0000-0000-000000000000'),
@@ -27,9 +15,7 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- Africa
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('Africa/Abidjan','Africa / Abidjan',0,false,'00000000-0000-0000-0000-000000000000'),
@@ -90,9 +76,7 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- America
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('America/Adak','America / Adak',-600,false,'00000000-0000-0000-0000-000000000000'),
@@ -201,9 +185,7 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- Antarctica
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('Antarctica/Casey','Antarctica / Casey',660,false,'00000000-0000-0000-0000-000000000000'),
@@ -223,9 +205,7 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- Asia
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('Asia/Aden','Asia / Aden',180,false,'00000000-0000-0000-0000-000000000000'),
@@ -317,9 +297,7 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- Atlantic
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('Atlantic/Azores','Atlantic / Azores',-60,false,'00000000-0000-0000-0000-000000000000'),
@@ -338,9 +316,7 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- Australia
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('Australia/Adelaide','Australia / Adelaide',570,false,'00000000-0000-0000-0000-000000000000'),
@@ -360,9 +336,7 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- Europe
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('Europe/Amsterdam','Europe / Amsterdam',60,false,'00000000-0000-0000-0000-000000000000'),
@@ -430,9 +404,7 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- Indian
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('Indian/Antananarivo','Indian / Antananarivo',180,false,'00000000-0000-0000-0000-000000000000'),
@@ -452,9 +424,7 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- Pacific
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, created_by)
 values
   ('Pacific/Apia','Pacific / Apia',780,false,'00000000-0000-0000-0000-000000000000'),
@@ -500,10 +470,8 @@ on conflict (code) do update set
   updated_at         = now(),
   updated_by         = excluded.created_by;
 
--- ============================================================================
 -- Aliases (legacy / convenience names → canonical IANA code)
 -- All canonical zones above must already exist before this block runs.
--- ============================================================================
 insert into shared.timezone (code, name, utc_offset_minutes, is_alias, canonical_code, created_by)
 values
   ('GMT',              'GMT',                    0,    true, 'Etc/GMT',                      '00000000-0000-0000-0000-000000000000'),

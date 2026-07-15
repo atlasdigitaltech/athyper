@@ -1,23 +1,9 @@
--- ============================================================================
--- blueprints/universal/070_people/310_job_classification.sql
--- Universal HR Job Classification Seed
---
--- Covers: job_family · job_function · career_band · career_level ·
---         pay_grade · designation · job
---
--- Design:
---   · Industry-agnostic templates covering 15 families and ~66 functions
---   · 9 career bands (Entry → C-Suite) with 19 levels
---   · 15 pay grades (G01–G15); amounts intentionally omitted — configure
---     min/midpoint/max per currency and market benchmark separately
---   · ~48 designations covering the full IC + management + C-suite ladder
---   · 80 representative jobs covering all major families and career paths
---   · Fully idempotent: ON CONFLICT (tenant_id, code) DO UPDATE
---
--- Usage:
---   SET app.seed_tenant_id = '<tenant-uuid>';
---   \i 310_job_classification.sql
--- ============================================================================
+-- Universal HR job classification: job_family / job_function / career_band /
+-- career_level / pay_grade / designation / job. Industry-agnostic templates —
+-- 15 families × ~66 functions, 9 bands × 19 levels, 15 pay grades (G01–G15),
+-- ~48 designations, ~80 representative jobs.
+-- Pay-grade min/midpoint/max amounts are intentionally omitted — tenants set
+-- those per currency + market benchmark separately.
 
 DO $seed$
 DECLARE

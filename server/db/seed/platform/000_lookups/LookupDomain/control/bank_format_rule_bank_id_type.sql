@@ -1,7 +1,3 @@
--- LookupDomain/control/bank_format_rule_bank_id_type.sql
--- Lookup values for domain: control.bank_format_rule_bank_id_type
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('bic',       'BIC / SWIFT',   'control.bank_format_rule_bank_id_type', 'SWIFT/BIC institution code',          10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

@@ -62,6 +62,7 @@ SELECT
     al.owner_type,
     al.owner_id,
     al.purpose,
+    al.role_qualifier,
     al.is_primary,
     al.effective_from,
     al.effective_until,
@@ -116,6 +117,7 @@ SELECT
     al.owner_id,
     al.address_id,
     al.purpose,
+    al.role_qualifier,
     al.is_primary,
     al.effective_from,
     al.effective_until,
@@ -146,6 +148,304 @@ COMMENT ON VIEW master.v_business_partner_address IS
     'Address links scoped to owner_type=business_partner, joined with address and country. '
     'id = address_link.id (the link PK). No temporal filter — shows all links including expired. '
     'SECURITY INVOKER — RLS on underlying tables enforces tenant isolation.';
+
+
+-- ============================================================================
+-- v_resolved_identity — paired address + email + phone view, one row per
+-- active (owner, role) combination. Use this for "show me the identity record
+-- for this owner playing this role" queries: invoice routing, document
+-- snapshot capture, identity strip UI.
+--
+-- Performance design:
+--   • Address comes from a straight JOIN to address_link + address — cheap
+--     index lookups (existing address_link_owner_purpose_idx).
+--   • Email and phone come from LATERAL subqueries with LIMIT 1, landing on
+--     the ux_contact_link_one_primary partial index (where is_primary=true).
+--     Each LATERAL probe is a single index seek per outer row, not a per-row
+--     scan. Avoids the N+1 trap of correlated subqueries in the SELECT list.
+--   • Qualifier-aware ordering: contact rows matching the address link's
+--     role_qualifier are preferred over qualifier-less rows. The deterministic
+--     tail (updated_at DESC, id) makes the result stable across runs.
+--
+-- Temporal filter mirrors v_resolved_address: only currently-effective links.
+-- address.status='active' enforced.
+-- ============================================================================
+CREATE OR REPLACE VIEW master.v_resolved_identity
+    WITH (security_invoker = true, security_barrier = true)
+AS
+SELECT
+    al.tenant_id,
+    al.owner_type,
+    al.owner_id,
+    al.purpose                       AS role,
+    al.role_qualifier                AS address_qualifier,
+
+    al.id                            AS address_link_id,
+    al.is_primary                    AS address_is_primary,
+    al.effective_from                AS address_effective_from,
+    al.effective_until               AS address_effective_until,
+
+    -- Address fields (denormalised from the JOIN already in place)
+    a.id                             AS address_id,
+    a.address_type,
+    a.attention_line,
+    a.line1,
+    a.line2,
+    a.line3,
+    a.city,
+    a.region,
+    a.postal_code,
+    a.country_code,
+    a.formatted_address,
+    a.latitude,
+    a.longitude,
+
+    -- Country display
+    c.name                           AS country_name,
+    c.calling_code                   AS country_calling_code,
+
+    -- Email — LATERAL probe lands on ux_contact_link_one_primary partial index
+    cl_email.id                      AS email_link_id,
+    cl_email.value                   AS email,
+    cl_email.role_qualifier          AS email_qualifier,
+    (cl_email.id IS NOT NULL)        AS email_present,
+
+    -- Phone — same access path on the phone channel
+    cl_phone.id                      AS phone_link_id,
+    cl_phone.value                   AS phone,
+    cl_phone.role_qualifier          AS phone_qualifier,
+    (cl_phone.id IS NOT NULL)        AS phone_present
+
+FROM master.address_link al
+JOIN master.address a
+    ON  a.tenant_id = al.tenant_id
+    AND a.id        = al.address_id
+LEFT JOIN shared.country c
+    ON  c.code = a.country_code
+
+-- Email: qualifier-aware, primary-only, status-active. Tie-break prefers
+-- a contact whose role_qualifier matches the address link's qualifier.
+LEFT JOIN LATERAL (
+    SELECT cl.id, cl.value, cl.role_qualifier
+    FROM master.contact_link cl
+    WHERE cl.tenant_id    = al.tenant_id
+      AND cl.owner_type   = al.owner_type
+      AND cl.owner_id     = al.owner_id
+      AND cl.purpose      = al.purpose
+      AND cl.channel_type = 'email'
+      AND cl.is_primary   = true
+      AND cl.status       = 'active'
+    ORDER BY
+        (cl.role_qualifier IS NOT DISTINCT FROM al.role_qualifier) DESC,
+        cl.updated_at DESC NULLS LAST,
+        cl.id
+    LIMIT 1
+) cl_email ON true
+
+-- Phone: same shape as email
+LEFT JOIN LATERAL (
+    SELECT cl.id, cl.value, cl.role_qualifier
+    FROM master.contact_link cl
+    WHERE cl.tenant_id    = al.tenant_id
+      AND cl.owner_type   = al.owner_type
+      AND cl.owner_id     = al.owner_id
+      AND cl.purpose      = al.purpose
+      AND cl.channel_type = 'phone'
+      AND cl.is_primary   = true
+      AND cl.status       = 'active'
+    ORDER BY
+        (cl.role_qualifier IS NOT DISTINCT FROM al.role_qualifier) DESC,
+        cl.updated_at DESC NULLS LAST,
+        cl.id
+    LIMIT 1
+) cl_phone ON true
+
+WHERE al.effective_from  <= CURRENT_DATE
+  AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+  AND a.status = 'active';
+
+COMMENT ON VIEW master.v_resolved_identity IS
+    'Paired address + email + phone view, one row per active (owner, role). '
+    'LATERAL joins land on ux_contact_link_one_primary partial index — single '
+    'index seek per outer row, no N+1. Use for invoice routing, document '
+    'snapshot capture, identity strip UI. SECURITY INVOKER — RLS on underlying '
+    'tables enforces tenant isolation. Filters: effective_from <= today, '
+    'effective_until > today or NULL, address.status=''active''.';
+
+
+-- ============================================================================
+-- v_site_address — owner-scoped address list for site-anchored pickers
+-- (PI / PO / GR / SE ship-to). Keyed by site_id so the runtime-options
+-- route can dependent-filter on a single column instead of synthesising an
+-- (owner_type, owner_id) tuple. Carries country/region/jurisdiction so the
+-- consumer renders the formatted address + jurisdiction chip without an
+-- extra address lookup.
+-- ============================================================================
+CREATE OR REPLACE VIEW master.v_site_address
+    WITH (security_invoker = true, security_barrier = true)
+AS
+SELECT
+    al.id               AS id,           -- row-level identifier; required by records.route's ORDER BY id tiebreaker
+    al.id               AS link_id,
+    al.tenant_id,
+    al.owner_id         AS site_id,
+    al.purpose,
+    al.role_qualifier,
+    al.is_primary,
+    al.effective_from,
+    al.effective_until,
+    -- address fields
+    a.id                AS address_id,
+    a.code,
+    a.name,
+    a.attention_line,
+    a.line1,
+    a.line2,
+    a.line3,
+    a.city,
+    a.region,
+    a.postal_code,
+    a.country_code,
+    a.formatted_address,
+    a.tax_jurisdiction_id,
+    a.status            AS address_status,
+    -- country display
+    c.name              AS country_name
+FROM master.address_link al
+JOIN master.address a
+    ON  a.tenant_id = al.tenant_id
+    AND a.id        = al.address_id
+LEFT JOIN shared.country c
+    ON  c.code = a.country_code
+WHERE al.owner_type = 'site'
+  AND al.effective_from  <= CURRENT_DATE
+  AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+  AND a.status = 'active';
+
+COMMENT ON VIEW master.v_site_address IS
+    'Address links scoped to owner_type=site, exposed with site_id as the '
+    'filter key so PI/PO/GR/SE ship-to pickers can dependent-filter on a '
+    'single column. Currently-effective links only; carries jurisdiction + '
+    'country for inline rendering. SECURITY INVOKER — RLS enforces tenancy.';
+
+
+-- ============================================================================
+-- v_supplier_address — owner-scoped address list for supplier-anchored
+-- pickers (PI / PO ship-from / remit-to). Address links may attach to the
+-- supplier directly OR to the underlying business_partner; this view UNIONs
+-- both paths and exposes a single supplier_id filter key. The same physical
+-- address surfaces once per (supplier_id, link_id) pair regardless of which
+-- owner_type the link uses.
+-- ============================================================================
+CREATE OR REPLACE VIEW master.v_supplier_address
+    WITH (security_invoker = true, security_barrier = true)
+AS
+SELECT
+    al.id               AS id,           -- row-level identifier; required by records.route's ORDER BY id tiebreaker
+    al.id               AS link_id,
+    al.tenant_id,
+    s.id                AS supplier_id,
+    al.owner_type       AS link_owner_type,
+    al.purpose,
+    al.role_qualifier,
+    al.is_primary,
+    al.effective_from,
+    al.effective_until,
+    -- address fields
+    a.id                AS address_id,
+    a.code,
+    a.name,
+    a.attention_line,
+    a.line1,
+    a.line2,
+    a.line3,
+    a.city,
+    a.region,
+    a.postal_code,
+    a.country_code,
+    a.formatted_address,
+    a.tax_jurisdiction_id,
+    a.status            AS address_status,
+    -- country display
+    c.name              AS country_name
+FROM master.supplier s
+JOIN master.address_link al
+    ON  al.tenant_id = s.tenant_id
+    AND (
+            (al.owner_type = 'supplier'         AND al.owner_id = s.id)
+         OR (al.owner_type = 'business_partner' AND al.owner_id = s.business_partner_id)
+        )
+JOIN master.address a
+    ON  a.tenant_id = al.tenant_id
+    AND a.id        = al.address_id
+LEFT JOIN shared.country c
+    ON  c.code = a.country_code
+WHERE al.effective_from  <= CURRENT_DATE
+  AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+  AND a.status = 'active';
+
+COMMENT ON VIEW master.v_supplier_address IS
+    'Address links scoped to a supplier (direct owner_type=supplier OR via '
+    'underlying business_partner). Exposes supplier_id as the filter key so '
+    'PI/PO ship-from / remit-to pickers can dependent-filter on a single '
+    'column. Currently-effective links only. SECURITY INVOKER — RLS enforces '
+    'tenancy.';
+
+
+-- ============================================================================
+-- v_company_code_address — owner-scoped address list for company-code-anchored
+-- pickers (PI / PO / SES bill-to). Keyed by company_code_id so the
+-- runtime-options route can dependent-filter on a single column. Carries
+-- country/region/jurisdiction so the consumer renders the formatted address +
+-- jurisdiction chip without an extra lookup.
+-- ============================================================================
+CREATE OR REPLACE VIEW master.v_company_code_address
+    WITH (security_invoker = true, security_barrier = true)
+AS
+SELECT
+    al.id               AS id,           -- row-level identifier; required by records.route's ORDER BY id tiebreaker
+    al.id               AS link_id,
+    al.tenant_id,
+    al.owner_id         AS company_code_id,
+    al.purpose,
+    al.role_qualifier,
+    al.is_primary,
+    al.effective_from,
+    al.effective_until,
+    -- address fields
+    a.id                AS address_id,
+    a.code,
+    a.name,
+    a.attention_line,
+    a.line1,
+    a.line2,
+    a.line3,
+    a.city,
+    a.region,
+    a.postal_code,
+    a.country_code,
+    a.formatted_address,
+    a.tax_jurisdiction_id,
+    a.status            AS address_status,
+    -- country display
+    c.name              AS country_name
+FROM master.address_link al
+JOIN master.address a
+    ON  a.tenant_id = al.tenant_id
+    AND a.id        = al.address_id
+LEFT JOIN shared.country c
+    ON  c.code = a.country_code
+WHERE al.owner_type = 'company_code'
+  AND al.effective_from  <= CURRENT_DATE
+  AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+  AND a.status = 'active';
+
+COMMENT ON VIEW master.v_company_code_address IS
+    'Address links scoped to owner_type=company_code, exposed with '
+    'company_code_id as the filter key so PI/PO/SES bill-to pickers can '
+    'dependent-filter on a single column. Currently-effective links only; '
+    'carries jurisdiction + country for inline rendering. SECURITY INVOKER — '
+    'RLS enforces tenancy.';
 
 
 -- ============================================================================

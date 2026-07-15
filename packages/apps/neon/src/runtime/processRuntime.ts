@@ -1,3 +1,4 @@
+import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import type {
   MetaEntityRuntimeDescriptor,
   ProcessRuntimeState,
@@ -91,11 +92,13 @@ export function createNeonProcessRuntimeAdapter(
 }
 
 function defaultProcessStateApiHref(entityCode: string, recordId: string): string {
-  return `/api/runtime/entities/${encodeURIComponent(entityCode)}/${encodeURIComponent(recordId)}/process-state`;
+  return runtimePath.processState(entityCode, recordId);
 }
 
 function defaultOperationApiHref(entityCode: string, operationCode: string, recordId?: string): string {
-  const base = `/api/runtime/entities/${encodeURIComponent(entityCode)}/operations/${encodeURIComponent(operationCode)}`;
+  // Stub default — consumers typically override via NeonProcessRuntimeConfig.operationApiHref.
+  // No BFF route exists at this path today; kept under v1/entities for forward-compatibility.
+  const base = `/api/runtime/v1/entities/${encodeURIComponent(entityCode)}/operations/${encodeURIComponent(operationCode)}`;
   return recordId ? `${base}?recordId=${encodeURIComponent(recordId)}` : base;
 }
 

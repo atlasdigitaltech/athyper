@@ -31,7 +31,7 @@ vi.mock("@athyper/adapter-db", () => ({
   })),
 }));
 
-vi.mock("@athyper/adapter-memorycache", () => ({
+vi.mock("@athyper/adapter-memory-cache", () => ({
   createRedisClient: vi.fn(() => ({
     get: mockRedisGet,
     set: vi.fn(),
@@ -55,7 +55,7 @@ vi.mock("@athyper/adapter-auth", () => ({
   })),
 }));
 
-vi.mock("@athyper/adapter-objectstorage", () => ({
+vi.mock("@athyper/adapter-object-storage", () => ({
   createS3ObjectStorageAdapter: vi.fn(() => ({
     put: vi.fn(),
     get: vi.fn(),
@@ -302,3 +302,4 @@ describe("bootstrap", () => {
     });
   });
 });
+

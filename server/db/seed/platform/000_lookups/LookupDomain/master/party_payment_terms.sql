@@ -1,7 +1,3 @@
--- LookupDomain/master/party_payment_terms.sql
--- Lookup values for domain: master.party_payment_terms
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order, true, 'active',

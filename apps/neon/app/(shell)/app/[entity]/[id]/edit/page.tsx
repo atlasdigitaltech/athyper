@@ -1,15 +1,18 @@
 import { RuntimeEditPage } from "@athyper/runtime-canvas";
-import { getMetaEntityProcessRuntimeState } from "@/lib/server/meta-entity-process-state";
+import { notFound } from "next/navigation";
 import { getMetaEntityRecordDetail, normalizeRouteRecordId } from "@/lib/server/meta-entity-records";
 import { getMetaEntityRuntimeDescriptor } from "@/lib/server/meta-entity-runtime";
+import { getDocumentEditCoordinatorIdentity } from "@/lib/server/document-edit-coordinator-identity";
+import { resolveMetaEntityEditRoute } from "@/lib/server/meta-entity-edit-routing";
 import { PLANE_KEY } from "@/lib/plane";
-import DocumentObjectPageClient from "../DocumentObjectPageClient";
+import { DocumentEditBootstrapClient } from "../DocumentObjectPageClient";
 
 /**
  * Generic edit route — branches on `descriptor.renderer`:
  *   - `"document"` → scroll-synchronized DocumentObjectPageWorkspace
  *     (M5: every document entity opts in via this single gate)
- *   - everything else → classic RuntimeEditPage (master / ledger / simple)
+ *   - `"master"` / `"simple"` → classic RuntimeEditPage
+ *   - `"ledger"` or read-only → no edit renderer
  *
  * No per-entity route file needed for document entities — the renderer flag
  * is the system's canonical declaration that an entity is a document, and
@@ -22,36 +25,40 @@ export default async function RuntimeEditRoute({
 }) {
   const { entity, id } = await params;
   const recordId = normalizeRouteRecordId(id);
-  const descriptor = await getMetaEntityRuntimeDescriptor(entity);
-  const detail = await getMetaEntityRecordDetail(entity, recordId, descriptor);
+  const descriptor = await getMetaEntityRuntimeDescriptor(entity, recordId);
+  const routeDecision = resolveMetaEntityEditRoute(descriptor);
 
-  // Document branch — render the object-page workspace.
-  if (descriptor?.renderer === "document" && detail.record) {
-    const processState = await getMetaEntityProcessRuntimeState(
-      entity,
-      recordId,
-      descriptor,
-      detail.record,
-    );
-    const recordUuid =
-      typeof detail.record.id === "string" && detail.record.id.length > 0
-        ? detail.record.id
-        : recordId;
+  // Document branch — render the object-page workspace. A document must never
+  // silently fall back to classic record PATCH when its compiled edit runtime
+  // is missing; that would bypass aggregate validation and atomic child saves.
+  if (routeDecision.kind === "configuration_error") {
+      return (
+        <main className="flex min-h-[40vh] items-center justify-center px-6 text-sm text-destructive">
+          This document is missing its compiled edit runtime. Editing is disabled until metadata is rebuilt.
+        </main>
+      );
+  }
+  if (routeDecision.kind === "document") {
+    const editCoordinatorIdentity = await getDocumentEditCoordinatorIdentity();
+    if (!editCoordinatorIdentity) {
+      return <main className="p-6 text-sm text-destructive">The document editor is unavailable for this session.</main>;
+    }
     return (
-      <DocumentObjectPageClient
+      <DocumentEditBootstrapClient
         entityCode={entity}
         recordId={recordId}
-        recordUuid={recordUuid}
-        descriptor={descriptor}
-        record={detail.record}
-        processState={processState ?? undefined}
-        autoEnterEdit
+        identity={editCoordinatorIdentity}
       />
     );
   }
 
-  // Classic branch — master / ledger / simple, or document without a
-  // resolvable record. RuntimeEditPage handles its own unavailable shell.
+  // Ledger/log entities are immutable by definition. Fail closed at the route
+  // boundary rather than mounting a disabled mutation form.
+  if (routeDecision.kind === "reject") notFound();
+
+  // Classic branch — master / simple. RuntimeEditPage handles its own
+  // unavailable shell when the descriptor or record cannot be resolved.
+  const detail = await getMetaEntityRecordDetail(entity, recordId, descriptor);
   return (
     <RuntimeEditPage
       plane={PLANE_KEY}

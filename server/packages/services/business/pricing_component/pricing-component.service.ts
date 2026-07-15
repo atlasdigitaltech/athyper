@@ -67,11 +67,11 @@ export type ApportionBasis = "value" | "quantity" | "weight" | "equal";
 export type Origin = "manual" | "inherited" | "vendor_default" | "system_resolved";
 
 export type SourceDocType =
-  | "PURCHASE_REQUISITION_LINE"
-  | "COMMITMENT_LINE"
-  | "PURCHASE_INVOICE_LINE"
-  | "RECEIPT_LINE"
-  | "SERVICE_SHEET_LINE";
+  | "purchase_requisition_line"
+  | "commitment_line"
+  | "purchase_invoice_line"
+  | "receipt_line"
+  | "service_sheet_line";
 
 export interface CreateComponentInput {
   source_doc_type:          SourceDocType;
@@ -377,11 +377,12 @@ export async function createComponent(
   return await db.transaction().execute(async (trx) => {
     await validateWhtInput(trx, tenantId, input);
     const id = await createComponentRow(trx, tenantId, actor, input);
-    await refreshInvoiceCaches(trx, tenantId, input.source_doc_id);
+    await refreshSourceCaches(trx, tenantId, input.source_doc_type, input.source_doc_id);
     await writePricingComponentAudit(trx, {
       tenantId,
       actor,
-      invoiceId: input.source_doc_id,
+      sourceDocType: input.source_doc_type,
+      sourceDocId: input.source_doc_id,
       oldValues: null,
       newValues: { action: "create", id, input },
     });
@@ -430,7 +431,7 @@ export async function savePricingComponents(
       insertedIds.push(await createComponentRow(trx, tenantId, actor, row));
     }
 
-    await refreshInvoiceCaches(trx, tenantId, input.source_doc_id);
+    await refreshSourceCaches(trx, tenantId, input.source_doc_type, input.source_doc_id);
 
     const after = await loadPricingComponentsForSource(
       trx,
@@ -443,7 +444,8 @@ export async function savePricingComponents(
     await writePricingComponentAudit(trx, {
       tenantId,
       actor,
-      invoiceId: input.source_doc_id,
+      sourceDocType: input.source_doc_type,
+      sourceDocId: input.source_doc_id,
       oldValues: { action: "replace", rows: before },
       newValues: { action: "replace", rows: after },
     });
@@ -484,6 +486,11 @@ async function createComponentRow(
 
   const metadataJson = JSON.stringify(input.metadata ?? {});
 
+  const companyCodeId = await resolveSourceCompanyCodeId(db, tenantId, input.source_doc_type, input.source_doc_id);
+  if (!companyCodeId) {
+    throw new Error(`PC_CREATE_FAILED: parent ${input.source_doc_type} ${input.source_doc_id} not found in tenant ${tenantId}`);
+  }
+
   const result = await sql<{ id: string }>`
     INSERT INTO document.pricing_component (
       tenant_id, company_code_id,
@@ -498,9 +505,9 @@ async function createComponentRow(
       currency_code, base_currency_code, exchange_rate,
       created_by
     )
-    SELECT
+    VALUES (
       ${tenantId}::uuid,
-      pi.company_code_id,
+      ${companyCodeId}::uuid,
       ${input.source_doc_type},
       ${input.source_doc_id}::uuid,
       ${input.source_line_id}::uuid,
@@ -529,15 +536,13 @@ async function createComponentRow(
       ${input.base_currency_code},
       ${input.exchange_rate},
       ${actor}::uuid
-    FROM document.purchase_invoice pi
-   WHERE pi.id        = ${input.source_doc_id}::uuid
-     AND pi.tenant_id = ${tenantId}::uuid
-   RETURNING id
+    )
+    RETURNING id
   `.execute(db);
 
   const firstRow = result.rows[0];
   if (!firstRow) {
-    throw new Error(`PC_CREATE_FAILED: parent PI ${input.source_doc_id} not found in tenant ${tenantId}`);
+    throw new Error(`PC_CREATE_FAILED: insert returned no row for ${input.source_doc_type} ${input.source_doc_id}`);
   }
 
   return firstRow.id;
@@ -587,7 +592,7 @@ export async function supersedeComponent(
          AND tenant_id = ${tenantId}::uuid
     `.execute(trx);
 
-    await refreshInvoiceCaches(trx, tenantId, replacement.source_doc_id);
+    await refreshSourceCaches(trx, tenantId, replacement.source_doc_type, replacement.source_doc_id);
 
     return { oldId: oldPcId, newId };
   });
@@ -712,11 +717,15 @@ export async function deleteComponent(
     }
 
     // ── Step 4: refresh the cached PIL/PI totals ───────────────────────
-    await refreshInvoiceCaches(trx, tenantId, invoiceId);
+    const sourceDocType = typeof beforeDelete.rows[0]?.["source_doc_type"] === "string"
+      ? beforeDelete.rows[0]["source_doc_type"] as SourceDocType
+      : "purchase_invoice_line";
+    await refreshSourceCaches(trx, tenantId, sourceDocType, invoiceId);
     await writePricingComponentAudit(trx, {
       tenantId,
       actor,
-      invoiceId,
+      sourceDocType,
+      sourceDocId: invoiceId,
       oldValues: { action: "delete", rows: beforeDelete.rows },
       newValues: null,
     });
@@ -803,7 +812,7 @@ export async function updateComponentInPlace(
       );
     }
 
-    await refreshInvoiceCaches(trx, tenantId, invoiceId);
+    await refreshSourceCaches(trx, tenantId, patch.source_doc_type, invoiceId);
     const after = await sql<Record<string, unknown>>`
       SELECT * FROM document.pricing_component
        WHERE id = ${pcId}::uuid AND tenant_id = ${tenantId}::uuid
@@ -812,7 +821,8 @@ export async function updateComponentInPlace(
     await writePricingComponentAudit(trx, {
       tenantId,
       actor,
-      invoiceId,
+      sourceDocType: patch.source_doc_type,
+      sourceDocId: invoiceId,
       oldValues: { action: "update", row: before.rows[0] ?? null },
       newValues: { action: "update", row: after.rows[0] ?? null },
     });
@@ -858,13 +868,17 @@ async function writePricingComponentAudit(
   ctx: {
     tenantId:   string;
     actor:      string;
-    invoiceId:  string;
+    sourceDocType: SourceDocType;
+    sourceDocId:   string;
     oldValues:  Record<string, unknown> | null;
     newValues:  Record<string, unknown> | null;
   },
 ): Promise<void> {
   const oldJson = ctx.oldValues == null ? null : JSON.stringify(ctx.oldValues);
   const newJson = ctx.newValues == null ? null : JSON.stringify(ctx.newValues);
+  const entityType = sourceDocTypeToHeaderEntity(ctx.sourceDocType);
+  const companyCodeId = await resolveSourceCompanyCodeId(db, ctx.tenantId, ctx.sourceDocType, ctx.sourceDocId);
+  if (!companyCodeId) return;
   await sql`
     INSERT INTO log.audit_log (
       tenant_id, entity_type, entity_id, operation,
@@ -872,22 +886,35 @@ async function writePricingComponentAudit(
       old_values, new_values, changed_fields,
       created_by
     )
-    SELECT
+    VALUES (
       ${ctx.tenantId}::uuid,
-      'purchase_invoice',
-      pi.id,
+      ${entityType},
+      ${ctx.sourceDocId}::uuid,
       'update',
       ${ctx.actor}::uuid,
       'principal',
-      pi.company_code_id,
+      ${companyCodeId}::uuid,
       ${oldJson}::jsonb,
       ${newJson}::jsonb,
       ARRAY['pricing_components']::text[],
       ${ctx.actor}::uuid
-    FROM document.purchase_invoice pi
-    WHERE pi.id = ${ctx.invoiceId}::uuid
-      AND pi.tenant_id = ${ctx.tenantId}::uuid
+    )
   `.execute(db);
+}
+
+function sourceDocTypeToHeaderEntity(sourceDocType: SourceDocType): string {
+  switch (sourceDocType) {
+    case "commitment_line":
+      return "purchase_order";
+    case "purchase_invoice_line":
+      return "purchase_invoice";
+    case "purchase_requisition_line":
+      return "purchase_requisition";
+    case "receipt_line":
+      return "receipt";
+    case "service_sheet_line":
+      return "service_sheet";
+  }
 }
 
 export async function refreshInvoiceCaches(
@@ -901,6 +928,45 @@ export async function refreshInvoiceCaches(
       ${invoiceId}::uuid
     )
   `.execute(db);
+}
+
+async function refreshSourceCaches(
+  db:            AnyDb,
+  tenantId:      string,
+  sourceDocType: SourceDocType,
+  sourceDocId:   string,
+): Promise<void> {
+  if (sourceDocType !== "purchase_invoice_line") return;
+  await refreshInvoiceCaches(db, tenantId, sourceDocId);
+}
+
+async function resolveSourceCompanyCodeId(
+  db:            AnyDb,
+  tenantId:      string,
+  sourceDocType: SourceDocType,
+  sourceDocId:   string,
+): Promise<string | null> {
+  if (sourceDocType === "purchase_invoice_line") {
+    const result = await sql<{ company_code_id: string }>`
+      SELECT company_code_id
+        FROM document.purchase_invoice
+       WHERE id = ${sourceDocId}::uuid
+         AND tenant_id = ${tenantId}::uuid
+       LIMIT 1
+    `.execute(db);
+    return result.rows[0]?.company_code_id ?? null;
+  }
+  if (sourceDocType === "commitment_line") {
+    const result = await sql<{ company_code_id: string }>`
+      SELECT company_code_id
+        FROM document.commitment
+       WHERE id = ${sourceDocId}::uuid
+         AND tenant_id = ${tenantId}::uuid
+       LIMIT 1
+    `.execute(db);
+    return result.rows[0]?.company_code_id ?? null;
+  }
+  return null;
 }
 
 // =============================================================================
@@ -967,7 +1033,7 @@ export async function apportionToLines(
     if (header.entry_level !== "header") {
       throw new Error(`PC_APPORTION_NOT_HEADER: ${input.headerPcId} entry_level=${header.entry_level}`);
     }
-    if (header.source_doc_type !== "PURCHASE_INVOICE_LINE") {
+    if (header.source_doc_type !== "purchase_invoice_line" && header.source_doc_type !== "commitment_line") {
       throw new Error(`PC_APPORTION_UNSUPPORTED_SOURCE: ${header.source_doc_type}`);
     }
 
@@ -1000,15 +1066,23 @@ export async function apportionToLines(
       };
     }
 
-    const pilsQuery = await sql<{ id: string; net_amount: string; quantity: string }>`
-      SELECT id, net_amount, quantity
-        FROM document.purchase_invoice_line
-       WHERE tenant_id           = ${input.tenantId}::uuid
-         AND purchase_invoice_id = ${header.source_doc_id}::uuid
-       ORDER BY line_no
-    `.execute(trx);
+    const lineQuery = header.source_doc_type === "purchase_invoice_line"
+      ? await sql<{ id: string; net_amount: string; quantity: string }>`
+          SELECT id, net_amount, quantity
+            FROM document.purchase_invoice_line
+           WHERE tenant_id           = ${input.tenantId}::uuid
+             AND purchase_invoice_id = ${header.source_doc_id}::uuid
+           ORDER BY line_no
+        `.execute(trx)
+      : await sql<{ id: string; net_amount: string; quantity: string }>`
+          SELECT id, net_amount, quantity
+            FROM document.commitment_line
+           WHERE tenant_id     = ${input.tenantId}::uuid
+             AND commitment_id = ${header.source_doc_id}::uuid
+           ORDER BY line_no
+        `.execute(trx);
 
-    const pils = pilsQuery.rows;
+    const pils = lineQuery.rows;
     if (pils.length === 0) {
       return { source_pc_id: input.headerPcId, line_pc_ids: [], total_apportioned: 0 };
     }
@@ -1053,7 +1127,8 @@ export async function apportionToLines(
     // pc_wht_metadata_snapshot_chk passes on each apportioned child without
     // forcing the apportioner to re-resolve the rate schedule per line.
     const headerMetaJson = JSON.stringify(header.metadata ?? {});
-    const insertResult = await sql<{ id: string; source_line_id: string }>`
+    const insertResult = header.source_doc_type === "purchase_invoice_line"
+      ? await sql<{ id: string; source_line_id: string }>`
       INSERT INTO document.pricing_component (
         tenant_id, company_code_id,
         source_doc_type, source_doc_id, source_line_id,
@@ -1103,6 +1178,57 @@ export async function apportionToLines(
          AND pi.tenant_id = ${input.tenantId}::uuid
        ORDER BY a.ord
        RETURNING id, source_line_id
+    `.execute(trx)
+      : await sql<{ id: string; source_line_id: string }>`
+      INSERT INTO document.pricing_component (
+        tenant_id, company_code_id,
+        source_doc_type, source_doc_id, source_line_id,
+        term_type, condition_type_id, sequence,
+        basis, amount_value, base_for_calculation,
+        computed_amount, computed_base_amount,
+        entry_level, apportion_basis,
+        is_apportioned, is_apportioned_from_id,
+        origin,
+        tax_group_id, is_inclusive, recoverable_pct, tax_section_code,
+        metadata,
+        currency_code, base_currency_code, exchange_rate,
+        created_by
+      )
+      SELECT
+        ${input.tenantId}::uuid,
+        po.company_code_id,
+        ${header.source_doc_type},
+        ${header.source_doc_id}::uuid,
+        a.line_id,
+        ${header.term_type},
+        ${header.condition_type_id}::uuid,
+        ${header.sequence},
+        'amount',
+        a.allocated,
+        a.allocated,
+        a.allocated,
+        a.allocated * ${exchangeRate},
+        'line',
+        NULL,
+        true,
+        ${input.headerPcId}::uuid,
+        'system_resolved',
+        ${header.tax_group_id}::uuid,
+        ${header.is_inclusive},
+        ${header.recoverable_pct == null ? null : parseFloat(header.recoverable_pct)},
+        ${header.tax_section_code},
+        ${headerMetaJson}::jsonb,
+        ${header.currency_code},
+        ${header.base_currency_code},
+        ${exchangeRate},
+        ${input.actor}::uuid
+      FROM unnest(${sql.val(pilIds)}::uuid[], ${sql.val(allocations)}::numeric[])
+        WITH ORDINALITY AS a(line_id, allocated, ord)
+      CROSS JOIN document.commitment po
+       WHERE po.id        = ${header.source_doc_id}::uuid
+         AND po.tenant_id = ${input.tenantId}::uuid
+       ORDER BY a.ord
+       RETURNING id, source_line_id
     `.execute(trx);
 
     if (insertResult.rows.length !== pils.length) {
@@ -1127,7 +1253,9 @@ export async function apportionToLines(
     // Single trailing refresh — covers all inserted line PCs in one shot.
     // Previously the per-PIL loop fired this N times (O(N²) PIL writes on
     // big invoices); now it's exactly once.
-    await refreshInvoiceCaches(trx, input.tenantId, header.source_doc_id);
+    if (header.source_doc_type === "purchase_invoice_line") {
+      await refreshInvoiceCaches(trx, input.tenantId, header.source_doc_id);
+    }
 
     return {
       source_pc_id:      input.headerPcId,

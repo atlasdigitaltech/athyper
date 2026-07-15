@@ -2,7 +2,7 @@
 -- CIRRUSATLANTIC — BLUEPRINT APPLICATION TRACKING
 -- ============================================================================
 -- File:     002_blueprint_applications.sql
--- Schema:   control.tenant_blueprint_application
+-- Schema:   control.blueprint_tenant_application
 -- Purpose:  Record the 7 blueprint tiers applied to CirrusAtlantic.
 --           Note: pack_ap_non_po is recorded by its own 099_apply.sql.
 -- Depends:  000_tenant.sql, seed/platform/007_blueprint_registry/
@@ -23,7 +23,7 @@ BEGIN
         RAISE EXCEPTION '[002_blueprint_applications] CirrusAtlantic tenant not found';
     END IF;
 
-    INSERT INTO control.tenant_blueprint_application
+    INSERT INTO control.blueprint_tenant_application
         (tenant_id, blueprint_code, status, applied_version, applied_by, created_by)
     VALUES
         (v_tid, 'base',             'applied', '1.0.0', v_su, v_su),
@@ -40,7 +40,7 @@ BEGIN
         applied_by      = EXCLUDED.applied_by,
         updated_at      = now(),
         updated_by      = EXCLUDED.applied_by
-    WHERE control.tenant_blueprint_application.status
+    WHERE control.blueprint_tenant_application.status
        IS DISTINCT FROM EXCLUDED.status;
 
     RAISE NOTICE '[002_blueprint_applications] 7 blueprint tiers recorded for CirrusAtlantic';

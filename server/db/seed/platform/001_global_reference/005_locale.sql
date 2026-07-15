@@ -1,19 +1,8 @@
--- 900_seed_data/001_shared/005_locale.sql
--- Seed: BCP 47 locales
--- Schema: shared | Table: locale
---
--- Best-practice notes
--- ───────────────────
--- direction is always set explicitly ('ltr' or 'rtl') — never null — so the
---   application never needs to guess or derive it from the language record.
--- script uses ISO 15924 four-letter codes (e.g. Latn, Arab, Hebr, Deva).
--- on conflict do update → re-running propagates corrections.
--- RTL locales covered: Arabic (all country variants), Hebrew, Persian/Dari,
---   Pashto, Urdu, Kurdish Sorani, Sindhi, Uyghur, Yiddish.
+-- BCP 47 locales.
+-- direction is always set explicitly so callers never derive it from language.
+-- script uses ISO 15924 four-letter codes (Latn, Arab, Hebr, Deva, …).
 
--- ============================================================================
 -- Language-only locales (no country qualifier)
--- ============================================================================
 insert into shared.locale (code, language_code, country_code, script, name, direction, created_by)
 values
   -- Major world languages (base locales)
@@ -114,9 +103,7 @@ on conflict (code) do update set
   updated_at    = now(),
   updated_by    = excluded.created_by;
 
--- ----------------------------------------------------------------------------
 -- Country-qualified locales (language-COUNTRY)
--- ----------------------------------------------------------------------------
 
 -- Arabic variants (all RTL, Arab script)
 insert into shared.locale (code, language_code, country_code, script, name, direction, created_by)

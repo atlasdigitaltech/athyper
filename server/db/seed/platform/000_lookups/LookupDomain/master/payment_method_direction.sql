@@ -1,6 +1,4 @@
--- LookupDomain/master/payment_method_direction.sql
--- Lookup values for domain: master.payment_method_direction
--- Shared across method, policy, binding, settlement tables
+-- Shared across master.payment_method, master.payment_policy, master.payment_binding, master.payment_settlement.
 
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES

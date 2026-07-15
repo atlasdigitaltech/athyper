@@ -1,6 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { i18nConfig } from "@athyper/i18n/config";
-import { decideHostGuard, getPlaneConfig, LOCALE_COOKIE_MAX_AGE_SECONDS } from "@athyper/session-plane";
+import {
+  decideHostGuard,
+  getPlaneConfig,
+  LOCALE_COOKIE_MAX_AGE_SECONDS,
+  cookieNamesWithHostPrefix,
+} from "@athyper/session-plane";
 import { isForbiddenPath, isPublicPath } from "@athyper/app-neon-route-manifest";
 import { PLANE_KEY } from "./lib/plane";
 
@@ -25,16 +30,19 @@ function readCookieValue(value: string): string {
   }
 }
 
-function hasMatchingCsrfCookie(request: NextRequest, cookieName: string, headerToken: string | null): boolean {
+function hasMatchingCsrfCookie(request: NextRequest, cookieNameCandidates: string[], headerToken: string | null): boolean {
   if (!headerToken) return false;
 
-  const selectedCookie = request.cookies.get(cookieName)?.value;
-  if (selectedCookie && readCookieValue(selectedCookie) === headerToken) return true;
+  for (const cookieName of cookieNameCandidates) {
+    const selectedCookie = request.cookies.get(cookieName)?.value;
+    if (selectedCookie && readCookieValue(selectedCookie) === headerToken) return true;
+  }
 
   const rawCookie = request.headers.get("cookie") ?? "";
   return rawCookie.split(";").some((part) => {
     const [name, ...valueParts] = part.trim().split("=");
-    return name === cookieName && readCookieValue(valueParts.join("=")) === headerToken;
+    if (name === undefined) return false;
+    return cookieNameCandidates.includes(name) && readCookieValue(valueParts.join("=")) === headerToken;
   });
 }
 
@@ -70,7 +78,7 @@ export function proxy(request: NextRequest) {
 
   if (pathname.startsWith("/api/") && MUTATING_METHODS.has(request.method) && !pathname.startsWith("/api/auth/")) {
     const csrfHeader = request.headers.get("x-csrf-token");
-    if (!hasMatchingCsrfCookie(request, plane.csrfCookieName, csrfHeader)) {
+    if (!hasMatchingCsrfCookie(request, cookieNamesWithHostPrefix(plane.csrfCookieName), csrfHeader)) {
       return NextResponse.json({ error: "CSRF_VALIDATION_FAILED", plane: plane.key }, { status: 403 });
     }
   }

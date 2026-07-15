@@ -1,19 +1,8 @@
--- ============================================================================
--- UNIVERSAL — COMMODITY CATEGORY
--- ============================================================================
--- File:     023_commodity_category.sql
--- Schema:   master.commodity_category
--- Purpose:  Direct seed of all 125 commodity categories with full posture flags.
---           Layer A: 17 universal cross-functional roots + 60 leaves (77 total)
---           Layer B: 13 direct-operations roots + 35 leaves (48 total)
---           No dependency on master.spend_category.
--- Depends:  platform/099_tenant_bootstrap (tenant must exist)
--- Idempotent: Yes — ON CONFLICT (tenant_id, code) DO UPDATE
--- ============================================================================
+-- Direct seed of all 125 master.commodity_category rows with posture flags.
+--   Layer A — 17 universal cross-functional roots + 60 leaves (77 total)
+--   Layer B — 13 direct-operations roots + 35 leaves (48 total)
+-- Standalone — no dependency on master.spend_category.
 
--- ============================================================================
--- LAYER A: Universal cross-functional categories (77 total)
--- ============================================================================
 DO $seed$
 DECLARE
     v_tid     uuid;
@@ -26,7 +15,6 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
-    -- ── Register commodity_category owner type ────────────────────────────
     INSERT INTO master.owner_type (
         tenant_id, code, name, description,
         schema_name, table_name, pk_column,
@@ -46,7 +34,6 @@ BEGIN
         'active', v_su
     ) ON CONFLICT (code) WHERE tenant_id IS NULL DO NOTHING;
 
-    -- ── Stage data ───────────────────────────────────────────────────────
     CREATE TEMP TABLE tmp_cc (
         seed_id                    uuid         DEFAULT shared.uuidv7(),
         code                       text         NOT NULL,
@@ -67,9 +54,7 @@ BEGIN
         serial_tracking            boolean      NOT NULL DEFAULT false
     ) ON COMMIT DROP;
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER A ROOTS (17) — container categories, children carry posture flags
-    -- ══════════════════════════════════════════════════════════════════════
+    -- LAYER A roots — containers only; posture flags ride on children.
     INSERT INTO tmp_cc (code, name, description, sort_order) VALUES
     ('SC-IT',     'IT & Digital',                          'Information technology hardware, software, cloud, and services',          10),
     ('SC-TELCO',  'Telecom & Connectivity',                'Voice, data, mobile, and network connectivity services',                  20),
@@ -89,11 +74,7 @@ BEGIN
     ('SC-OUTSRC', 'Outsourced & Shared Services',          'BPO, shared service centres, and temporary staffing',                   160),
     ('SC-SUBS',   'Subscriptions, Licenses & Memberships', 'Software licenses, memberships, and publication subscriptions',          170);
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER A LEAVES (60)
-    -- ══════════════════════════════════════════════════════════════════════
-
-    -- ── SC-IT leaves ─────────────────────────────────────────────────────
+    -- LAYER A leaves (60).
     INSERT INTO tmp_cc (code, name, description, parent_code, sort_order,
                         inventory_allowed, is_stockable, valuation_method, serial_tracking) VALUES
     ('SC-IT-HW',   'Hardware & End-user Devices', 'Laptops, desktops, monitors, peripherals, and mobile devices',
@@ -105,7 +86,6 @@ BEGIN
     ('SC-IT-SVC',   'IT Services & Support',  'Help desk, managed services, system integration, and consulting', 'SC-IT', 14),
     ('SC-IT-SEC',   'Cybersecurity',          'Security software, penetration testing, SOC, and identity management', 'SC-IT', 15);
 
-    -- ── SC-TELCO leaves ───────────────────────────────────────────────────
     INSERT INTO tmp_cc (code, name, description, parent_code, sort_order) VALUES
     ('SC-TELCO-VOICE', 'Voice & Telephony', 'PBX, SIP trunking, call centre, and PSTN services',           'SC-TELCO', 21),
     ('SC-TELCO-DATA',  'Data & Internet',   'MPLS, SD-WAN, broadband, and dedicated internet access',       'SC-TELCO', 22),
@@ -277,7 +257,6 @@ BEGIN
         updated_at                     = now(),
         updated_by                     = v_su;
 
-    -- ── UPSERT leaves (level_no = 2) ─────────────────────────────────────
     INSERT INTO master.commodity_category (
         id, tenant_id, code, name, description,
         parent_id, root_category_id, level_no, sort_order,
@@ -332,7 +311,6 @@ BEGIN
         updated_at                     = now(),
         updated_by                     = v_su;
 
-    -- ── Assertions ───────────────────────────────────────────────────────
     IF (SELECT count(*) FROM master.commodity_category
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack
@@ -359,9 +337,7 @@ BEGIN
 
 END $seed$;
 
--- ============================================================================
--- LAYER B: Direct-operations categories (48 total)
--- ============================================================================
+-- LAYER B — direct-operations categories (48 total). Requires LAYER A loaded.
 DO $seed$
 DECLARE
     v_tid     uuid;
@@ -379,7 +355,6 @@ BEGIN
         RAISE EXCEPTION '[023_commodity_category] Layer A not loaded — run Layer A block first';
     END IF;
 
-    -- ── Stage data ───────────────────────────────────────────────────────
     DROP TABLE IF EXISTS tmp_cc;
     CREATE TEMP TABLE tmp_cc (
         seed_id                    uuid         DEFAULT shared.uuidv7(),
@@ -401,9 +376,7 @@ BEGIN
         serial_tracking            boolean      NOT NULL DEFAULT false
     ) ON COMMIT DROP;
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER B ROOTS (13) — direct-operations container categories
-    -- ══════════════════════════════════════════════════════════════════════
+    -- LAYER B roots (13).
     INSERT INTO tmp_cc (code, name, description, sort_order, inventory_allowed) VALUES
     ('SC-RAW',      'Raw Materials & Feedstock',             'Metals, chemicals, polymers, and agricultural raw materials',           200, true),
     ('SC-COMP',     'Components & Sub-assemblies',           'Mechanical, electrical, and structural components',                     210, true),
@@ -421,11 +394,7 @@ BEGIN
     ('SC-TEMPWK',   'Temporary Works / Site Services',       'Scaffolding, temporary site facilities, and access equipment',        310),
     ('SC-PROCNRG',  'Process Energy / Utility Input',        'Steam, compressed air, and process gases used in production',         320);
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- LAYER B LEAVES (35)
-    -- ══════════════════════════════════════════════════════════════════════
-
-    -- ── SC-RAW leaves ────────────────────────────────────────────────────
+    -- LAYER B leaves (35).
     INSERT INTO tmp_cc (code, name, description, parent_code, sort_order,
                         inventory_allowed, is_stockable,
                         is_classification_required, is_hs_required, is_regulated,
@@ -579,7 +548,6 @@ BEGIN
         updated_at                     = now(),
         updated_by                     = v_su;
 
-    -- ── UPSERT leaves (level_no = 2) ─────────────────────────────────────
     INSERT INTO master.commodity_category (
         id, tenant_id, code, name, description,
         parent_id, root_category_id, level_no, sort_order,
@@ -634,7 +602,6 @@ BEGIN
         updated_at                     = now(),
         updated_by                     = v_su;
 
-    -- ── Assertions ───────────────────────────────────────────────────────
     IF (SELECT count(*) FROM master.commodity_category
         WHERE tenant_id = v_tid
           AND metadata->'_seed'->>'pack' = v_pack

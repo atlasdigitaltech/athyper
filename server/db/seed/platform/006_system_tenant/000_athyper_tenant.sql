@@ -1,19 +1,12 @@
--- ============================================================================
--- PLATFORM — BLUEPRINT TENANT SETUP
--- ============================================================================
--- File:     platform/006_system_tenant/000_athyper_tenant.sql
--- Schema:   master.tenant
--- Purpose:  Ensure the blueprint owner tenant exists before any Tier 2/3 seed
--- Depends:  000_public/000_bootstrap.sql (system principal)
--- Idempotent: Yes — ON CONFLICT DO UPDATE
--- ============================================================================
+-- Blueprint owner tenant — MUST exist before any Tier-2/3 tenant seed runs.
+-- Depends on 000_bootstrap.sql (system principal).
 
 DO $tenant$
 DECLARE
-    v_su uuid := '00000000-0000-0000-0000-000000000000';  -- system principal
+    v_su uuid := '00000000-0000-0000-0000-000000000000';   -- system principal
 BEGIN
-    -- shared.trg_set_updated_at() reads app.current_principal_id to set updated_by
-    -- on the ON CONFLICT UPDATE path.
+    -- shared.trg_set_updated_at() reads app.current_principal_id to populate updated_by
+    -- on the ON CONFLICT UPDATE branch; without this the trigger fails.
     PERFORM set_config('app.current_principal_id', v_su::text, true);
 
     INSERT INTO master.tenant (

@@ -1,12 +1,4 @@
--- ============================================================================
--- UNIVERSAL ORG FOUNDATION - COST CENTERS
--- ============================================================================
--- File:     blueprints/universal/060_org_structure/301_cost_centers.sql
--- Schema:   master.cost_center
--- Purpose:  Simple general-purpose cost-center hierarchy per active company.
--- Depends:  tenant legal entities and company codes.
--- Run:      After tenant company_code rows exist.
--- ============================================================================
+-- General-purpose master.cost_center hierarchy per active company_code.
 
 DO $seed$
 DECLARE

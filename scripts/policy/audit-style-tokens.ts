@@ -13,7 +13,7 @@ const SCAN_ROOTS = [
   "packages/apps/mesh",
   "packages/shared",
   "packages/product/design",
-  "packages/product/runtime-ui",
+  "packages/product-deprecated/runtime-ui",
   "packages/domain/finance",
 ] as const;
 

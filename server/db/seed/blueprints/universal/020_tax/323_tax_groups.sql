@@ -1,16 +1,8 @@
--- ============================================================================
--- 323_tax_groups.sql — Tax groups + components
--- ============================================================================
--- Fix 1: SALE + PURCHASE paired groups for recoverable VAT/GST countries
--- Fix 2: Zero/exempt groups explicitly flagged (metadata._seed.zero_rated)
--- Fix 3: India GST groups are state-specific (TG-IN-TN-*, TG-IN-MH-*)
--- Each country gets: sales group(s), purchase group(s), WHT group(s),
---   zero/exempt where applicable
--- Depends: 322 (tax_rate_schedules)
--- ============================================================================
--- NOTE: Component trs_key format matches 322's direction values:
---   SALE (not OUTPUT), PURCHASE (not INPUT) — per DDL trs_direction_chk
--- ============================================================================
+-- Tax groups and components. Per-country shape:
+--   sales group(s) + purchase group(s) + WHT group(s) + zero/exempt where applicable.
+-- Recoverable VAT/GST countries get paired SALE + PURCHASE groups.
+-- India GST groups are state-specific (TG-IN-TN-*, TG-IN-MH-*).
+-- Component trs_key direction matches 322 (SALE/PURCHASE, not OUTPUT/INPUT).
 
 DO $seed$
 DECLARE
@@ -489,6 +481,57 @@ BEGIN
           AND tg.metadata->'_seed'->>'pack' = '323_org'
         GROUP BY tg.code HAVING count(tgc.id) != 2
     ) THEN RAISE EXCEPTION '323 FAIL: compound group without exactly 2 components'; END IF;
+
+    -- ══════════════════════════════════════════════════════════════════════
+    -- STAGE C: backfill tax_group.jurisdiction_id (Phase 2)
+    -- Each group's scope jurisdiction derives from its code prefix:
+    --   TG-IN-TN-* → TJ-IN-TN, TG-IN-MH-* → TJ-IN-MH, TG-IN-IGST-* → TJ-IN,
+    --   TG-IN-TDS/TCS → TJ-IN, TG-US-CA-* → TJ-US-CA, rest → country code.
+    -- ══════════════════════════════════════════════════════════════════════
+    UPDATE control.tax_group tg
+       SET jurisdiction_id = tj.id,
+           updated_at = now(),
+           updated_by = v_su
+      FROM master.tax_jurisdiction tj
+     WHERE tg.tenant_id = v_tid
+       AND tj.tenant_id = v_tid
+       AND tg.metadata->'_seed'->>'pack' = '323_org'
+       AND tj.code = CASE
+           WHEN tg.code LIKE 'TG-IN-TN-%'    THEN 'TJ-IN-TN'
+           WHEN tg.code LIKE 'TG-IN-MH-%'    THEN 'TJ-IN-MH'
+           WHEN tg.code LIKE 'TG-US-CA-%'    THEN 'TJ-US-CA'
+           WHEN tg.code LIKE 'TG-MY-%'       THEN 'TJ-MY'
+           WHEN tg.code LIKE 'TG-QA-%'       THEN 'TJ-QA'
+           WHEN tg.code LIKE 'TG-SA-%'       THEN 'TJ-SA'
+           WHEN tg.code LIKE 'TG-AE-%'       THEN 'TJ-AE'
+           WHEN tg.code LIKE 'TG-US-%'       THEN 'TJ-US'
+           WHEN tg.code LIKE 'TG-SG-%'       THEN 'TJ-SG'
+           WHEN tg.code LIKE 'TG-IN-%'       THEN 'TJ-IN'
+           WHEN tg.code LIKE 'TG-CA-%'       THEN 'TJ-CA'
+           WHEN tg.code LIKE 'TG-DE-%'       THEN 'TJ-DE'
+           WHEN tg.code LIKE 'TG-TW-%'       THEN 'TJ-TW'
+           WHEN tg.code LIKE 'TG-ZA-%'       THEN 'TJ-ZA'
+           WHEN tg.code LIKE 'TG-GB-%'       THEN 'TJ-GB'
+           WHEN tg.code LIKE 'TG-JP-%'       THEN 'TJ-JP'
+           WHEN tg.code LIKE 'TG-PH-%'       THEN 'TJ-PH'
+       END
+       AND (tg.jurisdiction_id IS DISTINCT FROM tj.id);
+
+    -- A5: every 323_org-seeded group must now have a jurisdiction
+    IF EXISTS (
+        SELECT 1 FROM control.tax_group tg
+        WHERE tg.tenant_id = v_tid
+          AND tg.metadata->'_seed'->>'pack' = '323_org'
+          AND tg.jurisdiction_id IS NULL
+    ) THEN
+        RAISE EXCEPTION '323 FAIL: % group(s) missing jurisdiction_id backfill: %',
+            (SELECT count(*) FROM control.tax_group tg
+              WHERE tg.tenant_id = v_tid AND tg.metadata->'_seed'->>'pack' = '323_org'
+                AND tg.jurisdiction_id IS NULL),
+            (SELECT string_agg(code, ', ' ORDER BY code) FROM control.tax_group tg
+              WHERE tg.tenant_id = v_tid AND tg.metadata->'_seed'->>'pack' = '323_org'
+                AND tg.jurisdiction_id IS NULL);
+    END IF;
 
     RAISE NOTICE '323: % groups (% with components, % zero-rated), % components total',
         (SELECT count(*) FROM control.tax_group WHERE tenant_id = v_tid),

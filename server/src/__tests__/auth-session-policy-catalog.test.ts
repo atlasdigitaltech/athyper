@@ -3,11 +3,11 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-import { SESSION_POLICY_DEFAULTS, type SessionPolicyDefaults } from "../../../packages/shared/session-plane/src/index.js";
+import { SESSION_POLICY_DEFAULTS, type SessionPolicyDefaults } from "../../../packages/shared/platform-auth/session-plane/src/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const catalogSql = readFileSync(
-  resolve(__dirname, "../../db/seed/platform/003_control/085_parameter_definition.sql"),
+  resolve(__dirname, "../../db/seed/platform/003_control/085_control_parameter_definition.sql"),
   "utf8",
 );
 
@@ -42,7 +42,7 @@ describe("auth session policy catalog", () => {
       const expected = String(SESSION_POLICY_DEFAULTS[field]);
 
       expect(row).toContain(`'${expected}', '${expected}'`);
-      expect(row).toContain('"source":"packages/shared/session-plane/src/index.ts"');
+      expect(row).toContain('"source":"packages/shared/platform-auth/session-plane/src/index.ts"');
       expect(row).toContain(`"fallback_constant":"SESSION_POLICY_DEFAULTS.${field}"`);
     }
   });
@@ -53,7 +53,7 @@ describe("auth session policy catalog", () => {
       const expected = String(SESSION_POLICY_DEFAULTS[field]);
 
       expect(row).toContain(`'${expected}', '${expected}'`);
-      expect(row).toContain('"source":"packages/shared/session-plane/src/index.ts"');
+      expect(row).toContain('"source":"packages/shared/platform-auth/session-plane/src/index.ts"');
       expect(row).toContain(`"fallback_constant":"SESSION_POLICY_DEFAULTS.${field}"`);
     }
   });
@@ -68,3 +68,4 @@ describe("auth session policy catalog", () => {
     );
   });
 });
+

@@ -1,12 +1,9 @@
--- ============================================================================
--- FILE: blueprints/modules/governance/010_finance_close_governance_templates.sql
--- Purpose: Seed Finance close governance templates for:
---          1. Monthly soft close: open current month, soft-close prior month
---          2. Year-end hard close: final certification and hard-close lock
--- Depends: governance cycle tables, tenant company codes
--- Idempotent: upserts by natural keys
--- Session var: SET app.seed_tenant_id = '<tenant_uuid>'
--- ============================================================================
+-- Finance close governance templates (cycle_type + phases + categories + task
+-- templates + dependencies + carryforward rules) for two cycles:
+--   MONTHLY_CLOSE   — open current month, soft-close prior month
+--   YEAR_END_CLOSE  — final certification and hard-close lock
+-- Task templates are expanded per active company_code (entity_code). Requires
+-- SET app.seed_tenant_id = '<uuid>'.
 
 DO $seed_finance_close_governance$
 DECLARE
@@ -43,9 +40,6 @@ BEGIN
      WHERE tenant_id = v_tid
        AND status = 'active';
 
-    -- ------------------------------------------------------------------------
-    -- Cycle types
-    -- ------------------------------------------------------------------------
     FOR v_type IN
         SELECT *
         FROM (VALUES
@@ -144,9 +138,6 @@ BEGIN
             updated_by         = v_sys;
     END LOOP;
 
-    -- ------------------------------------------------------------------------
-    -- Phases
-    -- ------------------------------------------------------------------------
     FOR v_phase IN
         SELECT *
         FROM (VALUES
@@ -230,9 +221,6 @@ BEGIN
         END IF;
     END LOOP;
 
-    -- ------------------------------------------------------------------------
-    -- Categories
-    -- ------------------------------------------------------------------------
     FOR v_type IN
         SELECT id, type_code
           FROM governance.cycle_type
@@ -274,9 +262,7 @@ BEGIN
         END LOOP;
     END LOOP;
 
-    -- ------------------------------------------------------------------------
-    -- Task templates, expanded per active company code.
-    -- ------------------------------------------------------------------------
+    -- Task templates are expanded per active company_code (entity_code FK).
     IF v_company_count = 0 THEN
         RAISE WARNING '[finance_close_governance] No active company codes for tenant %. Seeded cycle types only.', v_tid;
     END IF;
@@ -400,9 +386,6 @@ BEGIN
                 updated_by                 = v_sys;
         END LOOP;
 
-        -- --------------------------------------------------------------------
-        -- Dependencies, per company/entity_code
-        -- --------------------------------------------------------------------
         FOR v_dep IN
             SELECT *
             FROM (VALUES
@@ -495,9 +478,6 @@ BEGIN
         END LOOP;
     END LOOP;
 
-    -- ------------------------------------------------------------------------
-    -- Carryforward rules
-    -- ------------------------------------------------------------------------
     FOR v_type IN
         SELECT id, type_code
           FROM governance.cycle_type

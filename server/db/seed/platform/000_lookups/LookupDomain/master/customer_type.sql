@@ -1,19 +1,4 @@
--- LookupDomain/master/customer_type.sql
--- Lookup values for domain: master.customer_type
--- Note: canonical intercompany code is 'intercompany' (matches DDL CHECK on master.customer).
--- A prior version used 'internal' — the migration block below renames it.
--- Idempotent: WHERE NOT EXISTS guard + migration UPDATE
-
--- Migration first: rename stale 'internal' → 'intercompany' before the INSERT runs.
--- On a clean install this is a no-op; on an existing DB it prevents the duplicate-key
--- violation that would occur if we inserted 'intercompany' while 'internal' still exists.
-UPDATE control.lookup_value
-SET    code        = 'intercompany',
-       name        = 'Intercompany',
-       description = 'Internal group entity — intercompany AR'
-WHERE  domain_code = 'master.customer_type'
-  AND  code        = 'internal'
-  AND  tenant_id IS NULL;
+-- 'intercompany' code must stay in sync with the CHECK constraint on master.customer.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

@@ -1,16 +1,6 @@
--- Seed: Cross-domain Industry Crosswalk (comprehensive heuristic generation)
--- Schema: shared | Table: industry_crosswalk
--- Source: generated from full NAICS + ISIC hierarchies plus manual starter anchors
--- Self-contained: assumes source/target codes already exist in shared code tables
--- Idempotent: ON CONFLICT (source_domain_code, source_code, target_domain_code, target_code) DO UPDATE
---
--- Notes:
--- - MANUAL rows preserve the original starter anchors.
--- - AI_GENERATED rows are descendant enrichments derived from anchored NAICS→ISIC mappings.
--- - This is a heuristic analytical crosswalk, not an official statistical concordance.
-
-
--- Total rows: 1946 (514 level-1/2 + 1432 level-3)
+-- NAICS ↔ ISIC industry crosswalk (1946 rows). Depends on 009b + 009c being loaded.
+-- Heuristic analytical mapping — NOT an official statistical concordance.
+-- provenance = MANUAL (starter anchors) or AI_GENERATED (descendant inheritance from anchors).
 INSERT INTO shared.industry_crosswalk (
     source_domain_code,
     source_code,
@@ -570,13 +560,7 @@ ON CONFLICT (source_domain_code, source_code, target_domain_code, target_code) D
   updated_by = EXCLUDED.created_by;
 
 
--- ============================================================================
--- NAICS Level-3 (4-digit Industry Groups) → ISIC Crosswalk
--- Generated: level3_inherit from NAICS 3-digit parent anchor mappings
--- Discount factor: 0.87 × parent confidence
--- Minimum confidence threshold: 25
--- Total rows: 1432
--- ============================================================================
+-- NAICS L3 (4-digit) → ISIC crosswalk via level3_inherit (parent confidence × 0.87, min 25).
 INSERT INTO shared.industry_crosswalk (
     source_domain_code,
     source_code,

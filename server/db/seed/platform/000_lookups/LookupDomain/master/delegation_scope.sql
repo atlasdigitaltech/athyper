@@ -1,8 +1,4 @@
--- LookupDomain/master/delegation_scope.sql
--- Lookup values for domain: master.delegation_scope
--- Idempotent: WHERE NOT EXISTS guard for inserts; explicit DELETE for retired entries
-
--- Retire the 'ou' entry (operating_unit scope replaced by company_code scope)
+-- Retire the 'ou' entry (operating_unit scope replaced by company_code scope).
 DELETE FROM control.lookup_value
 WHERE domain_code = 'master.delegation_scope'
   AND code        = 'ou'

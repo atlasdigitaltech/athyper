@@ -1,7 +1,3 @@
--- LookupDomain/master/bank_account_nature.sql
--- Lookup values for domain: master.bank_account_nature
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('direct',      'Direct Account',     'master.bank_account_nature', 'Real account at the institution. Traditional bank account.',                              10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

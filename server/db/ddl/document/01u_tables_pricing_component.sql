@@ -63,12 +63,6 @@ CREATE TABLE IF NOT EXISTS document.pricing_component (
     base_currency_code          character(3)  NOT NULL,
     exchange_rate               numeric(20,10) NOT NULL DEFAULT 1.0,
 
-    -- GL routing (the only routing override at term level)
-    business_intent_id          uuid,
-    posting_role_code           text,
-    gl_account_id               uuid,
-    account_source              text,
-
     -- NO dimensions (cost_center_id, profit_center_id, project_id, site_id, dimension_set_id)
     -- NO budget_allocation_id
     -- PC inherits these from source PIL at apportion/posting (v1.2 §3.3)
@@ -108,12 +102,8 @@ CREATE TABLE IF NOT EXISTS document.pricing_component (
 
     -- Polymorphic source type — reuses AD sealed CHECK
     CONSTRAINT pc_source_doc_type_chk        CHECK (source_doc_type IN (
-        'PURCHASE_REQUISITION_LINE','COMMITMENT_LINE','PURCHASE_INVOICE_LINE',
-        'GOODS_RECEIPT_LINE','SERVICE_ENTRY_SHEET_LINE')),
-
-    -- AD strategy enum mirrored
-    CONSTRAINT pc_account_source_chk         CHECK (account_source IS NULL
-        OR account_source IN ('POSTING_ROLE','FIXED','FROM_INTENT','FROM_CATEGORY')),
+        'purchase_requisition_line','commitment_line','purchase_invoice_line',
+        'receipt_line','service_sheet_line')),
 
     -- Magnitudes non-negative (signed effect derives from term_type)
     CONSTRAINT pc_rate_nonneg_chk            CHECK (rate_value IS NULL OR rate_value >= 0),
@@ -153,6 +143,25 @@ CREATE TABLE IF NOT EXISTS document.pricing_component (
     CONSTRAINT pc_recoverable_chk            CHECK (
         recoverable_pct IS NULL OR (recoverable_pct BETWEEN 0 AND 100)),
 
+    -- WHT-specific invariants (WS-B audit gate):
+    --   • is_inclusive must be FALSE/NULL — WHT is always exclusive of taxable amount
+    --   • recoverable_pct must be 0/NULL — WHT is a payment-time deduction, not an input credit
+    --   • metadata must snapshot the rate-schedule determination at create-time
+    --     (rate_schedule_id, wht_basis, resolved_rate) so historical JE/JV behavior
+    --     stays stable if upstream tax_rate_schedule mutates later (D8).
+    CONSTRAINT pc_wht_not_inclusive_chk      CHECK (
+        term_type <> 'withholding' OR is_inclusive IS NOT TRUE),
+    CONSTRAINT pc_wht_no_recoverable_chk     CHECK (
+        term_type <> 'withholding' OR recoverable_pct IS NULL OR recoverable_pct = 0),
+    CONSTRAINT pc_wht_metadata_snapshot_chk  CHECK (
+        term_type <> 'withholding'
+        OR (
+            metadata ? 'rate_schedule_id'
+            AND metadata ? 'wht_basis'
+            AND metadata ? 'resolved_rate'
+        )
+    ),
+
     -- Supersede tuple integrity
     CONSTRAINT pc_supersede_pair_chk         CHECK (
         (superseded_by_id IS NULL AND superseded_at IS NULL AND superseded_by_user IS NULL)
@@ -173,6 +182,17 @@ CREATE TABLE IF NOT EXISTS document.pricing_component (
     -- sequence bounds
     CONSTRAINT pc_sequence_chk               CHECK (sequence > 0)
 );
+
+-- Retire legacy PC account snapshot/intent/tax-rule columns from existing dev DBs.
+-- Account resolution now lands on accounting_distribution/journal_line; line
+-- business intent and tax-rule audit stay on the source P2P line.
+ALTER TABLE IF EXISTS document.pricing_component
+    DROP COLUMN IF EXISTS business_intent_id,
+    DROP COLUMN IF EXISTS gl_account_id,
+    DROP COLUMN IF EXISTS resolution_origin,
+    DROP COLUMN IF EXISTS resolved_by_rule_id,
+    DROP COLUMN IF EXISTS posting_role_code,
+    DROP COLUMN IF EXISTS account_source;
 
 -- =============================================================================
 -- Foreign Keys
@@ -269,7 +289,7 @@ DECLARE
 BEGIN
     -- entry_level vs source_line_id discipline is already in pc_entry_level_scope_chk
 
-    IF NEW.source_doc_type = 'PURCHASE_INVOICE_LINE' THEN
+    IF NEW.source_doc_type = 'purchase_invoice_line' THEN
         -- header-scope PC (source_line_id IS NULL): source_doc_id must be a purchase_invoice
         IF NEW.source_line_id IS NULL THEN
             SELECT tenant_id INTO parent_tenant
@@ -304,8 +324,8 @@ BEGIN
         END IF;
 
     ELSIF NEW.source_doc_type IN (
-        'COMMITMENT_LINE','GOODS_RECEIPT_LINE',
-        'SERVICE_ENTRY_SHEET_LINE','PURCHASE_REQUISITION_LINE'
+        'commitment_line','receipt_line',
+        'service_sheet_line','purchase_requisition_line'
     ) THEN
         -- Phase 2 (per-domain wiring): tighten as each source domain adopts PC
         NULL;
@@ -319,18 +339,18 @@ COMMENT ON FUNCTION document.fn_pc_validate_polymorphic_source() IS
     'BEFORE INSERT/UPDATE OF source_doc_type, source_doc_id, source_line_id on '
     'document.pricing_component: validates that the polymorphic source resolves to '
     'an existing parent (PI for header-scope, PIL for line-scope), with matching '
-    'tenant_id. Hard-validates PURCHASE_INVOICE_LINE; other source types '
+    'tenant_id. Hard-validates purchase_invoice_line; other source types '
     'soft-validated until per-domain wiring lands.';
 
 
--- Supersede-only update guard
+-- Parent lifecycle update guard
 CREATE OR REPLACE FUNCTION document.fn_pc_supersede_only_update()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
     parent_status text;
 BEGIN
     -- Resolve parent status (PI only for v1.2)
-    IF OLD.source_doc_type = 'PURCHASE_INVOICE_LINE' THEN
+    IF OLD.source_doc_type = 'purchase_invoice_line' THEN
         IF OLD.source_line_id IS NULL THEN
             SELECT status INTO parent_status FROM document.purchase_invoice
              WHERE id = OLD.source_doc_id AND tenant_id = OLD.tenant_id;
@@ -345,10 +365,28 @@ BEGIN
         RETURN NEW;
     END IF;
 
-    -- Editing freely allowed in draft / rejected
-    IF parent_status IN ('draft','rejected') THEN
+    -- Unified lifecycle: editable only while the parent is authorable.
+    --
+    -- proforma is a pre-draft state used when a PI is created from a PO or
+    -- contract before the supplier's tax invoice lands (supplier_invoice_number
+    -- and date are deferred; promoted to draft via the promote_proforma flow).
+    -- The PC route gates PATCH/DELETE on PC_MUTABLE_STATUSES = {draft, rejected,
+    -- proforma}, and the v3.1 PC affordance matrix in
+    -- @athyper/api-contracts/pc-affordance-matrix grants proforma canEdit/canDelete
+    -- to match. Without proforma in this IN-list the trigger raised
+    -- PC_SUPERSEDE_ONLY on every PATCH against a proforma PC, contradicting both
+    -- the route and the UI — closed by v3.1 Phase 5b.
+    IF parent_status IN ('draft','proforma') THEN
         RETURN NEW;
     END IF;
+
+    RAISE EXCEPTION 'PC_LOCKED_BY_PARENT_STATUS: parent invoice is %; request revision/reopen to draft before changing pricing components',
+        parent_status
+        USING ERRCODE = 'PC003';
+
+    -- Unreachable by design. Older replacement-chain checks were removed from
+    -- the active path; child history now lives in log.audit_log and lifecycle
+    -- snapshots, not a business-facing PC lifecycle.
 
     -- Editing not allowed once parent is terminal — only supersede-write permitted
     IF parent_status IN ('posted','partially_paid','fully_paid','reversed','cancelled') THEN
@@ -372,9 +410,6 @@ BEGIN
        OR (NEW.is_inclusive      IS DISTINCT FROM OLD.is_inclusive)
        OR (NEW.recoverable_pct   IS DISTINCT FROM OLD.recoverable_pct)
        OR (NEW.tax_section_code  IS DISTINCT FROM OLD.tax_section_code)
-       OR (NEW.business_intent_id IS DISTINCT FROM OLD.business_intent_id)
-       OR (NEW.posting_role_code IS DISTINCT FROM OLD.posting_role_code)
-       OR (NEW.account_source    IS DISTINCT FROM OLD.account_source)
        OR (NEW.source_doc_type   IS DISTINCT FROM OLD.source_doc_type)
        OR (NEW.source_doc_id     IS DISTINCT FROM OLD.source_doc_id)
        OR (NEW.source_line_id    IS DISTINCT FROM OLD.source_line_id)

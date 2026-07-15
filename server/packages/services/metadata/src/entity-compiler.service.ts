@@ -8,7 +8,20 @@
  */
 
 import { createHash } from "node:crypto";
-import type { Kysely } from "kysely";
+import { withFrameworkPhase } from "@athyper/adapter-telemetry";
+import { sql, type Kysely } from "kysely";
+import {
+  compileEntityCapabilityManifest,
+  type CapabilityHandlerManifest,
+  type CapabilityOperationInput,
+  type EntityCapabilityManifest,
+} from "./entity-capability-manifest.js";
+import {
+  compileExecutionDescriptor,
+  type SerializedExecutionDescriptorV1,
+} from "./execution-descriptor/index.js";
+import type { ExecutionDescriptorDiagnostic } from "./execution-descriptor/validation.js";
+import { ExecutionDescriptorActivationError } from "./execution-descriptor/validation.js";
 
 export interface CompiledField {
   id: string;
@@ -34,6 +47,10 @@ export interface CompiledField {
   is_pii: boolean;
   is_computed: boolean;
   is_write_once: boolean;
+  /** P5 marker — the entity's primary numeric-amount field (drives detectAmountField in runtime). */
+  is_primary_amount: boolean;
+  /** P5 marker — the entity's primary currency-code field (drives detectCurrencyField in runtime). */
+  is_primary_currency: boolean;
   default_value: unknown;
   validation_rules: Record<string, unknown> | null;
   enum_domain_code: string | null;
@@ -47,6 +64,8 @@ export interface CompiledField {
   editability: Record<string, unknown> | null;
   lookup_config: Record<string, unknown> | null;
   filter_config: Record<string, unknown> | null;
+  /** control.entity_field.defaults JSONB (cascade + on_source_change). */
+  defaults: Record<string, unknown> | null;
   i18n_key: string | null;
 }
 
@@ -56,8 +75,12 @@ export interface CompiledEntity {
   slug: string;
   entity_name: string;
   entity_class: string;
+  create_mode: string;
+  numbering_strategy: string;
   table_schema: string;
   table_name: string;
+  backing_type: string;
+  concurrency_policy: Record<string, unknown>;
   version_id: string;
   version_no: number;
   version_hash: string;
@@ -67,8 +90,11 @@ export interface CompiledEntity {
     label: string;
     description: string | null;
     sort_order: number;
+    /** P5 presentational role marker. Nullable for groups without an intent. */
+    ui_intent: string | null;
     fields: string[];
   }>;
+  relations: Array<Record<string, unknown>>;
   display_config: Record<string, unknown>;
   identity_config: Record<string, unknown>;
   search_config: Record<string, unknown>;
@@ -80,6 +106,30 @@ export interface CompiledEntity {
   class_profile: Record<string, unknown> | null;
   compiled_at: string;
   compiled_hash: string;
+  /**
+   * Persisted document-workspace execution plan. This is emitted by the
+   * metadata compiler (not the BFF) and is consumed by document mutations.
+   */
+  document_runtime_plan?: CompiledDocumentRuntimePlan;
+  /** Compiler-owned mutation/write contract consumed by all write runtimes. */
+  capability_manifest: EntityCapabilityManifest;
+  /** Immutable, execution-only model consumed by the generic kernel. */
+  execution_descriptor: SerializedExecutionDescriptorV1;
+  /** Explicit optional-feature degradation report; errors abort activation. */
+  execution_diagnostics: ExecutionDescriptorDiagnostic[];
+}
+
+export interface CompiledDocumentRuntimePlan {
+  source: "compiled_v6";
+  schemaVersion: "document-edit-runtime/v6.0";
+  planVersion: string;
+  planHash: string;
+  archetype: "header_only" | "document_with_items";
+  nodes: Array<{ key: string; kind: "core" | "collection"; versionSource: "document" | "node" }>;
+  invalidationActions: Array<{
+    source: { type: "field" | "node_mutation" | "operation"; key: string };
+    targets: Array<{ node: string; action: "patch" | "mark_stale" | "rehydrate_if_active" | "remove" }>;
+  }>;
 }
 
 export interface CompileAllSummary {
@@ -96,8 +146,13 @@ interface EntityRow {
   label_singular: string | null;
   label_plural: string | null;
   entity_class: string;
+  create_mode: string | null;
+  draft_ttl_hours: number | null;
+  numbering_strategy: string | null;
   table_schema: string;
   table_name: string;
+  backing_type: string;
+  concurrency_policy: unknown;
   display_config: unknown;
   identity_config: unknown;
   search_config: unknown;
@@ -139,6 +194,8 @@ interface EntityFieldRow {
   is_read_only: boolean;
   is_computed: boolean;
   is_write_once: boolean;
+  is_primary_amount: boolean;
+  is_primary_currency: boolean;
   sort_order: number;
   default_value: unknown | null;
   validation: unknown | null;
@@ -152,6 +209,8 @@ interface EntityFieldRow {
   group_key: string | null;
   filter_config: unknown | null;
   lookup_config: unknown | null;
+  /** control.entity_field.defaults JSONB (parent-row cascade + on_source_change). */
+  defaults: unknown | null;
 }
 
 interface ClassProfileRow {
@@ -204,6 +263,68 @@ function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().filter((key) => record[key] !== undefined)
+    .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`).join(",")}}`;
+}
+
+export function compileDocumentRuntimePlan(input: {
+  renderer: "master" | "document" | "ledger" | "simple";
+  versionHash: string;
+  hasItems: boolean;
+  fields: CompiledField[];
+  /** Metadata that changes the effective workspace graph or rendered nodes. */
+  contractMaterial?: unknown;
+}): CompiledDocumentRuntimePlan | undefined {
+  // The existing metadata compiler remains the single source. Only document
+  // entities receive a workspace plan; non-document entities never enter the
+  // document runtime transport.
+  if (input.renderer !== "document") return undefined;
+
+  const nodes: CompiledDocumentRuntimePlan["nodes"] = [
+    { key: "header", kind: "core", versionSource: "document" },
+    ...(input.hasItems ? [{ key: "items", kind: "collection" as const, versionSource: "node" as const }] : []),
+  ];
+  const targets = nodes.map((node) => ({
+    node: node.key,
+    action: node.key === "header" ? "patch" as const : "mark_stale" as const,
+  }));
+  const invalidationActions: CompiledDocumentRuntimePlan["invalidationActions"] = [
+    ...input.fields.map((field) => ({
+      source: { type: "field" as const, key: field.name },
+      targets,
+    })),
+    ...(input.hasItems ? [{
+      source: { type: "node_mutation" as const, key: "items" },
+      targets,
+    }] : []),
+    {
+      // Every document operation resolves through this compiled wildcard;
+      // the records service still supplies the concrete operation key.
+      source: { type: "operation", key: "*" },
+      targets,
+    },
+  ];
+  const planHash = sha256(stableStringify({
+    nodes,
+    invalidationActions,
+    versionHash: input.versionHash,
+    contractMaterial: input.contractMaterial ?? null,
+  }));
+  return {
+    source: "compiled_v6",
+    schemaVersion: "document-edit-runtime/v6.0",
+    planVersion: `entity-${input.versionHash.slice(0, 16)}`,
+    planHash,
+    archetype: input.hasItems ? "document_with_items" : "header_only",
+    nodes,
+    invalidationActions,
+  };
+}
+
 function withDefinedValues(record: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(record).filter(([, value]) => value !== undefined),
@@ -236,13 +357,59 @@ function booleanConfig(value: unknown): boolean | undefined {
   return undefined;
 }
 
-function normalizeDetailRenderer(value: unknown): "master" | "document" | "ledger" | undefined {
+function normalizeDetailRenderer(value: unknown): "master" | "document" | "ledger" | "simple" | undefined {
   const normalized = textConfig(value)?.toLowerCase().replace(/[\s-]+/g, "_");
   if (!normalized) return undefined;
   if (normalized === "document" || normalized === "document_detail") return "document";
   if (normalized === "ledger" || normalized === "log") return "ledger";
+  if (normalized === "simple") return "simple";
   if (["master", "standard", "readonly", "read_only", "read_only_master"].includes(normalized)) return "master";
   return undefined;
+}
+
+export function resolveCompiledEntityRenderer(input: {
+  entityClass: string;
+  tableSchema: string;
+  displayConfig: Record<string, unknown>;
+  featureFlags: Record<string, unknown>;
+}): "master" | "document" | "ledger" | "simple" {
+  const rawExplicit = textConfig(input.displayConfig["detail_renderer"]);
+  const explicit = normalizeDetailRenderer(rawExplicit);
+  if (rawExplicit && !explicit) {
+    throw new Error(`Unsupported detail_renderer "${rawExplicit}". Expected master, simple, document, or ledger.`);
+  }
+  if (explicit) return explicit;
+  if (booleanConfig(input.featureFlags["has_workflow"]) === true
+    || booleanConfig(input.featureFlags["is_approvable"]) === true) return "document";
+
+  const entityClass = input.entityClass.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (entityClass === "DOCUMENT" || entityClass === "DOCUMENT_RELATION") return "document";
+  if (entityClass === "LEDGER" || entityClass === "LOG") return "ledger";
+  if (input.displayConfig["document_header"] !== undefined) return "document";
+  if (input.tableSchema.trim().toUpperCase() === "DOCUMENT") return "document";
+  return "master";
+}
+
+export function hasCompiledDocumentItems(input: {
+  relations: Array<Record<string, unknown>>;
+  displayConfig: Record<string, unknown>;
+  featureFlags: Record<string, unknown>;
+}): boolean {
+  if (booleanConfig(input.featureFlags["has_lines"]) !== true) return false;
+  const configuredLineEntity = textConfig(input.displayConfig["line_entity_code"]);
+  return input.relations.some((relation) => {
+    if (textConfig(relation["relation_kind"])?.toLowerCase() !== "has_many") return false;
+    const name = textConfig(relation["name"])?.toLowerCase();
+    const targetEntity = textConfig(relation["target_entity"]);
+    const uiBehavior = coerceRecord(relation["ui_behavior"]);
+    const surface = textConfig(uiBehavior?.["surface"] ?? uiBehavior?.["surface_kind"])
+      ?.toLowerCase()
+      .replace(/[\s-]+/g, "_");
+    return name === "lines"
+      || surface === "lines_tab"
+      || surface === "line_items"
+      || (!!configuredLineEntity && targetEntity === configuredLineEntity);
+  });
 }
 
 function normalizeDetailProfile(raw: Record<string, unknown>): "simple" | "rich" | "read-only" | undefined {
@@ -289,7 +456,11 @@ function normalizeDisplayConfig(
   const out: Record<string, unknown> = { ...raw };
   for (const key of MOVED_DISPLAY_CONFIG_KEYS) delete out[key];
 
-  const detailRenderer = normalizeDetailRenderer(raw["detail_renderer"]);
+  const rawDetailRenderer = textConfig(raw["detail_renderer"]);
+  const detailRenderer = normalizeDetailRenderer(rawDetailRenderer);
+  if (rawDetailRenderer && !detailRenderer) {
+    throw new Error(`Unsupported detail_renderer "${rawDetailRenderer}". Expected master, simple, document, or ledger.`);
+  }
   if (detailRenderer) out["detail_renderer"] = detailRenderer;
   else delete out["detail_renderer"];
 
@@ -671,6 +842,8 @@ function mapField(
     is_pii: false,
     is_computed: row.is_computed,
     is_write_once: row.is_write_once,
+    is_primary_amount: row.is_primary_amount ?? false,
+    is_primary_currency: row.is_primary_currency ?? false,
     default_value: coerceJson(row.default_value),
     validation_rules: normalizeValidationRules(validation),
     enum_domain_code: row.enum_domain_code,
@@ -684,6 +857,7 @@ function mapField(
     editability: coerceRecord(row.editability),
     lookup_config: normalizeLookupConfig(row.lookup_config),
     filter_config: coerceRecord(row.filter_config) ?? coerceRecord(rawUiHint?.["filter"]),
+    defaults: coerceRecord(row.defaults),
     i18n_key: stringValue(rawUiHint?.["i18n_key"]),
   };
 }
@@ -692,19 +866,31 @@ export class EntityCompilerService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private readonly db: Kysely<any>;
   private readonly logger?: Logger;
+  private readonly handlerManifest?: CapabilityHandlerManifest;
   private readonly cache = new Map<string, { compiled: CompiledEntity; fetchedAt: number }>();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  constructor(db: Kysely<any>, logger?: Logger) {
+  constructor(db: Kysely<any>, logger?: Logger, handlerManifest?: CapabilityHandlerManifest) {
     this.db = db;
     this.logger = logger;
+    this.handlerManifest = handlerManifest;
   }
 
   /**
-   * Compile a single entity and persist its snapshot row.
+   * Compile one platform/base entity and persist its immutable base snapshot.
+   *
+   * Tenant overlays are deliberately not accepted here. They are persisted as
+   * `snapshot.entity_compiled_overlay` deltas and must be composed by the
+   * descriptor-serving layer with a tenant-scoped cache key. Treating this
+   * compiler as tenant-aware previously made the cache contract misleading:
+   * the tenant argument was ignored while callers could reasonably assume the
+   * returned result contained that tenant's overlay.
    */
-  async compile(entityCode: string, tenantId?: string): Promise<CompiledEntity | null> {
-    void tenantId;
+  async compile(entityCode: string): Promise<CompiledEntity | null> {
+    return withFrameworkPhase("descriptor_compile", () => this.compileMeasured(entityCode));
+  }
+
+  private async compileMeasured(entityCode: string): Promise<CompiledEntity | null> {
 
     const now = Date.now();
     const cached = this.cache.get(entityCode);
@@ -717,6 +903,105 @@ export class EntityCompilerService {
 
     await this.writeSnapshot(compiled);
     this.cache.set(entityCode, { compiled, fetchedAt: now });
+    return compiled;
+  }
+
+  /**
+   * L3 loader for the production execution-descriptor provider. The immutable
+   * snapshot is preferred; compilation is used only to repair a missing base
+   * snapshot. A tenant overlay snapshot may carry either a fully compiled
+   * descriptor or the small execution overlay consumed by the pure compiler.
+   */
+  async loadExecutionDescriptor(entityCode: string, tenantId: string): Promise<SerializedExecutionDescriptorV1 | null> {
+    const snapshot = await sql<{
+      entity_version_id: string;
+      compiled_json: unknown;
+    }>`
+      SELECT ec.entity_version_id::text AS entity_version_id,
+             ec.compiled_json
+        FROM snapshot.entity_compiled ec
+        JOIN control.entity_version ev ON ev.id = ec.entity_version_id
+        JOIN control.entity e ON e.id = ev.entity_id
+       WHERE ev.status = 'EFFECTIVE'
+         AND e.is_active = true
+         AND e.tenant_id IS NULL
+         AND (e.entity_code = ${entityCode} OR e.name = ${entityCode} OR e.slug = ${entityCode.replace(/_/g, "-")})
+       ORDER BY ec.created_at DESC
+       LIMIT 1
+    `.execute(this.db);
+
+    let compiled = coerceRecord(snapshot.rows[0]?.compiled_json) as CompiledEntity | null;
+    if (!compiled?.execution_descriptor) {
+      compiled = await this.compile(entityCode);
+    }
+    if (!compiled?.execution_descriptor) return null;
+
+    const overlay = await sql<{ compiled_json: unknown; compiled_hash: string }>`
+      SELECT compiled_json, compiled_hash
+        FROM snapshot.entity_compiled_overlay
+       WHERE tenant_id = ${tenantId}::uuid
+         AND entity_version_id = ${compiled.version_id}::uuid
+       ORDER BY created_at DESC
+       LIMIT 1
+    `.execute(this.db).catch(() => ({ rows: [] as Array<{ compiled_json: unknown; compiled_hash: string }> }));
+    const overlayRecord = coerceRecord(overlay.rows[0]?.compiled_json);
+    const precompiledOverlay = coerceRecord(overlayRecord?.["execution_descriptor"]);
+    if (precompiledOverlay) return precompiledOverlay as unknown as SerializedExecutionDescriptorV1;
+
+    if (overlayRecord && overlay.rows[0]?.compiled_hash) {
+      const policy = coerceRecord(overlayRecord["policy"]);
+      const fieldOverrides = coerceRecord(overlayRecord["fieldOverrides"] ?? overlayRecord["field_overrides"]);
+      const defaultSort = overlayRecord["defaultSort"] ?? overlayRecord["default_sort"];
+      const result = compileExecutionDescriptor({
+        compiledEntity: compiled,
+        handlerRegistry: this.handlerManifest,
+        tenantOverlay: {
+          tenantId,
+          compiledHash: overlay.rows[0].compiled_hash,
+          ...(policy ? { policy } : {}),
+          ...(fieldOverrides ? { fieldOverrides: fieldOverrides as any } : {}),
+          ...(Array.isArray(defaultSort) ? { defaultSort: defaultSort as any } : {}),
+        },
+      });
+      return result.serialized;
+    }
+
+    return compiled.execution_descriptor;
+  }
+
+  /** Effective public compiled entity used by the one-call runtime bootstrap. */
+  async loadRuntimeCompiledEntity(entityCode: string, tenantId: string): Promise<CompiledEntity | null> {
+    const base = await this.compile(entityCode);
+    if (!base) return null;
+    const overlay = await sql<{ compiled_json: unknown }>`
+      SELECT compiled_json
+        FROM snapshot.entity_compiled_overlay
+       WHERE tenant_id = ${tenantId}::uuid
+         AND entity_version_id = ${base.version_id}::uuid
+       ORDER BY created_at DESC
+       LIMIT 1
+    `.execute(this.db).catch(() => ({ rows: [] as Array<{ compiled_json: unknown }> }));
+    const record = coerceRecord(overlay.rows[0]?.compiled_json);
+    const effective = coerceRecord(record?.["compiled_entity"] ?? record?.["compiledEntity"]);
+    if (effective && Array.isArray(effective["fields"])) return effective as unknown as CompiledEntity;
+    if (record && Array.isArray(record["fields"]) && (record["entity_code"] || record["entityCode"])) {
+      return record as unknown as CompiledEntity;
+    }
+    return base;
+  }
+
+  /** Compile an IN_REVIEW/DRAFT version without persistence before activation. */
+  async validateVersionForActivation(versionId: string): Promise<CompiledEntity> {
+    const row = await (this.db as any)
+      .selectFrom("control.entity_version as ev")
+      .innerJoin("control.entity as e", "e.id", "ev.entity_id")
+      .select(["e.name", "e.entity_code"])
+      .where("ev.id", "=", versionId)
+      .executeTakeFirst() as { name?: string; entity_code?: string } | undefined;
+    const entityCode = row?.entity_code ?? row?.name;
+    if (!entityCode) throw new Error(`Entity version '${versionId}' is not bound to an active entity.`);
+    const compiled = await this.fullCompile(entityCode, versionId);
+    if (!compiled) throw new Error(`Entity version '${versionId}' cannot be compiled for activation.`);
     return compiled;
   }
 
@@ -755,9 +1040,14 @@ export class EntityCompilerService {
           }
         } catch (err) {
           failed++;
-          this.logger?.warn("entity_compile_failed", {
+          this.logger?.warn(err instanceof ExecutionDescriptorActivationError
+            ? "entity_activation_validation_failed"
+            : "entity_compile_failed", {
             entityCode,
             err: err instanceof Error ? err.message : String(err),
+            ...(err instanceof ExecutionDescriptorActivationError
+              ? { diagnostics: err.diagnostics }
+              : {}),
           });
         }
       }
@@ -788,7 +1078,7 @@ export class EntityCompilerService {
     return rows.map((r) => r.name);
   }
 
-  private async fullCompile(entityCode: string): Promise<CompiledEntity | null> {
+  private async fullCompile(entityCode: string, selectedVersionId?: string): Promise<CompiledEntity | null> {
     const entityRow = await this.db
       .selectFrom("control.entity as e" as never)
       .select([
@@ -799,8 +1089,13 @@ export class EntityCompilerService {
         "e.label_singular",
         "e.label_plural",
         "e.entity_class",
+        "e.create_mode",
+        "e.draft_ttl_hours",
+        "e.numbering_strategy",
         "e.table_schema",
         "e.table_name",
+        "e.backing_type",
+        "e.concurrency_policy",
         "e.display_config",
         "e.identity_config",
         "e.search_config",
@@ -823,12 +1118,14 @@ export class EntityCompilerService {
 
     if (!entityRow) return null;
 
-    const versionRow = await this.db
+    let versionQuery = this.db
       .selectFrom("control.entity_version as ev" as never)
       .select(["ev.id", "ev.version_no", "ev.version_hash"] as never[])
-      .where("ev.entity_id" as never, "=" as never, entityRow.id as never)
-      .where("ev.status" as never, "=" as never, "EFFECTIVE" as never)
-      .executeTakeFirst() as EntityVersionRow | undefined;
+      .where("ev.entity_id" as never, "=" as never, entityRow.id as never);
+    versionQuery = selectedVersionId
+      ? versionQuery.where("ev.id" as never, "=" as never, selectedVersionId as never)
+      : versionQuery.where("ev.status" as never, "=" as never, "EFFECTIVE" as never);
+    const versionRow = await versionQuery.executeTakeFirst() as EntityVersionRow | undefined;
 
     if (!versionRow) return null;
 
@@ -844,6 +1141,7 @@ export class EntityCompilerService {
     const referencePickerProfiles = await this.loadReferencePickerProfiles(fieldRows);
     const fields = fieldRows.map((row) => mapField(row, referencePickerProfiles));
     const fieldGroups = await this.loadFieldGroups(entityRow.entity_class, fieldRows);
+    const relations = await this.loadRelations(versionRow.id);
     const displayConfig = normalizeDisplayConfig(
       coerceRecord(entityRow.display_config) ?? {},
       entityRow.icon_key,
@@ -854,6 +1152,57 @@ export class EntityCompilerService {
     const dataPolicy = coerceRecord(entityRow.data_policy) ?? {};
     const featureFlags = normalizeFeatureFlags(coerceRecord(entityRow.feature_flags) ?? {});
     const versionHash = versionRow.version_hash ?? sha256(`${entityRow.id}:v${versionRow.version_no}`);
+    const renderer = resolveCompiledEntityRenderer({
+      entityClass: entityRow.entity_class,
+      tableSchema: entityRow.table_schema,
+      displayConfig,
+      featureFlags,
+    });
+    const documentRuntimePlan = compileDocumentRuntimePlan({
+      renderer,
+      versionHash,
+      hasItems: hasCompiledDocumentItems({ relations, displayConfig, featureFlags }),
+      fields,
+      contractMaterial: {
+        documentRuntime: displayConfig["document_runtime"] ?? null,
+        relations,
+      },
+    });
+    const lifecycleStates = await (this.db as any)
+      .selectFrom("control.entity_lifecycle as el")
+      .innerJoin("control.lifecycle as lc", "lc.id", "el.lifecycle_id")
+      .innerJoin("control.lifecycle_state as ls", "ls.lifecycle_id", "lc.id")
+      .select(["ls.code", "ls.is_initial", "ls.is_terminal", "ls.state_flags"])
+      .where("el.entity_name", "=", entityRow.entity_code ?? entityRow.name)
+      .where("el.tenant_id", "is", null)
+      .where("lc.is_active", "=", true)
+      .orderBy("el.priority", "asc")
+      .orderBy("ls.sort_order", "asc")
+      .execute() as Array<{
+        code: string; is_initial: boolean; is_terminal: boolean; state_flags: Record<string, unknown>;
+      }>;
+    const operations = await this.loadMutationOperations(entityRow.name);
+    const capabilityManifest = compileEntityCapabilityManifest({
+      entityCode: entityRow.entity_code ?? entityRow.name,
+      entityVersionId: versionRow.id,
+      renderer,
+      backingType: entityRow.backing_type,
+      mutability: entityRow.mutability,
+      featureFlags,
+      displayConfig,
+      dataPolicy,
+      fields: fieldRows,
+      relations,
+      operations,
+      hasDocumentRuntime: documentRuntimePlan !== undefined,
+      lifecycleStates: lifecycleStates.map((state) => ({
+        code: state.code,
+        isInitial: state.is_initial,
+        isTerminal: state.is_terminal,
+        stateFlags: state.state_flags ?? {},
+      })),
+      handlerManifest: this.handlerManifest,
+    });
 
     const payloadWithoutHash = {
       entity_id: entityRow.id,
@@ -861,13 +1210,19 @@ export class EntityCompilerService {
       slug: entityRow.slug ?? entityRow.table_name.replace(/_/g, "-"),
       entity_name: entityRow.label_singular ?? entityRow.name,
       entity_class: entityRow.entity_class,
+      create_mode: entityRow.create_mode ?? "FORM_ONLY",
+      draft_ttl_hours: entityRow.draft_ttl_hours ?? null,
+      numbering_strategy: entityRow.numbering_strategy ?? "none",
       table_schema: entityRow.table_schema,
       table_name: entityRow.table_name,
+      backing_type: entityRow.backing_type,
+      concurrency_policy: coerceRecord(entityRow.concurrency_policy) ?? {},
       version_id: versionRow.id,
       version_no: Number(versionRow.version_no),
       version_hash: versionHash,
       fields,
       field_groups: fieldGroups,
+      relations,
       display_config: displayConfig,
       identity_config: identityConfig,
       search_config: searchConfig,
@@ -877,13 +1232,69 @@ export class EntityCompilerService {
       security_tier: entityRow.security_tier,
       mutability: entityRow.mutability,
       class_profile: classProfile,
+      ...(documentRuntimePlan ? { document_runtime_plan: documentRuntimePlan } : {}),
+      capability_manifest: capabilityManifest,
       compiled_at: new Date().toISOString(),
     };
 
-    return {
+    const sourceCompiled = {
       ...payloadWithoutHash,
       compiled_hash: sha256(JSON.stringify(payloadWithoutHash)),
+    } as Omit<CompiledEntity, "execution_descriptor" | "execution_diagnostics">;
+    const execution = compileExecutionDescriptor({
+      compiledEntity: sourceCompiled,
+      handlerRegistry: this.handlerManifest,
+    });
+    return {
+      ...sourceCompiled,
+      compiled_hash: execution.serialized.identity.compiledHash,
+      execution_descriptor: execution.serialized,
+      execution_diagnostics: [...execution.diagnostics],
     };
+  }
+
+  private async loadRelations(versionId: string): Promise<Array<Record<string, unknown>>> {
+    return this.db
+      .selectFrom("control.entity_relation as er" as never)
+      .select([
+        sql<string>`er.id::text`.as("id"),
+        "er.name",
+        "er.relation_kind",
+        "er.target_entity",
+        "er.resolution_kind",
+        "er.fk_field",
+        "er.target_key",
+        "er.source_type_field",
+        "er.source_type_value",
+        "er.source_id_field",
+        "er.source_line_field",
+        "er.runtime_role",
+        "er.on_delete",
+        "er.record_filter",
+        "er.ui_behavior",
+      ] as never[])
+      .where("er.entity_version_id" as never, "=" as never, versionId as never)
+      .orderBy("er.name" as never, "asc" as never)
+      .execute() as Promise<Array<Record<string, unknown>>>;
+  }
+
+  private async loadMutationOperations(entityCode: string): Promise<CapabilityOperationInput[]> {
+    const rows = await (this.db as any)
+      .selectFrom("control.entity_operation as eo")
+      .leftJoin("shared.permission as p", "p.code", "eo.permission_code")
+      .select([
+        "eo.permission_code",
+        "eo.is_enabled",
+        sql<boolean>`p.code IS NOT NULL AND p.status = 'active'`.as("permission_registered"),
+      ] as never[])
+      .where("eo.entity_name" as never, "=" as never, entityCode as never)
+      .where("eo.tenant_id" as never, "is" as never, null as never)
+      .execute() as Array<{ permission_code: string; is_enabled: boolean; permission_registered: boolean }>;
+    return rows.map((row) => ({
+      permissionCode: row.permission_code,
+      enabled: row.is_enabled,
+      permissionRegistered: row.permission_registered,
+    }));
   }
 
   private async loadClassProfile(entityClass: string): Promise<Record<string, unknown> | null> {
@@ -954,7 +1365,10 @@ export class EntityCompilerService {
     const groupKeys = [...fieldsByGroup.keys()];
     const groupRows = await this.db
       .selectFrom("control.field_group as fg" as never)
-      .select(["fg.group_key", "fg.label", "fg.description", "fg.sort_order", "fg.applies_to_classes"] as never[])
+      .select([
+        "fg.group_key", "fg.label", "fg.description", "fg.sort_order",
+        "fg.applies_to_classes", "fg.ui_intent",
+      ] as never[])
       .where("fg.group_key" as never, "in" as never, groupKeys as never)
       .execute() as Array<{
         group_key: string;
@@ -962,6 +1376,7 @@ export class EntityCompilerService {
         description: string | null;
         sort_order: number;
         applies_to_classes: string[];
+        ui_intent: string | null;
       }>;
 
     const byKey = new Map(groupRows.map((row) => [row.group_key, row]));
@@ -976,6 +1391,7 @@ export class EntityCompilerService {
           label: groupRow.label,
           description: groupRow.description,
           sort_order: Number(groupRow.sort_order),
+          ui_intent: groupRow.ui_intent ?? null,
           fields: fieldNames,
         });
       } else {
@@ -985,6 +1401,7 @@ export class EntityCompilerService {
           label: groupKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
           description: null,
           sort_order: 9999,
+          ui_intent: null,
           fields: fieldNames,
         });
       }
@@ -1038,13 +1455,21 @@ export class EntityCompilerService {
       } as never)
       .onConflict((oc: any) =>
         oc.columns(["entity_version_id"] as never[])
-          .doNothing()
+          .doUpdateSet({
+            compiled_json: compiled as never,
+            compiled_hash: compiled.compiled_hash,
+            compliance_report: {},
+          } as never)
       )
       .execute();
   }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createEntityCompilerService(db: Kysely<any>, logger?: Logger): EntityCompilerService {
-  return new EntityCompilerService(db, logger);
+export function createEntityCompilerService(
+  db: Kysely<any>,
+  logger?: Logger,
+  handlerManifest?: CapabilityHandlerManifest,
+): EntityCompilerService {
+  return new EntityCompilerService(db, logger, handlerManifest);
 }

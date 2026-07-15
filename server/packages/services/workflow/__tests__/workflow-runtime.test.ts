@@ -191,7 +191,7 @@ function purchaseInvoiceRow(overrides: Record<string, unknown> = {}): Record<str
     tenant_id: TENANT_ID,
     status: "draft",
     company_code_id: COMPANY_CODE_ID,
-    invoice_number: "PI-1001",
+    code: "PI-1001",
     supplier_invoice_number: "SUP-1001",
     total_amount: 500,
     ...overrides,

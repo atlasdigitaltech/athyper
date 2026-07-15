@@ -1,33 +1,12 @@
--- ============================================================================
--- UNIVERSAL PARTY RISK DATASET
--- ============================================================================
--- File:     blueprints/universal/080_party_risk/010_party_risk_universal.sql
--- Schema:   master
--- Purpose:  Comprehensive best-practice risk dataset covering all tenant-scoped
---           risk tables. Seeds 3 supplier profiles (high / medium / low risk),
---           3 customer profiles, governance structure for the high-risk supplier,
---           multi-source evidence records, scored assessments with per-dimension
---           breakdown, individual risk drivers, mitigations, and a full review-
---           event audit trail.
--- Prereqs:  002_party_risk_registry.sql (risk_dimension / risk_driver_registry /
---           risk_source / risk_model / risk_model_dimension must exist).
---           Tenant must exist.  app.seed_tenant_id must be set.
--- Run:      SET app.seed_tenant_id = '<tenant-uuid>'; \i this_file.sql
--- Idempotent: yes — ON CONFLICT DO NOTHING / DO UPDATE guards throughout.
--- Tables:   master.tenant_risk_source_config
---           master.business_partner
---           master.party_governance_relation
---           master.party_risk_evidence
---           master.party_risk_assessment
---           master.party_risk_dimension_score
---           master.party_risk_driver
---           master.party_risk_mitigation
---           master.party_risk_review_event
--- ============================================================================
+-- Best-practice party-risk dataset covering every tenant-scoped risk table:
+-- 3 supplier profiles (high/medium/low risk) + 3 customer profiles, governance
+-- structure for the high-risk supplier, multi-source evidence, scored assessments
+-- with per-dimension breakdown, individual risk drivers, mitigations, review trail.
+-- Requires 002_party_risk_registry.sql first
+-- (risk_dimension/risk_driver_registry/risk_source/risk_model/risk_model_dimension).
 
 DO $seed$
 DECLARE
-    -- ── context ──────────────────────────────────────────────────────────────
     v_tid   uuid;
     v_su    uuid := '00000000-0000-0000-0000-000000000000';
     v_pack  text := 'party_risk_universal';

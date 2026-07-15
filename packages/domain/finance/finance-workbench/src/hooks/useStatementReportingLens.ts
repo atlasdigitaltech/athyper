@@ -32,21 +32,29 @@ export interface StatementReportingLens {
 
 function formatDateLabel(value: string | null): string {
   if (!value) return "";
-  const date = new Date(`${value}T00:00:00`);
+  // Anchor at UTC noon — same date regardless of viewer TZ. This is a business
+  // date, so we render via @athyper/temporal's TZ-immune helper would be ideal;
+  // sticking with Intl here for parity with the rest of the lens UI.
+  // eslint-disable-next-line no-direct-date-parse -- reason: explicit UTC noon anchor; value already validated as YYYY-MM-DD upstream.
+  const date = new Date(`${value}T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("en-US", {
     day: "numeric",
     month: "short",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
 function fiscalPointForDate(value: string, fiscalYearStartMonth: number): { fiscalYear: number; period: number } | null {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return null;
-
-  const month = date.getMonth() + 1;
-  const fiscalYear = month < fiscalYearStartMonth ? date.getFullYear() - 1 : date.getFullYear();
+  // Parse the YMD components directly — no Date object, no TZ. The previous
+  // implementation parsed via a local-time Date constructor which could shift
+  // the fiscal point by a day for off-UTC users.
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!parts) return null;
+  const year = Number(parts[1]);
+  const month = Number(parts[2]); // 1-12
+  const fiscalYear = month < fiscalYearStartMonth ? year - 1 : year;
   const period = ((month - fiscalYearStartMonth + 12) % 12) + 1;
   return { fiscalYear, period };
 }

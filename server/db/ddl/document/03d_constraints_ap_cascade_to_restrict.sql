@@ -14,51 +14,24 @@
 -- exists." This makes the failure mode visible to consumers earlier (the FK
 -- error is clearer than a trigger error during cascade).
 --
--- Affected FKs (8):
---   ipsnap_pi_fk         (invoice_party_snapshot)
---   iasnap_pi_fk         (invoice_address_snapshot)
---   ibsnap_pi_fk         (invoice_bank_snapshot)
+-- Affected FKs (5):
 --   itsnap_pi_fk         (invoice_tax_snapshot)
 --   itsnap_pil_fk        (invoice_tax_snapshot, was SET NULL — also conflicts)
 --   pea_payment_fk       (payment_entry_allocation)
 --   ptdr_payment_fk      (payment_term_discount_result)
 --   jlr_jl_fk            (journal_line_reference)
 --
+-- Identity now uses direct document header fields and live master joins; the
+-- legacy identity-snapshot FKs were removed with those tables.
+--
 -- Unaffected (children are mutable):
 --   pil_invoice_fk, imc_invoice_fk, imx_case_fk, imx_pil_fk,
 --   pta_invoice_fk, pta_invoice_line_fk, pea_invoice_fk, pea_pta_fk,
---   prem_payment_fk, ptdr_invoice_fk, jl_je_fk, pe_bsl_fk, bsl_recon_case_fk,
---   ad_resolution_audit_* (already RESTRICT)
+--   prem_payment_fk, ptdr_invoice_fk, jl_je_fk, pe_bsl_fk, bsl_recon_case_fk
 -- ============================================================================
 
--- §1  Invoice snapshots → PI : CASCADE → RESTRICT
-DO $$ BEGIN
-    ALTER TABLE document.invoice_party_snapshot DROP CONSTRAINT IF EXISTS ipsnap_pi_fk;
-    ALTER TABLE document.invoice_party_snapshot
-        ADD CONSTRAINT ipsnap_pi_fk
-        FOREIGN KEY (tenant_id, purchase_invoice_id)
-        REFERENCES document.purchase_invoice (tenant_id, id)
-        ON DELETE RESTRICT;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TABLE document.invoice_address_snapshot DROP CONSTRAINT IF EXISTS iasnap_pi_fk;
-    ALTER TABLE document.invoice_address_snapshot
-        ADD CONSTRAINT iasnap_pi_fk
-        FOREIGN KEY (tenant_id, purchase_invoice_id)
-        REFERENCES document.purchase_invoice (tenant_id, id)
-        ON DELETE RESTRICT;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TABLE document.invoice_bank_snapshot DROP CONSTRAINT IF EXISTS ibsnap_pi_fk;
-    ALTER TABLE document.invoice_bank_snapshot
-        ADD CONSTRAINT ibsnap_pi_fk
-        FOREIGN KEY (tenant_id, purchase_invoice_id)
-        REFERENCES document.purchase_invoice (tenant_id, id)
-        ON DELETE RESTRICT;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
+-- §1  Invoice tax snapshot → PI : CASCADE → RESTRICT
+-- (Phase D.4 dropped the three legacy identity snapshots and their FKs.)
 DO $$ BEGIN
     ALTER TABLE document.invoice_tax_snapshot DROP CONSTRAINT IF EXISTS itsnap_pi_fk;
     ALTER TABLE document.invoice_tax_snapshot

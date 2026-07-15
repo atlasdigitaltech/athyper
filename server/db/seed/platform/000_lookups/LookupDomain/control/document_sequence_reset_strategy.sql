@@ -1,8 +1,3 @@
--- LookupDomain/control/document_sequence_reset_strategy.sql
--- Legacy lookup values retained for historical migration compatibility.
--- is_extensible = false — reset strategies are engine-governed.
--- Idempotent: WHERE NOT EXISTS guard on both domain and value inserts.
-
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)
 SELECT 'control.document_sequence_reset_strategy',

@@ -442,7 +442,7 @@ async function seedSourceEntity(scenario: RuntimeScenario, suffix: string): Prom
   if (scenario.entityName === "purchase_invoice") {
     await sql`
       insert into document.purchase_invoice (
-        id, tenant_id, code, name, company_code_id, invoice_number,
+        id, tenant_id, code, name, company_code_id, code,
         invoice_source, invoice_type, match_type,
         supplier_invoice_number, supplier_invoice_date, document_date,
         posting_date, received_date, currency_code, base_currency_code,

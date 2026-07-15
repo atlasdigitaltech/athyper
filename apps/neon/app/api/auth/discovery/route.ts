@@ -1,3 +1,4 @@
+// GET|POST /api/auth/discovery — resolve org/tenant context for an email so the login gate can route to the correct IdP.
 import {
   createDiscoveryGetHandler,
   createDiscoveryPostHandler,

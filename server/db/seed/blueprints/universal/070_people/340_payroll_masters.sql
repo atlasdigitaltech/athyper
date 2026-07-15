@@ -1,39 +1,17 @@
--- ============================================================================
--- blueprints/universal/070_people/340_payroll_masters.sql
--- Universal Payroll Master Data Seed
+-- Universal payroll master data (tenant-scoped, idempotent). Contents:
+--   formula_expression(14) + versions, rate_table(7) + ~70 rows (IN×3, SG, GB, US×2),
+--   pay_component(58), pay_structure(3 tenant templates), pay_structure_line(~50),
+--   statutory_scheme(18 across IN/SG/MY/GB/US/AE).
 --
--- Covers (all tenant-scoped, idempotent):
---   § 1  control.formula_expression        — 14 named formula definitions
---   § 2  control.formula_expression_version — initial effective version per formula
---   § 3  control.rate_table                — 7 statutory / bracket rate tables (IN×3, SG, GB, US×2)
---   § 4  control.rate_table_row            — ~70 bracket / flat rows
---                                             incl. India IT FY2024-25 (expired) + FY2025-26 (live)
---                                             UK NI 2024-25 + 2025-26 (15% employer from Apr 2025)
---                                             US FICA SS + Medicare
---   § 5  master.pay_component              — 58 components (earning/deduction/statutory/memo)
---                                             incl. NI_EE, SS_EE, MEDICARE_EE, SOCSO_EE,
---                                             EIS_EE/ER, SDL_ER, SHG_EE
---   § 6  master.pay_structure              — 3 tenant-template structures (no pay_group link)
---   § 7  master.pay_structure_line         — component-to-structure mappings (~50 lines)
---   § 8  master.statutory_scheme           — 18 schemes across IN/SG/MY/GB/US/AE
---                                             all schemes now have employee/employer components linked
---
--- ⚠  VERIFY BEFORE NEXT FINANCIAL YEAR:
---   SG CPF: 55-60 and 60-65 age-band rates subject to CPF Board phased-increase schedule;
---            cross-check against https://www.cpf.gov.sg/employer/employer-obligations/what-are-the-cpf-contribution-rates
---   IN IT:  New regime slabs updated for FY2025-26 (Budget 2025); FY2026-27 slabs to be added after Budget 2026.
---   UK NI:  2025-26 rates applied; update if 2026-27 Autumn Statement changes rates/thresholds.
---   US SS:  Wage base updated to $176,100 (2025); update annually per IRS announcement.
+-- VERIFY BEFORE EACH FINANCIAL YEAR — these rates expire/change:
+--   SG CPF — 55-60 / 60-65 age-band rates follow CPF Board phased-increase schedule.
+--   IN IT  — new-regime slabs match FY2025-26 (Budget 2025); add FY2026-27 after Budget 2026.
+--   UK NI  — 2025-26 rates (15% employer from Apr 2025); update on next Autumn Statement.
+--   US SS  — wage base $176,100 (2025); update annually per IRS announcement.
 --
 -- Intentionally NOT seeded:
---   master.pay_group              — requires company_code_id (NOT NULL); create via admin UI
---                                    or a company-specific seed after company_code records exist.
---   master.employee_statutory_enrollment — requires live employee records; enrol after hire.
---
--- Usage:
---   SET app.seed_tenant_id = '<tenant-uuid>';
---   \i 340_payroll_masters.sql
--- ============================================================================
+--   master.pay_group — requires NOT NULL company_code_id; seed per-company elsewhere.
+--   master.employee_statutory_enrollment — needs live employee_id; enrol post-hire.
 
 DO $seed$
 DECLARE

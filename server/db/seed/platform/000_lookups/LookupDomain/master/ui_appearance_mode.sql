@@ -1,8 +1,4 @@
--- LookupDomain/master/ui_appearance_mode.sql
--- Lookup values for domain: ui.appearance_mode
--- Visual theme selection for master.principal_ui_profile.appearance_mode.
--- Tenant-extensible: tenants may add branded themes.
--- Idempotent: WHERE NOT EXISTS guard
+-- Tenant-extensible: tenants may register additional branded themes beyond light/dark/system.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)

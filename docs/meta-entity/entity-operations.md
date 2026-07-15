@@ -17,7 +17,8 @@ One row per (entity, permission_code) pair. Permission codes are the authoritati
 | `surface` | `text` | Where the action appears (see below) |
 | `placement` | `text` | Grouping within the surface (see below) |
 | `handler_type` | `text` | How the action is invoked (see below) |
-| `handler_target` | `text` | URL path, modal component name, or API route |
+| `handler_target` | `text` | UI interaction only: URL, modal name, or `flow:<flow_code>` |
+| `execution_target` | `text` | Server command independent of UI interaction, e.g. `lifecycle:submit` |
 | `is_record_required` | `bool` | `true` = requires a selected record; `false` = bulk or top-level |
 | `sort_order` | `smallint` | Display order within the same placement group |
 | `label_override` | `text` | UI label; NULL = use the permission's default label |
@@ -65,6 +66,12 @@ Controls grouping and visual placement within the surface.
 | `API` | POST to `handler_target` API route; response drives toast/refresh |
 | `MODAL` | Opens a modal component named by `handler_target` |
 | `INLINE` | Inline edit mode within the grid row |
+
+Lifecycle modals use both fields. For example, submit may declare
+`handler_target = 'flow:submit_for_approval'` so the UI loads that modal, while
+`execution_target = 'lifecycle:submit'` tells the server which entity-scoped
+command to execute. The server does not infer a lifecycle command from a flow
+code.
 
 ---
 

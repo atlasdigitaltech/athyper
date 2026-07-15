@@ -1,4 +1,4 @@
-# Meta-Entity System — Overview
+﻿# Meta-Entity System â€” Overview
 
 The meta-entity system is the foundational layer of Athyper's data model. It defines what entities exist, how they are classified, what lifecycles govern them, what workflows gate state changes, and what policies control field access and operations. All configuration lives in the `control` schema of the primary database (`athyper_neon`).
 
@@ -10,15 +10,15 @@ Every entity in the system is assigned one of 11 canonical class keys via `contr
 
 | Class Key | Label | Typical Use |
 |---|---|---|
-| `REFERENCE` | Reference Data | Country, currency, UOM — platform-managed, rarely mutated |
-| `MASTER` | Master Data | Supplier, customer, employee — tenant-owned, high governance |
+| `REFERENCE` | Reference Data | Country, currency, UOM â€” platform-managed, rarely mutated |
+| `MASTER` | Master Data | Supplier, customer, employee â€” tenant-owned, high governance |
 | `CONTROL` | Control / Config | Lifecycle definitions, workflow templates, policy rules |
-| `DOCUMENT` | Transaction Document | Invoice, purchase order, journal entry — full lifecycle + workflow |
-| `DOCUMENT_RELATION` | Document Relation | Line items, invoice lines — children of DOCUMENTs |
-| `LEDGER` | Ledger Entry | GL postings, account moves — append-only after posting |
-| `LOG` | Immutable Log | Audit trail, event log — insert-only, no update/delete |
-| `AGGREGATE` | Aggregate / Summary | Trial balance, aging buckets — computed, no direct mutations |
-| `DIMENSION` | Analytical Dimension | Cost center, department, project — used in postings |
+| `DOCUMENT` | Transaction Document | Invoice, purchase order, journal entry â€” full lifecycle + workflow |
+| `DOCUMENT_RELATION` | Document Relation | Line items, invoice lines â€” children of DOCUMENTs |
+| `LEDGER` | Ledger Entry | GL postings, account moves â€” append-only after posting |
+| `LOG` | Immutable Log | Audit trail, event log â€” insert-only, no update/delete |
+| `AGGREGATE` | Aggregate / Summary | Trial balance, aging buckets â€” computed, no direct mutations |
+| `DIMENSION` | Analytical Dimension | Cost center, department, project â€” used in postings |
 | `RELATION` | Many-to-Many Relation | Group memberships, tag assignments |
 | `*` | Wildcard / Uncategorized | Catch-all for new entity types |
 
@@ -47,10 +47,10 @@ The entity registry maps runtime `entity_name` codes (e.g. `journal_entry`, `sup
 
 | Seed File | Coverage |
 |---|---|
-| `010_entity_class_profile.sql` | 11 class profiles with field_flag_rules and compliance_profile |
+| `010_control_entity_class_profile_contract.sql` | 11 class profiles with field_flag_rules and compliance_profile |
 | `020_entity.sql` | All ~111 entity registrations with class_key and governance level |
-| `030_lifecycle.sql` | 21 lifecycle definitions and their state/transition bindings |
-| `040_entity_lifecycle.sql` | ~55 entity ↔ lifecycle bindings |
+| `030_control_lifecycle_contract.sql` | 21 lifecycle definitions and their state/transition bindings |
+| `040_entity_lifecycle.sql` | ~55 entity â†” lifecycle bindings |
 | `050_relations.sql` | ~75 inter-entity relations (parent_of, child_of, linked_to) |
 | `060_workflow_template.sql` | Platform-global workflow templates + stage definitions |
 | `070_policy.sql` | Platform-global policy definitions + rules |
@@ -68,11 +68,11 @@ Associates an entity name with one or more lifecycle definitions. The engine res
 | `id` | `uuid PK` | |
 | `tenant_id` | `uuid` | NULL = platform-global binding |
 | `entity_name` | `text` | FK to entity registry |
-| `lifecycle_id` | `uuid FK` | → `control.lifecycle` |
+| `lifecycle_id` | `uuid FK` | â†’ `control.lifecycle` |
 | `conditions` | `jsonb` | JSONLogic expression; NULL = always applies |
 | `priority` | `smallint` | Lower = evaluated first; first match wins |
 
-**Multiple lifecycles per entity** are supported — e.g. a `purchase_invoice` can follow `lc_draft_submitted_approved` under normal conditions, but switch to `lc_expedited_approval` when `amount > 50000`.
+**Multiple lifecycles per entity** are supported â€” e.g. a `purchase_invoice` can follow `lc_draft_submitted_approved` under normal conditions, but switch to `lc_expedited_approval` when `amount > 50000`.
 
 ---
 
@@ -94,26 +94,53 @@ Every entity class has an `expected_system_columns` list. These columns must be 
 
 ```
 Entity Record (e.g. purchase_invoice row)
-        │
-        ▼
-entity_lifecycle binding (entity_name → lifecycle_id, conditions, priority)
-        │
-        ▼
-control.lifecycle → control.lifecycle_state + control.lifecycle_transition
-        │
-        ├── lifecycle_transition_gate ──→ control.workflow_definition (optional pre-transition workflow)
-        │
-        └── lifecycle_transition.operation_code ──→ shared.permission (authz check)
-                │
-                ▼
+        â”‚
+        â–¼
+entity_lifecycle binding (entity_name â†’ lifecycle_id, conditions, priority)
+        â”‚
+        â–¼
+control.lifecycle â†’ control.lifecycle_state + control.lifecycle_transition
+        â”‚
+        â”œâ”€â”€ lifecycle_transition_gate â”€â”€â†’ control.workflow_definition (optional pre-transition workflow)
+        â”‚
+        â””â”€â”€ lifecycle_transition.operation_code â”€â”€â†’ shared.permission (authz check)
+                â”‚
+                â–¼
         control.entity_operation (surface, placement, handler_type per permission_code)
-                │
-                ▼
+                â”‚
+                â–¼
         control.policy_definition + control.policy_rule (evaluate before commit)
-                │
-                ▼
+                â”‚
+                â–¼
         control.field_security_policy (mask/redact PII fields in response)
 ```
+
+---
+
+## Document Surface Visibility (`entity_relation.ui_behavior`)
+
+Some relations are needed at runtime as a data source for a document surface (e.g. PI's `pricing_components` feeds the "Components" tab via `DocumentRuntimeContext`), but should **not** appear as their own auto-generated `child_records` tab. The relation-level `visible_as_tab` flag controls this.
+
+| Key | Type | Default | Behavior |
+|---|---|---|---|
+| `role` | `text` | â€” | Semantic tag (`components`, `lines`, `applications`, `distributions`, `schedules`, `matching`). Free-form hint for the document-runtime registry. |
+| `visible_as_tab` | `boolean` | `true` | When `false`, the compiler skips emitting a `child_records` surface for this relation. The relation **still appears in `descriptor.relations`** and is available to runtime data hooks. |
+| `line_expansion` | `boolean` | `false` | Marks the relation as a candidate for line-drawer expansion (e.g. line-scope components/distributions/schedules). Consumed by document surface renderers, not by the compiler. |
+| `label` | `text` | derived from name | Label override for tabs that do render. |
+
+**Example** â€” hide PI's raw Pricing Components tab while keeping the relation available to the Components surface:
+
+```sql
+UPDATE control.entity_relation er
+   SET ui_behavior = COALESCE(er.ui_behavior, '{}'::jsonb)
+                     || '{"role":"components","visible_as_tab":false}'::jsonb
+ WHERE er.name = 'pricing_components' AND ...;
+```
+
+After this, `compileMetaEntityRuntimeDescriptor(...)` produces a descriptor where:
+- `descriptor.relations` still contains `pricing_components`
+- `descriptor.surfaces` has **no** `child_records` entry keyed `pricing_components`
+- `DocumentRuntimeContext` continues to resolve `children.pricingComponents.{ all, headerScope, byLineId }`
 
 ---
 
@@ -125,3 +152,5 @@ control.lifecycle → control.lifecycle_state + control.lifecycle_transition
 - [Workflow Engine](./workflow.md)
 - [Policy Engine](./policy.md)
 - [Entity Operations](./entity-operations.md)
+
+

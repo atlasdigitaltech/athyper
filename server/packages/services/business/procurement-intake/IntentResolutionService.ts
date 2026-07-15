@@ -59,8 +59,7 @@ interface LineClassificationContext {
   currency_code:            string;
   commodity_category_id:        string | null;
   business_intent_id:       string | null;
-  is_asset:                 boolean;
-  asset_category_id:        string | null;
+  asset_class_id:           string | null;
   company_code_id:          string;
   invoice_source:           string | null;
   invoice_type:             string | null;
@@ -68,6 +67,8 @@ interface LineClassificationContext {
   company_country:          string | null;
   tax_group_id:             string | null;
   withholding_tax_group_id: string | null;
+  // Accounting dimensions live on document.accounting_distribution. Resolution
+  // context still carries them for derived-field comparison (DecisionStatusService).
   cost_center_id:           string | null;
   profit_center_id:         string | null;
   line_metadata:            Record<string, unknown> | null;
@@ -390,8 +391,7 @@ export async function resolveDraftLineClassification(
     currency_code:            party.currencyCode ?? "USD",
     commodity_category_id:        firstText([line, data], ["commodity_category_id"]),
     business_intent_id:       firstText([line, data], ["business_intent_id"]),
-    is_asset:                 booleanValue(line["is_asset"] ?? data?.["is_asset"]),
-    asset_category_id:        firstText([line, data], ["asset_category_id"]),
+    asset_class_id:           firstText([line, data], ["asset_class_id"]),
     company_code_id:          companyCodeId,
     invoice_source:           firstText([record], ["invoice_source", "source", "flow_code"]),
     invoice_type:             firstText([record], ["invoice_type", "type", "document_type"]),
@@ -435,8 +435,7 @@ export async function resolveLineClassification(
       pi.currency_code,
       pil.commodity_category_id,
       pil.business_intent_id,
-      pil.is_asset,
-      pil.asset_category_id,
+      pil.asset_class_id,
       pi.company_code_id,
       pi.invoice_source,
       pi.invoice_type,
@@ -444,12 +443,18 @@ export async function resolveLineClassification(
       le.country_code                AS company_country,
       pil.tax_group_id,
       pil.withholding_tax_group_id,
-      pil.cost_center_id,
-      pil.profit_center_id,
+      ad.cost_center_id,
+      ad.profit_center_id,
       pil.metadata AS line_metadata
     FROM  document.purchase_invoice_line pil
     JOIN  document.purchase_invoice      pi
           ON  pi.id = pil.purchase_invoice_id AND pi.tenant_id = pil.tenant_id
+    LEFT JOIN document.accounting_distribution ad
+          ON  ad.tenant_id        = pil.tenant_id
+         AND ad.source_doc_type  = 'purchase_invoice_line'
+         AND ad.source_doc_id    = pil.purchase_invoice_id
+         AND ad.source_line_id   = pil.id
+         AND ad.distribution_no  = 1
     LEFT JOIN master.supplier         sup ON sup.id = pi.supplier_id AND sup.tenant_id = pi.tenant_id
     LEFT JOIN master.business_partner bp  ON bp.id = sup.business_partner_id AND bp.tenant_id = sup.tenant_id
     LEFT JOIN master.company_code     cc  ON cc.id  = pi.company_code_id
@@ -682,11 +687,6 @@ async function resolveLineClassificationFromContext(
     blockers.push({ code: "HS_MISSING", field: "line_commodity_code",
       message: "HS / commodity code is required for this category" });
   }
-  if (ctx.is_asset && !ctx.asset_category_id) {
-    blockers.push({ code: "ASSET_CATEGORY_MISSING", field: "asset_category_id",
-      message: "Asset category is required when the line is marked as an asset" });
-  }
-
   const domain = (intent.domain ?? null) as ClassificationDecision["resolved"]["domain"];
 
   const decision: ClassificationDecision = {
@@ -752,8 +752,7 @@ async function resolveLineClassificationFromContext(
     whtGroupId:      ctx.withholding_tax_group_id,
     costCenterId:    ctx.cost_center_id,
     profitCenterId:  ctx.profit_center_id,
-    isAsset:         ctx.is_asset,
-    assetCategoryId: ctx.asset_category_id,
+    assetClassId:    ctx.asset_class_id,
     isCrossBorder,
     isIntercompany,
   };

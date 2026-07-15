@@ -4,6 +4,10 @@ import { Kysely } from "kysely";
 import { createPostgresDialect } from "./dialect.js";
 import { closePool, createPool, healthCheck, type PoolConfig } from "./pool.js";
 import { TenantStampDialect } from "./tenant-stamp-driver.js";
+import {
+  PerformanceDialect,
+  type DatabasePerformanceObserver,
+} from "./performance-dialect.js";
 
 import type { DB } from "../generated/kysely/types.js";
 import type { TenantIdProvider } from "./tx.js";
@@ -46,6 +50,9 @@ export type DbClientConfig = {
    * surfaced for incident triage.
    */
   onRollbackFailure?: (error: unknown, originalError: unknown) => void;
+
+  /** Optional logical-query, pool-wait, and transaction observer. */
+  performanceObserver?: DatabasePerformanceObserver;
 };
 
 export interface DbPoolStats {
@@ -79,7 +86,7 @@ export class DbClient {
     // with `app.current_tenant_id` stamped on its session GUC (required for
     // RLS policies that read `shared.current_tenant_id_soft()`).
     const baseDialect = createPostgresDialect(this.pool);
-    const dialect =
+    const tenantAwareDialect =
       config.tenantIdProvider !== undefined
         ? new TenantStampDialect({
             base: baseDialect,
@@ -88,6 +95,9 @@ export class DbClient {
             ...(config.onRollbackFailure ? { onRollbackFailure: config.onRollbackFailure } : {}),
           })
         : baseDialect;
+    const dialect = config.performanceObserver
+      ? new PerformanceDialect(tenantAwareDialect, config.performanceObserver)
+      : tenantAwareDialect;
     this.kysely = new Kysely<DB>({
       dialect,
     });

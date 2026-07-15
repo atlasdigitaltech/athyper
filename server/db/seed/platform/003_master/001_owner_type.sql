@@ -1,15 +1,8 @@
--- 900_seed_data/003_master/001_owner_type.sql
--- Seed: System owner types for the polymorphic routing registry.
--- Schema: master | Table: owner_type
--- Depends on: 04_tables/003_master.sql (owner_type table)
--- Idempotent: yes — ON CONFLICT on owner_type_system_code_uq DO NOTHING throughout
---
--- System rows define which master.* tables can be referenced by
--- contact_link.owner_type and address_link.owner_type. Each row
--- encodes the schema/table routing contract and advisory purpose filters.
--- ============================================================================
+-- System owner types for the polymorphic routing registry.
+-- Each row defines which master.* table is a valid target of contact_link.owner_type /
+-- address_link.owner_type, plus the schema/table routing contract and advisory purpose filters.
 
--- Retire operating_unit owner_type (table dropped in company_code migration)
+-- operating_unit was retired when company_code consolidation dropped its table.
 DELETE FROM master.owner_type WHERE code = 'operating_unit';
 
 INSERT INTO master.owner_type
@@ -21,7 +14,7 @@ INSERT INTO master.owner_type
      is_system, is_extensible_by_tenant, status, created_by)
 VALUES
 
--- ── Category: identity ───────────────────────────────────────────────────────
+-- identity
 
 ('principal', 'Principal',
  'User, service account, or bot. Core identity actor.',
@@ -29,12 +22,12 @@ VALUES
  'master', 'principal', 'id',
  true, 'tenant_id',
  true, true,
- ARRAY['home', 'work', 'mailing', 'default'],
- ARRAY['login', 'recovery', 'mfa', 'verification', 'notification', 'billing'],
+ ARRAY['correspondence', 'default'],
+ ARRAY['login', 'recovery', 'mfa', 'verification', 'notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
--- ── Category: party ──────────────────────────────────────────────────────────
+-- party
 
 ('business_partner', 'Business Partner',
  'Commercial identity root. Customer and Supplier roles point to this entity.',
@@ -42,8 +35,8 @@ VALUES
  'master', 'business_partner', 'id',
  true, 'tenant_id',
  true, true,
- ARRAY['billing', 'legal', 'hq', 'mailing', 'default'],
- ARRAY['billing', 'support', 'notification'],
+ ARRAY['bill_from', 'bill_to', 'ship_to', 'ship_from', 'remit_to', 'correspondence', 'default'],
+ ARRAY['default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -54,7 +47,7 @@ VALUES
  true, 'tenant_id',
  false, true,
  ARRAY[]::text[],
- ARRAY['work', 'mobile', 'email', 'phone', 'notification', 'default'],
+ ARRAY['bill_from', 'support', 'correspondence', 'notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -64,8 +57,8 @@ VALUES
  'master', 'customer', 'id',
  true, 'tenant_id',
  true, true,
- ARRAY['billing', 'shipping', 'legal', 'mailing', 'default'],
- ARRAY['billing', 'support', 'notification', 'marketing'],
+ ARRAY['bill_to', 'ship_to', 'correspondence', 'default'],
+ ARRAY['bill_to', 'bill_from', 'support', 'marketing', 'notification', 'correspondence', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -75,8 +68,8 @@ VALUES
  'master', 'supplier', 'id',
  true, 'tenant_id',
  true, true,
- ARRAY['billing', 'remittance', 'receiving', 'legal', 'mailing', 'default'],
- ARRAY['billing', 'notification'],
+ ARRAY['bill_from', 'remit_to', 'ship_from', 'correspondence', 'default'],
+ ARRAY['remit_to', 'bill_from', 'correspondence', 'notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -86,12 +79,12 @@ VALUES
  'master', 'employee', 'id',
  true, 'tenant_id',
  true, true,
- ARRAY['home', 'work', 'payroll', 'emergency', 'mailing', 'default'],
- ARRAY['notification', 'billing'],
+ ARRAY['remit_to', 'correspondence', 'default'],
+ ARRAY['login', 'recovery', 'mfa', 'verification', 'correspondence', 'notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
--- ── Category: structure ──────────────────────────────────────────────────────
+-- structure
 
 ('legal_entity', 'Legal Entity',
  'Registered legal entity (company, subsidiary, branch).',
@@ -99,8 +92,8 @@ VALUES
  'master', 'legal_entity', 'id',
  true, 'tenant_id',
  true, true,
- ARRAY['legal', 'hq', 'billing', 'tax', 'regulatory', 'mailing', 'default'],
- ARRAY['billing', 'notification'],
+ ARRAY['bill_to', 'bill_from', 'ship_to', 'ship_from', 'place_of_service', 'remit_to', 'correspondence', 'default'],
+ ARRAY['default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -112,7 +105,7 @@ VALUES
  'master', 'warehouse', 'id',
  true, 'tenant_id',
  true, false,
- ARRAY['warehouse', 'shipping', 'receiving', 'default'],
+ ARRAY['ship_to', 'ship_from', 'correspondence', 'default'],
  ARRAY[]::text[],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
@@ -123,8 +116,8 @@ VALUES
  'master', 'company_code', 'id',
  true, 'tenant_id',
  true, true,
- ARRAY['legal', 'billing', 'tax', 'regulatory', 'mailing', 'default'],
- ARRAY['billing', 'tax', 'notification'],
+ ARRAY['bill_to', 'ship_to', 'ship_from', 'place_of_service', 'bill_from', 'remit_to', 'correspondence', 'default'],
+ ARRAY['default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -134,8 +127,8 @@ VALUES
  'master', 'site', 'id',
  true, 'tenant_id',
  true, true,
- ARRAY['site', 'shipping', 'receiving', 'mailing', 'default'],
- ARRAY['notification'],
+ ARRAY['ship_to', 'ship_from', 'bill_to', 'place_of_service', 'bill_from', 'remit_to', 'correspondence', 'default'],
+ ARRAY['default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -145,7 +138,7 @@ VALUES
  'master', 'project', 'id',
  true, 'tenant_id',
  true, false,
- ARRAY['site', 'mailing', 'default'],
+ ARRAY['ship_to', 'place_of_service', 'correspondence', 'default'],
  ARRAY[]::text[],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
@@ -157,7 +150,7 @@ VALUES
  true, 'tenant_id',
  false, true,
  ARRAY[]::text[],
- ARRAY['notification'],
+ ARRAY['notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -168,13 +161,13 @@ VALUES
  true, 'tenant_id',
  false, true,
  ARRAY[]::text[],
- ARRAY['notification'],
+ ARRAY['notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000')
 
 ON CONFLICT (code) WHERE tenant_id IS NULL DO NOTHING;
 
--- ── tenant (root entity — not tenant-scoped; no tenant_id FK on master.tenant) ──
+-- tenant — root entity; NOT tenant-scoped (master.tenant has no tenant_id FK).
 
 INSERT INTO master.owner_type (
     code, name, description, category, sort_order,
@@ -190,14 +183,14 @@ INSERT INTO master.owner_type (
     'master', 'tenant', 'id',
     false, 'id',
     true, true,
-    ARRAY['hq', 'billing', 'legal', 'mailing', 'default'],
-    ARRAY['support', 'billing', 'notification'],
+    ARRAY['bill_from', 'bill_to', 'ship_to', 'ship_from', 'place_of_service', 'remit_to', 'correspondence', 'default'],
+    ARRAY['default'],
     true, false, 'active',
     '00000000-0000-0000-0000-000000000000'
 ) ON CONFLICT (code) WHERE tenant_id IS NULL DO NOTHING;
 
 
--- ── bank_party ───────────────────────────────────────────────────────────────
+-- bank_party
 
 INSERT INTO master.owner_type (
     tenant_id, code, name, description,
@@ -212,8 +205,8 @@ INSERT INTO master.owner_type (
     'master', 'bank_party', 'id',
     true, 'tenant_id',
     true, 'party',
-    ARRAY['default', 'legal', 'branch'],
-    ARRAY['default', 'operations', 'swift'],
+    ARRAY['remit_to', 'correspondence', 'default'],
+    ARRAY['correspondence', 'notification', 'default'],
     'active', '00000000-0000-0000-0000-000000000000'
 )
 ON CONFLICT (code) WHERE tenant_id IS NULL
@@ -225,7 +218,7 @@ DO UPDATE SET
     updated_at = now(), updated_by = EXCLUDED.created_by;
 
 
--- ── commodity_category ─────────────────────────────────────────────────────────
+-- commodity_category
 
 UPDATE master.owner_type
    SET status = 'deprecated',

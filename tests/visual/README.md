@@ -11,7 +11,7 @@ the full architectural context.
 
 ## Why dormant
 
-Sprint 8 PR1–PR5 made the descriptor-driven PI route render correctly
+Sprint 8 PR1Ã¢â‚¬â€œPR5 made the descriptor-driven PI route render correctly
 end-to-end (provider mount, header surface, real PiLineDrawer, real
 HeaderScopePcStrip, real PostingsPreviewSheet, action-code normalize,
 feature flag removed). PR6 wired the visual regression framework so a
@@ -43,20 +43,20 @@ gitignored by Playwright defaults; only the lockfile commit is needed.
 The skeleton lives at
 `server/db/seed/tenants/neon/010_demo/999_visual_fixture_pi.sql` and
 pins the header + 3 lines today. The pricing-component and accounting-
-distribution INSERTs are marked `TODO(activation)` — author them
+distribution INSERTs are marked `TODO(activation)` Ã¢â‚¬â€ author them
 against the live DDL to round out the fixture so the rendered output
 matches the spec's expected shape:
 
-- 3 lines with mixed UoMs (e.g. EA, KG, M) — *seeded*
-- 1 header-scope PC (freight, value apportionment) — *TODO*
-- 4 line-scope PC (discount, IGST 18%, retention 2%, withholding 10%) — *TODO*
-- 6 AD splits across 2 GL accounts — *TODO*
-- Status: `draft` (ensures AmountSummary chips populate) — *seeded*
+- 3 lines with mixed UoMs (e.g. EA, KG, M) Ã¢â‚¬â€ *seeded*
+- 1 header-scope PC (freight, value apportionment) Ã¢â‚¬â€ *TODO*
+- 4 line-scope PC (discount, IGST 18%, retention 2%, withholding 10%) Ã¢â‚¬â€ *TODO*
+- 6 AD splits across 2 GL accounts Ã¢â‚¬â€ *TODO*
+- Status: `draft` (ensures AmountSummary chips populate) Ã¢â‚¬â€ *seeded*
 
 The fixture id is pinned in `pi-fixture.spec.ts` as `PI_FIXTURE_ID`.
 Update that constant if the seed uses a different id.
 
-### 3. Auth — test-user storage state
+### 3. Auth Ã¢â‚¬â€ test-user storage state
 
 PR6 added `tests/visual/global-setup.ts` that signs in once and writes
 `tests/visual/.auth/storage-state.json`. Subsequent test runs reuse
@@ -85,7 +85,7 @@ workflow input today or swap to a repo secret as part of the CI flip
 
 ### 5. Generate the reference snapshot + commit
 
-After steps 1–4 land:
+After steps 1Ã¢â‚¬â€œ4 land:
 
 ```bash
 pnpm test:visual --update-snapshots
@@ -107,7 +107,7 @@ jobs:
   screenshot-parity-pi:
     # Before activation:
     if: github.event_name == 'workflow_dispatch'
-    # After activation — change to PR + path filter via paths-filter
+    # After activation Ã¢â‚¬â€ change to PR + path filter via paths-filter
     # action, OR by moving the `if:` to a paths check on the changed
     # files (using a community action like dorny/paths-filter@v3).
     # Recommended path scope (Sprint 8: legacy purchase_invoice route
@@ -116,10 +116,10 @@ jobs:
     #   - apps/neon/lib/server/pi-document-runtime-surfaces.ts
     #   - apps/neon/lib/server/meta-entity-runtime.ts
     #   - apps/neon/lib/bootstrap-document-runtime.ts
-    #   - packages/shared/runtime-canvas/src/surfaces/**
-    #   - packages/shared/runtime-canvas/src/document-runtime/**
-    #   - packages/shared/content-ui/src/document-components/**
-    #   - packages/shared/content-ui/src/purchase-invoice/**
+    #   - packages/shared/runtime-domain/runtime-canvas/src/surfaces/**
+    #   - packages/shared/runtime-domain/runtime-canvas/src/document-runtime/**
+    #   - packages/shared/ui-platform/content-ui/src/document-components/**
+    #   - packages/shared/ui-platform/content-ui/src/purchase-invoice/**
     #   - server/db/seed/platform/003_control/049_*
     #   - server/db/seed/platform/003_control/050_*
     #   - server/db/seed/tenants/neon/010_demo/999_visual_fixture_pi.sql
@@ -151,7 +151,7 @@ git commit -m "chore(visual): regenerate PI reference screenshot"
 ```
 
 The reference image lives at `tests/visual/__screenshots__/pi-fixture-chromium-1440x900.png`.
-**Review the image diff manually** — visual tests catch unintended
+**Review the image diff manually** Ã¢â‚¬â€ visual tests catch unintended
 regressions, not intended changes. The PR description must explain
 why a regenerated reference is correct.
 
@@ -159,7 +159,7 @@ why a regenerated reference is correct.
 
 ## Diff thresholds
 
-Initial threshold per [P5c plan §5](../../docs/cleanup-plan/P5c-screenshot-parity-plan.md):
+Initial threshold per [P5c plan Ã‚Â§5](../../docs/cleanup-plan/P5c-screenshot-parity-plan.md):
 
 - **maxDiffPixelRatio: 0.01** (1% of pixels may differ)
 - **threshold: 0.2** (per-pixel color-distance tolerance)
@@ -187,7 +187,7 @@ downloads the browser binary into `~/.cache/ms-playwright/` (~150 MB).
 - Not a screenshot diff against a design mockup (use Storybook /
   Chromatic for that workflow)
 - Not a cross-browser test (Chromium only; Firefox / Safari out of scope)
-- Not a multi-viewport test (1440×900 only; mobile / tablet deferred)
+- Not a multi-viewport test (1440Ãƒâ€”900 only; mobile / tablet deferred)
 - Not an interaction test (single static render only; click / hover /
   type out of scope)
 

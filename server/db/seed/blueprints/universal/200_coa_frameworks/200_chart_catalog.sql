@@ -1,16 +1,6 @@
--- ============================================================================
--- UNIVERSAL — CHART OF ACCOUNTS CATALOG
--- ============================================================================
--- File:     200_chart_catalog.sql
--- Schema:   master.chart_of_account
--- Purpose:  Two selectable operating charts of accounts:
---           COA-IFRS and COA-GAAP.
---           The shared group reporting taxonomy is internal and is seeded by
---           210_group_chart_accounts.sql as COA-GROUP.
--- Depends:  platform/099_tenant_bootstrap (tenant must exist)
--- Idempotent: Yes - ON CONFLICT (tenant_id, code) DO UPDATE
--- Spec ref: COA Framework Catalog
--- ============================================================================
+-- Two selectable operating charts of accounts: COA-IFRS and COA-GAAP.
+-- The internal shared group-reporting taxonomy (COA-GROUP) is seeded
+-- separately by 210_group_chart_accounts.sql.
 
 DO $seed$
 DECLARE
@@ -21,7 +11,6 @@ DECLARE
     v_meta     jsonb;
     v_count    int;
 BEGIN
-    -- Stage A: Resolve tenant.
     v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
     IF v_tid IS NULL THEN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set - run: SET app.seed_tenant_id = ''<uuid>''';

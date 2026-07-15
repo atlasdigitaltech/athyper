@@ -161,6 +161,7 @@ function parseRetryAfterMs(value: string | null): number | null {
   if (!value) return null;
   const seconds = Number(value);
   if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1_000;
+  // eslint-disable-next-line no-direct-date-parse -- reason: HTTP Retry-After per RFC 9110 §10.2.3 may be HTTP-date; Date.parse is the standard interpretation, NaN handled below.
   const dateMs = Date.parse(value);
   if (!Number.isNaN(dateMs)) return Math.max(0, dateMs - Date.now());
   return null;

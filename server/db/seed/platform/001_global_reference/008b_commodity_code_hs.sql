@@ -1,19 +1,7 @@
-/* ============================================================================
-   HS (Harmonized System) Commodity Codes (Full Hierarchy)
-   Schema: shared
-   Source: datasets/harmonized-system on GitHub (ODC-PDDL-1.0, public domain)
-   URL: https://github.com/datasets/harmonized-system
-   Upstream: UN Comtrade API
+-- HS 2022 Harmonized System commodity codes (6939 rows: 97 chapters / 1229 headings / 5613 subheadings).
+-- Source: datasets/harmonized-system on GitHub (ODC-PDDL-1.0) — upstream UN Comtrade.
 
-   HS 2022 Edition — 3-level hierarchy:
-     Level 1: Chapter    (2-digit)  — 97 entries
-     Level 2: Heading    (4-digit)  — 1229 entries
-     Level 3: Subheading (6-digit)  — 5613 entries
-     Total: 6939 codes
-   ============================================================================ */
-
-
--- Sentinel: used by crosswalk to mark UNSPSC segments not mappable to any HS chapter
+-- Sentinel row consumed by the crosswalk to mark UNSPSC segments with no HS counterpart.
 INSERT INTO shared.commodity_code (domain_code, code, name, parent_code, level_no, is_leaf, status, created_by)
 VALUES ('hs', 'NONE', 'Not Mappable (sentinel)', NULL, 1, true, 'active', '00000000-0000-0000-0000-000000000000')
 ON CONFLICT (domain_code, code) DO NOTHING;

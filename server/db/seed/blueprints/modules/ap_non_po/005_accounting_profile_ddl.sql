@@ -1,44 +1,30 @@
--- ============================================================================
--- FILE: blueprint/005_accounting_profile_ddl.sql
--- Purpose: Create master.accounting_profile identity table
--- Why here: Existing FK stubs in master.company_code_supplier_profile and
---           master.company_code_customer_profile use undefined_table guards that
---           reference this table. Base DDL never creates it. This file closes
---           that gap â€” once run, those FK stubs activate automatically.
--- Depends on: master.tenant, master.principal
--- Idempotent: CREATE TABLE IF NOT EXISTS + ADD CONSTRAINT DO $$ guards
--- ============================================================================
+-- Creates master.accounting_profile. Base DDL never creates this table, but
+-- master.company_code_{supplier,customer}_profile carry FK stubs (undefined_table
+-- guards) that activate as soon as this file runs.
 
 CREATE TABLE IF NOT EXISTS master.accounting_profile (
-    -- Identity
     id                  uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid            NOT NULL,
 
-    -- Natural key
     code                text            NOT NULL,
     name                text            NOT NULL,
     description         text,
 
-    -- Classification
     direction           text            NOT NULL DEFAULT 'INBOUND',
     subledger_type      text            NOT NULL DEFAULT 'AP',
     domain_hint         text,
 
-    -- Display
     icon_key            text,
     color_token         text,
     sort_order          smallint        NOT NULL DEFAULT 0,
 
-    -- Metadata
     metadata            jsonb           NOT NULL DEFAULT '{}'::jsonb,
 
-    -- Lifecycle
     status              text            NOT NULL DEFAULT 'active',
     is_active           boolean         GENERATED ALWAYS AS (status = 'active') STORED,
     status_changed_at   timestamptz,
     status_changed_by   uuid,
 
-    -- Audit
     created_at          timestamptz     NOT NULL DEFAULT now(),
     created_by          uuid            NOT NULL,
     updated_at          timestamptz,
@@ -73,8 +59,6 @@ COMMENT ON COLUMN master.accounting_profile.domain_hint IS
     'actual routing is driven by business_intent via Engine 4.13 rules.';
 
 
--- â”€â”€ FK constraints (tenant + audit) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 DO $$ BEGIN
     ALTER TABLE master.accounting_profile
         ADD CONSTRAINT ap_tenant_fk
@@ -100,8 +84,6 @@ EXCEPTION
 END $$;
 
 
--- â”€â”€ Indexes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 CREATE INDEX IF NOT EXISTS ap_tenant_status_idx
     ON master.accounting_profile (tenant_id, status)
     WHERE is_active = true;
@@ -111,16 +93,12 @@ CREATE INDEX IF NOT EXISTS ap_subledger_idx
     WHERE is_active = true;
 
 
--- â”€â”€ Row-Level Security â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 ALTER TABLE master.accounting_profile ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS ap_tenant_isolation ON master.accounting_profile;
 CREATE POLICY ap_tenant_isolation ON master.accounting_profile
     USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
 
-
--- â”€â”€ Updated-at trigger â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 DROP TRIGGER IF EXISTS trg_ap_updated_at ON master.accounting_profile;
 CREATE TRIGGER trg_ap_updated_at
@@ -131,6 +109,3 @@ DROP TRIGGER IF EXISTS trg_ap_status_changed ON master.accounting_profile;
 CREATE TRIGGER trg_ap_status_changed
     BEFORE UPDATE ON master.accounting_profile
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
--- Entity registration moved to 004_entity_engine/020_entities/001_entity_registry.sql
-

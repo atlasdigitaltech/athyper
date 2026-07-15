@@ -1,16 +1,3 @@
--- LookupDomain/master/supplier_type.sql
--- Lookup values for domain: master.supplier_type
--- Idempotent: WHERE NOT EXISTS guard
-
--- Migrate any existing 'vendor' code rows to 'general' (rename applied 2026-05)
-UPDATE control.lookup_value
-   SET code = 'general', name = 'General Supplier', description = 'Standard goods/services supplier'
- WHERE domain_code = 'master.supplier_type' AND code = 'vendor' AND tenant_id IS NULL;
-
-UPDATE master.supplier
-   SET supplier_type = 'general'
- WHERE supplier_type = 'vendor';
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order, true, 'active',

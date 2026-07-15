@@ -1,37 +1,10 @@
--- ============================================================================
--- FILE: blueprint/090_entity_operations_delta.sql
--- Purpose: Add Non-PO-specific operations not in base seed
--- Depends on: control.entity_operation (base pack), purchase_invoice +
---             payment_entry entities already registered
--- Idempotent: ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING
--- ============================================================================
--- Base pack already seeds these operations:
---   purchase_invoice: create, update, submit, approve, deny, post, cancel,
---                     reverse, copy, export
---   payment_entry:    create, update, submit, approve, deny, post, void,
---                     reverse, cancel, copy, export
---
--- This file ADDS the following missing Non-PO-specific operations:
---
--- purchase_invoice:
---   hold                 — put invoice on payment hold
---   release_hold         — release payment hold
---   propose_payment      — navigate to payment_entry/new pre-filled with invoice
---   view_je              — navigate to source journal entry
---   match_advance        — manually match existing supplier advance to invoice
---   allocate_payment     — manual allocation UI for partial payments
---
--- payment_entry:
---   transmit             — send to bank interface / PAYG provider
---   print                — generate remittance advice PDF (already exists)
---   mark_cleared         — user-driven clearance (before auto bank matching)
---   allocate             — manual allocation to invoice(s)
---   unallocate           — break an existing allocation
--- ============================================================================
-
--- ── Step 1: Ensure permission codes exist in shared.permission ───────────────
--- entity_operation has FK (permission_code) → shared.permission(code).
--- Insert any missing codes; existing ones are skipped via ON CONFLICT DO NOTHING.
+-- Non-PO-specific entity_operation deltas on top of base seed.
+-- Base seed already covers create/update/submit/approve/deny/post/cancel/reverse/copy/export
+-- for purchase_invoice + payment_entry; this file adds 11 Non-PO ops
+-- (hold/release_hold/propose_payment/view_je/match_advance/allocate_payment
+-- for purchase_invoice; transmit/print/mark_cleared/allocate/unallocate for payment_entry).
+-- entity_operation.permission_code FKs into shared.permission(code) — we insert any
+-- missing codes first so the binding inserts don't fail.
 DO $$
 DECLARE
     v_sys  uuid := '00000000-0000-0000-0000-000000000000';
@@ -56,7 +29,8 @@ BEGIN
     ON CONFLICT (code) DO NOTHING;
 END $$;
 
--- ── Step 1b: Fix already-seeded NAVIGATE handler_targets (idempotent) ────────
+-- Repair already-seeded NAVIGATE handler_targets if a prior version of this
+-- file landed them with stale routes (idempotent rewrite).
 UPDATE control.entity_operation
 SET handler_target = CASE
     WHEN permission_code = 'propose_payment' THEN '/app/payment_entry/new?invoice={id}'
@@ -67,13 +41,10 @@ WHERE tenant_id IS NULL
   AND permission_code IN ('propose_payment','view_je')
   AND handler_type = 'NAVIGATE';
 
--- ── Step 2: Insert entity operations ─────────────────────────────────────────
-
 INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
 VALUES
-    -- ── purchase_invoice ────────────────────────────────────────────────────
     (NULL, 'purchase_invoice', 'hold',
      'DETAIL', 'OVERFLOW', 'MODAL', 'put_on_hold',
      true, 110, '00000000-0000-0000-0000-000000000000'),
@@ -98,7 +69,6 @@ VALUES
      'DETAIL', 'OVERFLOW', 'MODAL', 'allocate_payment',
      true, 160, '00000000-0000-0000-0000-000000000000'),
 
-    -- ── payment_entry ───────────────────────────────────────────────────────
     (NULL, 'payment_entry', 'transmit',
      'DETAIL', 'TOOLBAR', 'MODAL', 'transmit_to_bank',
      true, 120, '00000000-0000-0000-0000-000000000000'),

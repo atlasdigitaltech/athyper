@@ -10,7 +10,7 @@ const promotedServices = new Map([
   ["business", "@athyper/svc-business"],
   ["collab", "@athyper/svc-collab"],
   ["content", "@athyper/svc-content"],
-  ["docservices", "@athyper/svc-docservices"],
+  ["doc-services", "@athyper/svc-doc-services"],
   ["documents", "@athyper/svc-documents"],
   ["finance", "@athyper/svc-finance"],
   ["iam", "@athyper/svc-iam"],
@@ -136,3 +136,5 @@ if (violations.length > 0) {
 } else {
   console.log("Server package boundaries verified.");
 }
+
+

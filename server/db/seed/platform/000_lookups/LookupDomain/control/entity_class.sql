@@ -1,9 +1,5 @@
--- LookupDomain/control/entity_class.sql
--- Lookup values for domain: entity.entity_class
--- Codes are lowercase per lookup_value_code_fmt constraint.
--- Note: control.entity.entity_class column stores UPPERCASE values;
---       the EnumRenderer does case-insensitive matching to bridge the gap.
--- Idempotent: WHERE NOT EXISTS guard
+-- Codes are lowercase (lookup_value_code_fmt constraint); control.entity.entity_class
+-- column stores UPPERCASE — EnumRenderer does case-insensitive matching.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, sort_order, is_system, status, created_by)

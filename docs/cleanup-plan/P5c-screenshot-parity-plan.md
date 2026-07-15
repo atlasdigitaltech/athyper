@@ -1,4 +1,4 @@
-# P5c — Screenshot Parity CI Check Plan
+# P5c Ã¢â‚¬â€ Screenshot Parity CI Check Plan
 
 **Status:** Planned for a focused PR. Sprint 5 delivers the surface
 contracts, renderers, and registries (P5a + P5b). This document
@@ -11,8 +11,8 @@ infrastructure rather than getting bundled with surface work.
 
 ## 1. Purpose
 
-Per cleanup-plan v5 §4.5 (acceptance criterion) and §8 (phasing
-sequence P5c → P6), the screenshot parity check is the **gate** that
+Per cleanup-plan v5 Ã‚Â§4.5 (acceptance criterion) and Ã‚Â§8 (phasing
+sequence P5c Ã¢â€ â€™ P6), the screenshot parity check is the **gate** that
 prevents P6 (descriptor cutover) from shipping a visual regression
 against the current PI page. Today's PI page is the visual baseline;
 the new descriptor-driven render must match it within a small
@@ -27,9 +27,9 @@ rows):
    (current code path)
 2. Visit `/app/purchase_invoice/<fixture_id>` with `pi_via_descriptor`
    feature flag enabled (descriptor-driven route)
-3. Capture screenshots at a fixed viewport (1440×900)
+3. Capture screenshots at a fixed viewport (1440Ãƒâ€”900)
 4. Compute perceptual diff
-5. Fail when diff exceeds threshold (TBD — start permissive, tighten)
+5. Fail when diff exceeds threshold (TBD Ã¢â‚¬â€ start permissive, tighten)
 
 ## 3. Required infrastructure
 
@@ -45,7 +45,7 @@ rows):
 ## 4. Sequencing
 
 The parity check makes sense AFTER:
-- P5a + P5b shipped (renderers exist; you can mount the new path) ✓
+- P5a + P5b shipped (renderers exist; you can mount the new path) Ã¢Å“â€œ
 - App-boot composer + sidecar + strategy registrations land
 - PI descriptor surface seeds applied to test tenant
 - `pi_via_descriptor` feature flag wired (P6 work)
@@ -61,9 +61,9 @@ after P5b is reviewed and the descriptor seed PR is ready.
 - [ ] CI workflow `screenshot-parity-pi` runs on every PR touching:
       - `apps/neon/app/(shell)/app/purchase_invoice/**`
       - `apps/neon/app/(shell)/app/[entity]/**`
-      - `packages/shared/runtime-canvas/src/surfaces/**`
-      - `packages/shared/runtime-canvas/src/document-runtime/**`
-      - `packages/shared/content-ui/src/document-components/**`
+      - `packages/shared/runtime-domain/runtime-canvas/src/surfaces/**`
+      - `packages/shared/runtime-domain/runtime-canvas/src/document-runtime/**`
+      - `packages/shared/ui-platform/content-ui/src/document-components/**`
       - `server/db/seed/platform/003_control/049_*.sql`
       - `server/db/seed/platform/003_control/050_*.sql`
 - [ ] Reference screenshot committed at `tests/visual/pi-fixture-1440x900.png`
@@ -77,7 +77,7 @@ after P5b is reviewed and the descriptor seed PR is ready.
 ## 6. What is NOT in scope for P5c
 
 - AR / GR / SES parity checks (different documents; out of v5 scope)
-- Multi-viewport (mobile / tablet) — single 1440×900 reference for now
+- Multi-viewport (mobile / tablet) Ã¢â‚¬â€ single 1440Ãƒâ€”900 reference for now
 - Cross-browser (Chrome only)
 - Animation / interaction screenshots (single static render only)
 

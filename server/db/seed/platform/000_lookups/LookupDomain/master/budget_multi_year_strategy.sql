@@ -1,7 +1,4 @@
--- LookupDomain/master/budget_multi_year_strategy.sql
--- Lookup values for domain: master.budget_multi_year_strategy
--- Used by: budget_profile.multi_year_strategy
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: budget_profile.multi_year_strategy.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

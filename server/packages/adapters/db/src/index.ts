@@ -8,6 +8,7 @@ export * from "./kysely/db.js";
 export * from "./kysely/db-mesh.js";
 export * from "./kysely/dialect.js";
 export * from "./kysely/pool.js";
+export * from "./kysely/performance-dialect.js";
 export * from "./kysely/query-helpers.js";
 export * from "./kysely/tx.js";
 

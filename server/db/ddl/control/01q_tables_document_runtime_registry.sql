@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS control.polymorphic_child_binding (
     fk_field                text,
 
     -- Polymorphic binding (NULL when FK)
-    source_doc_type_value   text,           -- e.g. 'PURCHASE_INVOICE_LINE'
+    source_doc_type_value   text,           -- e.g. 'purchase_invoice_line'
     source_doc_id_field     text,           -- e.g. 'source_doc_id'
     source_line_id_field    text,           -- e.g. 'source_line_id'
 

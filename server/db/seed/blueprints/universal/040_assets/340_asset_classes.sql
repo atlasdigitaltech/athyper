@@ -1,21 +1,10 @@
--- ============================================================================
--- 340_asset_classes.sql  Asset class taxonomy — universal seed (v1)
--- ============================================================================
--- File:     blueprints/universal/040_assets/340_asset_classes.sql
--- Schema:   master.asset_class
--- Purpose:  16 IAS 16/IFRS-compliant asset class templates per tenant:
---             4 L1 headers: TANGIBLE, INTANGIBLE, ROU, CWIP
---            12 L2 leaves : LAND, BUILDINGS, PLANT, VEHICLES, IT-EQUIP,
---                           FURNITURE, LHI, TOOLS, SOFTWARE, ROU-PROP,
---                           ROU-EQUIP, CWIP-GEN
--- Scope:    Tenant-level (no company_code_id). All company codes share
---           the same classification taxonomy. Per-company depreciation
---           parameters and capitalization thresholds live in
---           control.asset_class_book_policy (seeded per tenant via demo
---           seed or provisioned via setup UI).
--- Depends:  master.tenant exists with app.seed_tenant_id set
--- Idempotent: Yes — ON CONFLICT (tenant_id, code) DO UPDATE
--- ============================================================================
+-- master.asset_class — 16 IAS 16/IFRS-compliant rows per tenant:
+--   L1 headers (4): TANGIBLE, INTANGIBLE, ROU, CWIP
+--   L2 leaves (12): LAND, BUILDINGS, PLANT, VEHICLES, IT-EQUIP, FURNITURE,
+--                   LHI, TOOLS, SOFTWARE, ROU-PROP, ROU-EQUIP, CWIP-GEN
+-- Tenant-scoped — all company_codes share the same taxonomy. Per-company
+-- depreciation parameters and capitalisation thresholds live in
+-- control.asset_class_book_policy (seeded by 341 or setup UI).
 
 DO $seed$
 DECLARE

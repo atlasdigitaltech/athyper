@@ -1,12 +1,6 @@
--- 900_seed_data/001_shared/009b_industry_code_isic_groups_classes.sql
--- Seed: ISIC Rev.4 — Complete hierarchy (Sections → Divisions → Groups → Classes)
--- Schema: shared | Table: industry_code
--- Self-contained: no external dependencies for ISIC data
--- Idempotent: ON CONFLICT (domain_code, code) DO UPDATE throughout
+-- ISIC Rev.4 — Sections → Divisions → Groups → Classes.
 
--- ============================================================================
--- ISIC Rev.4 — Sections (Level 1)
--- ============================================================================
+-- Sections (Level 1)
 insert into shared.industry_code (domain_code, code, name, description, level_no, is_leaf, status, created_by)
 values
   ('isic','A','Agriculture, Forestry and Fishing','Crop and animal production, hunting, forestry, and fishing',1,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -39,9 +33,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- ISIC Rev.4 — Divisions (Level 2)
--- ============================================================================
 
 -- Section A: Agriculture, Forestry and Fishing
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
@@ -311,9 +303,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- ISIC Rev.4 — Groups (Level 3) and Classes (Level 4)
--- ============================================================================
 
 -- Section A — Agriculture, Forestry and Fishing (01-03)
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
@@ -378,9 +368,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section B — Mining and Quarrying (05-09)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','051','Mining of hard coal','Mining of hard coal from underground or surface mines','05',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -416,9 +404,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section C — Manufacturing (10-33)
--- ============================================================================
 
 -- Division 10: Manufacture of food products
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
@@ -772,9 +758,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section D — Electricity, Gas, Steam and Air Conditioning Supply (35)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','351','Electric power generation, transmission and distribution','Electric power generation, transmission and distribution','35',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -792,9 +776,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section E — Water Supply; Sewerage, Waste Management and Remediation (36-39)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','360','Water collection, treatment and supply','Water collection, treatment and supply','36',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -820,9 +802,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section F — Construction (41-43)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','410','Construction of buildings','Construction of buildings','41',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -853,9 +833,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section G — Wholesale and Retail Trade (45-47)
--- ============================================================================
 
 -- Division 45: Motor vehicles
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
@@ -956,9 +934,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section H — Transportation and Storage (49-53)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','491','Transport via railways','Transport via railways','49',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1001,9 +977,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section I — Accommodation and Food Service Activities (55-56)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','551','Short term accommodation activities','Short-stay accommodation','55',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1028,9 +1002,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section J — Information and Communication (58-63)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','581','Publishing of books, periodicals and other publishing activities','Publishing of books, periodicals and other publishing activities','58',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1078,9 +1050,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section K — Financial and Insurance Activities (64-66)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','641','Monetary intermediation','Monetary intermediation','64',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1120,9 +1090,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section L — Real Estate Activities (68)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','681','Real estate activities with own or leased property','Real estate activities with own or leased property','68',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1138,9 +1106,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section M — Professional, Scientific and Technical Activities (69-75)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','691','Legal activities','Legal activities','69',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1180,9 +1146,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section N — Administrative and Support Service Activities (77-82)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','771','Renting and leasing of motor vehicles','Renting and leasing of motor vehicles','77',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1239,9 +1203,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section O — Public Administration and Defence (84)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','841','Administration of the State and the economic and social policy of the community','Administration of the State and the economic and social policy of the community','84',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1263,9 +1225,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section P — Education (85)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','851','Pre-primary and primary education','Pre-primary and primary education','85',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1290,9 +1250,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section Q — Human Health and Social Work Activities (86-88)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','861','Hospital activities','Hospital activities','86',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1322,9 +1280,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section R — Arts, Entertainment and Recreation (90-93)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','900','Creative, arts and entertainment activities','Creative, arts and entertainment activities','90',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1351,9 +1307,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section S — Other Service Activities (94-96)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','941','Activities of business, employers and professional membership organizations','Activities of business, employers and professional membership organizations','94',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1388,9 +1342,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section T — Activities of Households as Employers (97-98)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','970','Activities of households as employers of domestic personnel','Activities of households as employers of domestic personnel','97',3,false,'active','00000000-0000-0000-0000-000000000000'),
@@ -1408,9 +1360,7 @@ ON CONFLICT (domain_code, code) DO UPDATE SET
     updated_at = now(),
     updated_by = excluded.created_by;
 
--- ============================================================================
 -- Section U — Activities of Extraterritorial Organizations and Bodies (99)
--- ============================================================================
 insert into shared.industry_code (domain_code, code, name, description, parent_code, level_no, is_leaf, status, created_by)
 values
   ('isic','990','Activities of extraterritorial organizations and bodies','Activities of extraterritorial organizations and bodies','99',3,false,'active','00000000-0000-0000-0000-000000000000'),

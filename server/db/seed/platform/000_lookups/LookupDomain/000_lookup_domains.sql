@@ -1,19 +1,11 @@
--- 900_seed_data/002_control/LookupDomain/000_lookup_domains.sql
--- Master registry: ALL lookup domain definitions across all schemas.
--- Schema: control | Table: lookup_domain
--- Depends on: 04_tables/002_control.sql
--- Idempotent: yes — ON CONFLICT (code) DO NOTHING
---
--- Ordering: grouped by source_schema, then by functional area within each schema.
--- Schemas: CONTROL → SHARED → MASTER → DOCUMENT → EVENT → LOG → GOVERNANCE
-
+-- Master registry of every control.lookup_domain code. Rows grouped by source_schema
+-- (control → shared → master → document → event → log → governance), then by
+-- functional area within a schema.
 
 INSERT INTO control.lookup_domain (code, name, description, source_schema, is_extensible, status, created_by)
 VALUES
 
-    -- ========================================================================
     -- CONTROL schema
-    -- ========================================================================
 
     -- ── Authentication ─────────────────────────────────────────────────────
 
@@ -185,9 +177,7 @@ VALUES
      'control', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
-    -- ========================================================================
     -- SHARED schema
-    -- ========================================================================
 
     ('shared.uom_quantity_type',
      'UoM Quantity Type',
@@ -201,9 +191,7 @@ VALUES
      'shared', false, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
-    -- ========================================================================
     -- MASTER schema
-    -- ========================================================================
 
     -- ── Tenant / Principal / Contact ────────────────────────────────────────
 
@@ -268,8 +256,30 @@ VALUES
      '00000000-0000-0000-0000-000000000000'),
 
     ('master.contact_link_purpose',
-     'Contact Point Purpose',
-     'Intended use of a contact_link. Drives routing logic for notifications, auth, and billing communications.',
+     'Contact Role',
+     'Unified contact-role vocabulary for contact_link.purpose. 15 canonical values '
+     'across auth (login/recovery/mfa/verification — reserved for principal/employee), '
+     'business (bill_to/remit_to/bill_from/ship_to/ship_from/place_of_service/correspondence — mirrors '
+     'address_purpose for paired routing), operational (support/notification/marketing), '
+     'and generic (default). Pairs with address_link.purpose for v_resolved_identity '
+     'lookups. Auth purposes forbid role_qualifier per contact_link_auth_no_qualifier_chk.',
+     'master', true, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.contact_role_qualifier',
+     'Contact Role Qualifier',
+     'Optional sub-classification within a contact_link.purpose. Disambiguates flows that '
+     'share one role (e.g. legal_notice vs tax_filing vs payslip, all under '
+     'purpose=correspondence). Free text; advisory lookup; never required.',
+     'master', true, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.marketing_consent_status',
+     'Marketing Consent Status',
+     'Authoritative state machine for master.contact_marketing_consent.status. '
+     'Marketing send-path MUST treat ''opted_in'' as the ONLY value that permits '
+     'delivery — all other states (opted_out, pending_double_opt_in, unknown) '
+     'are non-sendable. Sealed enum: changes require DDL + legal review.',
      'master', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
@@ -280,17 +290,27 @@ VALUES
      '00000000-0000-0000-0000-000000000000'),
 
     ('master.address_purpose',
-     'Address / Contact Purpose',
-     'Business purpose vocabulary for address_link.purpose. Conceptually overlaps with '
-     'contact_link_purpose (billing, legal, home, work…) to enable co-relation of a '
-     'physical address with a contact channel for the same business function.',
+     'Address Role',
+     'Unified business role vocabulary for address_link.purpose. 8 canonical values '
+     '(ship_to, bill_to, place_of_service, bill_from, remit_to, ship_from, correspondence, default) '
+     'shared identically with document address selections (PR/PO/GR/SE/PI). '
+     'Independent of address_link.role_qualifier (sub-classification within a role) and '
+     'master.address_type (physical classification of the place).',
+     'master', true, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.address_role_qualifier',
+     'Address Role Qualifier',
+     'Optional sub-classification within an address_link.purpose. Disambiguates flows that '
+     'share one role (e.g. legal_notice vs tax_filing vs account_statement, all under '
+     'purpose=correspondence). Free text; advisory lookup; never required.',
      'master', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
     ('master.address_type',
      'Address Type',
      'Physical classification of the address location. Describes what the place physically is '
-     '(commercial, warehouse, residential). Independent of address_link.purpose (how it is used).',
+     '(commercial, warehouse, residential, po_box, …). Independent of address_link.purpose (how it is used).',
      'master', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
@@ -314,6 +334,16 @@ VALUES
      'master.comment_reaction, event.comment_flag, governance.comment_moderation. '
      'is_extensible=true — new comment surfaces (task_comment, chat_message) '
      'added without DDL.',
+     'master', true, 'active',
+     '00000000-0000-0000-0000-000000000000'),
+
+    ('master.comment_intent',
+     'Comment Intent',
+     'Semantic role of a comment (general, submission_note, approval_note, '
+     'rejection_reason, query, clarification, audit_note, system_event). '
+     'Orthogonal to context_type. Drives badges + filter chips in the '
+     'Comments panel and is set by entity_flow_field.metadata.target when a '
+     'flow writes the comment. is_extensible=true.',
      'master', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
@@ -663,12 +693,6 @@ VALUES
 
     -- ── Spend Category ──────────────────────────────────────────────────────
 
-    ('master.procurement_type',
-     'Procurement type',
-     'Nature of procurement (goods, services, mixed).',
-     'master', false, 'active',
-     '00000000-0000-0000-0000-000000000000'),
-
     ('master.spend_visibility',
      'Spend category visibility',
      'Who can see and use this spend category (standard, restricted, hidden).',
@@ -749,9 +773,7 @@ VALUES
     -- ── Operating Unit — REMOVED (company_code migration) ──────────────────
     -- ou_type domain deleted. See 13_patches/002_drop_operating_unit.sql.
 
-    -- ========================================================================
     -- DOCUMENT schema
-    -- ========================================================================
 
     ('document.je_source_doc_type',
      'Journal entry source document type',
@@ -808,9 +830,7 @@ VALUES
      'document', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
-    -- ========================================================================
     -- EVENT schema
-    -- ========================================================================
 
     ('notification.digest_frequency',
      'Digest Frequency Window',
@@ -827,9 +847,7 @@ VALUES
      'event', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
-    -- ========================================================================
     -- LOG schema
-    -- ========================================================================
 
     ('log.actor_type',
      'Log Actor Type',
@@ -909,13 +927,9 @@ VALUES
      'log', false, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
-    -- ========================================================================
     -- GOVERNANCE schema
-    -- ========================================================================
 
-    -- ========================================================================
     -- MASTER schema — Asset Management
-    -- ========================================================================
 
     ('master.asset_book_type',
      'Asset book type',
@@ -987,9 +1001,7 @@ VALUES
      'control', false, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
-    -- ========================================================================
     -- DOCUMENT schema — Asset Management
-    -- ========================================================================
 
     ('document.asset_txn_type',
      'Asset transaction type',
@@ -998,9 +1010,7 @@ VALUES
      'document', true, 'active',
      '00000000-0000-0000-0000-000000000000'),
 
-    -- ========================================================================
-    -- RESOLUTION ENGINE (Engine 4.13)
-    -- ========================================================================
+    -- RESOLUTION ENGINE (Engine spec 4.13)
 
     -- ── Transaction Resolution ───────────────────────────────────────────────
 
@@ -1093,13 +1103,23 @@ INSERT INTO control.lookup_domain (code, name, description, source_schema, is_ex
 VALUES
     ('document.purchase_requisition_type',   'Purchase Requisition Type',   'Classification of purchase requisition (standard, urgent, blanket, framework call-off, capex). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.purchase_order_type',         'Purchase Order Type',         'Classification of purchase order (standard, blanket, service, emergency). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    ('document.commitment_type',             'Commitment Type',             'Type of commitment underlying a purchase order: purchase_order, contract, lease, subscription, standing_order, framework_agreement, grant_award, internal_order. Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    ('document.commitment_fx_policy',        'Commitment FX Policy',        'How exchange rates are captured for a commitment: spot_on_event, fixed_at_commitment, manual_contract_rate. Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    -- NOTE: payment_direction stays as an unbound text CHECK in DDL because
+    -- the platform values are UPPERCASE (OUTBOUND / INBOUND) and lookup_value
+    -- codes are constrained to lowercase snake_case by lookup_value_code_fmt.
+    -- The M3 finding (payment_direction as text vs enum) is intentionally
+    -- deferred: fixing it requires renaming the value across 15+ services,
+    -- blueprint files, and tenant seeds — out of scope for this batch.
     ('document.purchase_invoice_type',       'Purchase Invoice Type',       'Type of AP invoice (standard, credit_note, debit_note, advance, retention_release, proforma, self_billed, down_payment, final). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.purchase_invoice_source',     'Purchase Invoice Source',     'How the invoice was originated (po_based, contract_based, non_po, one_time_supplier). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.invoice_match_type',          'Invoice Match Type',          'Matching strategy for AP invoices (three_way, two_way, evaluated_receipt, no_match). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.match_exception_type',        'Match Exception Type',        'Types of invoice matching exceptions (price_variance, quantity_variance, missing_receipt, duplicate_invoice, tax_variance, fx_variance, retention_variance, advance_recovery_mismatch). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.payment_entry_type',          'Payment Entry Type',          'Type of outbound payment (standard, retention_release, advance, final, partial, down_payment, netting, urgent). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
-    ('document.acct_dist_account_source',    'Accounting Distribution Account Source', 'How the GL account was determined for an accounting distribution row (posting_role, from_intent, fixed, from_category). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
-    ('document.procurement_type',            'Invoice Line Procurement Type',          'Nature of the item or service on an invoice line (goods, services, mixed, freight, misc). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    ('document.acct_dist_account_source',    'Accounting Distribution Account Source', 'Provenance of the resolved GL account on an accounting distribution row (PENDING, PROFILE, FALLBACK). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    ('document.acct_dist_distribution_basis', 'Accounting Distribution Split Basis',    'How the split is calculated on an accounting distribution row (PERCENT, AMOUNT, QUANTITY). Platform-governed.',         'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    ('document.procurement_type',            'Invoice Line Procurement Type',          'Nature of the item or service on an invoice line (goods, services). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
+    ('document.line_type',                   'Invoice Line Type',                     'Source classification for an invoice line (contract, catalog, marketplace, noncatalog). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.invoice_match_status',        'Invoice Match Status',                   'Three-way match progress status for an invoice or invoice line (unmatched, partially_matched, fully_matched, match_exception). Platform-governed.', 'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
     ('document.invoice_budget_check_result', 'Invoice Budget Check Result',            'Outcome of the budget availability check on a purchase invoice (PASSED, WARNED, OVERRIDE, BLOCKED, EXEMPT). Platform-governed.',                        'document', false, 'active', '00000000-0000-0000-0000-000000000000'),
 
@@ -1231,9 +1251,7 @@ VALUES
      'Platform-governed — not tenant-extensible.',
      'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
 
-    -- ========================================================================
     -- CMS schema (master.content_item family)
-    -- ========================================================================
 
     ('master.content_item_kind',
      'Content Item Kind',
@@ -1382,14 +1400,8 @@ VALUES
 
     ('master.tax_filing_frequency',
      'Tax Filing Frequency',
-     'How often tax returns must be filed with the jurisdiction (monthly, quarterly, semi_annually, annually, on_demand). '
+     'How often tax returns must be filed with the jurisdiction (monthly, bimonthly, quarterly, semi_annually, annually, on_demand). '
      'is_extensible=false — filing frequencies are jurisdiction-regulated.',
-     'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
-
-    ('master.tax_category',
-     'Tax Type Category',
-     'Functional category of a tax type (income, sales, vat, gst, withholding, excise, customs, payroll, property, stamp_duty). '
-     'is_extensible=false — categories drive accounting treatment rules.',
      'master', false, 'active', '00000000-0000-0000-0000-000000000000'),
 
     ('master.fx_rate_type',

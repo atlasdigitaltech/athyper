@@ -35,7 +35,7 @@
       "@athyper/svc-audit":     ["./packages/services/audit/index.ts"],
       "@athyper/svc-business":  ["./packages/services/business/index.ts"],
       "@athyper/svc-content":   ["./packages/services/content/index.ts"],
-      "@athyper/svc-docservices": ["./packages/services/docservices/index.ts"],
+      "@athyper/svc-doc-services": ["./packages/services/doc-services/index.ts"],
       "@athyper/svc-integration": ["./packages/services/integration/index.ts"],
       "@athyper/svc-master":    ["./packages/services/master/index.ts"],
       "@athyper/svc-policy":    ["./packages/services/policy/index.ts"],
@@ -57,3 +57,5 @@
     "**/*.spec.ts"
   ]
 }
+
+

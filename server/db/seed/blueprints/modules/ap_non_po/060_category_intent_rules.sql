@@ -1,24 +1,8 @@
--- ============================================================================
--- FILE: blueprints/modules/ap_non_po/060_category_intent_rules.sql
--- Purpose: Seed root-container classification to domain intent rules for each
---          classification → intent rules for each of the 30 base commodity category roots
--- Depends on: master.commodity_category (from universal 023), master.business_intent
--- Idempotent: business_intents via ON CONFLICT DO NOTHING;
---             rules via WHERE NOT EXISTS
---
--- Priority 999 — fires ONLY when no leaf-level rule from 061/062 matched.
--- Leaf rules (061/062) always use priority ≤ 500, so these are true last-resort
--- fallbacks for the rare case where a container root is selected directly.
---
--- Root → intent domain mapping
---   OPEX roots (SC-IT,TELCO,OFFICE,HR,TRAVEL,PROF,MKTG,FAC,UTIL,FLEET,INS,
---               BANK,SAFETY,ENV,OUTSRC,SUBS) -> BI-OPEX
---   CAPEX roots (SC-CAPEQUIP)                -> BI-CAPEX
---   Direct-ops roots with COGS nature
---     (SC-RAW,COMP,PKG,CONSUM,MRO,PRODSVC,CONTRACT,FREIGHT,WHSE,QC,TEMPWK,
---      PROCNRG)                              -> BI-COGS
---   Regulatory roots (SC-TAX)                -> BI-REG
--- ============================================================================
+-- Root commodity_category → business_intent fallback rules (30 roots).
+-- Priority 999 — fires ONLY when no leaf-level rule from 061/062 matched
+-- (leaf rules use priority ≤ 500). True last-resort fallbacks.
+-- Domain map: OPEX roots → BI-OPEX, SC-CAPEQUIP → BI-CAPEX,
+--             direct-ops roots → BI-COGS, SC-TAX → BI-REG.
 
 DO $seed_cat_intent_rules$
 DECLARE
@@ -38,7 +22,6 @@ BEGIN
         RAISE EXCEPTION '[seed] active tenant % not found', v_tid;
     END IF;
 
-    -- ── Step A: Ensure 3 generic intents exist ────────────────────────────────
     FOR v_tenant IN
         SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
@@ -55,7 +38,6 @@ BEGIN
         END IF;
     END LOOP;
 
-    -- ── Step B: Root container → intent mapping table ─────────────────────────
     CREATE TEMP TABLE IF NOT EXISTS tmp_root_intent_map (
         cc_code     text  NOT NULL,
         bi_code     text  NOT NULL,
@@ -66,7 +48,6 @@ BEGIN
     TRUNCATE tmp_root_intent_map;
 
     INSERT INTO tmp_root_intent_map (cc_code, bi_code, bi_domain, explanation) VALUES
-    -- ── Universal / OPEX roots ──────────────────────────────────────────────
     ('SC-IT',      'BI-OPEX', 'OPEX',  'IT root container — OPEX fallback'),
     ('SC-TELCO',   'BI-OPEX', 'OPEX',  'Telecom root container — OPEX fallback'),
     ('SC-OFFICE',  'BI-OPEX', 'OPEX',  'Office root container — OPEX fallback'),
@@ -83,11 +64,9 @@ BEGIN
     ('SC-ENV',     'BI-OPEX', 'OPEX',  'ESG/Environmental root — OPEX fallback'),
     ('SC-OUTSRC',  'BI-OPEX', 'OPEX',  'Outsourcing root container — OPEX fallback'),
     ('SC-SUBS',    'BI-OPEX', 'OPEX',  'Subscriptions root container — OPEX fallback'),
-    -- ── Regulatory root ─────────────────────────────────────────────────────
     ('SC-TAX',     'BI-REG','REGULATORY', 'Tax/duties root — regulatory fallback'),
-    -- ── CAPEX root ──────────────────────────────────────────────────────────
     ('SC-CAPEQUIP','BI-CAPEX','CAPEX', 'Capital equipment root — CAPEX fallback'),
-    -- ── Direct-operations roots (COGS nature; AP still posts as AP) ─────────
+    -- Direct-operations roots — COGS nature but AP still posts as AP
     ('SC-RAW',     'BI-COGS', 'COST_OF_SALES',  'Raw materials root — cost of sales fallback'),
     ('SC-COMP',    'BI-COGS', 'COST_OF_SALES',  'Components root — cost of sales fallback'),
     ('SC-PKG',     'BI-COGS', 'COST_OF_SALES',  'Packaging root — cost of sales fallback'),
@@ -101,7 +80,6 @@ BEGIN
     ('SC-TEMPWK',  'BI-COGS', 'COST_OF_SALES',  'Temporary works root — cost of sales fallback'),
     ('SC-PROCNRG', 'BI-COGS', 'COST_OF_SALES',  'Process energy root — cost of sales fallback');
 
-    -- ── Step C: Insert rules per tenant ──────────────────────────────────────
     FOR v_tenant IN
         SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP

@@ -1,3 +1,4 @@
+import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import type {
   RuntimeListServerAdapter,
@@ -216,8 +217,9 @@ export function createNeonAdapter(config: NeonAdapterConfig): RuntimeListServerA
     entityListHref:   (code: string) => `/app/${code}`,
     entityDetailHref: (code: string, id: string) => `/app/${code}/${id}`,
     entityNewHref:    (code: string) => `/app/${code}/new`,
-    entityRecordsApiHref: (code: string) => `/api/runtime-records/${encodeURIComponent(code)}`,
-    entityFieldOptionsApiHrefBase: (code: string) => `/api/runtime-options/${encodeURIComponent(code)}`,
+    entityRecordsApiHref: (code: string) => runtimePath.list(code),
+    // Base URL for runtime-list FilterControl; consumer appends `/fields/<field>/options`.
+    entityFieldOptionsApiHrefBase: (code: string) => runtimePath.list(code),
     entitySavedViewsApiHref: (code: string) => config.savedViewsApiHref?.(code) ?? null,
 
     // Shell — neon uses @athyper/surface-kit PageFrame

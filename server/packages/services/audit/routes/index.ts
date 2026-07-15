@@ -13,6 +13,10 @@ import {
   createReportPackRoutes,
   type ReportPackRouteDeps,
 } from "./report-pack.route.js";
+import {
+  createAuditTimelineRoute,
+  type AuditTimelineRouteDeps,
+} from "./audit-timeline.route.js";
 
 export type {
   AuditRouteDeps,
@@ -23,6 +27,7 @@ export type {
   IntegrityCheckRouteDeps,
   AuditHashChainRouteDeps,
   ReportPackRouteDeps,
+  AuditTimelineRouteDeps,
 };
 
 export type AuditServiceDeps =
@@ -33,7 +38,8 @@ export type AuditServiceDeps =
   PiiInventoryRouteDeps &
   IntegrityCheckRouteDeps &
   AuditHashChainRouteDeps &
-  ReportPackRouteDeps;
+  ReportPackRouteDeps &
+  AuditTimelineRouteDeps;
 
 export function registerAuditRoutes(router: Router, deps: AuditServiceDeps): void {
   createAuditRoutes(router, deps);
@@ -44,4 +50,5 @@ export function registerAuditRoutes(router: Router, deps: AuditServiceDeps): voi
   createIntegrityCheckRoute(router, deps);
   createAuditHashChainRoutes(router, deps);
   createReportPackRoutes(router, deps);
+  createAuditTimelineRoute(router, deps);
 }

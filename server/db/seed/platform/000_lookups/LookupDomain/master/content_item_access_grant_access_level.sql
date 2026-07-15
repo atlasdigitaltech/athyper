@@ -1,8 +1,3 @@
--- LookupDomain/master/content_item_access_grant_access_level.sql
--- Lookup values for domain: master.content_item_access_grant.access_level
--- Access grant level for CMS content items.
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,

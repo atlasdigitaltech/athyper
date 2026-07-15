@@ -6,10 +6,10 @@
  * lease-plus-version concurrency model.
  *
  * Lock lifecycle:
- *   acquire  → POST   /api/records/:entity/:id/lock
- *   heartbeat → PUT   /api/records/:entity/:id/lock/heartbeat  (every 30 s)
- *   release  → DELETE /api/records/:entity/:id/lock
- *   force    → DELETE /api/records/:entity/:id/lock/force  (admin only)
+ *   acquire  → POST   /api/runtime/v1/entities/:entity/:id/lock
+ *   heartbeat → PUT   /api/runtime/v1/entities/:entity/:id/lock/heartbeat  (every 30 s)
+ *   release  → DELETE /api/runtime/v1/entities/:entity/:id/lock
+ *   force    → DELETE /api/runtime/v1/entities/:entity/:id/lock/force  (admin only)
  *
  * Acquisition is atomic: the service deletes any expired lock then inserts
  * a new one inside a transaction. The UNIQUE constraint catches the rare
@@ -97,7 +97,7 @@ function isUniqueViolation(err: unknown): boolean {
 // ── acquireLock ───────────────────────────────────────────────────────────────
 
 /**
- * Atomically acquires an edit-session lock for the given aggregate root.
+ * Atomically acquires a pessimistic document edit lock for the aggregate root.
  *
  * Algorithm (inside a transaction):
  *   1. DELETE any expired lock for this (tenant, entity, record) triple.

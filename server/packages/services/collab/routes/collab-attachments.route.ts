@@ -25,10 +25,9 @@ import busboy from "busboy";
 import {
   verifyBearer,
   isUuid,
-  resolveTenantId,
-  SYSTEM_PRINCIPAL_UUID,
+  resolveAttachmentAuthContext,
 } from "@athyper/svc-shared";
-import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
 import { createHash } from "node:crypto";
 
 // ── Deps ──────────────────────────────────────────────────────────────────────
@@ -38,23 +37,14 @@ export interface CollabAttachmentsRouteDeps {
   db: Kysely<any>;
   auth: { verifyToken(token: string): Promise<Record<string, unknown>> };
   objectStorage?: { adapterRef: { current: ObjectStorageAdapter | null }; bucket: string; maxUploadMb?: number };
-  logger?: { error(event: string, fields?: Record<string, unknown>): void };
+  logger?: {
+    error(event: string, fields?: Record<string, unknown>): void;
+    warn?(event: string, fields?: Record<string, unknown>): void;
+    info?(event: string, fields?: Record<string, unknown>): void;
+  };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function resolvePrincipal(db: Kysely<any>, sub: string, tenantId: string, realmKey = "athyper"): Promise<string> {
-  if (!sub) return SYSTEM_PRINCIPAL_UUID;
-  const row = await db
-    .selectFrom("master.principal_identity_binding as pab")
-    .select("pab.principal_id")
-    .where("pab.subject_id", "=", sub)
-    .where("pab.realm_key", "=", realmKey)
-    .where("pab.tenant_id", "=", tenantId)
-    .executeTakeFirst();
-  return row ? (row.principal_id as string) : SYSTEM_PRINCIPAL_UUID;
-}
 
 function sanitizeFileName(name: string): string {
   return name
@@ -133,6 +123,42 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
   // ── Shared upload core (used by both JSON and multipart paths) ───────────────
 
+  async function authorize(
+    req: Parameters<RequestHandler>[0],
+    res: Parameters<RequestHandler>[1],
+    claims: Record<string, unknown>,
+  ): Promise<{ tenantId: string; principalId: string; tenantCode: string; companyCode: string } | null> {
+    const headerOrg = (req.headers["x-org"] as string) ?? "";
+    const headerRealm = (req.headers["x-realm-key"] as string | undefined) ?? (req.headers["x-realm"] as string | undefined);
+    const authSource = {
+      type: "token",
+      headerOrgPresent: Boolean(headerOrg),
+      headerRealmPresent: Boolean(headerRealm),
+    };
+    logger?.info?.("collab_attachment_auth_attempt", {
+      authSource,
+      tenantHeader: headerOrg,
+      realmHeader: headerRealm,
+    });
+    const authAttempt = await resolveAttachmentAuthContext(db, claims, headerOrg, headerRealm);
+    if (!authAttempt.ok) {
+      logger?.warn?.("collab_attachment_auth_denied", {
+        authSource,
+        reason: authAttempt.error,
+        tenantHeader: headerOrg,
+        realmHeader: headerRealm,
+      });
+      res.status(authAttempt.status).json({ error: authAttempt.error, message: authAttempt.message });
+      return null;
+    }
+    return {
+      tenantId: authAttempt.context.tenantId,
+      principalId: authAttempt.context.principalId,
+      tenantCode: authAttempt.context.tenantCode,
+      companyCode: authAttempt.context.companyCode || authAttempt.context.tenantId,
+    };
+  }
+
   async function performUpload(opts: {
     adapter:      ObjectStorageAdapter;
     tenantId:     string;
@@ -145,9 +171,9 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
     fileBuffer:   Buffer;
   }): Promise<{ attachment_id: string; file_name: string; content_type: string; size_bytes: number; is_duplicate: boolean }> {
     const { adapter, tenantId, tenantCode, companyCode, principalId, fileName, contentType, sizeBytes, fileBuffer } = opts;
-    const sha256       = createHash("sha256").update(fileBuffer).digest("hex");
+    const sha256 = createHash("sha256").update(fileBuffer).digest("hex");
     const attachmentId = crypto.randomUUID();
-    const key          = storageKey(tenantCode, companyCode, attachmentId, fileName);
+    const key = storageKey(tenantCode, companyCode, attachmentId, fileName);
 
     // sha256 dedup — reuse only if the object lives in the CURRENT bucket.
     const existing = await db
@@ -168,12 +194,26 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
         .where("id"        as never, "=", ex["id"]  as never)
         .where("tenant_id" as never, "=", tenantId  as never)
         .execute();
+      logger?.info?.("collab_attachment_upload_dedup_hit", {
+        tenantId,
+        attachmentId: ex["id"],
+        originalFileName: fileName,
+        contentType,
+        sizeBytes,
+      });
       return { attachment_id: ex["id"] as string, file_name: fileName, content_type: contentType, size_bytes: sizeBytes, is_duplicate: true };
     }
 
     await adapter.put(key, fileBuffer, { contentType });
 
     try {
+      logger?.info?.("collab_attachment_upload_db_write_started", {
+        tenantId,
+        attachmentId,
+        fileName,
+        contentType,
+        sizeBytes,
+      });
       await db
         .insertInto("master.attachment" as never)
         .values({
@@ -200,8 +240,25 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
           metadata:                     {},
         } as never)
         .execute();
+
+        logger?.info?.("collab_attachment_upload_created", {
+          tenantId,
+          attachmentId,
+          fileName,
+          contentType,
+          sizeBytes,
+        });
     } catch (dbErr) {
-      await adapter.delete(key).catch(() => {});
+      const cleanupOutcome = await adapter.delete(key)
+        .then(() => "object_deleted_on_db_failure" as const)
+        .catch(() => "object_delete_failed_on_db_failure" as const);
+      logger?.warn?.("collab_attachment_upload_cleanup_outcome", {
+        tenantId,
+        attachmentId,
+        storageKey: key,
+        phase: "single",
+        outcome: cleanupOutcome,
+      });
       throw dbErr;
     }
 
@@ -212,6 +269,10 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
   const uploadMultipartHandler: RequestHandler = (req, res, next) => {
     void (async () => {
+      logger?.info?.("collab_attachment_upload_request_started", {
+        path: "multipart",
+        tenantSource: "resolved_auth_context",
+      });
       const adapter = adapterRef.current;
       if (!adapter) {
         res.status(503).json({ error: "STORAGE_UNAVAILABLE", message: "Object storage is not available" });
@@ -221,20 +282,15 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
 
-      const xOrg    = (req.headers["x-org"]   as string) ?? "";
-      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
-
-      const tenantCode  = (xOrg.split("--")[0] ?? "").trim() || tenantId;
-      const companyCode = (xOrg.split("--")[1] ?? "").trim() || tenantId;
-      const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipal(db, sub, tenantId, xRealm);
+      const authorized = await authorize(req, res, claims);
+      if (!authorized) return;
+      const { tenantId, principalId, tenantCode, companyCode } = authorized;
       const maxBytes    = await resolveAttachmentMaxBytes(db, tenantId, fallbackMaxBytes);
 
       const bb = busboy({ headers: req.headers, limits: { files: 1, fileSize: maxBytes + 1 } });
 
       let uploadPromise: Promise<{ attachment_id: string; file_name: string; content_type: string; size_bytes: number; is_duplicate: boolean }> | null = null;
+      let settled = false;
       let fileLimitExceeded = false;
 
       bb.on("file", (_fieldName, fileStream, info) => {
@@ -242,6 +298,10 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
         fileStream.on("limit", () => {
           fileLimitExceeded = true;
+          logger?.warn?.("collab_attachment_upload_request_invalid", {
+            path: "multipart",
+            reason: "file_too_large",
+          });
           fileStream.resume();
         });
 
@@ -260,16 +320,40 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
       bb.on("finish", () => {
         if (fileLimitExceeded) {
-          res.status(413).json({ error: "ATTACHMENT_SIZE_EXCEEDED", message: `File exceeds max size of ${formatMegabytes(maxBytes)} MB` });
+          logger?.warn?.("collab_attachment_upload_request_invalid", {
+            path: "multipart",
+            reason: "file_too_large",
+          });
+          settled = true;
+          res.status(413).json({ error: "FILE_TOO_LARGE", message: `File exceeds max size of ${formatMegabytes(maxBytes)} MB` });
           return;
         }
         if (!uploadPromise) {
+          logger?.warn?.("collab_attachment_upload_request_invalid", {
+            path: "multipart",
+            reason: "no_file",
+          });
+          settled = true;
           res.status(400).json({ error: "NO_FILE", message: "No file part found in multipart body" });
           return;
         }
+        if (settled) return;
+        settled = true;
         uploadPromise
-          .then((result) => res.status(201).json(result))
+          .then((result) => {
+            logger?.info?.("collab_attachment_upload_success", {
+              attachmentId: result.attachment_id,
+              isDuplicate: result.is_duplicate,
+              path: "multipart",
+            });
+            res.status(201).json(result);
+          })
           .catch((err: unknown) => {
+            logger?.warn?.("collab_attachment_upload_cleanup_outcome", {
+              path: "multipart",
+              error: "UPLOAD_STREAM_FAILED",
+              reason: err instanceof Error ? err.name : "error",
+            });
             logger?.error("collab_attachment_upload_error", { err: String(err) });
             next(err instanceof Error ? err : new Error(String(err)));
           });
@@ -277,7 +361,37 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
       bb.on("error", (err: unknown) => {
         logger?.error("collab_attachment_multipart_parse_error", { err: String(err) });
-        next(err instanceof Error ? err : new Error(String(err)));
+        logger?.warn?.("collab_attachment_upload_request_invalid", {
+          path: "multipart",
+          reason: "parser_error",
+          error: err instanceof Error ? err.name : "unknown",
+        });
+        res.status(400).json({
+          error: "MULTIPART_PARSE_ERROR",
+          message: String(err ?? "Multipart parser error"),
+        });
+        settled = true;
+      });
+
+      req.on("aborted", () => {
+        if (settled) return;
+        settled = true;
+        logger?.warn?.("collab_attachment_upload_cleanup_outcome", {
+          path: "multipart",
+          reason: "stream_aborted",
+          outcome: "client_aborted",
+        });
+        logger?.warn?.("collab_attachment_upload_request_invalid", {
+          path: "multipart",
+          reason: "upload_stream_aborted",
+        });
+        if (!res.headersSent) {
+          res.status(400).json({
+            error: "UPLOAD_STREAM_ABORTED",
+            message: "Upload stream aborted by client",
+            details: { reason: "request_aborted" },
+          });
+        }
       });
 
       req.pipe(bb);
@@ -288,6 +402,10 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
   const uploadJsonHandler: RequestHandler = async (req, res, next) => {
     try {
+      logger?.info?.("collab_attachment_upload_request_started", {
+        path: "json",
+        tenantSource: "resolved_auth_context",
+      });
       const adapter = adapterRef.current;
       if (!adapter) {
         res.status(503).json({ error: "STORAGE_UNAVAILABLE", message: "Object storage is not available" });
@@ -297,37 +415,54 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
 
-      const xOrg    = (req.headers["x-org"]   as string) ?? "";
-      const xRealm  = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
-
-      const tenantCode  = (xOrg.split("--")[0] ?? "").trim() || tenantId;
-      const companyCode = (xOrg.split("--")[1] ?? "").trim() || tenantId;
+      const authorized = await authorize(req, res, claims);
+      if (!authorized) return;
+      const { tenantId, principalId, tenantCode, companyCode } = authorized;
 
       const body = req.body as { filename?: string; content_type?: string; size_bytes?: number; data_base64?: string };
       if (!body.filename || !body.data_base64) {
+        logger?.warn?.("collab_attachment_upload_request_invalid", {
+          path: "json",
+          reason: "missing_fields",
+        });
         res.status(400).json({ error: "MISSING_FIELDS", message: "filename and data_base64 are required" });
         return;
       }
       if (!/^[A-Za-z0-9+/]*={0,2}$/.test(body.data_base64)) {
+        logger?.warn?.("collab_attachment_upload_request_invalid", {
+          path: "json",
+          reason: "invalid_base64",
+        });
         res.status(400).json({ error: "INVALID_BASE64" }); return;
       }
 
       const maxBytes   = await resolveAttachmentMaxBytes(db, tenantId, fallbackMaxBytes);
       const fileBuffer = Buffer.from(body.data_base64, "base64");
       if (fileBuffer.length > maxBytes) {
-        res.status(413).json({ error: "ATTACHMENT_SIZE_EXCEEDED", message: `File exceeds max size of ${formatMegabytes(maxBytes)} MB`, details: { size_bytes: fileBuffer.length, max_bytes: maxBytes } });
+        logger?.warn?.("collab_attachment_upload_request_invalid", {
+          path: "json",
+          reason: "file_too_large",
+          maxBytes,
+          sizeBytes: fileBuffer.length,
+        });
+        res.status(413).json({
+          error: "FILE_TOO_LARGE",
+          message: `File exceeds max size of ${formatMegabytes(maxBytes)} MB`,
+          details: { size_bytes: fileBuffer.length, max_bytes: maxBytes },
+        });
         return;
       }
 
-      const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipal(db, sub, tenantId, xRealm);
       const fileName    = sanitizeFileName(body.filename).slice(0, 500);
       const contentType = (body.content_type ?? "application/octet-stream").slice(0, 200);
       const sizeBytes   = body.size_bytes ?? fileBuffer.length;
 
       const result = await performUpload({ adapter, tenantId, tenantCode, companyCode, principalId, fileName, contentType, sizeBytes, fileBuffer });
+      logger?.info?.("collab_attachment_upload_success", {
+        attachmentId: result.attachment_id,
+        path: "json",
+        isDuplicate: result.is_duplicate,
+      });
       res.status(201).json(result);
     } catch (err) {
       logger?.error("collab_attachment_upload_error", { err: String(err) });
@@ -359,10 +494,9 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
         return;
       }
 
-      const xOrg   = (req.headers["x-org"]   as string) ?? "";
-      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const authorized = await authorize(req, res, claims);
+      if (!authorized) return;
+      const { tenantId, principalId } = authorized;
 
       // Only allow delete if no links exist (staged only)
       const linkCount = await db
@@ -411,10 +545,9 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
         return;
       }
 
-      const xOrg   = (req.headers["x-org"]   as string) ?? "";
-      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const authorized = await authorize(req, res, claims);
+      if (!authorized) return;
+      const { tenantId, principalId } = authorized;
 
       const row = await db
         .selectFrom("master.attachment as a")
@@ -425,17 +558,18 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
       if (!row) { res.status(404).json({ error: "ATTACHMENT_NOT_FOUND" }); return; }
       const r = row as Record<string, unknown>;
-      if (r["status"] === "quarantined") {
-        res.status(403).json({ error: "ATTACHMENT_QUARANTINED" });
+      if (r["status"] !== "active") {
+        res.status(403).json({
+          error: "QUARANTINE_VIOLATION",
+          message: "Attachment is quarantined, failed, or not yet active.",
+          status: r["status"] as string,
+        });
         return;
       }
-      if (r["status"] === "deleted") { res.status(404).json({ error: "ATTACHMENT_NOT_FOUND" }); return; }
 
       const presignedUrl = await adapter.getPresignedUrl(r["storage_key"] as string, 300);
 
       // Append access audit — best-effort
-      const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipal(db, sub, tenantId, xRealm);
       void db.insertInto("log.attachment_access_log" as never).values({
         tenant_id:             tenantId,
         principal_id:          principalId,
@@ -466,10 +600,9 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       const { attachmentId } = req.params as { attachmentId: string };
       if (!isUuid(attachmentId)) { res.status(404).json({ error: "ATTACHMENT_NOT_FOUND" }); return; }
 
-      const xOrg   = (req.headers["x-org"]   as string) ?? "";
-      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const authorized = await authorize(req, res, claims);
+      if (!authorized) return;
+      const { tenantId, principalId } = authorized;
 
       const body = req.body as { entity_type?: string; entity_id?: string };
       if (!body.entity_type || !body.entity_id) {
@@ -485,12 +618,13 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
         .executeTakeFirst();
       if (!row) { res.status(404).json({ error: "ATTACHMENT_NOT_FOUND" }); return; }
       if ((row as Record<string, unknown>)["status"] !== "active") {
-        res.status(409).json({ error: "ATTACHMENT_NOT_ACTIVE" });
+        res.status(409).json({
+          error: "QUARANTINE_VIOLATION",
+          message: "Attachment is not eligible for linking while quarantined or failed.",
+          status: (row as Record<string, unknown>)["status"] as string,
+        });
         return;
       }
-
-      const sub         = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = await resolvePrincipal(db, sub, tenantId, xRealm);
 
       await db.insertInto("master.entity_document_link" as never).values({
         tenant_id:   tenantId,
@@ -525,10 +659,9 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       const { attachmentId } = req.params as { attachmentId: string };
       if (!isUuid(attachmentId)) { res.status(404).json({ error: "ATTACHMENT_NOT_FOUND" }); return; }
 
-      const xOrg   = (req.headers["x-org"]   as string) ?? "";
-      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const authorized = await authorize(req, res, claims);
+      if (!authorized) return;
+      const { tenantId } = authorized;
 
       const body = req.body as { entity_type?: string; entity_id?: string };
       if (!body.entity_type || !body.entity_id) {
@@ -567,10 +700,9 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
 
-      const xOrg   = (req.headers["x-org"]   as string) ?? "";
-      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const authorized = await authorize(req, res, claims);
+      if (!authorized) return;
+      const { tenantId } = authorized;
 
       const { entity_type, entity_id } = req.query as { entity_type?: string; entity_id?: string };
       if (!entity_type || !entity_id) {
@@ -669,10 +801,9 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       const { attachmentId } = req.params as { attachmentId: string };
       if (!isUuid(attachmentId)) { res.status(404).json({ error: "ATTACHMENT_NOT_FOUND" }); return; }
 
-      const xOrg   = (req.headers["x-org"]   as string) ?? "";
-      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const authorized = await authorize(req, res, claims);
+      if (!authorized) return;
+      const { tenantId } = authorized;
 
       const body = req.body as { file_name?: string };
       if (!body.file_name || typeof body.file_name !== "string" || !body.file_name.trim()) {

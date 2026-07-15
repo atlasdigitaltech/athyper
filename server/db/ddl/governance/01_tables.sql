@@ -105,6 +105,7 @@ CREATE TABLE IF NOT EXISTS governance.book_period_status (
     CONSTRAINT book_period_status_composite_uq
         UNIQUE (tenant_id, company_code_id, book_id, fiscal_year, period_number),
     CONSTRAINT bps_period_range_chk CHECK (period_number BETWEEN 0 AND 16),
+    CONSTRAINT bps_status_chk CHECK (status IN ('future', 'open', 'soft_close', 'hard_close')),
     CONSTRAINT bps_reopen_count_chk CHECK (reopen_count >= 0)
 );
 

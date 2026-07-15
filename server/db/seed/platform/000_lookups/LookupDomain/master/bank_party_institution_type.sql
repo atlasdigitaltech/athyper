@@ -1,7 +1,3 @@
--- LookupDomain/master/bank_party_institution_type.sql
--- Lookup values for domain: master.bank_party_institution_type
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('bank',               'Bank',               'master.bank_party_institution_type', 'Commercial or retail bank',                            10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

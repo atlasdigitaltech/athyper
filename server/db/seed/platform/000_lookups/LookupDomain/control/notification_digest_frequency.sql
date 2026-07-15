@@ -1,9 +1,5 @@
--- LookupDomain/control/notification_digest_frequency.sql
--- Lookup values for domain: notification.digest_frequency
--- Delivery-timing windows for batched notification digest dispatch.
--- Grouped with notification.channel and notification.priority in control/
--- because all three are delivery-infrastructure configuration, not master data.
--- Idempotent: WHERE NOT EXISTS guard
+-- Co-located with notification.channel and notification.priority in control/ — all three
+-- are delivery-infrastructure config, not master data.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status,

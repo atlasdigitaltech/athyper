@@ -35,12 +35,12 @@ CREATE INDEX IF NOT EXISTS pil_invoice_idx
     ON document.purchase_invoice_line (tenant_id, purchase_invoice_id, line_no ASC);
 
 
--- §3-5  pi_workflow_idx, pil_commitment_line_idx, pil_gr_line_idx
+-- §3-5  pi_workflow_idx, pil_commitment_line_idx, pil_receipt_line_idx
 -- Live audit confirmed both definitions are identical — no DROP needed.
 -- Documenting here for reviewer clarity:
 --   pi_workflow_idx          (tenant) (workflow_request_id) WHERE NOT NULL — identical
 --   pil_commitment_line_idx  (tenant, commitment_line_id) WHERE NOT NULL  — identical
---   pil_gr_line_idx          (tenant, goods_receipt_line_id) WHERE NOT NULL — identical
+--   pil_receipt_line_idx     (tenant, receipt_line_id) WHERE NOT NULL — identical
 
 
 -- =============================================================================

@@ -19,7 +19,7 @@ import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadat
 import { relayMutate } from "@athyper/runtime-shared/client";
 import { fmtAmount } from "@athyper/runtime-shared/core";
 import { cn } from "@athyper/theme/utils";
-import { useEditSessionContext } from "@athyper/content-ui";
+import { useEditDraftContext } from "@athyper/content-ui";
 import {
   type LineRecord,
   MetaFieldInput,
@@ -1706,7 +1706,7 @@ export function ProcureLineComposerSheet({
 
   // Phase 6d: same fork as LineComposerSheet — when an Edit Session is active,
   // Save queues the line into the bundle for atomic commit.
-  const editSession = useEditSessionContext();
+  const editSession = useEditDraftContext();
 
   const sections = useMemo(
     () => resolveProcureComposerSections(resolvedEntity),

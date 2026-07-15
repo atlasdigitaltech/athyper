@@ -1,23 +1,6 @@
--- 900_seed_data/001_shared/002_state_region.sql
--- Seed: ISO 3166-2 subdivisions
--- Schema: shared | Table: state_region
--- Source: 200_seed_standard.sql (backup)
+-- ISO 3166-2 subdivisions. Depends on shared.country (001_country.sql).
 
--- ============================================================================
--- §2  SUBDIVISIONS (ISO 3166-2)
--- ============================================================================
-
-/* ============================================================================
-   REF Seed: Subdivisions (ISO 3166-2)
-   PostgreSQL 16+
-
-   Key countries: SA, AE, US, GB, IN, DE, FR, EG, JP, CA, AU, CN, BR
-   Depends on: 020_ref_seed_countries.sql
-   ============================================================================ */
-
--- ============================================================================
 -- Saudi Arabia (SA) — 13 regions
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('SA-01','SA','Riyadh','region','00000000-0000-0000-0000-000000000000'),
@@ -35,9 +18,7 @@ values
   ('SA-14','SA','Asir','region','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- United Arab Emirates (AE) — 7 emirates
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('AE-AZ','AE','Abu Dhabi','emirate','00000000-0000-0000-0000-000000000000'),
@@ -49,9 +30,7 @@ values
   ('AE-FU','AE','Fujairah','emirate','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- United States (US) — 50 states + DC
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('US-AL','US','Alabama','state','00000000-0000-0000-0000-000000000000'),
@@ -107,9 +86,7 @@ values
   ('US-DC','US','District of Columbia','district','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- United Kingdom (GB) — 4 countries
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('GB-ENG','GB','England','country','00000000-0000-0000-0000-000000000000'),
@@ -118,9 +95,7 @@ values
   ('GB-NIR','GB','Northern Ireland','country','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- India (IN) — 28 states + 8 union territories
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('IN-AP','IN','Andhra Pradesh','state','00000000-0000-0000-0000-000000000000'),
@@ -162,9 +137,7 @@ values
   ('IN-PY','IN','Puducherry','union territory','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- Germany (DE) — 16 states
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('DE-BW','DE','Baden-Württemberg','state','00000000-0000-0000-0000-000000000000'),
@@ -185,9 +158,7 @@ values
   ('DE-TH','DE','Thuringia','state','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- France (FR) — 13 metropolitan + 5 overseas regions
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('FR-ARA','FR','Auvergne-Rhône-Alpes','region','00000000-0000-0000-0000-000000000000'),
@@ -210,9 +181,7 @@ values
   ('FR-MAY','FR','Mayotte','region','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- Egypt (EG) — 27 governorates
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('EG-ALX','EG','Alexandria','governorate','00000000-0000-0000-0000-000000000000'),
@@ -244,9 +213,7 @@ values
   ('EG-HU','EG','Helwan','governorate','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- Japan (JP) — 47 prefectures
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('JP-01','JP','Hokkaido','prefecture','00000000-0000-0000-0000-000000000000'),
@@ -298,9 +265,7 @@ values
   ('JP-47','JP','Okinawa','prefecture','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- Canada (CA) — 10 provinces + 3 territories
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('CA-AB','CA','Alberta','province','00000000-0000-0000-0000-000000000000'),
@@ -318,9 +283,7 @@ values
   ('CA-YT','CA','Yukon','territory','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- Australia (AU) — 6 states + 2 territories
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('AU-NSW','AU','New South Wales','state','00000000-0000-0000-0000-000000000000'),
@@ -333,9 +296,7 @@ values
   ('AU-NT','AU','Northern Territory','territory','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- China (CN) — 23 provinces + 4 municipalities + 5 autonomous regions + 2 SARs
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   -- Provinces
@@ -378,9 +339,7 @@ values
   ('CN-MO','CN','Macao','special administrative region','00000000-0000-0000-0000-000000000000')
 on conflict (code, country_code) do nothing;
 
--- ============================================================================
 -- Brazil (BR) — 26 states + 1 federal district
--- ============================================================================
 insert into shared.state_region (code, country_code, name, category, created_by)
 values
   ('BR-AC','BR','Acre','state','00000000-0000-0000-0000-000000000000'),

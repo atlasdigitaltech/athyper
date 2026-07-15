@@ -28,8 +28,10 @@
     "db:verify:cache-backlog": "tsx scripts/verify/verify-cache-invalidation-backlog.ts",
     "db:verify:end-to-end": "tsx scripts/verify/verify-end-to-end-pipeline.ts",
     "db:verify:effective-lock": "tsx scripts/verify/verify-effective-lock-scenarios.ts",
+    "db:verify:seed-contracts": "tsx scripts/verify/verify-seed-contracts.ts",
+    "db:verify:identity-header": "tsx scripts/verify/verify-identity-header.ts",
     "db:verify:three-plane": "pnpm run db:verify:entity-operations && pnpm run db:verify:permission-aliases && pnpm run db:verify:plane-eligibility && pnpm run db:verify:version-locks",
-    "db:verify": "pnpm run db:verify:rls && pnpm run db:verify:field-security && pnpm run db:verify:secdef && pnpm run db:verify:archetypes && pnpm run db:verify:three-plane",
+    "db:verify": "pnpm run db:verify:rls && pnpm run db:verify:field-security && pnpm run db:verify:secdef && pnpm run db:verify:archetypes && pnpm run db:verify:three-plane && pnpm run db:verify:identity-header",
     "db:setup:ddl:sh": "bash ddl/runner.sh",
     "lint:sql": "bash ../packages/adapters/db/ci/lint_sql_hardcoded.sh"
   },

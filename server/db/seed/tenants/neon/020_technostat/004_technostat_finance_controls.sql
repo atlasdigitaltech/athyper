@@ -143,8 +143,27 @@ DECLARE
     v_grp_egy_std uuid; v_grp_egy_wht uuid;
 BEGIN
     SELECT id INTO v_tid    FROM master.tenant          WHERE realm_key = 'athyper' AND code = 'technostat';
+
+    -- Defensive: ensure TJ-SA / TJ-EG exist before referencing them in tax_groups.
+    -- The technostat production seed (003) creates these but ordering / partial
+    -- runs can leave them missing — guard with idempotent INSERTs so 004 is
+    -- self-sufficient. country_code FKs to shared.country (seeded universally).
+    INSERT INTO master.tax_jurisdiction
+        (tenant_id, code, name, description, country_code,
+         jurisdiction_type, status, created_by, metadata)
+    VALUES
+    (v_tid, 'TJ-SA', 'Saudi Arabia', 'Kingdom of Saudi Arabia — ZATCA jurisdiction', 'SA', 'country', 'active', v_su,
+     jsonb_build_object('_seed', jsonb_build_object('pack', '004_finance_controls', 'version', '1.0'))),
+    (v_tid, 'TJ-EG', 'Egypt',        'Arab Republic of Egypt — ETA jurisdiction',    'EG', 'country', 'active', v_su,
+     jsonb_build_object('_seed', jsonb_build_object('pack', '004_finance_controls', 'version', '1.0')))
+    ON CONFLICT (tenant_id, code) DO NOTHING;
+
     SELECT id INTO v_tj_sa  FROM master.tax_jurisdiction WHERE tenant_id = v_tid AND code = 'TJ-SA';
     SELECT id INTO v_tj_eg  FROM master.tax_jurisdiction WHERE tenant_id = v_tid AND code = 'TJ-EG';
+
+    IF v_tj_sa IS NULL OR v_tj_eg IS NULL THEN
+        RAISE EXCEPTION '[004] technostat: TJ-SA/TJ-EG jurisdiction lookup failed even after defensive insert (tenant=%, country FK to shared.country may be missing)', v_tid;
+    END IF;
     SELECT id INTO v_ttype_vat_sa FROM master.tax_type  WHERE tenant_id = v_tid AND code = 'VAT-SA';
     SELECT id INTO v_ttype_wht_sa FROM master.tax_type  WHERE tenant_id = v_tid AND code = 'WHT-SA';
     SELECT id INTO v_ttype_vat_eg FROM master.tax_type  WHERE tenant_id = v_tid AND code = 'VAT-EG';
@@ -166,17 +185,20 @@ BEGIN
 
     -- ── Tax groups ──────────────────────────────────────────────────────────
     INSERT INTO control.tax_group (
-        tenant_id, code, name, description, created_by)
+        tenant_id, code, name, description, jurisdiction_id, created_by)
     VALUES
     (v_tid, 'TG-KSA-STD', 'KSA VAT 15% Standard',
-     'Standard KSA VAT at 15% — purchase direction, fully recoverable', v_su),
+     'Standard KSA VAT at 15% — purchase direction, fully recoverable', v_tj_sa, v_su),
     (v_tid, 'TG-KSA-WHT5', 'KSA WHT 5% Technical Services',
-     'KSA withholding tax at 5% on technical service payments', v_su),
+     'KSA withholding tax at 5% on technical service payments', v_tj_sa, v_su),
     (v_tid, 'TG-EGY-STD', 'Egypt VAT 14% Standard',
-     'Standard Egyptian VAT at 14% — purchase direction, recoverable', v_su),
+     'Standard Egyptian VAT at 14% — purchase direction, recoverable', v_tj_eg, v_su),
     (v_tid, 'TG-EGY-WHT5', 'Egypt WHT 5% Domestic Services',
-     'Egyptian withholding tax at 5% on domestic service payments', v_su)
-    ON CONFLICT (tenant_id, code) DO NOTHING;
+     'Egyptian withholding tax at 5% on domestic service payments', v_tj_eg, v_su)
+    ON CONFLICT (tenant_id, code) DO UPDATE SET
+        jurisdiction_id = EXCLUDED.jurisdiction_id,
+        updated_at = now(), updated_by = v_su
+    WHERE control.tax_group.jurisdiction_id IS DISTINCT FROM EXCLUDED.jurisdiction_id;
 
     -- Resolve group IDs for component inserts
     SELECT id INTO v_grp_ksa_std  FROM control.tax_group WHERE tenant_id = v_tid AND code = 'TG-KSA-STD';

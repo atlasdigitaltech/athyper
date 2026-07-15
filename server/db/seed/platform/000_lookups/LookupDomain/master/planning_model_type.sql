@@ -1,7 +1,4 @@
--- LookupDomain/master/planning_model_type.sql
--- Lookup values for domain: master.planning_model_type
--- Used by: planning_model.model_type
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: planning_model.model_type.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

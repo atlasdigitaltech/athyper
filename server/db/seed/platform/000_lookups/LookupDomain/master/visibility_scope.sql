@@ -1,7 +1,4 @@
--- LookupDomain/master/visibility_scope.sql
--- Lookup values for domain: master.visibility_scope
--- Shared by: auth_group_role.visibility_scope, access_grant.visibility_scope
--- Idempotent: WHERE NOT EXISTS guard
+-- Shared by: auth_group_role.visibility_scope, access_grant.visibility_scope.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

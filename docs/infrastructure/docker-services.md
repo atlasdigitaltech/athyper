@@ -490,7 +490,7 @@ Full-text search for all entity types. The search indexer syncs entity data from
 | Image | `gotenberg:8.9.0` |
 | Port | `3000` (internal) |
 
-PDF rendering from HTML templates (invoices, reports, labels). Called by the print service in `svc-docservices`.
+PDF rendering from HTML templates (invoices, reports, labels). Called by the print service in `svc-doc-services`.
 
 #### `docparser` — Apache Tika *(profile: render)*
 
@@ -605,3 +605,4 @@ docker compose `
 | 3200 | tracing (Tempo) | HTTP — via Traefik |
 | 3310 | virusscan (ClamAV) | TCP — internal only |
 | 4317 | tracing (Tempo OTLP/gRPC) | gRPC — internal only |
+

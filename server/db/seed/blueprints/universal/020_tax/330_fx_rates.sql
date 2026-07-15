@@ -1,69 +1,24 @@
--- ============================================================================
--- 330_fx_rates.sql — FX rates: ALL active currencies → MYR (group reporting)
--- ============================================================================
--- Tables  : master.fx_rate
--- Schema  : master | Depends: master.tenant, shared.currency
--- Pack    : 330_org  (metadata._seed.pack — used for delete-owned idempotency)
--- Version : 4.0.1    (FY2026 extended to Q1+Q2; SPOT anchor set to 2026-05-15)
+-- FX rates from every active ISO 4217 currency → MYR (group reporting currency).
+-- Guarantees consolidation, FX revaluation, and master.get_fx_rate triangulation
+-- work on day one for any tenant base currency.
 --
--- ── Rationale ────────────────────────────────────────────────────────────────
--- Group reporting currency is MYR. Tenants can be onboarded with ANY base
--- currency from shared.currency. To guarantee that consolidation, FX
--- revaluation, and triangulation (master.get_fx_rate) work on day one — for
--- every tenant regardless of base currency — at least one PERIOD_END and one
--- SPOT rate to MYR must exist for every active ISO 4217 currency.
+-- Coverage: 5 × 13 = 65 FY2025 quarterly PERIOD_END (core 13 ccys for intercompany
+-- demos) + 6 × 150 = 900 FY2026 Q1+Q2 PERIOD_END + 1 × 150 = 150 SPOT (anchor
+-- 2026-05-15) → 1115 rows total.
 --
--- ── Scope ────────────────────────────────────────────────────────────────────
--- 1) FY2025 quarterly PERIOD_END history (Jan/Mar/Jun/Sep/Dec) for the
---    "core 13" currencies that drive the demo intercompany/consolidation
---    flows (USD, QAR, SAR, AED, SGD, INR, CAD, EUR, TWD, ZAR, GBP, JPY, PHP).
---    These are needed for FY2025 close-period revaluation demos.
+-- Excluded currencies (intentional):
+--   MYR — base/group currency (FK CHECK from <> to)
+--   HRK — deprecated (Croatia adopted EUR 2023-01-01)
+--   ZWL — deprecated (replaced by ZWG 2024-04-05)
+--   XAU/XAG/XPT/XPD — precious metals (priced per troy ounce, not FX)
+--   XDR — IMF Special Drawing Rights (not transactional)
 --
--- 2) FY2026 Q1+Q2 PERIOD_END (Jan 31, Feb 28, Mar 31, Apr 30, May 31, Jun 30)
---    for ALL 150 active currencies. Every ISO 4217 currency in shared.currency
---    (excluding MYR itself, deprecated HRK/ZWL, and non-monetary codes
---    XAU/XAG/XPT/XPD/XDR) gets full H1-2026 PERIOD_END coverage so that
---    period-close revaluation works for any month through June 2026.
+-- Rate convention: 1 foreign-currency unit = X MYR. inverse_rate is GENERATED.
+-- Monthly drift ≈0.23% MYR appreciation: anchor multipliers Jan +0.69%, Feb +0.23%,
+-- Mar baseline, Apr −0.23%, May −0.46% (also drives SPOT), Jun −0.69%.
 --
--- 3) SPOT rate (anchored at 2026-05-15) for all 150 currencies — for live
---    transaction posting (purchase invoices, sales invoices, payments) where
---    rate_type='SPOT' is the default. Rate = Mar 31 anchor × 0.99540
---    (reflecting continued MYR appreciation through May).
---
--- ── Coverage summary ─────────────────────────────────────────────────────────
---    FY2025 quarterly PERIOD_END :  5 dates × 13 ccy  =   65 rows
---    FY2026 Q1+Q2 PERIOD_END     :  6 dates × 150 ccy =  900 rows
---    SPOT (2026-05-15)           :  1 date  × 150 ccy =  150 rows
---    ──────────────────────────────────────────────  ───────
---    TOTAL                                             1115 rows
---
--- ── Currency exclusions (intentional) ────────────────────────────────────────
---    MYR                  — base/group currency (FK CHECK from <> to)
---    HRK                  — deprecated (Croatia adopted EUR 2023-01-01)
---    ZWL                  — deprecated (replaced by ZWG 2024-04-05)
---    XAU/XAG/XPT/XPD      — precious metals (priced per troy ounce, not FX)
---    XDR                  — IMF Special Drawing Rights (not transactional)
---
--- ── Rate convention ──────────────────────────────────────────────────────────
--- All rates are quoted as: 1 unit of foreign currency = X MYR.
--- The inverse_rate column is GENERATED ALWAYS, no need to insert it.
---
--- ── Q1+Q2 2026 rate progression (all currencies) ─────────────────────────────
--- A uniform MYR appreciation of ≈0.23%/month is applied (consistent story
--- across all 150 currencies):
---    Jan 31 = anchor × 1.00690   (≈ +0.69% — MYR weaker in Jan)
---    Feb 28 = anchor × 1.00230   (≈ +0.23%)
---    Mar 31 = anchor × 1.00000   (base anchor)
---    Apr 30 = anchor × 0.99770   (≈ −0.23%)
---    May 31 = anchor × 0.99540   (≈ −0.46%; also drives SPOT)
---    Jun 30 = anchor × 0.99310   (≈ −0.69%)
--- USD example: 4.3800 → 4.3600 → 4.3500 → 4.340 → 4.330 → 4.320
---
--- ── Idempotency ──────────────────────────────────────────────────────────────
--- master.fx_rate has no natural unique constraint accessible to ON CONFLICT
--- (the unique index is partial — WHERE is_active = true), so this seed uses
--- delete-owned-then-reinsert keyed on metadata._seed.pack = '330_org'.
--- ============================================================================
+-- Idempotency: master.fx_rate's unique index is partial (WHERE is_active=true),
+-- so ON CONFLICT can't see it. Uses delete-owned + reinsert on metadata._seed.pack.
 
 DO $seed$
 DECLARE

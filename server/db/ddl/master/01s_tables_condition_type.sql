@@ -1,12 +1,15 @@
 -- ============================================================================
 -- master/01s_tables_condition_type.sql
 -- Concept: master.condition_type — pricing-component condition catalog
--- Depends on: master/01b_tables_finance.sql (tax_group, business_intent)
+-- Depends on: master/01b_tables_finance.sql (business_intent ref already removed)
 -- Spec: docs/specs/purchase_invoice_field_design.md §3.8, §17.4
 --
--- Catalog of pricing-component condition kinds (freight, insurance, packing,
--- VAT, withholding-194Q, retention-warranty, ...). FK target for
--- document.pricing_component.condition_type_id.
+-- Catalog of pricing-component condition kinds. The PC-facing catalog: this is
+-- what the term picker offers. Jurisdictional tax-engine internals (rate,
+-- recoverability, jurisdiction) live in master.tax_type +
+-- control.tax_rate_schedule + control.tax_group; master.tax_type carries a
+-- condition_type_id back-pointer so each jurisdictional tax_type classifies
+-- into one of the catalog kinds (e.g. IN-CGST → "Goods and Services Tax").
 --
 -- Scope model:
 --   • System-seeded base set: is_system=true, tenant_id IS NULL
@@ -28,26 +31,27 @@ CREATE TABLE IF NOT EXISTS master.condition_type (
 
     -- Classification — aligns with pricing_component.term_type
     term_type                   text          NOT NULL,
+    term_sub_type               text,                       -- optional refinement: settlement / landed / warranty / performance / completion
 
     -- Defaults (populate PC at create-time)
     default_basis               text          NOT NULL,
     default_rate                numeric(20,10),
     default_amount              numeric(18,4),
     default_apportion_basis     text,
-    default_posting_role_code   text,
-    default_business_intent_id  uuid,
-    default_account_source      text,
-
-    -- Tax-related (applicable for term_type IN ('tax','withholding'))
-    default_tax_group_id        uuid,
-    default_is_inclusive        boolean,
-    default_recoverable_pct     numeric(7,4),
-    default_tax_section_code    text,
 
     -- Behavior flags
     is_taxable                  boolean       NOT NULL DEFAULT false,
     is_apportionable            boolean       NOT NULL DEFAULT true,
     applies_to_classes          jsonb         NOT NULL DEFAULT '[]'::jsonb,
+
+    -- Accounting semantics. These are stable defaults only; recognition timing
+    -- and event-specific Dr/Cr construction remain owned by acct_profile_event
+    -- and acct_profile_entry_template.
+    default_cost_effect         text          NOT NULL DEFAULT 'NO_COST_EFFECT',
+    default_posting_pattern     text          NOT NULL DEFAULT 'MEMO_ONLY',
+    default_distribution_policy text         NOT NULL DEFAULT 'INHERIT_LINE',
+    default_capitalization_policy text        NOT NULL DEFAULT 'FOLLOW_LINE',
+    default_posting_role_code   text,
 
     -- Scope marker (system vs tenant)
     is_system                   boolean       NOT NULL DEFAULT false,
@@ -86,9 +90,30 @@ CREATE TABLE IF NOT EXISTS master.condition_type (
     CONSTRAINT condition_type_apportion_chk      CHECK (
         default_apportion_basis IS NULL
         OR default_apportion_basis IN ('value','quantity','weight','equal')),
-    CONSTRAINT condition_type_account_source_chk CHECK (
-        default_account_source IS NULL
-        OR default_account_source IN ('POSTING_ROLE','FIXED','FROM_INTENT','FROM_CATEGORY')),
+    CONSTRAINT condition_type_cost_effect_chk CHECK (default_cost_effect IN (
+        'REDUCE_COST','ADD_TO_COST','NO_COST_EFFECT')),
+    CONSTRAINT condition_type_posting_pattern_chk CHECK (default_posting_pattern IN (
+        'INHERIT_LINE_ACCOUNT','SEPARATE_ACCOUNT','TAX_RECOVERABLE',
+        'LIABILITY_SPLIT','TAX_SELF_ASSESSED','MEMO_ONLY')),
+    CONSTRAINT condition_type_distribution_policy_chk CHECK (default_distribution_policy IN (
+        'INHERIT_LINE','APPORTION_TO_LINES','NO_COST_DISTRIBUTION')),
+    CONSTRAINT condition_type_capitalization_policy_chk CHECK (default_capitalization_policy IN (
+        'FOLLOW_LINE','ALWAYS_CAPITALIZE','NEVER_CAPITALIZE')),
+
+    -- term_sub_type enum
+    CONSTRAINT condition_type_sub_type_enum_chk  CHECK (
+        term_sub_type IS NULL
+        OR term_sub_type IN ('settlement','landed','warranty','performance','completion')),
+
+    -- term_sub_type only valid under specific term_types
+    CONSTRAINT condition_type_sub_type_pair_chk  CHECK (
+        (term_type = 'discount'         AND (term_sub_type IS NULL OR term_sub_type = 'settlement'))
+        OR (term_type = 'charge'        AND (term_sub_type IS NULL OR term_sub_type = 'landed'))
+        OR (term_type = 'tax'           AND term_sub_type IS NULL)
+        OR (term_type = 'withholding'   AND term_sub_type IS NULL)
+        OR (term_type = 'retention'     AND term_sub_type IN ('warranty','performance','completion'))
+        OR (term_type = 'principal_marker' AND term_sub_type IS NULL)
+    ),
 
     -- basis ↔ value coherence
     CONSTRAINT condition_type_basis_value_chk    CHECK (
@@ -98,51 +123,10 @@ CREATE TABLE IF NOT EXISTS master.condition_type (
         OR (default_basis IS NULL AND default_rate IS NULL AND default_amount IS NULL)
     ),
 
-    -- Tax fields scoped to tax/withholding term types
-    CONSTRAINT condition_type_tax_scope_chk      CHECK (
-        (term_type IN ('tax','withholding'))
-        OR (default_tax_group_id IS NULL
-            AND default_is_inclusive IS NULL
-            AND default_recoverable_pct IS NULL
-            AND default_tax_section_code IS NULL)
-    ),
-
-    -- recoverable_pct in [0,100]
-    CONSTRAINT condition_type_recoverable_chk    CHECK (
-        default_recoverable_pct IS NULL
-        OR (default_recoverable_pct BETWEEN 0 AND 100)),
-
     -- Non-empty identifiers
     CONSTRAINT condition_type_code_nonempty      CHECK (btrim(code) <> ''),
     CONSTRAINT condition_type_name_nonempty      CHECK (btrim(name) <> '')
 );
-
--- Tenant-scope FK to master.business_intent (optional)
-DO $$
-BEGIN
-    ALTER TABLE master.condition_type
-        ADD CONSTRAINT condition_type_business_intent_fk
-        FOREIGN KEY (tenant_id, default_business_intent_id)
-        REFERENCES master.business_intent (tenant_id, id)
-        ON DELETE SET NULL
-        DEFERRABLE INITIALLY DEFERRED;
-EXCEPTION WHEN duplicate_object THEN
-    NULL;
-END $$;
-
--- Tax group FK (control.tax_group is the canonical location)
-DO $$
-BEGIN
-    ALTER TABLE master.condition_type
-        ADD CONSTRAINT condition_type_tax_group_fk
-        FOREIGN KEY (tenant_id, default_tax_group_id)
-        REFERENCES control.tax_group (tenant_id, id)
-        ON DELETE SET NULL
-        DEFERRABLE INITIALLY DEFERRED;
-EXCEPTION
-    WHEN duplicate_object THEN NULL;
-    WHEN undefined_table  THEN NULL;  -- control.tax_group may not yet exist in some dev environments
-END $$;
 
 -- Indexes
 CREATE INDEX IF NOT EXISTS ix_condition_type_term_type
@@ -153,12 +137,17 @@ CREATE INDEX IF NOT EXISTS ix_condition_type_system
     ON master.condition_type (term_type, sort_order)
     WHERE is_system = true AND status = 'active';
 
+CREATE INDEX IF NOT EXISTS ix_condition_type_sub_type
+    ON master.condition_type (term_type, term_sub_type)
+    WHERE term_sub_type IS NOT NULL AND status = 'active';
+
 COMMENT ON TABLE master.condition_type IS
-    'ARCHETYPE=B;SCOPE=T. Pricing-component condition catalog. System-seeded base set '
-    '(is_system=true, tenant_id NULL) covers common procurement charges (freight, insurance, '
-    'discounts), taxes (VAT/GST), withholding (194Q/194C), retentions. Tenants can add '
-    'custom rows via standard CRUD with is_system=false. FK target for '
-    'document.pricing_component.condition_type_id. Defaults populate PC at create-time.';
+    'ARCHETYPE=B;SCOPE=T. PC-facing pricing-component condition catalog (term picker source). '
+    'System-seeded base set (is_system=true, tenant_id NULL) covers procurement charges (freight, '
+    'insurance, customs duty), tax kinds (VAT/GST/HST/PST/Sales/Use), withholding, retentions, and the '
+    'principal_marker. Tenants can add custom rows via standard CRUD with is_system=false. '
+    'Tax/withholding jurisdictional internals live in master.tax_type + control.tax_rate_schedule + '
+    'control.tax_group; master.tax_type.condition_type_id back-points here.';
 
 
 -- =============================================================================

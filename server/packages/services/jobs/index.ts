@@ -33,6 +33,7 @@ export type { NotificationChannelHandler } from "./workers/notification.worker.j
 export type { OutboxTopicHandler, OutboxEvent } from "./workers/domain-outbox.worker.js";
 
 export { createWfOutboxHandler } from "./handlers/wf-outbox.handler.js";
+export { createP2pNotificationOutboxHandler } from "./handlers/p2p-notification-outbox.handler.js";
 
 export {
   QUEUE_NAME,

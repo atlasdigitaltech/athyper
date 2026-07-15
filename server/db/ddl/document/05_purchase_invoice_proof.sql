@@ -66,7 +66,7 @@ BEGIN
         1::numeric,
         jsonb_build_object(
             'invoice_id', p_invoice_id,
-            'invoice_number', v_invoice.invoice_number,
+            'code', v_invoice.code,
             'status', v_invoice.status
         );
 
@@ -169,7 +169,7 @@ BEGIN
         FROM document.purchase_invoice_line pil
         LEFT JOIN document.accounting_distribution ad
                ON ad.tenant_id = pil.tenant_id
-              AND ad.source_doc_type = 'PURCHASE_INVOICE_LINE'
+              AND ad.source_doc_type = 'purchase_invoice_line'
               AND ad.source_doc_id = pil.purchase_invoice_id
               AND ad.source_line_id = pil.id
         WHERE pil.tenant_id = v_invoice.tenant_id
@@ -219,7 +219,7 @@ BEGIN
         FROM document.purchase_invoice_line pil
         LEFT JOIN document.accounting_distribution ad
                ON ad.tenant_id = pil.tenant_id
-              AND ad.source_doc_type = 'PURCHASE_INVOICE_LINE'
+              AND ad.source_doc_type = 'purchase_invoice_line'
               AND ad.source_doc_id = pil.purchase_invoice_id
               AND ad.source_line_id = pil.id
         WHERE pil.tenant_id = v_invoice.tenant_id

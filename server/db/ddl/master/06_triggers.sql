@@ -63,6 +63,11 @@ CREATE TRIGGER trg_a_contact_link_normalize
     ON master.contact_link
     FOR EACH ROW EXECUTE FUNCTION master.trg_normalize_contact_link_value();
 
+DROP TRIGGER IF EXISTS trg_b_contact_link_root_owner_default_purpose ON master.contact_link;
+CREATE TRIGGER trg_b_contact_link_root_owner_default_purpose
+    BEFORE INSERT OR UPDATE ON master.contact_link
+    FOR EACH ROW EXECUTE FUNCTION master.trg_contact_link_root_owner_default_purpose();
+
 DROP TRIGGER IF EXISTS trg_contact_link_updated_at ON master.contact_link;
 CREATE TRIGGER trg_contact_link_updated_at BEFORE UPDATE ON master.contact_link FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
@@ -142,6 +147,12 @@ CREATE TRIGGER trg_address_updated_at BEFORE UPDATE ON master.address FOR EACH R
 DROP TRIGGER IF EXISTS trg_address_status_changed ON master.address;
 CREATE TRIGGER trg_address_status_changed BEFORE UPDATE ON master.address FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
+-- Phase 3a: derive tax_jurisdiction_id from (country_code, region) on insert/update.
+DROP TRIGGER IF EXISTS trg_address_derive_jurisdiction ON master.address;
+CREATE TRIGGER trg_address_derive_jurisdiction
+    BEFORE INSERT OR UPDATE OF country_code, region ON master.address
+    FOR EACH ROW EXECUTE FUNCTION master.trg_address_derive_jurisdiction();
+
 -- address_link
 DROP TRIGGER IF EXISTS trg_address_link_updated_at ON master.address_link;
 CREATE TRIGGER trg_address_link_updated_at BEFORE UPDATE ON master.address_link FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
@@ -212,6 +223,45 @@ DROP TRIGGER IF EXISTS trg_contact_link_purpose_lookup ON master.contact_link;
 CREATE TRIGGER trg_contact_link_purpose_lookup
     BEFORE INSERT OR UPDATE OF purpose ON master.contact_link
     FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.contact_link_purpose', 'purpose');
+
+-- contact_link.role_qualifier (nullable, soft-validated — free text allowed but
+-- known qualifier codes from master.contact_role_qualifier seed are advisory)
+DROP TRIGGER IF EXISTS trg_contact_link_role_qualifier_lookup ON master.contact_link;
+CREATE TRIGGER trg_contact_link_role_qualifier_lookup
+    BEFORE INSERT OR UPDATE OF role_qualifier ON master.contact_link
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.contact_role_qualifier', 'role_qualifier');
+
+-- contact_marketing_consent.status — sealed enum, lookup-validated
+DROP TRIGGER IF EXISTS trg_marketing_consent_status_lookup ON master.contact_marketing_consent;
+CREATE TRIGGER trg_marketing_consent_status_lookup
+    BEFORE INSERT OR UPDATE OF status ON master.contact_marketing_consent
+    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.marketing_consent_status', 'status');
+
+-- contact_marketing_consent.owner_type — polymorphic owner validation
+DROP TRIGGER IF EXISTS trg_marketing_consent_owner_type_guard ON master.contact_marketing_consent;
+CREATE TRIGGER trg_marketing_consent_owner_type_guard
+    BEFORE INSERT OR UPDATE OF owner_type ON master.contact_marketing_consent
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_owner_type();
+
+-- contact_marketing_consent.owner_id — polymorphic FK validation against backing table
+DROP TRIGGER IF EXISTS trg_marketing_consent_owner_ref ON master.contact_marketing_consent;
+CREATE TRIGGER trg_marketing_consent_owner_ref
+    BEFORE INSERT OR UPDATE OF owner_type, owner_id ON master.contact_marketing_consent
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_owner_ref();
+
+-- contact_marketing_consent — updated_at maintenance
+DROP TRIGGER IF EXISTS trg_marketing_consent_updated_at ON master.contact_marketing_consent;
+CREATE TRIGGER trg_marketing_consent_updated_at
+    BEFORE UPDATE ON master.contact_marketing_consent
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- contact_marketing_consent — status_changed_at maintenance on status transition
+DROP TRIGGER IF EXISTS trg_marketing_consent_status_changed_at ON master.contact_marketing_consent;
+CREATE TRIGGER trg_marketing_consent_status_changed_at
+    BEFORE UPDATE OF status ON master.contact_marketing_consent
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION shared.trg_set_status_changed();
 
 -- address.address_type (nullable)
 DROP TRIGGER IF EXISTS trg_address_type_lookup ON master.address;
@@ -621,6 +671,13 @@ CREATE TRIGGER trg_gmod_context_type_lookup
     BEFORE INSERT OR UPDATE OF context_type ON governance.comment_moderation
     FOR EACH ROW EXECUTE FUNCTION
     control.trg_validate_lookup_columns('master.comment_type', 'context_type');
+
+-- master.comment_intent (semantic role of a comment)
+DROP TRIGGER IF EXISTS trg_comment_intent_lookup ON master.comment;
+CREATE TRIGGER trg_comment_intent_lookup
+    BEFORE INSERT OR UPDATE OF comment_intent ON master.comment
+    FOR EACH ROW EXECUTE FUNCTION
+    control.trg_validate_lookup_columns('master.comment_intent', 'comment_intent');
 
 -- master.reaction_type
 DROP TRIGGER IF EXISTS trg_cr_reaction_type_lookup ON master.comment_reaction;

@@ -763,8 +763,8 @@ END $p12a$;
 
 -- ╔═══════════════════════════════════════════════════════════════════════════╗
 -- ║  P13: TAX SETUP — KSA VAT 15% · Egypt VAT 14% · WHT  (DDL-aligned)     ║
--- ║  tax_jurisdiction:   jurisdiction_type NOT NULL, level_no               ║
--- ║  tax_type:           category IN ('INDIRECT','WITHHOLDING',...)          ║
+-- ║  tax_jurisdiction:   jurisdiction_type lookup (master.tax_jurisdiction_type) ║
+-- ║  tax_type:           condition_type_id bridge → master.condition_type         ║
 -- ║  control.tax_rate_schedule: structured identity, ON CONFLICT DO NOTHING  ║
 -- ╚═══════════════════════════════════════════════════════════════════════════╝
 
@@ -776,39 +776,42 @@ DECLARE
     v_tj_sa    uuid; v_tj_eg   uuid;
     v_tt_vatsa uuid; v_tt_whtsa uuid;
     v_tt_vateg uuid; v_tt_whteg uuid;
+    v_ct_vat   uuid; v_ct_wht   uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '003_prod_tax', 'version', '2.0.0', 'seeded_at', now()::text));
 
+    -- Resolve system condition_type catalog rows
+    SELECT id INTO v_ct_vat FROM master.condition_type WHERE code = 'TAX_VAT'     AND tenant_id IS NULL;
+    SELECT id INTO v_ct_wht FROM master.condition_type WHERE code = 'WHT_GENERIC' AND tenant_id IS NULL;
+
     -- ── Tax Jurisdictions ────────────────────────────────────────────────────
-    -- jurisdiction_type NOT NULL: COUNTRY | STATE | PROVINCE | CITY | DISTRICT | SPECIAL_ZONE | TREATY
+    -- jurisdiction_type values: country | state | province | county | city | district | union | special_zone | treaty
     INSERT INTO master.tax_jurisdiction (tenant_id, code, name, description, country_code,
-        jurisdiction_type, level_no, metadata, status, created_by)
+        jurisdiction_type, metadata, status, created_by)
     VALUES
-    (v_tid, 'TJ-SA', 'Saudi Arabia', 'Kingdom of Saudi Arabia — ZATCA jurisdiction', 'SA', 'COUNTRY', 1, v_meta, 'active', v_su),
-    (v_tid, 'TJ-EG', 'Egypt',        'Arab Republic of Egypt — ETA jurisdiction',    'EG', 'COUNTRY', 1, v_meta, 'active', v_su)
+    (v_tid, 'TJ-SA', 'Saudi Arabia', 'Kingdom of Saudi Arabia — ZATCA jurisdiction', 'SA', 'country', v_meta, 'active', v_su),
+    (v_tid, 'TJ-EG', 'Egypt',        'Arab Republic of Egypt — ETA jurisdiction',    'EG', 'country', v_meta, 'active', v_su)
     ON CONFLICT (tenant_id, code) DO UPDATE SET name=EXCLUDED.name, updated_at=now(), updated_by=v_su;
 
     SELECT id INTO v_tj_sa FROM master.tax_jurisdiction WHERE tenant_id = v_tid AND code = 'TJ-SA';
     SELECT id INTO v_tj_eg FROM master.tax_jurisdiction WHERE tenant_id = v_tid AND code = 'TJ-EG';
 
-    -- ── Tax Types (category CHECK: 'INDIRECT' | 'WITHHOLDING' | 'CUSTOMS_DUTY' | 'SURCHARGE') ─
+    -- ── Tax Types (kind classified via condition_type_id bridge) ─────────────
     INSERT INTO master.tax_type (tenant_id, code, name, description,
-        category, is_recoverable, is_deducted_at_source,
-        is_included_in_price, is_compound_eligible, sort_order,
+        condition_type_id, sort_order,
         metadata, status, created_by)
     VALUES
     (v_tid, 'VAT-SA', 'KSA VAT',   'Saudi VAT per ZATCA. Standard 15%, zero-rated 0%.',
-     'INDIRECT',    true,  false, false, false, 10, v_meta, 'active', v_su),
+     v_ct_vat, 10, v_meta, 'active', v_su),
     (v_tid, 'WHT-SA', 'KSA WHT',   'KSA WHT on non-resident payments. Art 68: 5/15/20%.',
-     'WITHHOLDING', false, true,  false, false, 20, v_meta, 'active', v_su),
+     v_ct_wht, 20, v_meta, 'active', v_su),
     (v_tid, 'VAT-EG', 'Egypt VAT', 'Egyptian VAT per ETA. Standard 14%.',
-     'INDIRECT',    true,  false, false, false, 30, v_meta, 'active', v_su),
+     v_ct_vat, 30, v_meta, 'active', v_su),
     (v_tid, 'WHT-EG', 'Egypt WHT', 'Egyptian WHT on services/royalties.',
-     'WITHHOLDING', false, true,  false, false, 40, v_meta, 'active', v_su)
+     v_ct_wht, 40, v_meta, 'active', v_su)
     ON CONFLICT (tenant_id, code) DO UPDATE SET
-        category=EXCLUDED.category, is_recoverable=EXCLUDED.is_recoverable,
-        is_deducted_at_source=EXCLUDED.is_deducted_at_source,
+        condition_type_id=EXCLUDED.condition_type_id,
         updated_at=now(), updated_by=v_su;
 
     SELECT id INTO v_tt_vatsa FROM master.tax_type WHERE tenant_id = v_tid AND code = 'VAT-SA';
@@ -820,21 +823,21 @@ BEGIN
     INSERT INTO control.tax_rate_schedule (
         tenant_id, jurisdiction_id, tax_type_id,
         tax_direction, rate_kind, rate_value,
-        recoverability_mode, calculation_basis, rounding_stage,
-        priority, description, effective_from,
+        recoverability_mode, calculation_basis,
+        description, effective_from,
         metadata, status, created_by)
     VALUES
-    (v_tid, v_tj_sa, v_tt_vatsa, 'SALE',     'PERCENT', 15.00, 'NONE', 'LINE_NET', 'LINE',  0, 'KSA VAT 15% on sales',                   '2020-07-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_sa, v_tt_vatsa, 'PURCHASE', 'PERCENT', 15.00, 'FULL', 'LINE_NET', 'LINE',  0, 'KSA VAT 15% on purchases (recoverable)',  '2020-07-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_sa, v_tt_vatsa, 'SALE',     'PERCENT',  0.00, 'NONE', 'LINE_NET', 'LINE', 10, 'KSA VAT zero-rated/exempt',               '2020-07-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_sa, v_tt_whtsa, 'PAYMENT',  'PERCENT',  5.00, 'NONE', 'LINE_NET', 'LINE',  0, 'KSA WHT 5% technical services',          '2020-01-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_sa, v_tt_whtsa, 'PAYMENT',  'PERCENT', 15.00, 'NONE', 'LINE_NET', 'LINE', 10, 'KSA WHT 15% royalties',                  '2020-01-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_sa, v_tt_whtsa, 'PAYMENT',  'PERCENT', 20.00, 'NONE', 'LINE_NET', 'LINE', 20, 'KSA WHT 20% management fees',            '2020-01-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_eg, v_tt_vateg, 'SALE',     'PERCENT', 14.00, 'NONE', 'LINE_NET', 'LINE',  0, 'Egypt VAT 14% on sales',                 '2017-07-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_eg, v_tt_vateg, 'PURCHASE', 'PERCENT', 14.00, 'FULL', 'LINE_NET', 'LINE',  0, 'Egypt VAT 14% on purchases (recoverable)','2017-07-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_eg, v_tt_vateg, 'SALE',     'PERCENT',  0.00, 'NONE', 'LINE_NET', 'LINE', 10, 'Egypt VAT exempt',                       '2017-07-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_eg, v_tt_whteg, 'PAYMENT',  'PERCENT',  5.00, 'NONE', 'LINE_NET', 'LINE',  0, 'Egypt WHT 5% domestic services',         '2020-01-01', v_meta, 'active', v_su),
-    (v_tid, v_tj_eg, v_tt_whteg, 'PAYMENT',  'PERCENT', 20.00, 'NONE', 'LINE_NET', 'LINE', 10, 'Egypt WHT 20% non-resident royalties',   '2020-01-01', v_meta, 'active', v_su)
+    (v_tid, v_tj_sa, v_tt_vatsa, 'SALE',     'PERCENT', 15.00, 'NONE', 'LINE_NET', 'KSA VAT 15% on sales',                   '2020-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_vatsa, 'PURCHASE', 'PERCENT', 15.00, 'FULL', 'LINE_NET', 'KSA VAT 15% on purchases (recoverable)',  '2020-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_vatsa, 'SALE',     'PERCENT',  0.00, 'NONE', 'LINE_NET', 'KSA VAT zero-rated/exempt',               '2020-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_whtsa, 'PAYMENT',  'PERCENT',  5.00, 'NONE', 'LINE_NET', 'KSA WHT 5% technical services',          '2020-01-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_whtsa, 'PAYMENT',  'PERCENT', 15.00, 'NONE', 'LINE_NET', 'KSA WHT 15% royalties',                  '2020-01-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_sa, v_tt_whtsa, 'PAYMENT',  'PERCENT', 20.00, 'NONE', 'LINE_NET', 'KSA WHT 20% management fees',            '2020-01-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_vateg, 'SALE',     'PERCENT', 14.00, 'NONE', 'LINE_NET', 'Egypt VAT 14% on sales',                 '2017-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_vateg, 'PURCHASE', 'PERCENT', 14.00, 'FULL', 'LINE_NET', 'Egypt VAT 14% on purchases (recoverable)','2017-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_vateg, 'SALE',     'PERCENT',  0.00, 'NONE', 'LINE_NET', 'Egypt VAT exempt',                       '2017-07-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_whteg, 'PAYMENT',  'PERCENT',  5.00, 'NONE', 'LINE_NET', 'Egypt WHT 5% domestic services',         '2020-01-01', v_meta, 'active', v_su),
+    (v_tid, v_tj_eg, v_tt_whteg, 'PAYMENT',  'PERCENT', 20.00, 'NONE', 'LINE_NET', 'Egypt WHT 20% non-resident royalties',   '2020-01-01', v_meta, 'active', v_su)
     ON CONFLICT DO NOTHING;
 
     RAISE NOTICE '[P13] 2 jurisdictions, 4 tax types, 11 rate schedules seeded (DDL-aligned)';

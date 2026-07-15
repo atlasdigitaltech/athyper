@@ -1,7 +1,4 @@
--- LookupDomain/master/acl_access_level.sql
--- Lookup values for domain: master.acl_access_level
--- Used by: attachment_acl.access_level, content_item_access_grant.access_level
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: attachment_acl.access_level, content_item_access_grant.access_level.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

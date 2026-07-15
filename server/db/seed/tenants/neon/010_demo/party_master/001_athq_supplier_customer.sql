@@ -68,6 +68,10 @@ DECLARE
     v_ct_iso9001  uuid;
     v_ct_iso27001 uuid;
 
+    -- Condition_type catalog refs (system rows, tenant_id IS NULL)
+    v_ct_vat_id  uuid;
+    v_ct_wht_id  uuid;
+
     -- Supplier
     v_sup_bp_id  uuid;
     v_sup_id     uuid;
@@ -102,6 +106,12 @@ BEGIN
     -- §1  SUPPORTING REFERENCE DATA
     -- ══════════════════════════════════════════════════════════════════════
 
+    -- Resolve system condition_type catalog rows
+    SELECT id INTO v_ct_vat_id FROM master.condition_type
+     WHERE code = 'TAX_VAT' AND tenant_id IS NULL;
+    SELECT id INTO v_ct_wht_id FROM master.condition_type
+     WHERE code = 'WHT_GENERIC' AND tenant_id IS NULL;
+
     -- §1a  Tax jurisdiction — UAE Federal
     SELECT id INTO v_jur_ae_id FROM master.tax_jurisdiction
      WHERE tenant_id = v_tenant_id AND code = 'AE-FED';
@@ -109,19 +119,19 @@ BEGIN
         INSERT INTO master.tax_jurisdiction (
             tenant_id, code, name, jurisdiction_type, country_code, status, created_by
         ) VALUES (
-            v_tenant_id, 'AE-FED', 'UAE Federal', 'COUNTRY', 'AE', 'active', v_sys
+            v_tenant_id, 'AE-FED', 'UAE Federal', 'country', 'AE', 'active', v_sys
         ) RETURNING id INTO v_jur_ae_id;
     END IF;
 
-    -- §1b  Tax types
+    -- §1b  Tax types (kind classified via condition_type_id)
     SELECT id INTO v_tt_vat_id FROM master.tax_type
      WHERE tenant_id = v_tenant_id AND code = 'VAT-AE';
     IF v_tt_vat_id IS NULL THEN
         INSERT INTO master.tax_type (
-            tenant_id, code, name, category, is_recoverable, status, created_by
+            tenant_id, code, name, condition_type_id, status, created_by
         ) VALUES (
             v_tenant_id, 'VAT-AE', 'UAE Standard VAT',
-            'INDIRECT', true, 'active', v_sys
+            v_ct_vat_id, 'active', v_sys
         ) RETURNING id INTO v_tt_vat_id;
     END IF;
 
@@ -129,10 +139,10 @@ BEGIN
      WHERE tenant_id = v_tenant_id AND code = 'WHT-AE-SVC';
     IF v_tt_wht_id IS NULL THEN
         INSERT INTO master.tax_type (
-            tenant_id, code, name, category, is_deducted_at_source, status, created_by
+            tenant_id, code, name, condition_type_id, status, created_by
         ) VALUES (
             v_tenant_id, 'WHT-AE-SVC', 'UAE WHT on Services',
-            'WITHHOLDING', true, 'active', v_sys
+            v_ct_wht_id, 'active', v_sys
         ) RETURNING id INTO v_tt_wht_id;
     END IF;
 
@@ -149,13 +159,13 @@ BEGIN
             tenant_id, jurisdiction_id, tax_type_id, tax_direction,
             component_code, rate_kind, rate_value,
             recoverability_mode, recoverability_percent,
-            calculation_basis, rounding_stage,
+            calculation_basis,
             effective_from, status, created_by
         ) VALUES (
             v_tenant_id, v_jur_ae_id, v_tt_vat_id, 'PURCHASE',
             'MAIN', 'PERCENT', 5.00,
             'FULL', 100.00,
-            'LINE_NET', 'LINE',
+            'LINE_NET',
             '2018-01-01'::date, 'active', v_sys
         ) RETURNING id INTO v_trs_vat_id;
     END IF;
@@ -172,27 +182,27 @@ BEGIN
             tenant_id, jurisdiction_id, tax_type_id, tax_direction,
             component_code, rate_kind, rate_value,
             recoverability_mode,
-            calculation_basis, rounding_stage,
-            wht_basis, wht_certificate_required,
+            calculation_basis,
+            wht_basis,
             effective_from, status, created_by
         ) VALUES (
             v_tenant_id, v_jur_ae_id, v_tt_wht_id, 'PAYMENT',
             'MAIN', 'PERCENT', 5.00,
             'NONE',
-            'LINE_NET', 'LINE',
-            'GROSS', true,
+            'LINE_NET',
+            'GROSS',
             '2018-01-01'::date, 'active', v_sys
         ) RETURNING id INTO v_trs_wht_id;
     END IF;
 
-    -- §1d  Tax groups
+    -- §1d  Tax groups (v_jur_ae_id points at AE-FED jurisdiction)
     SELECT id INTO v_tg_vat_id FROM control.tax_group
      WHERE tenant_id = v_tenant_id AND code = 'TG-AE-VAT-5-IN';
     IF v_tg_vat_id IS NULL THEN
         INSERT INTO control.tax_group (
-            tenant_id, code, name, status, created_by
+            tenant_id, code, name, jurisdiction_id, status, created_by
         ) VALUES (
-            v_tenant_id, 'TG-AE-VAT-5-IN', 'UAE VAT 5% Input', 'active', v_sys
+            v_tenant_id, 'TG-AE-VAT-5-IN', 'UAE VAT 5% Input', v_jur_ae_id, 'active', v_sys
         ) RETURNING id INTO v_tg_vat_id;
         INSERT INTO control.tax_group_component (
             tenant_id, tax_group_id, tax_rate_schedule_id,
@@ -201,15 +211,18 @@ BEGIN
             v_tenant_id, v_tg_vat_id, v_trs_vat_id,
             10, NULL, 'active', v_sys
         );
+    ELSE
+        UPDATE control.tax_group SET jurisdiction_id = v_jur_ae_id, updated_at = now(), updated_by = v_sys
+         WHERE id = v_tg_vat_id AND jurisdiction_id IS DISTINCT FROM v_jur_ae_id;
     END IF;
 
     SELECT id INTO v_tg_wht_id FROM control.tax_group
      WHERE tenant_id = v_tenant_id AND code = 'TG-AE-WHT-5-SVC';
     IF v_tg_wht_id IS NULL THEN
         INSERT INTO control.tax_group (
-            tenant_id, code, name, status, created_by
+            tenant_id, code, name, jurisdiction_id, status, created_by
         ) VALUES (
-            v_tenant_id, 'TG-AE-WHT-5-SVC', 'UAE WHT 5% Services', 'active', v_sys
+            v_tenant_id, 'TG-AE-WHT-5-SVC', 'UAE WHT 5% Services', v_jur_ae_id, 'active', v_sys
         ) RETURNING id INTO v_tg_wht_id;
         INSERT INTO control.tax_group_component (
             tenant_id, tax_group_id, tax_rate_schedule_id,
@@ -218,6 +231,9 @@ BEGIN
             v_tenant_id, v_tg_wht_id, v_trs_wht_id,
             10, NULL, 'active', v_sys
         );
+    ELSE
+        UPDATE control.tax_group SET jurisdiction_id = v_jur_ae_id, updated_at = now(), updated_by = v_sys
+         WHERE id = v_tg_wht_id AND jurisdiction_id IS DISTINCT FROM v_jur_ae_id;
     END IF;
 
     -- §1e  Payment methods
@@ -569,7 +585,7 @@ BEGIN
         ON CONFLICT (tenant_id, party_contact_person_id, role_code) DO NOTHING;
 
         -- Email + phone anchored at business_partner — shared across all roles.
-        -- Use purpose='notification' for general reachability;
+        -- Use purpose='default' for business_partner identity reachability;
         -- AP-specific billing contact can be added at supplier level as an override.
         INSERT INTO master.contact_link (
             tenant_id, owner_type, owner_id,
@@ -578,11 +594,11 @@ BEGIN
             metadata, status, created_by
         ) VALUES
         (v_tenant_id, 'business_partner', v_sup_bp_id,
-         'email', 'ahmed.alrashidi@gcm-uae.com', 'notification',
+         'email', 'ahmed.alrashidi@gcm-uae.com', 'default',
          true, true, now(),
          '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_sup_bp_id,
-         'phone', '+97148001234', 'notification',
+         'phone', '+97148001234', 'default',
          true, true, now(),
          '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys)
         ON CONFLICT DO NOTHING;
@@ -681,8 +697,7 @@ BEGIN
 
     -- §2k  Address — Dubai Investment Park (GCM HQ)
     --      Create one canonical address row and share it across:
-    --        BP as 'legal' + 'default'   (source of truth for identity)
-    --        Supplier as 'remittance'          (optional operational override, same physical address)
+    --        BP as 'default' only          (source of truth for identity)
     SELECT id INTO v_sup_addr_id FROM master.address
      WHERE tenant_id = v_tenant_id AND code = 'addr-gcm-dip-hq';
     IF v_sup_addr_id IS NULL THEN
@@ -705,28 +720,13 @@ BEGIN
         ) RETURNING id INTO v_sup_addr_id;
     END IF;
 
-    -- Link to BP: 'legal' is the canonical legal address; 'default' ensures
-    -- fn_resolve_address falls through cleanly when no specific purpose is requested.
-    INSERT INTO master.address_link (
-        tenant_id, owner_type, owner_id, address_id, purpose,
-        is_primary, effective_from, metadata, created_by
-    ) VALUES
-    (v_tenant_id, 'business_partner', v_sup_bp_id, v_sup_addr_id, 'legal',
-     true, '2008-01-01'::date,
-     '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_sup_bp_id, v_sup_addr_id, 'default',
-     true, '2008-01-01'::date,
-     '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys)
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
-
-    -- Link same address to supplier as 'remittance' (AP operational purpose).
-    -- fn_resolve_party_address will fall back to BP 'legal' if this is absent,
-    -- but seeding it explicitly makes the AP purpose discoverable.
+    -- Link one canonical BP default address. Supplier/customer operational
+    -- address roles live on their role owners, not on business_partner.
     INSERT INTO master.address_link (
         tenant_id, owner_type, owner_id, address_id, purpose,
         is_primary, effective_from, metadata, created_by
     ) VALUES (
-        v_tenant_id, 'business_partner', v_sup_bp_id, v_sup_addr_id, 'remittance',
+        v_tenant_id, 'business_partner', v_sup_bp_id, v_sup_addr_id, 'default',
         true, '2008-01-01'::date,
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys
     )
@@ -928,11 +928,11 @@ BEGIN
             metadata, status, created_by
         ) VALUES
         (v_tenant_id, 'business_partner', v_cus_bp_id,
-         'email', 'fatima.alzarooni@epg-uae.com', 'notification',
+         'email', 'fatima.alzarooni@epg-uae.com', 'default',
          true, true, now(),
          '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys),
         (v_tenant_id, 'business_partner', v_cus_bp_id,
-         'phone', '+97126543210', 'notification',
+         'phone', '+97126543210', 'default',
          true, true, now(),
          '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, 'active', v_sys)
         ON CONFLICT DO NOTHING;
@@ -1029,8 +1029,7 @@ BEGIN
 
     -- §3i  Address — Abu Dhabi Corniche (EPG HQ)
     --      Create one canonical address row and share it across:
-    --        BP as 'legal' + 'default'   (source of truth for identity)
-    --        Customer as 'billing'             (optional AR operational override, same physical address)
+    --        BP as 'default' only          (source of truth for identity)
     SELECT id INTO v_cus_addr_id FROM master.address
      WHERE tenant_id = v_tenant_id AND code = 'addr-epg-auh-hq';
     IF v_cus_addr_id IS NULL THEN
@@ -1053,27 +1052,12 @@ BEGIN
         ) RETURNING id INTO v_cus_addr_id;
     END IF;
 
-    -- Link to BP: 'legal' + 'default'
-    INSERT INTO master.address_link (
-        tenant_id, owner_type, owner_id, address_id, purpose,
-        is_primary, effective_from, metadata, created_by
-    ) VALUES
-    (v_tenant_id, 'business_partner', v_cus_bp_id, v_cus_addr_id, 'legal',
-     true, '2005-01-01'::date,
-     '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys),
-    (v_tenant_id, 'business_partner', v_cus_bp_id, v_cus_addr_id, 'default',
-     true, '2005-01-01'::date,
-     '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys)
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
-
-    -- Link same address to customer as 'billing' (AR operational purpose).
-    -- fn_resolve_party_address will fall back to BP 'legal' if this is absent,
-    -- but seeding it explicitly makes the AR billing purpose discoverable.
+    -- Link one canonical BP default address.
     INSERT INTO master.address_link (
         tenant_id, owner_type, owner_id, address_id, purpose,
         is_primary, effective_from, metadata, created_by
     ) VALUES (
-        v_tenant_id, 'business_partner', v_cus_bp_id, v_cus_addr_id, 'billing',
+        v_tenant_id, 'business_partner', v_cus_bp_id, v_cus_addr_id, 'default',
         true, '2005-01-01'::date,
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys
     )

@@ -9,106 +9,685 @@ datasource db {
   schemas  = ["mesh", "shared"]
 }
 
-model network_account {
-  id                                                                                         String                              @id(map: "mesh_network_account_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  account_code                                                                               String                              @unique(map: "mesh_network_account_code_uq")
-  provider_code                                                                              String                              @default("athyper_mesh")
-  display_name                                                                               String
-  participant_type                                                                           String                              @default("partner_org")
-  source_plane                                                                               String?
-  source_ref                                                                                 String?
-  legal_name                                                                                 String?
-  tax_id                                                                                     String?
-  tax_country                                                                                String?                             @db.Char(2)
-  vat_number                                                                                 String?
-  legal_form                                                                                 String?
-  registration_no                                                                            String?
-  registration_country_code                                                                  String?                             @db.Char(2)
-  tax_residence_country_code                                                                 String?                             @db.Char(2)
-  profile_authority                                                                          String                              @default("neon")
-  verification_status                                                                        String                              @default("unverified")
-  verified_at                                                                                DateTime?                           @db.Timestamptz(6)
-  verified_by                                                                                String?
-  published_at                                                                               DateTime?                           @db.Timestamptz(6)
-  website_url                                                                                String?
-  description                                                                                String?
-  aliases                                                                                    String[]                            @default([])
-  business_types                                                                             String[]                            @default([])
-  founded_year                                                                               Int?                                @db.SmallInt
-  employee_count_band                                                                        String?
-  annual_revenue_band                                                                        String?
-  incorporation_date                                                                         DateTime?                           @db.Date
-  effective_from                                                                             DateTime?                           @db.Date
-  effective_until                                                                            DateTime?                           @db.Date
-  profile_hash                                                                               String?
-  last_verified_at                                                                           DateTime?                           @db.Timestamptz(6)
-  profile_snapshot                                                                           Json                                @default("{}")
-  network_role                                                                               String                              @default("buyer")
-  capabilities                                                                               Json                                @default("{}")
-  status                                                                                     String                              @default("active")
-  is_active                                                                                  Boolean?                            @default(dbgenerated("(status = 'active'::text)"))
-  metadata                                                                                   Json                                @default("{}")
-  created_at                                                                                 DateTime                            @default(now()) @db.Timestamptz(6)
-  created_by                                                                                 String                              @default("system")
-  updated_at                                                                                 DateTime?                           @db.Timestamptz(6)
-  updated_by                                                                                 String?
-  account_grant                                                                              account_grant[]
-  address                                                                                    address[]
-  attachment                                                                                 attachment[]
-  attachment_acl                                                                             attachment_acl[]
-  attachment_folder                                                                          attachment_folder[]
-  bank_account                                                                               bank_account[]
-  bank_account_disclosure_bank_account_disclosure_account_codeTonetwork_account              bank_account_disclosure[]           @relation("bank_account_disclosure_account_codeTonetwork_account")
-  bank_account_disclosure_bank_account_disclosure_disclosed_to_account_codeTonetwork_account bank_account_disclosure[]           @relation("bank_account_disclosure_disclosed_to_account_codeTonetwork_account")
-  bank_party                                                                                 bank_party[]
-  carrier                                                                                    carrier[]
-  catalog                                                                                    catalog[]
-  certification                                                                              certification[]
-  certification_type                                                                         certification_type[]
-  comment_comment_account_codeTonetwork_account                                              comment[]                           @relation("comment_account_codeTonetwork_account")
-  comment_comment_commenter_account_codeTonetwork_account                                    comment[]                           @relation("comment_commenter_account_codeTonetwork_account")
-  comment_draft                                                                              comment_draft[]
-  comment_feed_cursor                                                                        comment_feed_cursor[]
-  comment_mention                                                                            comment_mention[]
-  connection_acceptance                                                                      connection_acceptance[]
-  connection_request_connection_request_buyer_account_codeTonetwork_account                  connection_request[]                @relation("connection_request_buyer_account_codeTonetwork_account")
-  connection_request_connection_request_supplier_account_codeTonetwork_account               connection_request[]                @relation("connection_request_supplier_account_codeTonetwork_account")
-  contact_link                                                                               contact_link[]
-  content_item                                                                               content_item[]
-  content_item_access_grant                                                                  content_item_access_grant[]
-  conversation                                                                               conversation[]
-  conversation_participant                                                                   conversation_participant[]
-  document_envelope_document_envelope_receiver_account_codeTonetwork_account                 document_envelope[]                 @relation("document_envelope_receiver_account_codeTonetwork_account")
-  document_envelope_document_envelope_sender_account_codeTonetwork_account                   document_envelope[]                 @relation("document_envelope_sender_account_codeTonetwork_account")
-  holiday_calendar                                                                           holiday_calendar[]
-  idempotency_key                                                                            idempotency_key[]
-  logistics_rate                                                                             logistics_rate[]
-  logistics_zone                                                                             logistics_zone[]
-  multipart_upload                                                                           multipart_upload[]
-  network_provider                                                                           network_provider                    @relation(fields: [provider_code], references: [code], onUpdate: NoAction, map: "mesh_network_account_provider_fk")
-  network_account_identifier                                                                 network_account_identifier[]
-  network_account_reference                                                                  network_account_reference[]
-  network_invitation_network_invitation_invitee_account_codeTonetwork_account                network_invitation[]                @relation("network_invitation_invitee_account_codeTonetwork_account")
-  network_invitation_network_invitation_inviter_account_codeTonetwork_account                network_invitation[]                @relation("network_invitation_inviter_account_codeTonetwork_account")
-  network_relationship_network_relationship_buyer_account_codeTonetwork_account              network_relationship[]              @relation("network_relationship_buyer_account_codeTonetwork_account")
-  network_relationship_network_relationship_supplier_account_codeTonetwork_account           network_relationship[]              @relation("network_relationship_supplier_account_codeTonetwork_account")
-  principal_notification_preference                                                          principal_notification_preference[]
-  saved_view                                                                                 saved_view[]
-  supplier_commodity_capability                                                              supplier_commodity_capability[]
-  supplier_profile_verification                                                              supplier_profile_verification[]
-  supplier_service_coverage                                                                  supplier_service_coverage[]
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model commodity_code {
+  id                                                                                                     String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                                                                                                   String
+  name                                                                                                   String
+  domain_code                                                                                            String
+  description                                                                                            String?
+  parent_code                                                                                            String?
+  level_no                                                                                               Int?
+  keywords                                                                                               String[]
+  is_leaf                                                                                                Boolean                         @default(false)
+  metadata                                                                                               Json                            @default("{}")
+  status                                                                                                 String                          @default("active")
+  is_active                                                                                              Boolean?                        @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                                                                      DateTime?                       @db.Timestamptz(6)
+  status_changed_by                                                                                      String?                         @db.Uuid
+  created_at                                                                                             DateTime                        @default(now()) @db.Timestamptz(6)
+  created_by                                                                                             String                          @db.Uuid
+  updated_at                                                                                             DateTime?                       @db.Timestamptz(6)
+  updated_by                                                                                             String?                         @db.Uuid
+  catalog_item_classification_catalog_item_classification_domain_code_commodity_codeTocommodity_code     catalog_item_classification[]   @relation("catalog_item_classification_domain_code_commodity_codeTocommodity_code")
+  supplier_commodity_capability_supplier_commodity_capability_domain_code_commodity_codeTocommodity_code supplier_commodity_capability[] @relation("supplier_commodity_capability_domain_code_commodity_codeTocommodity_code")
+  commodity_crosswalk_commodity_crosswalk_source_domain_code_source_codeTocommodity_code                 commodity_crosswalk[]           @relation("commodity_crosswalk_source_domain_code_source_codeTocommodity_code")
+  commodity_crosswalk_commodity_crosswalk_target_domain_code_target_codeTocommodity_code                 commodity_crosswalk[]           @relation("commodity_crosswalk_target_domain_code_target_codeTocommodity_code")
 
-  @@unique([id, account_code], map: "mesh_network_account_id_code_uq")
-  @@index([provider_code, account_code], map: "mesh_network_account_provider_idx")
-  @@index([legal_name], map: "mesh_network_account_legal_name_idx", where: raw("(legal_name IS NOT NULL)"))
-  @@index([network_role, status], map: "mesh_network_account_network_role_idx")
-  @@index([participant_type, status], map: "mesh_network_account_participant_type_idx")
-  @@index([account_code, profile_hash], map: "mesh_network_account_profile_hash_idx", where: raw("(profile_hash IS NOT NULL)"))
-  @@index([source_plane, source_ref], map: "mesh_network_account_source_idx", where: raw("((source_plane IS NOT NULL) AND (source_ref IS NOT NULL))"))
-  @@index([verification_status, verified_at], map: "mesh_network_account_verification_idx", where: raw("(verification_status = ANY (ARRAY['pending'::text, 'verified'::text]))"))
-  @@schema("mesh")
+  @@unique([domain_code, code], map: "commodity_code_domain_code_uq")
+  @@index([domain_code, code], map: "commodity_code_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@index([keywords], map: "commodity_code_keywords_gin", type: Gin)
+  @@index([domain_code, code], map: "commodity_code_leaf_pidx", where: raw("((is_leaf = true) AND (is_active = true))"))
+  @@index([domain_code, parent_code], map: "commodity_code_parent_idx", where: raw("(parent_code IS NOT NULL)"))
+  @@schema("shared")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model commodity_crosswalk {
+  id                                                                                String         @id(map: "ccw_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  source_domain_code                                                                String
+  source_code                                                                       String
+  target_domain_code                                                                String
+  target_code                                                                       String
+  mapping_type                                                                      String
+  confidence                                                                        Decimal?       @db.Decimal(5, 2)
+  provenance                                                                        String         @default("MANUAL")
+  is_verified                                                                       Boolean        @default(false)
+  verified_by                                                                       String?        @db.Uuid
+  verified_at                                                                       DateTime?      @db.Timestamptz(6)
+  notes                                                                             String?
+  metadata                                                                          Json           @default("{}")
+  status                                                                            String         @default("active")
+  is_active                                                                         Boolean?       @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                                                 DateTime?      @db.Timestamptz(6)
+  status_changed_by                                                                 String?        @db.Uuid
+  created_at                                                                        DateTime       @default(now()) @db.Timestamptz(6)
+  created_by                                                                        String         @db.Uuid
+  updated_at                                                                        DateTime?      @db.Timestamptz(6)
+  updated_by                                                                        String?        @db.Uuid
+  commodity_code_commodity_crosswalk_source_domain_code_source_codeTocommodity_code commodity_code @relation("commodity_crosswalk_source_domain_code_source_codeTocommodity_code", fields: [source_domain_code, source_code], references: [domain_code, code], onUpdate: NoAction, map: "ccw_source_fk")
+  commodity_code_commodity_crosswalk_target_domain_code_target_codeTocommodity_code commodity_code @relation("commodity_crosswalk_target_domain_code_target_codeTocommodity_code", fields: [target_domain_code, target_code], references: [domain_code, code], onUpdate: NoAction, map: "ccw_target_fk")
+
+  @@unique([source_domain_code, source_code, target_domain_code, target_code], map: "ccw_mapping_uq")
+  @@index([source_domain_code, source_code], map: "ccw_active_pidx", where: raw("(is_active = true)"))
+  @@index([source_domain_code, source_code], map: "ccw_source_idx")
+  @@index([target_domain_code, target_code], map: "ccw_target_idx")
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model country {
+  id                        String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                      String                      @unique(map: "country_code_uq") @db.Char(2)
+  name                      String
+  code3                     String?                     @unique(map: "country_code3_uq", where: raw("(code3 IS NOT NULL)")) @db.Char(3)
+  numeric3                  String?                     @db.Char(3)
+  official_name             String?
+  region                    String?
+  subregion                 String?
+  calling_code              String?
+  phone_trunk_prefix        String?
+  phone_national_pattern    String?
+  phone_example             String?
+  has_postal_codes          Boolean                     @default(true)
+  postal_code_pattern       String?
+  postal_code_label         String                      @default("Postal code")
+  postal_code_example       String?
+  region_label              String                      @default("Region")
+  postal_position           String                      @default("after_city")
+  address_format            String?
+  metadata                  Json                        @default("{}")
+  status                    String                      @default("active")
+  is_active                 Boolean?                    @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at         DateTime?                   @db.Timestamptz(6)
+  status_changed_by         String?                     @db.Uuid
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  created_by                String                      @db.Uuid
+  updated_at                DateTime?                   @db.Timestamptz(6)
+  updated_by                String?                     @db.Uuid
+  address                   address[]
+  bank_account              bank_account[]
+  bank_party                bank_party[]
+  catalog_availability      catalog_availability[]
+  holiday_calendar          holiday_calendar[]
+  logistics_zone_member     logistics_zone_member[]
+  supplier_service_coverage supplier_service_coverage[]
+  locale                    locale[]
+  state_region              state_region[]
+
+  @@index([code], map: "country_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model currency {
+  id                String           @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code              String           @unique(map: "currency_code_uq") @db.Char(3)
+  name              String
+  symbol            String?
+  minor_units       Int?
+  numeric3          String?          @db.Char(3)
+  metadata          Json             @default("{}")
+  status            String           @default("active")
+  is_active         Boolean?         @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at DateTime?        @db.Timestamptz(6)
+  status_changed_by String?          @db.Uuid
+  created_at        DateTime         @default(now()) @db.Timestamptz(6)
+  created_by        String           @db.Uuid
+  updated_at        DateTime?        @db.Timestamptz(6)
+  updated_by        String?          @db.Uuid
+  bank_account      bank_account[]
+  catalog_price     catalog_price[]
+  logistics_rate    logistics_rate[]
+
+  @@index([code], map: "currency_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model enterprise_feature {
+  id                  String                @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                String                @unique(map: "enterprise_feature_code_uq")
+  name                String
+  description         String?
+  view_key            String
+  edit_key            String
+  sort_order          Int                   @default(0) @db.SmallInt
+  metadata            Json                  @default("{}")
+  status              String                @default("active")
+  is_active           Boolean?              @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at   DateTime?             @db.Timestamptz(6)
+  status_changed_by   String?               @db.Uuid
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  created_by          String                @db.Uuid
+  updated_at          DateTime?             @db.Timestamptz(6)
+  updated_by          String?               @db.Uuid
+  plan_feature_access plan_feature_access[]
+
+  @@index([code], map: "enterprise_feature_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model industry_code {
+  id                                                                                  String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                                                                                String
+  name                                                                                String
+  domain_code                                                                         String
+  description                                                                         String?
+  parent_code                                                                         String?
+  level_no                                                                            Int?
+  keywords                                                                            String[]
+  is_leaf                                                                             Boolean              @default(false)
+  metadata                                                                            Json                 @default("{}")
+  status                                                                              String               @default("active")
+  is_active                                                                           Boolean?             @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                                                   DateTime?            @db.Timestamptz(6)
+  status_changed_by                                                                   String?              @db.Uuid
+  created_at                                                                          DateTime             @default(now()) @db.Timestamptz(6)
+  created_by                                                                          String               @db.Uuid
+  updated_at                                                                          DateTime?            @db.Timestamptz(6)
+  updated_by                                                                          String?              @db.Uuid
+  industry_crosswalk_industry_crosswalk_source_domain_code_source_codeToindustry_code industry_crosswalk[] @relation("industry_crosswalk_source_domain_code_source_codeToindustry_code")
+  industry_crosswalk_industry_crosswalk_target_domain_code_target_codeToindustry_code industry_crosswalk[] @relation("industry_crosswalk_target_domain_code_target_codeToindustry_code")
+
+  @@unique([domain_code, code], map: "industry_code_domain_code_uq")
+  @@index([domain_code, code], map: "industry_code_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@index([keywords], map: "industry_code_keywords_gin", type: Gin)
+  @@index([domain_code, code], map: "industry_code_leaf_pidx", where: raw("((is_leaf = true) AND (is_active = true))"))
+  @@index([domain_code, parent_code], map: "industry_code_parent_idx", where: raw("(parent_code IS NOT NULL)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model industry_crosswalk {
+  id                                                                             String        @id(map: "icw_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  source_domain_code                                                             String
+  source_code                                                                    String
+  target_domain_code                                                             String
+  target_code                                                                    String
+  mapping_type                                                                   String
+  confidence                                                                     Decimal?      @db.Decimal(5, 2)
+  provenance                                                                     String        @default("MANUAL")
+  is_verified                                                                    Boolean       @default(false)
+  verified_by                                                                    String?       @db.Uuid
+  verified_at                                                                    DateTime?     @db.Timestamptz(6)
+  notes                                                                          String?
+  metadata                                                                       Json          @default("{}")
+  status                                                                         String        @default("active")
+  is_active                                                                      Boolean?      @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                                              DateTime?     @db.Timestamptz(6)
+  status_changed_by                                                              String?       @db.Uuid
+  created_at                                                                     DateTime      @default(now()) @db.Timestamptz(6)
+  created_by                                                                     String        @db.Uuid
+  updated_at                                                                     DateTime?     @db.Timestamptz(6)
+  updated_by                                                                     String?       @db.Uuid
+  industry_code_industry_crosswalk_source_domain_code_source_codeToindustry_code industry_code @relation("industry_crosswalk_source_domain_code_source_codeToindustry_code", fields: [source_domain_code, source_code], references: [domain_code, code], onUpdate: NoAction, map: "icw_source_fk")
+  industry_code_industry_crosswalk_target_domain_code_target_codeToindustry_code industry_code @relation("industry_crosswalk_target_domain_code_target_codeToindustry_code", fields: [target_domain_code, target_code], references: [domain_code, code], onUpdate: NoAction, map: "icw_target_fk")
+
+  @@unique([source_domain_code, source_code, target_domain_code, target_code], map: "icw_mapping_uq")
+  @@index([source_domain_code, source_code], map: "icw_active_pidx", where: raw("(is_active = true)"))
+  @@index([source_domain_code, source_code], map: "icw_source_idx")
+  @@index([target_domain_code, target_code], map: "icw_target_idx")
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model language {
+  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code              String    @unique(map: "language_code_uq")
+  name              String
+  native_name       String?
+  iso639_2          String?
+  direction         String    @default("ltr")
+  metadata          Json      @default("{}")
+  status            String    @default("active")
+  is_active         Boolean?  @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at DateTime? @db.Timestamptz(6)
+  status_changed_by String?   @db.Uuid
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  created_by        String    @db.Uuid
+  updated_at        DateTime? @db.Timestamptz(6)
+  updated_by        String?   @db.Uuid
+  locale            locale[]
+
+  @@index([code], map: "language_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model locale {
+  id                String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code              String         @unique(map: "locale_code_uq")
+  name              String
+  language_code     String
+  country_code      String?        @db.Char(2)
+  script            String?
+  direction         String?
+  metadata          Json           @default("{}")
+  status            String         @default("active")
+  is_active         Boolean?       @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at DateTime?      @db.Timestamptz(6)
+  status_changed_by String?        @db.Uuid
+  created_at        DateTime       @default(now()) @db.Timestamptz(6)
+  created_by        String         @db.Uuid
+  updated_at        DateTime?      @db.Timestamptz(6)
+  updated_by        String?        @db.Uuid
+  content_item      content_item[]
+  country           country?       @relation(fields: [country_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "locale_country_fk")
+  language          language       @relation(fields: [language_code], references: [code], onUpdate: NoAction, map: "locale_language_fk")
+
+  @@index([code], map: "locale_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@index([language_code])
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model module {
+  id                 String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code               String               @unique(map: "module_code_uq")
+  name               String
+  description        String?
+  workspace_id       String?              @db.Uuid
+  config             Json?
+  metadata           Json                 @default("{}")
+  status             String               @default("active")
+  is_active          Boolean?             @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at  DateTime?            @db.Timestamptz(6)
+  status_changed_by  String?              @db.Uuid
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  created_by         String               @db.Uuid
+  updated_at         DateTime?            @db.Timestamptz(6)
+  updated_by         String?              @db.Uuid
+  workspace          workspace?           @relation(fields: [workspace_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "module_workspace_fk")
+  plan_module_access plan_module_access[]
+  role               role[]
+
+  @@index([workspace_id], map: "module_workspace_idx", where: raw("(workspace_id IS NOT NULL)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model permission {
+  id                     String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                   String                   @unique(map: "permission_code_uq")
+  name                   String
+  category_id            String                   @db.Uuid
+  scope_type             String                   @default("record")
+  risk_level             String                   @default("low")
+  is_plan_restricted     Boolean                  @default(false)
+  sort_order             Int                      @default(0) @db.SmallInt
+  metadata               Json                     @default("{}")
+  status                 String                   @default("active")
+  is_active              Boolean?                 @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at      DateTime?                @db.Timestamptz(6)
+  status_changed_by      String?                  @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by             String                   @db.Uuid
+  updated_at             DateTime?                @db.Timestamptz(6)
+  updated_by             String?                  @db.Uuid
+  permission_category    permission_category      @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "permission_category_fk")
+  persona_permission     persona_permission[]
+  plan_permission_access plan_permission_access[]
+
+  @@index([code], map: "permission_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@index([category_id], map: "permission_category_idx")
+  @@index([id], map: "permission_plan_restricted_pidx", where: raw("(is_plan_restricted = true)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model permission_category {
+  id                String       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code              String       @unique(map: "permission_category_code_uq")
+  name              String
+  sort_order        Int          @default(0) @db.SmallInt
+  metadata          Json         @default("{}")
+  status            String       @default("active")
+  is_active         Boolean?     @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at DateTime?    @db.Timestamptz(6)
+  status_changed_by String?      @db.Uuid
+  created_at        DateTime     @default(now()) @db.Timestamptz(6)
+  created_by        String       @db.Uuid
+  updated_at        DateTime?    @db.Timestamptz(6)
+  updated_by        String?      @db.Uuid
+  permission        permission[]
+
+  @@index([code], map: "permission_category_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model persona {
+  id                 String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code               String               @unique(map: "persona_code_uq")
+  name               String
+  description        String?
+  scope_mode         String               @default("tenant")
+  priority           Int                  @default(0)
+  is_system          Boolean              @default(false)
+  metadata           Json                 @default("{}")
+  status             String               @default("active")
+  is_active          Boolean?             @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at  DateTime?            @db.Timestamptz(6)
+  status_changed_by  String?              @db.Uuid
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  created_by         String               @db.Uuid
+  updated_at         DateTime?            @db.Timestamptz(6)
+  updated_by         String?              @db.Uuid
+  persona_permission persona_permission[]
+  role               role[]
+
+  @@index([scope_mode])
+  @@index([is_system], map: "persona_system_pidx", where: raw("(is_system = true)"))
+  @@schema("shared")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model persona_permission {
+  id            String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  persona_id    String     @db.Uuid
+  permission_id String     @db.Uuid
+  is_granted    Boolean    @default(false)
+  created_at    DateTime   @default(now()) @db.Timestamptz(6)
+  created_by    String     @db.Uuid
+  permission    permission @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "persona_permission_permission_fk")
+  persona       persona    @relation(fields: [persona_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "persona_permission_persona_fk")
+
+  @@unique([persona_id, permission_id], map: "persona_permission_uq")
+  @@index([persona_id, permission_id], map: "persona_permission_granted_pidx", where: raw("(is_granted = true)"))
+  @@index([persona_id], map: "persona_permission_persona_idx")
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model plan_feature_access {
+  id                        String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  plan_version_id           String                    @db.Uuid
+  feature_id                String                    @db.Uuid
+  is_included               Boolean                   @default(false)
+  is_addon                  Boolean                   @default(false)
+  addon_price_monthly       Decimal?                  @db.Decimal(10, 2)
+  max_users                 Int?
+  created_at                DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                String                    @db.Uuid
+  enterprise_feature        enterprise_feature        @relation(fields: [feature_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pfa_feature_fk")
+  subscription_plan_version subscription_plan_version @relation(fields: [plan_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pfa_plan_version_fk")
+
+  @@unique([plan_version_id, feature_id], map: "plan_feature_access_uq")
+  @@index([plan_version_id, feature_id], map: "pfa_included_pidx", where: raw("(is_included = true)"))
+  @@index([plan_version_id], map: "pfa_plan_ver_idx")
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model plan_module_access {
+  id                        String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  plan_version_id           String                    @db.Uuid
+  module_id                 String                    @db.Uuid
+  is_included               Boolean                   @default(false)
+  is_addon                  Boolean                   @default(false)
+  addon_price_monthly       Decimal?                  @db.Decimal(10, 2)
+  user_limit                Int?
+  created_at                DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                String                    @db.Uuid
+  module                    module                    @relation(fields: [module_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pma_module_fk")
+  subscription_plan_version subscription_plan_version @relation(fields: [plan_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pma_plan_version_fk")
+
+  @@unique([plan_version_id, module_id], map: "plan_module_access_uq")
+  @@index([plan_version_id, module_id], map: "pma_included_pidx", where: raw("(is_included = true)"))
+  @@index([plan_version_id], map: "pma_plan_ver_idx")
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model plan_permission_access {
+  id                        String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  plan_version_id           String                    @db.Uuid
+  permission_id             String                    @db.Uuid
+  is_included               Boolean                   @default(false)
+  is_addon                  Boolean                   @default(false)
+  addon_price_monthly       Decimal?                  @db.Decimal(10, 2)
+  usage_limit               Int?
+  created_at                DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                String                    @db.Uuid
+  permission                permission                @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ppa_permission_fk")
+  subscription_plan_version subscription_plan_version @relation(fields: [plan_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ppa_plan_version_fk")
+
+  @@unique([plan_version_id, permission_id], map: "plan_permission_access_uq")
+  @@index([plan_version_id, permission_id], map: "ppa_included_pidx", where: raw("(is_included = true)"))
+  @@index([plan_version_id], map: "ppa_plan_ver_idx")
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model role {
+  id                String     @id(map: "shared_role_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code              String     @unique(map: "shared_role_code_uq")
+  name              String
+  persona_id        String     @db.Uuid
+  module_id         String?    @db.Uuid
+  workspace_id      String?    @db.Uuid
+  kc_role_code      String?
+  metadata          Json       @default("{}")
+  status            String     @default("active")
+  is_active         Boolean?   @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at DateTime?  @db.Timestamptz(6)
+  status_changed_by String?    @db.Uuid
+  created_at        DateTime   @default(now()) @db.Timestamptz(6)
+  created_by        String     @db.Uuid
+  updated_at        DateTime?  @db.Timestamptz(6)
+  updated_by        String?    @db.Uuid
+  module            module?    @relation(fields: [module_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "shared_role_module_fk")
+  persona           persona    @relation(fields: [persona_id], references: [id], onUpdate: NoAction, map: "shared_role_persona_fk")
+  workspace         workspace? @relation(fields: [workspace_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "shared_role_workspace_fk")
+
+  @@index([id], map: "shared_role_active_pidx", where: raw("(status = 'active'::text)"))
+  @@index([module_id], map: "shared_role_module_pidx", where: raw("(module_id IS NOT NULL)"))
+  @@index([persona_id], map: "shared_role_persona_idx")
+  @@index([workspace_id], map: "shared_role_workspace_pidx", where: raw("(workspace_id IS NOT NULL)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model state_region {
+  id                        String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                      String
+  name                      String
+  country_code              String                      @db.Char(2)
+  category                  String?
+  parent_code               String?
+  metadata                  Json                        @default("{}")
+  status                    String                      @default("active")
+  is_active                 Boolean?                    @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at         DateTime?                   @db.Timestamptz(6)
+  status_changed_by         String?                     @db.Uuid
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  created_by                String                      @db.Uuid
+  updated_at                DateTime?                   @db.Timestamptz(6)
+  updated_by                String?                     @db.Uuid
+  catalog_availability      catalog_availability[]
+  logistics_zone_member     logistics_zone_member[]
+  supplier_service_coverage supplier_service_coverage[]
+  country                   country                     @relation(fields: [country_code], references: [code], onUpdate: NoAction, map: "state_region_country_fk")
+  state_region              state_region?               @relation("state_regionTostate_region", fields: [country_code, parent_code], references: [country_code, code], onUpdate: NoAction, map: "state_region_parent_fk")
+  other_state_region        state_region[]              @relation("state_regionTostate_region")
+
+  @@unique([country_code, code], map: "state_region_country_code_uq")
+  @@index([country_code, code], map: "state_region_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@index([country_code, parent_code], map: "state_region_parent_idx", where: raw("(parent_code IS NOT NULL)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model subscription_plan {
+  id                        String                     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                      String                     @unique(map: "subscription_plan_code_uq")
+  name                      String
+  max_users                 Int?
+  sort_order                Int                        @default(0) @db.SmallInt
+  metadata                  Json                       @default("{}")
+  status                    String                     @default("active")
+  is_active                 Boolean?                   @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at         DateTime?                  @db.Timestamptz(6)
+  status_changed_by         String?                    @db.Uuid
+  created_at                DateTime                   @default(now()) @db.Timestamptz(6)
+  created_by                String                     @db.Uuid
+  updated_at                DateTime?                  @db.Timestamptz(6)
+  updated_by                String?                    @db.Uuid
+  subscription_plan_version subscription_plan_version?
+
+  @@index([code], map: "subscription_plan_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model subscription_plan_version {
+  id                     String                   @id(map: "spv_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  plan_id                String                   @unique(map: "spv_active_uq", where: raw("((valid_to IS NULL) AND (status = 'active'::text))")) @db.Uuid
+  version_number         Int                      @default(autoincrement())
+  valid_from             DateTime                 @default(dbgenerated("CURRENT_DATE")) @db.Date
+  valid_to               DateTime?                @db.Date
+  max_users              Int?
+  metadata               Json                     @default("{}")
+  status                 String                   @default("active")
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by             String                   @db.Uuid
+  plan_feature_access    plan_feature_access[]
+  plan_module_access     plan_module_access[]
+  plan_permission_access plan_permission_access[]
+  subscription_plan      subscription_plan        @relation(fields: [plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "spv_plan_fk")
+
+  @@unique([plan_id, version_number], map: "spv_version_uq")
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model timezone {
+  id                 String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code               String     @unique(map: "timezone_code_uq")
+  name               String?
+  utc_offset_minutes Int?
+  is_alias           Boolean    @default(false)
+  canonical_code     String?
+  metadata           Json       @default("{}")
+  status             String     @default("active")
+  is_active          Boolean?   @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at  DateTime?  @db.Timestamptz(6)
+  status_changed_by  String?    @db.Uuid
+  created_at         DateTime   @default(now()) @db.Timestamptz(6)
+  created_by         String     @db.Uuid
+  updated_at         DateTime?  @db.Timestamptz(6)
+  updated_by         String?    @db.Uuid
+  timezone           timezone?  @relation("timezoneTotimezone", fields: [canonical_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "timezone_canonical_fk")
+  other_timezone     timezone[] @relation("timezoneTotimezone")
+
+  @@index([code], map: "timezone_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@index([canonical_code], map: "timezone_canonical_idx", where: raw("(canonical_code IS NOT NULL)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model uom {
+  id                                                 String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                                               String                 @unique(map: "uom_code_uq")
+  name                                               String
+  symbol                                             String?
+  quantity_type                                      String?
+  metadata                                           Json                   @default("{}")
+  status                                             String                 @default("active")
+  is_active                                          Boolean?               @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                  DateTime?              @db.Timestamptz(6)
+  status_changed_by                                  String?                @db.Uuid
+  created_at                                         DateTime               @default(now()) @db.Timestamptz(6)
+  created_by                                         String                 @db.Uuid
+  updated_at                                         DateTime?              @db.Timestamptz(6)
+  updated_by                                         String?                @db.Uuid
+  catalog_item                                       catalog_item[]
+  catalog_item_uom                                   catalog_item_uom[]
+  logistics_rate_logistics_rate_volume_uom_codeTouom logistics_rate[]       @relation("logistics_rate_volume_uom_codeTouom")
+  logistics_rate_logistics_rate_weight_uom_codeTouom logistics_rate[]       @relation("logistics_rate_weight_uom_codeTouom")
+  logistics_rate_break                               logistics_rate_break[]
+
+  @@index([code], map: "uom_active_pidx", where: raw("((status)::text = 'active'::text)"))
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model workspace {
+  id                       String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                     String    @unique(map: "workspace_code_uq")
+  name                     String
+  description              String?
+  sort_order               Int       @default(0) @db.SmallInt
+  is_shared_infrastructure Boolean   @default(false)
+  metadata                 Json      @default("{}")
+  status                   String    @default("active")
+  is_active                Boolean?  @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at        DateTime? @db.Timestamptz(6)
+  status_changed_by        String?   @db.Uuid
+  created_at               DateTime  @default(now()) @db.Timestamptz(6)
+  created_by               String    @db.Uuid
+  updated_at               DateTime? @db.Timestamptz(6)
+  updated_by               String?   @db.Uuid
+  module                   module[]
+  role                     role[]
+
+  @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model account_grant {
   id              String          @id(map: "mesh_account_grant_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   account_id      String          @db.Uuid
@@ -129,142 +708,8 @@ model account_grant {
   principal       principal       @relation(fields: [principal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mesh_account_grant_principal_fk")
 
   @@unique([account_id, principal_id, role_code], map: "mesh_account_grant_active_uq", where: raw("(status = 'active'::text)"))
-  @@index([principal_id, status], map: "mesh_account_grant_principal_idx")
   @@index([account_id, status], map: "mesh_account_grant_account_idx")
-  @@schema("mesh")
-}
-
-model principal {
-  id                                                                       String                              @id(map: "mesh_principal_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  principal_code                                                           String                              @unique(map: "mesh_principal_code_uq")
-  display_name                                                             String
-  principal_type                                                           String
-  metadata                                                                 Json                                @default("{}")
-  status                                                                   String                              @default("active")
-  is_active                                                                Boolean?                            @default(dbgenerated("(status = 'active'::text)"))
-  created_at                                                               DateTime                            @default(now()) @db.Timestamptz(6)
-  created_by                                                               String                              @default("system")
-  updated_at                                                               DateTime?                           @db.Timestamptz(6)
-  updated_by                                                               String?
-  account_grant                                                            account_grant[]
-  attachment                                                               attachment[]
-  attachment_acl_attachment_acl_granted_by_principal_idToprincipal         attachment_acl[]                    @relation("attachment_acl_granted_by_principal_idToprincipal")
-  attachment_acl_attachment_acl_grantee_principal_idToprincipal            attachment_acl[]                    @relation("attachment_acl_grantee_principal_idToprincipal")
-  attachment_comment_attachment_comment_author_principal_idToprincipal     attachment_comment[]                @relation("attachment_comment_author_principal_idToprincipal")
-  attachment_comment_attachment_comment_deleted_by_principal_idToprincipal attachment_comment[]                @relation("attachment_comment_deleted_by_principal_idToprincipal")
-  attachment_comment_attachment_comment_edited_by_principal_idToprincipal  attachment_comment[]                @relation("attachment_comment_edited_by_principal_idToprincipal")
-  comment_comment_archived_by_principal_idToprincipal                      comment[]                           @relation("comment_archived_by_principal_idToprincipal")
-  comment_comment_commenter_principal_idToprincipal                        comment[]                           @relation("comment_commenter_principal_idToprincipal")
-  comment_comment_deleted_by_principal_idToprincipal                       comment[]                           @relation("comment_deleted_by_principal_idToprincipal")
-  comment_draft                                                            comment_draft[]
-  comment_feed_cursor                                                      comment_feed_cursor[]
-  comment_mention                                                          comment_mention[]
-  comment_reaction                                                         comment_reaction[]
-  content_item_access_grant                                                content_item_access_grant[]
-  conversation                                                             conversation[]
-  conversation_participant                                                 conversation_participant[]
-  multipart_upload                                                         multipart_upload[]
-  principal_identity_binding                                               principal_identity_binding[]
-  principal_notification_preference                                        principal_notification_preference[]
-  saved_view                                                               saved_view[]
-
-  @@schema("mesh")
-}
-
-model principal_identity_binding {
-  id            String    @id(map: "mesh_principal_identity_binding_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  principal_id  String    @db.Uuid
-  realm_key     String    @default("athyper")
-  provider_code String    @default("keycloak")
-  subject_id    String
-  username      String?
-  issuer        String?
-  client_id     String?
-  synced_at     DateTime? @db.Timestamptz(6)
-  sync_status   String    @default("pending")
-  idp_snapshot  Json?
-  metadata      Json      @default("{}")
-  created_at    DateTime  @default(now()) @db.Timestamptz(6)
-  created_by    String    @default("system")
-  updated_at    DateTime? @db.Timestamptz(6)
-  updated_by    String?
-  principal     principal @relation(fields: [principal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mesh_pib_principal_fk")
-
-  @@unique([principal_id, realm_key, provider_code], map: "mesh_pib_principal_provider_uq")
-  @@unique([realm_key, provider_code, subject_id], map: "mesh_pib_subject_provider_uq")
-  @@index([realm_key, provider_code, subject_id], map: "mesh_principal_identity_subject_idx")
-  @@schema("mesh")
-}
-
-model document_envelope {
-  id                                                                       String                     @id(map: "mesh_document_envelope_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  connection_id                                                            String                     @db.Uuid
-  envelope_code                                                            String                     @unique(map: "mesh_document_envelope_code_uq")
-  document_type                                                            String
-  document_direction                                                       String
-  sender_account_code                                                      String
-  receiver_account_code                                                    String
-  business_key                                                             String?
-  correlation_id                                                           String?
-  idempotency_key                                                          String?
-  payload_uri                                                              String?
-  payload_hash                                                             String?
-  payload_content_type                                                     String?
-  payload_size_bytes                                                       BigInt?
-  status                                                                   String                     @default("received")
-  received_at                                                              DateTime                   @default(now()) @db.Timestamptz(6)
-  processed_at                                                             DateTime?                  @db.Timestamptz(6)
-  metadata                                                                 Json                       @default("{}")
-  created_at                                                               DateTime                   @default(now()) @db.Timestamptz(6)
-  created_by                                                               String                     @default("system")
-  updated_at                                                               DateTime?                  @db.Timestamptz(6)
-  updated_by                                                               String?
-  document_type_id                                                         String?                    @db.Uuid
-  payload_scan_status                                                      String                     @default("pending")
-  payload_scanned_at                                                       DateTime?                  @db.Timestamptz(6)
-  document_acknowledgement                                                 document_acknowledgement[]
-  network_document_type                                                    network_document_type?     @relation(fields: [document_type_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "mesh_document_envelope_document_type_fk")
-  network_account_document_envelope_receiver_account_codeTonetwork_account network_account            @relation("document_envelope_receiver_account_codeTonetwork_account", fields: [receiver_account_code], references: [account_code], onUpdate: NoAction, map: "mesh_document_envelope_receiver_fk")
-  network_relationship                                                     network_relationship       @relation(fields: [connection_id], references: [id], onUpdate: NoAction, map: "mesh_document_envelope_relationship_fk")
-  network_account_document_envelope_sender_account_codeTonetwork_account   network_account            @relation("document_envelope_sender_account_codeTonetwork_account", fields: [sender_account_code], references: [account_code], onUpdate: NoAction, map: "mesh_document_envelope_sender_fk")
-  document_event                                                           document_event[]
-  document_payload                                                         document_payload?
-
-  @@unique([sender_account_code, idempotency_key], map: "mesh_document_envelope_idempotency_uq")
-  @@index([connection_id, received_at(sort: Desc)], map: "mesh_document_envelope_connection_idx")
-  @@index([receiver_account_code, status, received_at(sort: Desc)], map: "mesh_document_envelope_receiver_status_idx")
-  @@index([document_type, business_key], map: "mesh_document_envelope_business_key_idx")
-  @@schema("mesh")
-}
-
-model document_event {
-  id                 String            @id(map: "mesh_document_event_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  envelope_id        String            @db.Uuid
-  event_type         String
-  actor_account_code String?
-  actor_subject_id   String?
-  event_payload      Json              @default("{}")
-  occurred_at        DateTime          @default(now()) @db.Timestamptz(6)
-  created_at         DateTime          @default(now()) @db.Timestamptz(6)
-  document_envelope  document_envelope @relation(fields: [envelope_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mesh_document_event_envelope_fk")
-
-  @@index([envelope_id, occurred_at], map: "mesh_document_event_envelope_idx")
-  @@schema("mesh")
-}
-
-model idempotency_key {
-  id              String          @id(map: "mesh_idempotency_key_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  account_code    String
-  idempotency_key String
-  request_hash    String
-  response_status Int?
-  response_body   Json?
-  expires_at      DateTime        @db.Timestamptz(6)
-  created_at      DateTime        @default(now()) @db.Timestamptz(6)
-  network_account network_account @relation(fields: [account_code], references: [account_code], onDelete: Cascade, onUpdate: NoAction, map: "mesh_idempotency_key_account_fk")
-
-  @@unique([account_code, idempotency_key], map: "mesh_idempotency_key_uq")
-  @@index([expires_at], map: "mesh_idempotency_key_expiry_idx")
+  @@index([principal_id, status], map: "mesh_account_grant_principal_idx")
   @@schema("mesh")
 }
 
@@ -1306,6 +1751,67 @@ model document_acknowledgement {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model document_envelope {
+  id                                                                       String                     @id(map: "mesh_document_envelope_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  connection_id                                                            String                     @db.Uuid
+  envelope_code                                                            String                     @unique(map: "mesh_document_envelope_code_uq")
+  document_type                                                            String
+  document_direction                                                       String
+  sender_account_code                                                      String
+  receiver_account_code                                                    String
+  business_key                                                             String?
+  correlation_id                                                           String?
+  idempotency_key                                                          String?
+  payload_uri                                                              String?
+  payload_hash                                                             String?
+  payload_content_type                                                     String?
+  payload_size_bytes                                                       BigInt?
+  status                                                                   String                     @default("received")
+  received_at                                                              DateTime                   @default(now()) @db.Timestamptz(6)
+  processed_at                                                             DateTime?                  @db.Timestamptz(6)
+  metadata                                                                 Json                       @default("{}")
+  created_at                                                               DateTime                   @default(now()) @db.Timestamptz(6)
+  created_by                                                               String                     @default("system")
+  updated_at                                                               DateTime?                  @db.Timestamptz(6)
+  updated_by                                                               String?
+  document_type_id                                                         String?                    @db.Uuid
+  payload_scan_status                                                      String                     @default("pending")
+  payload_scanned_at                                                       DateTime?                  @db.Timestamptz(6)
+  document_acknowledgement                                                 document_acknowledgement[]
+  network_document_type                                                    network_document_type?     @relation(fields: [document_type_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "mesh_document_envelope_document_type_fk")
+  network_account_document_envelope_receiver_account_codeTonetwork_account network_account            @relation("document_envelope_receiver_account_codeTonetwork_account", fields: [receiver_account_code], references: [account_code], onUpdate: NoAction, map: "mesh_document_envelope_receiver_fk")
+  network_relationship                                                     network_relationship       @relation(fields: [connection_id], references: [id], onUpdate: NoAction, map: "mesh_document_envelope_relationship_fk")
+  network_account_document_envelope_sender_account_codeTonetwork_account   network_account            @relation("document_envelope_sender_account_codeTonetwork_account", fields: [sender_account_code], references: [account_code], onUpdate: NoAction, map: "mesh_document_envelope_sender_fk")
+  document_event                                                           document_event[]
+  document_payload                                                         document_payload?
+
+  @@unique([sender_account_code, idempotency_key], map: "mesh_document_envelope_idempotency_uq")
+  @@index([document_type, business_key], map: "mesh_document_envelope_business_key_idx")
+  @@index([connection_id, received_at(sort: Desc)], map: "mesh_document_envelope_connection_idx")
+  @@index([receiver_account_code, status, received_at(sort: Desc)], map: "mesh_document_envelope_receiver_status_idx")
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model document_event {
+  id                 String            @id(map: "mesh_document_event_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  envelope_id        String            @db.Uuid
+  event_type         String
+  actor_account_code String?
+  actor_subject_id   String?
+  event_payload      Json              @default("{}")
+  occurred_at        DateTime          @default(now()) @db.Timestamptz(6)
+  created_at         DateTime          @default(now()) @db.Timestamptz(6)
+  document_envelope  document_envelope @relation(fields: [envelope_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mesh_document_event_envelope_fk")
+
+  @@index([envelope_id, occurred_at], map: "mesh_document_event_envelope_idx")
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model document_payload {
   id                   String            @id(map: "mesh_document_payload_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
@@ -1403,6 +1909,24 @@ model holiday_calendar_day {
 
   @@unique([holiday_calendar_id, holiday_date], map: "mesh_holiday_calendar_day_calendar_date_uq")
   @@index([holiday_calendar_id, calendar_year, holiday_date], map: "mesh_holiday_calendar_day_year_idx")
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model idempotency_key {
+  id              String          @id(map: "mesh_idempotency_key_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  account_code    String
+  idempotency_key String
+  request_hash    String
+  response_status Int?
+  response_body   Json?
+  expires_at      DateTime        @db.Timestamptz(6)
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  network_account network_account @relation(fields: [account_code], references: [account_code], onDelete: Cascade, onUpdate: NoAction, map: "mesh_idempotency_key_account_fk")
+
+  @@unique([account_code, idempotency_key], map: "mesh_idempotency_key_uq")
+  @@index([expires_at], map: "mesh_idempotency_key_expiry_idx")
   @@schema("mesh")
 }
 
@@ -1551,6 +2075,109 @@ model multipart_upload {
   @@unique([account_code, upload_id], map: "mesh_multipart_upload_account_upload_uq")
   @@index([account_code, status, expires_at], map: "mesh_multipart_upload_account_idx")
   @@index([attachment_id], map: "mesh_multipart_upload_attachment_idx", where: raw("(attachment_id IS NOT NULL)"))
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model network_account {
+  id                                                                                         String                              @id(map: "mesh_network_account_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  account_code                                                                               String                              @unique(map: "mesh_network_account_code_uq")
+  provider_code                                                                              String                              @default("athyper_mesh")
+  display_name                                                                               String
+  participant_type                                                                           String                              @default("partner_org")
+  source_plane                                                                               String?
+  source_ref                                                                                 String?
+  legal_name                                                                                 String?
+  tax_id                                                                                     String?
+  tax_country                                                                                String?                             @db.Char(2)
+  vat_number                                                                                 String?
+  legal_form                                                                                 String?
+  registration_no                                                                            String?
+  registration_country_code                                                                  String?                             @db.Char(2)
+  tax_residence_country_code                                                                 String?                             @db.Char(2)
+  profile_authority                                                                          String                              @default("neon")
+  verification_status                                                                        String                              @default("unverified")
+  verified_at                                                                                DateTime?                           @db.Timestamptz(6)
+  verified_by                                                                                String?
+  published_at                                                                               DateTime?                           @db.Timestamptz(6)
+  website_url                                                                                String?
+  description                                                                                String?
+  aliases                                                                                    String[]                            @default([])
+  business_types                                                                             String[]                            @default([])
+  founded_year                                                                               Int?                                @db.SmallInt
+  employee_count_band                                                                        String?
+  annual_revenue_band                                                                        String?
+  incorporation_date                                                                         DateTime?                           @db.Date
+  effective_from                                                                             DateTime?                           @db.Date
+  effective_until                                                                            DateTime?                           @db.Date
+  profile_hash                                                                               String?
+  last_verified_at                                                                           DateTime?                           @db.Timestamptz(6)
+  profile_snapshot                                                                           Json                                @default("{}")
+  network_role                                                                               String                              @default("buyer")
+  capabilities                                                                               Json                                @default("{}")
+  status                                                                                     String                              @default("active")
+  is_active                                                                                  Boolean?                            @default(dbgenerated("(status = 'active'::text)"))
+  metadata                                                                                   Json                                @default("{}")
+  created_at                                                                                 DateTime                            @default(now()) @db.Timestamptz(6)
+  created_by                                                                                 String                              @default("system")
+  updated_at                                                                                 DateTime?                           @db.Timestamptz(6)
+  updated_by                                                                                 String?
+  account_grant                                                                              account_grant[]
+  address                                                                                    address[]
+  attachment                                                                                 attachment[]
+  attachment_acl                                                                             attachment_acl[]
+  attachment_folder                                                                          attachment_folder[]
+  bank_account                                                                               bank_account[]
+  bank_account_disclosure_bank_account_disclosure_account_codeTonetwork_account              bank_account_disclosure[]           @relation("bank_account_disclosure_account_codeTonetwork_account")
+  bank_account_disclosure_bank_account_disclosure_disclosed_to_account_codeTonetwork_account bank_account_disclosure[]           @relation("bank_account_disclosure_disclosed_to_account_codeTonetwork_account")
+  bank_party                                                                                 bank_party[]
+  carrier                                                                                    carrier[]
+  catalog                                                                                    catalog[]
+  certification                                                                              certification[]
+  certification_type                                                                         certification_type[]
+  comment_comment_account_codeTonetwork_account                                              comment[]                           @relation("comment_account_codeTonetwork_account")
+  comment_comment_commenter_account_codeTonetwork_account                                    comment[]                           @relation("comment_commenter_account_codeTonetwork_account")
+  comment_draft                                                                              comment_draft[]
+  comment_feed_cursor                                                                        comment_feed_cursor[]
+  comment_mention                                                                            comment_mention[]
+  connection_acceptance                                                                      connection_acceptance[]
+  connection_request_connection_request_buyer_account_codeTonetwork_account                  connection_request[]                @relation("connection_request_buyer_account_codeTonetwork_account")
+  connection_request_connection_request_supplier_account_codeTonetwork_account               connection_request[]                @relation("connection_request_supplier_account_codeTonetwork_account")
+  contact_link                                                                               contact_link[]
+  content_item                                                                               content_item[]
+  content_item_access_grant                                                                  content_item_access_grant[]
+  conversation                                                                               conversation[]
+  conversation_participant                                                                   conversation_participant[]
+  document_envelope_document_envelope_receiver_account_codeTonetwork_account                 document_envelope[]                 @relation("document_envelope_receiver_account_codeTonetwork_account")
+  document_envelope_document_envelope_sender_account_codeTonetwork_account                   document_envelope[]                 @relation("document_envelope_sender_account_codeTonetwork_account")
+  holiday_calendar                                                                           holiday_calendar[]
+  idempotency_key                                                                            idempotency_key[]
+  logistics_rate                                                                             logistics_rate[]
+  logistics_zone                                                                             logistics_zone[]
+  multipart_upload                                                                           multipart_upload[]
+  network_provider                                                                           network_provider                    @relation(fields: [provider_code], references: [code], onUpdate: NoAction, map: "mesh_network_account_provider_fk")
+  network_account_identifier                                                                 network_account_identifier[]
+  network_account_reference                                                                  network_account_reference[]
+  network_invitation_network_invitation_invitee_account_codeTonetwork_account                network_invitation[]                @relation("network_invitation_invitee_account_codeTonetwork_account")
+  network_invitation_network_invitation_inviter_account_codeTonetwork_account                network_invitation[]                @relation("network_invitation_inviter_account_codeTonetwork_account")
+  network_relationship_network_relationship_buyer_account_codeTonetwork_account              network_relationship[]              @relation("network_relationship_buyer_account_codeTonetwork_account")
+  network_relationship_network_relationship_supplier_account_codeTonetwork_account           network_relationship[]              @relation("network_relationship_supplier_account_codeTonetwork_account")
+  principal_notification_preference                                                          principal_notification_preference[]
+  saved_view                                                                                 saved_view[]
+  supplier_commodity_capability                                                              supplier_commodity_capability[]
+  supplier_profile_verification                                                              supplier_profile_verification[]
+  supplier_service_coverage                                                                  supplier_service_coverage[]
+
+  @@unique([id, account_code], map: "mesh_network_account_id_code_uq")
+  @@index([legal_name], map: "mesh_network_account_legal_name_idx", where: raw("(legal_name IS NOT NULL)"))
+  @@index([network_role, status], map: "mesh_network_account_network_role_idx")
+  @@index([participant_type, status], map: "mesh_network_account_participant_type_idx")
+  @@index([account_code, profile_hash], map: "mesh_network_account_profile_hash_idx", where: raw("(profile_hash IS NOT NULL)"))
+  @@index([provider_code, account_code], map: "mesh_network_account_provider_idx")
+  @@index([source_plane, source_ref], map: "mesh_network_account_source_idx", where: raw("((source_plane IS NOT NULL) AND (source_ref IS NOT NULL))"))
+  @@index([verification_status, verified_at], map: "mesh_network_account_verification_idx", where: raw("(verification_status = ANY (ARRAY['pending'::text, 'verified'::text]))"))
   @@schema("mesh")
 }
 
@@ -1757,6 +2384,72 @@ model outbox_event {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model principal {
+  id                                                                       String                              @id(map: "mesh_principal_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  principal_code                                                           String                              @unique(map: "mesh_principal_code_uq")
+  display_name                                                             String
+  principal_type                                                           String
+  metadata                                                                 Json                                @default("{}")
+  status                                                                   String                              @default("active")
+  is_active                                                                Boolean?                            @default(dbgenerated("(status = 'active'::text)"))
+  created_at                                                               DateTime                            @default(now()) @db.Timestamptz(6)
+  created_by                                                               String                              @default("system")
+  updated_at                                                               DateTime?                           @db.Timestamptz(6)
+  updated_by                                                               String?
+  account_grant                                                            account_grant[]
+  attachment                                                               attachment[]
+  attachment_acl_attachment_acl_granted_by_principal_idToprincipal         attachment_acl[]                    @relation("attachment_acl_granted_by_principal_idToprincipal")
+  attachment_acl_attachment_acl_grantee_principal_idToprincipal            attachment_acl[]                    @relation("attachment_acl_grantee_principal_idToprincipal")
+  attachment_comment_attachment_comment_author_principal_idToprincipal     attachment_comment[]                @relation("attachment_comment_author_principal_idToprincipal")
+  attachment_comment_attachment_comment_deleted_by_principal_idToprincipal attachment_comment[]                @relation("attachment_comment_deleted_by_principal_idToprincipal")
+  attachment_comment_attachment_comment_edited_by_principal_idToprincipal  attachment_comment[]                @relation("attachment_comment_edited_by_principal_idToprincipal")
+  comment_comment_archived_by_principal_idToprincipal                      comment[]                           @relation("comment_archived_by_principal_idToprincipal")
+  comment_comment_commenter_principal_idToprincipal                        comment[]                           @relation("comment_commenter_principal_idToprincipal")
+  comment_comment_deleted_by_principal_idToprincipal                       comment[]                           @relation("comment_deleted_by_principal_idToprincipal")
+  comment_draft                                                            comment_draft[]
+  comment_feed_cursor                                                      comment_feed_cursor[]
+  comment_mention                                                          comment_mention[]
+  comment_reaction                                                         comment_reaction[]
+  content_item_access_grant                                                content_item_access_grant[]
+  conversation                                                             conversation[]
+  conversation_participant                                                 conversation_participant[]
+  multipart_upload                                                         multipart_upload[]
+  principal_identity_binding                                               principal_identity_binding[]
+  principal_notification_preference                                        principal_notification_preference[]
+  saved_view                                                               saved_view[]
+
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model principal_identity_binding {
+  id            String    @id(map: "mesh_principal_identity_binding_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  principal_id  String    @db.Uuid
+  realm_key     String    @default("athyper")
+  provider_code String    @default("keycloak")
+  subject_id    String
+  username      String?
+  issuer        String?
+  client_id     String?
+  synced_at     DateTime? @db.Timestamptz(6)
+  sync_status   String    @default("pending")
+  idp_snapshot  Json?
+  metadata      Json      @default("{}")
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  created_by    String    @default("system")
+  updated_at    DateTime? @db.Timestamptz(6)
+  updated_by    String?
+  principal     principal @relation(fields: [principal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "mesh_pib_principal_fk")
+
+  @@unique([principal_id, realm_key, provider_code], map: "mesh_pib_principal_provider_uq")
+  @@unique([realm_key, provider_code, subject_id], map: "mesh_pib_subject_provider_uq")
+  @@index([realm_key, provider_code, subject_id], map: "mesh_principal_identity_subject_idx")
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model principal_notification_preference {
@@ -1916,679 +2609,4 @@ model sync_checkpoint {
   @@unique([consumer_id, stream_name], map: "mesh_sync_checkpoint_consumer_stream_uq")
   @@index([stream_name, updated_at(sort: Desc)], map: "mesh_sync_checkpoint_stream_idx")
   @@schema("mesh")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model commodity_code {
-  id                                                                                                     String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                                                                                                   String
-  name                                                                                                   String
-  domain_code                                                                                            String
-  description                                                                                            String?
-  parent_code                                                                                            String?
-  level_no                                                                                               Int?
-  keywords                                                                                               String[]
-  is_leaf                                                                                                Boolean                         @default(false)
-  metadata                                                                                               Json                            @default("{}")
-  status                                                                                                 String                          @default("active")
-  is_active                                                                                              Boolean?                        @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                                                                      DateTime?                       @db.Timestamptz(6)
-  status_changed_by                                                                                      String?                         @db.Uuid
-  created_at                                                                                             DateTime                        @default(now()) @db.Timestamptz(6)
-  created_by                                                                                             String                          @db.Uuid
-  updated_at                                                                                             DateTime?                       @db.Timestamptz(6)
-  updated_by                                                                                             String?                         @db.Uuid
-  catalog_item_classification_catalog_item_classification_domain_code_commodity_codeTocommodity_code     catalog_item_classification[]   @relation("catalog_item_classification_domain_code_commodity_codeTocommodity_code")
-  supplier_commodity_capability_supplier_commodity_capability_domain_code_commodity_codeTocommodity_code supplier_commodity_capability[] @relation("supplier_commodity_capability_domain_code_commodity_codeTocommodity_code")
-  commodity_crosswalk_commodity_crosswalk_source_domain_code_source_codeTocommodity_code                 commodity_crosswalk[]           @relation("commodity_crosswalk_source_domain_code_source_codeTocommodity_code")
-  commodity_crosswalk_commodity_crosswalk_target_domain_code_target_codeTocommodity_code                 commodity_crosswalk[]           @relation("commodity_crosswalk_target_domain_code_target_codeTocommodity_code")
-
-  @@unique([domain_code, code], map: "commodity_code_domain_code_uq")
-  @@index([domain_code, code], map: "commodity_code_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@index([keywords], map: "commodity_code_keywords_gin", type: Gin)
-  @@index([domain_code, code], map: "commodity_code_leaf_pidx", where: raw("((is_leaf = true) AND (is_active = true))"))
-  @@index([domain_code, parent_code], map: "commodity_code_parent_idx", where: raw("(parent_code IS NOT NULL)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model commodity_crosswalk {
-  id                                                                                String         @id(map: "ccw_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  source_domain_code                                                                String
-  source_code                                                                       String
-  target_domain_code                                                                String
-  target_code                                                                       String
-  mapping_type                                                                      String
-  confidence                                                                        Decimal?       @db.Decimal(5, 2)
-  provenance                                                                        String         @default("MANUAL")
-  is_verified                                                                       Boolean        @default(false)
-  verified_by                                                                       String?        @db.Uuid
-  verified_at                                                                       DateTime?      @db.Timestamptz(6)
-  notes                                                                             String?
-  metadata                                                                          Json           @default("{}")
-  status                                                                            String         @default("active")
-  is_active                                                                         Boolean?       @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                                                 DateTime?      @db.Timestamptz(6)
-  status_changed_by                                                                 String?        @db.Uuid
-  created_at                                                                        DateTime       @default(now()) @db.Timestamptz(6)
-  created_by                                                                        String         @db.Uuid
-  updated_at                                                                        DateTime?      @db.Timestamptz(6)
-  updated_by                                                                        String?        @db.Uuid
-  commodity_code_commodity_crosswalk_source_domain_code_source_codeTocommodity_code commodity_code @relation("commodity_crosswalk_source_domain_code_source_codeTocommodity_code", fields: [source_domain_code, source_code], references: [domain_code, code], onUpdate: NoAction, map: "ccw_source_fk")
-  commodity_code_commodity_crosswalk_target_domain_code_target_codeTocommodity_code commodity_code @relation("commodity_crosswalk_target_domain_code_target_codeTocommodity_code", fields: [target_domain_code, target_code], references: [domain_code, code], onUpdate: NoAction, map: "ccw_target_fk")
-
-  @@unique([source_domain_code, source_code, target_domain_code, target_code], map: "ccw_mapping_uq")
-  @@index([source_domain_code, source_code], map: "ccw_active_pidx", where: raw("(is_active = true)"))
-  @@index([source_domain_code, source_code], map: "ccw_source_idx")
-  @@index([target_domain_code, target_code], map: "ccw_target_idx")
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model country {
-  id                        String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                      String                      @unique(map: "country_code_uq") @db.Char(2)
-  name                      String
-  code3                     String?                     @unique(map: "country_code3_uq", where: raw("(code3 IS NOT NULL)")) @db.Char(3)
-  numeric3                  String?                     @db.Char(3)
-  official_name             String?
-  region                    String?
-  subregion                 String?
-  calling_code              String?
-  phone_trunk_prefix        String?
-  phone_national_pattern    String?
-  phone_example             String?
-  has_postal_codes          Boolean                     @default(true)
-  postal_code_pattern       String?
-  postal_code_label         String                      @default("Postal code")
-  postal_code_example       String?
-  region_label              String                      @default("Region")
-  postal_position           String                      @default("after_city")
-  address_format            String?
-  metadata                  Json                        @default("{}")
-  status                    String                      @default("active")
-  is_active                 Boolean?                    @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at         DateTime?                   @db.Timestamptz(6)
-  status_changed_by         String?                     @db.Uuid
-  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
-  created_by                String                      @db.Uuid
-  updated_at                DateTime?                   @db.Timestamptz(6)
-  updated_by                String?                     @db.Uuid
-  address                   address[]
-  bank_account              bank_account[]
-  bank_party                bank_party[]
-  catalog_availability      catalog_availability[]
-  holiday_calendar          holiday_calendar[]
-  logistics_zone_member     logistics_zone_member[]
-  supplier_service_coverage supplier_service_coverage[]
-  locale                    locale[]
-  state_region              state_region[]
-
-  @@index([code], map: "country_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model currency {
-  id                String           @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code              String           @unique(map: "currency_code_uq") @db.Char(3)
-  name              String
-  symbol            String?
-  minor_units       Int?
-  numeric3          String?          @db.Char(3)
-  metadata          Json             @default("{}")
-  status            String           @default("active")
-  is_active         Boolean?         @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at DateTime?        @db.Timestamptz(6)
-  status_changed_by String?          @db.Uuid
-  created_at        DateTime         @default(now()) @db.Timestamptz(6)
-  created_by        String           @db.Uuid
-  updated_at        DateTime?        @db.Timestamptz(6)
-  updated_by        String?          @db.Uuid
-  bank_account      bank_account[]
-  catalog_price     catalog_price[]
-  logistics_rate    logistics_rate[]
-
-  @@index([code], map: "currency_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model enterprise_feature {
-  id                  String                @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                String                @unique(map: "enterprise_feature_code_uq")
-  name                String
-  description         String?
-  view_key            String
-  edit_key            String
-  sort_order          Int                   @default(0) @db.SmallInt
-  metadata            Json                  @default("{}")
-  status              String                @default("active")
-  is_active           Boolean?              @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at   DateTime?             @db.Timestamptz(6)
-  status_changed_by   String?               @db.Uuid
-  created_at          DateTime              @default(now()) @db.Timestamptz(6)
-  created_by          String                @db.Uuid
-  updated_at          DateTime?             @db.Timestamptz(6)
-  updated_by          String?               @db.Uuid
-  plan_feature_access plan_feature_access[]
-
-  @@index([code], map: "enterprise_feature_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model industry_code {
-  id                                                                                  String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                                                                                String
-  name                                                                                String
-  domain_code                                                                         String
-  description                                                                         String?
-  parent_code                                                                         String?
-  level_no                                                                            Int?
-  keywords                                                                            String[]
-  is_leaf                                                                             Boolean              @default(false)
-  metadata                                                                            Json                 @default("{}")
-  status                                                                              String               @default("active")
-  is_active                                                                           Boolean?             @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                                                   DateTime?            @db.Timestamptz(6)
-  status_changed_by                                                                   String?              @db.Uuid
-  created_at                                                                          DateTime             @default(now()) @db.Timestamptz(6)
-  created_by                                                                          String               @db.Uuid
-  updated_at                                                                          DateTime?            @db.Timestamptz(6)
-  updated_by                                                                          String?              @db.Uuid
-  industry_crosswalk_industry_crosswalk_source_domain_code_source_codeToindustry_code industry_crosswalk[] @relation("industry_crosswalk_source_domain_code_source_codeToindustry_code")
-  industry_crosswalk_industry_crosswalk_target_domain_code_target_codeToindustry_code industry_crosswalk[] @relation("industry_crosswalk_target_domain_code_target_codeToindustry_code")
-
-  @@unique([domain_code, code], map: "industry_code_domain_code_uq")
-  @@index([domain_code, code], map: "industry_code_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@index([keywords], map: "industry_code_keywords_gin", type: Gin)
-  @@index([domain_code, code], map: "industry_code_leaf_pidx", where: raw("((is_leaf = true) AND (is_active = true))"))
-  @@index([domain_code, parent_code], map: "industry_code_parent_idx", where: raw("(parent_code IS NOT NULL)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model industry_crosswalk {
-  id                                                                             String        @id(map: "icw_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  source_domain_code                                                             String
-  source_code                                                                    String
-  target_domain_code                                                             String
-  target_code                                                                    String
-  mapping_type                                                                   String
-  confidence                                                                     Decimal?      @db.Decimal(5, 2)
-  provenance                                                                     String        @default("MANUAL")
-  is_verified                                                                    Boolean       @default(false)
-  verified_by                                                                    String?       @db.Uuid
-  verified_at                                                                    DateTime?     @db.Timestamptz(6)
-  notes                                                                          String?
-  metadata                                                                       Json          @default("{}")
-  status                                                                         String        @default("active")
-  is_active                                                                      Boolean?      @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                                              DateTime?     @db.Timestamptz(6)
-  status_changed_by                                                              String?       @db.Uuid
-  created_at                                                                     DateTime      @default(now()) @db.Timestamptz(6)
-  created_by                                                                     String        @db.Uuid
-  updated_at                                                                     DateTime?     @db.Timestamptz(6)
-  updated_by                                                                     String?       @db.Uuid
-  industry_code_industry_crosswalk_source_domain_code_source_codeToindustry_code industry_code @relation("industry_crosswalk_source_domain_code_source_codeToindustry_code", fields: [source_domain_code, source_code], references: [domain_code, code], onUpdate: NoAction, map: "icw_source_fk")
-  industry_code_industry_crosswalk_target_domain_code_target_codeToindustry_code industry_code @relation("industry_crosswalk_target_domain_code_target_codeToindustry_code", fields: [target_domain_code, target_code], references: [domain_code, code], onUpdate: NoAction, map: "icw_target_fk")
-
-  @@unique([source_domain_code, source_code, target_domain_code, target_code], map: "icw_mapping_uq")
-  @@index([source_domain_code, source_code], map: "icw_active_pidx", where: raw("(is_active = true)"))
-  @@index([source_domain_code, source_code], map: "icw_source_idx")
-  @@index([target_domain_code, target_code], map: "icw_target_idx")
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model language {
-  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code              String    @unique(map: "language_code_uq")
-  name              String
-  native_name       String?
-  iso639_2          String?
-  direction         String    @default("ltr")
-  metadata          Json      @default("{}")
-  status            String    @default("active")
-  is_active         Boolean?  @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at DateTime? @db.Timestamptz(6)
-  status_changed_by String?   @db.Uuid
-  created_at        DateTime  @default(now()) @db.Timestamptz(6)
-  created_by        String    @db.Uuid
-  updated_at        DateTime? @db.Timestamptz(6)
-  updated_by        String?   @db.Uuid
-  locale            locale[]
-
-  @@index([code], map: "language_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model locale {
-  id                String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code              String         @unique(map: "locale_code_uq")
-  name              String
-  language_code     String
-  country_code      String?        @db.Char(2)
-  script            String?
-  direction         String?
-  metadata          Json           @default("{}")
-  status            String         @default("active")
-  is_active         Boolean?       @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at DateTime?      @db.Timestamptz(6)
-  status_changed_by String?        @db.Uuid
-  created_at        DateTime       @default(now()) @db.Timestamptz(6)
-  created_by        String         @db.Uuid
-  updated_at        DateTime?      @db.Timestamptz(6)
-  updated_by        String?        @db.Uuid
-  content_item      content_item[]
-  country           country?       @relation(fields: [country_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "locale_country_fk")
-  language          language       @relation(fields: [language_code], references: [code], onUpdate: NoAction, map: "locale_language_fk")
-
-  @@index([code], map: "locale_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@index([language_code])
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model module {
-  id                 String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code               String               @unique(map: "module_code_uq")
-  name               String
-  description        String?
-  workspace_id       String?              @db.Uuid
-  config             Json?
-  metadata           Json                 @default("{}")
-  status             String               @default("active")
-  is_active          Boolean?             @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at  DateTime?            @db.Timestamptz(6)
-  status_changed_by  String?              @db.Uuid
-  created_at         DateTime             @default(now()) @db.Timestamptz(6)
-  created_by         String               @db.Uuid
-  updated_at         DateTime?            @db.Timestamptz(6)
-  updated_by         String?              @db.Uuid
-  workspace          workspace?           @relation(fields: [workspace_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "module_workspace_fk")
-  plan_module_access plan_module_access[]
-  role               role[]
-
-  @@index([workspace_id], map: "module_workspace_idx", where: raw("(workspace_id IS NOT NULL)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model permission {
-  id                     String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                   String                   @unique(map: "permission_code_uq")
-  name                   String
-  category_id            String                   @db.Uuid
-  scope_type             String                   @default("record")
-  risk_level             String                   @default("low")
-  is_plan_restricted     Boolean                  @default(false)
-  sort_order             Int                      @default(0) @db.SmallInt
-  metadata               Json                     @default("{}")
-  status                 String                   @default("active")
-  is_active              Boolean?                 @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at      DateTime?                @db.Timestamptz(6)
-  status_changed_by      String?                  @db.Uuid
-  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
-  created_by             String                   @db.Uuid
-  updated_at             DateTime?                @db.Timestamptz(6)
-  updated_by             String?                  @db.Uuid
-  permission_category    permission_category      @relation(fields: [category_id], references: [id], onUpdate: NoAction, map: "permission_category_fk")
-  persona_permission     persona_permission[]
-  plan_permission_access plan_permission_access[]
-
-  @@index([code], map: "permission_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@index([category_id], map: "permission_category_idx")
-  @@index([id], map: "permission_plan_restricted_pidx", where: raw("(is_plan_restricted = true)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model permission_category {
-  id                String       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code              String       @unique(map: "permission_category_code_uq")
-  name              String
-  sort_order        Int          @default(0) @db.SmallInt
-  metadata          Json         @default("{}")
-  status            String       @default("active")
-  is_active         Boolean?     @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at DateTime?    @db.Timestamptz(6)
-  status_changed_by String?      @db.Uuid
-  created_at        DateTime     @default(now()) @db.Timestamptz(6)
-  created_by        String       @db.Uuid
-  updated_at        DateTime?    @db.Timestamptz(6)
-  updated_by        String?      @db.Uuid
-  permission        permission[]
-
-  @@index([code], map: "permission_category_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model persona {
-  id                 String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code               String               @unique(map: "persona_code_uq")
-  name               String
-  description        String?
-  scope_mode         String               @default("tenant")
-  priority           Int                  @default(0)
-  is_system          Boolean              @default(false)
-  metadata           Json                 @default("{}")
-  status             String               @default("active")
-  is_active          Boolean?             @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at  DateTime?            @db.Timestamptz(6)
-  status_changed_by  String?              @db.Uuid
-  created_at         DateTime             @default(now()) @db.Timestamptz(6)
-  created_by         String               @db.Uuid
-  updated_at         DateTime?            @db.Timestamptz(6)
-  updated_by         String?              @db.Uuid
-  persona_permission persona_permission[]
-  role               role[]
-
-  @@index([scope_mode])
-  @@index([is_system], map: "persona_system_pidx", where: raw("(is_system = true)"))
-  @@schema("shared")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model persona_permission {
-  id            String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  persona_id    String     @db.Uuid
-  permission_id String     @db.Uuid
-  is_granted    Boolean    @default(false)
-  created_at    DateTime   @default(now()) @db.Timestamptz(6)
-  created_by    String     @db.Uuid
-  permission    permission @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "persona_permission_permission_fk")
-  persona       persona    @relation(fields: [persona_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "persona_permission_persona_fk")
-
-  @@unique([persona_id, permission_id], map: "persona_permission_uq")
-  @@index([persona_id, permission_id], map: "persona_permission_granted_pidx", where: raw("(is_granted = true)"))
-  @@index([persona_id], map: "persona_permission_persona_idx")
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model plan_feature_access {
-  id                        String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  plan_version_id           String                    @db.Uuid
-  feature_id                String                    @db.Uuid
-  is_included               Boolean                   @default(false)
-  is_addon                  Boolean                   @default(false)
-  addon_price_monthly       Decimal?                  @db.Decimal(10, 2)
-  max_users                 Int?
-  created_at                DateTime                  @default(now()) @db.Timestamptz(6)
-  created_by                String                    @db.Uuid
-  enterprise_feature        enterprise_feature        @relation(fields: [feature_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pfa_feature_fk")
-  subscription_plan_version subscription_plan_version @relation(fields: [plan_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pfa_plan_version_fk")
-
-  @@unique([plan_version_id, feature_id], map: "plan_feature_access_uq")
-  @@index([plan_version_id, feature_id], map: "pfa_included_pidx", where: raw("(is_included = true)"))
-  @@index([plan_version_id], map: "pfa_plan_ver_idx")
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model plan_module_access {
-  id                        String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  plan_version_id           String                    @db.Uuid
-  module_id                 String                    @db.Uuid
-  is_included               Boolean                   @default(false)
-  is_addon                  Boolean                   @default(false)
-  addon_price_monthly       Decimal?                  @db.Decimal(10, 2)
-  user_limit                Int?
-  created_at                DateTime                  @default(now()) @db.Timestamptz(6)
-  created_by                String                    @db.Uuid
-  module                    module                    @relation(fields: [module_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pma_module_fk")
-  subscription_plan_version subscription_plan_version @relation(fields: [plan_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pma_plan_version_fk")
-
-  @@unique([plan_version_id, module_id], map: "plan_module_access_uq")
-  @@index([plan_version_id, module_id], map: "pma_included_pidx", where: raw("(is_included = true)"))
-  @@index([plan_version_id], map: "pma_plan_ver_idx")
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model plan_permission_access {
-  id                        String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  plan_version_id           String                    @db.Uuid
-  permission_id             String                    @db.Uuid
-  is_included               Boolean                   @default(false)
-  is_addon                  Boolean                   @default(false)
-  addon_price_monthly       Decimal?                  @db.Decimal(10, 2)
-  usage_limit               Int?
-  created_at                DateTime                  @default(now()) @db.Timestamptz(6)
-  created_by                String                    @db.Uuid
-  permission                permission                @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ppa_permission_fk")
-  subscription_plan_version subscription_plan_version @relation(fields: [plan_version_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ppa_plan_version_fk")
-
-  @@unique([plan_version_id, permission_id], map: "plan_permission_access_uq")
-  @@index([plan_version_id, permission_id], map: "ppa_included_pidx", where: raw("(is_included = true)"))
-  @@index([plan_version_id], map: "ppa_plan_ver_idx")
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model role {
-  id                String     @id(map: "shared_role_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code              String     @unique(map: "shared_role_code_uq")
-  name              String
-  persona_id        String     @db.Uuid
-  module_id         String?    @db.Uuid
-  workspace_id      String?    @db.Uuid
-  kc_role_code      String?
-  metadata          Json       @default("{}")
-  status            String     @default("active")
-  is_active         Boolean?   @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at DateTime?  @db.Timestamptz(6)
-  status_changed_by String?    @db.Uuid
-  created_at        DateTime   @default(now()) @db.Timestamptz(6)
-  created_by        String     @db.Uuid
-  updated_at        DateTime?  @db.Timestamptz(6)
-  updated_by        String?    @db.Uuid
-  module            module?    @relation(fields: [module_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "shared_role_module_fk")
-  persona           persona    @relation(fields: [persona_id], references: [id], onUpdate: NoAction, map: "shared_role_persona_fk")
-  workspace         workspace? @relation(fields: [workspace_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "shared_role_workspace_fk")
-
-  @@index([id], map: "shared_role_active_pidx", where: raw("(status = 'active'::text)"))
-  @@index([module_id], map: "shared_role_module_pidx", where: raw("(module_id IS NOT NULL)"))
-  @@index([persona_id], map: "shared_role_persona_idx")
-  @@index([workspace_id], map: "shared_role_workspace_pidx", where: raw("(workspace_id IS NOT NULL)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model state_region {
-  id                        String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                      String
-  name                      String
-  country_code              String                      @db.Char(2)
-  category                  String?
-  parent_code               String?
-  metadata                  Json                        @default("{}")
-  status                    String                      @default("active")
-  is_active                 Boolean?                    @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at         DateTime?                   @db.Timestamptz(6)
-  status_changed_by         String?                     @db.Uuid
-  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
-  created_by                String                      @db.Uuid
-  updated_at                DateTime?                   @db.Timestamptz(6)
-  updated_by                String?                     @db.Uuid
-  catalog_availability      catalog_availability[]
-  logistics_zone_member     logistics_zone_member[]
-  supplier_service_coverage supplier_service_coverage[]
-  country                   country                     @relation(fields: [country_code], references: [code], onUpdate: NoAction, map: "state_region_country_fk")
-  state_region              state_region?               @relation("state_regionTostate_region", fields: [country_code, parent_code], references: [country_code, code], onUpdate: NoAction, map: "state_region_parent_fk")
-  other_state_region        state_region[]              @relation("state_regionTostate_region")
-
-  @@unique([country_code, code], map: "state_region_country_code_uq")
-  @@index([country_code, code], map: "state_region_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@index([country_code, parent_code], map: "state_region_parent_idx", where: raw("(parent_code IS NOT NULL)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model subscription_plan {
-  id                        String                     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                      String                     @unique(map: "subscription_plan_code_uq")
-  name                      String
-  max_users                 Int?
-  sort_order                Int                        @default(0) @db.SmallInt
-  metadata                  Json                       @default("{}")
-  status                    String                     @default("active")
-  is_active                 Boolean?                   @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at         DateTime?                  @db.Timestamptz(6)
-  status_changed_by         String?                    @db.Uuid
-  created_at                DateTime                   @default(now()) @db.Timestamptz(6)
-  created_by                String                     @db.Uuid
-  updated_at                DateTime?                  @db.Timestamptz(6)
-  updated_by                String?                    @db.Uuid
-  subscription_plan_version subscription_plan_version?
-
-  @@index([code], map: "subscription_plan_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model subscription_plan_version {
-  id                     String                   @id(map: "spv_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  plan_id                String                   @unique(map: "spv_active_uq", where: raw("((valid_to IS NULL) AND (status = 'active'::text))")) @db.Uuid
-  version_number         Int                      @default(autoincrement())
-  valid_from             DateTime                 @default(dbgenerated("CURRENT_DATE")) @db.Date
-  valid_to               DateTime?                @db.Date
-  max_users              Int?
-  metadata               Json                     @default("{}")
-  status                 String                   @default("active")
-  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
-  created_by             String                   @db.Uuid
-  plan_feature_access    plan_feature_access[]
-  plan_module_access     plan_module_access[]
-  plan_permission_access plan_permission_access[]
-  subscription_plan      subscription_plan        @relation(fields: [plan_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "spv_plan_fk")
-
-  @@unique([plan_id, version_number], map: "spv_version_uq")
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model timezone {
-  id                 String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code               String     @unique(map: "timezone_code_uq")
-  name               String?
-  utc_offset_minutes Int?
-  is_alias           Boolean    @default(false)
-  canonical_code     String?
-  metadata           Json       @default("{}")
-  status             String     @default("active")
-  is_active          Boolean?   @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at  DateTime?  @db.Timestamptz(6)
-  status_changed_by  String?    @db.Uuid
-  created_at         DateTime   @default(now()) @db.Timestamptz(6)
-  created_by         String     @db.Uuid
-  updated_at         DateTime?  @db.Timestamptz(6)
-  updated_by         String?    @db.Uuid
-  timezone           timezone?  @relation("timezoneTotimezone", fields: [canonical_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "timezone_canonical_fk")
-  other_timezone     timezone[] @relation("timezoneTotimezone")
-
-  @@index([code], map: "timezone_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@index([canonical_code], map: "timezone_canonical_idx", where: raw("(canonical_code IS NOT NULL)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model uom {
-  id                                                 String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                                               String                 @unique(map: "uom_code_uq")
-  name                                               String
-  symbol                                             String?
-  quantity_type                                      String?
-  metadata                                           Json                   @default("{}")
-  status                                             String                 @default("active")
-  is_active                                          Boolean?               @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                  DateTime?              @db.Timestamptz(6)
-  status_changed_by                                  String?                @db.Uuid
-  created_at                                         DateTime               @default(now()) @db.Timestamptz(6)
-  created_by                                         String                 @db.Uuid
-  updated_at                                         DateTime?              @db.Timestamptz(6)
-  updated_by                                         String?                @db.Uuid
-  catalog_item                                       catalog_item[]
-  catalog_item_uom                                   catalog_item_uom[]
-  logistics_rate_logistics_rate_volume_uom_codeTouom logistics_rate[]       @relation("logistics_rate_volume_uom_codeTouom")
-  logistics_rate_logistics_rate_weight_uom_codeTouom logistics_rate[]       @relation("logistics_rate_weight_uom_codeTouom")
-  logistics_rate_break                               logistics_rate_break[]
-
-  @@index([code], map: "uom_active_pidx", where: raw("((status)::text = 'active'::text)"))
-  @@schema("shared")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model workspace {
-  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code              String    @unique(map: "workspace_code_uq")
-  name              String
-  description       String?
-  sort_order        Int       @default(0) @db.SmallInt
-  metadata          Json      @default("{}")
-  status            String    @default("active")
-  is_active         Boolean?  @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at DateTime? @db.Timestamptz(6)
-  status_changed_by String?   @db.Uuid
-  created_at        DateTime  @default(now()) @db.Timestamptz(6)
-  created_by        String    @db.Uuid
-  updated_at        DateTime? @db.Timestamptz(6)
-  updated_by        String?   @db.Uuid
-  module            module[]
-  role              role[]
-
-  @@schema("shared")
 }

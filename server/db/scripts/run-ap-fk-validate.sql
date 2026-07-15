@@ -1,6 +1,7 @@
 -- ============================================================================
 -- server/db/scripts/run-ap-fk-validate.sql
--- Concept: OPERATOR-ONLY VALIDATE pass for the 23 AP FKs added in 03b + 03f
+-- Concept: OPERATOR-ONLY VALIDATE pass for the 20 AP FKs added in 03b + 03f
+-- (Phase D.4 removed 3 identity-snapshot VALIDATEs alongside the tables.)
 -- Spec: AP Schema Hardening Plan §H1, Hardening Sprint H-Fix-2 §HF2-4
 --
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -21,9 +22,8 @@
 
 ALTER TABLE document.purchase_invoice_line          VALIDATE CONSTRAINT pil_invoice_fk;
 
-ALTER TABLE document.invoice_party_snapshot         VALIDATE CONSTRAINT ipsnap_pi_fk;
-ALTER TABLE document.invoice_address_snapshot       VALIDATE CONSTRAINT iasnap_pi_fk;
-ALTER TABLE document.invoice_bank_snapshot          VALIDATE CONSTRAINT ibsnap_pi_fk;
+-- Phase D.4 — identity snapshot constraints (ipsnap/iasnap/ibsnap) removed
+-- with their tables; tax-snapshot FKs remain.
 ALTER TABLE document.invoice_tax_snapshot           VALIDATE CONSTRAINT itsnap_pi_fk;
 ALTER TABLE document.invoice_tax_snapshot           VALIDATE CONSTRAINT itsnap_pil_fk;
 
@@ -45,10 +45,8 @@ ALTER TABLE document.payment_term_discount_result   VALIDATE CONSTRAINT ptdr_inv
 ALTER TABLE document.journal_line                   VALIDATE CONSTRAINT jl_je_fk;
 ALTER TABLE document.journal_line_reference         VALIDATE CONSTRAINT jlr_jl_fk;
 
-ALTER TABLE document.accounting_distribution_resolution_audit VALIDATE CONSTRAINT ad_resolution_audit_ad_fk;
-ALTER TABLE document.accounting_distribution_resolution_audit VALIDATE CONSTRAINT ad_resolution_audit_gl_fk;
-
 ALTER TABLE document.payment_entry                  VALIDATE CONSTRAINT pe_bsl_fk;
 ALTER TABLE document.bank_statement_line            VALIDATE CONSTRAINT bsl_recon_case_fk;
 
--- 23 VALIDATE statements (20 new + 2 widened to composite + 1 reshape via 03f).
+-- 18 VALIDATE statements remaining post-D.4 (was 23; 3 identity-snapshot
+-- entries removed with their dropped tables).

@@ -1,6 +1,6 @@
 -- ============================================================================
 -- control/01k_record_edit_lock.sql
--- Concept: Pessimistic edit-session locks for aggregate-root records
+-- Concept: Pessimistic document edit locks for aggregate-root records
 -- Depends on: control/01_tables.sql (shared.uuidv7, control schema)
 -- Scope: One active lock per (tenant_id, aggregate_entity_name, aggregate_record_id).
 --        Lock is acquired on Edit, renewed by heartbeat, released on Save/Cancel.
@@ -58,7 +58,7 @@ ALTER TABLE control.entity
 -- ── Comments ──────────────────────────────────────────────────────────────────
 
 COMMENT ON TABLE control.record_edit_lock IS
-    'SCOPE=T. Pessimistic edit-session lock — one active lock per aggregate root. '
+    'SCOPE=T. Pessimistic document edit lock — one active lock per aggregate root. '
     'Acquired on Edit (POST /api/records/:entity/:id/lock), renewed every 30 s by heartbeat, '
     'released on Save or Cancel. Stale locks are evicted by jobs-stale-lock sweep. '
     'RLS: tenant_read + tenant_write/update/delete; admin full access via athyperadmin.';

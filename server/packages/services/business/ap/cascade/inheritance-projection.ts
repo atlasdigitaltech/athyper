@@ -11,10 +11,10 @@
  *
  * The cascade primitives are duplicated here from @athyper/cascade so the
  * server workspace doesn't take a cross-workspace dependency. The two
- * implementations MUST stay in sync — single test fixture per behavior in
- * packages/shared/cascade/src/__tests__/ + duplicate fixture here.
+ * implementations MUST stay in sync â€” single test fixture per behavior in
+ * packages/shared/business-domain/cascade/src/__tests__/ + duplicate fixture here.
  *
- * Spec: docs/specs/purchase_invoice_field_design.md §4
+ * Spec: docs/specs/purchase_invoice_field_design.md Â§4
  */
 
 import type { Kysely } from "kysely";
@@ -24,7 +24,7 @@ import { sql } from "kysely";
 type AnyDb = Kysely<Record<string, any>>;
 
 // =============================================================================
-// Types — mirror of @athyper/cascade/types
+// Types â€” mirror of @athyper/cascade/types
 // =============================================================================
 
 export type InheritanceLabel =
@@ -107,7 +107,7 @@ interface DefaultsRow {
 
 /**
  * Reads `control.entity_field.defaults` for every active field of the named
- * entity (latest entity_version). Returns a name→defaults map ready to feed
+ * entity (latest entity_version). Returns a nameâ†’defaults map ready to feed
  * into `projectInheritance`.
  *
  * Tenant-aware: returns canonical (tenant_id IS NULL) rules. Tenant-custom

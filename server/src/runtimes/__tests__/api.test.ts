@@ -68,7 +68,7 @@ vi.mock("@athyper/svc-content", () => ({
 vi.mock("@athyper/svc-integration", () => ({
   registerIntegrationRoutes: vi.fn(),
 }));
-vi.mock("@athyper/svc-docservices", () => ({
+vi.mock("@athyper/svc-doc-services", () => ({
   registerDocServicesRoutes: vi.fn(),
 }));
 vi.mock("@athyper/svc-ai", () => ({
@@ -255,3 +255,4 @@ describe("startApi (Phase 2B — HTTP-only)", () => {
     expect(deps.auth.warmUp).toHaveBeenCalledTimes(1);
   });
 });
+

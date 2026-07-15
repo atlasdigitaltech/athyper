@@ -270,10 +270,10 @@ RAISE NOTICE '══════════════════════
 RAISE NOTICE '§4  Blueprint Application Records';
 RAISE NOTICE '════════════════════════════════════════════════════════════════';
 
-DELETE FROM control.tenant_blueprint_application
+DELETE FROM control.blueprint_tenant_application
 WHERE blueprint_code LIKE '%pack_%';
 GET DIAGNOSTICS v_n = ROW_COUNT;
-RAISE NOTICE '  tenant_blueprint_application    : % rows', v_n;
+RAISE NOTICE '  blueprint_tenant_application    : % rows', v_n;
 
 -- ============================================================================
 -- §5  schema_provisions TRACKING  (allow re-seeding pack files later)

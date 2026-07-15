@@ -1,7 +1,4 @@
--- LookupDomain/master/party_identifier_scheme.sql
--- Lookup domain + values for: master.party_identifier_scheme
--- Used by: master.party_identifier.scheme
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by: master.party_identifier.scheme.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

@@ -12,9 +12,28 @@ const ACCOUNT_CONSOLE_ACTIONS = new Set([
 ]);
 
 function safeReturnUrl(raw: string | null | undefined): string {
-  if (!raw) return "/dashboard";
-  if (raw.startsWith("/") && !raw.startsWith("//")) return raw;
-  return "/dashboard";
+  const trimmed = raw?.trim();
+  if (!trimmed || !trimmed.startsWith("/") || trimmed.startsWith("//")) return "/dashboard";
+
+  try {
+    const parsed = new URL(trimmed, "https://sentinel.invalid");
+    if (parsed.origin !== "https://sentinel.invalid") return "/dashboard";
+
+    const path = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    if (isBlockedReturnPath(path)) return "/dashboard";
+    return path;
+  } catch {
+    return "/dashboard";
+  }
+}
+
+function isBlockedReturnPath(path: string): boolean {
+  if (path === "/login" || path.startsWith("/login?")) return true;
+  if (path === "/logout" || path.startsWith("/logout?")) return true;
+  if (path === "/auth" || path.startsWith("/auth/") || path.startsWith("/auth?")) return true;
+  if (path === "/mfa" || path.startsWith("/mfa/") || path.startsWith("/mfa?")) return true;
+  if (path === "/api" || path.startsWith("/api/")) return true;
+  return false;
 }
 
 function safeAction(raw: string | null | undefined): string | null {

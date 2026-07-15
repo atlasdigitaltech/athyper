@@ -3,7 +3,7 @@
 -- ============================================================================
 -- File:     001_module_subscriptions.sql
 -- Schema:   master.tenant_module_subscription
--- Purpose:  Subscribe CirrusAtlantic to all available modules.
+-- Purpose:  Subscribe CirrusAtlantic to all available non-partner modules.
 -- Depends:  000_tenant.sql
 -- Idempotent: Yes — ON CONFLICT (tenant_id, module_id) DO NOTHING
 -- ============================================================================
@@ -29,8 +29,9 @@ BEGIN
         'active',
         '00000000-0000-0000-0000-000000000000'
     FROM shared.module m
+    WHERE m.code NOT IN ('PCON', 'OMI', 'IMO', 'CCON', 'SOO', 'SII', 'LOGX')
     ON CONFLICT (tenant_id, module_id) DO NOTHING;
 
-    RAISE NOTICE '[001_module_subscriptions] CirrusAtlantic subscribed to all modules';
+    RAISE NOTICE '[001_module_subscriptions] CirrusAtlantic subscribed to non-partner modules';
 
 END $catl_subs$;

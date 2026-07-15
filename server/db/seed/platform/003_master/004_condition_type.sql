@@ -1,300 +1,280 @@
--- ============================================================================
--- FILE: platform/003_master/004_condition_type.sql
--- Purpose: System-seeded pricing-component condition catalog.
---          Drives document.pricing_component.condition_type_id FK.
---
--- Scope:   tenant_id = NULL, is_system = true → available to all tenants.
---          Tenant-specific custom rows (is_system = false, tenant_id = <uuid>)
---          land via standard CRUD.
---
--- Coverage (~18 system rows across 6 term types):
---   • discount        — commercial, prompt-payment
---   • charge          — freight in/out, insurance transit, packing, customs
---   • tax             — VAT standard/zero/exempt, GST CGST/SGST/IGST, reverse charge
---   • withholding     — 194Q TDS (goods), 194C TDS (services), generic WHT
---   • retention       — warranty, performance, completion
---   • principal_marker — line principal anchor (sequence=0 marker)
---
--- Idempotent: ON CONFLICT (tenant_id, code) DO NOTHING.
--- Created by: system user (00000000-0000-0000-0000-000000000000)
--- ============================================================================
+-- System pricing-component condition catalog (tenant_id=NULL, is_system=true → all tenants).
+-- Drives document.pricing_component.condition_type_id; also the back-pointer target for
+-- master.tax_type.condition_type_id (jurisdictional WHT variants like TDS/EWT/FWT live there).
 
 INSERT INTO master.condition_type (
     tenant_id, code, name, description,
-    term_type,
+    term_type, term_sub_type,
     default_basis, default_rate, default_amount,
     default_apportion_basis,
-    default_posting_role_code, default_account_source,
-    default_tax_group_id, default_is_inclusive, default_recoverable_pct, default_tax_section_code,
     is_taxable, is_apportionable, applies_to_classes,
+    default_cost_effect, default_posting_pattern,
+    default_distribution_policy, default_capitalization_policy,
+    default_posting_role_code,
     is_system, sort_order,
     metadata, status,
     created_by
 )
 SELECT NULL,
        v.code, v.name, v.description,
-       v.term_type,
+       v.term_type, v.term_sub_type,
        v.default_basis, v.default_rate, v.default_amount,
        v.default_apportion_basis,
-       v.default_posting_role_code, v.default_account_source,
-       NULL, v.default_is_inclusive, v.default_recoverable_pct, v.default_tax_section_code,
-       v.is_taxable, v.is_apportionable, '["purchase_invoice","purchase_order"]'::jsonb,
+       v.is_taxable, v.is_apportionable, v.applies_to_classes::jsonb,
+       CASE
+         WHEN v.code = 'DISC_COMMERCIAL' THEN 'REDUCE_COST'
+         WHEN v.code = 'CHG_FREIGHT_IN' THEN 'ADD_TO_COST'
+         WHEN v.code IN ('CHG_CUSTOMS_DUTY') THEN 'ADD_TO_COST'
+         WHEN v.term_type = 'tax' AND v.code IN ('TAX_SALES','TAX_PST','TAX_SURCHARGE') THEN 'ADD_TO_COST'
+         ELSE 'NO_COST_EFFECT'
+       END,
+       CASE
+         WHEN v.code = 'DISC_COMMERCIAL' THEN 'INHERIT_LINE_ACCOUNT'
+         WHEN v.code = 'DISC_PROMPT_PAYMENT' THEN 'SEPARATE_ACCOUNT'
+         WHEN v.code IN ('CHG_FREIGHT_IN','CHG_CUSTOMS_DUTY') THEN 'INHERIT_LINE_ACCOUNT'
+         WHEN v.term_type = 'charge' THEN 'SEPARATE_ACCOUNT'
+         WHEN v.code = 'TAX_USE' THEN 'TAX_SELF_ASSESSED'
+         WHEN v.term_type = 'tax' AND v.code IN ('TAX_SALES','TAX_PST','TAX_SURCHARGE') THEN 'INHERIT_LINE_ACCOUNT'
+         WHEN v.term_type = 'tax' THEN 'TAX_RECOVERABLE'
+         WHEN v.term_type IN ('withholding','retention') THEN 'LIABILITY_SPLIT'
+         ELSE 'MEMO_ONLY'
+       END,
+       CASE
+         WHEN v.code = 'CHG_FREIGHT_IN' THEN 'APPORTION_TO_LINES'
+         WHEN v.code = 'DISC_COMMERCIAL' OR v.code = 'CHG_CUSTOMS_DUTY'
+           OR (v.term_type = 'tax' AND v.code IN ('TAX_SALES','TAX_PST','TAX_SURCHARGE'))
+           THEN 'INHERIT_LINE'
+         ELSE 'NO_COST_DISTRIBUTION'
+       END,
+       CASE WHEN v.code IN ('CHG_FREIGHT_IN','CHG_CUSTOMS_DUTY')
+              OR v.code = 'DISC_COMMERCIAL'
+              OR (v.term_type = 'tax' AND v.code IN ('TAX_SALES','TAX_PST','TAX_SURCHARGE'))
+            THEN 'FOLLOW_LINE' ELSE 'NEVER_CAPITALIZE' END,
+       CASE
+         WHEN v.code = 'DISC_PROMPT_PAYMENT' THEN 'purchase_discount'
+         WHEN v.term_type = 'withholding' THEN 'wht_payable'
+         WHEN v.term_type = 'retention' THEN 'ap_retention_payable'
+         WHEN v.term_type = 'tax' AND v.code NOT IN ('TAX_SALES','TAX_PST','TAX_SURCHARGE','TAX_USE') THEN 'input_tax_recoverable'
+         ELSE NULL
+       END,
        true, v.sort_order,
-       jsonb_build_object('_seed', jsonb_build_object('pack','004_condition_type','version','1.0.0')),
+       jsonb_build_object('_seed', jsonb_build_object('pack','004_condition_type','version','2.0.0')),
        'active',
        '00000000-0000-0000-0000-000000000000'
 FROM (VALUES
 
-    -- ──────────────────────────────────────────────────────────────────────
-    -- DISCOUNTS
-    -- ──────────────────────────────────────────────────────────────────────
+    -- DISCOUNTS (sign − in engine)
     ('DISC_COMMERCIAL',
      'Commercial Discount',
      'Vendor-extended commercial discount, applied as a percentage on the line subtotal.',
-     'discount',
+     'discount', NULL,
      'percent', 0.0, NULL,
      NULL,
-     'DISCOUNT_RECEIVED', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     false, true, 10::smallint),
+     false, true,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     10::smallint),
 
     ('DISC_PROMPT_PAYMENT',
      'Prompt Payment Discount',
-     'Early-settlement discount per payment term clause; reduces payable amount.',
-     'discount',
+     'Early-settlement discount per payment-term clause; reduces payable amount.',
+     'discount', 'settlement',
      'percent', 0.0, NULL,
      NULL,
-     'DISCOUNT_RECEIVED_PROMPT', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     false, true, 11::smallint),
+     false, true,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     11::smallint),
 
-    -- ──────────────────────────────────────────────────────────────────────
-    -- CHARGES
-    -- ──────────────────────────────────────────────────────────────────────
+    -- TAXES (sign + in engine; jurisdictional variants in master.tax_type)
+    ('TAX_GST',
+     'Goods and Services Tax',
+     'GST kind. Jurisdictional variants (IN-CGST/SGST/IGST, SG-GST, CA-GST) classify into this kind.',
+     'tax', NULL,
+     'percent', 0.0, NULL,
+     NULL,
+     false, false,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     20::smallint),
+
+    ('TAX_HST',
+     'Harmonized Sales Tax',
+     'HST kind (Canada). Combines federal + provincial portions in a single rate.',
+     'tax', NULL,
+     'percent', 0.0, NULL,
+     NULL,
+     false, false,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     21::smallint),
+
+    ('TAX_PST',
+     'Provincial Sales Tax',
+     'Provincial Sales Tax (Canada). Non-recoverable in most provinces.',
+     'tax', NULL,
+     'percent', 0.0, NULL,
+     NULL,
+     false, false,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     22::smallint),
+
+    ('TAX_SALES',
+     'Sales Tax',
+     'General Sales Tax kind (US state/local, MY-SST). Typically non-recoverable.',
+     'tax', NULL,
+     'percent', 0.0, NULL,
+     NULL,
+     false, false,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     23::smallint),
+
+    ('TAX_USE',
+     'Use Tax',
+     'Self-assessed use tax on out-of-state purchases (US).',
+     'tax', NULL,
+     'percent', 0.0, NULL,
+     NULL,
+     false, false,
+     '["purchase_invoice","purchase_order"]',
+     24::smallint),
+
+    ('TAX_VAT',
+     'Value Added Tax',
+     'VAT kind. Jurisdictional variants (AE-VAT, SA-VAT, DE-UST, GB-VAT, etc.) classify into this kind. Typically recoverable.',
+     'tax', NULL,
+     'percent', 0.0, NULL,
+     NULL,
+     false, false,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     25::smallint),
+
+    ('TAX_SURCHARGE',
+     'Cess / Surcharge',
+     'Bucket for surcharge-style levies: Zakat (SA), Compensation Cess (IN), Mining Royalty (ZA), etc.',
+     'tax', NULL,
+     'percent', 0.0, NULL,
+     NULL,
+     false, false,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     26::smallint),
+
+    -- WITHHOLDING (sign − in engine; jurisdictional WHT in tax_type)
+    ('WHT_GENERIC',
+     'Withholding Tax',
+     'Withholding Tax kind. Jurisdictional variants (IN-TDS, IN-TCS, PH-EWT/FWT, US-WHT, etc.) classify into this kind. Section codes carried on the PC instance.',
+     'withholding', NULL,
+     'percent', 0.0, NULL,
+     NULL,
+     false, false,
+     '["purchase_invoice"]',
+     30::smallint),
+
+    -- CHARGES (sign + in engine)
     ('CHG_FREIGHT_IN',
      'Freight In',
-     'Inbound transportation charge from supplier to delivery point.',
-     'charge',
+     'Inbound transportation charge from supplier to delivery point. Landed-cost component.',
+     'charge', 'landed',
      'amount', NULL, 0.0,
      'value',
-     'EXPENSE_FREIGHT', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     true, true, 20::smallint),
+     true, true,
+     '["purchase_invoice","purchase_order"]',
+     40::smallint),
 
     ('CHG_FREIGHT_OUT',
      'Freight Out',
      'Outbound transportation charge to customer.',
-     'charge',
+     'charge', NULL,
      'amount', NULL, 0.0,
      'value',
-     'EXPENSE_FREIGHT_OUT', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     true, true, 21::smallint),
+     true, true,
+     '["sales_invoice","sales_order"]',
+     41::smallint),
 
     ('CHG_INSURANCE_TRANSIT',
      'Transit Insurance',
      'Insurance premium for goods in transit.',
-     'charge',
+     'charge', NULL,
      'amount', NULL, 0.0,
      'value',
-     'EXPENSE_INSURANCE', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     false, true, 22::smallint),
+     false, true,
+     '["purchase_invoice","purchase_order"]',
+     42::smallint),
 
     ('CHG_PACKING',
      'Packing Charge',
      'Packing and handling fee.',
-     'charge',
+     'charge', NULL,
      'amount', NULL, 0.0,
      'value',
-     'EXPENSE_PACKING', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     true, true, 23::smallint),
+     true, true,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     43::smallint),
 
     ('CHG_CUSTOMS_DUTY',
      'Customs Duty',
-     'Import customs duty levied on goods crossing borders.',
-     'charge',
+     'Import customs duty levied on goods crossing borders. Classified as a landed-cost charge, not a recoverable tax. Jurisdictional customs (IN-CUSTOMS, DE-CUSTOMS, GB-CUSTOMS) classify into this kind.',
+     'charge', 'landed',
      'percent', 0.0, NULL,
      'value',
-     'EXPENSE_CUSTOMS', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     true, true, 24::smallint),
+     true, true,
+     '["purchase_invoice","purchase_order"]',
+     44::smallint),
 
     ('CHG_MISC',
      'Miscellaneous Charge',
      'Generic miscellaneous charge bucket.',
-     'charge',
+     'charge', NULL,
      'amount', NULL, 0.0,
      'value',
-     'EXPENSE_MISC', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     true, true, 29::smallint),
+     true, true,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     49::smallint),
 
-    -- ──────────────────────────────────────────────────────────────────────
-    -- TAXES
-    -- ──────────────────────────────────────────────────────────────────────
-    ('TAX_VAT_STANDARD',
-     'VAT — Standard Rate',
-     'Standard value-added tax; recoverable input VAT.',
-     'tax',
-     'percent', 0.0, NULL,
-     NULL,
-     'AP_VAT_INPUT', 'POSTING_ROLE',
-     false, 100.00, NULL,
-     false, false, 30::smallint),
-
-    ('TAX_VAT_ZERO',
-     'VAT — Zero Rated',
-     'Zero-rated supply; no VAT charged.',
-     'tax',
-     'percent', 0.0, NULL,
-     NULL,
-     'AP_VAT_INPUT', 'POSTING_ROLE',
-     false, 100.00, NULL,
-     false, false, 31::smallint),
-
-    ('TAX_VAT_EXEMPT',
-     'VAT — Exempt',
-     'Exempt supply; no input VAT recovery.',
-     'tax',
-     'percent', 0.0, NULL,
-     NULL,
-     'AP_VAT_INPUT', 'POSTING_ROLE',
-     false, 0.00, NULL,
-     false, false, 32::smallint),
-
-    ('TAX_VAT_REVERSE',
-     'VAT — Reverse Charge',
-     'Reverse-charge VAT (recipient self-accounts).',
-     'tax',
-     'percent', 0.0, NULL,
-     NULL,
-     'AP_VAT_REVERSE', 'POSTING_ROLE',
-     false, 100.00, NULL,
-     false, false, 33::smallint),
-
-    ('TAX_GST_CGST',
-     'GST — CGST',
-     'Central GST component (India).',
-     'tax',
-     'percent', 0.0, NULL,
-     NULL,
-     'AP_CGST_INPUT', 'POSTING_ROLE',
-     false, 100.00, NULL,
-     false, false, 34::smallint),
-
-    ('TAX_GST_SGST',
-     'GST — SGST',
-     'State GST component (India).',
-     'tax',
-     'percent', 0.0, NULL,
-     NULL,
-     'AP_SGST_INPUT', 'POSTING_ROLE',
-     false, 100.00, NULL,
-     false, false, 35::smallint),
-
-    ('TAX_GST_IGST',
-     'GST — IGST',
-     'Integrated GST (interstate, India).',
-     'tax',
-     'percent', 0.0, NULL,
-     NULL,
-     'AP_IGST_INPUT', 'POSTING_ROLE',
-     false, 100.00, NULL,
-     false, false, 36::smallint),
-
-    -- ──────────────────────────────────────────────────────────────────────
-    -- WITHHOLDING
-    -- ──────────────────────────────────────────────────────────────────────
-    ('WHT_194Q',
-     'TDS — Section 194Q',
-     'Tax deducted at source on purchase of goods above threshold (India 194Q).',
-     'withholding',
-     'percent', 0.10, NULL,
-     NULL,
-     'WHT_PAYABLE_194Q', 'POSTING_ROLE',
-     false, NULL, '194Q',
-     false, false, 40::smallint),
-
-    ('WHT_194C',
-     'TDS — Section 194C',
-     'Tax deducted at source on contractor payments (India 194C).',
-     'withholding',
-     'percent', 1.00, NULL,
-     NULL,
-     'WHT_PAYABLE_194C', 'POSTING_ROLE',
-     false, NULL, '194C',
-     false, false, 41::smallint),
-
-    ('WHT_GENERIC',
-     'Generic Withholding',
-     'Generic withholding tax (jurisdiction-agnostic).',
-     'withholding',
-     'percent', 0.0, NULL,
-     NULL,
-     'WHT_PAYABLE', 'POSTING_ROLE',
-     false, NULL, NULL,
-     false, false, 49::smallint),
-
-    -- ──────────────────────────────────────────────────────────────────────
-    -- RETENTION
-    -- ──────────────────────────────────────────────────────────────────────
+    -- RETENTION (sign − in engine; sub_type required)
     ('RET_WARRANTY',
      'Warranty Retention',
      'Warranty-period retention held until milestone met.',
-     'retention',
+     'retention', 'warranty',
      'percent', 5.00, NULL,
      NULL,
-     'AP_RETENTION_PAYABLE', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     false, false, 50::smallint),
+     false, false,
+     '["purchase_invoice","purchase_order"]',
+     50::smallint),
 
     ('RET_PERFORMANCE',
      'Performance Retention',
      'Performance-based retention released on completion or KPI achievement.',
-     'retention',
+     'retention', 'performance',
      'percent', 10.00, NULL,
      NULL,
-     'AP_RETENTION_PAYABLE', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     false, false, 51::smallint),
+     false, false,
+     '["purchase_invoice","purchase_order"]',
+     51::smallint),
 
     ('RET_COMPLETION',
      'Completion Retention',
      'Released on project / milestone completion sign-off.',
-     'retention',
+     'retention', 'completion',
      'percent', 5.00, NULL,
      NULL,
-     'AP_RETENTION_PAYABLE', 'POSTING_ROLE',
-     NULL, NULL, NULL,
-     false, false, 52::smallint),
+     false, false,
+     '["purchase_invoice","purchase_order"]',
+     52::smallint),
 
-    -- ──────────────────────────────────────────────────────────────────────
-    -- PRINCIPAL MARKER (audit-only)
-    -- ──────────────────────────────────────────────────────────────────────
+    -- PRINCIPAL MARKER (audit-only; sequence=0 anchor)
     ('PRINCIPAL_MARKER',
      'Principal Line Marker',
-     'Audit-only marker for the principal line amount; not posted as a separate term. '
-     'Sequence=0 by convention.',
-     'principal_marker',
+     'Audit-only marker for the principal line amount; not posted as a separate term. Sequence=0 by convention.',
+     'principal_marker', NULL,
      'amount', NULL, 0.0,
      NULL,
-     NULL, NULL,
-     NULL, NULL, NULL,
-     false, false, 0::smallint)
+     false, false,
+     '["purchase_invoice","purchase_order","sales_invoice","sales_order"]',
+     0::smallint)
 
 ) AS v(
-    code, name, description, term_type,
+    code, name, description,
+    term_type, term_sub_type,
     default_basis, default_rate, default_amount,
     default_apportion_basis,
-    default_posting_role_code, default_account_source,
-    default_is_inclusive, default_recoverable_pct, default_tax_section_code,
-    is_taxable, is_apportionable, sort_order
+    is_taxable, is_apportionable, applies_to_classes,
+    sort_order
 )
 ON CONFLICT (tenant_id, code) DO NOTHING;
-
-
--- =============================================================================
--- End of 004_condition_type.sql
--- =============================================================================

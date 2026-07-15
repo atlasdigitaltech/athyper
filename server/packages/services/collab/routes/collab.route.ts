@@ -32,7 +32,7 @@ import {
   SYSTEM_PRINCIPAL_UUID,
   resolvePrincipalIdWithJit,
 } from "@athyper/svc-shared";
-import type { RedisClient } from "@athyper/adapter-memorycache";
+import type { RedisClient } from "@athyper/adapter-memory-cache";
 
 // Local duck-type for MentionService (avoids cross-package rootDir import)
 interface MentionObject { userId: string; displayName: string }
@@ -90,10 +90,23 @@ function toComment(row: Record<string, unknown>) {
     parentCommentId: row.parent_comment_id ?? null,
     threadDepth:     row.thread_depth ?? 0,
     visibility:      row.visibility ?? "public",
+    commentIntent:   (row.comment_intent as string | undefined) ?? "general",
     createdAt:       row.created_at,
     updatedAt:       row.updated_at ?? null,
     replyCount:      Number(row.reply_count ?? 0),
   };
+}
+
+/** Parse comma-separated or array query value into a clean string[] of codes. */
+function parseIntentFilter(raw: unknown): string[] {
+  const values = Array.isArray(raw)
+    ? raw
+    : typeof raw === "string" && raw.length > 0
+      ? raw.split(",")
+      : [];
+  return values
+    .map((v) => String(v).trim())
+    .filter((v) => v.length > 0 && /^[a-z][a-z0-9_]*$/.test(v));
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -260,6 +273,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const entityId   = req.query["entityId"]   as string | undefined;
       const limit  = Math.min(100, Math.max(1, parseInt(String(req.query["limit"]  ?? "50"), 10)));
       const offset =                             parseInt(String(req.query["offset"] ?? "0"),  10);
+      const intents = parseIntentFilter(req.query["intent"] ?? req.query["intents"]);
 
       if (!entityType || !entityId) {
         res.status(400).json({ error: "entityType and entityId are required" });
@@ -276,7 +290,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
-      const rows = await db
+      let query = db
         .selectFrom("master.comment as c")
         .leftJoin("master.principal as p", "p.id" as never, "c.commenter_id" as never)
         .select([
@@ -285,6 +299,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
           "c.content_json" as never, "c.content_html" as never,
           "c.parent_comment_id",
           "c.thread_depth", "c.visibility",
+          "c.comment_intent" as never,
           "c.created_at", "c.updated_at", "c.created_by",
           "p.name as commenter_name" as never,
         ])
@@ -292,7 +307,13 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         .where("c.entity_type", "=", entityType)
         .where("c.entity_id",   "=", entityId)
         .where("c.deleted_at" as never, "is", null)
-        .where("c.parent_comment_id", "is", null)
+        .where("c.parent_comment_id", "is", null);
+
+      if (intents.length > 0) {
+        query = query.where("c.comment_intent" as never, "in" as never, intents as never);
+      }
+
+      const rows = await query
         .orderBy("c.created_at", "desc")
         .limit(limit + 1)
         .offset(offset)
@@ -480,6 +501,18 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         ? rawVis as CommentVis
         : "internal";
 
+      // Optional discriminators — validated server-side against lookup
+      // domains via DB triggers (master.comment_type, master.comment_intent).
+      // Default to existing behaviour when omitted.
+      const rawContextType = (req.body as Record<string, unknown>).contextType;
+      const contextType = typeof rawContextType === "string" && /^[a-z][a-z0-9_]*$/.test(rawContextType)
+        ? rawContextType
+        : DEFAULT_CONTEXT_TYPE;
+      const rawIntent = (req.body as Record<string, unknown>).commentIntent;
+      const commentIntent = typeof rawIntent === "string" && /^[a-z][a-z0-9_]*$/.test(rawIntent)
+        ? rawIntent
+        : "general";
+
       const hasContent = commentText?.trim() || attachmentIds.length > 0 || contentJson;
       if (!entityType || !entityId || !hasContent) {
         res.status(400).json({ error: "entityType, entityId, and content are required" });
@@ -512,7 +545,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const isRich = !!contentJson;
       const insertValues: Record<string, unknown> = {
         tenant_id:      tenantId,
-        context_type:   DEFAULT_CONTEXT_TYPE,
+        context_type:   contextType,
         entity_type:    entityType,
         entity_id:      entityId,
         commenter_id:   commenterId,
@@ -520,6 +553,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         content_format: isRich ? "rich_json" : "plain",
         thread_depth:   threadDepth,
         visibility,
+        comment_intent: commentIntent,
         created_by:     commenterId,
       };
       if (contentJson)     insertValues.content_json = JSON.stringify(contentJson);
@@ -639,7 +673,10 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const parent = await db
         .selectFrom("master.comment as c")
-        .select(["c.entity_type", "c.entity_id", "c.thread_depth"])
+        .select([
+          "c.entity_type", "c.entity_id", "c.thread_depth",
+          "c.context_type", "c.comment_intent" as never,
+        ])
         .where("c.id", "=", parentCommentId)
         .where("c.tenant_id", "=", tenantId)
         .executeTakeFirst();
@@ -655,9 +692,21 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         : SYSTEM_PRINCIPAL_UUID;
 
       const trimmedText = replyText?.trim() || (replyAttachmentIds.length > 0 ? "[attachment]" : "[rich comment]");
+      const parentIntent =
+        typeof (parent as Record<string, unknown>)["comment_intent"] === "string"
+          ? ((parent as Record<string, unknown>)["comment_intent"] as string)
+          : "general";
+      const parentContextType =
+        typeof (parent as Record<string, unknown>)["context_type"] === "string"
+          ? ((parent as Record<string, unknown>)["context_type"] as string)
+          : DEFAULT_CONTEXT_TYPE;
+      // A reply to a typed comment (e.g. submission_note) flips to 'clarification'
+      // so the parent's role stays uniquely identifiable. General comments keep
+      // their thread as 'general'.
+      const replyIntent = parentIntent === "general" ? "general" : "clarification";
       const replyInsertValues: Record<string, unknown> = {
         tenant_id:         tenantId,
-        context_type:      DEFAULT_CONTEXT_TYPE,
+        context_type:      parentContextType,
         entity_type:       parent.entity_type,
         entity_id:         parent.entity_id,
         commenter_id:      commenterId,
@@ -666,6 +715,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         parent_comment_id: parentCommentId,
         thread_depth:      Math.min(5, ((parent.thread_depth as number) ?? 0) + 1),
         visibility:        replyVisibility,
+        comment_intent:    replyIntent,
         created_by:        commenterId,
       };
       if (replyContentJson) replyInsertValues.content_json = JSON.stringify(replyContentJson);
@@ -773,7 +823,9 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
           "c.commenter_id", "c.comment_text", "c.content_format" as never,
           "c.content_json" as never, "c.content_html" as never,
           "c.parent_comment_id",
-          "c.thread_depth", "c.visibility", "c.created_at", "c.updated_at", "c.created_by",
+          "c.thread_depth", "c.visibility",
+          "c.comment_intent" as never,
+          "c.created_at", "c.updated_at", "c.created_by",
           "p.name as commenter_name" as never,
         ])
         .where("c.tenant_id", "=", tenantId)
@@ -2046,3 +2098,4 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
   return router;
 }
+

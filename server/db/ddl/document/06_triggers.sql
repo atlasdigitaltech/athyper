@@ -148,8 +148,8 @@ CREATE TRIGGER trg_je_period_gate
     EXECUTE FUNCTION document.trg_je_period_gate_fn();
 
 COMMENT ON TRIGGER trg_je_period_gate ON document.journal_entry IS
-    'Blocks INSERT into hard-closed or future (not yet opened) book-periods. '
-    'Checks master.fiscal_period AND governance.book_period_status.';
+    'Blocks forward posting unless fiscal and book periods are open/soft_close. '
+    'Missing book-period rows are treated as future; posted->reversed is exempt.';
 
 -- Workflow approval gate — blocks created→posted when a pending/rejected request exists.
 -- Alphabetically fires after trg_je_status_transition_guard ('s' < 'w').
@@ -315,10 +315,10 @@ DROP TRIGGER IF EXISTS trg_cl_updated_at ON document.commitment_line;
 CREATE TRIGGER trg_cl_updated_at BEFORE UPDATE ON document.commitment_line
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
--- §15.3  Commitment line company consistency (item + delivery warehouse/site)
+-- §15.3  Commitment line company consistency (item + delivery warehouse + site)
 DROP TRIGGER IF EXISTS trg_cl_company_guard ON document.commitment_line;
 CREATE TRIGGER trg_cl_company_guard
-    BEFORE INSERT OR UPDATE OF item_id, delivery_warehouse_id, delivery_site_id
+    BEFORE INSERT OR UPDATE OF item_id, warehouse_id, site_id
     ON document.commitment_line
     FOR EACH ROW
     EXECUTE FUNCTION document.trg_guard_commitment_line_company();
@@ -661,60 +661,89 @@ CREATE TRIGGER trg_dn_status_changed BEFORE UPDATE ON document.delivery_note
 
 
 -- =============================================================================
--- §P2P1  document.goods_receipt  — §15.1 GR header company consistency
+-- §P2P1  document.receipt  — §15.1 receipt header company consistency
 -- =============================================================================
 
-DROP TRIGGER IF EXISTS trg_gr_updated_at ON document.goods_receipt;
-CREATE TRIGGER trg_gr_updated_at BEFORE UPDATE ON document.goods_receipt
+DROP TRIGGER IF EXISTS trg_rcp_updated_at ON document.receipt;
+CREATE TRIGGER trg_rcp_updated_at BEFORE UPDATE ON document.receipt
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_gr_status_changed ON document.goods_receipt;
-CREATE TRIGGER trg_gr_status_changed BEFORE UPDATE ON document.goods_receipt
+DROP TRIGGER IF EXISTS trg_rcp_status_changed ON document.receipt;
+CREATE TRIGGER trg_rcp_status_changed BEFORE UPDATE ON document.receipt
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-DROP TRIGGER IF EXISTS trg_gr_company_guard ON document.goods_receipt;
-CREATE TRIGGER trg_gr_company_guard
-    BEFORE INSERT OR UPDATE OF company_code_id, receiving_warehouse_id, receiving_site_id
-    ON document.goods_receipt
-    FOR EACH ROW
-    EXECUTE FUNCTION document.trg_guard_gr_header_company();
-
-
 -- =============================================================================
--- §P2P2  document.goods_receipt_line  — §15.2 GR line company consistency
+-- §P2P2  document.receipt_line  — §15.2 receipt line company consistency
 -- =============================================================================
 
-DROP TRIGGER IF EXISTS trg_grl_company_guard ON document.goods_receipt_line;
-CREATE TRIGGER trg_grl_company_guard
+DROP TRIGGER IF EXISTS trg_rcpl_company_guard ON document.receipt_line;
+CREATE TRIGGER trg_rcpl_company_guard
     BEFORE INSERT OR UPDATE OF item_id, warehouse_id
-    ON document.goods_receipt_line
+    ON document.receipt_line
     FOR EACH ROW
     EXECUTE FUNCTION document.trg_guard_gr_line_company();
 
 
 -- =============================================================================
--- §P2P3a  document.service_entry_sheet
+-- §P2P3a  document.service_sheet
 -- =============================================================================
 
-DROP TRIGGER IF EXISTS trg_ses_updated_at ON document.service_entry_sheet;
-CREATE TRIGGER trg_ses_updated_at BEFORE UPDATE ON document.service_entry_sheet
+DROP TRIGGER IF EXISTS trg_ssh_updated_at ON document.service_sheet;
+CREATE TRIGGER trg_ssh_updated_at BEFORE UPDATE ON document.service_sheet
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_ses_status_changed ON document.service_entry_sheet;
-CREATE TRIGGER trg_ses_status_changed BEFORE UPDATE ON document.service_entry_sheet
+DROP TRIGGER IF EXISTS trg_ssh_status_changed ON document.service_sheet;
+CREATE TRIGGER trg_ssh_status_changed BEFORE UPDATE ON document.service_sheet
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 
 -- =============================================================================
--- §P2P3  document.service_entry_sheet_line  — §15.4 SES line company consistency
+-- §P2P3  document.service_sheet_line  — §15.4 service_sheet line company consistency
 -- =============================================================================
 
-DROP TRIGGER IF EXISTS trg_sesl_company_guard ON document.service_entry_sheet_line;
-CREATE TRIGGER trg_sesl_company_guard
+DROP TRIGGER IF EXISTS trg_sshl_company_guard ON document.service_sheet_line;
+CREATE TRIGGER trg_sshl_company_guard
     BEFORE INSERT OR UPDATE OF item_id
-    ON document.service_entry_sheet_line
+    ON document.service_sheet_line
     FOR EACH ROW
     EXECUTE FUNCTION document.trg_guard_ses_line_company();
+
+-- =============================================================================
+-- Â§P2P_REQUESTED_BY  Default "On Behalf Of" actor
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION shared.trg_default_requested_by()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    NEW.requested_by := COALESCE(NEW.requested_by, NEW.created_by);
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_pr_default_requested_by ON document.purchase_requisition;
+CREATE TRIGGER trg_pr_default_requested_by
+    BEFORE INSERT ON document.purchase_requisition
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_default_requested_by();
+
+DROP TRIGGER IF EXISTS trg_cmt_default_requested_by ON document.commitment;
+CREATE TRIGGER trg_cmt_default_requested_by
+    BEFORE INSERT ON document.commitment
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_default_requested_by();
+
+DROP TRIGGER IF EXISTS trg_rcp_default_requested_by ON document.receipt;
+CREATE TRIGGER trg_rcp_default_requested_by
+    BEFORE INSERT ON document.receipt
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_default_requested_by();
+
+DROP TRIGGER IF EXISTS trg_ssh_default_requested_by ON document.service_sheet;
+CREATE TRIGGER trg_ssh_default_requested_by
+    BEFORE INSERT ON document.service_sheet
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_default_requested_by();
+
+DROP TRIGGER IF EXISTS trg_pi_default_requested_by ON document.purchase_invoice;
+CREATE TRIGGER trg_pi_default_requested_by
+    BEFORE INSERT ON document.purchase_invoice
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_default_requested_by();
 
 -- ── document.wht_certificate updated_at ─────────────────────────────────────
 -- R7-C
@@ -765,6 +794,121 @@ COMMENT ON TRIGGER trg_pi_row_version ON document.purchase_invoice IS
     'Increments row_version on every UPDATE to purchase_invoice, including updates '
     'triggered by trg_pil_sync_header when lines change. This is intentional: any '
     'mutation to the invoice aggregate (header or lines) advances the version so a '
-    'concurrently open header-save sees the conflict and returns 409. '
-    'Phase 2: attach the same trigger to purchase_order, journal_entry, payment_entry '
-    'once those tables have row_version added in 01z_row_version.sql.';
+    'concurrently open header-save sees the conflict and returns 409.';
+
+
+-- §RCP  Receipt row_version (P2P plan Plan 2 — POC slice)
+-- Receipt and Service Sheet are the proving ground for extending row_version
+-- coverage across P2P. Once these run cleanly the same pattern lands for
+-- PR / POC / DN / commitment / commitment_line.
+DROP TRIGGER IF EXISTS trg_rcp_row_version ON document.receipt;
+CREATE TRIGGER trg_rcp_row_version
+    BEFORE UPDATE ON document.receipt
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_increment_row_version();
+
+COMMENT ON TRIGGER trg_rcp_row_version ON document.receipt IS
+    'Increments row_version on every UPDATE to receipt. Optimistic-lock saves '
+    'pass expected_row_version in WHERE; mismatched version yields 0 rows -> 409.';
+
+-- §SES  Service Sheet row_version
+DROP TRIGGER IF EXISTS trg_ssh_row_version ON document.service_sheet;
+CREATE TRIGGER trg_ssh_row_version
+    BEFORE UPDATE ON document.service_sheet
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_increment_row_version();
+
+COMMENT ON TRIGGER trg_ssh_row_version ON document.service_sheet IS
+    'Increments row_version on every UPDATE to service_sheet.';
+
+-- §PR  Purchase Requisition row_version (P2P plan Plan 2 batch B)
+DROP TRIGGER IF EXISTS trg_pr_row_version ON document.purchase_requisition;
+CREATE TRIGGER trg_pr_row_version
+    BEFORE UPDATE ON document.purchase_requisition
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_increment_row_version();
+
+-- §CMT  Commitment row_version (purchase_order view writes route here)
+-- PO is a view over document.commitment + document.commitment_procurement;
+-- attaching the trigger to commitment makes the PO concurrency check work
+-- because every PO write touches the underlying commitment header.
+DROP TRIGGER IF EXISTS trg_cmt_row_version ON document.commitment;
+CREATE TRIGGER trg_cmt_row_version
+    BEFORE UPDATE ON document.commitment
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_increment_row_version();
+
+-- §POC  Purchase Order Confirmation row_version
+DROP TRIGGER IF EXISTS trg_poc_row_version ON document.purchase_order_confirmation;
+CREATE TRIGGER trg_poc_row_version
+    BEFORE UPDATE ON document.purchase_order_confirmation
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_increment_row_version();
+
+DROP TRIGGER IF EXISTS trg_pocl_row_version ON document.purchase_order_confirmation_line;
+CREATE TRIGGER trg_pocl_row_version
+    BEFORE UPDATE ON document.purchase_order_confirmation_line
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_increment_row_version();
+
+
+-- §DN  Delivery Note row_version
+DROP TRIGGER IF EXISTS trg_dn_row_version ON document.delivery_note;
+CREATE TRIGGER trg_dn_row_version
+    BEFORE UPDATE ON document.delivery_note
+    FOR EACH ROW EXECUTE FUNCTION shared.trg_increment_row_version();
+
+-- =============================================================================
+-- §IMMUTABILITY  P2P terminal-state mutation guards (Plan 5)
+-- =============================================================================
+-- Mirrors trg_pi_immutability_guard for the remaining P2P documents. Each
+-- trigger fires only when OLD.status is in the entity's terminal vocabulary
+-- (saves the function-call hop on every UPDATE in non-terminal states).
+-- Function definitions live in document/05_functions.sql §P2P chain
+-- immutability guards.
+--
+-- These triggers BLOCK direct field edits; status transitions remain allowed
+-- via the IF OLD.status IS DISTINCT FROM NEW.status short-circuit inside each
+-- function, so the action dispatcher and lifecycle engine still work.
+
+-- ── §CMT  commitment ──────────────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_cmt_immutability_guard ON document.commitment;
+CREATE TRIGGER trg_cmt_immutability_guard
+    BEFORE UPDATE ON document.commitment
+    FOR EACH ROW
+    WHEN (OLD.status IN ('closed','cancelled','expired') OR OLD.terminal_status IS NOT NULL)
+    EXECUTE FUNCTION document.trg_cmt_immutability_guard();
+
+-- ── §PR  purchase_requisition ─────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_pr_immutability_guard ON document.purchase_requisition;
+CREATE TRIGGER trg_pr_immutability_guard
+    BEFORE UPDATE ON document.purchase_requisition
+    FOR EACH ROW
+    WHEN (OLD.status IN ('rejected','fully_converted','closed','cancelled') OR OLD.terminal_status IS NOT NULL)
+    EXECUTE FUNCTION document.trg_pr_immutability_guard();
+
+-- ── §POC  purchase_order_confirmation ─────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_poc_immutability_guard ON document.purchase_order_confirmation;
+CREATE TRIGGER trg_poc_immutability_guard
+    BEFORE UPDATE ON document.purchase_order_confirmation
+    FOR EACH ROW
+    WHEN (OLD.status IN ('rejected','cancelled','changes_rejected') OR OLD.terminal_status IS NOT NULL)
+    EXECUTE FUNCTION document.trg_poc_immutability_guard();
+
+-- ── §DN  delivery_note ────────────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_dn_immutability_guard ON document.delivery_note;
+CREATE TRIGGER trg_dn_immutability_guard
+    BEFORE UPDATE ON document.delivery_note
+    FOR EACH ROW
+    WHEN (OLD.status IN ('fully_receipted','returned','cancelled') OR OLD.terminal_status IS NOT NULL)
+    EXECUTE FUNCTION document.trg_dn_immutability_guard();
+
+-- ── §RCP  receipt ─────────────────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_rcp_immutability_guard ON document.receipt;
+CREATE TRIGGER trg_rcp_immutability_guard
+    BEFORE UPDATE ON document.receipt
+    FOR EACH ROW
+    WHEN (OLD.status IN ('posted','reversed','cancelled') OR OLD.terminal_status IS NOT NULL)
+    EXECUTE FUNCTION document.trg_rcp_immutability_guard();
+
+-- ── §SES  service_sheet ───────────────────────────────────────────────────
+DROP TRIGGER IF EXISTS trg_ssh_immutability_guard ON document.service_sheet;
+CREATE TRIGGER trg_ssh_immutability_guard
+    BEFORE UPDATE ON document.service_sheet
+    FOR EACH ROW
+    WHEN (OLD.status IN ('posted','reversed','cancelled') OR OLD.terminal_status IS NOT NULL)
+    EXECUTE FUNCTION document.trg_ssh_immutability_guard();

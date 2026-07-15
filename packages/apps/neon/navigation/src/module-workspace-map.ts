@@ -66,13 +66,6 @@ export const MODULE_WORKSPACE_MAP: Record<string, string> = {
   ASSETFM:   "asset-management",
 
   // ── Partner Management ────────────────────────────────────────────────
-  PCOLLAB:   "partner-management",  // Proposal & Contract Collaboration
-  PORDER:    "partner-management",  // Order Inbox
-  PINV:      "partner-management",  // Invoice Outbox
-  PCUST:     "partner-management",  // Customer Contract Portal
-  PSALE:     "partner-management",  // Sales Order Outbox
-  PSINV:     "partner-management",  // Sales Invoice Management Inbox
-  PLOG:      "partner-management",  // Logistics Collaboration
 };
 
 /** Display labels for each workspace key. */
@@ -84,7 +77,6 @@ export const WORKSPACE_LABELS: Record<string, string> = {
   "project-management":   "Projects",
   "manufacturing-operations": "Manufacturing",
   "asset-management":     "Assets",
-  "partner-management":   "Partner",
 };
 
 /** Maps workspace key → landing page URL (used for right-click "Open in new tab" on rail icons). */
@@ -96,7 +88,6 @@ export const WORKSPACE_HREF_MAP: Record<string, string> = {
   "project-management":       "/projects",
   "manufacturing-operations": "/manufacturing",
   "asset-management":         "/asset-management",
-  // "partner-management" has no landing page yet
 };
 
 /** Sort order for workspaces in the rail (lower = higher). */
@@ -108,7 +99,6 @@ export const WORKSPACE_SORT_ORDER: Record<string, number> = {
   "project-management":       4,
   "manufacturing-operations": 5,
   "asset-management":         6,
-  "partner-management":       7,
 };
 
 /** Core module sub-group assignments for the ContextPanel. */
@@ -118,10 +108,5 @@ export const CORE_GROUPS: Array<{ label: string; codes: string[] }> = [
   { label: "Services", codes: ["DOC", "NTF", "INT", "CMS", "ACT", "REL"] },
 ];
 
-/** Partner Management module sub-group assignments for the ContextPanel. */
-export const PARTNER_GROUPS: Array<{ label: string; codes: string[] }> = [
-  { label: "Proposals",   codes: ["PCOLLAB", "PCUST"] },
-  { label: "Trade",       codes: ["PORDER", "PSALE"] },
-  { label: "Financials",  codes: ["PINV", "PSINV"] },
-  { label: "Logistics",   codes: ["PLOG"] },
-];
+/** Reserved partner-module groups removed from Neon navigation (handled in Mesh plane). */
+export const PARTNER_GROUPS: Array<{ label: string; codes: string[] }> = [];

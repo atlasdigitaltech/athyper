@@ -58,7 +58,13 @@ import { createEndpointHealthWorker } from "./workers/endpoint-health.worker.js"
 import { createTikaExtractWorker, type TikaObjectStorage } from "./workers/tika-extract.worker.js";
 import { createBackupWorker, type BackupObjectStorage } from "./workers/backup.worker.js";
 import { createStaleLockWorker } from "./workers/stale-lock.worker.js";
-import type { PreviewContentJobData, RenderDocumentJobData, ExtractTextJobData, DbBackupJobData } from "./jobs.types.js";
+import type {
+  PreviewContentJobData,
+  RenderDocumentJobData,
+  ExtractTextJobData,
+  OrphanCleanupJobData,
+  DbBackupJobData,
+} from "./jobs.types.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type DB = Kysely<Record<string, any>>;
@@ -94,6 +100,8 @@ export interface JobsServiceOptions {
   outboxPurgeSweepMs?: number;
   /** Milliseconds between stale edit-lock eviction sweeps (default: 300 000) */
   staleLockSweepMs?: number;
+  /** Milliseconds between orphan attachment cleanup sweeps (default: 900 000) */
+  orphanCleanupSweepMs?: number;
 }
 
 export interface JobsServiceDeps {
@@ -196,7 +204,7 @@ const QUEUE_NAME_TO_KEY: Record<string, keyof JobsQueues> = {
 // ─── Exported queue map type ──────────────────────────────────────────────────
 
 export interface JobsQueues {
-  lifecycleTimers: Queue<FireTimerJobData | SweepJobData>;
+  lifecycleTimers: Queue<FireTimerJobData | SweepJobData | OrphanCleanupJobData>;
   notifications:   Queue<SendNotificationJobData | SweepJobData | DigestFlushJobData | ProviderHealthJobData>;
   domainOutbox:    Queue<DomainOutboxJobData>;
   slaCheck:        Queue<SlaCheckJobData>;
@@ -263,6 +271,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
     tikaExtractSweepMs           = DEFAULT_INTERVALS.TIKA_EXTRACT_SWEEP_MS,
     outboxPurgeSweepMs           = DEFAULT_INTERVALS.OUTBOX_PURGE_SWEEP_MS,
     staleLockSweepMs             = DEFAULT_INTERVALS.STALE_LOCK_SWEEP_MS,
+    orphanCleanupSweepMs         = DEFAULT_INTERVALS.ORPHAN_CLEANUP_SWEEP_MS,
   } = options;
 
   // BullMQ recommends separate IORedis connections per Queue/Worker.
@@ -270,6 +279,9 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
   // to create a fresh connection per object — safe and correct.
   const conn = connection;
   const tikaExtractEnabled = Boolean(tikaUrl && attachmentStorage);
+  const orphanCleanupStorage = attachmentStorage?.delete
+    ? { delete: (key: string) => attachmentStorage.delete!(key) }
+    : undefined;
 
   // ── Queues (producers) ───────────────────────────────────────────────────
 
@@ -295,6 +307,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
       db,
       queue:      queues.lifecycleTimers,
       connection: conn,
+      attachmentStorage: orphanCleanupStorage,
       logger,
     }),
     createNotificationWorker({
@@ -548,11 +561,18 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         }
       }
 
-      // ── Stale edit-session lock eviction ─────────────────────────────────
+      // ── Stale document edit-lock eviction ────────────────────────────────
       await queues.staleLock.upsertJobScheduler(
         SCHEDULER_ID.STALE_LOCK_SWEEP,
         { every: staleLockSweepMs },
         { name: JOB_NAME.STALE_LOCK_SWEEP, data: {} as Record<string, never> },
+      );
+
+      // â”€â”€ Orphan attachment cleanup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      await queues.lifecycleTimers.upsertJobScheduler(
+        SCHEDULER_ID.ORPHAN_CLEANUP,
+        { every: orphanCleanupSweepMs },
+        { name: JOB_NAME.CLEAN_ORPHANS, data: {} as Record<string, never> },
       );
 
       // ── Code-based CronRegistry entries ──────────────────────────────────
@@ -698,6 +718,8 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
         kcSyncMs,
         kcSyncEnabled:               kcAdmin != null,
         endpointHealthSweepMs,
+        staleLockSweepMs,
+        orphanCleanupSweepMs,
         tikaExtractEnabled,
         tikaExtractSweepMs,
         workersEnabled,

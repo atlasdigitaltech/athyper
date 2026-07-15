@@ -325,7 +325,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             entityRow.module_id as string,
             moduleResolver,
             logger,
-            { authEpoch },
+            { authEpoch, mode: "read_metadata" },
           );
           if (!hasAccess) {
             res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -420,6 +420,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           "eff.placeholder",
           "eff.sort_order",
           "eff.section_key",
+          "eff.metadata",
           "ef.name as field_name",
           sql<string>`COALESCE(ef.label, ef.name)`.as("field_label"),
           "ef.data_type",
@@ -592,6 +593,9 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             placeholder: (f.placeholder ?? null) as string | null,
             sort_order: Number(f.sort_order ?? 0),
             section_key: (f.section_key ?? null) as string | null,
+            metadata: (f.metadata && typeof f.metadata === "object")
+              ? f.metadata as Record<string, unknown>
+              : null,
             is_overridden: false,
           }));
 

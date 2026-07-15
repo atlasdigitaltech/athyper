@@ -36,7 +36,7 @@ export interface FieldSecurityMiddlewareDeps {
   logger?: { warn(event: string, fields?: Record<string, unknown>): void };
 }
 
-interface FieldPolicy {
+export interface FieldPolicy {
   fieldName:       string;       // control.entity_field.name (logical name)
   columnName:      string;       // control.entity_field.column_name
   maskingStrategy: "full" | "partial" | "hash";
@@ -85,10 +85,38 @@ function applyMask(value: unknown, strategy: "full" | "partial" | "hash"): unkno
 }
 
 /**
+ * Strip reference-label companion keys for a masked FK field. The
+ * runtime label enricher attaches `${name}_label`, `${base}_label`,
+ * `${name}_code`, `${base}_code` (and column-name variants) for any
+ * field with a `reference_config.target_entity`. When the base FK is
+ * masked, those companion keys would leak the human-readable identity
+ * the policy was hiding — so delete them outright. Same base-name rule
+ * the enricher uses: strip a trailing `_id`.
+ *
+ * Safe on non-reference fields: a `phone_label` key never exists, so
+ * the deletes are no-ops for non-FK policies.
+ */
+export function stripReferenceCompanionKeys(
+  record: Record<string, unknown>,
+  fieldName: string,
+): void {
+  const base = fieldName.endsWith("_id") ? fieldName.slice(0, -3) : fieldName;
+  delete record[`${fieldName}_label`];
+  delete record[`${fieldName}_code`];
+  if (base !== fieldName) {
+    delete record[`${base}_label`];
+    delete record[`${base}_code`];
+  }
+}
+
+/**
  * Apply field security policies to a single record object.
  * Mutates the record in place for performance.
+ *
+ * Exported for unit testing — production callers should go through
+ * createFieldSecurityMiddleware or applyFieldSecurityMask.
  */
-function maskRecord(
+export function maskRecord(
   record: Record<string, unknown>,
   policies: FieldPolicy[],
   principalRoles: Set<string>,
@@ -104,6 +132,12 @@ function maskRecord(
     }
     if (policy.columnName in record && policy.columnName !== policy.fieldName) {
       record[policy.columnName] = applyMask(record[policy.columnName], policy.maskingStrategy);
+    }
+    // Strip enricher-produced label/code companions for both shapes
+    // so masked FKs don't leak through the human-readable name.
+    stripReferenceCompanionKeys(record, policy.fieldName);
+    if (policy.columnName !== policy.fieldName) {
+      stripReferenceCompanionKeys(record, policy.columnName);
     }
   }
 }

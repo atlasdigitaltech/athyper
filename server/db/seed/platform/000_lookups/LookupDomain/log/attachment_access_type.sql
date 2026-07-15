@@ -1,9 +1,3 @@
--- LookupDomain/log/attachment_access_type.sql
--- Lookup values for domain: log.attachment_access_type
--- Idempotent: WHERE NOT EXISTS guard
--- Includes base values + extension values from master/010_doc_lookups.sql
-
--- Base values
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order, true, 'active',
@@ -35,7 +29,7 @@ WHERE NOT EXISTS (
     WHERE x.domain_code = v.domain_code AND x.code = v.code AND x.tenant_id IS NULL
 );
 
--- Extension values (from master/010_doc_lookups.sql)
+-- Template-related access values (added when print_profile/template engine landed).
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order, true, 'active',

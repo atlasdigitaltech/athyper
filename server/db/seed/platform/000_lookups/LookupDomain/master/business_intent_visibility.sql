@@ -1,8 +1,3 @@
--- LookupDomain/master/business_intent_visibility.sql
--- Lookup values for domain: master.business_intent.visibility
--- Visibility classification for business intents.
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,

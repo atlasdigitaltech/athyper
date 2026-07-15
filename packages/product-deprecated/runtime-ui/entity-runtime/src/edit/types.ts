@@ -6,4 +6,5 @@ export type {
   FieldRenderer,
   SectionRenderer,
   ValidationResult,
-} from "@athyper/runtime-shared/edit";
+} from "@athyper/runtime-shared";
+

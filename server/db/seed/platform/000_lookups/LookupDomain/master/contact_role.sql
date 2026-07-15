@@ -1,7 +1,4 @@
--- LookupDomain/master/contact_role.sql
--- Lookup values for domain: master.contact_role
--- Functional roles for party_contact_person — drives AP/AR, legal, and escalation routing.
--- Idempotent: WHERE NOT EXISTS guard
+-- Roles drive AP/AR, legal, and escalation routing on party_contact_person.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

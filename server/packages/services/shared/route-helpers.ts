@@ -42,6 +42,66 @@ export function isUuid(s: string): boolean { return UUID_RE.test(s); }
 
 export const SYSTEM_PRINCIPAL_UUID = "00000000-0000-0000-0000-000000000000";
 
+const ATTACHMENT_AUTH_STRICT = process.env.ATTACHMENT_AUTH_STRICT === "true";
+const ATTACHMENT_MULTIPART_CLEANUP_STRICT = process.env.ATTACHMENT_MULTIPART_CLEANUP_STRICT === "true";
+
+/** Verified identity and selected authorization scope for a request. */
+export interface VerifiedRequestContext {
+  tenantId: string;
+  tenantCode: string;
+  companyCode?: string;
+  companyCodeId?: string;
+  organizationId?: string;
+  legalEntityId?: string;
+  realmKey: string;
+  principalId: string;
+  authEpoch: number;
+  subject: string;
+  /** Service credentials are accepted only when they match the bound service principal. */
+  authType: "bearer" | "internal_service";
+  serviceClientId?: string;
+  correlationId?: string;
+  workspace?: string;
+  profile?: string;
+  headerOrg?: string | null;
+  headerRealm?: string | null;
+}
+
+/** @deprecated Use VerifiedRequestContext for new authorization boundaries. */
+export type AttachmentAuthContext = VerifiedRequestContext;
+
+export interface AttachmentAuthContextResult {
+  ok: true;
+  context: AttachmentAuthContext;
+}
+
+export interface AttachmentAuthContextFailure {
+  ok: false;
+  error: string;
+  message: string;
+  status: number;
+}
+
+export type AttachmentAuthContextAttempt = AttachmentAuthContextResult | AttachmentAuthContextFailure;
+
+export type VerifiedRequestContextAttempt =
+  | { ok: true; context: VerifiedRequestContext }
+  | AttachmentAuthContextFailure;
+
+export interface VerifiedRequestContextHints {
+  org?: string | null;
+  realm?: string | null;
+  tenantId?: string | null;
+  tenantCode?: string | null;
+  companyCodeId?: string | null;
+  organizationId?: string | null;
+  legalEntityId?: string | null;
+  orgContextType?: string | null;
+  correlationId?: string | null;
+  /** Trusted tenant UUID already resolved by the authenticated host boundary. */
+  trustedTenantId?: string | null;
+}
+
 // ── Default realm key (bootstrap-configured) ──────────────────────────────────
 //
 // Phase D — the setter + state moved to realm-default.ts and is exposed only
@@ -65,6 +125,318 @@ export function extractOrgHeaders(req: Parameters<RequestHandler>[0]): { xOrg: s
       ?? defaultRealmKey(),
   };
 }
+
+/** Extract non-authoritative routing hints for resolveVerifiedRequestContext. */
+export function extractVerifiedRequestContextHints(
+  req: Parameters<RequestHandler>[0],
+): VerifiedRequestContextHints {
+  const header = (name: string): string | undefined => {
+    const value = req.headers[name];
+    return typeof value === "string" ? value : Array.isArray(value) ? value[0] : undefined;
+  };
+  return {
+    org: header("x-org"),
+    realm: header("x-realm-key") ?? header("x-realm"),
+    tenantId: header("x-tenant-id"),
+    tenantCode: header("x-tenant-code"),
+    companyCodeId: header("x-company-code-id"),
+    organizationId: header("x-organization-id"),
+    legalEntityId: header("x-legal-entity-id"),
+    orgContextType: header("x-org-context-type"),
+    correlationId: header("x-trace-id") ?? header("x-request-id"),
+  };
+}
+
+export function getAttachmentAuthFlags(): { attachmentAuthStrict: boolean; multipartCleanupStrict: boolean } {
+  return {
+    attachmentAuthStrict: ATTACHMENT_AUTH_STRICT,
+    multipartCleanupStrict: ATTACHMENT_MULTIPART_CLEANUP_STRICT,
+  };
+}
+
+function normalizeClaimString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((x): x is string => typeof x === "string" && x.trim().length > 0).map((x) => x.trim());
+}
+
+function splitOrgHeader(value: string | null | undefined): { tenantCode: string; companyCode: string } {
+  const org = normalizeClaimString(value) ?? "";
+  const [tenantCode = "", companyCode = ""] = org.split("--");
+  return { tenantCode, companyCode };
+}
+
+function parseRealmFromClaims(claims: Record<string, unknown>): string | null {
+  const direct = normalizeClaimString(claims["realm_key"]) ?? normalizeClaimString(claims["realm"]);
+  if (direct) return direct;
+  const iss = normalizeClaimString(claims["iss"]);
+  const match = iss?.match(/\/realms\/([^/?#]+)\/?$/);
+  return match?.[1] ?? null;
+}
+
+function parseTenantFromClaims(claims: Record<string, unknown>): string | null {
+  const candidates = [
+    normalizeClaimString(claims["tenant_code"]),
+    normalizeClaimString(claims["tenant"]),
+    normalizeClaimString(claims["org"]),
+    normalizeClaimString(claims["organization"]),
+    normalizeClaimString(claims["organization_code"]),
+    normalizeClaimString(claims["x-org"]),
+  ];
+  return candidates.find((value): value is string => Boolean(value)) ?? null;
+}
+
+function parseCompanyFromClaims(claims: Record<string, unknown>): string | null {
+  const candidates = [
+    normalizeClaimString(claims["company_code"]),
+    normalizeClaimString(claims["company"]),
+    normalizeClaimString(claims["companyCode"]),
+  ];
+  return candidates.find((value): value is string => Boolean(value)) ?? null;
+}
+
+function parseServiceClientId(claims: Record<string, unknown>): string | null {
+  const candidates = [
+    normalizeClaimString(claims["azp"]),
+    normalizeClaimString(claims["client_id"]),
+    normalizeClaimString(claims["clientId"]),
+  ];
+  return candidates.find((value): value is string => Boolean(value)) ?? null;
+}
+
+/**
+ * Resolve the shared, fail-closed authorization context. Organization and
+ * realm headers are routing hints only; they must agree with verified claims.
+ */
+export async function resolveVerifiedRequestContext(
+  db: Kysely<any>,
+  claims: Record<string, unknown>,
+  hints: VerifiedRequestContextHints,
+): Promise<VerifiedRequestContextAttempt> {
+  const headerOrg = normalizeClaimString(hints.org) ?? undefined;
+  const headerRealm = normalizeClaimString(hints.realm) ?? undefined;
+  const realmKey = parseRealmFromClaims(claims);
+  if (!realmKey) {
+    return {
+      ok: false,
+      error: "AUTH_CONTEXT_REQUIRED",
+      message: "A verified realm claim is required.",
+      status: 403,
+    };
+  }
+
+  if (headerRealm && headerRealm !== realmKey) {
+    return {
+      ok: false,
+      error: "AUTH_CONTEXT_MISMATCH",
+      message: "The requested realm does not match the verified token.",
+      status: 403,
+    };
+  }
+
+  const subject = normalizeClaimString(claims["sub"]) ?? normalizeClaimString(claims["principal_id"]);
+  if (!subject) {
+    return {
+      ok: false,
+      error: "AUTH_CONTEXT_REQUIRED",
+      message: "A verified identity subject is required.",
+      status: 403,
+    };
+  }
+
+  const tenantCodeFromClaims = parseTenantFromClaims(claims);
+  const tenantIdClaim = normalizeClaimString(claims["tenant_id"]) ?? normalizeClaimString(claims["tenant_uuid"]);
+  const headerOrgScope = splitOrgHeader(headerOrg);
+  if (!headerOrgScope.tenantCode) {
+    return {
+      ok: false,
+      error: "ORG_CONTEXT_REQUIRED",
+      message: "An active organization context is required.",
+      status: 403,
+    };
+  }
+  let tenantId = normalizeClaimString(hints.trustedTenantId) ?? "";
+  let tenantCode = "";
+  let companyCode = "";
+
+  if (tenantCodeFromClaims) {
+    const org = splitOrgHeader(tenantCodeFromClaims);
+    tenantCode = org.tenantCode;
+    companyCode = org.companyCode;
+    if (tenantCode !== headerOrgScope.tenantCode) {
+      return {
+        ok: false,
+        error: "AUTH_CONTEXT_MISMATCH",
+        message: "The requested organization does not match the verified token.",
+        status: 403,
+      };
+    }
+  } else if (tenantIdClaim) {
+    const foundById = await db
+      .selectFrom("master.tenant as t")
+      .select(["t.id", "t.code"])
+      .where("t.id", "=", tenantIdClaim)
+      .where("t.realm_key", "=", realmKey)
+      .executeTakeFirst();
+    if (foundById) {
+      tenantId = foundById.id as string;
+      tenantCode = foundById.code as string;
+    }
+  }
+
+  if (!tenantCode && tenantCodeFromClaims) {
+    return { ok: false, error: "AUTH_CONTEXT_REQUIRED", message: "Token tenant context is invalid.", status: 403 };
+  }
+  const allowedTenants = readStringArray(claims["allowed_tenants"]);
+  if (!tenantCode && allowedTenants.length > 0) {
+    if (!allowedTenants.includes(headerOrgScope.tenantCode)) {
+      return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "Requested organization is not authorized by the verified token.", status: 403 };
+    }
+    tenantCode = headerOrgScope.tenantCode;
+  }
+  if (!tenantCode && !tenantId) {
+    return { ok: false, error: "AUTH_CONTEXT_REQUIRED", message: "The verified token has no tenant authorization context.", status: 403 };
+  }
+
+  if (!tenantId) {
+    const row = await db
+      .selectFrom("master.tenant as t")
+      .select(["t.id", "t.code"])
+      .where("t.code", "=", tenantCode)
+      .where("t.realm_key", "=", realmKey)
+      .executeTakeFirst();
+    if (!row) return { ok: false, error: "AUTH_CONTEXT_DENIED", message: "Requested organization is not available in the verified realm.", status: 403 };
+    tenantId = row.id as string;
+    tenantCode = (row.code as string) || tenantCode;
+  }
+
+  if (allowedTenants.length > 0) {
+    if (!tenantCode || !allowedTenants.includes(tenantCode)) {
+      return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "Requested organization is not authorized by the verified token.", status: 403 };
+    }
+  } else if (tenantIdClaim && tenantId !== tenantIdClaim) {
+    return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "Requested organization is not authorized by the verified token.", status: 403 };
+  }
+
+  if (tenantCode !== headerOrgScope.tenantCode) {
+    return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "The requested organization does not match the verified tenant.", status: 403 };
+  }
+  const hintedTenantId = normalizeClaimString(hints.tenantId);
+  const hintedTenantCode = normalizeClaimString(hints.tenantCode);
+  if ((hintedTenantId && hintedTenantId !== tenantId) || (hintedTenantCode && hintedTenantCode !== tenantCode)) {
+    return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "The requested tenant headers do not match the verified context.", status: 403 };
+  }
+
+  // Resolve binding, active principal state, service binding, and security
+  // epoch in one query. This replaces the former binding lookup followed by a
+  // second principal query on every protected request.
+  // A service request is not inferred from any caller-supplied header. It is
+  // recognised only when the verified JWT client id matches the service client
+  // bound to an active service-account principal in the same tenant. It then
+  // traverses normal IAM permissions and company scope just like a user.
+  const principal = await db
+    .selectFrom("master.principal_identity_binding as pab")
+    .innerJoin("master.principal as p", (join) => join
+      .onRef("p.id", "=", "pab.principal_id")
+      .onRef("p.tenant_id", "=", "pab.tenant_id"))
+    .leftJoin("master.principal_profile as pp", (join) => join
+      .onRef("pp.principal_id", "=", "p.id")
+      .onRef("pp.tenant_id", "=", "p.tenant_id"))
+    .select(["p.id", "p.auth_epoch", "p.is_service_account", "p.status", "pp.keycloak_service_client_id"])
+    .where("pab.subject_id", "=", subject)
+    .where("pab.realm_key", "=", realmKey)
+    .where("pab.tenant_id", "=", tenantId)
+    .executeTakeFirst() as {
+      id?: string;
+      auth_epoch?: number;
+      is_service_account?: boolean;
+      status?: string;
+      keycloak_service_client_id?: string | null;
+    } | undefined;
+  if (!principal || principal.status !== "active") {
+    return { ok: false, error: "PRINCIPAL_NOT_FOUND", message: "The bound principal is not active in the verified tenant.", status: 403 };
+  }
+  const principalId = principal.id;
+  if (!principalId) {
+    return { ok: false, error: "PRINCIPAL_NOT_FOUND", message: "No principal is bound to this verified identity in the active tenant.", status: 403 };
+  }
+  const serviceClientId = parseServiceClientId(claims);
+  const isServicePrincipal = principal.is_service_account === true;
+  if (isServicePrincipal && (!serviceClientId || serviceClientId !== principal.keycloak_service_client_id)) {
+    return {
+      ok: false,
+      error: "SERVICE_PRINCIPAL_DENIED",
+      message: "The verified service client is not bound to this service principal.",
+      status: 403,
+    };
+  }
+
+  const organizationId = normalizeClaimString(hints.organizationId);
+  const legalEntityId = normalizeClaimString(hints.legalEntityId);
+  const companyCodeIdHint = normalizeClaimString(hints.companyCodeId);
+  const orgContextType = normalizeClaimString(hints.orgContextType)?.toLowerCase();
+  const companyCodeId = orgContextType === "company_code" ? organizationId : companyCodeIdHint;
+  if (orgContextType === "company_code" && !companyCodeId) {
+    return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "A company organization context requires a company code.", status: 403 };
+  }
+  if (companyCodeId) {
+    const company = await db
+      .selectFrom("master.company_code as cc")
+      .select(["cc.id", "cc.code", "cc.legal_entity_id"])
+      .where("cc.id", "=", companyCodeId)
+      .where("cc.tenant_id", "=", tenantId)
+      .where("cc.status", "=", "active")
+      .executeTakeFirst();
+    if (!company || (legalEntityId && company.legal_entity_id !== legalEntityId)) {
+      return { ok: false, error: "AUTH_CONTEXT_MISMATCH", message: "The requested company context is outside the verified tenant scope.", status: 403 };
+    }
+    companyCode = company.code as string;
+  }
+
+  return {
+    ok: true,
+    context: {
+      tenantId,
+      tenantCode,
+      companyCode: companyCode || parseCompanyFromClaims(claims) || undefined,
+      companyCodeId: companyCodeId ?? undefined,
+      organizationId: organizationId ?? undefined,
+      legalEntityId: legalEntityId ?? undefined,
+      realmKey,
+      principalId,
+      authEpoch: Number.isSafeInteger(principal.auth_epoch) ? principal.auth_epoch! : 0,
+      subject,
+      authType: isServicePrincipal ? "internal_service" : "bearer",
+      serviceClientId: isServicePrincipal ? serviceClientId ?? undefined : undefined,
+      correlationId: normalizeClaimString(hints.correlationId) ?? undefined,
+      workspace: normalizeClaimString(claims["workspace"]) ?? normalizeClaimString(claims["workspace_id"]) ?? undefined,
+      profile: normalizeClaimString(claims["profile"]) ?? normalizeClaimString(claims["profile_id"]) ?? undefined,
+      headerOrg: headerOrg ?? null,
+      headerRealm: headerRealm ?? null,
+    },
+  };
+}
+
+/**
+ * Compatibility entry point for the attachment service. Attachments now use
+ * the same verified context as records and lifecycle operations.
+ */
+export async function resolveAttachmentAuthContext(
+  db: Kysely<any>,
+  claims: Record<string, unknown>,
+  headerOrg: string | undefined,
+  headerRealm: string | undefined | null,
+): Promise<AttachmentAuthContextAttempt> {
+  return resolveVerifiedRequestContext(db, claims, {
+    org: headerOrg,
+    realm: headerRealm,
+  });
+}
+
+export { ATTACHMENT_AUTH_STRICT, ATTACHMENT_MULTIPART_CLEANUP_STRICT };
 
 // ── Tenant resolver ───────────────────────────────────────────────────────────
 

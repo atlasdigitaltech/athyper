@@ -1,8 +1,3 @@
--- LookupDomain/master/entity_document_link_link_kind.sql
--- Lookup values for domain: master.entity_document_link.link_kind
--- Attachment link kind for entity document links.
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order,

@@ -1,6 +1,3 @@
--- LookupDomain/master/payment_method_instrument_mode.sql
--- Lookup values for domain: master.payment_method_instrument_mode
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('bank_transfer',  'Bank Transfer',    'master.payment_method_instrument_mode', 'Wire, RTGS, local transfer, UPI',             10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

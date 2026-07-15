@@ -18,7 +18,7 @@ CREATE OR REPLACE VIEW document.v_ap_settlement_graph AS
 SELECT
     pi.id                            AS purchase_invoice_id,
     pi.tenant_id,
-    pi.invoice_number,
+    pi.code,
     pi.status                        AS invoice_status,
     pi.payable_amount,
     pi.paid_amount,
@@ -45,7 +45,7 @@ SELECT
                                                   AND pil.tenant_id           = pi.tenant_id
   LEFT JOIN document.accounting_distribution  ad  ON ad.source_line_id        = pil.id
                                                   AND ad.tenant_id            = pil.tenant_id
-                                                  AND ad.source_doc_type      = 'PURCHASE_INVOICE_LINE'
+                                                  AND ad.source_doc_type      = 'purchase_invoice_line'
   LEFT JOIN document.journal_entry            je  ON je.id                    = pi.ap_je_id
                                                   AND je.tenant_id            = pi.tenant_id
   LEFT JOIN document.journal_line             jl  ON jl.journal_entry_id      = je.id
@@ -79,7 +79,7 @@ COMMENT ON VIEW document.v_ap_settlement_graph IS
 CREATE OR REPLACE VIEW document.v_ap_invoice_summary AS
 SELECT pi.id                AS purchase_invoice_id,
        pi.tenant_id,
-       pi.invoice_number,
+       pi.code,
        pi.status            AS invoice_status,
        pi.supplier_id,
        pi.payable_amount,
@@ -104,7 +104,7 @@ COMMENT ON VIEW document.v_ap_invoice_summary IS
 CREATE OR REPLACE VIEW document.v_ap_settlement_summary AS
 SELECT pi.id                            AS purchase_invoice_id,
        pi.tenant_id,
-       pi.invoice_number,
+       pi.code,
        pe.id                            AS payment_entry_id,
        pe.payment_number,
        pe.status                        AS payment_status,
@@ -120,7 +120,7 @@ SELECT pi.id                            AS purchase_invoice_id,
   JOIN document.payment_entry                 pe  ON pe.id        = pea.payment_entry_id
                                                   AND pe.tenant_id = pea.tenant_id
  WHERE document.fn_pe_cash_effective(pe.status, pe.is_voided) = true
- GROUP BY pi.id, pi.tenant_id, pi.invoice_number, pe.id, pe.payment_number, pe.status;
+ GROUP BY pi.id, pi.tenant_id, pi.code, pe.id, pe.payment_number, pe.status;
 
 COMMENT ON VIEW document.v_ap_settlement_summary IS
     'One row per (invoice × cash-effective payment). Allocated and cash-out totals '

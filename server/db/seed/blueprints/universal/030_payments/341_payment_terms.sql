@@ -1,24 +1,17 @@
--- ============================================================================
--- 341_payment_terms.sql — Payment term catalog with clauses & discount tiers
--- ============================================================================
--- Tables: master.payment_term, master.payment_term_clause,
---         master.payment_term_discount_tier
--- Scope:  28 terms covering standard, construction, trade, government, lease,
---         subscription, and advanced scenarios (multi-tier discounts,
---         flexible clauses, compound advance+retention, partial release)
--- Depends: platform/099_tenant_bootstrap (tenant must exist)
--- ============================================================================
--- DDL CONSTRAINT REMINDERS (bugs found and fixed from v1):
---   due_date_flexibility: 'FIXED' | 'FLEXIBLE' (NOT 'STRICT')
---   base_event: INVOICE_DATE|GR_DATE|SERVICE_ENTRY_DATE|DELIVERY_DATE|
---               CERTIFIED_DATE|CONTRACT_DATE (NOT 'ORDER_DATE')
---   term_category: standard|construction|government|subscription|lease|trade
---   trigger_event: on_po_approval|on_contract_signing|on_mobilization|
---                  on_first_delivery|on_invoice|on_payment|on_final_acceptance
---   release_event: practical_completion|final_acceptance|dlp_expiry|
---                  warranty_expiry|custom_milestone|gazette_notification
---   recovery_method: pro_rata|lump_sum_first|milestone_based|equal_installment
--- ============================================================================
+-- master.payment_term + clauses + discount tiers — 28 terms covering standard,
+-- construction, trade, government, lease, subscription, and advanced scenarios
+-- (multi-tier discounts, flexible clauses, compound advance+retention, partial release).
+--
+-- DDL constraint gotchas (these enum values are the only allowed ones):
+--   due_date_flexibility  FIXED | FLEXIBLE   (NOT 'STRICT')
+--   base_event            INVOICE_DATE | GR_DATE | SERVICE_ENTRY_DATE | DELIVERY_DATE
+--                         | CERTIFIED_DATE | CONTRACT_DATE   (NOT 'ORDER_DATE')
+--   term_category         standard | construction | government | subscription | lease | trade
+--   trigger_event         on_po_approval | on_contract_signing | on_mobilization
+--                         | on_first_delivery | on_invoice | on_payment | on_final_acceptance
+--   release_event         practical_completion | final_acceptance | dlp_expiry
+--                         | warranty_expiry | custom_milestone | gazette_notification
+--   recovery_method       pro_rata | lump_sum_first | milestone_based | equal_installment
 
 DO $seed$
 DECLARE

@@ -1,6 +1,3 @@
--- LookupDomain/control/bank_interface_profile_type.sql
--- Lookup values for domain: control.bank_interface_profile_type
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('file',        'File',        'control.bank_interface_profile_type', 'File-based (PAIN.001, NACHA, MT101)',         10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

@@ -1,8 +1,5 @@
--- LookupDomain/master/company_code_access_entity_type.sql
--- Lookup values for domain: master.company_code_access_entity_type
--- Replaces the inline CHECK constraint cca_entity_type_chk (removed from table DDL).
--- is_extensible = true: tenants may add custom entity types via lookup_value without DDL changes.
--- Idempotent: WHERE NOT EXISTS guard on (domain_code, code, tenant_id IS NULL)
+-- Replaces the dropped CHECK constraint cca_entity_type_chk — extensibility comes
+-- from is_extensible=true on the domain, so tenants can add types without DDL.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, sort_order, is_system, status, created_by)

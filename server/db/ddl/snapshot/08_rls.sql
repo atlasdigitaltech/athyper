@@ -22,3 +22,23 @@ CREATE POLICY tenant_read ON snapshot.template_version
 -- Admin full access (publishing pipeline runs as athyperadmin)
 CREATE POLICY admin_read  ON snapshot.template_version FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write ON snapshot.template_version FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+
+-- =============================================================================
+-- §8  snapshot.document_snapshot — tenant-scoped read; write via athyperadmin only
+-- =============================================================================
+-- Writes happen through snapshot.fn_capture_full() (SECURITY INVOKER) from
+-- transition hook handlers running under athyperadmin context. Tenants may only
+-- SELECT their own snapshots.
+
+ALTER TABLE snapshot.document_snapshot ENABLE ROW LEVEL SECURITY;
+ALTER TABLE snapshot.document_snapshot FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read  ON snapshot.document_snapshot;
+DROP POLICY IF EXISTS admin_read   ON snapshot.document_snapshot;
+DROP POLICY IF EXISTS admin_write  ON snapshot.document_snapshot;
+CREATE POLICY tenant_read ON snapshot.document_snapshot
+    FOR SELECT USING (
+        shared.current_tenant_id_soft() IS NOT NULL
+        AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY admin_read  ON snapshot.document_snapshot FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON snapshot.document_snapshot FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

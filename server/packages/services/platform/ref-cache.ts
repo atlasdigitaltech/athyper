@@ -12,7 +12,7 @@
  * getRefData() / setRefData() are used by read handlers that want caching.
  */
 
-import type { RedisClient } from "@athyper/adapter-memorycache";
+import type { RedisClient } from "@athyper/adapter-memory-cache";
 
 const REF_TTL_SECONDS = 3600;
 
@@ -32,3 +32,4 @@ export async function setRefData<T>(redis: RedisClient, family: string, data: T[
   const ver = await redis.incr(`ref_ver:${family}`);
   await redis.set(`ref:${family}:v${ver}`, JSON.stringify(data), "EX", REF_TTL_SECONDS);
 }
+

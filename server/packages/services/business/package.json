@@ -25,6 +25,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@athyper/api-contracts": "workspace:*",
     "@athyper/svc-ai": "workspace:*",
     "@athyper/svc-shared": "workspace:*"
   },

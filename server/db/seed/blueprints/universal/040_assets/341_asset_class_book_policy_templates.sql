@@ -1,13 +1,6 @@
--- ============================================================================
--- 341_asset_class_book_policy_templates.sql
--- Universal IFRS asset policy templates
--- ============================================================================
--- Schema: control.asset_class_book_policy_template
--- Scope:  Platform-global template rows (tenant_id IS NULL)
--- Purpose:
---   One simple source for default asset policy onboarding. Concrete company/book
---   rows are created later by control.provision_asset_policies().
--- ============================================================================
+-- Platform-global IFRS asset policy templates (tenant_id IS NULL).
+-- Concrete per-(company × book) rows are created later by
+-- control.provision_asset_policies() — this file only seeds the templates.
 
 DO $seed$
 DECLARE

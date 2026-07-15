@@ -1,7 +1,4 @@
--- LookupDomain/master/payment_term_clause_type.sql
--- Lookup values for domain: master.payment_term_clause_type
--- Used by: payment_term_clause.clause_type
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: payment_term_clause.clause_type.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

@@ -1,8 +1,3 @@
--- LookupDomain/master/dimension_type_category.sql
--- Lookup domain + values for master.dimension_type.category
--- is_extensible = false — categories are platform-governed.
--- Idempotent: WHERE NOT EXISTS guard on both domain and value inserts.
-
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)
 SELECT 'master.dimension_type_category',

@@ -30,12 +30,39 @@ import {
   parseScopeParams,
   resolveCompanyIds,
 } from "./finance.route.js";
-import { verifyBearer, resolveTenantId, isUuid, resolvePrincipalIdOrNull, extractOrgHeaders, verifyLock } from "@athyper/svc-shared";
+import { verifyBearer, resolveTenantId, isUuid, resolvePrincipalIdOrNull, resolvePrincipalIdWithJit, extractOrgHeaders, verifyLock, isEntityOperationAllowed } from "@athyper/svc-shared";
+import { checkPermission, requireAllow } from "@athyper/svc-iam";
+import {
+  restoreFromSnapshot,
+  RestoreError,
+} from "@athyper/svc-business";
 import { randomUUID } from "node:crypto";
 import { handleCreateApInvoice } from "@athyper/svc-business";
 import { handleAddInvoiceLine, handleUpdateInvoiceLine, handleDeleteInvoiceLine } from "@athyper/svc-business";
-import { handlePostPayment, handleSubmitPayment, handleVoidPayment } from "@athyper/svc-business";
+import {
+  allocateDocumentNumber,
+  createPaymentFromInvoice,
+  handlePostPayment,
+  handleSubmitPayment,
+  handleVoidPayment,
+  resolveCompanyAndBaseCurrency,
+  resolveFiscalPeriod,
+} from "@athyper/svc-business";
 import type { BusinessLifecycleSyncHook } from "@athyper/svc-business";
+import {
+  apportionToLines,
+  canPcAction,
+  createComponent,
+  deleteComponent,
+  supersedeComponent,
+  updateComponentInPlace,
+  type ApportionBasis,
+  type Basis,
+  type CreateComponentInput,
+  type EntryLevel,
+  type Origin,
+  type TermType,
+} from "@athyper/svc-business";
 import { syncLifecycleInstanceForStatus } from "@athyper/svc-workflow";
 import {
   resolveDraftLineClassification,
@@ -136,10 +163,533 @@ function createFinanceLifecycleSyncHook(
   };
 }
 
+// PC_MUTABLE_STATUSES / PC_SUPERSEDE_STATUSES removed in v3.1 Phase 1. Use
+// canPcAction(invoice.status, "canEdit" | "canDelete" | "canAdd" | "canSupersede")
+// instead — the canonical matrix lives in @athyper/api-contracts/pc-affordance-matrix
+// and is consumed by both the client UI hook and the verifier.
+const PC_TERM_TYPES: readonly TermType[] = ["discount", "charge", "tax", "withholding", "retention", "principal_marker"];
+
+// Apportionment breakup helpers — extracted to apportionment-helpers.ts in
+// Phase 5e so the pure parsing + escaping logic can be unit-tested without
+// dragging in express + kysely. Re-imported here so the route handlers
+// keep their existing call sites unchanged.
+import {
+  APPORTIONMENT_CSV_MAX_ROWS,
+  csvField,
+  encodeApportionmentCursor,
+  parseApportionmentCursor,
+  parseApportionmentQuery,
+  parseApportionmentTab,
+} from "./apportionment-helpers.js";
+
+// Apportionment breakup helpers (parse cursor / tab / q + csv field
+// escape + CSV row cap) live in ./apportionment-helpers.ts — imported
+// at the top of this file beside the canPcAction import. Extracted in
+// v3.1 Phase 5e so the pure parsing logic can be unit-tested without
+// pulling in the express + kysely surface this route file depends on.
+
+const PC_BASIS_TYPES: readonly Basis[] = ["percent", "amount", "per_unit", "flat"];
+const PC_ENTRY_LEVELS: readonly EntryLevel[] = ["header", "line"];
+const PC_APPORTION_BASES: readonly ApportionBasis[] = ["value", "quantity", "weight", "equal"];
+const PC_ORIGINS: readonly Origin[] = ["manual", "inherited", "vendor_default", "system_resolved"];
+
+interface InvoiceForPricingComponent {
+  id: string;
+  status: string;
+  currency_code: string | null;
+  base_currency_code: string | null;
+  exchange_rate: string | number | null;
+}
+
+interface GenericPricingComponentSource {
+  id: string;
+  source_doc_type: "commitment_line";
+  status: string;
+  currency_code: string | null;
+  base_currency_code: string | null;
+  exchange_rate: string | number | null;
+}
+
+interface PricingComponentSupersedeBlock {
+  id: string;
+  expectedVersion?: string | number;
+}
+
+type ParseResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; status: number; error: string; message: string };
+
+function parsePricingComponentRequest(
+  value: unknown,
+  invoice: InvoiceForPricingComponent,
+): ParseResult<{ input: CreateComponentInput; supersede: PricingComponentSupersedeBlock | null }> {
+  if (!isPlainRecord(value)) {
+    return { ok: false, status: 400, error: "INVALID_REQUEST", message: "Body must be a JSON object." };
+  }
+  const rawCreate = isPlainRecord(value["create"]) ? value["create"] : value;
+  const create = rawCreate as Record<string, unknown>;
+
+  const requestSourceDocId = readOptionalUuid(create["source_doc_id"]);
+  if (requestSourceDocId && requestSourceDocId !== invoice.id) {
+    return {
+      ok: false,
+      status: 400,
+      error: "SOURCE_DOC_ID_MISMATCH",
+      message: "Pricing component source_doc_id must match the invoice id in the route.",
+    };
+  }
+
+  const conditionTypeId = readOptionalUuid(create["condition_type_id"]);
+  if (!conditionTypeId) {
+    return {
+      ok: false,
+      status: 400,
+      error: "INVALID_CONDITION_TYPE",
+      message: "condition_type_id must be a UUID.",
+    };
+  }
+
+  const termType = readEnum(create["term_type"], PC_TERM_TYPES);
+  const basis = readEnum(create["basis"], PC_BASIS_TYPES);
+  if (!termType || !basis) {
+    return {
+      ok: false,
+      status: 400,
+      error: "INVALID_COMPONENT_SHAPE",
+      message: "term_type and basis are required and must be valid pricing component values.",
+    };
+  }
+
+  const sourceLineId = readOptionalUuid(create["source_line_id"]);
+  const entryLevel = readEnum(create["entry_level"], PC_ENTRY_LEVELS) ?? (sourceLineId ? "line" : "header");
+  if (entryLevel === "line" && !sourceLineId) {
+    return { ok: false, status: 400, error: "SOURCE_LINE_REQUIRED", message: "Line-scope components require source_line_id." };
+  }
+  if (entryLevel === "header" && sourceLineId) {
+    return { ok: false, status: 400, error: "HEADER_SOURCE_LINE_FORBIDDEN", message: "Header-scope components must not include source_line_id." };
+  }
+
+  const currencyCode = readString(create["currency_code"]) || invoice.currency_code || "INR";
+  const baseCurrencyCode = readString(create["base_currency_code"]) || invoice.base_currency_code || currencyCode;
+  const exchangeRate = readNumber(create["exchange_rate"]) ?? readNumber(invoice.exchange_rate) ?? 1;
+  const sequence = readNumber(create["sequence"]) ?? 100;
+
+  const input: CreateComponentInput = {
+    source_doc_type: "purchase_invoice_line",
+    source_doc_id: invoice.id,
+    source_line_id: entryLevel === "line" ? sourceLineId : null,
+    term_type: termType,
+    condition_type_id: conditionTypeId,
+    sequence,
+    basis,
+    rate_value: readNumber(create["rate_value"]),
+    amount_value: readNumber(create["amount_value"]),
+    base_for_calculation: readNumber(create["base_for_calculation"]),
+    entry_level: entryLevel,
+    apportion_basis: entryLevel === "header"
+      ? readEnum(create["apportion_basis"], PC_APPORTION_BASES) ?? "value"
+      : null,
+    origin: readEnum(create["origin"], PC_ORIGINS) ?? "manual",
+    tax_group_id: readOptionalUuid(create["tax_group_id"]),
+    is_inclusive: readBoolean(create["is_inclusive"]),
+    recoverable_pct: readNumber(create["recoverable_pct"]),
+    tax_section_code: readNullableString(create["tax_section_code"]),
+    // WS-B/D8: propagate the WHT metadata snapshot through to the service.
+    // The service-level validateWhtInput() enforces presence of
+    // rate_schedule_id + wht_basis + resolved_rate for term_type='withholding';
+    // without this read the keys were dropped at the route boundary and the
+    // service rejected every WHT create.
+    metadata: isPlainRecord(create["metadata"]) ? create["metadata"] : null,
+    currency_code: currencyCode,
+    base_currency_code: baseCurrencyCode,
+    exchange_rate: exchangeRate,
+  };
+
+  return { ok: true, value: { input, supersede: parsePricingComponentSupersede(value["supersede"]) } };
+}
+
+function parseGenericPricingComponentRequest(
+  value: unknown,
+  source: GenericPricingComponentSource,
+): ParseResult<{ input: CreateComponentInput; supersede: PricingComponentSupersedeBlock | null }> {
+  if (!isPlainRecord(value)) {
+    return { ok: false, status: 400, error: "INVALID_REQUEST", message: "Body must be a JSON object." };
+  }
+  const rawCreate = isPlainRecord(value["create"]) ? value["create"] : value;
+  const create = rawCreate as Record<string, unknown>;
+
+  const requestSourceDocId = readOptionalUuid(create["source_doc_id"]);
+  if (requestSourceDocId && requestSourceDocId !== source.id) {
+    return {
+      ok: false,
+      status: 400,
+      error: "SOURCE_DOC_ID_MISMATCH",
+      message: "Pricing component source_doc_id must match the source document id.",
+    };
+  }
+
+  const conditionTypeId = readOptionalUuid(create["condition_type_id"]);
+  if (!conditionTypeId) {
+    return {
+      ok: false,
+      status: 400,
+      error: "INVALID_CONDITION_TYPE",
+      message: "condition_type_id must be a UUID.",
+    };
+  }
+
+  const termType = readEnum(create["term_type"], PC_TERM_TYPES);
+  const basis = readEnum(create["basis"], PC_BASIS_TYPES);
+  if (!termType || !basis) {
+    return {
+      ok: false,
+      status: 400,
+      error: "INVALID_COMPONENT_SHAPE",
+      message: "term_type and basis are required and must be valid pricing component values.",
+    };
+  }
+
+  const sourceLineId = readOptionalUuid(create["source_line_id"]);
+  const entryLevel = readEnum(create["entry_level"], PC_ENTRY_LEVELS) ?? (sourceLineId ? "line" : "header");
+  if (entryLevel === "line" && !sourceLineId) {
+    return { ok: false, status: 400, error: "SOURCE_LINE_REQUIRED", message: "Line-scope components require source_line_id." };
+  }
+  if (entryLevel === "header" && sourceLineId) {
+    return { ok: false, status: 400, error: "HEADER_SOURCE_LINE_FORBIDDEN", message: "Header-scope components must not include source_line_id." };
+  }
+
+  const currencyCode = readString(create["currency_code"]) || source.currency_code || "INR";
+  const baseCurrencyCode = readString(create["base_currency_code"]) || source.base_currency_code || currencyCode;
+  const exchangeRate = readNumber(create["exchange_rate"]) ?? readNumber(source.exchange_rate) ?? 1;
+
+  return {
+    ok: true,
+    value: {
+      input: {
+        source_doc_type: source.source_doc_type,
+        source_doc_id: source.id,
+        source_line_id: entryLevel === "line" ? sourceLineId : null,
+        term_type: termType,
+        condition_type_id: conditionTypeId,
+        sequence: readNumber(create["sequence"]) ?? 100,
+        basis,
+        rate_value: readNumber(create["rate_value"]),
+        amount_value: readNumber(create["amount_value"]),
+        base_for_calculation: readNumber(create["base_for_calculation"]),
+        entry_level: entryLevel,
+        apportion_basis: entryLevel === "header"
+          ? readEnum(create["apportion_basis"], PC_APPORTION_BASES) ?? "value"
+          : null,
+        origin: readEnum(create["origin"], PC_ORIGINS) ?? "manual",
+        tax_group_id: readOptionalUuid(create["tax_group_id"]),
+        is_inclusive: readBoolean(create["is_inclusive"]),
+        recoverable_pct: readNumber(create["recoverable_pct"]),
+        tax_section_code: readNullableString(create["tax_section_code"]),
+        metadata: isPlainRecord(create["metadata"]) ? create["metadata"] : null,
+        currency_code: currencyCode,
+        base_currency_code: baseCurrencyCode,
+        exchange_rate: exchangeRate,
+      },
+      supersede: parsePricingComponentSupersede(value["supersede"]),
+    },
+  };
+}
+
+function parsePricingComponentSupersede(value: unknown): PricingComponentSupersedeBlock | null {
+  if (!isPlainRecord(value)) return null;
+  const id = readOptionalUuid(value["id"]);
+  if (!id) return null;
+  const expectedVersion = value["expectedVersion"];
+  if (typeof expectedVersion === "string" || typeof expectedVersion === "number") {
+    return { id, expectedVersion };
+  }
+  return { id };
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function readString(value: unknown): string | null {
+  if (typeof value === "string") return value.trim() || null;
+  if (typeof value === "number" || typeof value === "bigint") return String(value);
+  return null;
+}
+
+function readNullableString(value: unknown): string | null {
+  return readString(value);
+}
+
+function readOptionalUuid(value: unknown): string | null {
+  const text = readString(value);
+  return text && isUuid(text) ? text : null;
+}
+
+async function loadGenericPricingComponentSource(
+  db: Kysely<unknown>,
+  tenantId: string,
+  sourceDocType: string,
+  sourceDocId: string,
+): Promise<GenericPricingComponentSource | null> {
+  if (sourceDocType !== "commitment_line") return null;
+  const row = await sql<GenericPricingComponentSource>`
+    SELECT
+      id,
+      'commitment_line'::text AS source_doc_type,
+      status,
+      currency_code,
+      base_currency_code,
+      exchange_rate
+    FROM document.commitment
+    WHERE id = ${sourceDocId}::uuid
+      AND tenant_id = ${tenantId}::uuid
+    LIMIT 1
+  `.execute(db);
+  return row.rows[0] ?? null;
+}
+
+function readNumber(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function readBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return null;
+}
+
+function readEnum<T extends string>(value: unknown, allowed: readonly T[]): T | null {
+  return typeof value === "string" && (allowed as readonly string[]).includes(value)
+    ? value as T
+    : null;
+}
+
 export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
-  const { db, auth, logger, cache } = deps;
+  const { db, auth, logger, cache, checkPermissionBatch } = deps;
   const businessLogger = createBusinessLogger(logger);
   const lifecycleSync = createFinanceLifecycleSyncHook(logger);
+
+  router.post("/finance/pricing-components", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const body = isPlainRecord(req.body) ? req.body : {};
+      const sourceDocType = readString(body["source_doc_type"]);
+      const rawCreate = isPlainRecord(body["create"]) ? body["create"] : body;
+      const sourceDocId = readOptionalUuid((rawCreate as Record<string, unknown>)["source_doc_id"]);
+      if (!sourceDocType || !sourceDocId) {
+        res.status(400).json({ error: "INVALID_REQUEST", message: "source_doc_type and create.source_doc_id are required." });
+        return;
+      }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:pc:create:${tenantId}:${sub}`, 30, 60)) return;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      const source = await loadGenericPricingComponentSource(db as Kysely<unknown>, tenantId, sourceDocType, sourceDocId);
+      if (!source) {
+        res.status(404).json({ error: "SOURCE_NOT_FOUND", message: "Pricing component source is not supported or was not found." });
+        return;
+      }
+
+      const parsed = parseGenericPricingComponentRequest(req.body, source);
+      if (!parsed.ok) {
+        res.status(parsed.status).json({ error: parsed.error, message: parsed.message });
+        return;
+      }
+      if (parsed.value.supersede) {
+        res.status(422).json({ error: "CHILD_NOT_EDITABLE", message: "Pricing components must be edited while the document is draft." });
+        return;
+      }
+      if (!canPcAction(source.status, "canAdd")) {
+        res.status(422).json({
+          error: "NOT_EDITABLE",
+          message: `Document is in '${source.status}' and cannot accept new pricing components.`,
+        });
+        return;
+      }
+      if (parsed.value.input.source_line_id) {
+        const line = await sql<{ id: string }>`
+          SELECT id
+            FROM document.commitment_line
+           WHERE id = ${parsed.value.input.source_line_id}::uuid
+             AND commitment_id = ${source.id}::uuid
+             AND tenant_id = ${tenantId}::uuid
+           LIMIT 1
+        `.execute(db);
+        if (!line.rows[0]) { res.status(404).json({ error: "LINE_NOT_FOUND" }); return; }
+      }
+
+      const id = await createComponent(db, tenantId, principalId, parsed.value.input);
+      const createdInput = parsed.value.input;
+      const needsApportionment = createdInput.source_doc_type === "commitment_line"
+        && createdInput.entry_level === "header"
+        && createdInput.apportion_basis != null
+        && createdInput.apportion_basis !== "weight";
+      if (needsApportionment) {
+        try {
+          await apportionToLines(db, { tenantId, headerPcId: id, actor: principalId });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          if (message.startsWith("PC_APPORTION_DEGENERATE_BASIS")) {
+            res.status(422).json({
+              error: "PC_APPORTION_DEGENERATE_BASIS",
+              message: message.replace(/^PC_APPORTION_DEGENERATE_BASIS:\s*/, ""),
+            });
+            return;
+          }
+          throw err;
+        }
+      }
+      res.status(201).json({ ok: true, created: { id } });
+    } catch (err) {
+      logger?.error("finance_pricing_component_create_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+  router.patch("/finance/pricing-components/:pcId", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const pcId = String(req.params["pcId"] ?? "");
+      if (!isUuid(pcId)) { res.status(400).json({ error: "INVALID_PC_ID" }); return; }
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:pc:update:${tenantId}:${sub}`, 30, 60)) return;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      const pc = await sql<{
+        id: string; source_doc_type: string; source_doc_id: string; entry_level: string; origin: string; superseded_by_id: string | null;
+      }>`
+        SELECT id, source_doc_type, source_doc_id, entry_level, origin, superseded_by_id
+          FROM document.pricing_component
+         WHERE id = ${pcId}::uuid
+           AND tenant_id = ${tenantId}::uuid
+         LIMIT 1
+      `.execute(db);
+      const current = pc.rows[0];
+      if (!current) { res.status(404).json({ error: "PRICING_COMPONENT_NOT_FOUND" }); return; }
+      if (current.superseded_by_id) { res.status(409).json({ error: "LEGACY_REPLACED_ROW" }); return; }
+      if (current.origin !== "manual") {
+        res.status(422).json({ error: "UPDATE_NOT_ALLOWED_FOR_ORIGIN", message: `Pricing components with origin '${current.origin}' cannot be edited directly.` });
+        return;
+      }
+
+      const source = await loadGenericPricingComponentSource(db as Kysely<unknown>, tenantId, current.source_doc_type, current.source_doc_id);
+      if (!source) { res.status(404).json({ error: "SOURCE_NOT_FOUND" }); return; }
+      if (!canPcAction(source.status, "canEdit")) {
+        res.status(422).json({ error: "NOT_EDITABLE", message: `Document is in '${source.status}' and pricing components are read-only.` });
+        return;
+      }
+
+      const parsed = parseGenericPricingComponentRequest(req.body, source);
+      if (!parsed.ok) {
+        res.status(parsed.status).json({ error: parsed.error, message: parsed.message });
+        return;
+      }
+      if (parsed.value.supersede) {
+        res.status(400).json({ error: "INVALID_REQUEST", message: "PATCH does not accept replacement-chain blocks." });
+        return;
+      }
+
+      const result = await updateComponentInPlace(db, tenantId, principalId, pcId, source.id, parsed.value.input);
+      if (current.entry_level === "header") {
+        await sql`
+          DELETE FROM document.pricing_component
+           WHERE tenant_id              = ${tenantId}::uuid
+             AND is_apportioned_from_id = ${pcId}::uuid
+        `.execute(db);
+      }
+      const updatedInput = parsed.value.input;
+      const needsApportionment = updatedInput.source_doc_type === "commitment_line"
+        && updatedInput.entry_level === "header"
+        && updatedInput.apportion_basis != null
+        && updatedInput.apportion_basis !== "weight";
+      if (needsApportionment) {
+        try {
+          await apportionToLines(db, { tenantId, headerPcId: pcId, actor: principalId });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          if (message.startsWith("PC_APPORTION_DEGENERATE_BASIS")) {
+            res.status(422).json({
+              error: "PC_APPORTION_DEGENERATE_BASIS",
+              message: message.replace(/^PC_APPORTION_DEGENERATE_BASIS:\s*/, ""),
+            });
+            return;
+          }
+          throw err;
+        }
+      }
+      res.status(200).json({ ok: true, updated: { id: result.id } });
+    } catch (err) {
+      logger?.error("finance_pricing_component_update_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+  router.delete("/finance/pricing-components/:pcId", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const pcId = String(req.params["pcId"] ?? "");
+      if (!isUuid(pcId)) { res.status(400).json({ error: "INVALID_PC_ID" }); return; }
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:pc:delete:${tenantId}:${sub}`, 30, 60)) return;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      const pc = await sql<{
+        id: string; source_doc_type: string; source_doc_id: string; origin: string; superseded_by_id: string | null;
+      }>`
+        SELECT id, source_doc_type, source_doc_id, origin, superseded_by_id
+          FROM document.pricing_component
+         WHERE id = ${pcId}::uuid
+           AND tenant_id = ${tenantId}::uuid
+         LIMIT 1
+      `.execute(db);
+      const current = pc.rows[0];
+      if (!current) { res.status(404).json({ error: "PRICING_COMPONENT_NOT_FOUND" }); return; }
+      if (current.superseded_by_id) { res.status(409).json({ error: "LEGACY_REPLACED_ROW" }); return; }
+      if (current.origin !== "manual") {
+        res.status(422).json({ error: "DELETE_NOT_ALLOWED_FOR_ORIGIN", message: `Pricing components with origin '${current.origin}' cannot be deleted directly.` });
+        return;
+      }
+
+      const source = await loadGenericPricingComponentSource(db as Kysely<unknown>, tenantId, current.source_doc_type, current.source_doc_id);
+      if (!source) { res.status(404).json({ error: "SOURCE_NOT_FOUND" }); return; }
+      if (!canPcAction(source.status, "canDelete")) {
+        res.status(422).json({ error: "NOT_DELETABLE", message: `Document is in '${source.status}' and pricing components are read-only.` });
+        return;
+      }
+
+      await deleteComponent(db, tenantId, principalId, pcId, source.id);
+      res.status(200).json({ ok: true, deleted: { id: pcId } });
+    } catch (err) {
+      logger?.error("finance_pricing_component_delete_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
 
   // ── GET /api/finance/ap/invoices ──────────────────────────────────────────
   router.get("/finance/ap/invoices", (async (req, res, next) => {
@@ -176,7 +726,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         )
         .select([
           "pi.id",
-          "pi.invoice_number as invoiceNumber",
+          "pi.code as invoiceNumber",
           "pi.invoice_source as invoiceSource",
           "pi.supplier_invoice_number as supplierInvoiceNumber",
           "pi.supplier_invoice_date as supplierInvoiceDate",
@@ -212,7 +762,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       if (supplierId) q = q.where("pi.supplier_id", "=", supplierId) as typeof q;
 
       const [items, countRow] = await Promise.all([
-        q.orderBy("pi.posting_date", "desc").orderBy("pi.invoice_number", "desc")
+        q.orderBy("pi.posting_date", "desc").orderBy("pi.code", "desc")
           .limit(limit).offset(offset).execute(),
         db.selectFrom("document.purchase_invoice as pi")
           .select(db.fn.countAll().as("total"))
@@ -288,10 +838,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
   }) as RequestHandler);
 
   // ── GET /api/finance/ap/invoices/:id/party ────────────────────────────────
-  // Snapshot-aware party display. Pre-submit (draft, rejected) returns live
-  // master.business_partner data; post-submit returns the immutable snapshot.
-  // 409 SNAPSHOT_MISSING when status is past draft but no snapshot exists
-  // (legal/compliance signal — invoice must be remediated).
+  // Party display resolves purchase_invoice.supplier_id through live master data.
   router.get("/finance/ap/invoices/:id/party", (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -313,48 +860,23 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const pi = piRow.rows[0];
       if (!pi) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
 
-      const isPreSubmit = ["draft", "rejected"].includes((pi.status ?? "").toLowerCase());
-      if (isPreSubmit) {
-        if (!pi.supplier_id) { res.json({ source: "live", party: null }); return; }
-        const live = await sql<Record<string, unknown>>`
-          SELECT s.id                                    AS supplier_id,
-                 s.supplier_code                         AS code,
-                 COALESCE(bp.legal_name, bp.display_name, bp.name) AS name,
-                 bp.registration_no                      AS tax_registration_no,
-                 COALESCE(bp.registration_country_code, bp.tax_residence_country_code) AS country_code,
-                 bp.legal_name                           AS legal_entity_name
-            FROM master.supplier s
-            JOIN master.business_partner bp
-              ON bp.id = s.business_partner_id AND bp.tenant_id = s.tenant_id
-           WHERE s.id        = ${pi.supplier_id}::uuid
-             AND s.tenant_id = ${tenantId}::uuid
-           LIMIT 1
-        `.execute(db);
-        res.json({ source: "live", party: live.rows[0] ?? null });
-        return;
-      }
-
-      const snap = await sql<Record<string, unknown>>`
-        SELECT supplier_id,
-               party_name        AS name,
-               tax_registration_no,
-               country_code,
-               legal_entity_name,
-               captured_at,
-               captured_by
-          FROM document.invoice_party_snapshot
-         WHERE purchase_invoice_id = ${invoiceId}::uuid
-           AND tenant_id           = ${tenantId}::uuid
+      if (!pi.supplier_id) { res.json({ source: "live", party: null }); return; }
+      const live = await sql<Record<string, unknown>>`
+        SELECT s.id                                    AS supplier_id,
+               s.supplier_code                         AS code,
+               COALESCE(bp.legal_name, bp.display_name, bp.name) AS name,
+               bp.registration_no                      AS tax_registration_no,
+               COALESCE(bp.registration_country_code, bp.tax_residence_country_code) AS country_code,
+               bp.legal_name                           AS legal_entity_name
+          FROM master.supplier s
+          JOIN master.business_partner bp
+            ON bp.id = s.business_partner_id AND bp.tenant_id = s.tenant_id
+         WHERE s.id        = ${pi.supplier_id}::uuid
+           AND s.tenant_id = ${tenantId}::uuid
          LIMIT 1
       `.execute(db);
-      if (!snap.rows[0]) {
-        res.status(409).json({
-          error:   "SNAPSHOT_MISSING",
-          message: "Invoice past draft but no party snapshot exists. Backfill required.",
-        });
-        return;
-      }
-      res.json({ source: "snapshot", party: snap.rows[0] });
+      res.json({ source: "live", party: live.rows[0] ?? null });
+
     } catch (err) {
       logger?.error("finance_ap_invoice_party_error", { err: String(err) });
       next(err);
@@ -489,6 +1011,8 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
           "pi.fiscal_year     as fiscalYear",
           "pi.period_number   as periodNumber",
           "pi.status",
+          "pi.is_posted       as isPosted",
+          "pi.is_credit_note  as isCreditNote",
           sql<string>`COALESCE(bp.display_name, bp.name, s.supplier_code)`.as("supplierName"),
         ])
         .where("pi.id",        "=", invoiceId)
@@ -497,6 +1021,14 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
 
       if (!invoice) {
         res.status(404).json({ error: "INVOICE_NOT_FOUND" });
+        return;
+      }
+      if (invoice["isCreditNote"]) {
+        res.status(422).json({ error: "INVOICE_NOT_PAYABLE", message: "Credit/debit notes must be applied through credit settlement, not paid as cash out." });
+        return;
+      }
+      if (!invoice["isPosted"] || !["posted", "partially_paid"].includes(String(invoice["status"]))) {
+        res.status(422).json({ error: "INVOICE_NOT_PAYABLE", message: "Only AP-posted invoices can be selected for payment." });
         return;
       }
 
@@ -537,95 +1069,86 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         return;
       }
 
-      // Auto-generate payment number: PAY-{YYYY}-{seq}
-      const fiscalYear = Number(invoice["fiscalYear"]);
-      const countRow = await db
-        .selectFrom("document.payment_entry as pe")
-        .select(db.fn.countAll().as("cnt"))
-        .where("pe.tenant_id",  "=", tenantId)
-        .where("pe.fiscal_year", "=", fiscalYear)
-        .executeTakeFirst() as { cnt: string | number } | undefined;
-      const seq = parseInt(String(countRow?.cnt ?? "0"), 10) + 1;
-      const paymentNumber = `PAY-${fiscalYear}-${String(seq).padStart(5, "0")}`;
+      const companyCodeId = String(invoice["companyCodeId"]);
+      const company = await resolveCompanyAndBaseCurrency(db, {
+        tenantId,
+        companyCodeIdHint: companyCodeId,
+      });
+      if (!company.companyCodeId || !company.baseCurrencyCode) {
+        res.status(422).json({
+          error:   "COMPANY_CODE_REQUIRED",
+          message: "Could not resolve company_code_id and base_currency_code for the invoice company.",
+        });
+        return;
+      }
 
-      const paymentEntryId = randomUUID();
-      const currencyCode   = String(invoice["currencyCode"]);
+      const fp = await resolveFiscalPeriod(db, {
+        tenantId,
+        companyCodeId,
+        documentDate: today,
+        logger: logger?.warn ? { warn: logger.warn } : undefined,
+      });
+      if (!fp.ok) {
+        res.status(422).json({
+          error:   "FISCAL_PERIOD_MISSING",
+          message: `No fiscal_period covers ${today} for the invoice company_code.`,
+          details: { tenantId, companyCodeId, documentDate: today },
+        });
+        return;
+      }
 
-      await db.transaction().execute(async (trx) => {
-        // Insert payment_entry (draft)
-        await trx
-          .insertInto("document.payment_entry" as never)
-          .values({
-            id:                 paymentEntryId,
-            tenant_id:          tenantId,
-            company_code_id:    invoice["companyCodeId"],
-            payment_number:     paymentNumber,
-            payment_type:       "standard",
-            payment_direction:  "OUTBOUND",
-            supplier_id:        invoice["supplierId"] ?? null,
-            supplier_name:      invoice["supplierName"] ?? "Unknown Supplier",
-            payment_method_id:  paymentMethodId,
-            bank_account_id:    bankAccountId,
-            value_date:         valueDate,
-            document_date:      today,
-            posting_date:       today,
-            currency_code:      currencyCode,
-            base_currency_code: currencyCode,
-            payment_amount:     outstanding.toFixed(4),
-            base_amount:        outstanding.toFixed(4),
-            fiscal_year:        fiscalYear,
-            period_number:      Number(invoice["periodNumber"]),
-            status:             "draft",
-            is_batch_payment:   false,
-            is_posted:          false,
-            is_printed:         false,
-            is_transmitted:     false,
-            is_voided:          false,
-            is_reversal:        false,
-            line_count:         1,
-            notes:              notes,
-            tags:               sql`'[]'::jsonb`,
-            metadata:           sql`'{}'::jsonb`,
-            created_at:         sql`now()`,
-            created_by:         principalId,
-          } as never)
-          .execute();
-
-        // Insert payment_entry_allocation
-        await trx
-          .insertInto("document.payment_entry_allocation" as never)
-          .values({
-            id:                randomUUID(),
-            tenant_id:         tenantId,
-            payment_entry_id:  paymentEntryId,
-            line_no:           1,
-            purchase_invoice_id: invoiceId,
-            currency_code:     currencyCode,
-            allocated_amount:  outstanding.toFixed(4),
-            discount_amount:   "0",
-            withholding_tax_amount: "0",
-            advance_recovery_amount: "0",
-            retention_amount:  "0",
-            created_at:        sql`now()`,
-            created_by:        principalId,
-          } as never)
-          .execute();
-
-        // Invoice paid_amount/status is intentionally NOT updated here.
-        // A draft payment allocation creates the invoice↔payment link but must not
-        // change invoice status — the invoice is only marked paid after the payment
-        // is posted (handlePostPayment calls resolveInvoicePaymentStatus after posting).
+      const resolvedPaymentNumber = await allocateDocumentNumber(db, {
+        tenantId,
+        entityCode:     "payment_entry",
+        numberField:    "document_no",
+        companyCodeId,
+        fiscalYear:     fp.fiscalYear,
+        periodNumber:   fp.periodNumber,
+        effectiveDate:  today,
+        fallbackPrefix: "PMT",
       });
 
+      const outcome = await createPaymentFromInvoice(db, {
+        tenantId,
+        principalId,
+        companyCodeId,
+        documentDate:     today,
+        valueDate,
+        paymentMethodId,
+        bankAccountId,
+        notes:            notes ?? undefined,
+        paymentNumber:    resolvedPaymentNumber,
+        fiscalYear:       fp.fiscalYear,
+        periodNumber:     fp.periodNumber,
+        baseCurrencyCode: company.baseCurrencyCode,
+        allocations:      [{ invoiceId, allocatedAmount: outstanding }],
+      });
+
+      if (!outcome.ok) {
+        res.status(outcome.status).json({
+          error:   outcome.error,
+          message: outcome.message,
+          ...(outcome.fieldErrors ? { fieldErrors: outcome.fieldErrors } : {}),
+        });
+        return;
+      }
+
       logger?.info?.("finance_ap_payment_created", {
-        paymentEntryId, paymentNumber, invoiceId, tenantId,
+        paymentEntryId: outcome.paymentId,
+        paymentNumber: outcome.paymentNumber,
+        invoiceId,
+        tenantId,
       });
 
       res.status(201).json({
-        payment_entry_id: paymentEntryId,
-        payment_number:   paymentNumber,
+        payment_entry_id: outcome.paymentId,
+        payment_number:   outcome.paymentNumber,
         status:           "draft",
       });
+      return;
+
+        // A draft payment allocation creates the invoice↔payment link but must not
+        // change invoice status — the invoice is only marked paid after the payment
     } catch (err) {
       logger?.error("finance_ap_payment_create_error", { err: String(err) });
       next(err);
@@ -1234,6 +1757,1151 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
 
 
   // ── POST /api/finance/ap/invoices/:id/lines ───────────────────────────────
+  router.post("/finance/ap/invoices/:id/pricing-components", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const invoiceId = String(req.params["id"] ?? "");
+      if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_invoice_pc:create:${tenantId}:${sub}`, 30, 60)) return;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      const invoice = await db
+        .selectFrom("document.purchase_invoice as pi")
+        .select(["pi.id", "pi.status", "pi.currency_code", "pi.base_currency_code", "pi.exchange_rate"])
+        .where("pi.id",        "=", invoiceId)
+        .where("pi.tenant_id", "=", tenantId)
+        .executeTakeFirst() as InvoiceForPricingComponent | undefined;
+      if (!invoice) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+
+      const parsed = parsePricingComponentRequest(req.body, invoice);
+      if (!parsed.ok) {
+        res.status(parsed.status).json({ error: parsed.error, message: parsed.message });
+        return;
+      }
+
+      if (parsed.value.input.source_line_id) {
+        const line = await db
+          .selectFrom("document.purchase_invoice_line as pil")
+          .select("pil.id")
+          .where("pil.id", "=", parsed.value.input.source_line_id)
+          .where("pil.purchase_invoice_id", "=", invoiceId)
+          .where("pil.tenant_id", "=", tenantId)
+          .executeTakeFirst();
+        if (!line) { res.status(404).json({ error: "LINE_NOT_FOUND" }); return; }
+      }
+
+      const legacyReplaceRequest: PricingComponentSupersedeBlock | null = parsed.value.supersede;
+      if (legacyReplaceRequest) {
+        res.status(422).json({
+          error: "CHILD_NOT_EDITABLE",
+          message: `Invoice is in '${invoice.status}'. Pricing changes must be made while the invoice is draft/proforma; request revision or reopen to draft before replacing pricing components.`,
+        });
+        return;
+      }
+
+      // Gates derived from the canonical PC affordance matrix
+      // (@athyper/api-contracts/pc-affordance-matrix). canAdd controls
+      // create-new; canSupersede controls v1→v2 chain writes. Replaces
+      // the legacy PC_MUTABLE_STATUSES / PC_SUPERSEDE_STATUSES set lookups
+      // so client UI + server gates + DB trigger all read the same matrix.
+      if (!parsed.value.supersede && !canPcAction(invoice.status, "canAdd")) {
+        res.status(422).json({
+          error: "NOT_EDITABLE",
+          message: `Invoice is in '${invoice.status}' and cannot accept new pricing components.`,
+        });
+        return;
+      }
+      if (parsed.value.supersede && !canPcAction(invoice.status, "canSupersede")) {
+        res.status(422).json({
+          error: "NOT_EDITABLE",
+          message: `Invoice is in '${invoice.status}' and pricing components are read-only; request revision or reopen to draft before replacing pricing components.`,
+        });
+        return;
+      }
+
+      if (!parsed.value.supersede) {
+        const id = await createComponent(db, tenantId, principalId, parsed.value.input);
+
+        // Auto-apportion header-scope PCs to line children (v3.1 Phase 5i).
+        // Without this, a header PC sits orphaned with `is_apportioned=false`
+        // and zero children, and the breakup view shows "0 lines · short
+        // MYR X" for every header charge — exactly the user-visible bug.
+        // Skip when:
+        //   - PC is line-scope (no apportion concept)
+        //   - basis is unsupported ('weight' raises in the service) or unset
+        // Degenerate-basis errors (PC_APPORTION_DEGENERATE_BASIS — value/
+        // quantity with sum-of-basis = 0) surface as 422 so the user can
+        // pick a different basis. The orphaned header PC stays in place;
+        // the user can delete it from the strip or retry by superseding.
+        const input = parsed.value.input;
+        const needsApportionment =
+          input.entry_level === "header"
+          && input.apportion_basis != null
+          && input.apportion_basis !== "weight";
+        if (needsApportionment) {
+          try {
+            await apportionToLines(db, {
+              tenantId,
+              headerPcId: id,
+              actor:      principalId,
+            });
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.startsWith("PC_APPORTION_DEGENERATE_BASIS")) {
+              res.status(422).json({
+                error:   "PC_APPORTION_DEGENERATE_BASIS",
+                message: msg.replace(/^PC_APPORTION_DEGENERATE_BASIS:\s*/, ""),
+              });
+              return;
+            }
+            throw err;
+          }
+        }
+
+        res.status(201).json({ ok: true, created: { id } });
+        return;
+      }
+
+      const oldPc = await db
+        .selectFrom("document.pricing_component as pc")
+        .select(["pc.id", "pc.row_version", "pc.source_doc_id", "pc.superseded_by_id", "pc.entry_level"])
+        .where("pc.id", "=", parsed.value.supersede.id)
+        .where("pc.tenant_id", "=", tenantId)
+        .executeTakeFirst() as {
+          id: string;
+          row_version: string | number;
+          source_doc_id: string;
+          superseded_by_id: string | null;
+          entry_level: string;
+        } | undefined;
+      if (!oldPc || oldPc.source_doc_id !== invoiceId) {
+        res.status(404).json({ error: "PRICING_COMPONENT_NOT_FOUND" });
+        return;
+      }
+      if (oldPc.superseded_by_id) {
+        res.status(409).json({ error: "LEGACY_REPLACED_ROW", message: "This pricing component is a legacy replaced row." });
+        return;
+      }
+      if (
+        parsed.value.supersede.expectedVersion != null
+        && String(oldPc.row_version) !== String(parsed.value.supersede.expectedVersion)
+      ) {
+        res.status(409).json({
+          error: "VERSION_CONFLICT",
+          message: "Another user edited this component while you were drafting. Reload and try again.",
+          current_version: oldPc.row_version,
+        });
+        return;
+      }
+
+      const result = await supersedeComponent(
+        db,
+        tenantId,
+        principalId,
+        parsed.value.supersede.id,
+        parsed.value.input,
+      );
+
+      // Phase 5j supersede re-apportionment.
+      //
+      // When the superseded PC (v1) was header-scope, its line-scope
+      // children (rows with is_apportioned_from_id = v1.id) are now
+      // stale — v2 is the active row and needs its own children. We:
+      //   1. Bulk-DELETE v1's children. DELETE bypasses the
+      //      fn_pc_supersede_only_update trigger (UPDATE-only), so this
+      //      works in approval-stream statuses too. v1 itself stays as
+      //      the supersession audit anchor.
+      //   2. Refresh PIL caches — child deletions zero out the per-line
+      //      discount/tax/withholding/retention amounts that were
+      //      derived from v1.
+      //   3. If v2 is also header-scope with a valid basis, run
+      //      apportionToLines on v2 (which adds its own internal
+      //      refresh after the bulk INSERT).
+      //
+      // Skip when v1 was line-scope (no children to delete) — only
+      // header-scope PCs apportion.
+      if (oldPc.entry_level === "header") {
+        await sql`
+          DELETE FROM document.pricing_component
+           WHERE tenant_id              = ${tenantId}::uuid
+             AND is_apportioned_from_id = ${oldPc.id}::uuid
+        `.execute(db);
+        await sql`
+          SELECT document.refresh_invoice_amounts_from_pc(
+            ${tenantId}::uuid,
+            ${invoiceId}::uuid
+          )
+        `.execute(db);
+      }
+
+      const newInput = parsed.value.input;
+      const needsApportionment =
+        newInput.entry_level === "header"
+        && newInput.apportion_basis != null
+        && newInput.apportion_basis !== "weight";
+      if (needsApportionment) {
+        try {
+          await apportionToLines(db, {
+            tenantId,
+            headerPcId: result.newId,
+            actor:      principalId,
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.startsWith("PC_APPORTION_DEGENERATE_BASIS")) {
+            res.status(422).json({
+              error:   "PC_APPORTION_DEGENERATE_BASIS",
+              message: msg.replace(/^PC_APPORTION_DEGENERATE_BASIS:\s*/, ""),
+            });
+            return;
+          }
+          throw err;
+        }
+      }
+
+      res.status(200).json({
+        ok: true,
+        created: { id: result.newId },
+        superseded: { id: result.oldId },
+      });
+    } catch (err) {
+      logger?.error("finance_ap_invoice_pricing_component_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── PATCH /api/finance/ap/invoices/:id/pricing-components/:pcId ──────────────
+  //
+  // In-place edit of a manually-added pricing component while the parent
+  // invoice is in a mutable status (draft / rejected / proforma). Used by
+  // the draft-mode Edit affordance instead of supersession because
+  // supersession in draft creates a confusing v1 / v2 chain with no audit
+  // value (the row has never been approved or posted).
+  //
+  // Gates mirror the create + supersede + delete siblings:
+  //   - invoice exists in the tenant
+  //   - invoice.status ∈ PC_MUTABLE_STATUSES (draft / rejected / proforma)
+  //   - PC exists, belongs to this invoice, isn't already superseded
+  //   - PC.origin === 'manual' — inherited / system rows must be replaced via supersede
+  //
+  // Approval-stream statuses (pending_approval / approved / on_hold)
+  // continue to use the POST + supersede path; the supersede-only trigger
+  // on the table prevents in-place edits in those states anyway.
+  router.patch("/finance/ap/invoices/:id/pricing-components/:pcId", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const invoiceId = String(req.params["id"] ?? "");
+      const pcId      = String(req.params["pcId"] ?? "");
+      if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      if (!isUuid(pcId))      { res.status(400).json({ error: "INVALID_PC_ID" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_invoice_pc:update:${tenantId}:${sub}`, 30, 60)) return;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      const invoice = await db
+        .selectFrom("document.purchase_invoice as pi")
+        .select(["pi.id", "pi.status", "pi.currency_code", "pi.base_currency_code", "pi.exchange_rate"])
+        .where("pi.id",        "=", invoiceId)
+        .where("pi.tenant_id", "=", tenantId)
+        .executeTakeFirst() as InvoiceForPricingComponent | undefined;
+      if (!invoice) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+
+      if (!canPcAction(invoice.status, "canEdit")) {
+        res.status(422).json({
+          error:   "NOT_EDITABLE",
+          message: `Invoice is in '${invoice.status}' and pricing components are read-only. Request revision or reopen to draft before changing pricing.`,
+        });
+        return;
+      }
+
+      const pc = await db
+        .selectFrom("document.pricing_component as pc")
+        .select(["pc.id", "pc.source_doc_id", "pc.origin", "pc.superseded_by_id", "pc.entry_level"])
+        .where("pc.id",        "=", pcId)
+        .where("pc.tenant_id", "=", tenantId)
+        .executeTakeFirst() as {
+          id: string;
+          source_doc_id: string;
+          origin: string;
+          superseded_by_id: string | null;
+          entry_level: string;
+        } | undefined;
+      if (!pc || pc.source_doc_id !== invoiceId) {
+        res.status(404).json({ error: "PRICING_COMPONENT_NOT_FOUND" });
+        return;
+      }
+      if (pc.superseded_by_id) {
+        res.status(409).json({
+          error:   "LEGACY_REPLACED_ROW",
+          message: "This is a legacy replaced pricing component row and cannot be edited.",
+        });
+        return;
+      }
+      if (pc.origin !== "manual") {
+        res.status(422).json({
+          error:   "UPDATE_NOT_ALLOWED_FOR_ORIGIN",
+          message: `Pricing components with origin '${pc.origin}' cannot be edited directly. Change the source/default and recalculate pricing.`,
+        });
+        return;
+      }
+
+      const parsed = parsePricingComponentRequest(req.body, invoice);
+      if (!parsed.ok) {
+        res.status(parsed.status).json({ error: parsed.error, message: parsed.message });
+        return;
+      }
+      if (parsed.value.supersede) {
+        res.status(400).json({
+          error: "INVALID_REQUEST",
+          message: "PATCH does not accept legacy replacement-chain blocks. Pricing edits are parent-gated draft changes.",
+        });
+        return;
+      }
+
+      const result = await updateComponentInPlace(
+        db,
+        tenantId,
+        principalId,
+        pcId,
+        invoiceId,
+        parsed.value.input,
+      );
+
+      // Phase 5j PATCH re-apportionment.
+      //
+      // If the row WAS header-scope, its existing children are stale —
+      // basis / computed_amount / apportion_basis may have changed and
+      // the old per-line splits no longer match. Wipe them. The deletes
+      // automatically re-arm `apportionToLines`'s idempotency check (it
+      // queries for children existence — gone now), so no separate
+      // flag reset is needed.
+      //
+      // Trade-off: this throws away any per-line manual overrides that
+      // pointed at children of this PC. Acceptable for v3.1 because:
+      //   - Overrides are a separate row (origin='manual', no
+      //     is_apportioned_from_id) and survive the delete
+      //   - The audit story is captured in the PC's row_version + the
+      //     updated_at/by columns updateComponentInPlace already wrote
+      // If field-level overrides on the apportionment children become
+      // important, switch to a diff-based update later.
+      if (pc.entry_level === "header") {
+        await sql`
+          DELETE FROM document.pricing_component
+           WHERE tenant_id              = ${tenantId}::uuid
+             AND is_apportioned_from_id = ${pcId}::uuid
+        `.execute(db);
+      }
+
+      const newInput = parsed.value.input;
+      const needsApportionment =
+        newInput.entry_level === "header"
+        && newInput.apportion_basis != null
+        && newInput.apportion_basis !== "weight";
+      if (needsApportionment) {
+        try {
+          await apportionToLines(db, {
+            tenantId,
+            headerPcId: pcId,
+            actor:      principalId,
+          });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.startsWith("PC_APPORTION_DEGENERATE_BASIS")) {
+            res.status(422).json({
+              error:   "PC_APPORTION_DEGENERATE_BASIS",
+              message: msg.replace(/^PC_APPORTION_DEGENERATE_BASIS:\s*/, ""),
+            });
+            return;
+          }
+          throw err;
+        }
+      } else if (pc.entry_level === "header") {
+        // Children were deleted but no new apportionment will run (e.g.,
+        // user changed entry_level to 'line' or removed the basis). The
+        // updateComponentInPlace refresh already ran but the subsequent
+        // DELETE invalidated PIL flat amounts again — refresh once more.
+        await sql`
+          SELECT document.refresh_invoice_amounts_from_pc(
+            ${tenantId}::uuid,
+            ${invoiceId}::uuid
+          )
+        `.execute(db);
+      }
+
+      res.status(200).json({ ok: true, updated: { id: result.id } });
+    } catch (err) {
+      logger?.error("finance_ap_invoice_pricing_component_update_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── DELETE /api/finance/ap/invoices/:id/pricing-components/:pcId ─────────────
+  //
+  // Hard-delete a manually-added pricing component on a mutable invoice.
+  // The generic records API blocks delete on `pricing_component` (the table
+  // is audit-tracked); this dedicated route enforces the same gates as the
+  // create + supersede sibling and runs the raw DELETE via the
+  // `deleteComponent` business helper.
+  //
+  // Gates:
+  //   - invoice exists in the tenant
+  //   - invoice.status is in PC_MUTABLE_STATUSES (draft / rejected / proforma)
+  //   - PC exists, belongs to this invoice, isn't already superseded
+  //   - PC.origin === 'manual' — inherited / vendor_default / system_resolved
+  //     rows are denied; replace them via supersede instead
+  router.delete("/finance/ap/invoices/:id/pricing-components/:pcId", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const invoiceId = String(req.params["id"] ?? "");
+      const pcId      = String(req.params["pcId"] ?? "");
+      if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      if (!isUuid(pcId))      { res.status(400).json({ error: "INVALID_PC_ID" }); return; }
+
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_invoice_pc:delete:${tenantId}:${sub}`, 30, 60)) return;
+      const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+
+      const invoice = await db
+        .selectFrom("document.purchase_invoice as pi")
+        .select(["pi.id", "pi.status"])
+        .where("pi.id",        "=", invoiceId)
+        .where("pi.tenant_id", "=", tenantId)
+        .executeTakeFirst() as { id: string; status: string } | undefined;
+      if (!invoice) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+
+      if (!canPcAction(invoice.status, "canDelete")) {
+        res.status(422).json({
+          error:   "NOT_DELETABLE",
+          message: `Invoice is in '${invoice.status}' and pricing components are read-only. Request revision or reopen to draft before changing pricing.`,
+        });
+        return;
+      }
+
+      const pc = await db
+        .selectFrom("document.pricing_component as pc")
+        .select(["pc.id", "pc.source_doc_id", "pc.origin", "pc.superseded_by_id"])
+        .where("pc.id",        "=", pcId)
+        .where("pc.tenant_id", "=", tenantId)
+        .executeTakeFirst() as {
+          id: string;
+          source_doc_id: string;
+          origin: string;
+          superseded_by_id: string | null;
+        } | undefined;
+      if (!pc || pc.source_doc_id !== invoiceId) {
+        res.status(404).json({ error: "PRICING_COMPONENT_NOT_FOUND" });
+        return;
+      }
+      if (pc.superseded_by_id) {
+        res.status(409).json({
+          error:   "LEGACY_REPLACED_ROW",
+          message: "This is a legacy replaced pricing component row and cannot be deleted directly.",
+        });
+        return;
+      }
+      if (pc.origin !== "manual") {
+        res.status(422).json({
+          error:   "DELETE_NOT_ALLOWED_FOR_ORIGIN",
+          message: `Pricing components with origin '${pc.origin}' cannot be deleted directly. Change the source/default and recalculate pricing.`,
+        });
+        return;
+      }
+
+      await deleteComponent(db, tenantId, principalId, pcId, invoiceId);
+      res.status(200).json({ ok: true, deleted: { id: pcId } });
+    } catch (err) {
+      logger?.error("finance_ap_invoice_pricing_component_delete_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
+
+
+  // ── GET /api/finance/ap/invoices/:id/pricing-components/apportionment-summary ──
+  //
+  // v3.1 Phase 6 — bulk aggregate hydration for the HeaderScopePcStrip.
+  //
+  // Returns one summary row per header-scope PC on the invoice:
+  //   { header_pc_id, line_count, override_count, balance_gap,
+  //     allocated_sum, computed_at }
+  //
+  // Replaces the client-side aggregation that re-derived these from the
+  // full line-scope PC slice on every render. The strip surface fetches
+  // this once on mount and indexes by header_pc_id; badges on each
+  // collapsed row read from the map.
+  //
+  // `balance_gap` = parent.computed_amount − Σ child.computed_amount.
+  // Non-zero means rounding drift (typical: ±0.01..0.02) OR genuine
+  // un-apportioned remainder. Zero when the header was never apportioned
+  // (no children) — caller can distinguish via `line_count = 0`.
+  //
+  // `computed_at` = GREATEST(parent.updated_at, MAX(child.updated_at))
+  // with a COALESCE on `updated_at` → `created_at` for freshly-INSERTed
+  // rows that haven't been updated yet.
+  router.get(
+    "/finance/ap/invoices/:id/pricing-components/apportionment-summary",
+    (async (req, res, next) => {
+      try {
+        const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+        if (!claims) return;
+        const { xOrg, xRealm } = extractOrgHeaders(req);
+        const tenantId = await resolveTenantId(db, xOrg, xRealm);
+        if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+        const invoiceId = String(req.params["id"] ?? "");
+        if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+        const invoice = await db
+          .selectFrom("document.purchase_invoice as pi")
+          .select(["pi.id"])
+          .where("pi.id",        "=", invoiceId)
+          .where("pi.tenant_id", "=", tenantId)
+          .executeTakeFirst() as { id: string } | undefined;
+        if (!invoice) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+
+        // One round-trip: header PCs LEFT JOIN their children LEFT JOIN
+        // matching line-scope manual overrides. Override match = same
+        // condition_type_id on the same source_line_id (matches the
+        // client projection's override resolution rule).
+        const result = await sql<{
+          header_pc_id:    string;
+          line_count:      string;
+          override_count:  string;
+          balance_gap:     string;
+          allocated_sum:   string;
+          computed_at:     string | null;
+        }>`
+          WITH headers AS (
+            SELECT pc.id,
+                   pc.computed_amount,
+                   COALESCE(pc.updated_at, pc.created_at) AS ts
+              FROM document.pricing_component pc
+             WHERE pc.tenant_id       = ${tenantId}::uuid
+               AND pc.source_doc_id   = ${invoiceId}::uuid
+               AND pc.source_line_id IS NULL
+               AND pc.superseded_by_id IS NULL
+          ),
+          children AS (
+            SELECT pc.is_apportioned_from_id      AS header_id,
+                   pc.source_line_id,
+                   pc.condition_type_id,
+                   pc.computed_amount,
+                   COALESCE(pc.updated_at, pc.created_at) AS ts
+              FROM document.pricing_component pc
+             WHERE pc.tenant_id              = ${tenantId}::uuid
+               AND pc.source_doc_id          = ${invoiceId}::uuid
+               AND pc.is_apportioned_from_id IS NOT NULL
+               AND pc.superseded_by_id       IS NULL
+          ),
+          overrides AS (
+            SELECT pc.source_line_id, pc.condition_type_id
+              FROM document.pricing_component pc
+             WHERE pc.tenant_id              = ${tenantId}::uuid
+               AND pc.source_doc_id          = ${invoiceId}::uuid
+               AND pc.source_line_id IS NOT NULL
+               AND pc.is_apportioned_from_id IS NULL
+               AND pc.origin                 = 'manual'
+               AND pc.superseded_by_id       IS NULL
+          )
+          SELECT h.id::text                                                                          AS header_pc_id,
+                 COUNT(c.source_line_id)::text                                                       AS line_count,
+                 COUNT(o.source_line_id)::text                                                       AS override_count,
+                 (h.computed_amount - COALESCE(SUM(c.computed_amount), 0))::text                     AS balance_gap,
+                 COALESCE(SUM(c.computed_amount), 0)::text                                           AS allocated_sum,
+                 GREATEST(h.ts, MAX(c.ts))                                                           AS computed_at
+            FROM headers h
+            LEFT JOIN children c
+              ON c.header_id = h.id
+            LEFT JOIN overrides o
+              ON o.source_line_id    = c.source_line_id
+             AND o.condition_type_id = c.condition_type_id
+           GROUP BY h.id, h.computed_amount, h.ts
+           ORDER BY h.id
+        `.execute(db);
+
+        res.json({
+          summaries: result.rows.map((row) => ({
+            header_pc_id:    row.header_pc_id,
+            line_count:      parseInt(row.line_count,     10),
+            override_count:  parseInt(row.override_count, 10),
+            balance_gap:     row.balance_gap,
+            allocated_sum:   row.allocated_sum,
+            computed_at:     row.computed_at,
+          })),
+        });
+      } catch (err) {
+        logger?.error("finance_ap_invoice_apportionment_summary_error", { err: String(err) });
+        next(err);
+      }
+    }) as RequestHandler,
+  );
+
+
+  // ── GET /api/finance/ap/invoices/:id/pricing-components/line-rollup ──
+  //
+  // v3.1 Phase 6b — line-scope component rollup for the unified Components
+  // view. Groups user-entered line-scope PCs by condition_type_id so the
+  // strip can render "VAT — Zero Rated · ← from 3 lines · MYR 351.00" as
+  // a single read-only summary row alongside header-scope entries.
+  //
+  // Filtered to:
+  //   - source_line_id IS NOT NULL          (line-scope only)
+  //   - is_apportioned_from_id IS NULL      (NOT header apportionment children
+  //                                          — those already render via the
+  //                                          header row's APPORTIONMENT cell)
+  //   - origin = 'manual'                   (user-entered, not derived)
+  //   - superseded_by_id IS NULL            (active rows only)
+  //
+  // BASIS handling: returns the common `rate_value` when uniform across all
+  // contributing lines, NULL when they vary. The client renders "varies"
+  // for null rates.
+  router.get(
+    "/finance/ap/invoices/:id/pricing-components/line-rollup",
+    (async (req, res, next) => {
+      try {
+        const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+        if (!claims) return;
+        const { xOrg, xRealm } = extractOrgHeaders(req);
+        const tenantId = await resolveTenantId(db, xOrg, xRealm);
+        if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+        const invoiceId = String(req.params["id"] ?? "");
+        if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+
+        const invoice = await db
+          .selectFrom("document.purchase_invoice as pi")
+          .select(["pi.id"])
+          .where("pi.id",        "=", invoiceId)
+          .where("pi.tenant_id", "=", tenantId)
+          .executeTakeFirst() as { id: string } | undefined;
+        if (!invoice) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+
+        const result = await sql<{
+          condition_type_id:    string;
+          condition_type_label: string | null;
+          condition_type_code:  string | null;
+          term_type:            string;
+          line_count:           string;
+          rate_value:           string | null;
+          amount:               string;
+          line_ids:             string[];
+        }>`
+          SELECT
+            pc.condition_type_id::text                                AS condition_type_id,
+            ct.name                                                   AS condition_type_label,
+            ct.code                                                   AS condition_type_code,
+            MAX(pc.term_type)                                         AS term_type,
+            COUNT(*)::text                                            AS line_count,
+            CASE WHEN COUNT(DISTINCT pc.rate_value) > 1 THEN NULL
+                 ELSE MAX(pc.rate_value)::text END                    AS rate_value,
+            COALESCE(SUM(pc.computed_amount), 0)::text                AS amount,
+            ARRAY_AGG(pc.source_line_id::text ORDER BY pc.source_line_id) AS line_ids
+            FROM document.pricing_component pc
+            LEFT JOIN master.condition_type ct
+                   ON ct.id = pc.condition_type_id
+                  AND (ct.tenant_id = pc.tenant_id OR ct.tenant_id IS NULL)
+           WHERE pc.tenant_id              = ${tenantId}::uuid
+             AND pc.source_doc_id          = ${invoiceId}::uuid
+             AND pc.source_line_id         IS NOT NULL
+             AND pc.is_apportioned_from_id IS NULL
+             AND pc.origin                 = 'manual'
+             AND pc.superseded_by_id       IS NULL
+           GROUP BY pc.condition_type_id, ct.name, ct.code
+           ORDER BY MIN(pc.sequence), ct.name
+        `.execute(db);
+
+        res.json({
+          rollups: result.rows.map((row) => ({
+            condition_type_id:    row.condition_type_id,
+            condition_type_label: row.condition_type_label,
+            condition_type_code:  row.condition_type_code,
+            term_type:            row.term_type,
+            line_count:           parseInt(row.line_count, 10),
+            rate_value:           row.rate_value,
+            amount:               row.amount,
+            line_ids:             row.line_ids ?? [],
+          })),
+        });
+      } catch (err) {
+        logger?.error("finance_ap_invoice_line_rollup_error", { err: String(err) });
+        next(err);
+      }
+    }) as RequestHandler,
+  );
+
+
+  // ── GET /api/finance/ap/invoices/:id/pricing-components/:pcId/apportionment ──
+  //
+  // v3.1 Phase 4 — the breakup drawer's backing route.
+  //
+  // Returns the per-line apportionment of a header-scope PC: one row per
+  // PIL the PC apportioned to, with the allocated amount + optional
+  // override + the basis value used. The drawer is the audit view that
+  // replaces the inline 500-row expansion (which collapses to summary-only
+  // in Phase 2). Paginated so a 10,000-line invoice doesn't push 10k rows
+  // into the BFF response.
+  //
+  // Pagination is cursor-based on `(line_no, pil_id)` — both immutable per
+  // invoice, so no float drift, no skipped-row edge cases when concurrent
+  // writes land. Cursor is opaque base64 of the last-emitted tuple.
+  //
+  // Filtering:
+  //   - tab=all         (default) — every PIL the PC touched
+  //   - tab=overrides   only PILs with a manual override
+  //   - tab=top         not yet supported (Phase 4b adds "Top by basis value")
+  //
+  // Response shape:
+  //   {
+  //     header_pc: { term_type, condition_type_label, apportion_basis,
+  //                  computed_amount },
+  //     rows: [
+  //       { pil_id, line_no, item_description, basis_value,
+  //         allocated_amount, override_amount, is_overridden }
+  //     ],
+  //     next_cursor: string | null,
+  //     summary: { total_lines, override_count, allocated_sum }
+  //   }
+  router.get(
+    "/finance/ap/invoices/:id/pricing-components/:pcId/apportionment",
+    (async (req, res, next) => {
+      try {
+        const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+        if (!claims) return;
+        const { xOrg, xRealm } = extractOrgHeaders(req);
+        const tenantId = await resolveTenantId(db, xOrg, xRealm);
+        if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+        const invoiceId = String(req.params["id"]   ?? "");
+        const pcId      = String(req.params["pcId"] ?? "");
+        if (!isUuid(invoiceId)) { res.status(400).json({ error: "INVALID_ID" });    return; }
+        if (!isUuid(pcId))      { res.status(400).json({ error: "INVALID_PC_ID" }); return; }
+
+        // Validate tenant + invoice ownership in one query
+        const invoice = await db
+          .selectFrom("document.purchase_invoice as pi")
+          .select(["pi.id"])
+          .where("pi.id",        "=", invoiceId)
+          .where("pi.tenant_id", "=", tenantId)
+          .executeTakeFirst() as { id: string } | undefined;
+        if (!invoice) { res.status(404).json({ error: "INVOICE_NOT_FOUND" }); return; }
+
+        // Fetch parent PC for the response header. condition_type_label is
+        // pulled from master.condition_type via a left join — non-fatal if
+        // the label is missing, the client falls back to the code.
+        const headerPc = await sql<{
+          id:                       string;
+          term_type:                string;
+          apportion_basis:          string | null;
+          computed_amount:          string;
+          is_apportioned:           boolean;
+          superseded_by_id:         string | null;
+          condition_type_code:      string | null;
+          condition_type_label:     string | null;
+        }>`
+          SELECT pc.id, pc.term_type, pc.apportion_basis, pc.computed_amount,
+                 pc.is_apportioned, pc.superseded_by_id,
+                 ct.code  AS condition_type_code,
+                 ct.name  AS condition_type_label
+            FROM document.pricing_component pc
+            LEFT JOIN master.condition_type ct
+                   ON ct.id = pc.condition_type_id
+                  AND (ct.tenant_id = pc.tenant_id OR ct.tenant_id IS NULL)
+           WHERE pc.id              = ${pcId}::uuid
+             AND pc.tenant_id       = ${tenantId}::uuid
+             AND pc.source_doc_id   = ${invoiceId}::uuid
+             AND pc.source_line_id IS NULL
+        `.execute(db);
+
+        const headerRow = headerPc.rows[0];
+        if (!headerRow) {
+          res.status(404).json({ error: "HEADER_PC_NOT_FOUND" });
+          return;
+        }
+        if (headerRow.superseded_by_id) {
+          res.status(409).json({ error: "HEADER_PC_SUPERSEDED" });
+          return;
+        }
+
+        // ── CSV export branch (v3.1 Phase 5c) ─────────────────────────
+        //
+        // Gated by `purchase_invoice.export` (or any permission_code
+        // ending in `.export` on an enabled entity_operation row for
+        // `purchase_invoice`). The check mirrors the records-export
+        // gate; without `checkPermissionBatch` wired in, it fail-closes
+        // to 403 — same as records.
+        //
+        // CSV ignores `cursor` + `limit` so the user gets a single
+        // self-contained file. A hard 10k row cap protects against
+        // pathological invoices. `tab=overrides` is honored so users
+        // can export only the override slice when auditing exceptions.
+        if (req.query["format"] === "csv") {
+          const sub = typeof claims.sub === "string" ? claims.sub : "";
+          const principalId = sub ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
+          if (!principalId) {
+            res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" });
+            return;
+          }
+          const allowed = await isEntityOperationAllowed(
+            db,
+            "purchase_invoice",
+            "export",
+            tenantId,
+            principalId,
+            checkPermissionBatch,
+          );
+          if (!allowed) {
+            res.status(403).json({
+              error:   "EXPORT_FORBIDDEN",
+              message: "Your role does not include permission to export apportionment data.",
+            });
+            return;
+          }
+
+          const tabCsv           = parseApportionmentTab(req.query["tab"]);
+          const overridesOnlyCsv = tabCsv === "overrides";
+          const isTopTabCsv      = tabCsv === "top";
+          // Same search semantics as the JSON branch — an auditor who
+          // filters on screen + clicks CSV gets the filtered result set
+          // in the file.
+          const queryFilterCsv = parseApportionmentQuery(req.query["q"]);
+          const qIsTextCsv     = queryFilterCsv.kind === "text";
+          const qIsLineNoCsv   = queryFilterCsv.kind === "line_no";
+          const qTextCsv       = qIsTextCsv   ? queryFilterCsv.value : "";
+          const qLineNoCsv     = qIsLineNoCsv ? queryFilterCsv.value : -1;
+          // CSV honors the active tab including 'top' so the file's row
+          // order matches what the user sees on screen. No cursor — CSV
+          // returns the full result set up to APPORTIONMENT_CSV_MAX_ROWS.
+          const basisExprCsv = sql`
+            CASE
+              WHEN ${headerRow.apportion_basis} = 'quantity' THEN pil.quantity
+              WHEN ${headerRow.apportion_basis} = 'equal'    THEN 1
+              ELSE pil.net_amount
+            END
+          `;
+          const orderByCsv = isTopTabCsv
+            ? sql`${basisExprCsv} DESC, pil.id ASC`
+            : sql`pil.line_no, pil.id`;
+          const csvRowsResult = await sql<{
+            line_no:           number;
+            item_description:  string;
+            basis_value:       string;
+            allocated_amount:  string;
+            override_amount:   string | null;
+          }>`
+            WITH apportioned AS (
+              SELECT pc.id, pc.source_line_id, pc.computed_amount, pc.condition_type_id
+                FROM document.pricing_component pc
+               WHERE pc.tenant_id              = ${tenantId}::uuid
+                 AND pc.is_apportioned_from_id = ${pcId}::uuid
+                 AND pc.superseded_by_id       IS NULL
+            ),
+            overrides AS (
+              SELECT pc.source_line_id, pc.condition_type_id,
+                     pc.computed_amount AS override_amount
+                FROM document.pricing_component pc
+               WHERE pc.tenant_id              = ${tenantId}::uuid
+                 AND pc.source_doc_id          = ${invoiceId}::uuid
+                 AND pc.source_line_id IS NOT NULL
+                 AND pc.is_apportioned_from_id IS NULL
+                 AND pc.origin                 = 'manual'
+                 AND pc.superseded_by_id       IS NULL
+            )
+            SELECT pil.line_no,
+                   pil.item_description,
+                   CASE
+                     WHEN ${headerRow.apportion_basis} = 'quantity' THEN pil.quantity::text
+                     WHEN ${headerRow.apportion_basis} = 'equal'    THEN '1'
+                     ELSE pil.net_amount::text
+                   END                                AS basis_value,
+                   a.computed_amount::text            AS allocated_amount,
+                   o.override_amount::text            AS override_amount
+              FROM apportioned a
+              JOIN document.purchase_invoice_line pil
+                ON pil.id        = a.source_line_id
+               AND pil.tenant_id = ${tenantId}::uuid
+              LEFT JOIN overrides o
+                ON o.source_line_id    = a.source_line_id
+               AND o.condition_type_id = a.condition_type_id
+             WHERE (${overridesOnlyCsv}::boolean = false OR o.override_amount IS NOT NULL)
+               AND (
+                 (${qIsTextCsv}::boolean = false AND ${qIsLineNoCsv}::boolean = false)
+                 OR (${qIsTextCsv}::boolean = true
+                     AND pil.item_description ILIKE '%' || ${qTextCsv} || '%' ESCAPE '\\')
+                 OR (${qIsLineNoCsv}::boolean = true
+                     AND pil.line_no = ${qLineNoCsv}::smallint)
+               )
+             ORDER BY ${orderByCsv}
+             LIMIT ${APPORTIONMENT_CSV_MAX_ROWS}
+          `.execute(db);
+
+          const filenameSlug =
+            (headerRow.condition_type_code ?? headerRow.term_type ?? "apportionment")
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, "-")
+              .replace(/^-+|-+$/g, "")
+            || "apportionment";
+          const filename = `apportionment-${filenameSlug}-${pcId.slice(0, 8)}.csv`;
+
+          res.setHeader("Content-Type", "text/csv; charset=utf-8");
+          res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+          res.setHeader("Cache-Control", "no-store");
+
+          const header = [
+            "Line No", "Item Description", "Basis Value",
+            "Allocated", "Override Amount", "Is Overridden",
+          ].map(csvField).join(",");
+          res.write(header + "\r\n");
+          for (const r of csvRowsResult.rows) {
+            const line = [
+              r.line_no,
+              r.item_description,
+              r.basis_value,
+              r.allocated_amount,
+              r.override_amount ?? "",
+              r.override_amount != null ? "true" : "false",
+            ].map(csvField).join(",");
+            res.write(line + "\r\n");
+          }
+          res.end();
+          return;
+        }
+
+        // Parse pagination + filter params
+        const limit = Math.min(
+          100,
+          Math.max(1, parseInt(String(req.query["limit"] ?? "50"), 10) || 50),
+        );
+        const tab       = parseApportionmentTab(req.query["tab"]);
+        const rawCursor = parseApportionmentCursor(req.query["cursor"]);
+
+        // Search query (v3.1 Phase 5e). Three boolean gates compose the
+        // WHERE clause: exactly one filter fires (or none). Kysely binds
+        // these as parameters so the LIKE pattern can never inject SQL.
+        const queryFilter = parseApportionmentQuery(req.query["q"]);
+        const qIsText     = queryFilter.kind === "text";
+        const qIsLineNo   = queryFilter.kind === "line_no";
+        const qText       = qIsText   ? queryFilter.value : "";
+        const qLineNo     = qIsLineNo ? queryFilter.value : -1;
+
+        // ── Tab → ordering + cursor composition (v3.1 Phase 5f) ──────
+        //
+        // Two ordering modes coexist:
+        //   - all / overrides → ORDER BY line_no ASC, pil_id ASC
+        //                       cursor kind: "line_no_asc"
+        //   - top             → ORDER BY basis_value DESC, pil_id ASC
+        //                       cursor kind: "basis_desc"
+        //
+        // The cursor's kind MUST match the active tab; mismatched cursors
+        // are silently dropped (treated as first-page) since the client
+        // already resets cursor on tab change.
+        const isTopTab      = tab === "top";
+        const overridesOnly = tab === "overrides";
+
+        // Active cursor only when its kind matches the active tab.
+        const activeCursor =
+          rawCursor
+          && ((isTopTab  && rawCursor.kind === "basis_desc") ||
+              (!isTopTab && rawCursor.kind === "line_no_asc"))
+            ? rawCursor : null;
+
+        // basis_value expression — referenced from both ORDER BY and the
+        // top-mode cursor predicate. Kept inline (vs. a subquery) so PG
+        // can plan against pil.net_amount / pil.quantity directly.
+        const basisExpr = sql`
+          CASE
+            WHEN ${headerRow.apportion_basis} = 'quantity' THEN pil.quantity
+            WHEN ${headerRow.apportion_basis} = 'equal'    THEN 1
+            ELSE pil.net_amount
+          END
+        `;
+
+        const cursorPredicate = isTopTab
+          ? (activeCursor && activeCursor.kind === "basis_desc"
+              ? sql`AND (
+                  ${basisExpr} < ${activeCursor.basis_value}::numeric
+                  OR (${basisExpr} = ${activeCursor.basis_value}::numeric
+                      AND pil.id > ${activeCursor.pil_id}::uuid)
+                )`
+              : sql``)
+          : (() => {
+              const cLineNo = activeCursor && activeCursor.kind === "line_no_asc"
+                ? activeCursor.line_no : -1;
+              const cPilId  = activeCursor && activeCursor.kind === "line_no_asc"
+                ? activeCursor.pil_id  : "00000000-0000-0000-0000-000000000000";
+              return sql`AND (pil.line_no, pil.id) > (${cLineNo}::smallint, ${cPilId}::uuid)`;
+            })();
+
+        const orderBy = isTopTab
+          ? sql`${basisExpr} DESC, pil.id ASC`
+          : sql`pil.line_no, pil.id`;
+        const rowsResult = await sql<{
+          pil_id:            string;
+          line_no:           number;
+          item_description:  string;
+          basis_value:       string;
+          allocated_amount:  string;
+          override_amount:   string | null;
+        }>`
+          WITH apportioned AS (
+            SELECT pc.id, pc.source_line_id, pc.computed_amount, pc.condition_type_id
+              FROM document.pricing_component pc
+             WHERE pc.tenant_id              = ${tenantId}::uuid
+               AND pc.is_apportioned_from_id = ${pcId}::uuid
+               AND pc.superseded_by_id       IS NULL
+          ),
+          overrides AS (
+            SELECT pc.source_line_id, pc.condition_type_id,
+                   pc.computed_amount AS override_amount
+              FROM document.pricing_component pc
+             WHERE pc.tenant_id              = ${tenantId}::uuid
+               AND pc.source_doc_id          = ${invoiceId}::uuid
+               AND pc.source_line_id IS NOT NULL
+               AND pc.is_apportioned_from_id IS NULL
+               AND pc.origin                 = 'manual'
+               AND pc.superseded_by_id       IS NULL
+          )
+          SELECT pil.id        AS pil_id,
+                 pil.line_no,
+                 pil.item_description,
+                 CASE
+                   WHEN ${headerRow.apportion_basis} = 'quantity' THEN pil.quantity::text
+                   WHEN ${headerRow.apportion_basis} = 'equal'    THEN '1'
+                   ELSE pil.net_amount::text
+                 END                                AS basis_value,
+                 a.computed_amount::text            AS allocated_amount,
+                 o.override_amount::text            AS override_amount
+            FROM apportioned a
+            JOIN document.purchase_invoice_line pil
+              ON pil.id        = a.source_line_id
+             AND pil.tenant_id = ${tenantId}::uuid
+            LEFT JOIN overrides o
+              ON o.source_line_id    = a.source_line_id
+             AND o.condition_type_id = a.condition_type_id
+           WHERE TRUE
+             ${cursorPredicate}
+             AND (${overridesOnly}::boolean = false OR o.override_amount IS NOT NULL)
+             AND (
+               (${qIsText}::boolean = false AND ${qIsLineNo}::boolean = false)
+               OR (${qIsText}::boolean = true
+                   AND pil.item_description ILIKE '%' || ${qText} || '%' ESCAPE '\\')
+               OR (${qIsLineNo}::boolean = true
+                   AND pil.line_no = ${qLineNo}::smallint)
+             )
+           ORDER BY ${orderBy}
+           LIMIT ${limit + 1}
+        `.execute(db);
+
+        const allRows = rowsResult.rows;
+        const hasMore = allRows.length > limit;
+        const rows    = hasMore ? allRows.slice(0, limit) : allRows;
+
+        const lastRow = rows[rows.length - 1];
+        const next_cursor = (hasMore && lastRow)
+          ? (isTopTab
+              ? encodeApportionmentCursor({
+                  kind:        "basis_desc",
+                  basis_value: lastRow.basis_value,
+                  pil_id:      lastRow.pil_id,
+                })
+              : encodeApportionmentCursor({
+                  kind:    "line_no_asc",
+                  line_no: lastRow.line_no,
+                  pil_id:  lastRow.pil_id,
+                }))
+          : null;
+
+        // Summary aggregate — independent of pagination + tab so the
+        // drawer's tab badges can show absolute counts.
+        const summary = await sql<{
+          total_lines:    string;
+          override_count: string;
+          allocated_sum:  string;
+        }>`
+          WITH apportioned AS (
+            SELECT pc.source_line_id, pc.computed_amount, pc.condition_type_id
+              FROM document.pricing_component pc
+             WHERE pc.tenant_id              = ${tenantId}::uuid
+               AND pc.is_apportioned_from_id = ${pcId}::uuid
+               AND pc.superseded_by_id       IS NULL
+          ),
+          overrides AS (
+            SELECT pc.source_line_id, pc.condition_type_id
+              FROM document.pricing_component pc
+             WHERE pc.tenant_id              = ${tenantId}::uuid
+               AND pc.source_doc_id          = ${invoiceId}::uuid
+               AND pc.source_line_id IS NOT NULL
+               AND pc.is_apportioned_from_id IS NULL
+               AND pc.origin                 = 'manual'
+               AND pc.superseded_by_id       IS NULL
+          )
+          SELECT COUNT(*)::text                                     AS total_lines,
+                 COUNT(o.source_line_id)::text                      AS override_count,
+                 COALESCE(SUM(a.computed_amount), 0)::text          AS allocated_sum
+            FROM apportioned a
+            LEFT JOIN overrides o
+              ON o.source_line_id    = a.source_line_id
+             AND o.condition_type_id = a.condition_type_id
+        `.execute(db);
+
+        const summaryRow = summary.rows[0] ?? {
+          total_lines: "0", override_count: "0", allocated_sum: "0",
+        };
+
+        res.json({
+          header_pc: {
+            id:                   headerRow.id,
+            term_type:            headerRow.term_type,
+            condition_type_code:  headerRow.condition_type_code,
+            condition_type_label: headerRow.condition_type_label,
+            apportion_basis:      headerRow.apportion_basis,
+            computed_amount:      headerRow.computed_amount,
+          },
+          rows: rows.map((r) => ({
+            pil_id:            r.pil_id,
+            line_no:           r.line_no,
+            item_description:  r.item_description,
+            basis_value:       r.basis_value,
+            allocated_amount:  r.allocated_amount,
+            override_amount:   r.override_amount,
+            is_overridden:     r.override_amount != null,
+          })),
+          next_cursor,
+          summary: {
+            total_lines:    parseInt(summaryRow.total_lines,    10),
+            override_count: parseInt(summaryRow.override_count, 10),
+            allocated_sum:  summaryRow.allocated_sum,
+          },
+        });
+      } catch (err) {
+        logger?.error("finance_ap_invoice_apportionment_error", { err: String(err) });
+        next(err);
+      }
+    }) as RequestHandler,
+  );
+
+
   router.post("/finance/ap/invoices/:id/lines", (async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -1257,8 +2925,8 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const addedLineId = typeof addedLine?.["id"] === "string" ? addedLine["id"] : "";
       const hasSourceLine = Boolean(
         addedLine?.["commitment_line_id"]
-        || addedLine?.["goods_receipt_line_id"]
-        || addedLine?.["ses_line_id"],
+        || addedLine?.["receipt_line_id"]
+        || addedLine?.["service_sheet_line_id"],
       );
       if (status === 201 && principalId && addedLineId && !hasSourceLine) {
         try {
@@ -1307,7 +2975,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
         "item_id", "item_description", "metadata", "data",
         "quantity", "unit_price", "price_unit", "discount_pct",
         "tax_group_id", "withholding_tax_group_id",
-        "is_asset", "asset_category_id",
+        "asset_class_id",
       ];
       const shouldClassify = classificationInputs.some((key) =>
         Object.prototype.hasOwnProperty.call(body, key),
@@ -1517,6 +3185,169 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
     }
   }) as RequestHandler);
 
+  // ── POST /api/finance/ap/invoices/:id/revert-to-baseline ───────────────
+  // Phase 12: thin wrapper around the snapshot-restore engine. Resolves the
+  // most recent authoring_lock snapshot for the PI (the last "submitted"
+  // baseline) and calls the engine. If the draft has never been submitted
+  // there is no baseline → 422 NO_BASELINE_SNAPSHOT.
+  //
+  // Distinct from the per-snapshot Restore CTA on the Versions tab:
+  //   /snapshots/:snapshotId/restore  — pick any historical snapshot
+  //   /revert-to-baseline             — explicit "revert to last submission"
+  //
+  // Permission: PI.REVERT_TO_BASELINE (manager+). The route preflights the
+  // status and baseline before invoking the audited restore engine.
+  const revertInvoiceToBaselineHandler: RequestHandler = (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+      const sub = String(claims.sub ?? "");
+      const id  = String(req.params["id"] ?? "");
+      if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
+      const workspaceCapability = req.header("X-Document-Edit-Workspace")?.trim();
+      if (!workspaceCapability) {
+        res.status(428).json({
+          error: "WORKSPACE_REQUIRED",
+          message: "Open an authorized purchase-invoice workspace before reverting to baseline.",
+        });
+        return;
+      }
+      if (req.body?.operation !== "revert_to_baseline") {
+        res.status(422).json({
+          error: "VALIDATION",
+          message: "The operation must be 'revert_to_baseline'.",
+        });
+        return;
+      }
+
+      // Rate-limit — this is a heavy operation; 5 per minute per actor is
+      // generous for any legitimate revision workflow.
+      if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap:revert-to-baseline:${tenantId}:${sub}`, 5, 60)) return;
+
+      // Resolve principal_id from JWT sub (audit FK target).
+      const principalId = sub && tenantId
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
+        : sub;
+
+      // Permission gate.
+      const decision = await checkPermission(db, tenantId, principalId, "PI.REVERT_TO_BASELINE");
+      if (!requireAllow(decision, res)) return;
+
+      const currentResult = await sql<{ status: string }>`
+        SELECT status
+          FROM document.purchase_invoice
+         WHERE tenant_id = ${tenantId}::uuid
+           AND id = ${id}::uuid
+         LIMIT 1
+      `.execute(db);
+      const currentStatus = currentResult.rows[0]?.status;
+      if (!currentStatus) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: "Purchase invoice not found." });
+        return;
+      }
+      if (!["draft", "rejected", "proforma"].includes(currentStatus)) {
+        res.status(422).json({
+          error: "STATUS_NOT_RESTORABLE",
+          message: `Purchase invoice status '${currentStatus}' cannot be reverted to an authoring baseline.`,
+        });
+        return;
+      }
+
+      // Resolve the most recent authoring_lock snapshot for this PI. That's
+      // the "last submitted baseline" the business operation restores.
+      const baselineResult = await sql<{ id: string }>`
+        SELECT id
+          FROM snapshot.document_snapshot
+         WHERE tenant_id       = ${tenantId}::uuid
+           AND entity_type     = 'purchase_invoice'
+           AND entity_id       = ${id}::uuid
+           AND gate_event_kind = 'authoring_lock'
+         ORDER BY chain_seq DESC
+         LIMIT 1
+      `.execute(db);
+      const baselineSnapshotId = baselineResult.rows[0]?.id;
+      if (!baselineSnapshotId) {
+        res.status(422).json({
+          error:   "NO_BASELINE_SNAPSHOT",
+          message: "This invoice has never been submitted, so there is no committed baseline to restore.",
+        });
+        return;
+      }
+
+      // Look up the system 'restore_snapshot' reason code (same one the
+      // per-snapshot restore route uses — the audit semantics are identical).
+      const reasonResult = await sql<{ id: string }>`
+        SELECT id
+          FROM master.change_reason_code
+         WHERE code      = 'restore_snapshot'
+           AND status    = 'active'
+           AND (tenant_id IS NULL OR tenant_id = ${tenantId}::uuid)
+         ORDER BY (tenant_id IS NOT NULL) DESC
+         LIMIT 1
+      `.execute(db);
+      const reasonCodeId = reasonResult.rows[0]?.id;
+      if (!reasonCodeId) {
+        res.status(500).json({
+          error:   "REASON_CODE_NOT_SEEDED",
+          message: "Required system reason code 'restore_snapshot' is not present. Re-apply seed 005_change_reason_code.",
+        });
+        return;
+      }
+
+      try {
+        const result = await restoreFromSnapshot(db, {
+          tenantId,
+          entityType:  "purchase_invoice",
+          entityId:    id,
+          snapshotId:  baselineSnapshotId,
+          principalId,
+          reasonCodeId,
+        });
+        res.json({
+          ok: true,
+          operation: "revert_to_baseline",
+          baselineSnapshotId,
+          result,
+        });
+      } catch (err) {
+        if (err instanceof RestoreError) {
+          const status = err.code === "ENTITY_LOCKED"         ? 409
+            :          err.code === "STATUS_NOT_RESTORABLE"   ? 422
+            :          err.code === "ENTITY_NOT_FOUND"        ? 404
+            :          err.code === "SNAPSHOT_NOT_FOUND"      ? 404
+            :          err.code === "SNAPSHOT_TAMPERED"       ? 500
+            :          err.code === "UNSUPPORTED_ENTITY_TYPE" ? 400
+            : 500;
+          if (err.code === "SNAPSHOT_TAMPERED") {
+            logger?.error("snapshot_restore_tamper_detected", {
+              snapshot_id: baselineSnapshotId,
+              entity:      "purchase_invoice",
+              record_id:   id,
+              tenant_id:   tenantId,
+              source:      "revert_to_baseline",
+              details:     err.details,
+            });
+          }
+          res.status(status).json({
+            error:   err.code,
+            message: err.message,
+            details: err.details,
+          });
+          return;
+        }
+        throw err;
+      }
+    } catch (err) {
+      logger?.error("finance_ap_invoice_revert_to_baseline_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler;
+  router.post("/finance/ap/invoices/:id/revert-to-baseline", revertInvoiceToBaselineHandler);
+  // Compatibility alias during migration; semantics remain revert_to_baseline.
+  router.post("/finance/ap/invoices/:id/discard-session", revertInvoiceToBaselineHandler);
 
   // ── POST /api/finance/ap/payments/:id/submit — draft → pending_approval | approved ──
   router.post("/finance/ap/payments/:id/submit", (async (req, res, next) => {
@@ -1617,6 +3448,62 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
 
       res.json(result);
     } catch (err) { logger?.error("finance_ap_extract_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+
+  // ── POST /api/finance/tax/resolve ──────────────────────────────────────────
+  // Phase 4: resolve tax_group for a given 4-jurisdiction context.
+  //   Body: { doc_entity_code, billto/shipto/billfrom/shipfrom_jurisdiction_id,
+  //           counterparty_tax_status, commodity_category_id, supplier_industry_code,
+  //           doc_date, explain (boolean) }
+  //   Returns: { winner: {ruleId,ruleCode,taxGroupId} | null, candidates: [...] | null }
+  //   explain=true returns the full trace (used by the "Why this rule?" UI).
+  router.post("/finance/tax/resolve", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg   = (req.headers["x-org"]   as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "TENANT_RESOLUTION_FAILED" }); return; }
+
+      const body = (req.body ?? {}) as {
+        doc_entity_code?:           string;
+        billto_jurisdiction_id?:    string | null;
+        shipto_jurisdiction_id?:    string | null;
+        billfrom_jurisdiction_id?:  string | null;
+        shipfrom_jurisdiction_id?:  string | null;
+        counterparty_tax_status?:   string | null;
+        commodity_category_id?:     string | null;
+        supplier_industry_code?:    string | null;
+        doc_date?:                  string;
+        explain?:                   boolean;
+      };
+
+      const { resolveTaxGroup, explainTaxGroupResolution } = await import(
+        "../../business/ap/purchase_invoice/tax-calculation.service"
+      );
+      const ctx = {
+        tenantId,
+        docEntityCode:          body.doc_entity_code ?? "purchase_invoice",
+        billToJurisdictionId:   body.billto_jurisdiction_id   ?? null,
+        shipToJurisdictionId:   body.shipto_jurisdiction_id   ?? null,
+        billFromJurisdictionId: body.billfrom_jurisdiction_id ?? null,
+        shipFromJurisdictionId: body.shipfrom_jurisdiction_id ?? null,
+        counterpartyTaxStatus:  body.counterparty_tax_status  ?? null,
+        commodityCategoryId:    body.commodity_category_id    ?? null,
+        supplierIndustryCode:   body.supplier_industry_code   ?? null,
+        docDate:                body.doc_date ? new Date(body.doc_date) : new Date(),
+      };
+
+      if (body.explain) {
+        const result = await explainTaxGroupResolution(db, ctx);
+        res.json(result);
+      } else {
+        const result = await resolveTaxGroup(db, ctx);
+        res.json({ winner: result, candidates: null });
+      }
+    } catch (err) { logger?.error("finance_tax_resolve_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
 
 

@@ -19,9 +19,13 @@ REM                               #   Drops: shared control master mesh mesh_log
 REM                               #          document ledger log event governance snapshot aggregate
 REM                               #          schemas, plus
 REM                               #          public.schema_provisions and public.migrations.
+REM                               #   --keep-shared also supported for dev workflows (preserve shared schema).
+REM                               #   --skip-shared also supported to avoid reseeding shared DDL.
 REM                               #   can combine: --reset --ddl-only  (drop + Stage 1 only)
 REM                               #                --reset --no-demo   (drop + Stages 1+2 only)
 REM   seed-db.bat --drop-only     # DROP all app schemas + tracking tables only (no re-seed)
+REM                               #   --keep-shared also supported for dev workflows (preserve shared schema).
+REM                               #   --skip-shared also supported to avoid reseeding shared DDL.
 REM   seed-db.bat --status        # Read-only report - shows OK / PENDING / CHANGED per file
 REM   seed-db.bat --force         # Re-run all stages even if checksum unchanged
 REM   seed-db.bat --stage=N       # Low-level: run explicit stage(s) - N is 1, 2, or 3

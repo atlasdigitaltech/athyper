@@ -823,8 +823,13 @@ COMMENT ON TABLE master.company_code_dimension_default IS
 -- ============================================================================
 
 -- ── master.tax_jurisdiction ──────────────────────────────────────────────────
--- Tax authority hierarchy: COUNTRY→STATE→CITY. Treaty jurisdictions for WHT.
--- Referenced by company_code.tax_jurisdiction_id (FK added in 06_constraints/003_master.sql).
+-- Tax authority registry. Flat (non-hierarchical) — each jurisdiction stands
+-- alone. country_code FKs to shared.country; (country_code, state_region_code)
+-- composite FK to shared.state_region. city_code stays free-form text for
+-- future municipal jurisdictions. jurisdiction_type and filing_frequency are
+-- validated against control.lookup_value (domains
+-- master.tax_jurisdiction_type / master.tax_filing_frequency).
+-- Referenced by company_code.tax_jurisdiction_id.
 CREATE TABLE IF NOT EXISTS master.tax_jurisdiction (
     -- Identity
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
@@ -834,16 +839,18 @@ CREATE TABLE IF NOT EXISTS master.tax_jurisdiction (
     code                    text            NOT NULL,
     name                    text            NOT NULL,
     description             text,
-    country_code            character(2)    NOT NULL,
-    state_region_code       text,
-    city_code               text,
-    jurisdiction_type       text            NOT NULL,
-    parent_id               uuid,
-    level_no                smallint        NOT NULL DEFAULT 1,
+    country_code            character(2)    NOT NULL,        -- FK → shared.country(code)
+    state_region_code       text,                            -- FK (country_code, state_region_code) → shared.state_region(country_code, code)
+    city_code               text,                            -- free-form, reserved for municipal jurisdictions
+    jurisdiction_type       text            NOT NULL,        -- lookup: master.tax_jurisdiction_type
     authority_name          text,
     registration_required   boolean         NOT NULL DEFAULT false,
-    filing_frequency        text,
-    currency_code           character(3),
+    -- WS-A · WHT section-code required for PC capture (e.g. India TDS sections
+    -- 194A/B/C/J, Philippines EWT codes). When true, WhtDrawer enforces
+    -- tax_section_code on the pricing_component row; server validation also
+    -- enforces. Default false (most jurisdictions don't require a section code).
+    wht_section_required    boolean         NOT NULL DEFAULT false,
+    filing_frequency        text,                            -- lookup: master.tax_filing_frequency
     sort_order              smallint        NOT NULL DEFAULT 0,
 
     -- Metadata
@@ -866,20 +873,29 @@ CREATE TABLE IF NOT EXISTS master.tax_jurisdiction (
     CONSTRAINT tj_code_uq           UNIQUE (tenant_id, code),
     CONSTRAINT tj_code_chk          CHECK (btrim(code) <> ''),
     CONSTRAINT tj_name_chk          CHECK (btrim(name) <> ''),
+    -- Aligned with master.tax_jurisdiction_type lookup (9 values)
     CONSTRAINT tj_type_chk          CHECK (jurisdiction_type IN (
-        'COUNTRY','STATE','PROVINCE','CITY','DISTRICT','SPECIAL_ZONE','TREATY')),
-    CONSTRAINT tj_no_self_ref       CHECK (parent_id IS DISTINCT FROM id),
-    CONSTRAINT tj_level_chk         CHECK (level_no >= 1),
+        'country','state','province','county','city','district','union','special_zone','treaty')),
+    -- Aligned with master.tax_filing_frequency lookup (6 values)
     CONSTRAINT tj_filing_chk        CHECK (filing_frequency IS NULL OR filing_frequency IN (
-        'MONTHLY','QUARTERLY','ANNUAL','BIMONTHLY','SEMI_ANNUAL'))
+        'monthly','bimonthly','quarterly','semi_annually','annually','on_demand'))
 );
 COMMENT ON TABLE master.tax_jurisdiction IS
-    'ARCHETYPE=B;SCOPE=T. Tax authority hierarchy: COUNTRY→STATE→CITY. Multinational support. '
-    'Treaty jurisdictions for WHT. parent_id enables multi-level inheritance. '
+    'ARCHETYPE=B;SCOPE=T. Tax authority registry (flat, non-hierarchical). '
+    'country_code → shared.country; (country_code, state_region_code) → shared.state_region. '
+    'city_code is free-form (reserved for municipal jurisdictions). '
+    'jurisdiction_type / filing_frequency validated against control.lookup_value. '
     'Referenced by company_code.tax_jurisdiction_id.';
 
 
 -- ── master.tax_type ──────────────────────────────────────────────────────────
+-- Jurisdictional tax-engine classification. Each row represents one tax kind
+-- in a specific jurisdiction (e.g. IN-CGST, AE-VAT, SG-GST). Drives
+-- control.tax_rate_schedule.tax_type_id (the rate engine FK).
+--
+-- condition_type_id back-points to master.condition_type, the PC-facing
+-- catalog kind (e.g. AE-VAT / SA-VAT / DE-UST → "Value Added Tax"). The PC
+-- term picker uses condition_type; the rate engine uses tax_type.
 CREATE TABLE IF NOT EXISTS master.tax_type (
     -- Identity
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
@@ -889,12 +905,12 @@ CREATE TABLE IF NOT EXISTS master.tax_type (
     code                    text            NOT NULL,
     name                    text            NOT NULL,
     description             text,
-    category                text            NOT NULL,
-    is_recoverable          boolean         NOT NULL DEFAULT false,
-    is_deducted_at_source   boolean         NOT NULL DEFAULT false,
-    is_included_in_price    boolean         NOT NULL DEFAULT false,
-    is_compound_eligible    boolean         NOT NULL DEFAULT false,
     sort_order              smallint        NOT NULL DEFAULT 0,
+
+    -- Catalog bridge → master.condition_type (PC-facing kind).
+    -- Classification (tax / withholding / charge) is read from
+    -- condition_type.term_type — no separate category column here.
+    condition_type_id       uuid,
 
     -- Metadata
     metadata                jsonb           NOT NULL DEFAULT '{}'::jsonb,
@@ -914,15 +930,18 @@ CREATE TABLE IF NOT EXISTS master.tax_type (
     CONSTRAINT tt_pkey              PRIMARY KEY (id),
     CONSTRAINT tt_tenant_id_uq      UNIQUE (tenant_id, id),
     CONSTRAINT tt_code_uq           UNIQUE (tenant_id, code),
-    CONSTRAINT tt_code_chk          CHECK (btrim(code) <> ''),
-    CONSTRAINT tt_category_chk      CHECK (category IN (
-        'INDIRECT','WITHHOLDING','CUSTOMS_DUTY','SURCHARGE')),
-    CONSTRAINT tt_recoverable_chk   CHECK (NOT is_recoverable OR category = 'INDIRECT'),
-    CONSTRAINT tt_deducted_chk      CHECK (NOT is_deducted_at_source OR category = 'WITHHOLDING')
+    CONSTRAINT tt_code_chk          CHECK (btrim(code) <> '')
 );
+
+CREATE INDEX IF NOT EXISTS ix_tax_type_condition_type
+    ON master.tax_type (tenant_id, condition_type_id)
+    WHERE status = 'active' AND condition_type_id IS NOT NULL;
+
 COMMENT ON TABLE master.tax_type IS
-    'ARCHETYPE=B;SCOPE=T. Tax type catalog: INDIRECT (recoverable VAT/GST), WITHHOLDING (deducted at source), '
-    'CUSTOMS_DUTY (import/export), SURCHARGE (cess, levies).';
+    'ARCHETYPE=B;SCOPE=T. Jurisdictional tax kind (tax-engine internal classifier). Each row pairs a '
+    'jurisdictional code (e.g. IN-CGST, AE-VAT) with a condition_type kind via condition_type_id. '
+    'Term-type / category is read from the linked condition_type row — not duplicated here. '
+    'Recoverability / WHT detection live on control.tax_rate_schedule.';
 
 
 -- ── master.fx_rate ───────────────────────────────────────────────────────────

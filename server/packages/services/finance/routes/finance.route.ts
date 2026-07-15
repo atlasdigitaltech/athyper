@@ -21,6 +21,8 @@ import type { RequestHandler, Router } from "express";
 import { sql, type Kysely } from "kysely";
 import { verifyBearer, resolveTenantId } from "@athyper/svc-shared";
 import { incrementRateLimit } from "@athyper/svc-shared";
+import type { CheckPermissionBatchFn } from "@athyper/svc-shared";
+import { decidePeriodGate, type FiscalPeriodStatus } from "@athyper/finance-rules";
 
 export interface FinanceRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +36,12 @@ export interface FinanceRouteDeps {
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
+  /**
+   * RBAC batch check used by data-export endpoints (apportionment CSV,
+   * future finance reports). When omitted, all gated endpoints refuse
+   * with 403 — fail-closed by design.
+   */
+  checkPermissionBatch?: CheckPermissionBatchFn;
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
     info?(event: string, fields?: Record<string, unknown>): void;
@@ -112,6 +120,7 @@ export function parseScopeParams(query: Record<string, unknown>): ScopeParams | 
 
 function parseDateOnlyParam(value: unknown): string | null {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  // eslint-disable-next-line no-direct-date-parse -- reason: regex above guarantees canonical YYYY-MM-DD; explicit Z suffix forces UTC parse.
   const date = new Date(`${value}T00:00:00Z`);
   return Number.isNaN(date.getTime()) ? null : value;
 }
@@ -512,6 +521,7 @@ function toDateOnly(value: string | Date): string {
 }
 
 function shortMonthYear(dateValue: string): string {
+  // eslint-disable-next-line no-direct-date-parse -- reason: explicit Z suffix forces UTC parse; toLocaleDateString below uses timeZone: "UTC".
   const date = new Date(`${dateValue}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return dateValue;
   return date.toLocaleDateString("en-US", {
@@ -775,7 +785,9 @@ function buildCalendarDateBuckets(
   range: StatementDateRangeParams,
   groupBy: StatementBucketMode,
 ): StatementBucketShape[] {
+  // eslint-disable-next-line no-direct-date-parse -- reason: dateFrom/dateTo already validated as canonical YYYY-MM-DD; Z suffix forces UTC.
   const start = new Date(`${range.dateFrom}T00:00:00Z`);
+  // eslint-disable-next-line no-direct-date-parse -- reason: dateFrom/dateTo already validated as canonical YYYY-MM-DD; Z suffix forces UTC.
   const end = new Date(`${range.dateTo}T00:00:00Z`);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
 
@@ -1560,21 +1572,30 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
 
       const q        = ((req.query["q"]        as string | undefined) ?? "").trim();
       const id       = ((req.query["id"]       as string | undefined) ?? "").trim();
-      const category = ((req.query["category"] as string | undefined) ?? "").trim().toUpperCase();
+      // term_type filter (lowercase): 'tax' | 'withholding' | 'charge'
+      // Back-compat: accept legacy uppercase 'category' query param values.
+      const rawCat   = ((req.query["term_type"] as string | undefined)
+                        ?? (req.query["category"] as string | undefined)
+                        ?? "").trim().toLowerCase();
+      const termType = rawCat === "indirect" || rawCat === "surcharge" || rawCat === "customs_duty"
+                         ? "tax"
+                         : rawCat === "withholding"
+                           ? "withholding"
+                           : rawCat;
       const limit    = Math.min(50, Math.max(1, Number(req.query["limit"] ?? 10)));
       const pattern  = `%${q}%`;
       const idFilter = id || null;
 
       const rows = await sql<{
         id: string; code: string; name: string; description: string | null;
-        category: string; rate_value: string | null; tax_type_code: string | null;
+        term_type: string | null; rate_value: string | null; tax_type_code: string | null;
       }>`
         SELECT DISTINCT ON (tg.id)
           tg.id,
           tg.code,
           tg.name,
           tg.description,
-          tt.category,
+          ct.term_type,
           trs.rate_value,
           tt.code AS tax_type_code
         FROM control.tax_group tg
@@ -1590,12 +1611,14 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
           ON  tt.id        = trs.tax_type_id
           AND tt.tenant_id = trs.tenant_id
           AND tt.status    = 'active'
+        LEFT JOIN master.condition_type ct
+          ON  ct.id = tt.condition_type_id
         WHERE tg.tenant_id = ${tenantId}::uuid
           AND tg.status    = 'active'
           AND (${idFilter}::uuid IS NULL OR tg.id = ${idFilter}::uuid)
-          AND (${category} = '' OR tt.category = ${category})
+          AND (${termType} = '' OR ct.term_type = ${termType})
           AND (
-            tt.category = 'WITHHOLDING'
+            ct.term_type = 'withholding'
             OR trs.tax_direction IN ('PURCHASE', 'BOTH')
             OR trs.wht_basis IS NOT NULL
           )
@@ -1692,11 +1715,11 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
 
       const fpRows = await fpQuery.execute() as Array<{
         company_code_id: string; fiscal_year: number; period_number: number;
-        fiscalPeriodStatus: string; openedAt: string | null;
+        fiscalPeriodStatus: FiscalPeriodStatus; openedAt: string | null;
         softClosedAt: string | null; hardClosedAt: string | null;
       }>;
 
-      const bpsMap = new Map<string, string>();
+      const bpsMap = new Map<string, FiscalPeriodStatus>();
       if (parsed.bookId) {
         let bpsQ = db
           .selectFrom("governance.book_period_status as bps")
@@ -1708,15 +1731,29 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
           .where("bps.fiscal_year", "=", parsed.fiscalYear);
         if (parsed.period !== null) bpsQ = bpsQ.where("bps.period_number", "=", parsed.period);
         const bpsRows = await bpsQ.execute() as Array<{
-          company_code_id: string; fiscal_year: number; period_number: number; bookPeriodStatus: string;
+          company_code_id: string; fiscal_year: number; period_number: number; bookPeriodStatus: FiscalPeriodStatus;
         }>;
         for (const r of bpsRows) bpsMap.set(`${r.company_code_id}:${r.fiscal_year}:${r.period_number}`, r.bookPeriodStatus);
       }
 
-      const STATUS_RANK: Record<string, number> = { hard_close: 4, soft_close: 3, future: 2, open: 1 };
+      const STATUS_RANK: Record<FiscalPeriodStatus, number> = { hard_close: 4, soft_close: 3, future: 2, open: 1 };
       const ccMap = new Map(companies.map((c) => [c.company_code_id, c.company_code]));
       const result = fpRows.map((fp) => {
-        const bookStatus = bpsMap.get(`${fp.company_code_id}:${fp.fiscal_year}:${fp.period_number}`) ?? null;
+        const key = `${fp.company_code_id}:${fp.fiscal_year}:${fp.period_number}`;
+        const rawBookStatus = bpsMap.get(key) ?? null;
+        const bookStatus = parsed.bookId ? (rawBookStatus ?? "future") : null;
+        const bookPeriodStatusSource = !parsed.bookId
+          ? "not_requested"
+          : rawBookStatus
+            ? "row"
+            : "missing_treated_as_future";
+        const periodGateDecision = decidePeriodGate({
+          fiscalPeriodStatus: fp.fiscalPeriodStatus,
+          bookPeriodStatus: parsed.bookId ? rawBookStatus : null,
+        });
+        const postability = periodGateDecision.allowed
+          ? (fp.fiscalPeriodStatus === "soft_close" || bookStatus === "soft_close" ? "adjustment_only" : "postable")
+          : (fp.fiscalPeriodStatus === "hard_close" || bookStatus === "hard_close" ? "read_only" : "locked");
         const fpRank  = STATUS_RANK[fp.fiscalPeriodStatus] ?? 0;
         const bpsRank = bookStatus ? (STATUS_RANK[bookStatus] ?? 0) : 0;
         const effectiveStatus = fpRank >= bpsRank ? fp.fiscalPeriodStatus : bookStatus;
@@ -1724,7 +1761,12 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
           companyCode: ccMap.get(fp.company_code_id) ?? fp.company_code_id,
           fiscalYear: fp.fiscal_year, periodNumber: fp.period_number,
           fiscalPeriodStatus: fp.fiscalPeriodStatus, bookPeriodStatus: bookStatus,
-          effectiveStatus, openedAt: fp.openedAt,
+          bookPeriodStatusSource,
+          effectiveStatus,
+          periodGateDecision,
+          postability,
+          postabilityReasonCode: periodGateDecision.reason,
+          openedAt: fp.openedAt,
           softClosedAt: fp.softClosedAt, hardClosedAt: fp.hardClosedAt,
         };
       });

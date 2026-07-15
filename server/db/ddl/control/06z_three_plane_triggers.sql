@@ -124,6 +124,85 @@ COMMENT ON FUNCTION control.fn_invalidate_on_satellite_write IS
     'D10. Trigger function: writes log.descriptor_cache_invalidation and pg_notify on satellite writes. '
     'Listener subscribes to channel ''desc_invalidate''; poller scans WHERE processed_at IS NULL as fallback.';
 
+-- Version-bound relations do not carry entity_id directly.
+CREATE OR REPLACE FUNCTION control.fn_invalidate_by_entity_version_id()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE v_tenant uuid; v_entity text; v_actor uuid;
+BEGIN
+    IF current_setting('app.bypass_version_lock', true) = 'true' THEN RETURN COALESCE(NEW, OLD); END IF;
+    SELECT COALESCE(NEW.tenant_id, OLD.tenant_id, e.tenant_id), e.entity_code
+      INTO v_tenant, v_entity
+      FROM control.entity_version ev JOIN control.entity e ON e.id = ev.entity_id
+     WHERE ev.id = COALESCE(NEW.entity_version_id, OLD.entity_version_id);
+    v_actor := COALESCE(NEW.created_by, OLD.created_by, '00000000-0000-0000-0000-000000000000'::uuid);
+    INSERT INTO log.descriptor_cache_invalidation
+        (tenant_id, entity_code, reason, triggered_by_table, triggered_by_id, created_by)
+    VALUES (v_tenant, v_entity, 'execution_binding_write', TG_TABLE_NAME, COALESCE(NEW.id, OLD.id), v_actor);
+    PERFORM pg_notify('desc_invalidate', json_build_object(
+        'tenant_id', v_tenant, 'entity_code', v_entity, 'reason', 'execution_binding_write',
+        'source', TG_TABLE_NAME, 'at', extract(epoch FROM now()))::text);
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+-- Overlay changes resolve through overlay.base_entity_id and retain tenant scope.
+CREATE OR REPLACE FUNCTION control.fn_invalidate_by_overlay_id()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE v_tenant uuid; v_entity text; v_actor uuid; v_overlay uuid;
+BEGIN
+    IF current_setting('app.bypass_version_lock', true) = 'true' THEN RETURN COALESCE(NEW, OLD); END IF;
+    v_overlay := COALESCE(NEW.overlay_id, OLD.overlay_id);
+    SELECT ov.tenant_id, e.entity_code INTO v_tenant, v_entity
+      FROM control.overlay ov JOIN control.entity e ON e.id = ov.base_entity_id
+     WHERE ov.id = v_overlay;
+    v_actor := COALESCE(NEW.created_by, OLD.created_by, '00000000-0000-0000-0000-000000000000'::uuid);
+    INSERT INTO log.descriptor_cache_invalidation
+        (tenant_id, entity_code, reason, triggered_by_table, triggered_by_id, created_by)
+    VALUES (v_tenant, v_entity, 'tenant_overlay_write', TG_TABLE_NAME, COALESCE(NEW.id, OLD.id), v_actor);
+    PERFORM pg_notify('desc_invalidate', json_build_object(
+        'tenant_id', v_tenant, 'entity_code', v_entity, 'reason', 'tenant_overlay_write',
+        'source', TG_TABLE_NAME, 'at', extract(epoch FROM now()))::text);
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION control.fn_invalidate_by_overlay_row()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE v_tenant uuid; v_entity text; v_actor uuid;
+BEGIN
+    IF current_setting('app.bypass_version_lock', true) = 'true' THEN RETURN COALESCE(NEW, OLD); END IF;
+    v_tenant := COALESCE(NEW.tenant_id, OLD.tenant_id);
+    SELECT e.entity_code INTO v_entity FROM control.entity e
+     WHERE e.id = COALESCE(NEW.base_entity_id, OLD.base_entity_id);
+    v_actor := COALESCE(NEW.created_by, OLD.created_by, '00000000-0000-0000-0000-000000000000'::uuid);
+    INSERT INTO log.descriptor_cache_invalidation
+        (tenant_id, entity_code, reason, triggered_by_table, triggered_by_id, created_by)
+    VALUES (v_tenant, v_entity, 'tenant_overlay_write', TG_TABLE_NAME, COALESCE(NEW.id, OLD.id), v_actor);
+    PERFORM pg_notify('desc_invalidate', json_build_object(
+        'tenant_id', v_tenant, 'entity_code', v_entity, 'reason', 'tenant_overlay_write',
+        'source', TG_TABLE_NAME, 'at', extract(epoch FROM now()))::text);
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+-- Registry/lifecycle catalogue changes can affect several entities. They use
+-- one exact global sentinel generation key rather than scanning payload keys.
+CREATE OR REPLACE FUNCTION control.fn_invalidate_all_execution_descriptors()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE v_actor uuid;
+BEGIN
+    IF current_setting('app.bypass_version_lock', true) = 'true' THEN RETURN COALESCE(NEW, OLD); END IF;
+    v_actor := COALESCE(NEW.created_by, OLD.created_by, '00000000-0000-0000-0000-000000000000'::uuid);
+    INSERT INTO log.descriptor_cache_invalidation
+        (tenant_id, entity_code, reason, triggered_by_table, triggered_by_id, created_by)
+    VALUES (NULL, NULL, 'execution_registry_write', TG_TABLE_NAME, COALESCE(NEW.id, OLD.id), v_actor);
+    PERFORM pg_notify('desc_invalidate', json_build_object(
+        'reason', 'execution_registry_write', 'source', TG_TABLE_NAME,
+        'at', extract(epoch FROM now()))::text);
+    RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
 
 -- ----------------------------------------------------------------------------
 -- §2  Cache-invalidation triggers — one per satellite table
@@ -154,6 +233,46 @@ DROP TRIGGER IF EXISTS trg_fsp_invalidate ON control.field_security_policy;
 CREATE TRIGGER trg_fsp_invalidate
     AFTER INSERT OR UPDATE OR DELETE ON control.field_security_policy
     FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_by_entity_id();
+
+DROP TRIGGER IF EXISTS trg_el_invalidate ON control.entity_lifecycle;
+CREATE TRIGGER trg_el_invalidate
+    AFTER INSERT OR UPDATE OR DELETE ON control.entity_lifecycle
+    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_by_entity_name();
+
+DROP TRIGGER IF EXISTS trg_er_invalidate ON control.entity_relation;
+CREATE TRIGGER trg_er_invalidate
+    AFTER INSERT OR UPDATE OR DELETE ON control.entity_relation
+    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_by_entity_version_id();
+
+DROP TRIGGER IF EXISTS trg_ov_invalidate ON control.overlay;
+CREATE TRIGGER trg_ov_invalidate
+    AFTER INSERT OR UPDATE OR DELETE ON control.overlay
+    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_by_overlay_row();
+
+DROP TRIGGER IF EXISTS trg_oc_invalidate ON control.overlay_change;
+CREATE TRIGGER trg_oc_invalidate
+    AFTER INSERT OR UPDATE OR DELETE ON control.overlay_change
+    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_by_overlay_id();
+
+DROP TRIGGER IF EXISTS trg_har_execdesc_invalidate ON control.hook_action_registry;
+CREATE TRIGGER trg_har_execdesc_invalidate
+    AFTER INSERT OR UPDATE OR DELETE ON control.hook_action_registry
+    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_all_execution_descriptors();
+
+DROP TRIGGER IF EXISTS trg_lifecycle_execdesc_invalidate ON control.lifecycle;
+CREATE TRIGGER trg_lifecycle_execdesc_invalidate
+    AFTER INSERT OR UPDATE OR DELETE ON control.lifecycle
+    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_all_execution_descriptors();
+
+DROP TRIGGER IF EXISTS trg_lifecycle_state_execdesc_invalidate ON control.lifecycle_state;
+CREATE TRIGGER trg_lifecycle_state_execdesc_invalidate
+    AFTER INSERT OR UPDATE OR DELETE ON control.lifecycle_state
+    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_all_execution_descriptors();
+
+DROP TRIGGER IF EXISTS trg_lifecycle_transition_execdesc_invalidate ON control.lifecycle_transition;
+CREATE TRIGGER trg_lifecycle_transition_execdesc_invalidate
+    AFTER INSERT OR UPDATE OR DELETE ON control.lifecycle_transition
+    FOR EACH ROW EXECUTE FUNCTION control.fn_invalidate_all_execution_descriptors();
 
 
 -- ----------------------------------------------------------------------------

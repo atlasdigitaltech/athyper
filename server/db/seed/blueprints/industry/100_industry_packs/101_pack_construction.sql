@@ -1,11 +1,5 @@
--- ============================================================================
--- INDUSTRY PACK - LEGACY SPEND CATEGORY RETIREMENT
--- ============================================================================
--- File:     101_pack_construction.sql
--- Purpose:  Retired compatibility slot. Industry-specific procurement taxonomy
---           now resolves through master.commodity_category and commodity policy
---           tables.
--- ============================================================================
+-- Retired industry-pack slot — kept as a no-op for stable ordering. Industry
+-- procurement taxonomy now lives in master.commodity_category + policy tables.
 
 DO $seed$
 BEGIN

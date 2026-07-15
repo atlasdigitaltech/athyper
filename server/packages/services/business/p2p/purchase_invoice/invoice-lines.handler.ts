@@ -12,7 +12,7 @@
  *   - All three mutations run inside a transaction that SELECT … FOR UPDATE on
  *     the parent invoice row, serializing concurrent line edits and fixing the
  *     max(line_no)+10 race that could produce duplicate line numbers.
- *   - When the caller holds an edit-session lock (lock_token present), the lock
+ *   - When the caller holds a document edit lock (lock_token present), the lock
  *     is verified before entering the transaction.
  *   - trg_pil_sync_header fires after each mutation and updates the header totals.
  *     That UPDATE also fires trg_pi_row_version, incrementing parent.row_version.
@@ -84,11 +84,11 @@ async function lockAndGuardInvoice(
 ): Promise<{ record: Record<string, unknown> } | { error: string; status: number }> {
   const rows = await sql<{
     id: string; status: string; tenant_id: string; company_code_id: string;
-    line_count: number; row_version: number;
+    currency_code: string; row_version: number;
     tax_mode: string | null; invoice_date: string;
   }>`
-    SELECT id, status, tenant_id, company_code_id, line_count, row_version,
-           tax_mode, COALESCE(supplier_invoice_date, document_date) AS invoice_date
+    SELECT id, status, tenant_id, company_code_id, currency_code, row_version,
+           tax_mode, COALESCE(supplier_invoice_date, received_date, CURRENT_DATE)::text AS invoice_date
       FROM document.purchase_invoice
      WHERE id        = ${invoiceId}::uuid
        AND tenant_id = ${tenantId}::uuid
@@ -111,15 +111,6 @@ async function nextLineNo(trx: AnyDb, invoiceId: string): Promise<number> {
     .where("pil.purchase_invoice_id", "=", invoiceId)
     .executeTakeFirst() as { max_line: number | null } | undefined;
   return (result?.max_line ?? 0) + 10;
-}
-
-function plainRecord(value: unknown): Record<string, unknown> | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  return value as Record<string, unknown>;
-}
-
-function lineMetadataPatch(body: AddLineBody | UpdateLineBody): Record<string, unknown> | null {
-  return plainRecord(body.metadata) ?? plainRecord(body.data);
 }
 
 // ── Fetch parent row_version after a line mutation ────────────────────────────
@@ -188,8 +179,6 @@ export async function handleAddInvoiceLine(
     return { status: lockCheck.status, body: { error: lockCheck.error, reason: lockCheck.reason } };
   }
 
-  const metadata = lineMetadataPatch(body);
-
   try {
     const result = await (db as unknown as { transaction(): { execute<T>(fn: (trx: AnyDb) => Promise<T>): Promise<T> } })
       .transaction()
@@ -199,26 +188,14 @@ export async function handleAddInvoiceLine(
 
         const lineNo   = await nextLineNo(trx, invoiceId);
         const now      = new Date();
-
-        // gross_amount = unit_price × quantity / price_unit (pre-discount net amount).
-        // Mirrors the GENERATED net_amount formula so fn_refresh_purchase_invoice_totals
-        // can roll up a meaningful gross before tax estimation runs.
         const priceUnit   = body.price_unit ?? 1;
-        const grossAmount = (body.unit_price * body.quantity) / (priceUnit || 1);
-
-        // retention_amount: use explicit value if supplied; otherwise compute from
-        // retention_pct against gross_amount when pct is provided.
-        const retentionPct = body.retention_pct ?? null;
-        const retentionAmount = body.retention_amount != null
-          ? body.retention_amount
-          : retentionPct != null
-          ? (grossAmount * retentionPct) / 100
-          : 0;
+        const invoice = guard.record as { company_code_id: string; currency_code: string };
 
         let inserted = await trx
           .insertInto("document.purchase_invoice_line")
           .values({
             tenant_id:                tenantId,
+            company_code_id:          invoice.company_code_id,
             purchase_invoice_id:      invoiceId,
             line_no:                  lineNo,
             item_id:                  body.item_id ?? null,
@@ -229,15 +206,11 @@ export async function handleAddInvoiceLine(
             quantity:                 body.quantity,
             unit_price:               body.unit_price,
             price_unit:               priceUnit,
-            discount_pct:             body.discount_pct ?? null,
-            discount_amount:          null,
+            currency_code:            invoice.currency_code,
             tax_group_id:             body.tax_group_id ?? null,
             tax_amount:               0,
             withholding_tax_group_id: body.withholding_tax_group_id ?? null,
             withholding_tax_amount:   0,
-            gross_amount:             grossAmount,
-            retention_pct:            retentionPct,
-            retention_amount:         retentionAmount,
             commodity_category_id:        body.commodity_category_id ?? null,
             business_intent_id:       body.business_intent_id ?? null,
             site_id:                  body.site_id ?? null,
@@ -245,8 +218,6 @@ export async function handleAddInvoiceLine(
             commitment_line_id:       body.commitment_line_id ?? null,
             receipt_line_id:    body.receipt_line_id ?? null,
             service_sheet_line_id:              body.service_sheet_line_id ?? null,
-            notes:                    body.notes ?? null,
-            metadata:                 metadata ?? {},
             created_by:               principalId ?? "00000000-0000-0000-0000-000000000000",
             created_at:               now,
           } as never)
@@ -344,8 +315,6 @@ export async function handleUpdateInvoiceLine(
     return { status: lockCheck.status, body: { error: lockCheck.error, reason: lockCheck.reason } };
   }
 
-  const metadata = lineMetadataPatch(body);
-
   try {
     const result = await (db as unknown as { transaction(): { execute<T>(fn: (trx: AnyDb) => Promise<T>): Promise<T> } })
       .transaction()
@@ -354,50 +323,17 @@ export async function handleUpdateInvoiceLine(
         if ("error" in guard) return guard;
 
         const setClause: Record<string, unknown> = { updated_at: new Date(), updated_by: principalId };
-
-        // If any price-affecting field changes, recompute gross_amount.
-        // retention_amount is also recomputed if retention_pct is provided but retention_amount is not.
-        const priceFieldChanged = ["quantity", "unit_price", "price_unit"].some(
-          (f) => Object.prototype.hasOwnProperty.call(body, f),
-        );
-        if (priceFieldChanged || body.retention_pct != null || body.retention_amount != null) {
-          // We need the current line to fill in unchanged values
-          const curLine = await sql<{
-            quantity: string; unit_price: string; price_unit: string; retention_pct: string | null;
-          }>`
-            SELECT quantity, unit_price, price_unit, retention_pct
-              FROM document.purchase_invoice_line
-             WHERE id = ${lineId} AND tenant_id = ${tenantId}
-          `.execute(trx);
-
-          const cur = curLine.rows[0];
-          if (cur) {
-            const qty      = Number(body.quantity   ?? cur.quantity);
-            const uPrice   = Number(body.unit_price ?? cur.unit_price);
-            const pUnit    = Number(body.price_unit ?? cur.price_unit) || 1;
-            const gross    = (uPrice * qty) / pUnit;
-            const retPct   = body.retention_pct   != null ? body.retention_pct
-                           : cur.retention_pct    != null ? Number(cur.retention_pct) : null;
-            const retAmt   = body.retention_amount != null ? body.retention_amount
-                           : retPct               != null  ? (gross * retPct) / 100 : 0;
-            setClause["gross_amount"]     = gross;
-            setClause["retention_amount"] = retAmt;
-            if (body.retention_pct != null) setClause["retention_pct"] = body.retention_pct;
-          }
-        }
-
         const fields: (keyof UpdateLineBody)[] = [
           "item_id", "item_description", "procurement_type", "uom_code",
           "line_type",
-          "quantity", "unit_price", "price_unit", "discount_pct",
+          "quantity", "unit_price", "price_unit",
           "tax_group_id", "withholding_tax_group_id",
           "commodity_category_id", "business_intent_id",
           "site_id",
           "shipto_address_id", "shipfrom_address_id",
           "asset_class_id",
           "commitment_line_id", "receipt_line_id", "service_sheet_line_id",
-          "retention_pct", "retention_amount",
-          "notes", "line_no",
+          "line_no",
         ];
 
         for (const f of fields) {
@@ -417,21 +353,9 @@ export async function handleUpdateInvoiceLine(
 
         if (!updated) return { notFound: true as const };
 
-        if (metadata) {
-          const patchedMetadata = await sql<{ metadata: Record<string, unknown> }>`
-            UPDATE document.purchase_invoice_line
-               SET metadata   = jsonb_strip_nulls(COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify(metadata)}::jsonb),
-                   updated_at = ${new Date()},
-                   updated_by = ${principalId}
-             WHERE id = ${lineId} AND tenant_id = ${tenantId}
-             RETURNING metadata
-          `.execute(trx);
-          updated["metadata"] = patchedMetadata.rows[0]?.metadata ?? updated["metadata"];
-        }
-
         // Recompute tax whenever any price or group field changes
         const taxAffecting = [
-          "quantity", "unit_price", "price_unit", "discount_pct",
+          "quantity", "unit_price", "price_unit",
           "tax_group_id", "withholding_tax_group_id",
         ];
         const taxAffectingChanged = taxAffecting.some(f =>
@@ -520,7 +444,7 @@ export async function handleDeleteInvoiceLine(
           SELECT id, term_type
             FROM document.pricing_component
            WHERE tenant_id        = ${tenantId}::uuid
-             AND source_doc_type  = 'PURCHASE_INVOICE_LINE'
+             AND source_doc_type  = 'purchase_invoice_line'
              AND source_line_id   = ${lineId}::uuid
              AND superseded_by_id IS NULL
         `.execute(trx);

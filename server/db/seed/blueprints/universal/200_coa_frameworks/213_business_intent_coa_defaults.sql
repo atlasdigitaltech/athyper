@@ -1,10 +1,5 @@
--- ============================================================================
--- UNIVERSAL - BUSINESS INTENT COA DEFAULTS (retired)
--- ============================================================================
--- Business intents no longer carry GL/tax/asset defaults. Accounting defaults
--- are seeded and maintained on commodity category buy/sell policy rows.
--- This file remains as an idempotent compatibility step for existing seed order.
--- ============================================================================
+-- Retired no-op slot — business intents no longer carry GL/tax/asset defaults.
+-- Accounting defaults now live on commodity_category buy/sell policy rows.
 
 DO $seed$
 BEGIN

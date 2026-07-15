@@ -14,7 +14,7 @@ import { describe, it, expect } from "vitest";
 import {
   HoldNotAllowedError,
   ReleaseNotAllowedError,
-} from "../ap/invoice-hold.service.js";
+} from "../p2p/purchase_invoice/invoice-hold.service.js";
 
 describe("Hold/Release error classes", () => {
   it("HoldNotAllowedError carries code='HOLD_NOT_ALLOWED'", () => {
@@ -50,5 +50,5 @@ maybeDescribe("placeInvoiceOnHold / releaseInvoiceHold — integration (live DB)
   it.todo("placing a posted invoice on hold throws HoldNotAllowedError");
   it.todo("placing an already-on-hold invoice throws HoldNotAllowedError");
   it.todo("releasing a non-on-hold invoice throws ReleaseNotAllowedError");
-  it.todo("hold_reason can be patched via records.route only while status=on_hold");
+  it.todo("metadata.hold.reason is captured at hold time via placeInvoiceOnHold");
 });

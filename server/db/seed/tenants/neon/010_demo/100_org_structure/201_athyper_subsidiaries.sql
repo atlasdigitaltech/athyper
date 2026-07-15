@@ -276,4 +276,91 @@ BEGIN
 
     RAISE NOTICE '[201_athyper_subsidiaries] 16 company codes inserted (or already present)';
 
+    -- ── Temporal profile (locale / timezone / date format / week start) ─────────
+    -- Resolution order at runtime: company_code > tenant_profile > principal_ui_profile.
+    -- Values derived from the company's legal-entity country_code; rows whose country
+    -- isn't in this mapping fall back to tenant defaults (columns stay NULL).
+    UPDATE master.company_code cc
+       SET timezone_code = profile.tz,
+           locale_code   = profile.locale,
+           date_format   = profile.date_format,
+           week_start    = profile.week_start
+      FROM (
+        SELECT le.id AS legal_entity_id,
+               CASE le.country_code
+                 WHEN 'SA' THEN 'Asia/Riyadh'
+                 WHEN 'AE' THEN 'Asia/Dubai'
+                 WHEN 'QA' THEN 'Asia/Qatar'
+                 WHEN 'MY' THEN 'Asia/Kuala_Lumpur'
+                 WHEN 'SG' THEN 'Asia/Singapore'
+                 WHEN 'IN' THEN 'Asia/Kolkata'
+                 WHEN 'TW' THEN 'Asia/Taipei'
+                 WHEN 'JP' THEN 'Asia/Tokyo'
+                 WHEN 'PH' THEN 'Asia/Manila'
+                 WHEN 'US' THEN 'America/New_York'
+                 WHEN 'CA' THEN 'America/Toronto'
+                 WHEN 'GB' THEN 'Europe/London'
+                 WHEN 'DE' THEN 'Europe/Berlin'
+                 WHEN 'ZA' THEN 'Africa/Johannesburg'
+               END AS tz,
+               CASE le.country_code
+                 WHEN 'SA' THEN 'ar-SA'
+                 WHEN 'AE' THEN 'ar-AE'
+                 WHEN 'QA' THEN 'ar-QA'
+                 WHEN 'MY' THEN 'ms-MY'
+                 WHEN 'SG' THEN 'en-SG'
+                 WHEN 'IN' THEN 'en-IN'
+                 WHEN 'TW' THEN 'zh-TW'
+                 WHEN 'JP' THEN 'ja-JP'
+                 WHEN 'PH' THEN 'en-PH'
+                 WHEN 'US' THEN 'en-US'
+                 WHEN 'CA' THEN 'en-CA'
+                 WHEN 'GB' THEN 'en-GB'
+                 WHEN 'DE' THEN 'de-DE'
+                 WHEN 'ZA' THEN 'en-ZA'
+               END AS locale,
+               CASE le.country_code
+                 WHEN 'US' THEN '%m/%d/%Y'
+                 WHEN 'PH' THEN '%m/%d/%Y'
+                 WHEN 'CA' THEN '%Y-%m-%d'
+                 WHEN 'JP' THEN '%Y-%m-%d'
+                 WHEN 'TW' THEN '%Y-%m-%d'
+                 ELSE '%d/%m/%Y'
+               END AS date_format,
+               CASE le.country_code
+                 -- Saturday-start weeks (Gulf states)
+                 WHEN 'SA' THEN 6  WHEN 'AE' THEN 6  WHEN 'QA' THEN 6
+                 -- Monday-start weeks (most of EU/UK + MY/SG/TW)
+                 WHEN 'GB' THEN 1  WHEN 'DE' THEN 1
+                 WHEN 'MY' THEN 1  WHEN 'SG' THEN 1  WHEN 'TW' THEN 1
+                 -- Sunday-start weeks (US/Canada/JP/IN/PH/ZA)
+                 ELSE 0
+               END AS week_start
+          FROM master.legal_entity le
+         WHERE le.tenant_id = v_tenant_id
+           AND le.id IN (
+             'dd000015-0000-0000-0000-000000000001',
+             'dd000016-0000-0000-0000-000000000001',
+             'dd000017-0000-0000-0000-000000000001',
+             'dd000018-0000-0000-0000-000000000001',
+             'dd000019-0000-0000-0000-000000000001',
+             'dd000020-0000-0000-0000-000000000001',
+             'dd000021-0000-0000-0000-000000000001',
+             'dd000022-0000-0000-0000-000000000001',
+             'dd000023-0000-0000-0000-000000000001',
+             'dd000024-0000-0000-0000-000000000001',
+             'dd000025-0000-0000-0000-000000000001',
+             'dd000026-0000-0000-0000-000000000001',
+             'dd000027-0000-0000-0000-000000000001',
+             'dd000028-0000-0000-0000-000000000001',
+             'dd000029-0000-0000-0000-000000000001',
+             'dd000030-0000-0000-0000-000000000001'
+           )
+      ) profile
+     WHERE cc.tenant_id        = v_tenant_id
+       AND cc.legal_entity_id  = profile.legal_entity_id
+       AND profile.tz IS NOT NULL;
+
+    RAISE NOTICE '[201_athyper_subsidiaries] temporal profile (tz/locale/date_format/week_start) applied';
+
 END $athyper_subs$;

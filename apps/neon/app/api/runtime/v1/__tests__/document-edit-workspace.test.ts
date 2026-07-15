@@ -337,6 +337,29 @@ describe("workspace lifecycle route guard wiring", () => {
     expect(hydrate).toContain('compatibilityBodyToken: readString(body, "workspaceId")');
   });
 
+  it("rolls out OPEN projections safely and seeds security-scoped caches before consumers", () => {
+    const open = readFileSync(new URL("[entity]/[id]/edit/open/route.ts", editRouteRoot), "utf8");
+    const flags = readFileSync(resolve(process.cwd(), "lib/server/document-runtime-feature-flags.ts"), "utf8");
+    const context = readFileSync(resolve(
+      process.cwd(),
+      "../../packages/shared/runtime-domain/runtime-canvas/src/document-runtime/document-runtime-context.tsx",
+    ), "utf8");
+    const coordinator = readFileSync(resolve(
+      process.cwd(),
+      "../../packages/shared/runtime-domain/runtime-canvas/src/document-runtime/document-edit-coordinator.tsx",
+    ), "utf8");
+    const contextBody = context.slice(context.indexOf("function DocumentRuntimeContextBody"));
+
+    expect(flags).toContain("DOCUMENT_OPEN_ROLLOUT_STAGE");
+    expect(flags).toContain("stableRolloutBucket");
+    expect(open).toContain("loadOptionalOpenProjection");
+    expect(open).toContain('"workspace_compatibility_fetch"');
+    expect(contextBody.indexOf("seedDocumentOpenProjections")).toBeLessThan(contextBody.indexOf("useDocumentChildren"));
+    expect(contextBody.indexOf("seedDocumentOpenProjections")).toBeLessThan(contextBody.indexOf("useDocumentRules"));
+    expect(coordinator).toContain("buildDocumentRulesQueryKey(projection.entity, identity");
+    expect(coordinator).toContain("buildCompiledEntityQueryKey(entityCode, identity)");
+  });
+
   it("keeps the active document page adapter but removes its legacy save transport", () => {
     const source = readFileSync(resolve(
       process.cwd(),
@@ -344,7 +367,7 @@ describe("workspace lifecycle route guard wiring", () => {
     ), "utf8");
     const workspaceSource = readFileSync(resolve(
       process.cwd(),
-      "../../packages/shared/runtime-canvas/src/record/document-object-page-workspace.tsx",
+      "../../packages/shared/runtime-domain/runtime-canvas/src/record/document-object-page-workspace.tsx",
     ), "utf8");
     expect(workspaceSource).toContain("editCoordinator.openWorkspace()");
     expect(workspaceSource).toContain('core["draftContext"]');
@@ -354,7 +377,7 @@ describe("workspace lifecycle route guard wiring", () => {
     expect(source).not.toMatch(/\/api\/[^"'\n]*\/edit-session/);
     const contractSource = readFileSync(resolve(
       process.cwd(),
-      "../../packages/shared/runtime-contracts/src/document-edit-runtime-compiler.ts",
+      "../../packages/shared/runtime-domain/runtime-contracts/src/document-edit-runtime-compiler.ts",
     ), "utf8");
     const descriptorSource = readFileSync(resolve(
       process.cwd(),
@@ -365,7 +388,7 @@ describe("workspace lifecycle route guard wiring", () => {
 
     const lineGridSource = readFileSync(resolve(
       process.cwd(),
-      "../../packages/shared/runtime-line-item/src/surface/LinesGrid.tsx",
+      "../../packages/shared/runtime-domain/runtime-line-item/src/surface/lines-grid.tsx",
     ), "utf8");
     expect(lineGridSource).toContain("submitWorkspaceChanges({");
     expect(lineGridSource).toContain("lines: { update: updates }");
@@ -385,7 +408,7 @@ describe("workspace lifecycle route guard wiring", () => {
   it("keeps event credentials out of URLs and uses OPEN as the edit-page record bootstrap", () => {
     const coordinator = readFileSync(resolve(
       process.cwd(),
-      "../../packages/shared/runtime-canvas/src/document-runtime/DocumentEditCoordinator.tsx",
+      "../../packages/shared/runtime-domain/runtime-canvas/src/document-runtime/document-edit-coordinator.tsx",
     ), "utf8");
     const security = readFileSync(resolve(
       process.cwd(),
@@ -403,5 +426,49 @@ describe("workspace lifecycle route guard wiring", () => {
     expect(editPage).toContain("missing its compiled edit runtime");
     expect(editPage).toContain('routeDecision.kind === "reject"');
     expect(editPage).toContain("notFound()");
+  });
+
+  it("keeps document bootstrap data authoritative across fields and line surfaces", () => {
+    const fieldsSurface = readFileSync(resolve(
+      process.cwd(),
+      "../../packages/shared/runtime-domain/runtime-canvas/src/surfaces/fields-surface.tsx",
+    ), "utf8");
+    const lineSurface = readFileSync(resolve(
+      process.cwd(),
+      "../../packages/shared/runtime-domain/runtime-canvas/src/surfaces/line-items-surface.tsx",
+    ), "utf8");
+    const lineGrid = readFileSync(resolve(
+      process.cwd(),
+      "../../packages/shared/runtime-domain/runtime-line-item/src/surface/lines-grid.tsx",
+    ), "utf8");
+
+    expect(fieldsSurface).toContain("readSelectedOptionLabels(documentEditCoordinator?.initialCore)");
+    expect(fieldsSurface).toContain("optionBatchContext={optionBatchContext}");
+    expect(lineSurface).toContain("controlledData={controlledData}");
+    expect(lineSurface).toContain("documentRuntime.children.lines");
+    expect(lineGrid).toContain('accountingLine ? "accounting_distribution" : null');
+  });
+
+  it("secures and consolidates document field-option batches", () => {
+    const formSource = readFileSync(resolve(
+      process.cwd(),
+      "../../packages/shared/runtime-domain/runtime-canvas/src/edit/runtime-edit-form.tsx",
+    ), "utf8");
+    const batchRoute = readFileSync(
+      new URL("[entity]/[id]/edit/field-options/batch/route.ts", editRouteRoot),
+      "utf8",
+    );
+    const singleRoute = readFileSync(
+      new URL("[entity]/fields/[field]/options/route.ts", editRouteRoot),
+      "utf8",
+    );
+
+    expect(formSource).toContain('import { csrfFetch } from "@athyper/runtime-shared/client"');
+    expect(formSource).toContain("csrfFetch(batchContext.endpoint");
+    expect(batchRoute).toContain("resolveRuntimeFieldOptions");
+    expect(batchRoute).toContain("MAX_BATCH_CONCURRENCY = 8");
+    expect(batchRoute).not.toContain("GET as resolveSingleFieldOptions");
+    expect(batchRoute).not.toContain("buildSingleFieldRequest");
+    expect(singleRoute).toContain("runtimeHeaders: buildRuntimeHeaders(session)");
   });
 });

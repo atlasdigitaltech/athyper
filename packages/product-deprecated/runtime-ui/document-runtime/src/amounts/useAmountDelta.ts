@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { AmountBreakdownLine, DocumentLine } from "@athyper/api-contracts/documents";
-import type { DocumentPendingDeltaMode } from "@athyper/api-contracts/edit-session";
+import type { DocumentPendingDeltaMode } from "@athyper/api-contracts/document-edit-draft";
 
 /**
  * Per-amount-line pending delta. Keyed by the line's `label` (the only

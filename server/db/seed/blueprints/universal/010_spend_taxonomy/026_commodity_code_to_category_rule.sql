@@ -1,19 +1,10 @@
--- ============================================================================
--- UNIVERSAL — COMMODITY CODE TO CATEGORY RULE (ROUTING)
--- ============================================================================
--- File:     026_commodity_code_to_category_rule.sql
--- Schema:   control.commodity_code_to_category_rule
--- Purpose:  Routes incoming UNSPSC segment codes to commodity_category.
---           Uses PREFIX match_mode — a UNSPSC prefix maps to the best-fit
---           commodity category. More specific (longer) prefixes win by priority.
--- Depends:  023_commodity_category (categories must exist)
--- Idempotent: DELETE-then-INSERT by pack metadata tag.
---             Pack names PRESERVED for idempotency against existing DB rows.
--- ============================================================================
+-- Routes incoming UNSPSC codes to commodity_category via PREFIX match_mode.
+-- Priority scheme: 90 narrow (6+ digit family), 70 medium (4-digit segment),
+-- 50 broad (2-digit segment group). Higher priority wins when multiple match.
+-- Idempotency = DELETE-then-INSERT by metadata._seed.pack; pack names
+-- PRESERVED ('024_base' / '024_base_direct_ops') for compat — do not rename.
 
--- ============================================================================
--- BLOCK 1: Layer A universal routing rules
--- ============================================================================
+-- BLOCK 1 — Layer A universal routing.
 DO $seed$
 DECLARE
     v_tid     uuid;
@@ -34,10 +25,6 @@ BEGIN
     WHERE tenant_id = v_tid
       AND metadata->'_seed'->>'pack' = v_pack;
 
-    -- ── Stage routing rules ───────────────────────────────────────────────
-    -- (unspsc_prefix, cc_code, priority, confidence)
-    -- Higher priority wins when multiple rules match the same code.
-    -- Longer/more-specific prefix should have higher priority.
     CREATE TEMP TABLE tmp_routing (
         unspsc_prefix   text    NOT NULL,
         cc_code         text    NOT NULL,
@@ -45,13 +32,7 @@ BEGIN
         confidence      numeric(5,2) NOT NULL DEFAULT 80.00
     ) ON COMMIT DROP;
 
-    -- Priority scheme:
-    --   90 = narrow (6-digit UNSPSC family or deeper)
-    --   70 = medium (4-digit UNSPSC segment prefix → ????0000)
-    --   50 = broad   (2-digit UNSPSC segment group → ??000000)
-
     INSERT INTO tmp_routing (unspsc_prefix, cc_code, priority, confidence) VALUES
-    -- ── IT & Digital ──────────────────────────────────────────────────────
     ('432100', 'SC-IT-HW', 90, 90),   -- Computer Equipment
     ('432300', 'SC-IT-SW', 90, 90),   -- Software
     ('811100', 'SC-IT-SVC', 70, 80),   -- Computer services (broad → also cloud)
@@ -173,9 +154,7 @@ BEGIN
 END $seed$;
 
 
--- ============================================================================
--- BLOCK 2: Layer B direct-operations routing rules
--- ============================================================================
+-- BLOCK 2 — Layer B direct-operations routing.
 DO $seed$
 DECLARE
     v_tid     uuid;

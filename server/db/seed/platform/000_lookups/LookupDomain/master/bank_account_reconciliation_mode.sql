@@ -1,7 +1,3 @@
--- LookupDomain/master/bank_account_reconciliation_mode.sql
--- Lookup values for domain: master.bank_account_reconciliation_mode
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('manual',    'Manual',    'master.bank_account_reconciliation_mode', 'Manual matching by user',         10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

@@ -66,7 +66,7 @@ describe("F4 — /livez liveness handler", () => {
       "ServerDeps",
       "kernel/bootstrap",
       "@athyper/adapter-db",
-      "@athyper/adapter-memorycache",
+      "@athyper/adapter-memory-cache",
       "@athyper/adapter-auth",
       "healthChecks",
     ];
@@ -75,3 +75,4 @@ describe("F4 — /livez liveness handler", () => {
     }
   });
 });
+

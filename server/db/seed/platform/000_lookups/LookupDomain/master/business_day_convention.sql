@@ -1,7 +1,4 @@
--- LookupDomain/master/business_day_convention.sql
--- Lookup values for domain: master.business_day_convention
--- Used by: payment_term.business_day_convention
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: payment_term.business_day_convention.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

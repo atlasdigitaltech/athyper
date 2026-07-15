@@ -9,7 +9,7 @@ const handler = buildRelayHandler({
   resolveSession: () => getMeshServerSession(),
   runtimeApiUrl: RUNTIME_API_URL,
   appLabel: "mesh:relay",
-  passthroughHeaders: ["Idempotency-Key", "X-Idempotency-Key"],
+  passthroughHeaders: ["Idempotency-Key", "X-Idempotency-Key", "If-Match"],
 });
 
 export const GET = handler;

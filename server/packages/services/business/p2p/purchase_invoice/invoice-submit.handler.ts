@@ -1,21 +1,18 @@
 /**
- * Invoice Submit Handler — flow:submit_for_approval
+ * Purchase Invoice Submit Preparation
  *
- * Called from action-dispatcher.route.ts when handler_target = 'flow:submit_for_approval'
- * for purchase_invoice entity.
+ * Called by the lifecycle orchestrator after it locks the invoice.
  *
  * Steps:
  *   1. Load and validate invoice (must be in 'draft' status with at least 1 line)
  *   2. Resolve workflow template via control.workflow_definition rules
- *   3. If allow_self_approval=true and all approvers === requester → auto-approve
- *   4. Create document.workflow_request (ON CONFLICT DO NOTHING for idempotency)
- *   5. Create document.workflow_stage rows (one per template stage)
- *   6. Create document.work_item for stage 1 (type=approval) + assign approvers
- *   7. Update invoice.status → 'pending_approval' + set workflow_request_id
- *   8. Return { ok: true, record: updatedInvoice }
+ *   3. Create or resolve document.workflow_request idempotently
+ *   4. Create workflow stages and first-stage work items
+ *   5. Dispatch metadata-driven flow-field bindings
+ *   6. Return the workflow_request_id patch and preparation context
  *
- * If no workflow_definition is found for purchase_invoice, falls through to a
- * direct status transition (auto-approve path for tenants without approval rules).
+ * This service never changes invoice status. The lifecycle orchestrator owns
+ * draft → pending_approval and the associated hooks/audit fields.
  *
  * Schema notes:
  *   - Routing: control.workflow_definition  (entity_type + rules jsonb)
@@ -32,7 +29,6 @@ import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { matchInvoice } from "./invoice-match.service.js";
 import { validatePurchaseInvoiceInvariants } from "./invoice-invariants.service.js";
-import { syncBusinessLifecycle, type BusinessLifecycleSyncHook } from "../../lifecycle/lifecycle-sync-hook.js";
 import { seedRetentionFromPricingComponents } from "../../ap/purchase_invoice/retention-advance-seeder.service.js";
 import { dispatchFlowFieldBindings } from "../../../workflow/flow-field-dispatcher.js";
 
@@ -41,7 +37,7 @@ type AnyDb = Kysely<Record<string, any>>;
 
 interface HandlerResult {
   status: number;
-  body:   Record<string, unknown>;
+  body: Record<string, unknown>;
 }
 
 interface TemplateStage {
@@ -203,21 +199,42 @@ async function resolveApprovers(
   return Array.from(ids);
 }
 
-export async function handleSubmitForApproval(
+export interface PurchaseInvoiceSubmitPreparation {
+  statusPatch: Readonly<Record<string, unknown>>;
+  context: Readonly<{
+    workflowRequestId: string;
+    workflowTemplateId: string;
+    stageCount: number;
+    commentsCreated: number;
+  }>;
+}
+
+export class PurchaseInvoiceSubmitPreparationError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+    readonly status: number,
+    readonly details?: Record<string, unknown>,
+  ) {
+    super(message);
+    this.name = "PurchaseInvoiceSubmitPreparationError";
+  }
+}
+
+export async function preparePurchaseInvoiceSubmit(
   db:          AnyDb,
   tenantId:    string,
   invoiceId:   string,
   principalId: string | null,
   body:        Record<string, unknown>,
   logger?:     { info(e: string, f?: Record<string, unknown>): void; warn(e: string, f?: Record<string, unknown>): void },
-  lifecycleSync?: BusinessLifecycleSyncHook,
-): Promise<HandlerResult> {
+): Promise<PurchaseInvoiceSubmitPreparation> {
   // The submit-for-approval flow declares its inputs in control.entity_flow_field.
   // The 'notes' binding carries metadata.target = { kind: 'comment',
   // comment_intent: 'submission_note', ... } so dispatchFlowFieldBindings
   // routes the value into master.comment. Nothing here hardcodes that mapping.
 
-  return db.transaction().execute(async (trx) => {
+  return runInTransaction(db, async (trx) => {
 
     // Step 1: Load invoice + validate
     const invoiceResult = await sql<Record<string, unknown>>`
@@ -228,17 +245,31 @@ export async function handleSubmitForApproval(
 
     const invoice = invoiceResult.rows[0];
     if (!invoice) {
-      return { status: 404, body: { error: "INVOICE_NOT_FOUND", message: "Invoice not found" } };
+      throw new PurchaseInvoiceSubmitPreparationError("INVOICE_NOT_FOUND", "Invoice not found", 404);
     }
 
     const currentStatus = String(invoice["status"] ?? "").toLowerCase();
     if (currentStatus !== "draft") {
-      return { status: 422, body: { error: "INVALID_STATUS", message: `Invoice is in '${currentStatus}' — only draft invoices can be submitted` } };
+      throw new PurchaseInvoiceSubmitPreparationError(
+        "INVALID_STATUS",
+        `Invoice is in '${currentStatus}' — only draft invoices can be submitted`,
+        422,
+      );
     }
 
-    const lineCount = Number(invoice["line_count"] ?? 0);
+    const lineCountRows = await sql<{ line_count: string }>`
+      SELECT COUNT(*)::text AS line_count
+        FROM document.purchase_invoice_line
+       WHERE tenant_id = ${tenantId}::uuid
+         AND purchase_invoice_id = ${invoiceId}::uuid
+    `.execute(trx);
+    const lineCount = Number(lineCountRows.rows[0]?.line_count ?? 0);
     if (lineCount === 0) {
-      return { status: 422, body: { error: "NO_LINES", message: "Invoice must have at least one line before submitting" } };
+      throw new PurchaseInvoiceSubmitPreparationError(
+        "NO_LINES",
+        "Invoice must have at least one line before submitting",
+        422,
+      );
     }
 
     // Auto-resolve match_status for non-PO invoices (sets match_status = 'unmatched').
@@ -253,14 +284,12 @@ export async function handleSubmitForApproval(
     // pass rather than chasing repeated submit failures.
     const invariants = await validatePurchaseInvoiceInvariants(trx, tenantId, invoiceId, { phase: "submit" });
     if (!invariants.ok) {
-      return {
-        status: 422,
-        body: {
-          error:      "INVOICE_INVARIANT_VIOLATION",
-          message:    `${invariants.violations.length} invariant violation(s) prevent submit.`,
-          violations: invariants.violations,
-        },
-      };
+      throw new PurchaseInvoiceSubmitPreparationError(
+        "INVOICE_INVARIANT_VIOLATION",
+        `${invariants.violations.length} invariant violation(s) prevent submit.`,
+        422,
+        { violations: invariants.violations },
+      );
     }
 
     // Identity now resolves from purchase_invoice header fields and live master joins.
@@ -278,112 +307,15 @@ export async function handleSubmitForApproval(
     const template = await resolveWorkflowTemplate(trx, tenantId, "purchase_invoice", invoice);
 
     if (!template || template.stages.length === 0) {
-      // Auto-approve: no workflow configured for this tenant
-      const updated = await sql<Record<string, unknown>>`
-        UPDATE document.purchase_invoice
-           SET status            = 'approved',
-               status_changed_at = ${now},
-               status_changed_by = ${principalId},
-               approved_at       = ${now},
-               approved_by       = ${principalId},
-               updated_at        = ${now},
-               updated_by        = ${principalId}
-         WHERE id = ${invoiceId} AND tenant_id = ${tenantId} AND status = 'draft'
-         RETURNING *
-      `.execute(trx);
-
-      const updatedInvoice = updated.rows[0];
-      if (!updatedInvoice) {
-        return { status: 409, body: { error: "CONFLICT", message: "Invoice was modified concurrently. Please retry." } };
-      }
-
-      const dispatched = await dispatchFlowFieldBindings(trx, {
-        tenantId,
-        entityName: "purchase_invoice",
-        entityId:   invoiceId,
-        flowCode:   "submit_for_approval",
-        stepKey:    "submit",
-        draft:      body,
-        principalId,
-        workflowRequestId: null,
-      });
-
-      await syncBusinessLifecycle(lifecycleSync, {
-        db: trx,
-        tenantId,
-        entityName: "purchase_invoice",
-        entityId: invoiceId,
-        status: "approved",
-        actorId: principalId,
-        payload: updatedInvoice,
-      });
-
-      logger?.info("ap_invoice_auto_approved", {
-        tenantId, invoiceId,
-        commentsCreated: dispatched.commentsCreated,
-      });
-      return { status: 200, body: { ok: true, record: updatedInvoice } };
+      throw new PurchaseInvoiceSubmitPreparationError(
+        "WORKFLOW_TEMPLATE_NOT_FOUND",
+        "No active purchase-invoice approval workflow is configured.",
+        422,
+      );
     }
 
-    // Step 3: Check for self-approval shortcut
-    const allowSelfApproval = template.behaviors["allow_self_approval"] === true;
-    if (allowSelfApproval && principalId) {
-      const stage1 = template.stages.find((s) => s.stage_no === 1);
-      if (stage1) {
-        const approvers = await resolveApprovers(
-          trx, tenantId, template.id, stage1.stage_no, invoice, principalId,
-        );
-        const onlyRequester = approvers.length > 0 && approvers.every((a) => a === principalId);
-        if (onlyRequester) {
-          const updated = await sql<Record<string, unknown>>`
-            UPDATE document.purchase_invoice
-               SET status            = 'approved',
-                   status_changed_at = ${now},
-                   status_changed_by = ${principalId},
-                   approved_at       = ${now},
-                   approved_by       = ${principalId},
-                   updated_at        = ${now},
-                   updated_by        = ${principalId}
-             WHERE id = ${invoiceId} AND tenant_id = ${tenantId} AND status = 'draft'
-             RETURNING *
-          `.execute(trx);
-
-          const updatedInvoice = updated.rows[0];
-          if (!updatedInvoice) {
-            return { status: 409, body: { error: "CONFLICT", message: "Invoice was modified concurrently. Please retry." } };
-          }
-
-          const dispatched = await dispatchFlowFieldBindings(trx, {
-            tenantId,
-            entityName: "purchase_invoice",
-            entityId:   invoiceId,
-            flowCode:   "submit_for_approval",
-            stepKey:    "submit",
-            draft:      body,
-            principalId,
-            workflowRequestId: null,
-          });
-
-          await syncBusinessLifecycle(lifecycleSync, {
-            db: trx,
-            tenantId,
-            entityName: "purchase_invoice",
-            entityId: invoiceId,
-            status: "approved",
-            actorId: principalId,
-            payload: updatedInvoice,
-          });
-
-          logger?.info("ap_invoice_self_approved", {
-            tenantId, invoiceId,
-            commentsCreated: dispatched.commentsCreated,
-          });
-          return { status: 200, body: { ok: true, record: updatedInvoice } };
-        }
-      }
-    }
-
-    // Step 4: Create workflow_request (idempotent)
+    // Create or resolve the workflow request. Self-approval, when allowed,
+    // is a separate lifecycle decision; preparation never skips the submitted state.
     const wreqResult = await sql<{ id: string }>`
       INSERT INTO document.workflow_request (
         tenant_id, workflow_type, workflow_template_id, entity_type, entity_id,
@@ -414,7 +346,11 @@ export async function handleSubmitForApproval(
         LIMIT 1
       `.execute(trx);
       if (!existing.rows[0]) {
-        return { status: 409, body: { error: "CONFLICT", message: "Another workflow request is already pending for this invoice" } };
+        throw new PurchaseInvoiceSubmitPreparationError(
+          "WORKFLOW_REQUEST_CONFLICT",
+          "Another workflow request is already pending for this invoice",
+          409,
+        );
       }
       wreqId = existing.rows[0].id;
     }
@@ -471,23 +407,6 @@ export async function handleSubmitForApproval(
       }
     }
 
-    // Step 7: Update invoice status → pending_approval
-    const updated = await sql<Record<string, unknown>>`
-      UPDATE document.purchase_invoice
-         SET status              = 'pending_approval',
-             workflow_request_id = ${wreqId},
-             status_changed_at   = ${now},
-             status_changed_by   = ${principalId},
-             updated_at          = ${now},
-             updated_by          = ${principalId}
-       WHERE id = ${invoiceId} AND tenant_id = ${tenantId} AND status = 'draft'
-       RETURNING *
-    `.execute(trx);
-
-    if (!updated.rows[0]) {
-      return { status: 409, body: { error: "CONFLICT", message: "Invoice was modified concurrently — please retry" } };
-    }
-
     const dispatched = await dispatchFlowFieldBindings(trx, {
       tenantId,
       entityName: "purchase_invoice",
@@ -499,21 +418,45 @@ export async function handleSubmitForApproval(
       workflowRequestId: wreqId,
     });
 
-    await syncBusinessLifecycle(lifecycleSync, {
-      db: trx,
-      tenantId,
-      entityName: "purchase_invoice",
-      entityId: invoiceId,
-      status: "pending_approval",
-      actorId: principalId,
-      payload: updated.rows[0],
-    });
-
-    logger?.info("ap_invoice_submitted", {
+    logger?.info("ap_invoice_submit_prepared", {
       tenantId, invoiceId, wreqId,
       stages: template.stages.length,
       commentsCreated: dispatched.commentsCreated,
     });
-    return { status: 200, body: { ok: true, record: updated.rows[0], workflow_request_id: wreqId } };
+    return {
+      statusPatch: { workflow_request_id: wreqId },
+      context: {
+        workflowRequestId: wreqId,
+        workflowTemplateId: template.id,
+        stageCount: template.stages.length,
+        commentsCreated: dispatched.commentsCreated,
+      },
+    };
   });
+}
+
+async function runInTransaction<T>(
+  db: AnyDb,
+  work: (trx: AnyDb) => Promise<T>,
+): Promise<T> {
+  return (db as { isTransaction?: boolean }).isTransaction === true
+    ? work(db)
+    : db.transaction().execute((trx) => work(trx));
+}
+
+/** @deprecated Submit must enter through the records lifecycle orchestrator. */
+export async function handleSubmitForApproval(
+  _db: AnyDb,
+  _tenantId: string,
+  _invoiceId: string,
+  _principalId: string | null,
+  _body: Record<string, unknown>,
+): Promise<HandlerResult> {
+  return {
+    status: 409,
+    body: {
+      error: "LIFECYCLE_ORCHESTRATOR_REQUIRED",
+      message: "Purchase-invoice submit must run through the lifecycle orchestrator.",
+    },
+  };
 }

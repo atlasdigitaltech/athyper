@@ -15,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
 const brandSrc = path.join(repoRoot, "packages/apps/neon/brand/src/products/neon");
-const brandDist = path.join(repoRoot, "packages/shared/brand/dist");
+const brandDist = path.join(repoRoot, "packages/shared/ui-platform/brand/dist");
 const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
 const kcImg = path.join(kcLogin, "resources/img");
 

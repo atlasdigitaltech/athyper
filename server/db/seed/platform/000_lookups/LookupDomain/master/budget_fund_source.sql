@@ -1,7 +1,4 @@
--- LookupDomain/master/budget_fund_source.sql
--- Lookup values for domain: master.budget_fund_source
--- Used by: budget_profile.fund_source
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: budget_profile.fund_source.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

@@ -4,7 +4,6 @@ export {
   TRACE_ID_HEADER,
   buildRuntimeHeaders,
   buildServiceUrl,
-  copySetCookieHeaders,
   copyTraceResponseHeaders,
   safePathFromSegments,
   sanitizeContentDisposition,

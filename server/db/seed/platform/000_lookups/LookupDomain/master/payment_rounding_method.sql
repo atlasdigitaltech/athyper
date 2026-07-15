@@ -1,7 +1,4 @@
--- LookupDomain/master/payment_rounding_method.sql
--- Lookup values for domain: master.payment_rounding_method
--- Used by: payment_term_clause.rounding_method
--- Idempotent: WHERE NOT EXISTS guard
+-- Used by: payment_term_clause.rounding_method.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

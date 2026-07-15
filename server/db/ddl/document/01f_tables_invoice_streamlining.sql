@@ -50,21 +50,32 @@ ALTER TABLE document.purchase_invoice
 -- §S3  New columns
 -- ---------------------------------------------------------------------------
 
+-- Phase 4 UI cleanup (Tax section review):
+--   tax_mode and tax_mode_source default at the DB level. UI hides both via
+--   visibility metadata (042f seed). This means every new PI is automatically
+--   stamped with exclusive / tax_group without requiring service-layer code
+--   to set them, and the user never sees the dropdowns. tax_mode='exclusive'
+--   is the B2B default; tax_mode_source='tax_group' attributes the decision
+--   to the tax-group resolver — aligns with Phase 3 model and prepares for
+--   Phase 5 (when control.tax_resolution_rule will carry default_tax_mode).
 ALTER TABLE document.purchase_invoice
-  ADD COLUMN IF NOT EXISTS tax_mode text;
+  ADD COLUMN IF NOT EXISTS tax_mode text NOT NULL DEFAULT 'exclusive';
 
 ALTER TABLE document.purchase_invoice
-  ADD COLUMN IF NOT EXISTS tax_mode_source text;
+  ADD COLUMN IF NOT EXISTS tax_mode_source text NOT NULL DEFAULT 'tax_group';
 
 -- ---------------------------------------------------------------------------
 -- §S3a Backfill tax_mode for rows that pre-date this migration.
+--      With the NOT NULL DEFAULT above, only legacy rows whose columns existed
+--      but were nullable need backfill — preserve the older "cannot_infer"
+--      attribution so the audit trail shows the difference between "system
+--      backfilled" vs "freshly created with defaults".
 -- ---------------------------------------------------------------------------
 
 UPDATE document.purchase_invoice
-   SET tax_mode        = 'exclusive',
-       tax_mode_source = 'cannot_infer'
- WHERE tax_mode IS NULL
-   AND status <> 'proforma';
+   SET tax_mode_source = 'cannot_infer'
+ WHERE tax_mode IS NOT NULL
+   AND tax_mode_source IS NULL;
 
 -- ---------------------------------------------------------------------------
 -- §S4  Drop and recreate vocabulary CHECK constraints

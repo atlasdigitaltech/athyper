@@ -36,6 +36,7 @@
     "@athyper/tsconfig": "workspace:*",
     "rimraf": "^6.0.1",
     "tsup": "^8.3.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

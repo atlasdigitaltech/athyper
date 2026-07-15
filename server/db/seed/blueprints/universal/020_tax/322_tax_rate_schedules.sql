@@ -1,20 +1,9 @@
--- ============================================================================
--- 322_tax_rate_schedules.sql — Tax rate schedules (effective-dated)
--- ============================================================================
--- Tables: control.tax_rate_schedule
--- Fix 1: Proper UPSERT (delete-owned-then-reinsert) — seed corrections land
--- Fix 2: Both SALE and PURCHASE schedules for recoverable indirect taxes
--- Fix 3: Strong assertions
--- ============================================================================
--- CRITICAL DDL NOTE:
--- DDL CHECK constraint trs_direction_chk allows:
---   'PURCHASE','SALE','PAYMENT','IMPORT','EXPORT','BOTH'
--- The source spec used OUTPUT/INPUT — corrected here to SALE/PURCHASE.
--- SALE  = output direction (charged to customers)
--- PURCHASE = input direction (recoverable from suppliers)
--- ============================================================================
--- Depends: 320 (jurisdictions), 321 (tax_types)
--- ============================================================================
+-- Effective-dated control.tax_rate_schedule rows; idempotency = delete-owned
+-- + reinsert so seed corrections actually land.
+-- Recoverable indirect taxes get BOTH a SALE and a PURCHASE schedule.
+-- DDL gotcha — trs_direction_chk only allows PURCHASE/SALE/PAYMENT/IMPORT/EXPORT/BOTH.
+-- The original spec used OUTPUT/INPUT; we use SALE (output, customer-charged)
+-- and PURCHASE (input, supplier-recoverable) instead.
 
 DO $seed$
 DECLARE
@@ -44,6 +33,9 @@ BEGIN
         recover_mode text NOT NULL DEFAULT 'NONE',
         recover_pct  numeric(5,2),
         reverse_mode text NOT NULL DEFAULT 'NONE',
+        -- priority column retained in this temp table only for backward-compat
+        -- with the existing VALUES tuples; not written to control.tax_rate_schedule
+        -- (priority column was dropped in Phase 2 — resolution moved to control.tax_resolution_rule).
         priority     smallint NOT NULL DEFAULT 10
     ) ON COMMIT DROP;
 
@@ -214,7 +206,7 @@ BEGIN
              rate_kind, rate_value,
              recoverability_mode, recoverability_percent,
              reverse_charge_mode, calculation_basis,
-             effective_from, priority,
+             effective_from,
              status, created_by, metadata)
         SELECT
             v_tid, tj.id, tt.id,
@@ -222,7 +214,7 @@ BEGIN
             'PERCENT', r.rate,
             r.recover_mode, r.recover_pct,
             r.reverse_mode, 'LINE_NET',
-            '2025-01-01'::date, r.priority,
+            '2025-01-01'::date,
             'active', v_su, v_meta
         FROM tmp_rates r
         JOIN tmp_tj tj ON tj.code = r.tj_code
@@ -241,39 +233,57 @@ BEGIN
         (SELECT count(*) FROM control.tax_rate_schedule WHERE tenant_id = v_tid);
     END IF;
 
-    -- A2: Every seed-managed recoverable type has at least 1 SALE schedule.
-    -- Scoped to 321_org types to exclude stale rows from prior seed versions.
+    -- A2: Every seed-managed tax_type that has at least one recoverable
+    -- schedule (recoverability_mode IN ('FULL','PARTIAL')) must have a SALE
+    -- direction schedule. Scoped to 321_org types to exclude stale rows.
+    -- Recoverability is read from the schedule, not from tax_type.
     IF EXISTS (
         SELECT tt.code FROM master.tax_type tt
-        WHERE tt.tenant_id = v_tid AND tt.is_recoverable = true
+        WHERE tt.tenant_id = v_tid
           AND tt.metadata->'_seed'->>'pack' = '321_org'
+          AND EXISTS (
+              SELECT 1 FROM control.tax_rate_schedule trs
+              WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
+                AND trs.recoverability_mode IN ('FULL','PARTIAL'))
           AND NOT EXISTS (
               SELECT 1 FROM control.tax_rate_schedule trs
               WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
                 AND trs.tax_direction = 'SALE')
     ) THEN RAISE EXCEPTION '322 FAIL: recoverable tax type with no SALE schedule: %',
         (SELECT string_agg(tt.code, ', ') FROM master.tax_type tt
-         WHERE tt.tenant_id = v_tid AND tt.is_recoverable = true
+         WHERE tt.tenant_id = v_tid
            AND tt.metadata->'_seed'->>'pack' = '321_org'
+           AND EXISTS (
+               SELECT 1 FROM control.tax_rate_schedule trs
+               WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
+                 AND trs.recoverability_mode IN ('FULL','PARTIAL'))
            AND NOT EXISTS (
                SELECT 1 FROM control.tax_rate_schedule trs
                WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
                  AND trs.tax_direction = 'SALE'));
     END IF;
 
-    -- A3: Every seed-managed recoverable type has at least 1 PURCHASE schedule.
+    -- A3: Same coverage check for PURCHASE direction.
     IF EXISTS (
         SELECT tt.code FROM master.tax_type tt
-        WHERE tt.tenant_id = v_tid AND tt.is_recoverable = true
+        WHERE tt.tenant_id = v_tid
           AND tt.metadata->'_seed'->>'pack' = '321_org'
+          AND EXISTS (
+              SELECT 1 FROM control.tax_rate_schedule trs
+              WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
+                AND trs.recoverability_mode IN ('FULL','PARTIAL'))
           AND NOT EXISTS (
               SELECT 1 FROM control.tax_rate_schedule trs
               WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
                 AND trs.tax_direction = 'PURCHASE')
     ) THEN RAISE EXCEPTION '322 FAIL: recoverable tax type with no PURCHASE schedule: %',
         (SELECT string_agg(tt.code, ', ') FROM master.tax_type tt
-         WHERE tt.tenant_id = v_tid AND tt.is_recoverable = true
+         WHERE tt.tenant_id = v_tid
            AND tt.metadata->'_seed'->>'pack' = '321_org'
+           AND EXISTS (
+               SELECT 1 FROM control.tax_rate_schedule trs
+               WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id
+                 AND trs.recoverability_mode IN ('FULL','PARTIAL'))
            AND NOT EXISTS (
                SELECT 1 FROM control.tax_rate_schedule trs
                WHERE trs.tenant_id = v_tid AND trs.tax_type_id = tt.id

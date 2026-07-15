@@ -357,3 +357,110 @@ COMMENT ON COLUMN snapshot.content_item_version.body_format IS
 COMMENT ON COLUMN snapshot.content_item_version.checksum IS
     'SHA-256 of body_json. Unique per (tenant, content_item) — prevents '
     'saving a duplicate body as a new version.';
+
+
+-- =============================================================================
+-- §8  snapshot.document_snapshot — generic P2P / approvable document snapshot
+-- =============================================================================
+-- Captures the full graph (header + lines + components + distributions +
+-- schedules + related) at a lifecycle gate event. Powers point-in-time
+-- audit, "what did this PI look like when it was approved?" queries,
+-- amendment baselines, and hash-chain integrity verification.
+--
+-- Append-only: written by snapshot.fn_capture_full() from the snapshot.capture
+-- hook action; UPDATE/DELETE blocked by snapshot.trg_document_snapshot_immutable.
+-- Partitioned by captured_at (DEFAULT partition catches everything until a
+-- range partition strategy lands — pattern mirrors log.activity_log).
+--
+-- gate_event_kind taxonomy (sealed):
+--   authoring_lock      — draft → pending_approval (entity locks for review)
+--   commitment          — approval / placement / acceptance
+--   fulfillment         — receipt / service_sheet post
+--   financial_post      — PI / payment post
+--   match_decision      — three-way match resolved
+--   amendment_baseline  — supersede / publish_revision
+--   reversal            — posted → reversed
+--
+-- Chain integrity:
+--   previous_snapshot_id + chain_seq + payload_hash form a hash chain per
+--   (entity_type, entity_id). snapshot.fn_verify_chain() recomputes hashes
+--   and asserts continuity.
+
+CREATE TABLE IF NOT EXISTS snapshot.document_snapshot (
+    -- Identity
+    id                      uuid          NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid          NOT NULL,
+
+    -- Subject (polymorphic)
+    entity_type             text          NOT NULL,        -- e.g. 'purchase_invoice'
+    entity_id               uuid          NOT NULL,
+    document_code           text,                          -- denormalised display code (invoice_number, etc.)
+    version_number          int           NOT NULL DEFAULT 1,
+
+    -- Gate event context
+    gate_event              text          NOT NULL,        -- transition.event_code or 'manual'
+    gate_event_kind         text          NOT NULL,        -- sealed enum (see CHECK)
+    activity_log_id         uuid,                          -- no FK (activity_log is partitioned with composite PK)
+
+    -- Payload (full graph; NULL where the entity has no children of that kind)
+    header_json             jsonb         NOT NULL,
+    lines_json              jsonb,
+    components_json         jsonb,
+    distributions_json      jsonb,
+    schedules_json          jsonb,
+    related_json            jsonb,
+
+    -- Hash chain
+    payload_hash            text          NOT NULL,        -- sha256 hex of canonical payload
+    previous_snapshot_id    uuid,                          -- prior snapshot in this entity's chain
+    chain_seq               int           NOT NULL DEFAULT 1,
+
+    -- Capture audit (append-only — no updated_at)
+    captured_at             timestamptz   NOT NULL DEFAULT now(),
+    captured_by             uuid          NOT NULL,
+    capture_source          text          NOT NULL DEFAULT 'transition_hook',
+
+    CONSTRAINT ds_pkey              PRIMARY KEY (id, captured_at),
+    CONSTRAINT ds_tenant_id_uq      UNIQUE (tenant_id, id, captured_at),
+    CONSTRAINT ds_kind_chk          CHECK (gate_event_kind IN (
+        'authoring_lock','commitment','fulfillment','financial_post',
+        'match_decision','amendment_baseline','reversal')),
+    CONSTRAINT ds_capture_source_chk CHECK (capture_source IN (
+        'transition_hook','manual','reconcile','migration')),
+    CONSTRAINT ds_entity_type_chk   CHECK (btrim(entity_type) <> ''),
+    CONSTRAINT ds_hash_chk          CHECK (length(payload_hash) >= 64),
+    CONSTRAINT ds_chain_pos         CHECK (chain_seq >= 1),
+    CONSTRAINT ds_version_pos       CHECK (version_number >= 1),
+    CONSTRAINT ds_header_json_chk   CHECK (jsonb_typeof(header_json) = 'object'),
+    CONSTRAINT ds_no_self_prev      CHECK (previous_snapshot_id IS DISTINCT FROM id)
+) PARTITION BY RANGE (captured_at);
+
+CREATE TABLE IF NOT EXISTS snapshot.document_snapshot_default
+    PARTITION OF snapshot.document_snapshot DEFAULT;
+
+COMMENT ON TABLE snapshot.document_snapshot IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_PARTITIONED. Generic P2P / approvable document snapshot. '
+    'Captures full graph (header + lines + components + distributions + schedules + related) at lifecycle gate events. '
+    'Append-only — UPDATE/DELETE blocked by snapshot.trg_document_snapshot_immutable. '
+    'Partitioned by captured_at; default partition catches all until a range strategy is configured. '
+    'Hash chain (previous_snapshot_id + chain_seq + payload_hash) enables tamper detection — '
+    'verified by snapshot.fn_verify_chain().';
+
+COMMENT ON COLUMN snapshot.document_snapshot.entity_type IS
+    'Polymorphic entity code — e.g. ''purchase_invoice'', ''commitment'', ''receipt'', ''service_sheet''.';
+
+COMMENT ON COLUMN snapshot.document_snapshot.gate_event_kind IS
+    'Sealed taxonomy: authoring_lock | commitment | fulfillment | financial_post | '
+    'match_decision | amendment_baseline | reversal.';
+
+COMMENT ON COLUMN snapshot.document_snapshot.payload_hash IS
+    'SHA-256 hex of the canonical JSON payload (jsonb_to_text with sorted keys). '
+    'Used by snapshot.fn_verify_chain() to detect tampering or storage corruption.';
+
+COMMENT ON COLUMN snapshot.document_snapshot.previous_snapshot_id IS
+    'Prior snapshot in this entity''s chain (NULL for the first snapshot). '
+    'NOT a tenant-scoped FK — chains span partition boundaries and the PK includes captured_at.';
+
+COMMENT ON COLUMN snapshot.document_snapshot.activity_log_id IS
+    'log.activity_log row that triggered this snapshot. NO FK — activity_log has composite PK '
+    '(id, created_at) due to partitioning; we store the id alone and LEFT JOIN in views.';

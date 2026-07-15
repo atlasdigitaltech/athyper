@@ -10,9 +10,9 @@
  *
  * Notes on intentional divergences (not flagged):
  *   - server/tsconfig.json uses NodeNext directly (sub-monorepo, separate resolution).
- *   - packages/shared/config/* are the shared bases themselves.
+ *   - packages/shared/data-integration/config/* are the shared bases themselves.
  *   - Casing on `module` / `target` is left to the TS schema's mixed-case
- *     conventions ("ESNext", "ES2022") — both are canonical.
+ *     conventions ("ESNext", "ES2022") â€” both are canonical.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -77,12 +77,12 @@ function isSharedBaseOrIndependent(rel: string): boolean {
   return (
     norm === "tsconfig.json" ||
     norm.startsWith("tooling/tsconfig/") ||
-    norm.startsWith("packages/shared/config/") ||
+    norm.startsWith("packages/shared/data-integration/config/") ||
     norm === "server/tsconfig.json"
   );
 }
 
-// String-aware JSONC comment stripper — only trips on comments outside of strings.
+// String-aware JSONC comment stripper â€” only trips on comments outside of strings.
 function stripJsonComments(raw: string): string {
   let out = "";
   let i = 0;
@@ -158,7 +158,7 @@ for (const abs of files) {
     const lower = mr.toLowerCase();
     if (MODULE_RESOLUTION_LOWERCASE.has(lower) && mr !== lower) {
       errors.push(
-        `${rel}: [casing] compilerOptions.moduleResolution = "${mr}" — use lowercase "${lower}" for consistency`,
+        `${rel}: [casing] compilerOptions.moduleResolution = "${mr}" â€” use lowercase "${lower}" for consistency`,
       );
     }
   }
@@ -167,7 +167,7 @@ for (const abs of files) {
   for (const key of STRICT_OPTIONS_FORBIDDEN_FALSE) {
     if (opts[key] === false) {
       errors.push(
-        `${rel}: [strictness] compilerOptions.${key} = false — strictness options must not be disabled at the package level`,
+        `${rel}: [strictness] compilerOptions.${key} = false â€” strictness options must not be disabled at the package level`,
       );
     }
   }

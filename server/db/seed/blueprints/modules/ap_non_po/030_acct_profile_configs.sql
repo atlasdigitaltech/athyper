@@ -1,20 +1,6 @@
--- ============================================================================
--- FILE: blueprint/030_acct_profile_configs.sql
--- Purpose: Create versioned acct_profile_config rows for each accounting_profile
--- Depends on: master.accounting_profile (020_accounting_profiles.sql)
---             control.acct_profile_config
--- Idempotent: ON CONFLICT (accounting_profile_id, version) DO NOTHING
--- ============================================================================
--- Each profile gets exactly one config row at version=1, status='active'.
--- Fields:
---   direction       = INBOUND (AP-facing)
---   profile_type    = STANDARD for normal invoicing; PREPAYMENT for AP_ADVANCE_SUPPLIER
---   subledger_type  = AP
---   applicable_flow_codes   = which transaction_flow_template codes this config applies to
---   applicable_doc_types    = which document types it applies to
---   recognition_timing      = IMMEDIATE (no deferral)
---   matching_type           = NONE (Non-PO invoices are not 3-way matched)
--- ============================================================================
+-- Versioned acct_profile_config for each AP Non-PO profile (one v1/active row each).
+-- AP_ADVANCE_SUPPLIER uses profile_type=PREPAYMENT; others STANDARD/CAPITALIZATION.
+-- matching_type=NONE because Non-PO invoices are not 3-way matched.
 
 DO $seed_ap_configs$
 DECLARE
@@ -36,7 +22,6 @@ BEGIN
     FOR v_tenant IN
         SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
-        -- ── AP_NON_PO_STANDARD ────────────────────────────────────────────────
         SELECT id, tenant_id INTO v_prof
           FROM master.accounting_profile
          WHERE tenant_id = v_tenant.tenant_id AND code = 'AP_NON_PO_STANDARD';
@@ -79,7 +64,6 @@ BEGIN
                 updated_by            = v_sys;
         END IF;
 
-        -- ── AP_NON_PO_CAPEX ───────────────────────────────────────────────────
         SELECT id, tenant_id INTO v_prof
           FROM master.accounting_profile
          WHERE tenant_id = v_tenant.tenant_id AND code = 'AP_NON_PO_CAPEX';
@@ -122,7 +106,6 @@ BEGIN
                 updated_by            = v_sys;
         END IF;
 
-        -- ── AP_ADVANCE_SUPPLIER ─────────────────────────────────────────────────
         SELECT id, tenant_id INTO v_prof
           FROM master.accounting_profile
          WHERE tenant_id = v_tenant.tenant_id AND code = 'AP_ADVANCE_SUPPLIER';
@@ -164,7 +147,6 @@ BEGIN
                 updated_by            = v_sys;
         END IF;
 
-        -- ── AP_RETENTION_RELEASE ──────────────────────────────────────────────
         SELECT id, tenant_id INTO v_prof
           FROM master.accounting_profile
          WHERE tenant_id = v_tenant.tenant_id AND code = 'AP_RETENTION_RELEASE';

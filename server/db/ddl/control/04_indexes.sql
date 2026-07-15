@@ -198,6 +198,28 @@ CREATE INDEX IF NOT EXISTS ef_searchable_pidx
 CREATE INDEX IF NOT EXISTS ef_filterable_pidx
     ON control.entity_field (entity_version_id) WHERE is_filterable = true;
 
+-- Normalized runtime surfaces
+CREATE INDEX IF NOT EXISTS es_entity_mode_order_idx
+    ON control.entity_surface (entity_id, mode, sort_order, surface_key);
+CREATE INDEX IF NOT EXISTS es_tenant_entity_mode_key_idx
+    ON control.entity_surface (tenant_id, entity_id, mode, surface_key);
+CREATE INDEX IF NOT EXISTS es_entity_kind_idx
+    ON control.entity_surface (entity_id, kind)
+    WHERE is_enabled = true;
+CREATE INDEX IF NOT EXISTS es_parent_slot_idx
+    ON control.entity_surface (parent_surface_id, slot_key, sort_order)
+    WHERE parent_surface_id IS NOT NULL AND is_enabled = true;
+CREATE INDEX IF NOT EXISTS es_active_pidx
+    ON control.entity_surface (entity_id, mode, placement, sort_order)
+    WHERE is_enabled = true;
+
+CREATE INDEX IF NOT EXISTS efsurf_surface_order_idx
+    ON control.entity_field_surface (entity_surface_id, sort_order, entity_field_id);
+CREATE INDEX IF NOT EXISTS efsurf_field_idx
+    ON control.entity_field_surface (entity_field_id);
+CREATE INDEX IF NOT EXISTS efsurf_tenant_surface_field_idx
+    ON control.entity_field_surface (tenant_id, entity_surface_id, entity_field_id);
+
 -- ─── control.overlay ────────────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS ov_tenant_active_idx
@@ -531,6 +553,27 @@ CREATE INDEX IF NOT EXISTS trs_wht_pidx
     ON control.tax_rate_schedule (tenant_id, jurisdiction_id)
     WHERE wht_basis IS NOT NULL AND is_active = true;
 
+-- ── control.tax_group ────────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS tg_jurisdiction_pidx
+    ON control.tax_group (tenant_id, jurisdiction_id)
+    WHERE is_active = true AND jurisdiction_id IS NOT NULL;
+
+-- ── control.tax_resolution_rule (Phase 3c: 4-jurisdiction model) ─────────────
+-- Resolver hot-path: scoped to (tenant, shipto, priority DESC). ship-to is the
+-- most selective dimension for the dominant use case (India GST place-of-supply).
+-- The resolver query filters remaining scopes in the WHERE clause and LIMIT 1.
+CREATE INDEX IF NOT EXISTS trr_resolution_pidx
+    ON control.tax_resolution_rule (tenant_id, scope_shipto_jurisdiction_id, priority DESC)
+    WHERE is_active = true;
+-- Reverse lookup: which rules target this group?
+CREATE INDEX IF NOT EXISTS trr_group_pidx
+    ON control.tax_resolution_rule (tenant_id, resolved_tax_group_id)
+    WHERE is_active = true;
+-- GIN index for entity-code array containment lookups
+CREATE INDEX IF NOT EXISTS trr_entity_codes_pidx
+    ON control.tax_resolution_rule USING GIN (scope_doc_entity_codes)
+    WHERE is_active = true;
+
 -- ══════════════════════════════════════════════════════════════════════════════
 -- BUDGET · COMMITMENT · PLANNING ENGINE — Control indexes
 -- ══════════════════════════════════════════════════════════════════════════════
@@ -739,15 +782,15 @@ CREATE INDEX IF NOT EXISTS br_status_active_pidx
     ON control.blueprint_registry (category, code)
     WHERE status = 'active';
 
--- ── §PROV-2  tenant_blueprint_application ────────────────────────────────────
+-- ── §PROV-2  blueprint_tenant_application ────────────────────────────────────
 -- R6: primary access pattern — all packs applied to a given tenant
 -- (tba_tenant_idx was previously created in the seed file; IF NOT EXISTS is idempotent)
 CREATE INDEX IF NOT EXISTS tba_tenant_idx
-    ON control.tenant_blueprint_application (tenant_id);
+    ON control.blueprint_tenant_application (tenant_id);
 
 -- status filter — find failed or rolled-back applications
 CREATE INDEX IF NOT EXISTS tba_status_pidx
-    ON control.tenant_blueprint_application (tenant_id, status)
+    ON control.blueprint_tenant_application (tenant_id, status)
     WHERE status <> 'applied';
 
 
@@ -842,3 +885,15 @@ CREATE INDEX IF NOT EXISTS mcal_compiler_run_idx
 CREATE INDEX IF NOT EXISTS mcal_failed_idx
     ON control.metadata_change_application_log (tenant_id, applied_at DESC)
     WHERE result <> 'success';
+
+
+-- ============================================================================
+-- P5 — at most one primary_amount / primary_currency field per entity_version
+-- ============================================================================
+CREATE UNIQUE INDEX IF NOT EXISTS ef_primary_amount_uq
+    ON control.entity_field (entity_version_id)
+    WHERE is_primary_amount = true AND entity_version_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS ef_primary_currency_uq
+    ON control.entity_field (entity_version_id)
+    WHERE is_primary_currency = true AND entity_version_id IS NOT NULL;

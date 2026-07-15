@@ -1,20 +1,6 @@
--- ============================================================================
--- FILE: 061_min_intake_rules.sql
--- Purpose: Phase 1b minimum seed — classification→intent rules for top-20
---          spend categories and company-code spend policies for demo tenants.
---
--- Depends on: 023_commodity_category.sql (base pack), 021_business_intents.sql,
---             060_category_intent_rules.sql (fallback stubs already seeded)
--- Idempotent: all inserts guarded by WHERE NOT EXISTS.
---
--- Category codes used (verified against 023_commodity_category.sql):
---   SC-IT-HW, SC-IT-SW, SC-IT-SVC, SC-IT-CLOUD, SC-IT-SEC
---   SC-PROF-CONSULT, SC-PROF-LEGAL, SC-PROF-AUDIT, SC-PROF-ENG
---   SC-FAC-RENT, SC-FAC-MAINT, SC-OFFICE-SUP
---   SC-MKTG-DIGITAL, SC-TRAVEL-AIR
---   SC-FREIGHT, SC-CAPEQUIP
---   SC-RAW, SC-TAX, SC-OUTSRC, SC-SUBS
--- ============================================================================
+-- Phase 1b minimum seed — leaf classification→intent rules for top-20 spend
+-- categories. Priorities: 10–99 = amount/recurring conditions (evaluated first),
+-- 500 = FALLBACK. 060 fallback stubs sit at 999 below these.
 
 DO $seed_min_intake$
 DECLARE
@@ -62,10 +48,8 @@ BEGIN
         SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
 
-        -- ──────────────────────────────────────────────────────────────────────
-        -- STEP 1: Ensure all required business_intents exist
-        -- ──────────────────────────────────────────────────────────────────────
-        -- Resolve domain-level business_intent IDs. Specific intent rows were retired.
+        -- Domain-level business_intent IDs (specific intent rows were retired —
+        -- everything now resolves to BI-OPEX / BI-CAPEX / BI-COGS / BI-REG / BI-TRANSFER).
         SELECT id INTO v_bi_opex_it          FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
         SELECT id INTO v_bi_opex_it_sub      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
         SELECT id INTO v_bi_capex_it         FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-CAPEX';
@@ -86,9 +70,6 @@ BEGIN
         SELECT id INTO v_bi_reg_tax          FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-REG';
         SELECT id INTO v_bi_transfer_ic      FROM master.business_intent WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-TRANSFER';
 
-        -- ──────────────────────────────────────────────────────────────────────
-        -- STEP 2: Resolve commodity_category IDs
-        -- ──────────────────────────────────────────────────────────────────────
         SELECT id INTO v_cc_it_hw        FROM master.commodity_category WHERE tenant_id = v_tenant.tenant_id AND code = 'SC-IT-HW';
         SELECT id INTO v_cc_it_sw        FROM master.commodity_category WHERE tenant_id = v_tenant.tenant_id AND code = 'SC-IT-SW';
         SELECT id INTO v_cc_it_svc       FROM master.commodity_category WHERE tenant_id = v_tenant.tenant_id AND code = 'SC-IT-SVC';
@@ -110,18 +91,7 @@ BEGIN
         SELECT id INTO v_cc_outsrc       FROM master.commodity_category WHERE tenant_id = v_tenant.tenant_id AND code = 'SC-OUTSRC';
         SELECT id INTO v_cc_subs         FROM master.commodity_category WHERE tenant_id = v_tenant.tenant_id AND code = 'SC-SUBS';
 
-        -- ──────────────────────────────────────────────────────────────────────
-        -- STEP 3: commodity_classification_to_intent_rule rows
-        --
-        -- Rule priority scheme:
-        --   10–99  : Amount / recurring conditions (evaluated first)
-        --   500    : FALLBACK (catch-all, evaluated last)
-        -- ──────────────────────────────────────────────────────────────────────
-
-        -- Helper macro — insert rule if not already present
-        -- (inlined as INSERT ... WHERE NOT EXISTS for each rule)
-
-        -- SC-IT-HW: Hardware - amount above threshold -> BI-CAPEX, otherwise BI-OPEX
+        -- SC-IT-HW: amount > 5,000 → CAPEX; else OPEX fallback.
         IF v_cc_it_hw IS NOT NULL AND v_bi_capex_it IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -156,7 +126,7 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_opex_it);
         END IF;
 
-        -- SC-IT-SW: Software - recurring -> BI-OPEX, amount above threshold -> BI-CAPEX
+        -- SC-IT-SW: recurring → OPEX (SaaS); amount > 25,000 → CAPEX (perpetual license).
         IF v_cc_it_sw IS NOT NULL AND v_bi_opex_it_sub IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -208,7 +178,6 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_opex_it);
         END IF;
 
-        -- SC-IT-SVC / SC-IT-CLOUD / SC-IT-SEC: simple fallback -> BI-OPEX
         FOREACH v_cc_cur IN ARRAY ARRAY[v_cc_it_svc, v_cc_it_cloud, v_cc_it_sec] LOOP
             CONTINUE WHEN v_cc_cur IS NULL OR v_bi_opex_it IS NULL;
             INSERT INTO control.commodity_classification_to_intent_rule
@@ -227,7 +196,7 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_opex_it);
         END LOOP;
 
-        -- SC-PROF-CONSULT: cross-border and fallback -> BI-OPEX
+        -- SC-PROF-CONSULT: cross-border priority rule triggers WHT withholding downstream.
         IF v_cc_prof_consult IS NOT NULL AND v_bi_opex_consult_xb IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -262,7 +231,6 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_opex_consult);
         END IF;
 
-        -- SC-PROF-LEGAL -> BI-OPEX; SC-PROF-AUDIT -> BI-REG
         IF v_cc_prof_legal IS NOT NULL AND v_bi_opex_legal IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -297,7 +265,6 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_reg_audit);
         END IF;
 
-        -- SC-PROF-ENG -> BI-OPEX (engineering advisory treated as consulting OPEX)
         IF v_cc_prof_eng IS NOT NULL AND v_bi_opex_consult IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id, classification_source, classification_id, direction,
@@ -315,7 +282,6 @@ BEGIN
                    AND condition_type = 'FALLBACK' AND resolved_intent_id = v_bi_opex_consult);
         END IF;
 
-        -- ── SC-FAC-RENT / SC-FAC-MAINT / SC-OFFICE-SUP / SC-MKTG-DIGITAL / SC-TRAVEL-AIR ──
         IF v_cc_fac_rent    IS NOT NULL AND v_bi_opex_fac_rent  IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id,classification_source,classification_id,direction,condition_type,condition_config,applies_to_flows,resolved_intent_id,resolved_domain,explanation_template,confidence,priority,effective_from,status,created_by)
@@ -356,7 +322,6 @@ BEGIN
             WHERE NOT EXISTS(SELECT 1 FROM control.commodity_classification_to_intent_rule WHERE tenant_id=v_tenant.tenant_id AND classification_source='COMMODITY_CATEGORY' AND classification_id=v_cc_travel_air AND condition_type='FALLBACK' AND resolved_intent_id=v_bi_opex_travel);
         END IF;
 
-        -- SC-FREIGHT -> BI-COGS; SC-CAPEQUIP -> BI-CAPEX
         IF v_cc_freight  IS NOT NULL AND v_bi_cogs_freight IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id,classification_source,classification_id,direction,condition_type,condition_config,applies_to_flows,resolved_intent_id,resolved_domain,explanation_template,confidence,priority,effective_from,status,created_by)
@@ -371,7 +336,6 @@ BEGIN
             WHERE NOT EXISTS(SELECT 1 FROM control.commodity_classification_to_intent_rule WHERE tenant_id=v_tenant.tenant_id AND classification_source='COMMODITY_CATEGORY' AND classification_id=v_cc_capequip AND condition_type='FALLBACK' AND resolved_intent_id=v_bi_capex_equip);
         END IF;
 
-        -- SC-RAW -> BI-COGS; SC-TAX -> BI-REG; SC-OUTSRC -> BI-TRANSFER; SC-SUBS -> BI-OPEX
         IF v_cc_raw    IS NOT NULL AND v_bi_cogs_raw     IS NOT NULL THEN
             INSERT INTO control.commodity_classification_to_intent_rule
                 (tenant_id,classification_source,classification_id,direction,condition_type,condition_config,applies_to_flows,resolved_intent_id,resolved_domain,explanation_template,confidence,priority,effective_from,status,created_by)
@@ -400,13 +364,13 @@ BEGIN
             WHERE NOT EXISTS(SELECT 1 FROM control.commodity_classification_to_intent_rule WHERE tenant_id=v_tenant.tenant_id AND classification_source='COMMODITY_CATEGORY' AND classification_id=v_cc_subs AND condition_type='FALLBACK' AND resolved_intent_id=v_bi_opex_subs);
         END IF;
 
-    END LOOP; -- end tenant loop
+    END LOOP;
 
     RAISE NOTICE '061_min_intake_rules: Phase 1b seed complete for tenant %.', v_tid;
 END $seed_min_intake$;
 
 
--- ── §VERIFY  Assertion: every seeded category has ≥1 active rule ─────────────
+-- Guard: every seeded category MUST have ≥1 active intent rule.
 DO $verify_intake_rules$
 DECLARE
     v_missing int := 0;

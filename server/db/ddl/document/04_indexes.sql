@@ -120,16 +120,10 @@ CREATE INDEX IF NOT EXISTS ad_source_doc_idx
     ON document.accounting_distribution (tenant_id, source_doc_type, source_doc_id);
 CREATE INDEX IF NOT EXISTS ad_source_line_idx
     ON document.accounting_distribution (tenant_id, source_line_id);
-DROP INDEX IF EXISTS document.ad_spend_category_idx;
-CREATE INDEX IF NOT EXISTS ad_commodity_category_idx
-    ON document.accounting_distribution (tenant_id, commodity_category_id)
-    WHERE commodity_category_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS ad_business_intent_idx
-    ON document.accounting_distribution (tenant_id, business_intent_id)
-    WHERE business_intent_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS ad_capex_idx
-    ON document.accounting_distribution (tenant_id, source_doc_id)
-    WHERE is_capex = true;
+-- Asset-bound distributions (CapEx reporting + class-pending reconciliation)
+CREATE INDEX IF NOT EXISTS ad_asset_id_idx
+    ON document.accounting_distribution (tenant_id, asset_id)
+    WHERE asset_id IS NOT NULL;
 
 
 -- ============================================================================
@@ -137,8 +131,6 @@ CREATE INDEX IF NOT EXISTS ad_capex_idx
 -- ============================================================================
 CREATE INDEX IF NOT EXISTS idx_cmt_tenant         ON document.commitment (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_cmt_company        ON document.commitment (company_code_id);
-CREATE INDEX IF NOT EXISTS idx_cmt_allocation     ON document.commitment (budget_allocation_id)
-    WHERE budget_allocation_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_cmt_status         ON document.commitment (tenant_id, status)
     WHERE status NOT IN ('fully_fulfilled','closed','cancelled','expired');
 CREATE INDEX IF NOT EXISTS idx_cmt_expiry         ON document.commitment (expiry_date)
@@ -148,17 +140,15 @@ CREATE INDEX IF NOT EXISTS idx_cmt_party          ON document.commitment (party_
     WHERE party_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_cmt_workflow       ON document.commitment (workflow_request_id)
     WHERE workflow_request_id IS NOT NULL;
+DROP INDEX IF EXISTS document.uq_cmt_active_provisional;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_cmt_active_provisional
+    ON document.commitment (tenant_id, commitment_type, draft_started_by, company_code_id)
+    WHERE is_provisional = true;
+CREATE INDEX IF NOT EXISTS idx_cmt_provisional_expiry
+    ON document.commitment (tenant_id, draft_expires_at)
+    WHERE is_provisional = true AND status = 'draft' AND code = '';
 
 -- ── document.commitment_procurement ─────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS cp_supplier_idx
-    ON document.commitment_procurement (tenant_id, supplier_id);
-CREATE INDEX IF NOT EXISTS cp_parent_contract_idx
-    ON document.commitment_procurement (tenant_id, parent_contract_id)
-    WHERE parent_contract_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS cp_release_orders_idx
-    ON document.commitment_procurement (tenant_id, parent_contract_id)
-    WHERE is_release_order = true;
-
 -- ── document.commitment_line ─────────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS cl_commitment_idx
     ON document.commitment_line (tenant_id, commitment_id);
@@ -171,6 +161,15 @@ CREATE INDEX IF NOT EXISTS cl_item_idx
 CREATE INDEX IF NOT EXISTS cl_req_line_idx
     ON document.commitment_line (tenant_id, requisition_line_id)
     WHERE requisition_line_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS cl_site_idx
+    ON document.commitment_line (tenant_id, site_id)
+    WHERE site_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS cl_shipto_address_idx
+    ON document.commitment_line (tenant_id, shipto_address_id)
+    WHERE shipto_address_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS cl_asset_class_idx
+    ON document.commitment_line (tenant_id, asset_class_id)
+    WHERE asset_class_id IS NOT NULL;
 
 -- ── document.commitment_release_allocation ───────────────────────────────────
 CREATE INDEX IF NOT EXISTS cra_parent_line_active_idx
@@ -244,11 +243,16 @@ CREATE INDEX IF NOT EXISTS pi_supplier_invoice_dedup_idx
 CREATE INDEX IF NOT EXISTS pil_match_exception_idx
     ON document.purchase_invoice_line (tenant_id, purchase_invoice_id)
     WHERE match_status = 'match_exception';
+CREATE INDEX IF NOT EXISTS pil_shipto_address_idx
+    ON document.purchase_invoice_line (tenant_id, shipto_address_id)
+    WHERE shipto_address_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS pil_to_jurisdiction_idx
+    ON document.purchase_invoice_line (tenant_id, to_tax_jurisdiction_id)
+    WHERE to_tax_jurisdiction_id IS NOT NULL;
 
--- ── document.invoice_party_snapshot ──────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS ips_supplier_idx
-    ON document.invoice_party_snapshot (tenant_id, supplier_id)
-    WHERE supplier_id IS NOT NULL;
+-- ── document.invoice_party_snapshot (DROPPED in Phase D.4) ───────────────────
+-- ips_supplier_idx removed alongside the table. Supplier lookups now use
+-- document.purchase_invoice.supplier_id and live master joins.
 
 -- ── document.invoice_match_case ──────────────────────────────────────────────
 CREATE INDEX IF NOT EXISTS imc_pending_idx
@@ -487,55 +491,51 @@ CREATE INDEX IF NOT EXISTS dnl_delivery_note_idx
 CREATE INDEX IF NOT EXISTS dnl_commitment_line_idx
     ON document.delivery_note_line (tenant_id, commitment_line_id);
 
--- ── document.goods_receipt ───────────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS gr_commitment_idx
-    ON document.goods_receipt (tenant_id, commitment_id);
-CREATE INDEX IF NOT EXISTS gr_supplier_idx
-    ON document.goods_receipt (tenant_id, supplier_id);
-CREATE INDEX IF NOT EXISTS gr_posting_date_idx
-    ON document.goods_receipt (tenant_id, company_code_id, posting_date DESC);
-CREATE INDEX IF NOT EXISTS gr_pending_approval_idx
-    ON document.goods_receipt (tenant_id, company_code_id)
+-- ── document.receipt ─────────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS rcp_commitment_idx
+    ON document.receipt (tenant_id, commitment_id);
+CREATE INDEX IF NOT EXISTS rcp_supplier_idx
+    ON document.receipt (tenant_id, supplier_id);
+CREATE INDEX IF NOT EXISTS rcp_posting_date_idx
+    ON document.receipt (tenant_id, company_code_id, posting_date DESC);
+CREATE INDEX IF NOT EXISTS rcp_pending_approval_idx
+    ON document.receipt (tenant_id, company_code_id)
     WHERE status = 'pending_approval';
-CREATE INDEX IF NOT EXISTS gr_unposted_approved_idx
-    ON document.goods_receipt (tenant_id)
-    WHERE status = 'approved' AND is_posted = false;
-CREATE INDEX IF NOT EXISTS gr_workflow_idx
-    ON document.goods_receipt (workflow_request_id)
+CREATE INDEX IF NOT EXISTS rcp_workflow_idx
+    ON document.receipt (workflow_request_id)
     WHERE workflow_request_id IS NOT NULL;
 
--- ── document.goods_receipt_line ──────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS grl_gr_idx
-    ON document.goods_receipt_line (tenant_id, goods_receipt_id);
-CREATE INDEX IF NOT EXISTS grl_commitment_line_idx
-    ON document.goods_receipt_line (tenant_id, commitment_line_id);
-CREATE INDEX IF NOT EXISTS grl_item_idx
-    ON document.goods_receipt_line (tenant_id, item_id);
-CREATE INDEX IF NOT EXISTS grl_warehouse_idx
-    ON document.goods_receipt_line (tenant_id, warehouse_id);
+-- ── document.receipt_line ────────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS rcpl_parent_idx
+    ON document.receipt_line (tenant_id, receipt_id);
+CREATE INDEX IF NOT EXISTS rcpl_commitment_line_idx
+    ON document.receipt_line (tenant_id, commitment_line_id);
+CREATE INDEX IF NOT EXISTS rcpl_item_idx
+    ON document.receipt_line (tenant_id, item_id);
+CREATE INDEX IF NOT EXISTS rcpl_warehouse_idx
+    ON document.receipt_line (tenant_id, warehouse_id);
+CREATE INDEX IF NOT EXISTS rcpl_asset_class_idx
+    ON document.receipt_line (tenant_id, asset_class_id)
+    WHERE asset_class_id IS NOT NULL;
 
--- ── document.service_entry_sheet ─────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS ses_commitment_idx
-    ON document.service_entry_sheet (tenant_id, commitment_id);
-CREATE INDEX IF NOT EXISTS ses_supplier_idx
-    ON document.service_entry_sheet (tenant_id, supplier_id);
-CREATE INDEX IF NOT EXISTS ses_posting_date_idx
-    ON document.service_entry_sheet (tenant_id, company_code_id, posting_date DESC);
-CREATE INDEX IF NOT EXISTS ses_pending_acceptance_idx
-    ON document.service_entry_sheet (tenant_id)
+-- ── document.service_sheet ───────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS ssh_commitment_idx
+    ON document.service_sheet (tenant_id, commitment_id);
+CREATE INDEX IF NOT EXISTS ssh_supplier_idx
+    ON document.service_sheet (tenant_id, supplier_id);
+CREATE INDEX IF NOT EXISTS ssh_posting_date_idx
+    ON document.service_sheet (tenant_id, company_code_id, posting_date DESC);
+CREATE INDEX IF NOT EXISTS ssh_pending_acceptance_idx
+    ON document.service_sheet (tenant_id)
     WHERE status = 'pending_acceptance';
-CREATE INDEX IF NOT EXISTS ses_pending_approval_idx
-    ON document.service_entry_sheet (tenant_id)
+CREATE INDEX IF NOT EXISTS ssh_pending_approval_idx
+    ON document.service_sheet (tenant_id)
     WHERE status = 'pending_approval';
-CREATE INDEX IF NOT EXISTS ses_unposted_approved_idx
-    ON document.service_entry_sheet (tenant_id)
-    WHERE status = 'approved' AND is_posted = false;
-
--- ── document.service_entry_sheet_line ────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS sesl_ses_idx
-    ON document.service_entry_sheet_line (tenant_id, service_entry_sheet_id);
-CREATE INDEX IF NOT EXISTS sesl_commitment_line_idx
-    ON document.service_entry_sheet_line (tenant_id, commitment_line_id);
+-- ── document.service_sheet_line ──────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS sshl_parent_idx
+    ON document.service_sheet_line (tenant_id, service_sheet_id);
+CREATE INDEX IF NOT EXISTS sshl_commitment_line_idx
+    ON document.service_sheet_line (tenant_id, commitment_line_id);
 
 -- ── document.wht_certificate ─────────────────────────────────────────────────
 -- R7-C: lookup by supplier + company + period
@@ -562,19 +562,9 @@ CREATE INDEX IF NOT EXISTS pi_due_date_idx
     ON document.purchase_invoice (tenant_id, company_code_id, due_date ASC)
     WHERE status IN ('approved','posted','partially_paid');
 
--- Budget allocation linkage
-CREATE INDEX IF NOT EXISTS pi_budget_allocation_idx
-    ON document.purchase_invoice (tenant_id, budget_allocation_id)
-    WHERE budget_allocation_id IS NOT NULL;
-
--- Dimension indexes for reporting
-CREATE INDEX IF NOT EXISTS pi_cost_center_idx
-    ON document.purchase_invoice (tenant_id, cost_center_id)
-    WHERE cost_center_id IS NOT NULL;
-
-CREATE INDEX IF NOT EXISTS pi_project_idx
-    ON document.purchase_invoice (tenant_id, project_id)
-    WHERE project_id IS NOT NULL;
+-- Header-level accounting dimensions were removed from purchase_invoice in the
+-- Phase 1 reset. Reporting dimensions now live on purchase_invoice_line and
+-- document.accounting_distribution.
 
 -- Workflow request — one join per invoice detail page load
 CREATE INDEX IF NOT EXISTS pi_workflow_idx
@@ -610,10 +600,10 @@ CREATE INDEX IF NOT EXISTS pil_business_intent_idx
     ON document.purchase_invoice_line (tenant_id, business_intent_id)
     WHERE business_intent_id IS NOT NULL;
 
--- Asset lines (asset_transaction creation query)
-CREATE INDEX IF NOT EXISTS pil_asset_idx
-    ON document.purchase_invoice_line (tenant_id, asset_category_id)
-    WHERE is_asset = true;
+-- Asset lines (asset_transaction creation query + capex reporting)
+CREATE INDEX IF NOT EXISTS pil_asset_class_idx
+    ON document.purchase_invoice_line (tenant_id, asset_class_id)
+    WHERE asset_class_id IS NOT NULL;
 
 -- Matching status for the matching engine
 CREATE INDEX IF NOT EXISTS pil_match_status_idx
@@ -625,9 +615,13 @@ CREATE INDEX IF NOT EXISTS pil_commitment_line_idx
     ON document.purchase_invoice_line (tenant_id, commitment_line_id)
     WHERE commitment_line_id IS NOT NULL;
 
-CREATE INDEX IF NOT EXISTS pil_gr_line_idx
-    ON document.purchase_invoice_line (tenant_id, goods_receipt_line_id)
-    WHERE goods_receipt_line_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS pil_receipt_line_idx
+    ON document.purchase_invoice_line (tenant_id, receipt_line_id)
+    WHERE receipt_line_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS pil_service_sheet_line_idx
+    ON document.purchase_invoice_line (tenant_id, service_sheet_line_id)
+    WHERE service_sheet_line_id IS NOT NULL;
 
 
 -- ============================================================================
@@ -726,3 +720,19 @@ CREATE INDEX IF NOT EXISTS brcl_stmt_line_idx
 CREATE INDEX IF NOT EXISTS pe_bank_stmt_line_idx
     ON document.payment_entry (bank_statement_line_id)
     WHERE bank_statement_line_id IS NOT NULL;
+
+
+-- ============================================================================
+-- Seed Gift Prototype (ATHQ-only) indexes
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS seed_gift_company_status_idx
+    ON document.seed_gift (tenant_id, company_code_id, status);
+CREATE INDEX IF NOT EXISTS seed_gift_created_idx
+    ON document.seed_gift (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS seed_gift_recipient_idx
+    ON document.seed_gift (tenant_id, lower(recipient_email))
+    WHERE recipient_email IS NOT NULL;
+CREATE INDEX IF NOT EXISTS seed_gift_source_ref_idx
+    ON document.seed_gift (tenant_id, source_ref)
+    WHERE source_ref IS NOT NULL;

@@ -131,6 +131,13 @@ export interface RouteAuditEntry {
   oldValues?: Record<string, unknown> | null;
   newValues?: Record<string, unknown> | null;
   changedFields?: string[];
+  /**
+   * Optional FK to master.change_reason_code(id). Required on high-risk
+   * mutation paths (manual GL override, posting adjustment, restore from
+   * snapshot). Enforced by callers, not by this writer — callers know
+   * which paths are high-risk and pass the resolved code id.
+   */
+  reasonCode?: string | null;
   correlationId?: string | null;
   requestId?: string | null;
   ipAddress?: string | null;
@@ -179,6 +186,7 @@ export async function writeRouteAudit(
         old_values:      entry.oldValues ? JSON.stringify(entry.oldValues) : null,
         new_values:      entry.newValues ? JSON.stringify(entry.newValues) : null,
         changed_fields:  changedFields.length > 0 ? changedFields : null,
+        reason_code:     entry.reasonCode ?? null,
         correlation_id:  entry.correlationId ?? null,
         request_id:      entry.requestId ?? null,
         ip_address:      entry.ipAddress ?? null,

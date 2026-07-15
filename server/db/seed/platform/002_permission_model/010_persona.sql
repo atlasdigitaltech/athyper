@@ -1,7 +1,4 @@
--- 900_seed_data/001_shared/010_persona.sql
--- Seed: System personas (role templates)
--- Schema: shared | Table: persona
--- Idempotent: on conflict (code) do nothing
+-- System personas (role templates). Persona codes feed shared.role.code as `{persona}-{MODULE}`.
 
 insert into shared.persona (code, name, description, scope_mode, priority, is_system, created_by) values
   ('viewer',      'Viewer',       'Read-only access to records',         'tenant', 10,  true, '00000000-0000-0000-0000-000000000000'),

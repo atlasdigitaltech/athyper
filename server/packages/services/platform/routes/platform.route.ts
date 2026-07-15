@@ -1288,6 +1288,20 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
     }
     if (!claims) return;
 
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+    const sendComment = (text: string) => {
+      res.write(`:${text}\n\n`);
+    };
+    sendEvent("connected", { ok: true });
+
     const xOrg   = (req.headers["x-org"]   as string) ?? "";
     const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
 
@@ -1298,29 +1312,18 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const sub   = typeof claims["sub"] === "string" ? claims["sub"] : "";
       principalId = sub && tenantId ? await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm) : null;
     } catch {
-      res.status(401).end();
+      sendEvent("connection:error", { code: "SESSION_SCOPE_UNAVAILABLE" });
+      res.end();
       return;
     }
 
     if (!tenantId || !principalId) {
-      res.status(401).end();
+      sendEvent("connection:error", { code: "SESSION_SCOPE_UNAVAILABLE" });
+      res.end();
       return;
     }
 
     // ── SSE headers ──────────────────────────────────────────────────────────
-    res.setHeader("Content-Type",  "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("Connection",    "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no"); // disable nginx buffering
-    res.flushHeaders();
-
-    const sendEvent = (event: string, data: unknown) => {
-      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    };
-    const sendComment = (text: string) => {
-      res.write(`:${text}\n\n`);
-    };
-
     // ── Initial count ────────────────────────────────────────────────────────
     const getUnreadCount = async (): Promise<number> => {
       try {
@@ -1481,7 +1484,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
             ELSE 'active'
           END AS status
         FROM   control.blueprint_registry br
-        LEFT   JOIN control.tenant_blueprint_application tba
+        LEFT   JOIN control.blueprint_tenant_application tba
                ON  tba.blueprint_code = br.code
                AND tba.tenant_id      = ${tenantId}::uuid
                AND tba.status         = 'applied'
@@ -1537,7 +1540,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const row = await (db as any)
-        .insertInto("control.tenant_blueprint_application")
+        .insertInto("control.blueprint_tenant_application")
         .values({
           tenant_id:        tenantId,
           blueprint_code:   code,
@@ -1597,7 +1600,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updated = await (db as any)
-        .updateTable("control.tenant_blueprint_application")
+        .updateTable("control.blueprint_tenant_application")
         .set({ status: "removed", applied_by: principalId ?? null })
         .where("tenant_id",      "=", tenantId)
         .where("blueprint_code", "=", code)

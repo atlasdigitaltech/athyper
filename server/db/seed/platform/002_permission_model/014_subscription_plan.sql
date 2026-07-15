@@ -1,7 +1,5 @@
--- 900_seed_data/001_shared/014_subscription_plan.sql
--- Seed: Subscription plan tiers
--- Schema: shared | Table: subscription_plan
--- Idempotent: on conflict (code) do nothing
+-- Subscription plan tiers. `code` values MUST match SubscriptionPlanCode enum
+-- in apps/web/lib/billing/plans.ts and tenant_subscription check constraint.
 
 insert into shared.subscription_plan (code, name, max_users, sort_order, created_by) values
   ('trial',        'Trial',         5,    10, '00000000-0000-0000-0000-000000000000'),

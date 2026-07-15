@@ -1,13 +1,15 @@
 -- ============================================================================
 -- document/01e_tables_invoice.sql
--- Concept: Purchase Invoices — AP invoice lifecycle, matching, party snapshots
+-- Concept: Purchase Invoices - AP invoice lifecycle, matching, tax snapshots
 -- Depends on: 04_tables/004b_document_commitment.sql, 04_tables/003b_master_finance.sql
 -- Scope: Invoice document tables
 -- Domain: purchase_invoice, purchase_invoice_line,
---         invoice_party_snapshot, invoice_address_snapshot,
---         invoice_bank_snapshot, invoice_tax_snapshot,
+--         invoice_tax_snapshot,
 --         invoice_match_case, match_exception,
 --         payment_term_application (belongs with invoice domain)
+--
+-- Identity now uses direct document header fields and live master joins.
+-- invoice_tax_snapshot remains because it captures tax determination.
 -- Load order: 004d (after 004c_document_p2p.sql)
 -- ============================================================================
 
@@ -23,115 +25,22 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
     name                    text            NOT NULL DEFAULT '',
     company_code_id         uuid            NOT NULL,
 
-    -- Natural keys
-    invoice_number          text            NOT NULL,
-    fiscal_document_number  text,
-
-    -- Classification
-    invoice_source          text            NOT NULL DEFAULT 'po_based',
-    invoice_type            text            NOT NULL DEFAULT 'standard',
-    description             text,
-
-    -- Counterparty
-    supplier_id             uuid,
-    supplier_invoice_number text            NOT NULL,
-    supplier_invoice_date   date            NOT NULL,
-
-    -- Parent commitment
-    commitment_id           uuid,
-
-    -- Dates
-    document_date           date            NOT NULL DEFAULT CURRENT_DATE,
-    posting_date            date            NOT NULL DEFAULT CURRENT_DATE,
-    received_date           date            NOT NULL DEFAULT CURRENT_DATE,
-    baseline_date           date,
-    due_date                date,
-
-    -- Amounts
-    currency_code           character(3)    NOT NULL,
-    base_currency_code      character(3)    NOT NULL,
-    exchange_rate           numeric(18,10),
-
-    subtotal_amount         numeric(18,4)   NOT NULL DEFAULT 0,
-    discount_amount         numeric(18,4)   NOT NULL DEFAULT 0,
-    freight_amount          numeric(18,4)   NOT NULL DEFAULT 0,
-    misc_charges_amount     numeric(18,4)   NOT NULL DEFAULT 0,
-    total_amount            numeric(18,4)   NOT NULL DEFAULT 0,
-
-    tax_amount              numeric(18,4)   NOT NULL DEFAULT 0,
-    withholding_tax_amount  numeric(18,4)   NOT NULL DEFAULT 0,
-
-    payable_amount          numeric(18,4)   GENERATED ALWAYS AS (
-                                total_amount - withholding_tax_amount
-                            ) STORED,
-
-    -- Payment terms
-    payment_term_id         uuid,
-    term_snapshot           jsonb,
-    payment_method_id       uuid,
-
-    -- Advance deduction
-    advance_deduction_amount numeric(18,4)  NOT NULL DEFAULT 0,
-
-    -- Retention (AP Retention Payable — liability, NOT receivable asset)
-    retention_amount        numeric(18,4)   NOT NULL DEFAULT 0,
-    retention_pct           numeric(5,2),
-
-    -- Payment tracking
-    paid_amount             numeric(18,4)   NOT NULL DEFAULT 0,
-    outstanding_amount      numeric(18,4)   GENERATED ALWAYS AS (
-                                total_amount - withholding_tax_amount
-                                - advance_deduction_amount - retention_amount - paid_amount
-                            ) STORED,
-
-    -- Budget
-    budget_allocation_id    uuid,
-    budget_check_result     text,
-
-    -- Fiscal scope
-    fiscal_year             smallint        NOT NULL,
-    period_number           smallint        NOT NULL,
-
-    -- Dimensions
-    cost_center_id          uuid,
-    profit_center_id        uuid,
-    project_id              uuid,
-    site_id                 uuid,
-    dimension_set_id        uuid,
-
-    -- Posting
-    ap_je_id                uuid,
-    is_posted               boolean         NOT NULL DEFAULT false,
-    posted_at               timestamptz,
-    posted_by               uuid,
-
-    -- Matching
-    match_type              text            NOT NULL DEFAULT 'three_way',
-    match_status            text            NOT NULL DEFAULT 'unmatched',
-
-    -- Reversal / credit note
-    is_reversal             boolean         NOT NULL DEFAULT false,
-    reversal_of_id          uuid,
-    is_credit_note          boolean         NOT NULL DEFAULT false,
-
-    -- Workflow
+    -- Request / approval
+    requested_by            uuid            NOT NULL,
     workflow_request_id     uuid,
     approved_at             timestamptz,
     approved_by             uuid,
 
-    -- Hold
-    is_on_hold              boolean         NOT NULL DEFAULT false,
-    hold_reason             text,
-
-    -- Line count + notes
-    line_count              smallint        NOT NULL DEFAULT 0,
-    notes                   text,
-
-    -- Tags & Metadata
-    tags                    jsonb           NOT NULL DEFAULT '[]'::jsonb,
-    metadata                jsonb           NOT NULL DEFAULT '{}'::jsonb,
+    -- Versioning (universal)
+    row_version             bigint          NOT NULL DEFAULT 1,
+    version_number          int             NOT NULL DEFAULT 1,
+    previous_version_id     uuid,
+    is_current_version      boolean         NOT NULL DEFAULT true,
+    supersedes_at           timestamptz,
 
     -- Lifecycle
+    terminal_status         text,
+    status_source           text            NOT NULL DEFAULT 'manual',
     status                  text            NOT NULL DEFAULT 'draft',
     is_active               boolean         GENERATED ALWAYS AS (
                                 status IN ('draft','pending_approval','approved','posted',
@@ -140,16 +49,64 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
     status_changed_at       timestamptz,
     status_changed_by       uuid,
 
-    -- Audit
+    -- Audit / extension
     created_at              timestamptz     NOT NULL DEFAULT now(),
     created_by              uuid            NOT NULL,
     updated_at              timestamptz,
     updated_by              uuid,
+    tags                    jsonb           NOT NULL DEFAULT '[]'::jsonb,
+    metadata                jsonb           NOT NULL DEFAULT '{}'::jsonb,
+
+    -- Invoice classification
+    invoice_source          text            NOT NULL DEFAULT 'po_based',
+    invoice_type            text            NOT NULL DEFAULT 'standard',
+    supplier_id             uuid,
+    commitment_id           uuid,
+    supplier_invoice_number text            NOT NULL,
+
+    -- Dates
+    supplier_invoice_date   date            NOT NULL,
+    posting_date            date            NOT NULL DEFAULT CURRENT_DATE,
+    received_date           date            NOT NULL DEFAULT CURRENT_DATE,
+    baseline_date           date,
+    due_date                date,
+
+    -- Tax / matching
+    tax_mode                text            NOT NULL DEFAULT 'exclusive',
+    match_type              text            NOT NULL DEFAULT 'three_way',
+    match_status            text            NOT NULL DEFAULT 'unmatched',
+
+    -- Amounts
+    currency_code           character(3)    NOT NULL,
+    base_currency_code      character(3)    NOT NULL,
+    exchange_rate           numeric(18,10),
+    fx_rate_snapshot        jsonb,
+    total_amount            numeric(18,4)   NOT NULL DEFAULT 0,
+    tax_amount              numeric(18,4)   NOT NULL DEFAULT 0,
+    withholding_tax_amount  numeric(18,4)   NOT NULL DEFAULT 0,
+    payable_amount          numeric(18,4)   GENERATED ALWAYS AS (
+                                total_amount - withholding_tax_amount
+                                - advance_deduction_amount - retention_amount
+                            ) STORED,
+    retention_amount        numeric(18,4)   NOT NULL DEFAULT 0,
+    advance_deduction_amount numeric(18,4)  NOT NULL DEFAULT 0,
+    paid_amount             numeric(18,4)   NOT NULL DEFAULT 0,
+    outstanding_amount      numeric(18,4)   GENERATED ALWAYS AS (
+                                total_amount - withholding_tax_amount
+                                - advance_deduction_amount - retention_amount - paid_amount
+                            ) STORED,
+
+    -- Fiscal / budget / posting links
+    payment_term_id         uuid,
+    fiscal_year             smallint        NOT NULL,
+    period_number           smallint        NOT NULL,
+    budget_check_result     text,
+    ap_je_id                uuid,
 
     CONSTRAINT pi_pkey              PRIMARY KEY (id),
     CONSTRAINT pi_tenant_id_uq      UNIQUE (tenant_id, id),
-    CONSTRAINT pi_tenant_number_uq  UNIQUE (tenant_id, company_code_id, invoice_number),
-    CONSTRAINT pi_number_nonempty   CHECK (btrim(invoice_number) <> ''),
+    CONSTRAINT pi_tenant_code_uq    UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT pi_code_nonempty     CHECK (btrim(code) <> ''),
     CONSTRAINT pi_status_chk        CHECK (status IN (
         'draft','pending_approval','approved','posted','partially_paid',
         'fully_paid','on_hold','reversed','cancelled','rejected')),
@@ -157,7 +114,8 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
         'po_based','contract_based','non_po','one_time_supplier')),
     CONSTRAINT pi_type_chk          CHECK (invoice_type IN (
         'standard','credit_note','debit_note','advance','retention_release',
-        'proforma','self_billed','down_payment','final')),
+        'self_billed','final')),
+    CONSTRAINT pi_tax_mode_chk      CHECK (tax_mode IN ('exclusive','inclusive','out_of_scope')),
     CONSTRAINT pi_match_type_chk    CHECK (match_type IN (
         'three_way','two_way','no_match','evaluated_receipt')),
     CONSTRAINT pi_match_status_chk  CHECK (match_status IN (
@@ -165,31 +123,44 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice (
     CONSTRAINT pi_commitment_req    CHECK (
         invoice_source NOT IN ('po_based','contract_based')
         OR commitment_id IS NOT NULL),
-    CONSTRAINT pi_amount_chk        CHECK (total_amount >= 0 OR is_credit_note),
+    CONSTRAINT pi_amount_chk        CHECK (total_amount >= 0),
+    CONSTRAINT pi_tax_nonneg        CHECK (tax_amount >= 0),
+    CONSTRAINT pi_wht_nonneg        CHECK (withholding_tax_amount >= 0),
+    CONSTRAINT pi_retention_nonneg  CHECK (retention_amount >= 0),
+    CONSTRAINT pi_advance_nonneg    CHECK (advance_deduction_amount >= 0),
+    CONSTRAINT pi_paid_nonneg       CHECK (paid_amount >= 0),
+    CONSTRAINT pi_currency_triad_chk CHECK (
+        status = 'draft'
+        OR (
+            (currency_code = base_currency_code AND exchange_rate = 1.0)
+            OR (currency_code <> base_currency_code AND exchange_rate IS NOT NULL AND exchange_rate > 0)
+        )),
     CONSTRAINT pi_period_chk        CHECK (period_number BETWEEN 1 AND 16),
     CONSTRAINT pi_budget_chk        CHECK (budget_check_result IS NULL OR budget_check_result IN (
         'passed','warned','override','blocked','exempt')),
-    CONSTRAINT pi_no_self_reversal  CHECK (reversal_of_id IS DISTINCT FROM id),
-    CONSTRAINT pi_retention_chk     CHECK (
-        retention_pct IS NULL OR retention_pct BETWEEN 0 AND 100),
-    CONSTRAINT pi_posting_pair_chk  CHECK ((posted_at IS NULL) = (posted_by IS NULL))
+    CONSTRAINT pi_terminal_status_chk CHECK (
+        terminal_status IS NULL OR terminal_status IN ('CANCELED','REJECTED')),
+    CONSTRAINT pi_status_source_chk CHECK (
+        status_source IN ('manual','derived','system','terminal')),
+    CONSTRAINT pi_version_self_chk  CHECK (previous_version_id IS DISTINCT FROM id)
 );
 
 COMMENT ON TABLE document.purchase_invoice IS
-    'ARCHETYPE=B;SCOPE=T. Non-standard active-set: is_active GENERATED AS (status IN (''draft'',''pending_approval'',''approved'',''posted'',''partially_paid'',''on_hold'')). Approvable AP invoice. Four sources: PO_BASED, CONTRACT_BASED, NON_PO, ONE_TIME_SUPPLIER. '
-    'Supplier identity frozen in invoice_party_snapshot + invoice_address_snapshot + invoice_bank_snapshot. '
-    'Tax determined by existing engine; tax_amount is a display cache. '
-    'Retention creates AP Retention Payable (liability), not a receivable asset.';
+    'ARCHETYPE=B;SCOPE=T. Phase 1 reset AP invoice header. name is the operational headline; description, posting flags, reversal flags, subtotal/discount/freight/misc fields, and header dimensions are removed.';
 
 
 -- ============================================================================
 -- §9.1  document.purchase_invoice_line
 -- ============================================================================
 
+COMMENT ON COLUMN document.purchase_invoice.fx_rate_snapshot IS
+    'Explains how exchange_rate was resolved by fx.resolve_rate: identity, spot, commitment_fixed, reference_document, or manual_override.';
+
 CREATE TABLE IF NOT EXISTS document.purchase_invoice_line (
     -- Identity
     id                      uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid            NOT NULL,
+    company_code_id         uuid            NOT NULL,
 
     -- Parent
     purchase_invoice_id     uuid            NOT NULL,
@@ -197,56 +168,56 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice_line (
 
     -- Source line links
     commitment_line_id      uuid,
-    goods_receipt_line_id   uuid,
-    ses_line_id             uuid,
+    receipt_line_id         uuid,
+    service_sheet_line_id   uuid,
 
-    -- Item
+    -- Item / classification
     item_id                 uuid,
     item_description        text            NOT NULL,
     procurement_type        text            NOT NULL DEFAULT 'goods',
+    line_type               text            NOT NULL DEFAULT 'noncatalog',
     commodity_category_id   uuid,
     business_intent_id      uuid,
+    classification_decision jsonb,
+    asset_class_id          uuid,
 
     -- Quantity / price
     uom_code                text            NOT NULL,
     quantity                numeric(18,4)   NOT NULL,
     unit_price              numeric(18,4)   NOT NULL,
     price_unit              numeric(18,4)   NOT NULL DEFAULT 1,
+    currency_code           character(3)    NOT NULL,
     net_amount              numeric(18,4)   GENERATED ALWAYS AS (
                                 (quantity * unit_price) / NULLIF(price_unit, 0)
                             ) STORED,
-
-    -- Discounts
-    discount_pct            numeric(5,2)    DEFAULT 0,
-    discount_amount         numeric(18,4)   DEFAULT 0,
-
-    -- Tax
-    tax_group_id            uuid,
     tax_amount              numeric(18,4)   NOT NULL DEFAULT 0,
-    withholding_tax_group_id uuid,
     withholding_tax_amount  numeric(18,4)   NOT NULL DEFAULT 0,
+    gross_amount            numeric(18,4)   GENERATED ALWAYS AS (
+                                ((quantity * unit_price) / NULLIF(price_unit, 0))
+                                + tax_amount - withholding_tax_amount
+                            ) STORED,
+    required_by_date        date,
 
-    gross_amount            numeric(18,4)   NOT NULL DEFAULT 0,
+    -- Tax determination
+    tax_group_id            uuid,
+    withholding_tax_group_id uuid,
+    to_tax_jurisdiction_id  uuid,
+    from_tax_jurisdiction_id uuid,
 
-    -- Dimensions
-    cost_center_id          uuid,
-    profit_center_id        uuid,
-    project_id              uuid,
+    -- Address bundle
     site_id                 uuid,
-    dimension_set_id        uuid,
-
-    -- Asset
-    is_asset                boolean         NOT NULL DEFAULT false,
-    asset_category_id       uuid,
+    warehouse_id            uuid,
+    storage_location        text,
+    shipto_address_id       uuid,
+    billto_address_id       uuid,
+    billfrom_address_id     uuid,
+    supplier_id             uuid,
+    shipfrom_address_id     uuid,
+    remitto_address_id      uuid,
 
     -- Match tracking
     matched_quantity        numeric(18,4)   NOT NULL DEFAULT 0,
     match_status            text            NOT NULL DEFAULT 'unmatched',
-
-    -- Notes & metadata
-    notes                   text,
-    metadata                jsonb           NOT NULL DEFAULT '{}'::jsonb,
-    status                  text            NOT NULL DEFAULT 'open',
 
     -- Audit
     created_at              timestamptz     NOT NULL DEFAULT now(),
@@ -261,179 +232,16 @@ CREATE TABLE IF NOT EXISTS document.purchase_invoice_line (
     CONSTRAINT pil_qty_nonzero      CHECK (quantity <> 0),
     CONSTRAINT pil_price_nonneg     CHECK (unit_price >= 0),
     CONSTRAINT pil_price_unit_pos   CHECK (price_unit > 0),
-    CONSTRAINT pil_proc_type_chk    CHECK (procurement_type IN (
-        'goods','services','mixed','freight','misc')),
-    CONSTRAINT pil_match_status_chk CHECK (match_status IN (
-        'unmatched','partially_matched','fully_matched','match_exception')),
     CONSTRAINT pil_tax_nonneg       CHECK (tax_amount >= 0),
     CONSTRAINT pil_wht_nonneg       CHECK (withholding_tax_amount >= 0),
-    CONSTRAINT pil_discount_chk     CHECK (discount_pct IS NULL OR discount_pct BETWEEN 0 AND 100)
+    CONSTRAINT pil_proc_type_chk    CHECK (procurement_type IN ('goods','services')),
+    CONSTRAINT pil_line_type_chk    CHECK (line_type IN ('contract','catalog','marketplace','noncatalog')),
+    CONSTRAINT pil_match_status_chk CHECK (match_status IN (
+        'unmatched','partially_matched','fully_matched','match_exception'))
 );
-
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'document' AND table_name = 'purchase_invoice_line'
-          AND column_name = 'spend_category_id'
-    ) AND NOT EXISTS (
-        SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'document' AND table_name = 'purchase_invoice_line'
-          AND column_name = 'commodity_category_id'
-    ) THEN
-        ALTER TABLE document.purchase_invoice_line RENAME COLUMN spend_category_id TO commodity_category_id;
-    END IF;
-END $$;
 
 COMMENT ON TABLE document.purchase_invoice_line IS
-    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. AP invoice line items. '
-    'net_amount GENERATED. match_status tracks per-line three-way matching progress. '
-    'Retention: retention_pct withholds a % of gross_amount per line; retention_amount is the held-back sum.';
-
--- Idempotent additions for retention at line level (works on existing schemas)
--- ADD COLUMN IF NOT EXISTS skips the CONSTRAINT clause when the column already exists,
--- so constraints are added separately to ensure they are always present.
-ALTER TABLE document.purchase_invoice_line
-    ADD COLUMN IF NOT EXISTS retention_pct    numeric(5,2)  DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS retention_amount numeric(18,4) NOT NULL DEFAULT 0;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'pil_retention_pct_chk'
-          AND conrelid = 'document.purchase_invoice_line'::regclass
-    ) THEN
-        ALTER TABLE document.purchase_invoice_line
-            ADD CONSTRAINT pil_retention_pct_chk
-                CHECK (retention_pct IS NULL OR retention_pct BETWEEN 0 AND 100);
-    END IF;
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'pil_retention_amt_nonneg'
-          AND conrelid = 'document.purchase_invoice_line'::regclass
-    ) THEN
-        ALTER TABLE document.purchase_invoice_line
-            ADD CONSTRAINT pil_retention_amt_nonneg
-                CHECK (retention_amount >= 0);
-    END IF;
-END
-$$;
-
-
--- ============================================================================
--- §5.3  document.invoice_party_snapshot  (identity only; address is separate)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS document.invoice_party_snapshot (
-    -- Identity
-    id                  uuid            NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id           uuid            NOT NULL,
-
-    -- Parent invoice
-    purchase_invoice_id uuid            NOT NULL,
-
-    -- Party
-    supplier_id         uuid,
-    party_name          text            NOT NULL,
-    tax_registration_no text,
-    legal_entity_name   text,
-    country_code        character(2),
-
-    is_one_time_supplier boolean        NOT NULL DEFAULT false,
-
-    -- Contact
-    contact_name        text,
-    contact_email       text,
-    contact_phone       text,
-
-    -- Capture audit (append-only)
-    captured_at         timestamptz     NOT NULL DEFAULT now(),
-    captured_by         uuid            NOT NULL,
-    metadata            jsonb           NOT NULL DEFAULT '{}'::jsonb,
-
-    CONSTRAINT ips_pkey         PRIMARY KEY (id),
-    CONSTRAINT ips_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT ips_invoice_uq   UNIQUE (purchase_invoice_id)
-);
-
-COMMENT ON TABLE document.invoice_party_snapshot IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable supplier identity frozen at invoice time. '
-    'One row per invoice (1:1 UNIQUE). Append-only.';
-
-
--- ============================================================================
--- §5.4  document.invoice_address_snapshot
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS document.invoice_address_snapshot (
-    -- Identity
-    id                  uuid            NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id           uuid            NOT NULL,
-
-    -- Parent invoice
-    purchase_invoice_id uuid            NOT NULL,
-    address_type        text            NOT NULL,
-
-    -- Address
-    address_line_1      text            NOT NULL,
-    address_line_2      text,
-    city                text,
-    state_province      text,
-    postal_code         text,
-    country_code        character(2)    NOT NULL,
-
-    -- Capture audit (append-only)
-    captured_at         timestamptz     NOT NULL DEFAULT now(),
-    captured_by         uuid            NOT NULL,
-
-    CONSTRAINT ias_pkey             PRIMARY KEY (id),
-    CONSTRAINT ias_tenant_id_uq     UNIQUE (tenant_id, id),
-    CONSTRAINT ias_invoice_type_uq  UNIQUE (purchase_invoice_id, address_type),
-    CONSTRAINT ias_type_chk         CHECK (address_type IN (
-        'SUPPLIER','REMIT_TO','BILLING','DELIVERY'))
-);
-
-COMMENT ON TABLE document.invoice_address_snapshot IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable address snapshot frozen at invoice time. '
-    'One row per (invoice_id, address_type). Append-only.';
-
-
--- ============================================================================
--- §5.5  document.invoice_bank_snapshot
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS document.invoice_bank_snapshot (
-    -- Identity
-    id                  uuid            NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id           uuid            NOT NULL,
-
-    -- Parent invoice
-    purchase_invoice_id uuid            NOT NULL,
-
-    -- Bank details
-    bank_name           text            NOT NULL,
-    bank_country_code   character(2),
-    account_holder_name text            NOT NULL,
-    account_number      text,
-    iban                text,
-    swift_bic           text,
-    routing_number      text,
-    bank_branch         text,
-
-    -- Capture audit (append-only)
-    captured_at         timestamptz     NOT NULL DEFAULT now(),
-    captured_by         uuid            NOT NULL,
-
-    CONSTRAINT ibs_pkey         PRIMARY KEY (id),
-    CONSTRAINT ibs_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT ibs_invoice_uq   UNIQUE (purchase_invoice_id),
-    CONSTRAINT ibs_account_chk  CHECK (account_number IS NOT NULL OR iban IS NOT NULL)
-);
-
-COMMENT ON TABLE document.invoice_bank_snapshot IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable supplier bank details frozen at invoice time. '
-    'One row per invoice (1:1 UNIQUE). Append-only.';
+    'ARCHETYPE=B_LITE;SCOPE=T;PENDING_ACTIVE_SET. Purchase invoice origination lines. Phase 1 reset removes line status, notes, metadata, row_version, discount fields, and tax-resolution audit columns.';
 
 
 -- ============================================================================
@@ -462,6 +270,14 @@ CREATE TABLE IF NOT EXISTS document.invoice_tax_snapshot (
     is_recoverable          boolean         NOT NULL DEFAULT true,
     is_withholding          boolean         NOT NULL DEFAULT false,
 
+    -- WS-SNAPSHOT (D8 immutability) — capture the determination context
+    -- so historical JE/JV behavior remains stable if upstream
+    -- tax_rate_schedule / tax_jurisdiction rows mutate later. These are
+    -- snapshot copies, NOT FKs that would propagate downstream edits.
+    tax_section_code        text,
+    jurisdiction_id         uuid,
+    wht_basis               text,           -- copy of tax_rate_schedule.wht_basis at post time
+
     -- Capture audit (append-only)
     captured_at             timestamptz     NOT NULL DEFAULT now(),
     captured_by             uuid            NOT NULL,
@@ -469,13 +285,18 @@ CREATE TABLE IF NOT EXISTS document.invoice_tax_snapshot (
     CONSTRAINT its_pkey             PRIMARY KEY (id),
     CONSTRAINT its_tenant_id_uq     UNIQUE (tenant_id, id),
     CONSTRAINT its_tax_rate_nonneg  CHECK (tax_rate >= 0),
-    CONSTRAINT its_base_nonneg      CHECK (tax_base_amount >= 0)
+    CONSTRAINT its_base_nonneg      CHECK (tax_base_amount >= 0),
+    -- wht_basis must align with is_withholding (WS-SNAPSHOT)
+    CONSTRAINT its_wht_basis_chk    CHECK (wht_basis IS NULL OR is_withholding = true)
 );
 
 COMMENT ON TABLE document.invoice_tax_snapshot IS
     'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Frozen tax determination at invoice time. '
     'Create only where legal/regulatory requirements mandate it. '
-    'Otherwise posted tax facts in ledger.tax_calculation are authoritative.';
+    'Otherwise posted tax facts in ledger.tax_calculation are authoritative. '
+    'WS-SNAPSHOT: tax_section_code + jurisdiction_id + wht_basis are snapshot '
+    'copies (NOT FKs) so historical determinations stay stable across upstream '
+    'schedule/jurisdiction mutations.';
 
 
 -- ============================================================================

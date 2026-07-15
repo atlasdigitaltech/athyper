@@ -266,6 +266,6 @@ describe("S5 — multi-tenant mesh partner uses distinct fingerprints", () => {
 describe("Phase 5 composite — describe-invalidate pattern stays principal-agnostic", () => {
   it("matches every plane for a given (tenant, entity)", () => {
     const p = composeDescInvalidatePattern("t-1", "purchase_invoice");
-    expect(p).toBe("desc:v4:*:t-1:*:purchase_invoice:*");
+    expect(p).toBe("desc:v5:*:t-1:*:purchase_invoice:*");
   });
 });

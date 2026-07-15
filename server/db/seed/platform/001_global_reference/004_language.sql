@@ -1,19 +1,4 @@
--- 900_seed_data/001_shared/004_language.sql
--- Seed: ISO 639-1 languages
--- Schema: shared | Table: language
--- Source: 200_seed_standard.sql (backup)
-
--- ============================================================================
--- §4  LANGUAGES (ISO 639)
--- ============================================================================
-
-/* ============================================================================
-   REF Seed: Languages (ISO 639-1)
-   PostgreSQL 16+
-
-   ISO 639-1 two-letter language codes with native names and script direction.
-   Depends on: 010_ref_master_tables.sql
-   ============================================================================ */
+-- ISO 639-1 languages.
 
 insert into shared.language (code, name, native_name, iso639_2, direction, created_by)
 values

@@ -1,15 +1,15 @@
 #!/usr/bin/env tsx
 /**
- * Build canonical brand assets into packages/shared/brand/dist.
+ * Build canonical brand assets into packages/shared/ui-platform/brand/dist.
  *
  * Sources (per-product after brand split):
- *   packages/shared/brand/src/products/athyper/
+ *   packages/shared/ui-platform/brand/src/products/athyper/
  *   packages/apps/neon/brand/src/products/neon/
  *   packages/apps/mesh/brand/src/products/mesh/
  *   packages/apps/admin/brand/src/products/admin/
  *
  * Output:
- *   packages/shared/brand/dist/{product}/
+ *   packages/shared/ui-platform/brand/dist/{product}/
  *
  * Run:
  *   pnpm brand:build
@@ -21,14 +21,14 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
-const distRoot = path.join(repoRoot, "packages/shared/brand/dist");
+const distRoot = path.join(repoRoot, "packages/shared/ui-platform/brand/dist");
 
 const PRODUCTS = ["athyper", "neon", "mesh", "admin"] as const;
 
 type ProductCode = (typeof PRODUCTS)[number];
 
 const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  athyper: path.join(repoRoot, "packages/shared/brand/src/products/athyper"),
+  athyper: path.join(repoRoot, "packages/shared/ui-platform/brand/src/products/athyper"),
   neon:    path.join(repoRoot, "packages/apps/neon/brand/src/products/neon"),
   mesh:    path.join(repoRoot, "packages/apps/mesh/brand/src/products/mesh"),
   admin:   path.join(repoRoot, "packages/apps/admin/brand/src/products/admin"),

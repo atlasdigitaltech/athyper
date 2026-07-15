@@ -16,7 +16,7 @@
 --   contact_link + email/phone (support contact per institution)
 --   bank_account_house_config (for all new + backfill domestic accounts)
 --
--- Depends:  001_bank_accounts_per_company.sql, 003_address_contacts.sql,
+-- Depends:  001_bank_accounts_per_company.sql, 100_org_structure/306_address_contacts.sql,
 --           200_finance/201_company_chart_assignments.sql (COA / GL accounts)
 -- Idempotent: Yes — ON CONFLICT / NOT EXISTS guards throughout
 -- =============================================================================
@@ -177,20 +177,21 @@ BEGIN
 
         INSERT INTO master.address_link (
             tenant_id, owner_type, owner_id, address_id, purpose, is_primary, created_by
-        ) VALUES (v_tid, 'bank_party', rec.bp_id, v_addr_id, 'legal', true, v_su)
+        ) VALUES (v_tid, 'bank_party', rec.bp_id, v_addr_id, 'correspondence', true, v_su)
         ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
 
         -- Email contact
         INSERT INTO master.contact_link (
             tenant_id, owner_type, owner_id, channel_type, value,
             purpose, is_primary, is_verified, verified_at, status, created_by
+        -- bank_party.allowed_contact_purposes = [correspondence, notification, default]
         ) VALUES (v_tid, 'bank_party', rec.bp_id, 'email', rec.email,
-            'support', true, true, now(), 'active', v_su)
-        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
+            'correspondence', true, true, now(), 'active', v_su)
+        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
 
         SELECT id INTO v_cl_id FROM master.contact_link
         WHERE tenant_id = v_tid AND owner_type = 'bank_party' AND owner_id = rec.bp_id
-          AND channel_type = 'email' AND value = rec.email AND purpose = 'support';
+          AND channel_type = 'email' AND value = rec.email AND purpose = 'correspondence';
 
         INSERT INTO master.contact_email (
             tenant_id, contact_link_id, local_part, domain, mx_valid, created_by
@@ -204,12 +205,12 @@ BEGIN
             tenant_id, owner_type, owner_id, channel_type, value,
             purpose, is_primary, is_verified, verified_at, status, created_by
         ) VALUES (v_tid, 'bank_party', rec.bp_id, 'phone', rec.phone_e164,
-            'support', true, true, now(), 'active', v_su)
-        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose) DO NOTHING;
+            'notification', true, true, now(), 'active', v_su)
+        ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
 
         SELECT id INTO v_cl_id FROM master.contact_link
         WHERE tenant_id = v_tid AND owner_type = 'bank_party' AND owner_id = rec.bp_id
-          AND channel_type = 'phone' AND value = rec.phone_e164 AND purpose = 'support';
+          AND channel_type = 'phone' AND value = rec.phone_e164 AND purpose = 'notification';
 
         INSERT INTO master.contact_phone (
             tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by

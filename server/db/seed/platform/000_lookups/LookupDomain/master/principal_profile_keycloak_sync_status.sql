@@ -1,7 +1,5 @@
--- LookupDomain/master/principal_profile_keycloak_sync_status.sql
--- Lookup values for domain: master.principal_profile.keycloak_sync_status
--- Legacy Keycloak synchronization health on principal profiles.
--- Idempotent: WHERE NOT EXISTS guard
+-- Legacy column kept for backward compatibility — principal_identity_binding.sync_status
+-- is the canonical IdP-sync health field today.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)

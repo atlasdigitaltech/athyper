@@ -594,6 +594,17 @@ END $$;
 -- address.address_type — CHECK removed, trigger-based validation in 09_triggers.
 ALTER TABLE master.address DROP CONSTRAINT IF EXISTS address_type_chk;
 
+-- address.tax_jurisdiction_id → master.tax_jurisdiction (tenant-composite).
+-- Geographic jurisdiction (derived by trg_address_derive_jurisdiction trigger).
+DO $$ BEGIN
+    ALTER TABLE master.address
+        ADD CONSTRAINT address_tax_jurisdiction_fk
+        FOREIGN KEY (tenant_id, tax_jurisdiction_id)
+        REFERENCES master.tax_jurisdiction (tenant_id, id)
+        ON DELETE SET NULL
+        DEFERRABLE INITIALLY DEFERRED;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- ── address_link ─────────────────────────────────────────────────────────────
 
 -- address_link.address_id → master.address (composite FK — cross-tenant safe)
@@ -1713,6 +1724,9 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.fiscal_period ADD CONSTRAINT fp_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.fiscal_period ADD CONSTRAINT fiscal_period_status_chk
+    CHECK (status IN ('future', 'open', 'soft_close', 'hard_close'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── master.ledger_book ───────────────────────────────────────────────────────
 ALTER TABLE master.ledger_book DROP CONSTRAINT IF EXISTS lb_tenant_fk;
@@ -1758,6 +1772,14 @@ DO $$ BEGIN ALTER TABLE master.business_partner ADD CONSTRAINT bpart_tenant_fk
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.business_partner ADD CONSTRAINT bpart_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- BP's declared tax registration jurisdiction (legal fact). Used for bill-from /
+-- bill-to snapshots when this BP is the counterparty on a document.
+DO $$ BEGIN ALTER TABLE master.business_partner ADD CONSTRAINT bpart_tax_jurisdiction_fk
+    FOREIGN KEY (tenant_id, tax_jurisdiction_id)
+    REFERENCES master.tax_jurisdiction (tenant_id, id)
+    ON DELETE SET NULL
+    DEFERRABLE INITIALLY DEFERRED;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.business_partner ADD CONSTRAINT bpart_parent_fk
     FOREIGN KEY (tenant_id, parent_business_partner_id)
@@ -2277,12 +2299,19 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.tax_jurisdiction ADD CONSTRAINT tj_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.tax_jurisdiction ADD CONSTRAINT tj_parent_fk
-    FOREIGN KEY (tenant_id, parent_id)
-    REFERENCES master.tax_jurisdiction (tenant_id, id);
+-- Country: clean single-column FK to ISO catalog
+DO $$ BEGIN ALTER TABLE master.tax_jurisdiction ADD CONSTRAINT tj_country_fk
+    FOREIGN KEY (country_code) REFERENCES shared.country (code)
+    ON UPDATE RESTRICT ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-DO $$ BEGIN ALTER TABLE master.tax_jurisdiction ADD CONSTRAINT tj_currency_fk
-    FOREIGN KEY (currency_code) REFERENCES shared.currency (code);
+-- State/region: composite FK to ISO 3166-2 subdivision register. Nullable —
+-- country-level rows have no state. MATCH SIMPLE (default): the FK is
+-- satisfied when state_region_code is NULL.
+DO $$ BEGIN ALTER TABLE master.tax_jurisdiction ADD CONSTRAINT tj_state_region_fk
+    FOREIGN KEY (country_code, state_region_code)
+    REFERENCES shared.state_region (country_code, code)
+    ON UPDATE RESTRICT ON DELETE RESTRICT
+    DEFERRABLE INITIALLY DEFERRED;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.tax_jurisdiction ADD CONSTRAINT tj_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
@@ -2300,6 +2329,13 @@ DO $$ BEGIN ALTER TABLE master.tax_type ADD CONSTRAINT tt_tenant_fk
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.tax_type ADD CONSTRAINT tt_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Catalog bridge: tax_type → condition_type (PC-facing kind).
+-- Single-column FK on condition_type.id (PK): system catalog rows live in
+-- tenant_id IS NULL slot and a composite-on-tenant FK cannot reach them.
+DO $$ BEGIN ALTER TABLE master.tax_type ADD CONSTRAINT tt_condition_type_fk
+    FOREIGN KEY (condition_type_id) REFERENCES master.condition_type (id)
+    ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── master.fx_rate ───────────────────────────────────────────────────────────

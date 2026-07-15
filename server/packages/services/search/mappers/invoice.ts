@@ -7,7 +7,7 @@
  * The generic default-mapper already handles id/title/summary/status/
  * tags/updated_at from conventions. This override adds financial-specific
  * extensions that make the search UI useful:
- *   - supplier_invoice_number (searchable alongside invoice_number)
+ *   - supplier_invoice_number (searchable alongside code)
  *   - total_amount + currency_code for amount display/filtering
  *   - document_date for chronological filters
  *   - fiscal_year + period_number for period-scoped queries
@@ -40,9 +40,9 @@ export const invoiceOverride: EntityDocumentOverride = (
   row:        Record<string, unknown>,
 ): SearchDocument => {
   // Title: the default picks `name` first; for purchase_invoice the
-  // invoice_number is the canonical identifier. Force it.
-  const title = typeof row["invoice_number"] === "string" && row["invoice_number"].trim()
-    ? row["invoice_number"]
+  // code is the canonical identifier. Force it.
+  const title = typeof row["code"] === "string" && row["code"].trim()
+    ? row["code"]
     : defaultDoc.title;
 
   // Summary: prefer description, fall back to notes.

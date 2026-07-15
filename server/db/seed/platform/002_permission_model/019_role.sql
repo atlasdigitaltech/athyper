@@ -1,10 +1,5 @@
--- seed/platform/002_permission_model/019_role.sql
--- Seed: shared.role — one role per (persona × module)
--- Schema: shared | Table: role
--- Depends on: 010_persona.sql, 012_module.sql
--- Scope lives on master.auth_group_role; roles are platform-level, not per-tenant.
--- code pattern: {persona_code}-{MODULE_CODE}  e.g. 'manager-ACC'
--- Idempotent: ON CONFLICT (code) DO UPDATE
+-- shared.role = persona × module cross-product (e.g. 'manager-ACC'). Depends on 010 + 012.
+-- Roles are platform-level; tenant scope is applied at master.auth_group_role binding time.
 
 INSERT INTO shared.role (code, name, persona_id, module_id, created_by)
 SELECT
@@ -26,9 +21,7 @@ CROSS JOIN (
       ('SRM'), ('SOURCE'), ('CONTRACT'), ('BUY'), ('INVENTORY'),
       ('QMS'), ('SUBCON'), ('DEMAND'), ('WMS'), ('LOGISTICS'),
       ('CRM'), ('SALE'), ('HR'), ('PAYROLL'), ('PRJCOST'), ('ITSM'),
-      ('MAINT'), ('MFG'), ('ASSET'), ('ASSETREMS'), ('ASSETFM'),
-      ('PCON'), ('OMI'), ('IMO'), ('CCON'), ('SOO'),
-      ('SII'), ('LOGX')
+      ('MAINT'), ('MFG'), ('ASSET'), ('ASSETREMS'), ('ASSETFM')
   ) AS allowed_modules (code)
 JOIN shared.module m
   ON m.code = allowed_modules.code
@@ -57,9 +50,7 @@ BEGIN
       ('SRM'), ('SOURCE'), ('CONTRACT'), ('BUY'), ('INVENTORY'),
       ('QMS'), ('SUBCON'), ('DEMAND'), ('WMS'), ('LOGISTICS'),
       ('CRM'), ('SALE'), ('HR'), ('PAYROLL'), ('PRJCOST'), ('ITSM'),
-      ('MAINT'), ('MFG'), ('ASSET'), ('ASSETREMS'), ('ASSETFM'),
-      ('PCON'), ('OMI'), ('IMO'), ('CCON'), ('SOO'),
-      ('SII'), ('LOGX')
+      ('MAINT'), ('MFG'), ('ASSET'), ('ASSETREMS'), ('ASSETFM')
   ) AS allowed_modules(code);
 
   SELECT count(*) INTO v_role_count FROM shared.role;

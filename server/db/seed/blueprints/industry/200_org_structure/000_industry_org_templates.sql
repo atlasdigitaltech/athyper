@@ -1,20 +1,9 @@
--- ============================================================================
--- INDUSTRY ORG EXTENSIONS
--- ============================================================================
--- File:     blueprints/industry/200_org_structure/000_industry_org_templates.sql
--- Schemas:  master.org_unit, master.cost_center, master.profit_center
--- Purpose:  Add industry-specific leaves onto the universal org foundation.
--- Depends:  blueprints/universal/060_org_structure/300-302 and company_code metadata
---           industry tags.
---
--- Targeting rules:
---   * Multi-company tenants: tag each company_code with one of:
---       metadata._industry_vertical = 'utilities'
---       metadata._industry_pack     = 'pack_utilities'
---       metadata._industry_verticals / _industry_packs as JSON arrays
---   * Single-company tenants: if an industry blueprint is marked applied in
---     control.tenant_blueprint_application, that pack applies to the company.
--- ============================================================================
+-- Industry-specific leaves grafted onto the universal org/cost/profit foundation
+-- seeded by universal/060_org_structure/300-302. Targeting rules:
+--   * Multi-company tenants — tag each company_code via metadata:
+--       _industry_vertical='utilities' OR _industry_pack='pack_utilities'
+--       OR _industry_verticals/_industry_packs as JSON arrays.
+--   * Single-company tenants — pack applies if marked in blueprint_tenant_application.
 
 DO $seed$
 DECLARE
@@ -44,7 +33,6 @@ BEGIN
     INSERT INTO tmp_industry_template
         (template_kind, pack_code, industry_vertical, parent_suffix, suffix, display_name, classification, sort_order)
     VALUES
-    -- Utilities
     ('org',    'pack_utilities',          'utilities',          'OPS', 'GRID',      'Grid Operations',              'department', 510),
     ('org',    'pack_utilities',          'utilities',          'OPS', 'GEN',       'Generation Operations',        'department', 520),
     ('org',    'pack_utilities',          'utilities',          'OPS', 'DIST',      'Distribution Operations',      'department', 530),
@@ -55,7 +43,6 @@ BEGIN
     ('profit', 'pack_utilities',          'utilities',          'EXT', 'WATER',     'Water Supply',                 'revenue',    520),
     ('profit', 'pack_utilities',          'utilities',          'EXT', 'CONNECT',   'Connection Fees',              'revenue',    530),
 
-    -- Construction
     ('org',    'pack_construction',       'construction',       'OPS', 'PROJECTS',  'Project Delivery',             'department', 510),
     ('org',    'pack_construction',       'construction',       'OPS', 'CIVIL',     'Civil Works',                  'department', 520),
     ('org',    'pack_construction',       'construction',       'OPS', 'MEP',       'MEP Works',                    'department', 530),
@@ -66,7 +53,6 @@ BEGIN
     ('profit', 'pack_construction',       'construction',       'EXT', 'CIVIL',     'Civil Engineering',            'revenue',    520),
     ('profit', 'pack_construction',       'construction',       'EXT', 'MEP',       'MEP Contracting',              'revenue',    530),
 
-    -- Real estate
     ('org',    'pack_real_estate',        'real_estate',        'OPS', 'PROPERTY',  'Property Operations',          'department', 510),
     ('org',    'pack_real_estate',        'real_estate',        'OPS', 'DEV',       'Development Operations',       'department', 520),
     ('org',    'pack_real_estate',        'real_estate',        'OPS', 'FACILITY',  'Facilities Operations',        'department', 530),
@@ -77,7 +63,6 @@ BEGIN
     ('profit', 'pack_real_estate',        'real_estate',        'EXT', 'PRODEV',    'Property Development',         'revenue',    520),
     ('profit', 'pack_real_estate',        'real_estate',        'EXT', 'PROPSAL',   'Property Sales',               'revenue',    530),
 
-    -- Transportation and storage
     ('org',    'pack_transport',          'transport',          'OPS', 'FLEET',     'Fleet Operations',             'department', 510),
     ('org',    'pack_transport',          'transport',          'OPS', 'WHSE',      'Warehouse Operations',         'department', 520),
     ('org',    'pack_transport',          'transport',          'OPS', 'LASTMILE',  'Last Mile Operations',         'department', 530),
@@ -88,7 +73,6 @@ BEGIN
     ('profit', 'pack_transport',          'transport',          'EXT', 'WHSE',      'Warehousing and Storage',      'revenue',    520),
     ('profit', 'pack_transport',          'transport',          'EXT', 'LASTMILE',  'Last Mile Delivery',           'revenue',    530),
 
-    -- Trading
     ('org',    'pack_trading',            'trading',            'OPS', 'BUYING',    'Buying and Merchandising',     'department', 510),
     ('org',    'pack_trading',            'trading',            'OPS', 'RETAIL',    'Retail Operations',            'department', 520),
     ('org',    'pack_trading',            'trading',            'OPS', 'ECOMM',     'E-Commerce Operations',        'department', 530),
@@ -99,7 +83,6 @@ BEGIN
     ('profit', 'pack_trading',            'trading',            'EXT', 'RETAIL',    'Retail',                       'revenue',    520),
     ('profit', 'pack_trading',            'trading',            'EXT', 'ECOMM',     'E-Commerce',                   'revenue',    530),
 
-    -- Hospitality
     ('org',    'pack_hospitality',        'hospitality',        'OPS', 'ROOMS',     'Rooms Operations',             'department', 510),
     ('org',    'pack_hospitality',        'hospitality',        'OPS', 'FB',        'Food and Beverage Operations', 'department', 520),
     ('org',    'pack_hospitality',        'hospitality',        'OPS', 'EVENTS',    'Events Operations',            'department', 530),
@@ -111,7 +94,6 @@ BEGIN
     ('profit', 'pack_hospitality',        'hospitality',        'EXT', 'EVENTS',    'Events and Banqueting',        'revenue',    530),
     ('profit', 'pack_hospitality',        'hospitality',        'EXT', 'SPA',       'Spa and Recreation',           'revenue',    540),
 
-    -- Information and communication
     ('org',    'pack_infocomm',           'infocomm',           'OPS', 'CLOUD',     'Cloud Operations',             'department', 510),
     ('org',    'pack_infocomm',           'infocomm',           'OPS', 'RND',       'Research and Development',     'department', 520),
     ('org',    'pack_infocomm',           'infocomm',           'OPS', 'DELIVERY',  'Service Delivery',             'department', 530),
@@ -122,7 +104,6 @@ BEGIN
     ('profit', 'pack_infocomm',           'infocomm',           'EXT', 'CONSULT',   'Consulting and Implementation','revenue',    520),
     ('profit', 'pack_infocomm',           'infocomm',           'EXT', 'LICENSE',   'License and IP',               'revenue',    530),
 
-    -- Financial services
     ('org',    'pack_financial',          'financial',          'OPS', 'LENDING',   'Lending Operations',           'department', 510),
     ('org',    'pack_financial',          'financial',          'OPS', 'RISK',      'Risk and Compliance',          'department', 520),
     ('org',    'pack_financial',          'financial',          'OPS', 'INSURANCE', 'Insurance Operations',         'department', 530),
@@ -134,7 +115,6 @@ BEGIN
     ('profit', 'pack_financial',          'financial',          'INV', 'TRADING',   'Trading and Markets',          'investment', 530),
     ('profit', 'pack_financial',          'financial',          'SVC', 'INSURANCE', 'Insurance Premiums',           'service',    540),
 
-    -- Manufacturing: textiles and leather
     ('org',    'pack_mfg_textile',        'mfg_textile',        'OPS', 'CUTSEW',    'Cut and Sew Operations',       'department', 510),
     ('org',    'pack_mfg_textile',        'mfg_textile',        'OPS', 'FABRIC',    'Fabric Operations',            'department', 520),
     ('org',    'pack_mfg_textile',        'mfg_textile',        'OPS', 'QC',        'Quality Control',              'department', 530),
@@ -145,7 +125,6 @@ BEGIN
     ('profit', 'pack_mfg_textile',        'mfg_textile',        'EXT', 'FABRIC',    'Fabric Sales',                 'revenue',    520),
     ('profit', 'pack_mfg_textile',        'mfg_textile',        'EXT', 'LEATHER',   'Leather Goods',                'revenue',    530),
 
-    -- Manufacturing: food and beverage
     ('org',    'pack_mfg_food_bev',       'mfg_food_bev',       'OPS', 'PROCESS',   'Processing Operations',        'department', 510),
     ('org',    'pack_mfg_food_bev',       'mfg_food_bev',       'OPS', 'PACKAGING', 'Packaging Operations',         'department', 520),
     ('org',    'pack_mfg_food_bev',       'mfg_food_bev',       'OPS', 'QA',        'Quality Assurance',            'department', 530),
@@ -156,7 +135,6 @@ BEGIN
     ('profit', 'pack_mfg_food_bev',       'mfg_food_bev',       'EXT', 'BEVERAGE',  'Beverages',                    'revenue',    520),
     ('profit', 'pack_mfg_food_bev',       'mfg_food_bev',       'EXT', 'INGREDNT',  'Ingredient and B2B',           'revenue',    530),
 
-    -- Manufacturing: pharmaceutical
     ('org',    'pack_mfg_pharma',         'mfg_pharma',         'OPS', 'PROD',      'Production Operations',        'department', 510),
     ('org',    'pack_mfg_pharma',         'mfg_pharma',         'OPS', 'QA',        'Quality Assurance',            'department', 520),
     ('org',    'pack_mfg_pharma',         'mfg_pharma',         'OPS', 'LAB',       'Laboratory Operations',        'department', 530),
@@ -168,7 +146,6 @@ BEGIN
     ('profit', 'pack_mfg_pharma',         'mfg_pharma',         'EXT', 'API',       'API Third-Party Sales',        'revenue',    530),
     ('profit', 'pack_mfg_pharma',         'mfg_pharma',         'SVC', 'LICENSING', 'Licensing and Royalties',      'service',    540),
 
-    -- Manufacturing: electronics
     ('org',    'pack_mfg_electronics',    'mfg_electronics',    'OPS', 'SMT',       'SMT Operations',               'department', 510),
     ('org',    'pack_mfg_electronics',    'mfg_electronics',    'OPS', 'ASSEMBLY',  'Assembly Operations',          'department', 520),
     ('org',    'pack_mfg_electronics',    'mfg_electronics',    'OPS', 'TEST',      'Test Operations',              'department', 530),
@@ -179,7 +156,6 @@ BEGIN
     ('profit', 'pack_mfg_electronics',    'mfg_electronics',    'EXT', 'MODULE',    'Module Assembly',              'revenue',    520),
     ('profit', 'pack_mfg_electronics',    'mfg_electronics',    'EXT', 'AFTERMKT',  'Aftermarket and Spares',       'revenue',    530),
 
-    -- Mining and petroleum
     ('org',    'pack_mining_petroleum',   'mining_petroleum',   'OPS', 'EXTRACT',   'Extraction Operations',        'department', 510),
     ('org',    'pack_mining_petroleum',   'mining_petroleum',   'OPS', 'PROCESS',   'Processing Operations',        'department', 520),
     ('org',    'pack_mining_petroleum',   'mining_petroleum',   'OPS', 'HSE',       'HSE Operations',               'department', 530),
@@ -190,7 +166,6 @@ BEGIN
     ('profit', 'pack_mining_petroleum',   'mining_petroleum',   'EXT', 'GAS',       'Natural Gas Sales',            'revenue',    520),
     ('profit', 'pack_mining_petroleum',   'mining_petroleum',   'EXT', 'NGL',       'NGL and Condensate',           'revenue',    530),
 
-    -- Agriculture
     ('org',    'pack_agriculture',        'agriculture',        'OPS', 'CROP',      'Crop Operations',              'department', 510),
     ('org',    'pack_agriculture',        'agriculture',        'OPS', 'LIVESTOCK', 'Livestock Operations',         'department', 520),
     ('org',    'pack_agriculture',        'agriculture',        'OPS', 'DAIRY',     'Dairy Operations',             'department', 530),
@@ -201,7 +176,6 @@ BEGIN
     ('profit', 'pack_agriculture',        'agriculture',        'EXT', 'LIVESTOCK', 'Livestock Sales',              'revenue',    520),
     ('profit', 'pack_agriculture',        'agriculture',        'EXT', 'DAIRY',     'Dairy and Produce',            'revenue',    530),
 
-    -- Education
     ('org',    'pack_education',          'education',          'OPS', 'ACADEMIC',  'Academic Operations',          'department', 510),
     ('org',    'pack_education',          'education',          'OPS', 'RESEARCH',  'Research Operations',          'department', 520),
     ('org',    'pack_education',          'education',          'OPS', 'EXEC',      'Executive Education',          'department', 530),
@@ -212,7 +186,6 @@ BEGIN
     ('profit', 'pack_education',          'education',          'EXT', 'RESEARCH',  'Research Grants',              'revenue',    520),
     ('profit', 'pack_education',          'education',          'SVC', 'EXEC',      'Executive Education',          'service',    530),
 
-    -- Healthcare
     ('org',    'pack_healthcare',         'healthcare',         'OPS', 'INPAT',     'Inpatient Operations',         'department', 510),
     ('org',    'pack_healthcare',         'healthcare',         'OPS', 'OUTPAT',    'Outpatient Operations',        'department', 520),
     ('org',    'pack_healthcare',         'healthcare',         'OPS', 'DIAG',      'Diagnostics Operations',       'department', 530),
@@ -255,7 +228,7 @@ BEGIN
             (SELECT count(*) FROM active_companies) = 1
             AND EXISTS (
                 SELECT 1
-                FROM control.tenant_blueprint_application tba
+                FROM control.blueprint_tenant_application tba
                 WHERE tba.tenant_id = v_tid
                   AND tba.blueprint_code = pm.pack_code
                   AND tba.status = 'applied'

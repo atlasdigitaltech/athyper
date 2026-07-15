@@ -1,16 +1,6 @@
--- ============================================================================
--- 303_company_code_tax_fx_links.sql - post-company tax/FX onboarding links
--- ============================================================================
--- Purpose:
---   Universal tax and FX catalogs are tenant-scoped, but company codes are
---   tenant-specific and are created by onboarding files. This post-company
---   step connects every applicable company code to those universal catalogs.
---
--- Depends:
---   blueprints/universal/020_tax/320_tax_jurisdictions.sql
---   blueprints/universal/020_tax/330_fx_rates.sql
---   tenant 100_org_structure/1* or /2* legal_entity/company_code files
--- ============================================================================
+-- Wires every active company_code to the universal tax_jurisdiction + FX
+-- catalogues seeded by 320/330. Must run AFTER tenant 100_org_structure files
+-- have created the legal_entity + company_code rows.
 
 DO $seed$
 DECLARE
@@ -38,9 +28,8 @@ BEGIN
       AND le.country_code IS NOT NULL;
 
     -- Link each company code to the tenant's matching country-level tax
-    -- jurisdiction. If the tenant has a country-specific override seeded
-    -- outside the universal pack, this still works as long as country_code
-    -- and level_no are populated.
+    -- jurisdiction. Identified by jurisdiction_type='country' (level_no/parent_id
+    -- columns were dropped as part of the tax-jurisdiction cleanup).
     UPDATE master.company_code cc
     SET tax_jurisdiction_id = tj.id,
         updated_at          = now(),
@@ -48,7 +37,7 @@ BEGIN
     FROM master.tax_jurisdiction tj
     WHERE cc.tenant_id = v_tid
       AND tj.tenant_id = cc.tenant_id
-      AND tj.level_no = 1
+      AND tj.jurisdiction_type = 'country'
       AND tj.status = 'active'
       AND tj.country_code = cc.country_code
       AND cc.tax_jurisdiction_id IS DISTINCT FROM tj.id;
@@ -65,7 +54,7 @@ BEGIN
           SELECT 1
           FROM master.tax_jurisdiction tj
           WHERE tj.tenant_id = cc.tenant_id
-            AND tj.level_no = 1
+            AND tj.jurisdiction_type = 'country'
             AND tj.status = 'active'
             AND tj.country_code = cc.country_code
       )
@@ -74,7 +63,7 @@ BEGIN
           FROM master.tax_jurisdiction linked
           WHERE linked.tenant_id = cc.tenant_id
             AND linked.id = cc.tax_jurisdiction_id
-            AND linked.level_no = 1
+            AND linked.jurisdiction_type = 'country'
             AND linked.status = 'active'
             AND linked.country_code = cc.country_code
       );

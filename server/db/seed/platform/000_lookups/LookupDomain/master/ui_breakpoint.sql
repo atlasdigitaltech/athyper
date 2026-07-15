@@ -1,8 +1,4 @@
--- LookupDomain/master/ui_breakpoint.sql
--- Lookup values for domain: ui.breakpoint
--- Responsive breakpoint codes for master.dashboard_widget.breakpoint_code.
--- Not tenant-extensible: platform-governed layout system.
--- Idempotent: WHERE NOT EXISTS guard
+-- Not tenant-extensible: breakpoints are hard-coded in the platform layout system.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)

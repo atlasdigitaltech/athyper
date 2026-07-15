@@ -211,18 +211,28 @@ describe("WorkflowEngine.createRequest", () => {
     await expect(engine.createRequest(baseParams)).rejects.toMatchObject({ code: 422 });
   });
 
-  it("throws 422 when template has no compiled_hash", async () => {
+  it("accepts a usable template snapshot when compiled_hash is not published", async () => {
     const uncompiledTemplate = { ...makeTemplateRow(), compiled_hash: null };
     const db = makeMockDb({
       tables: {
         "document.workflow_request as wr": [],
         "control.workflow_definition as wd": [makeDefinitionRow()],
         "control.workflow_template as wt": [uncompiledTemplate],
+        "document.workflow_stage as ws": [makeStageRow()],
+      },
+      txTables: {
+        "document.workflow_request as wr": [],
+        "document.workflow_stage as ws": [makeStageRow()],
+      },
+      insertIds: {
+        "document.workflow_request": WF_REQUEST_ID,
+        "document.workflow_stage": WF_STAGE_ID,
+        "event.work_item": WF_ITEM_ID,
       },
     });
     const engine = new WorkflowEngine({ db: db as never });
 
-    await expect(engine.createRequest(baseParams)).rejects.toMatchObject({ code: 422 });
+    await expect(engine.createRequest(baseParams)).resolves.toMatchObject({ isExisting: false });
   });
 
   it("creates a new request and returns {isExisting:false}", async () => {
@@ -445,6 +455,29 @@ describe("WorkflowEngine.processAction", () => {
     await expect(
       engine.processAction({ ...baseActionParams, action: "reject" }),
     ).resolves.toBeUndefined();
+  });
+
+  it("return closes the workflow but restores the PO source to draft", async () => {
+    const completeWorkflow = vi.fn().mockResolvedValue(undefined);
+    const db = makeMockDb({
+      txTables: {
+        "event.work_item as wi": [makeWorkItemRow({ decision: "return" })],
+        "document.workflow_request as wr": [makeRequestRow({ entity_type: "purchase_order" })],
+        "document.workflow_stage as ws": [makeStageRow({ quorum: null })],
+        "document.workflow_stage": [],
+      },
+    });
+    const engine = new WorkflowEngine({
+      db: db as never,
+      sourceEntityAdapter: { completeWorkflow },
+    });
+
+    await engine.processAction({ ...baseActionParams, action: "return" });
+
+    expect(completeWorkflow).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      entityType: "purchase_order",
+      outcome: "returned",
+    }));
   });
 
   it("count quorum: stage complete when required approvals reached", async () => {

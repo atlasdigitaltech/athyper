@@ -1,34 +1,15 @@
--- ============================================================================
--- blueprints/universal/070_people/320_work_schedules.sql
--- Universal Work Schedule Seed
---
--- Covers: work_pattern · work_pattern_day · shift_type
---
--- Work patterns (10):
---   standard_5d      — Mon–Fri 40 h/wk  (09:00–17:30, 30 min break)
---   extended_5d      — Mon–Fri 45 h/wk  (08:00–18:00, 60 min break)
---   compressed_4d    — Mon–Thu 40 h/wk  (07:00–18:00, 60 min break)
---   part_time_3d     — Mon/Wed/Fri 24 h/wk
---   rotating_3shift  — 3-day mini-cycle: day / evening / night
---   two_shift_alt    — 14-day cycle: week A days, week B evenings
---   weekend_only     — Sat–Sun  16 h/wk
---   flexible_5d      — Mon–Fri, no fixed hours, 40 h target
---   night_5d         — Mon–Fri nights, 40 h/wk
---   six_day_shift    — Mon–Sat 48 h/wk  (manufacturing / retail)
+-- work_pattern + work_pattern_day + shift_type. 10 patterns covering common
+-- weekday/compressed/rotating/weekend/night shifts; 10 shift types.
+-- Patterns:
+--   standard_5d Mon-Fri 40h | extended_5d Mon-Fri 45h | compressed_4d Mon-Thu 40h
+--   part_time_3d 24h | rotating_3shift 3-day cycle | two_shift_alt 14-day A/B
+--   weekend_only Sat-Sun | flexible_5d 40h target | night_5d Mon-Fri 40h
+--   six_day_shift Mon-Sat 48h (manufacturing/retail)
 --
 -- Shift types (10):
 --   day_standard · day_office · morning_early · day_mid · afternoon ·
---   evening · night · half_day_am · half_day_pm · extended_day
---
--- Planned-minutes formula enforced by DB CHECK:
---   planned_minutes = EXTRACT(EPOCH FROM (end_time - start_time))::int/60
---                     - break_minutes
---   → Overnight/flexible days use NULL start/end; check passes unconditionally.
---
--- Usage:
---   SET app.seed_tenant_id = '<tenant-uuid>';
---   \i 320_work_schedules.sql
--- ============================================================================
+-- DB CHECK enforces planned_minutes = EXTRACT(EPOCH FROM end_time-start_time)/60
+-- minus break_minutes. Overnight/flexible days pass by leaving start/end NULL.
 
 DO $seed$
 DECLARE

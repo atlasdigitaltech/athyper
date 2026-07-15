@@ -23,7 +23,7 @@
 
 import { sql } from "kysely";
 import type { Kysely } from "kysely";
-import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
 import type { PdfRenderOptions, SyncPdfRenderer } from "./pdf-renderer-client.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -299,3 +299,4 @@ export function createRenderService(
 ): RenderService {
   return new RenderService(db, renderer, storage);
 }
+

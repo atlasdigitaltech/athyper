@@ -1,19 +1,10 @@
--- ============================================================================
--- UNIVERSAL — CLASSIFICATION TO INTENT RULE
--- ============================================================================
--- File:     025_classification_to_intent_rule.sql
--- Schema:   control.commodity_classification_to_intent_rule
--- Purpose:  Seeds the intent routing rules for commodity categories.
---           classification_source='COMMODITY_CATEGORY', classification_id=cc.id
---           Covers Layer A (universal) and Layer B (direct-operations) categories.
--- Depends:  021_business_intents, 023_commodity_category
--- Idempotent: DELETE-then-INSERT by pack metadata tag.
---             Pack names PRESERVED for idempotency against existing DB rows.
--- ============================================================================
+-- Base intent-routing rules for commodity_category
+-- (classification_source='COMMODITY_CATEGORY', covers Layer A + Layer B).
+-- Idempotency = DELETE pack rows then re-INSERT, keyed by metadata._seed.pack.
+-- Pack names are PRESERVED ('026_base' / '026_base_direct_ops') for compat with
+-- any existing DB rows; do not rename.
 
--- ============================================================================
--- BLOCK 1: Layer A universal cross-functional intent rules
--- ============================================================================
+-- BLOCK 1 — Layer A universal cross-functional rules.
 DO $seed$
 DECLARE
     v_tid     uuid;
@@ -28,7 +19,6 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set';
     END IF;
 
-    -- ── Prerequisite checks ───────────────────────────────────────────────
     IF NOT EXISTS (SELECT 1 FROM master.business_intent WHERE tenant_id = v_tid AND code = 'BI-OPEX') THEN
         RAISE EXCEPTION '[025] business_intents not seeded — run 021 first';
     END IF;
@@ -36,14 +26,10 @@ BEGIN
         RAISE EXCEPTION '[025] commodity_categories not seeded — run 023 first';
     END IF;
 
-    -- ── DELETE existing rows from this pack ───────────────────────────────
     DELETE FROM control.commodity_classification_to_intent_rule
     WHERE tenant_id = v_tid
       AND metadata->'_seed'->>'pack' = v_pack;
 
-    -- ── Seed intent rules via staging ─────────────────────────────────────
-    -- Each rule: (cc_code, condition_type, condition_config, resolved_bi_code,
-    --             explanation_template, confidence, priority, direction)
     CREATE TEMP TABLE tmp_cir (
         cc_code            text    NOT NULL,
         condition_type     text    NOT NULL,
@@ -55,9 +41,6 @@ BEGIN
         direction          text
     ) ON COMMIT DROP;
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- IT & Digital — SC-IT-HW: serial-tracked hardware → CAPEX if large
-    -- ══════════════════════════════════════════════════════════════════════
     INSERT INTO tmp_cir VALUES
     ('SC-IT-HW', 'AMOUNT_ABOVE',  '{"threshold": 5000}', 'BI-CAPEX',
      'IT hardware cost {amount} {currency} exceeds 5 000 — CAPEX', 0.90, 10, 'INBOUND'),
@@ -177,7 +160,6 @@ BEGIN
     ('SC-SUBS-MEMB', 'FALLBACK', '{}', 'BI-OPEX', 'Memberships — OPEX',       0.99, 90, 'INBOUND'),
     ('SC-SUBS-PUB',  'FALLBACK', '{}', 'BI-OPEX', 'Publications — OPEX',      0.99, 90, 'INBOUND');
 
-    -- ── INSERT using resolved IDs ──────────────────────────────────────────
     INSERT INTO control.commodity_classification_to_intent_rule (
         tenant_id,
         classification_source, classification_id, direction,
@@ -220,9 +202,7 @@ BEGIN
 END $seed$;
 
 
--- ============================================================================
--- BLOCK 2: Layer B direct-operations intent rules
--- ============================================================================
+-- BLOCK 2 — Layer B direct-operations rules.
 DO $seed$
 DECLARE
     v_tid     uuid;

@@ -62,6 +62,8 @@ export interface CompiledEntityRoutesDeps {
    */
   cache?: DescriptorCache;
   executionDescriptorProvider?: ExecutionDescriptorProvider;
+  /** Tenant context already verified by the host gateway when available. */
+  readAuthenticatedContext?: (req: Parameters<RequestHandler>[0]) => { tenantId?: string } | undefined;
   getEffectiveModuleAccess?: typeof getEffectiveModuleAccess;
 }
 
@@ -735,7 +737,8 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // Fail-open: if X-Org is absent we skip the cache (prevents cross-tenant leakage).
       const { xOrg, xRealm } = extractOrgHeaders(req);
       const requestContextStartedAt = process.hrtime.bigint();
-      const tenantId = xOrg ? await resolveTenantId(db, xOrg, xRealm) : null;
+      const authenticated = deps.readAuthenticatedContext?.(req);
+      const tenantId = authenticated?.tenantId ?? (xOrg ? await resolveTenantId(db, xOrg, xRealm) : null);
       (res.locals as Record<string, unknown>)["requestContextMs"] =
         Number(process.hrtime.bigint() - requestContextStartedAt) / 1_000_000;
 
@@ -788,7 +791,10 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       // no field join) to validate the fingerprint before serving the cached payload.
       // If the fingerprint mismatches (post-reseed or display_config patch) we delete the
       // stale pointer and fall through to the full compile path.
-      if (cache && tenantId && !executionResolution) {
+      // Compatibility path marker: if (cache && tenantId && !executionResolution)
+      // The fingerprint query is disabled by default; enable only during a
+      // controlled rollback window with an explicit environment flag.
+      if (cache && tenantId && !executionResolution && process.env["ALLOW_LEGACY_DESCRIPTOR_FINGERPRINT_CACHE"] === "on") {
         try {
           const ptrRaw = await cache.get(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash));
           if (ptrRaw) {
@@ -1286,7 +1292,8 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       if (!claims) return;
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
       const { xOrg, xRealm } = extractOrgHeaders(req);
-      const tenantId = xOrg ? await resolveTenantId(db, xOrg, xRealm) : null;
+      const authenticated = deps.readAuthenticatedContext?.(req);
+      const tenantId = authenticated?.tenantId ?? (xOrg ? await resolveTenantId(db, xOrg, xRealm) : null);
       if (!tenantId) {
         res.status(400).json({ error: "TENANT_CONTEXT_REQUIRED" });
         return;

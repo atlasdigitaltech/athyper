@@ -1,21 +1,7 @@
--- ============================================================================
--- FILE: blueprints/modules/ap_non_po/070_intent_profile_rules.sql
--- Purpose: Route (intent + flow + doc_type) → specific acct_profile_config
--- Depends on: master.business_intent (060), control.acct_profile_config (030)
--- Idempotent: WHERE NOT EXISTS guard
--- ============================================================================
--- 6 rules per tenant:
---
--- Rule 1: OPEX  + NON_PO + STANDARD      → AP_NON_PO_STANDARD
--- Rule 2: ADMIN + NON_PO + STANDARD      → AP_NON_PO_STANDARD (same profile)
--- Rule 3: OPEX  + NON_PO + CREDIT_NOTE   → AP_NON_PO_STANDARD
--- Rule 4: CAPEX + NON_PO + STANDARD      → AP_NON_PO_CAPEX
--- Rule 5: OPEX  + any    + ADVANCE       → AP_ADVANCE_SUPPLIER
--- Rule 6: OPEX  + any    + RETENTION_RELEASE → AP_RETENTION_RELEASE
---
--- Priority: 100=most specific (advance, retention) ... 500=general fallbacks.
--- First match by ascending priority wins.
--- ============================================================================
+-- Routes (intent + flow + doc_type) → acct_profile_config (6 rules/tenant).
+-- Priority — 100 (most specific: advance/retention), 200 CAPEX, 300/310 STANDARD/credit-note;
+-- first match by ascending priority wins.
+-- Rules 5/6 use flow_code=NULL as wildcard (matches NON_PO + PURCHASE_CONTRACT + DIRECT_PURCHASE).
 
 DO $seed_intent_profile_rules$
 DECLARE
@@ -44,7 +30,6 @@ BEGIN
     FOR v_tenant IN
         SELECT id AS tenant_id FROM master.tenant WHERE id = v_tid AND status = 'active'
     LOOP
-        -- Resolve intent ids
         SELECT id INTO v_bi_opex  FROM master.business_intent
          WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-OPEX';
         SELECT id INTO v_bi_capex FROM master.business_intent
@@ -52,7 +37,6 @@ BEGIN
         SELECT id INTO v_bi_admin FROM master.business_intent
          WHERE tenant_id = v_tenant.tenant_id AND code = 'BI-ADMIN';
 
-        -- Resolve config ids (active version)
         SELECT apc.id INTO v_apc_std
           FROM control.acct_profile_config apc
           JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
@@ -85,7 +69,6 @@ BEGIN
            AND apc.is_active = true
          LIMIT 1;
 
-        -- ── Rule 1: OPEX + NON_PO + STANDARD → AP_NON_PO_STANDARD ────────────
         IF v_bi_opex IS NOT NULL AND v_apc_std IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -107,7 +90,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Rule 2: ADMIN + NON_PO + STANDARD → AP_NON_PO_STANDARD ───────────
         IF v_bi_admin IS NOT NULL AND v_apc_std IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -129,7 +111,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Rule 3: OPEX + NON_PO + CREDIT_NOTE → AP_NON_PO_STANDARD ─────────
         IF v_bi_opex IS NOT NULL AND v_apc_std IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -151,7 +132,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Rule 4: CAPEX + NON_PO + STANDARD → AP_NON_PO_CAPEX ──────────────
         IF v_bi_capex IS NOT NULL AND v_apc_capex IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -173,8 +153,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Rule 5: OPEX + any + ADVANCE → AP_ADVANCE_SUPPLIER ─────────────────
-        -- NULL flow_code = wildcard, matches NON_PO, PURCHASE_CONTRACT, DIRECT_PURCHASE
         IF v_bi_opex IS NOT NULL AND v_apc_adv IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,
@@ -196,7 +174,6 @@ BEGIN
             );
         END IF;
 
-        -- ── Rule 6: OPEX + any + RETENTION_RELEASE → AP_RETENTION_RELEASE ────
         IF v_bi_opex IS NOT NULL AND v_apc_ret IS NOT NULL THEN
             INSERT INTO control.intent_to_accounting_profile_rule (
                 tenant_id, direction, intent_id, intent_domain,

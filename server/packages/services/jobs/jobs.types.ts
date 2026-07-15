@@ -34,7 +34,7 @@ export const QUEUE_NAME = {
   TIKA_EXTRACT:    "jobs-tika-extract",
   /** PostgreSQL backup — pg_dump | gzip → object storage; schedule driven by control.cron_schedule */
   BACKUP:          "jobs-backup",
-  /** Stale edit-session lock cleanup — DELETE control.record_edit_lock WHERE expires_at < now() */
+  /** Stale document edit-lock cleanup — DELETE control.record_edit_lock WHERE expires_at < now() */
   STALE_LOCK:      "jobs-stale-lock",
 } as const;
 
@@ -78,6 +78,8 @@ export const JOB_NAME = {
   EXTRACT_TEXT: "extract-text",
   /** outbox purge: delete completed event.outbox rows older than the retention window */
   OUTBOX_PURGE: "outbox-purge",
+  /** purge orphaned attachment versions and schedule object deletion */
+  CLEAN_ORPHANS: "clean-orphans",
   /** pg-dump backup: run pg_dump, gzip, upload to object storage, prune old files */
   DB_BACKUP: "pg-dump",
 } as const;
@@ -92,7 +94,7 @@ export function drainJobName(topic: string): string {
 
 // ─── Domain outbox topics ─────────────────────────────────────────────────────
 
-export const DRAIN_TOPICS = ["fin", "wf", "audit", "search"] as const;
+export const DRAIN_TOPICS = ["fin", "wf", "audit", "search", "notification", "entity_mutation"] as const;
 export type DrainTopic = (typeof DRAIN_TOPICS)[number];
 
 // ─── Scheduler IDs (BullMQ upsertJobScheduler keys) ──────────────────────────
@@ -114,6 +116,7 @@ export const SCHEDULER_ID = {
   TIKA_EXTRACT_SWEEP:          "sched:tika-extract-sweep",
   OUTBOX_PURGE:                "sched:outbox-purge",
   STALE_LOCK_SWEEP:            "sched:stale-lock-sweep",
+  ORPHAN_CLEANUP:              "sched:orphan-cleanup",
 } as const;
 
 // ─── Job payload types ────────────────────────────────────────────────────────
@@ -207,7 +210,13 @@ export type KcSyncJobData = Record<string, never>;
 /** Attachment text extraction — Tika POSTs the blob, worker writes extracted_text back */
 export interface ExtractTextJobData {
   attachmentId: string;
-  tenantId:     string;
+  tenantId:      string;
+  versionNo?:    number;
+  sha256?:       string;
+}
+
+export interface OrphanCleanupJobData {
+  attachmentId?: string;
 }
 
 /** PostgreSQL backup: override the default env-based connection URL or target bucket */
@@ -288,5 +297,6 @@ export const DEFAULT_INTERVALS = {
   ENDPOINT_HEALTH_SWEEP_MS:        300_000,      // 5 min  — endpoint health probe cadence per task spec
   TIKA_EXTRACT_SWEEP_MS:           600_000,      // 10 min — catches rows missed by the inline enqueue (upload race, worker restarts, backfill)
   OUTBOX_PURGE_SWEEP_MS:           3_600_000,    // 1 h    — housekeeping; deletes completed rows older than retention (function default 7d)
-  STALE_LOCK_SWEEP_MS:             300_000,      // 5 min  — evicts expired edit-session locks; matches default lock TTL
+  STALE_LOCK_SWEEP_MS:             300_000,      // 5 min  — evicts expired document edit locks; matches default lock TTL
+  ORPHAN_CLEANUP_SWEEP_MS:         900_000,      // 15 min — orphan cleanup sweep for quarantined/failed attachments
 } as const;

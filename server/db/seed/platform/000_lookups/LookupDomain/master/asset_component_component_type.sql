@@ -1,7 +1,4 @@
--- LookupDomain/master/asset_component_component_type.sql
--- Lookup values for domain: master.asset_component.component_type
--- IAS 16 componentization role for an asset component.
--- Idempotent: WHERE NOT EXISTS guard
+-- Values model the IAS 16 componentization role of an asset component.
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)

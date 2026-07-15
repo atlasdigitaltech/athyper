@@ -1,8 +1,4 @@
--- LookupDomain/control/ai_doc_class.sql
--- Lookup values for domain: control.ai_doc_class
--- 8 platform-defined document classes used to scope ai_action_policy and
--- ai_confidence_threshold rows.  NULL doc_class in those tables = catch-all.
--- Idempotent: WHERE NOT EXISTS guard
+-- NULL doc_class in ai_action_policy / ai_confidence_threshold = catch-all (applies to any class).
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

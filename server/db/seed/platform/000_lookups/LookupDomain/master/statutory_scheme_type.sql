@@ -1,8 +1,5 @@
--- LookupDomain/master/statutory_scheme_type.sql
--- Lookup values for domain: master.statutory_scheme_type
--- Values MUST match the DB check constraint statutory_scheme_type_chk:
---   ('pension', 'social_security', 'income_tax', 'healthcare', 'workers_comp', 'other')
--- Idempotent: WHERE NOT EXISTS guard
+-- Values MUST stay in sync with the DB CHECK constraint statutory_scheme_type_chk:
+-- ('pension','social_security','income_tax','healthcare','workers_comp','other').
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)

@@ -14,6 +14,7 @@ import {
   resolveTenantId,
   verifyBearer,
 } from "@athyper/svc-shared";
+import { isActiveApproverFor } from "@athyper/svc-workflow";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -48,11 +49,13 @@ interface EntityOperationRow {
   placement: string;
   handler_type: string;
   handler_target: string | null;
+  execution_target: string | null;
   is_record_required: boolean;
   sort_order: number;
   label_override: string | null;
   icon_override: string | null;
   is_enabled: boolean;
+  selection_config: unknown;
   tenant_id: string | null;
   permission_risk_level: string;
   permission_metadata: unknown;
@@ -99,6 +102,7 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
 
   const handler: RequestHandler = async (req, res, next) => {
     try {
+      const recordOverlayOnly = req.path.endsWith("/record-operations");
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
 
@@ -122,6 +126,20 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
         return;
       }
 
+      // Optional record-context query param. When provided, the route gates
+      // workflow_task operations (approve / deny / request_info) on whether
+      // the principal is the active approver for this record. When absent,
+      // workflow_task ops stay dropped — entity-level callers (list views,
+      // bulk pages) have no record to gate against.
+      const recordIdParam = typeof req.query["recordId"] === "string"
+        ? req.query["recordId"].trim()
+        : "";
+      const recordId = recordIdParam.length > 0 ? recordIdParam : null;
+      if (recordOverlayOnly && !recordId) {
+        res.status(400).json({ error: "RECORD_ID_REQUIRED" });
+        return;
+      }
+
       // Phase 4: prefer the EffectivePermissionContext built upstream by the
       // permission-context middleware (Phase 2). When the middleware has run,
       // res.locals.effectivePermissionContext carries the allowed set already,
@@ -134,13 +152,22 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
         | undefined;
 
       let permissionDecisions: Record<string, { decision: string } | undefined>;
+      let principalId: string | null = null;
       if (upstreamCtx) {
         permissionDecisions = decisionsFromContext(upstreamCtx);
+        // Upstream-ctx path doesn't resolve principalId — only resolve when
+        // we actually need it for the active-approver gate, which costs one
+        // extra DB round-trip on record-context calls only.
+        if (recordId) {
+          principalId = sub
+            ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
+            : null;
+        }
       } else {
         // Guaranteed by the early-return guard above, but TypeScript can't
         // narrow `checkPermissionBatch` across that branch.
         if (!checkPermissionBatch) { res.json([]); return; }
-        const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
+        principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
         const personaRow = await db
           .selectFrom("master.principal_persona as pp" as never)
           .select(["pp.persona_id"] as never[])
@@ -156,6 +183,13 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
         );
       }
 
+      // Active-approver gate: only run when we have both a record context and
+      // a resolved principalId. Result is folded into the flatMap below to
+      // decide whether workflow_task ops are emitted.
+      const isActiveApprover = recordId && principalId
+        ? await isActiveApproverFor({ db, tenantId, principalId, entityCode, recordId })
+        : false;
+
       const rows = await loadOperationRows(db, entityCode, tenantId);
       const lifecycleTransitions = await loadLifecycleTransitions(db, entityCode, tenantId);
       const seen = dedupeTenantOperations(rows);
@@ -167,7 +201,12 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
           if (decision !== "allow") return [];
 
           const metadata = asRecord(row.permission_metadata);
-          if (isWorkflowTaskOperation(row, metadata)) return [];
+          // workflow_task ops (approve / deny / request_info) only render when
+          // the principal is the active approver for this specific record.
+          // Without a record context — or when the principal isn't the active
+          // approver — drop them so a stale workflow.approve permission grant
+          // can't surface those buttons against records routed elsewhere.
+          if (isWorkflowTaskOperation(row, metadata) && !isActiveApprover) return [];
 
           const transitions = lifecycleTransitions.get(row.permission_code) ?? [];
           return [{
@@ -178,6 +217,7 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
             placement: row.placement,
             handler_type: row.handler_type,
             handler_target: row.handler_target,
+            execution_target: row.execution_target,
             is_record_required: row.is_record_required,
             sort_order: row.sort_order,
             label_override: row.label_override,
@@ -190,11 +230,21 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
             requires_reason: resolveRequiresReason(metadata, transitions),
             source: transitions.length > 0 ? "lifecycle_transition" : "entity_operation",
             permission_decision: decision,
+            selection_config: row.selection_config,
             lifecycle_transitions: transitions.length > 0 ? transitions : undefined,
           }];
         });
 
-      res.json(operations);
+      if (recordOverlayOnly) {
+        res.json({
+          schemaVersion: 1,
+          entityCode,
+          recordId: recordId!,
+          operations: operations.filter((operation) => operation.action_group === "workflow_task"),
+        });
+      } else {
+        res.json(operations);
+      }
     } catch (err) {
       logger?.error("entity_operations_route_error", { err: String(err) });
       next(err);
@@ -202,7 +252,48 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
   };
 
   router.get("/metadata/entities/:entity/operations", handler);
+  router.get("/metadata/entities/:entity/record-operations", handler);
   return router;
+}
+
+/** Principal-agnostic operation declarations for the cached runtime bootstrap. */
+export async function loadPublicEntityOperations(
+  db: AnyDb,
+  entityCode: string,
+  tenantId: string,
+): Promise<Array<Record<string, unknown>>> {
+  const rows = await loadOperationRows(db, entityCode, tenantId);
+  const lifecycleTransitions = await loadLifecycleTransitions(db, entityCode, tenantId);
+  return [...dedupeTenantOperations(rows).values()]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .flatMap((row) => {
+      const metadata = asRecord(row.permission_metadata);
+      if (isWorkflowTaskOperation(row, metadata)) return [];
+      const transitions = lifecycleTransitions.get(row.permission_code) ?? [];
+      return [{
+        id: row.id,
+        entity_name: row.entity_name,
+        permission_code: row.permission_code,
+        surface: row.surface,
+        placement: row.placement,
+        handler_type: row.handler_type,
+        handler_target: row.handler_target,
+        execution_target: row.execution_target,
+        is_record_required: row.is_record_required,
+        sort_order: row.sort_order,
+        label_override: row.label_override,
+        icon_override: row.icon_override,
+        is_enabled: row.is_enabled,
+        disabled_reason: null,
+        action_group: resolveActionGroup(row, metadata, transitions),
+        intent: resolveIntent(row, metadata),
+        requires_confirmation: resolveRequiresConfirmation(row, metadata),
+        requires_reason: resolveRequiresReason(metadata, transitions),
+        source: transitions.length > 0 ? "lifecycle_transition" : "entity_operation",
+        selection_config: row.selection_config,
+        lifecycle_transitions: transitions.length > 0 ? transitions : undefined,
+      }];
+    });
 }
 
 async function loadOperationRows(
@@ -222,11 +313,13 @@ async function loadOperationRows(
       "eo.placement",
       "eo.handler_type",
       "eo.handler_target",
+      "eo.execution_target",
       "eo.is_record_required",
       "eo.sort_order",
       "eo.label_override",
       "eo.icon_override",
       "eo.is_enabled",
+      "eo.selection_config",
       "eo.tenant_id",
       "p.risk_level as permission_risk_level",
       "p.metadata as permission_metadata",
@@ -323,6 +416,11 @@ function resolveActionGroup(
 ): ActionGroup {
   const explicit = readActionGroup(metadata, "action_group") ?? readActionGroup(metadata, "actionGroup");
   if (explicit) return explicit;
+  // Workflow-task ops (approve / deny / request_info / return / reject) must
+  // self-classify so chrome filters keyed on `action_group === "workflow_task"`
+  // (e.g. edit-mode hides forward-only ops) actually match. Detected via
+  // permission_category_code === "workflow" + WORKFLOW_TASK_DECISIONS leaf.
+  if (isWorkflowTaskOperation(row, metadata)) return "workflow_task";
   if (transitions.length > 0) return "lifecycle";
   if (RECORD_CATEGORY_CODES.has(row.permission_category_code)) return "record";
   return "general";

@@ -6,7 +6,7 @@ import { DrawerShell } from "@athyper/ui/primitives";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { relayMutate } from "@athyper/runtime-shared/client";
-import { useEditSessionContext } from "@athyper/content-ui";
+import { useEditDraftContext } from "@athyper/content-ui";
 import {
   type LineRecord,
   MetaFieldInput,
@@ -58,7 +58,7 @@ export function MassEditSheet({
   // applies the deltas to each selected line via `editSession.updateLine`
   // — same payload, just queued into the bundle instead of dispatched as
   // parallel per-line PATCHes. Action-bar Save commits all atomically.
-  const editSession = useEditSessionContext();
+  const editSession = useEditDraftContext();
 
   useEffect(() => {
     if (!open) return;

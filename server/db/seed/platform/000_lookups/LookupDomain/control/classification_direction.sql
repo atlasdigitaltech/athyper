@@ -1,8 +1,5 @@
--- LookupDomain/control/classification_direction.sql
--- Lookup values for domain: control.classification_direction
--- Flow direction scope for commodity_classification_to_intent_rule.direction.
--- Lookup codes are lowercase; commodity_classification_to_intent_rule stores uppercase.
--- Idempotent: WHERE NOT EXISTS guard
+-- Codes are lowercase; commodity_classification_to_intent_rule.direction stores uppercase
+-- (EnumRenderer does case-insensitive matching).
 
 INSERT INTO control.lookup_value
     (code, name, domain_code, sort_order, is_system, status, created_by)

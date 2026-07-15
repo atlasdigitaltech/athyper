@@ -56,7 +56,7 @@ BEGIN
         -- Day -10: created in draft
         (v_tenant_id, 'document', 'document.created', 'purchase_invoice', v_inv_a1,
          NULL, v_cc_id,
-         '{"message": "Invoice INV-A1-0001 created in draft", "invoice_number": "INV-A1-0001", "amount": 2500.00}',
+         '{"message": "Invoice INV-A1-0001 created in draft", "code": "INV-A1-0001", "amount": 2500.00}',
          v_sys, v_t0),
 
         -- Day -9: lines updated
@@ -114,7 +114,7 @@ BEGIN
         -- Day -5: created in draft
         (v_tenant_id, 'document', 'document.created', 'purchase_invoice', v_inv_a3,
          NULL, v_cc_id,
-         '{"message": "Invoice INV-A3-0001 created in draft", "invoice_number": "INV-A3-0001", "amount": 1000.00, "wht_amount": 100.00}',
+         '{"message": "Invoice INV-A3-0001 created in draft", "code": "INV-A3-0001", "amount": 1000.00, "wht_amount": 100.00}',
          v_sys, v_t0 + interval '5 days'),
 
         -- Day -4: line added with WHT group
@@ -148,7 +148,7 @@ BEGIN
         -- Created in draft
         (v_tenant_id, 'document', 'document.created', 'purchase_invoice', v_inv_a4,
          NULL, v_cc_id,
-         '{"message": "Invoice INV-A4-0001 created in draft", "invoice_number": "INV-A4-0001", "tax_mode": "tax_inclusive"}',
+         '{"message": "Invoice INV-A4-0001 created in draft", "code": "INV-A4-0001", "tax_mode": "tax_inclusive"}',
          v_sys, v_t0 + interval '5 days'),
 
         -- Tax lines added (WHT + VAT)
@@ -176,7 +176,7 @@ BEGIN
         -- Created in draft
         (v_tenant_id, 'document', 'document.created', 'purchase_invoice', v_inv_a7,
          NULL, v_cc_id,
-         '{"message": "Invoice INV-A7-0001 created in draft with advance recovery deduction", "invoice_number": "INV-A7-0001"}',
+         '{"message": "Invoice INV-A7-0001 created in draft with advance recovery deduction", "code": "INV-A7-0001"}',
          v_sys, v_t0 + interval '5 days'),
 
         -- Advance deduction linked
@@ -204,7 +204,7 @@ BEGIN
         -- Created in draft
         (v_tenant_id, 'document', 'document.created', 'purchase_invoice', v_inv_a8,
          NULL, v_cc_id,
-         '{"message": "Invoice INV-A8-0001 created in draft with 10% retention hold", "invoice_number": "INV-A8-0001"}',
+         '{"message": "Invoice INV-A8-0001 created in draft with 10% retention hold", "code": "INV-A8-0001"}',
          v_sys, v_t0 + interval '5 days'),
 
         -- Retention amount set

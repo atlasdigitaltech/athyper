@@ -1,7 +1,3 @@
--- LookupDomain/master/bank_party_national_bank_code_type.sql
--- Lookup values for domain: master.bank_party_national_bank_code_type
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('aba',        'ABA Routing',        'master.bank_party_national_bank_code_type', 'US routing transit number',          10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

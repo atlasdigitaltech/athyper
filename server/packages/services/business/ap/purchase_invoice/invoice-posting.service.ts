@@ -10,11 +10,13 @@
  *   3. Creates document.accounting_distribution rows linking each line to the JE
  *   4. Updates commitment_line.invoiced_quantity for PO-based lines
  *   5. Creates document.asset_transaction for lines whose distribution has asset_id set
- *   6. Updates invoice: status → 'posted', ap_je_id, is_posted, posted_at/by
+ *   6. Materializes posting fields (ap_je_id, is_posted, posted_at/by)
+ *      after the lifecycle orchestrator has transitioned the invoice to 'posted'
  *
  * handleReverseInvoice:
  *   Creates a credit-note (reversal) invoice that mirrors this invoice with
- *   all amounts negated. status → 'reversed' on the original.
+ *   all amounts negated. The lifecycle orchestrator owns the original invoice's
+ *   transition to 'reversed'.
  *
  * Posting account resolution:
  *   1. Line's commodity_category + business_intent -> commodity_category_buy_policy
@@ -31,27 +33,22 @@ import { postInvoiceTaxCalculations, reverseInvoiceTaxCalculations } from "./tax
 import { deriveApInvoiceProfile } from "./acct-profile-derivation.service.js";
 import { buildJeLinesFromProfile } from "./journal-from-profile.service.js";
 import type { InvoiceLineCtx, InvoiceCtx, PostingCtx } from "./journal-from-profile.service.js";
-import { syncBusinessLifecycle, type BusinessLifecycleSyncHook } from "../../lifecycle/lifecycle-sync-hook.js";
+import type { BusinessLifecycleSyncHook } from "../../lifecycle/lifecycle-sync-hook.js";
 import { withDomainSpan } from "@athyper/svc-shared";
-import { createHash } from "node:crypto";
 import { postJournalGl } from "../../ledger/post-journal-gl.service.js";
+import { refreshDistributionCostBasis } from "../../pricing_component/component-accounting-loader.service.js";
+import type { ComponentAccountingAllocation } from "../../pricing_component/component-accounting-resolver.service.js";
+import { reconcilePurchaseOrderInvoicing } from "../../p2p/purchase_order/purchase-order-reconciliation.service.js";
 
 /**
- * Optional dispatch context. Passed by transaction-flow-dispatcher when this
- * service is invoked via the lifecycle hook path; omitted by the existing
- * route-handler callers. When omitted, the post-journal-gl helper synthesises
- * an execution token from the JE id so retries are still idempotent.
+ * Required execution context supplied only by transaction-flow.dispatch.
+ * Direct route invocation is rejected to preserve single lifecycle ownership.
  */
 export interface InvoicePostingDispatchCtx {
+  executionMode:       "lifecycle_hook";
   executionToken:     string;
   transitionId:       string;
   transitionEventSeq?: number;
-}
-
-const POSTING_SENTINEL_TRANSITION_ID = "00000000-0000-0000-0000-000000000000";
-
-function synthExecutionToken(jeId: string): string {
-  return createHash("sha256").update(`je-post:${jeId}`).digest("hex");
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -212,6 +209,19 @@ async function nextJeCode(db: AnyDb, tenantId: string, companyId: string): Promi
 
 // ── Post invoice ──────────────────────────────────────────────────────────────
 
+function bucketAmountByLine(
+  rows: ComponentAccountingAllocation[],
+  positive: ComponentAccountingAllocation["componentBucket"][],
+  negative: ComponentAccountingAllocation["componentBucket"][],
+): Map<string, number> {
+  const result = new Map<string, number>();
+  for (const row of rows) {
+    const sign = positive.includes(row.componentBucket) ? 1 : negative.includes(row.componentBucket) ? -1 : 0;
+    if (sign !== 0) result.set(row.sourceLineId, (result.get(row.sourceLineId) ?? 0) + sign * row.amount);
+  }
+  return result;
+}
+
 export async function handlePostInvoice(
   db:          AnyDb,
   tenantId:    string,
@@ -222,13 +232,24 @@ export async function handlePostInvoice(
   lifecycleSync?: BusinessLifecycleSyncHook,
   dispatchCtx?: InvoicePostingDispatchCtx,
 ): Promise<HandlerResult> {
+  if (dispatchCtx?.executionMode !== "lifecycle_hook") {
+    return {
+      status: 409,
+      body: {
+        error: "LIFECYCLE_HOOK_EXECUTION_REQUIRED",
+        message: "Purchase-invoice posting may only run from transaction_flow.dispatch.",
+      },
+    };
+  }
   return withDomainSpan("finance.invoice.post", {
     tenant_id: tenantId,
     invoice_id: invoiceId,
     actor_id: principalId ?? "system",
     operation: "post_invoice",
   }, async (span) => {
-    const result = await handlePostInvoiceInner(db, tenantId, invoiceId, principalId, body, logger, lifecycleSync, dispatchCtx);
+    const result = await handlePostInvoiceInner(
+      db, tenantId, invoiceId, principalId, body, dispatchCtx, logger, lifecycleSync,
+    );
     span.setAttribute("result.status_code", result.status);
     const error = result.body["error"];
     if (typeof error === "string") span.setAttribute("result.error", error);
@@ -244,15 +265,16 @@ async function handlePostInvoiceInner(
   invoiceId:   string,
   principalId: string | null,
   body:        Record<string, unknown>,
+  dispatchCtx: InvoicePostingDispatchCtx,
   logger?:     { info(e: string, f?: Record<string, unknown>): void; warn(e: string, f?: Record<string, unknown>): void },
   lifecycleSync?: BusinessLifecycleSyncHook,
-  dispatchCtx?: InvoicePostingDispatchCtx,
 ): Promise<HandlerResult> {
 
   const remarks = typeof body["remarks"] === "string" ? body["remarks"]
     : typeof body["notes"] === "string" ? body["notes"] : undefined;
 
-  return db.transaction().execute(async (trx) => {
+  return runInTransaction(db, async (trx) => {
+    const pId = principalId ?? "00000000-0000-0000-0000-000000000000";
 
     // Load + lock invoice
     const invResult = await sql<Record<string, unknown>>`
@@ -264,16 +286,14 @@ async function handlePostInvoiceInner(
     const invoice = invResult.rows[0];
     if (!invoice) return { status: 404, body: { error: "INVOICE_NOT_FOUND" } };
 
-    // Accept both 'approved' (route-handler path) and 'posted' (transition-
-    // hook path where the action-dispatcher has already updated the status
-    // column before AFTER hooks fire). is_posted is the authoritative gate
-    // for whether the work has actually run.
+    // Financial materialization runs only after the lifecycle orchestrator
+    // has transitioned the invoice to the target state.
     const currentStatus = String(invoice["status"] ?? "").toLowerCase();
-    const isAlreadyPosted = Boolean(invoice["is_posted"]);
-    if (currentStatus !== "approved" && currentStatus !== "posted") {
+    const isAlreadyPosted = Boolean(invoice["ap_je_id"]);
+    if (currentStatus !== "posted") {
       return {
         status: 422,
-        body: { error: "INVALID_STATUS", message: `Invoice is in '${currentStatus}' — must be 'approved' or 'posted' to run posting` },
+        body: { error: "INVALID_STATUS", message: `Invoice is in '${currentStatus}' — lifecycle target 'posted' is required` },
       };
     }
     if (isAlreadyPosted) {
@@ -284,7 +304,13 @@ async function handlePostInvoiceInner(
     }
 
     // Must have lines
-    const lineCount = Number(invoice["line_count"] ?? 0);
+    const lineCountRows = await sql<{ line_count: string }>`
+      SELECT COUNT(*)::text AS line_count
+        FROM document.purchase_invoice_line
+       WHERE tenant_id = ${tenantId}::uuid
+         AND purchase_invoice_id = ${invoiceId}::uuid
+    `.execute(trx);
+    const lineCount = Number(lineCountRows.rows[0]?.line_count ?? 0);
     if (lineCount === 0) {
       return { status: 422, body: { error: "NO_LINES", message: "Invoice has no lines to post" } };
     }
@@ -302,6 +328,37 @@ async function handlePostInvoiceInner(
       };
     }
 
+    const componentProjection = await refreshDistributionCostBasis(trx, {
+      tenantId,
+      sourceDocType: "purchase_invoice_line",
+      sourceDocId: invoiceId,
+      principalId: pId,
+      final: true,
+    });
+    const projectedCostByLine = bucketAmountByLine(componentProjection.allocations,
+      ["BASE_COST", "COST_ADDITION", "NONRECOVERABLE_TAX"], ["COST_REDUCTION"]);
+    const projectedRecoverableTaxByLine = bucketAmountByLine(componentProjection.allocations,
+      ["RECOVERABLE_TAX"], []);
+    const projectedTotal = componentProjection.totals.DISTRIBUTABLE_COST
+      + componentProjection.totals.RECOVERABLE_TAX;
+    await sql`
+      UPDATE document.purchase_invoice
+         SET total_amount = ${projectedTotal},
+             tax_amount = ${componentProjection.totals.RECOVERABLE_TAX + componentProjection.totals.NONRECOVERABLE_TAX},
+             withholding_tax_amount = ${componentProjection.totals.WHT_LIABILITY},
+             retention_amount = ${componentProjection.totals.RETENTION_LIABILITY},
+             updated_at = now(), updated_by = ${pId}::uuid
+       WHERE tenant_id = ${tenantId}::uuid AND id = ${invoiceId}::uuid
+    `.execute(trx);
+    invoice["total_amount"] = projectedTotal;
+    invoice["tax_amount"] = componentProjection.totals.RECOVERABLE_TAX;
+    invoice["withholding_tax_amount"] = componentProjection.totals.WHT_LIABILITY;
+    invoice["retention_amount"] = componentProjection.totals.RETENTION_LIABILITY;
+    invoice["payable_amount"] = projectedTotal
+      - componentProjection.totals.WHT_LIABILITY
+      - componentProjection.totals.RETENTION_LIABILITY
+      - Number(invoice["advance_deduction_amount"] ?? 0);
+
     const companyId       = String(invoice["company_code_id"] ?? "");
     const currencyCode    = String(invoice["currency_code"] ?? "");
     const baseCurrencyCode = String(invoice["base_currency_code"] ?? currencyCode);
@@ -311,8 +368,7 @@ async function handlePostInvoiceInner(
     // AP sign convention: credit_note = supplier credit memo (reduces liability);
     // debit_note = buyer-issued debit memo to supplier (also reduces AP liability).
     // Both invert the JE: DR AP Control / CR Expense instead of DR Expense / CR AP Control.
-    const isCreditNote    = invoice["is_credit_note"] === true
-                            || invoiceType === "credit_note"
+    const isCreditNote    = invoiceType === "credit_note"
                             || invoiceType === "debit_note";
     const now             = new Date();
 
@@ -355,7 +411,7 @@ async function handlePostInvoiceInner(
       FROM   document.purchase_invoice_line pil
       LEFT JOIN document.accounting_distribution ad
              ON ad.tenant_id        = pil.tenant_id
-            AND ad.source_doc_type  = 'PURCHASE_INVOICE_LINE'
+            AND ad.source_doc_type  = 'purchase_invoice_line'
             AND ad.source_doc_id    = pil.purchase_invoice_id
             AND ad.source_line_id   = pil.id
             AND ad.distribution_no  = 1
@@ -492,7 +548,6 @@ async function handlePostInvoiceInner(
     // configured for input-tax-recoverable), fall back to the legacy
     // hard-coded Dr Expense / Cr AP / Cr WHT path.
 
-    const pId = principalId ?? "00000000-0000-0000-0000-000000000000";
 
     // Dominant intent = business_intent_id of the line with the largest |net_amount|.
     // Used by deriveApInvoiceProfile (Step 1) to route OPEX → AP_NON_PO_STANDARD
@@ -541,8 +596,8 @@ async function handlePostInvoiceInner(
       id:               l.id,
       lineNo:           l.line_no,
       description:      l.item_description,
-      netAmount:        Number(l.net_amount),
-      taxAmount:        Number(l.tax_amount),
+      netAmount:        projectedCostByLine.get(l.id) ?? Number(l.net_amount),
+      taxAmount:        projectedRecoverableTaxByLine.get(l.id) ?? Number(l.tax_amount),
       whtAmount:        Number(l.withholding_tax_amount),
       spendCategoryId:  l.commodity_category_id,
       businessIntentId: l.business_intent_id,
@@ -594,7 +649,7 @@ async function handlePostInvoiceInner(
       for (const line of lines) {
         const distAccountId = profileResult.lineAccountMap.get(line.id);
         if (distAccountId) {
-          const lineAmount = Math.abs(Number(line.net_amount) + Number(line.tax_amount));
+          const lineAmount = Math.abs(projectedCostByLine.get(line.id) ?? Number(line.net_amount));
           // AD default 1:1 row was created by accounting.default_distribution
           // when the PIL was inserted. Stamp the resolved GL account + final
           // distributed amount here (Stage 3 final-posting UPDATE).
@@ -612,7 +667,7 @@ async function handlePostInvoiceInner(
                      END AS document_amount
                 FROM document.accounting_distribution ad
                WHERE ad.tenant_id        = ${tenantId}
-                 AND ad.source_doc_type  = 'PURCHASE_INVOICE_LINE'
+                 AND ad.source_doc_type  = 'purchase_invoice_line'
                  AND ad.source_doc_id    = ${invoiceId}
                  AND ad.source_line_id   = ${line.id}
             )
@@ -620,8 +675,6 @@ async function handlePostInvoiceInner(
                SET gl_account_id           = ${distAccountId},
                    account_source          = 'PROFILE',
                    distributed_amount      = calculated.document_amount,
-                   distributed_amount_base = calculated.document_amount * ${exchangeRate},
-                   exchange_rate_snapshot  = ${exchangeRate},
                    currency_code           = ${currencyCode},
                    updated_at              = now(),
                    updated_by              = ${pId}
@@ -662,7 +715,7 @@ async function handlePostInvoiceInner(
             FROM document.accounting_distribution ad
             JOIN master.asset_book ab ON ab.asset_id = ad.asset_id AND ab.tenant_id = ${tenantId}
             WHERE ad.tenant_id        = ${tenantId}
-              AND ad.source_doc_type  = 'PURCHASE_INVOICE_LINE'
+              AND ad.source_doc_type  = 'purchase_invoice_line'
               AND ad.source_line_id   = ${line.id}
               AND ad.asset_id IS NOT NULL
             LIMIT 1
@@ -697,10 +750,13 @@ async function handlePostInvoiceInner(
           };
         }
 
-        const lineNetBase  = Number(line.net_amount) * exchangeRate;
-        const lineTaxBase  = Number(line.tax_amount) * exchangeRate;
+        const projectedLineCost = projectedCostByLine.get(line.id) ?? Number(line.net_amount);
+        const projectedLineTax = projectedRecoverableTaxByLine.get(line.id) ?? Number(line.tax_amount);
+        const lineNetBase  = projectedLineCost * exchangeRate;
+        const lineTaxBase  = projectedLineTax * exchangeRate;
         // Math.abs: credit-note lines may be negative; JE amounts are always non-negative.
-        const lineAmount   = Math.abs(Number(line.net_amount) + Number(line.tax_amount));
+        const lineAmount   = Math.abs(projectedLineCost + projectedLineTax);
+        const distributionAmount = Math.abs(projectedLineCost);
         const lineBase     = Math.abs(lineNetBase + lineTaxBase);
         // Standard: DR expense / CR AP.  Credit note: DR AP / CR expense (inverted).
         const lineDebit    = isCreditNote ? 0 : lineAmount;
@@ -739,17 +795,17 @@ async function handlePostInvoiceInner(
           WITH calculated AS (
             SELECT ad.id,
                    CASE ad.distribution_basis
-                     WHEN 'PERCENT'  THEN ${lineAmount} * COALESCE(ad.split_pct, 0) / 100
+                     WHEN 'PERCENT'  THEN ${distributionAmount} * COALESCE(ad.split_pct, 0) / 100
                      WHEN 'AMOUNT'   THEN ABS(COALESCE(ad.split_amount, ad.distributed_amount, 0))
                      WHEN 'QUANTITY' THEN
                        CASE WHEN ${Number(line.quantity)} = 0 THEN 0
-                            ELSE ${lineAmount} * COALESCE(ad.split_quantity, 0) / ${Number(line.quantity)}
+                            ELSE ${distributionAmount} * COALESCE(ad.split_quantity, 0) / ${Number(line.quantity)}
                        END
                      ELSE ad.distributed_amount
                    END AS document_amount
               FROM document.accounting_distribution ad
              WHERE ad.tenant_id        = ${tenantId}
-               AND ad.source_doc_type  = 'PURCHASE_INVOICE_LINE'
+               AND ad.source_doc_type  = 'purchase_invoice_line'
                AND ad.source_doc_id    = ${invoiceId}
                AND ad.source_line_id   = ${line.id}
           )
@@ -757,8 +813,6 @@ async function handlePostInvoiceInner(
              SET gl_account_id           = ${debitAccount},
                  account_source          = 'FALLBACK',
                  distributed_amount      = calculated.document_amount,
-                 distributed_amount_base = calculated.document_amount * ${exchangeRate},
-                 exchange_rate_snapshot  = ${exchangeRate},
                  currency_code           = ${currencyCode},
                  updated_at              = now(),
                  updated_by              = ${pId}
@@ -800,7 +854,7 @@ async function handlePostInvoiceInner(
             FROM document.accounting_distribution ad
             JOIN master.asset_book ab ON ab.asset_id = ad.asset_id AND ab.tenant_id = ${tenantId}
             WHERE ad.tenant_id        = ${tenantId}
-              AND ad.source_doc_type  = 'PURCHASE_INVOICE_LINE'
+              AND ad.source_doc_type  = 'purchase_invoice_line'
               AND ad.source_line_id   = ${line.id}
               AND ad.asset_id IS NOT NULL
             LIMIT 1
@@ -884,42 +938,34 @@ async function handlePostInvoiceInner(
 
     // ── Materialise gl_balance via single-source helper (Phase 5.4 R6) ───
     // postJournalGl is the only call site for ledger.upsert_gl_balance. The
-    // execution token is taken from dispatchCtx when this handler runs from
-    // the transaction-flow-dispatcher hook; otherwise we synthesise one from
-    // the JE id so retries on the route-handler path are idempotent too.
+    // Lifecycle identity is mandatory and comes from transaction_flow.dispatch.
     await postJournalGl(trx, {
       tenantId,
       jeId,
-      executionToken:     dispatchCtx?.executionToken     ?? synthExecutionToken(jeId),
-      transitionId:       dispatchCtx?.transitionId       ?? POSTING_SENTINEL_TRANSITION_ID,
-      transitionEventSeq: dispatchCtx?.transitionEventSeq,
+      executionToken:     dispatchCtx.executionToken,
+      transitionId:       dispatchCtx.transitionId,
+      transitionEventSeq: dispatchCtx.transitionEventSeq,
       sourceDocType:      "purchase_invoice",
       sourceDocId:        invoiceId,
       principalId:        principalId ?? null,
     });
 
-    // ── Update invoice: posted ────────────────────────────────────────────
-    // Gate on is_posted=false (not status='approved') because the action
-    // dispatcher may have already moved status='posted' before AFTER hooks
-    // fired. status is set idempotently — already 'posted' when reached
-    // via the hook path.
+    // ── Materialize posting fields after the orchestrated transition ──────
+    // The status='posted' predicate proves this handler is running after the
+    // lifecycle transition; ap_je_id IS NULL provides idempotency.
     const updated = await sql<Record<string, unknown>>`
       UPDATE document.purchase_invoice
-         SET status            = 'posted',
-             ap_je_id          = ${jeId},
-             is_posted         = true,
-             posted_at         = ${now},
-             posted_by         = ${principalId},
+         SET ap_je_id          = ${jeId},
              fiscal_year       = ${fp.fiscal_year},
              period_number     = ${fp.period_number},
-             status_changed_at = ${now},
-             status_changed_by = ${principalId},
+             posted_at         = ${now},
+             posted_by         = ${principalId},
              updated_at        = ${now},
              updated_by        = ${principalId}
        WHERE id        = ${invoiceId}
          AND tenant_id = ${tenantId}
-         AND is_posted = false
-         AND status IN ('approved', 'posted')
+         AND ap_je_id IS NULL
+         AND status = 'posted'
        RETURNING *
     `.execute(trx);
 
@@ -945,15 +991,10 @@ async function handlePostInvoiceInner(
       );
     }
 
-    await syncBusinessLifecycle(lifecycleSync, {
-      db: trx,
-      tenantId,
-      entityName: "purchase_invoice",
-      entityId: invoiceId,
-      status: "posted",
-      actorId: principalId,
-      payload: updated.rows[0],
-    });
+    const commitmentId = invoice["commitment_id"];
+    if (typeof commitmentId === "string" && commitmentId) {
+      await reconcilePurchaseOrderInvoicing(trx, tenantId, commitmentId, principalId ?? "00000000-0000-0000-0000-000000000000");
+    }
 
     logger?.info("ap_invoice_posted", { tenantId, invoiceId, jeId, jeCode });
     return { status: 200, body: { ok: true, record: updated.rows[0], journal_entry_id: jeId, journal_entry_code: jeCode } };
@@ -974,10 +1015,20 @@ export async function handleReverseInvoice(
   dispatchCtx?: InvoicePostingDispatchCtx,
 ): Promise<HandlerResult> {
 
+  if (dispatchCtx?.executionMode !== "lifecycle_hook") {
+    return {
+      status: 409,
+      body: {
+        error: "LIFECYCLE_HOOK_EXECUTION_REQUIRED",
+        message: "Purchase-invoice reversal may only run from transaction_flow.dispatch.",
+      },
+    };
+  }
+
   const remarks = typeof body["remarks"] === "string" ? body["remarks"]
     : typeof body["notes"] === "string" ? body["notes"] : "Invoice reversal";
 
-  return db.transaction().execute(async (trx) => {
+  return runInTransaction(db, async (trx) => {
 
     // Lock original
     const invResult = await sql<Record<string, unknown>>`
@@ -990,10 +1041,11 @@ export async function handleReverseInvoice(
     if (!invoice) return { status: 404, body: { error: "INVOICE_NOT_FOUND" } };
 
     const currentStatus = String(invoice["status"] ?? "").toLowerCase();
-    if (currentStatus !== "posted") {
+    // AFTER lifecycle hooks observe the orchestrated target state.
+    if (currentStatus !== "reversed") {
       return {
         status: 422,
-        body: { error: "INVALID_STATUS", message: `Only posted invoices can be reversed (current: '${currentStatus}')` },
+        body: { error: "INVALID_STATUS", message: `Invoice is in '${currentStatus}' — lifecycle target 'reversed' is required` },
       };
     }
 
@@ -1095,13 +1147,13 @@ export async function handleReverseInvoice(
 
     // Materialise gl_balance for the reversal JE (review finding P1 fix —
     // reversal JEs must hit gl_balance so trial balance / P&L reflect them).
-    // Same dispatchCtx-or-synthesised-token pattern as forward posting.
+    // Use the lifecycle identity supplied by transaction_flow.dispatch.
     await postJournalGl(trx, {
       tenantId,
       jeId:               revJeId,
-      executionToken:     dispatchCtx?.executionToken     ?? synthExecutionToken(revJeId),
-      transitionId:       dispatchCtx?.transitionId       ?? POSTING_SENTINEL_TRANSITION_ID,
-      transitionEventSeq: dispatchCtx?.transitionEventSeq,
+      executionToken:     dispatchCtx.executionToken,
+      transitionId:       dispatchCtx.transitionId,
+      transitionEventSeq: dispatchCtx.transitionEventSeq,
       sourceDocType:      "purchase_invoice",
       sourceDocId:        invoiceId,
       principalId:        principalId ?? null,
@@ -1115,16 +1167,11 @@ export async function handleReverseInvoice(
        WHERE id = ${originalJeId} AND tenant_id = ${tenantId}
     `.execute(trx);
 
-    // Update original invoice → reversed
+    // Lifecycle status is already 'reversed'; this handler owns only the
+    // compensating financial materialization.
     const updated = await sql<Record<string, unknown>>`
-      UPDATE document.purchase_invoice
-         SET status            = 'reversed',
-             status_changed_at = ${now},
-             status_changed_by = ${principalId},
-             updated_at        = ${now},
-             updated_by        = ${principalId}
-       WHERE id = ${invoiceId} AND tenant_id = ${tenantId} AND status = 'posted'
-       RETURNING *
+      SELECT * FROM document.purchase_invoice
+       WHERE id = ${invoiceId} AND tenant_id = ${tenantId} AND status = 'reversed'
     `.execute(trx);
 
     if (!updated.rows[0]) {
@@ -1146,15 +1193,10 @@ export async function handleReverseInvoice(
     // Phase 3: write reversal rows into tax_calculation and tax_credit_movement.
     await reverseInvoiceTaxCalculations(trx, tenantId, invoiceId, principalId, revJeId);
 
-    await syncBusinessLifecycle(lifecycleSync, {
-      db: trx,
-      tenantId,
-      entityName: "purchase_invoice",
-      entityId: invoiceId,
-      status: "reversed",
-      actorId: principalId,
-      payload: updated.rows[0],
-    });
+    const commitmentId = invoice["commitment_id"];
+    if (typeof commitmentId === "string" && commitmentId) {
+      await reconcilePurchaseOrderInvoicing(trx, tenantId, commitmentId, principalId ?? "00000000-0000-0000-0000-000000000000");
+    }
 
     logger?.info("ap_invoice_reversed", { tenantId, invoiceId, revJeId });
     return {
@@ -1162,4 +1204,13 @@ export async function handleReverseInvoice(
       body:   { ok: true, record: updated.rows[0], reversal_journal_entry_id: revJeId, journal_entry_code: revJeCode },
     };
   });
+}
+
+async function runInTransaction<T>(
+  db: AnyDb,
+  work: (trx: AnyDb) => Promise<T>,
+): Promise<T> {
+  return (db as { isTransaction?: boolean }).isTransaction === true
+    ? work(db)
+    : db.transaction().execute((trx) => work(trx));
 }

@@ -1,7 +1,4 @@
--- LookupDomain/master/supplier_taxation_type.sql
--- Lookup domain + values for: master.supplier_taxation_type
--- Used by: master.party_tax_profile.taxation_type
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by: master.party_tax_profile.taxation_type.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

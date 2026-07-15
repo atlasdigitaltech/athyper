@@ -1,10 +1,6 @@
--- ============================================================================
--- FILE: verify.sql
--- Purpose: Run-after-install verification queries. Non-destructive.
--- Usage:   psql "$DATABASE_URL" -f verify.sql
--- ============================================================================
--- Each query should return the expected result indicated in the \echo below it.
--- ============================================================================
+-- Post-install verification (non-destructive). Run via:
+--   psql "$DATABASE_URL" -f verify.sql
+-- Each \echo states the expected result for the query that follows.
 
 \pset border 2
 
@@ -17,7 +13,7 @@ SELECT br.code AS blueprint, br.status AS registry_status, br.base_version,
        tba.metadata->>'templates'          AS templates,
        tba.metadata->>'intent_profile_rules' AS rules
   FROM control.blueprint_registry br
-  LEFT JOIN control.tenant_blueprint_application tba
+  LEFT JOIN control.blueprint_tenant_application tba
          ON tba.blueprint_code = br.code
  WHERE br.code = 'pack_ap_non_po';
 
@@ -118,8 +114,7 @@ SELECT 'payment' AS kind, payment_number AS doc, pe.status, payment_amount AS am
 \echo ''
 \echo '── CHECK 9 — Engine resolution dry-run (OPEX Non-PO STANDARD) ───────────'
 \echo 'Expected: method=RULE_MATCH, subledger_type=AP, non-null profile_config_id'
--- Requires control.resolve_accounting_profile to be installed (runtime engine).
--- Skipped: function not yet deployed. Verify manually once Engine 4.13 is live.
+-- Engine 4.13 dependency — function may not be deployed yet; the DO block detects.
 DO $$
 BEGIN
     IF EXISTS (
@@ -145,7 +140,7 @@ SELECT t.code AS tenant,
        ON  r.classification_id = sc.id
        AND r.is_active = true
   JOIN master.tenant t ON t.id = sc.tenant_id
- WHERE sc.parent_id IS NOT NULL   -- only leaf categories (not root containers)
+ WHERE sc.parent_id IS NOT NULL   -- leaves only; root containers excluded
    AND t.status = 'active'
  GROUP BY t.code
  ORDER BY t.code;
@@ -161,7 +156,7 @@ SELECT t.code AS tenant,
   JOIN control.acct_profile_config apc ON apc.id = iprr.resolved_profile_config_id
   JOIN master.accounting_profile ap ON ap.id = apc.accounting_profile_id
   JOIN master.tenant t ON t.id = iprr.tenant_id
- WHERE iprr.intent_id IS NULL    -- wildcard rules only
+ WHERE iprr.intent_id IS NULL    -- wildcard rows only (072 fallbacks)
    AND iprr.is_active
    AND ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX')
  ORDER BY t.code, iprr.priority, iprr.intent_domain;

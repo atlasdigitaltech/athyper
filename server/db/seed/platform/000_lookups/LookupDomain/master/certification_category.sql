@@ -1,7 +1,4 @@
--- LookupDomain/master/certification_category.sql
--- Lookup domain + values for: master.certification_category
--- Used by: master.certification_type.category
--- Idempotent: WHERE NOT EXISTS guards
+-- Used by: master.certification_type.category.
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

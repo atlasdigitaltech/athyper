@@ -916,6 +916,142 @@ COMMENT ON FUNCTION control.guard_terminal_immutability() IS
 
 
 -- =============================================================================
+-- Effective lifecycle hooks
+-- =============================================================================
+-- Canonical tenant-effective resolver shared by runtime execution, contract
+-- verification, and lifecycle inspection. Platform hooks form the base layer;
+-- tenant overrides may suppress/replace replaceable hooks or inject an action
+-- immediately before/after a non-required hook. Tenant-native hooks are then
+-- included as their own layer.
+
+CREATE OR REPLACE FUNCTION control.resolve_effective_lifecycle_hooks(
+    p_tenant_id uuid,
+    p_transition_id uuid
+)
+RETURNS TABLE (
+    effective_hook_id uuid,
+    source_hook_id uuid,
+    override_id uuid,
+    scope_tenant_id uuid,
+    transition_id uuid,
+    timing text,
+    sort_order integer,
+    action text,
+    config jsonb,
+    safety_level text,
+    contract_role text
+)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = control, pg_catalog
+AS $$
+    WITH platform_hooks AS (
+        SELECT h.*
+          FROM control.lifecycle_transition_hook h
+         WHERE h.transition_id = p_transition_id
+           AND h.tenant_id IS NULL
+           AND h.is_active
+    ), applicable_overrides AS (
+        SELECT o.*, h.sort_order AS target_sort_order
+          FROM platform_hooks h
+          JOIN control.lifecycle_hook_override o
+            ON p_tenant_id IS NOT NULL
+           AND o.tenant_id = p_tenant_id
+           AND o.target_hook_id = h.id
+           AND o.is_active
+           AND (
+                (o.override_kind IN ('suppress', 'replace')
+                 AND h.safety_level = 'replaceable')
+                OR
+                (o.override_kind IN ('add_before', 'add_after')
+                 AND h.safety_level <> 'required')
+           )
+    ), effective_hooks AS (
+        -- Platform base. add_before/add_after retain the original hook;
+        -- suppress/replace remove it from the effective set.
+        SELECT h.id AS effective_hook_id,
+               h.id AS source_hook_id,
+               NULL::uuid AS override_id,
+               p_tenant_id AS scope_tenant_id,
+               h.transition_id,
+               h.timing,
+               (h.sort_order::integer * 10) AS sort_order,
+               h.action,
+               h.config,
+               h.safety_level,
+               h.contract_role
+          FROM platform_hooks h
+          LEFT JOIN applicable_overrides o ON o.target_hook_id = h.id
+         WHERE coalesce(o.override_kind, '') NOT IN ('suppress', 'replace')
+
+        UNION ALL
+
+        -- Replacement/injected hook. A non-zero override sort_order is an
+        -- explicit slot; otherwise additions are placed around the target.
+        SELECT o.id AS effective_hook_id,
+               h.id AS source_hook_id,
+               o.id AS override_id,
+               p_tenant_id AS scope_tenant_id,
+               h.transition_id,
+               h.timing,
+               CASE
+                   WHEN o.sort_order <> 0 THEN o.sort_order::integer * 10
+                   WHEN o.override_kind = 'add_before' THEN h.sort_order::integer * 10 - 1
+                   WHEN o.override_kind = 'add_after'  THEN h.sort_order::integer * 10 + 1
+                   ELSE h.sort_order::integer * 10
+               END AS sort_order,
+               o.replacement_action AS action,
+               coalesce(o.replacement_config, h.config) AS config,
+               h.safety_level,
+               h.contract_role
+          FROM platform_hooks h
+          JOIN applicable_overrides o ON o.target_hook_id = h.id
+         WHERE o.override_kind IN ('replace', 'add_before', 'add_after')
+
+        UNION ALL
+
+        -- Tenant-native hooks are independent additions and retain their
+        -- tenant-layer sort slots.
+        SELECT h.id AS effective_hook_id,
+               h.id AS source_hook_id,
+               NULL::uuid AS override_id,
+               p_tenant_id AS scope_tenant_id,
+               h.transition_id,
+               h.timing,
+               (h.sort_order::integer * 10) AS sort_order,
+               h.action,
+               h.config,
+               h.safety_level,
+               h.contract_role
+          FROM control.lifecycle_transition_hook h
+         WHERE p_tenant_id IS NOT NULL
+           AND h.transition_id = p_transition_id
+           AND h.tenant_id = p_tenant_id
+           AND h.is_active
+    )
+    SELECT eh.effective_hook_id,
+           eh.source_hook_id,
+           eh.override_id,
+           eh.scope_tenant_id,
+           eh.transition_id,
+           eh.timing,
+           eh.sort_order,
+           eh.action,
+           eh.config,
+           eh.safety_level,
+           eh.contract_role
+      FROM effective_hooks eh
+     ORDER BY eh.sort_order, eh.effective_hook_id;
+$$;
+
+COMMENT ON FUNCTION control.resolve_effective_lifecycle_hooks(uuid, uuid) IS
+    'Returns the canonical tenant-effective lifecycle hook set. Applies '
+    'suppress, replace, add_before, and add_after overrides according to hook '
+    'safety level, includes tenant-native hooks, and orders deterministically.';
+
+
+-- =============================================================================
 -- §7  control.guard_deletable_states()
 -- =============================================================================
 -- Trigger function: blocks DELETE on entities not in deletable states.

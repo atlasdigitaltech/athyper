@@ -1,4 +1,4 @@
-﻿-- columns:   FieldsRenderer / EntityPrintTemplate grid column count (1=single, 2=two-col, 3=three-col).
+-- columns:   FieldsRenderer / EntityPrintTemplate grid column count (1=single, 2=two-col, 3=three-col).
 -- page_span: print two-column layout â€” 'half' joins left/right split, 'full' spans the page above.
 
 INSERT INTO control.field_group (group_key, label, description, applies_to_classes, sort_order, columns, page_span)
@@ -219,7 +219,7 @@ ON CONFLICT (group_key) DO UPDATE SET
 
 -- ============================================================================
 -- P5 â€” assign ui_intent to line-item groups so the shared line-item runtime
--- (packages/shared/runtime-line-item/src/variants/procure.ts) can derive
+-- (packages/shared/runtime-domain/runtime-line-item/src/variants/procure.ts) can derive
 -- section / tab types from metadata instead of a hardcoded convention table.
 -- ============================================================================
 UPDATE control.field_group SET ui_intent = 'what'             WHERE group_key IN ('item','profile');

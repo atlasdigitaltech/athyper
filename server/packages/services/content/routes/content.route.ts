@@ -55,7 +55,7 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { createHash, randomUUID } from "crypto";
 import { sql } from "kysely";
-import type { ObjectStorageAdapter } from "@athyper/adapter-objectstorage";
+import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
 import { ContentAttachmentService } from "@athyper/svc-documents";
 import {
   verifyBearer,
@@ -97,7 +97,6 @@ export interface ContentRouteDeps {
     warn?(event: string, fields?: Record<string, unknown>): void;
   };
 }
-
 // ── Shape helpers ─────────────────────────────────────────────────────────────
 
 function toContentItem(r: Record<string, unknown>) {
@@ -230,7 +229,17 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
   // ── Attachment service (S3-backed; optional — returns 503 when absent) ─────
   const attachSvc = objectStorage
-    ? new ContentAttachmentService(db, objectStorage.adapter, objectStorage.bucket)
+    ? new ContentAttachmentService(
+      db,
+      objectStorage.adapter,
+      objectStorage.bucket,
+      logger
+        ? {
+            info: (event: string, fields?: Record<string, unknown>) => logger.warn?.(event, fields),
+            warn: (event: string, fields?: Record<string, unknown>) => logger.warn?.(event, fields),
+          }
+        : undefined,
+    )
     : null;
   const maxUploadBytes = (objectStorage?.maxUploadMb ?? 100) * 1024 * 1024;
 

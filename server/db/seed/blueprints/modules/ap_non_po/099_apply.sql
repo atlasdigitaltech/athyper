@@ -1,13 +1,6 @@
--- ============================================================================
--- FILE: blueprints/modules/ap_non_po/099_apply.sql
--- Purpose: Record application of pack_ap_non_po for the provisioning tenant
--- Depends on: all prior 010..090 files successfully executed for this tenant
--- Idempotent: ON CONFLICT (tenant_id, blueprint_code) DO UPDATE (bumps version)
--- Session var: SET app.seed_tenant_id = '<tenant_uuid>' before running
--- ============================================================================
--- This file is the "receipt" that the pack was applied. It also runs
--- post-install sanity checks and raises a warning if expected rows are missing.
--- ============================================================================
+-- Receipt that pack_ap_non_po was applied — writes to control.blueprint_tenant_application.
+-- Counts seeded rows per table and raises a WARNING (not exception) if minima aren't met,
+-- so retries remain idempotent. Requires SET app.seed_tenant_id = '<uuid>'.
 
 DO $apply_ap_non_po$
 DECLARE
@@ -38,7 +31,6 @@ BEGIN
         RAISE EXCEPTION '[seed] No tenant found for app.seed_tenant_id = %', v_tid;
     END IF;
 
-    -- Count what we actually seeded for this tenant
     SELECT count(*) INTO v_profile_count
       FROM master.accounting_profile
      WHERE tenant_id = v_tid
@@ -94,8 +86,8 @@ BEGIN
        AND ap.code IN ('AP_NON_PO_STANDARD','AP_NON_PO_CAPEX',
                        'AP_ADVANCE_SUPPLIER','AP_RETENTION_RELEASE');
 
-    -- Count ALL active classification→intent rules for this tenant.
-    -- (Prior query only counted the 3 generic-intent rules, missing 061/062 rules.)
+    -- Must count ALL active classification rules — earlier version only counted
+    -- the 3 generic-intent rules and silently missed everything from 061/062.
     SELECT count(*) INTO v_rule_count
       FROM control.commodity_classification_to_intent_rule
      WHERE tenant_id = v_tid
@@ -114,7 +106,6 @@ BEGIN
      WHERE tenant_id = v_tid
        AND metadata->>'auto_created_by' = 'pack_ap_non_po';
 
-    -- Validate expected minima
     IF v_profile_count < 4 THEN
         v_warnings := v_warnings || format(
             'Tenant %s: expected 4 accounting profiles, got %s',
@@ -125,7 +116,7 @@ BEGIN
             'Tenant %s: expected 4 profile configs, got %s',
             v_tenant_code, v_config_count);
     END IF;
-    IF v_event_count < 9 THEN  -- 3+3+2+1
+    IF v_event_count < 9 THEN  -- 3 STANDARD + 3 CAPEX + 2 ADVANCE + 1 RETENTION
         v_warnings := v_warnings || format(
             'Tenant %s: expected >=9 profile events, got %s',
             v_tenant_code, v_event_count);
@@ -156,9 +147,8 @@ BEGIN
             v_tenant_code, v_iprr_count);
     END IF;
 
-    -- After 061 + 062 both run, expect >=60 active classification rules per tenant
-    -- (20 from 061 roots+leaves + 30 root containers from 060 + >=75 leaves from 062,
-    --  minus any that couldn't resolve commodity_category/intent IDs).
+    -- After 060+061+062 run: ≥60 active rules (30 roots from 060 + ~20 leaves from
+    -- 061 + ~75 leaves from 062, minus any whose category/intent didn't resolve).
     IF v_rule_count < 60 THEN
         v_warnings := v_warnings || format(
             'Tenant %s: expected >=60 classification→intent rules, got %s — '
@@ -166,8 +156,8 @@ BEGIN
             v_tenant_code, v_rule_count);
     END IF;
 
-    -- Record application (applied even with warnings so retries are idempotent)
-    INSERT INTO control.tenant_blueprint_application (
+    -- Record even when warnings present, so re-runs stay idempotent.
+    INSERT INTO control.blueprint_tenant_application (
         tenant_id, blueprint_code, applied_version,
         applied_at, applied_by, status, error_detail, metadata,
         created_by

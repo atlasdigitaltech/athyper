@@ -1,7 +1,5 @@
--- LookupDomain/master/party_governance_control_lookups.sql
--- Lookup domains for BP 360 governance controlled fields.
--- Used by: master.party_governance_relation member/control/compliance fields.
--- Idempotent: WHERE NOT EXISTS guards.
+-- Bundles seven governance domains used by master.party_governance_relation
+-- (member/control/compliance fields).
 
 INSERT INTO control.lookup_domain
     (code, name, description, source_schema, is_extensible, status, created_by)

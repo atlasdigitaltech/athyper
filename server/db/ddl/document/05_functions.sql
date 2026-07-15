@@ -880,79 +880,6 @@ COMMENT ON FUNCTION document.trg_stocktake_line_denorm_counts() IS
 --             04_tables/008_governance.sql
 
 -- =============================================================================
--- document.trg_je_period_gate_fn
--- =============================================================================
--- Blocks journal_entry INSERT (and posting_date UPDATE) when the target
--- book-period is hard_closed at either the book or fiscal-period level.
---
--- Checks two independent gates:
---   1. master.fiscal_period.status      = 'hard_close'
---   2. governance.book_period_status.status IN ('hard_close','future')
---
--- A missing book_period_status row is treated as 'future' (not yet opened).
--- soft_close periods ALLOW posting (they are still mutable pre-close).
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION document.trg_je_period_gate_fn()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = document, master, governance, pg_catalog
-AS $$
-DECLARE
-  v_fp_status   text;
-  v_bps_status  text;
-BEGIN
-  -- 1. Check master.fiscal_period status
-  SELECT fp.status
-    INTO v_fp_status
-    FROM master.fiscal_period fp
-   WHERE fp.tenant_id       = NEW.tenant_id        -- same tenant
-     AND fp.company_code_id = NEW.company_code_id
-     AND fp.fiscal_year     = NEW.fiscal_year
-     AND fp.period_number   = NEW.period_number
-   LIMIT 1;
-
-  IF v_fp_status = 'hard_close' THEN
-    RAISE EXCEPTION
-      'PERIOD_HARD_CLOSED: Fiscal period %/% for company % is hard-closed. '
-      'Use a prior-period adjustment JE with close_override_id.',
-      NEW.fiscal_year, NEW.period_number, NEW.company_code_id
-      USING ERRCODE = 'P0001';
-  END IF;
-
-  -- 2. Check governance.book_period_status
-  SELECT bps.status
-    INTO v_bps_status
-    FROM governance.book_period_status bps
-   WHERE bps.tenant_id       = NEW.tenant_id
-     AND bps.company_code_id = NEW.company_code_id
-     AND bps.book_id         = NEW.book_id
-     AND bps.fiscal_year     = NEW.fiscal_year
-     AND bps.period_number   = NEW.period_number
-   LIMIT 1;
-
-  -- Missing row = 'future' (period not yet opened)
-  v_bps_status := COALESCE(v_bps_status, 'future');
-
-  IF v_bps_status IN ('hard_close', 'future') THEN
-    RAISE EXCEPTION
-      'BOOK_PERIOD_NOT_OPEN: Book period %/% for company %/book % has status ''%''. '
-      'Period must be in status ''open'' or ''soft_close'' to accept postings.',
-      NEW.fiscal_year, NEW.period_number, NEW.company_code_id, NEW.book_id, v_bps_status
-      USING ERRCODE = 'P0001';
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-COMMENT ON FUNCTION document.trg_je_period_gate_fn IS
-  'BEFORE INSERT trigger function for document.journal_entry. '
-  'Blocks posting to hard-closed fiscal periods or unopened book-periods. '
-  'Checks master.fiscal_period AND governance.book_period_status.';
-
-
--- =============================================================================
 -- document.trg_jl_validate_posting_controls_fn
 -- =============================================================================
 -- Validates that the GL account is postable in the given company before
@@ -1337,10 +1264,10 @@ COMMENT ON FUNCTION document.trg_jl_check_budget_fn IS
 -- business-rule guards for payment allocation semantics.
 --
 -- Why four company-consistency functions not one:
---   goods_receipt header  – has company_code_id directly; checks warehouse + site
---   goods_receipt line    – no company_code_id; reads from parent GR header
+--   receipt header        – has company_code_id directly; checks warehouse + site
+--   receipt line          – no company_code_id; reads from parent receipt header
 --   commitment_line       – no company_code_id; reads from parent commitment
---   ses_line              – no company_code_id; reads from parent SES; item only
+--   service_sheet line    – no company_code_id; reads from parent service_sheet; item only
 --
 -- master.warehouse has no company_code_id; resolved via warehouse → site → company.
 --
@@ -1411,8 +1338,8 @@ DECLARE
     v_resolved  uuid;
 BEGIN
     SELECT company_code_id INTO v_header_co
-    FROM document.goods_receipt
-    WHERE tenant_id = NEW.tenant_id AND id = NEW.goods_receipt_id;
+    FROM document.receipt
+    WHERE tenant_id = NEW.tenant_id AND id = NEW.receipt_id;
 
     IF v_header_co IS NULL THEN
         RETURN NEW;  -- parent not found yet (deferred FK); let FK catch it
@@ -1451,7 +1378,7 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- §15.3  COMMITMENT LINE: item_id + delivery_warehouse_id + delivery_site_id
+-- §15.3  COMMITMENT LINE: item_id + warehouse_id + site_id
 --        (company from parent document.commitment)
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION document.trg_guard_commitment_line_company()
@@ -1482,30 +1409,30 @@ BEGIN
         END IF;
     END IF;
 
-    IF NEW.delivery_warehouse_id IS NOT NULL THEN
+    IF NEW.warehouse_id IS NOT NULL THEN
         SELECT s.company_code_id INTO v_resolved
         FROM master.warehouse w
         JOIN master.site s
              ON s.tenant_id = w.tenant_id AND s.id = w.site_id
-        WHERE w.tenant_id = NEW.tenant_id AND w.id = NEW.delivery_warehouse_id;
+        WHERE w.tenant_id = NEW.tenant_id AND w.id = NEW.warehouse_id;
 
         IF v_resolved IS DISTINCT FROM v_header_co THEN
             RAISE EXCEPTION
-                'Commitment line: delivery_warehouse % belongs to company %, but commitment company is %',
-                NEW.delivery_warehouse_id, v_resolved, v_header_co
+                'Commitment line: warehouse % belongs to company %, but commitment company is %',
+                NEW.warehouse_id, v_resolved, v_header_co
                 USING ERRCODE = 'integrity_constraint_violation';
         END IF;
     END IF;
 
-    IF NEW.delivery_site_id IS NOT NULL THEN
+    IF NEW.site_id IS NOT NULL THEN
         SELECT company_code_id INTO v_resolved
         FROM master.site
-        WHERE tenant_id = NEW.tenant_id AND id = NEW.delivery_site_id;
+        WHERE tenant_id = NEW.tenant_id AND id = NEW.site_id;
 
         IF v_resolved IS DISTINCT FROM v_header_co THEN
             RAISE EXCEPTION
-                'Commitment line: delivery_site % belongs to company %, but commitment company is %',
-                NEW.delivery_site_id, v_resolved, v_header_co
+                'Commitment line: site % belongs to company %, but commitment company is %',
+                NEW.site_id, v_resolved, v_header_co
                 USING ERRCODE = 'integrity_constraint_violation';
         END IF;
     END IF;
@@ -1516,7 +1443,7 @@ $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- §15.4  SES LINE: item_id only (optional catalogued services)
---        (company from parent document.service_entry_sheet)
+--        (company from parent document.service_sheet)
 -- ─────────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION document.trg_guard_ses_line_company()
 RETURNS trigger LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1530,8 +1457,8 @@ BEGIN
     END IF;
 
     SELECT company_code_id INTO v_header_co
-    FROM document.service_entry_sheet
-    WHERE tenant_id = NEW.tenant_id AND id = NEW.service_entry_sheet_id;
+    FROM document.service_sheet
+    WHERE tenant_id = NEW.tenant_id AND id = NEW.service_sheet_id;
 
     IF v_header_co IS NULL THEN
         RETURN NEW;
@@ -1691,49 +1618,30 @@ DECLARE
     v_row RECORD;
 BEGIN
     SELECT
-        COUNT(*)::smallint                         AS line_count,
-        COALESCE(SUM(net_amount), 0)               AS subtotal_amount,
-        COALESCE(SUM(
-            net_amount
-            - COALESCE(discount_amount, 0)
-        ), 0)                                      AS subtotal_net,
+        COALESCE(SUM(net_amount), 0)               AS net_amount,
         COALESCE(SUM(tax_amount), 0)               AS tax_amount,
-        COALESCE(SUM(withholding_tax_amount), 0)   AS withholding_tax_amount,
-        COALESCE(SUM(retention_amount), 0)         AS retention_amount
+        COALESCE(SUM(withholding_tax_amount), 0)   AS withholding_tax_amount
     INTO v_row
     FROM document.purchase_invoice_line
     WHERE purchase_invoice_id = p_invoice_id;
 
     UPDATE document.purchase_invoice
-       SET line_count             = v_row.line_count,
-           subtotal_amount        = v_row.subtotal_amount,
-           tax_amount             = v_row.tax_amount,
+       SET tax_amount             = v_row.tax_amount,
            withholding_tax_amount = v_row.withholding_tax_amount,
-           retention_amount       = v_row.retention_amount,
-           -- total = subtotal (after line discounts) + tax + freight + misc − header discount
-           -- No GREATEST clamping: credit notes (is_credit_note=true) may legitimately
-           -- produce a negative total; pi_amount_chk enforces total_amount >= 0 OR is_credit_note.
-           total_amount           = v_row.subtotal_net
-               + v_row.tax_amount
-               + COALESCE((SELECT freight_amount FROM document.purchase_invoice WHERE id = p_invoice_id), 0)
-               + COALESCE((SELECT misc_charges_amount FROM document.purchase_invoice WHERE id = p_invoice_id), 0)
-               - COALESCE((SELECT discount_amount FROM document.purchase_invoice WHERE id = p_invoice_id), 0),
+           total_amount           = v_row.net_amount + v_row.tax_amount,
            updated_at             = now()
      WHERE id = p_invoice_id;
 END;
 $$;
 
 COMMENT ON FUNCTION document.fn_refresh_purchase_invoice_totals(uuid) IS
-    'Recomputes line_count, subtotal_amount, tax_amount, withholding_tax_amount, '
-    'retention_amount, and total_amount on purchase_invoice from its child lines. '
-    'Called by trg_pil_sync_header trigger.';
-
+    'Phase 1 reset: recomputes total_amount, tax_amount, and withholding_tax_amount on purchase_invoice from current child lines.';
 
 -- ── trg_pi_before_insert ────────────────────────────────────────────────────
 -- BEFORE INSERT on document.purchase_invoice:
 --   1. Sets created_by from session if not explicitly provided
---   2. Auto-generates invoice_number from control.entity_numbering_config if empty
---   3. Sets code = invoice_number (display code)
+--   2. Auto-generates code from control.entity_numbering_config if empty
+--   3. Sets code = code (display code)
 
 CREATE OR REPLACE FUNCTION document.trg_pi_before_insert()
 RETURNS trigger LANGUAGE plpgsql SET search_path = document, master, shared, pg_catalog AS $$
@@ -1746,8 +1654,8 @@ BEGIN
     v_actor := nullif(current_setting('app.current_principal_id', true), '')::uuid;
     NEW.created_by := COALESCE(v_actor, NEW.created_by);
 
-    -- 2. Auto-generate invoice_number if blank
-    IF NEW.invoice_number IS NULL OR btrim(NEW.invoice_number) = '' THEN
+    -- 2. Auto-generate code if blank
+    IF NEW.code IS NULL OR btrim(NEW.code) = '' THEN
         -- Determine fiscal year for the number series
         v_fy := EXTRACT(YEAR FROM COALESCE(NEW.posting_date, CURRENT_DATE))::smallint;
 
@@ -1755,7 +1663,7 @@ BEGIN
             v_num := control.next_entity_number(
                 NEW.tenant_id,
                 'purchase_invoice',
-                'document_no',
+                'code',
                 NEW.company_code_id,
                 v_fy,
                 NEW.period_number,
@@ -1772,11 +1680,11 @@ BEGIN
                      || lpad(nextval('document.upupr_code_seq')::text, 6, '0');
         END IF;
 
-        NEW.invoice_number := v_num;
+        NEW.code := v_num;
     END IF;
 
-    -- 3. code mirrors invoice_number for entity-engine display
-    NEW.code := NEW.invoice_number;
+    -- 3. code mirrors code for entity-engine display
+    NEW.code := NEW.code;
 
     RETURN NEW;
 END;
@@ -2375,7 +2283,7 @@ BEGIN
 
     v_payload := jsonb_build_object(
         'snapshot', jsonb_build_object(
-            'invoice_number',  NEW.invoice_number,
+            'code',  NEW.code,
             'status',          NEW.status,
             'total_amount',    NEW.total_amount,
             'currency_code',   NEW.currency_code,
@@ -2404,7 +2312,7 @@ BEGIN
         OLD.status, NEW.status, v_from_state, v_to_state,
         v_actor, 'principal', NEW.company_code_id,
         format('Invoice %s status changed from %s to %s',
-               COALESCE(NEW.invoice_number, NEW.id::text), OLD.status, NEW.status),
+               COALESCE(NEW.code, NEW.id::text), OLD.status, NEW.status),
         v_payload,
         v_revision_no, v_revision_lbl,
         'business', v_created_by
@@ -2726,6 +2634,19 @@ BEGIN
 END;
 $$;
 
+-- =============================================================================
+-- document.trg_je_period_gate_fn
+-- =============================================================================
+-- Forward posting is allowed only when:
+--   1. master.fiscal_period.status is open or soft_close
+--   2. governance.book_period_status.status is open or soft_close
+--
+-- The fiscal period is resolved from NEW.fiscal_period_id. The book-period row
+-- is resolved from that fiscal period's year/period; a missing book row is
+-- treated as future and blocks posting. The posted -> reversed transition is
+-- exempt so reversals can be recorded after close.
+-- =============================================================================
+
 CREATE OR REPLACE FUNCTION document.trg_je_period_gate_fn()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -2785,6 +2706,11 @@ $$;
 -- code  ? je_number
 -- name  ? description when non-empty; else JE + posting date fallback
 -- =============================================================================
+
+COMMENT ON FUNCTION document.trg_je_period_gate_fn IS
+  'Forward posting requires fiscal and book period status open/soft_close. '
+  'Missing book-period rows are treated as future. '
+  'Updates from posted to reversed are exempt from the period gate.';
 
 CREATE OR REPLACE FUNCTION document.trg_je_before_insert()
 RETURNS trigger LANGUAGE plpgsql
@@ -2857,5 +2783,124 @@ BEGIN
     RAISE EXCEPTION
         'journal_line_reference is append-only after journal entry submission; create a compensating reference instead'
         USING ERRCODE = 'check_violation';
+END;
+$$;
+
+
+-- ============================================================================
+-- P2P chain immutability guards (Plan 5 — terminal-state mutation block)
+-- ============================================================================
+-- Mirrors document.trg_pi_immutability_guard for the remaining P2P
+-- documents. Once a row is in a terminal state, generic UPDATE paths
+-- (records.route.ts, raw SQL via admin tools) cannot rewrite fields —
+-- the only acceptable mutation is a status change driven by the action
+-- dispatcher. Lifecycle-driven transitions stay allowed via the
+-- `IF OLD.status IS DISTINCT FROM NEW.status THEN RETURN NEW` short-circuit.
+--
+-- Terminal vocabulary per entity (read from each table's status CHECK):
+--   commitment                     closed, cancelled, expired
+--   purchase_requisition           rejected, fully_converted, closed, cancelled
+--   purchase_order_confirmation    rejected, cancelled, changes_rejected
+--   delivery_note                  fully_receipted, returned, cancelled
+--   receipt                        posted, reversed, cancelled
+--   service_sheet                  posted, reversed, cancelled
+--
+-- The universal `terminal_status IS NOT NULL` (set when the lifecycle
+-- engine marks CANCELED / REJECTED) is also treated as terminal — that
+-- column is the single-source flag for cross-entity audit queries.
+
+-- ── §CMT  commitment ───────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_cmt_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, pg_catalog AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN RETURN NEW; END IF;
+    IF OLD.status IN ('closed','cancelled','expired')
+       OR OLD.terminal_status IS NOT NULL THEN
+        RAISE EXCEPTION
+            'commitment % is in terminal status ''%'' and cannot be modified directly. Use an action operation.',
+            OLD.id, COALESCE(OLD.terminal_status, OLD.status)
+            USING ERRCODE = 'P0001';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ── §PR  purchase_requisition ──────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_pr_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, pg_catalog AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN RETURN NEW; END IF;
+    IF OLD.status IN ('rejected','fully_converted','closed','cancelled')
+       OR OLD.terminal_status IS NOT NULL THEN
+        RAISE EXCEPTION
+            'purchase_requisition % is in terminal status ''%'' and cannot be modified directly. Use an action operation.',
+            OLD.id, COALESCE(OLD.terminal_status, OLD.status)
+            USING ERRCODE = 'P0001';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ── §POC  purchase_order_confirmation ──────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_poc_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, pg_catalog AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN RETURN NEW; END IF;
+    IF OLD.status IN ('rejected','cancelled','changes_rejected')
+       OR OLD.terminal_status IS NOT NULL THEN
+        RAISE EXCEPTION
+            'purchase_order_confirmation % is in terminal status ''%'' and cannot be modified directly. Use an action operation.',
+            OLD.id, COALESCE(OLD.terminal_status, OLD.status)
+            USING ERRCODE = 'P0001';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ── §DN  delivery_note ─────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_dn_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, pg_catalog AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN RETURN NEW; END IF;
+    IF OLD.status IN ('fully_receipted','returned','cancelled')
+       OR OLD.terminal_status IS NOT NULL THEN
+        RAISE EXCEPTION
+            'delivery_note % is in terminal status ''%'' and cannot be modified directly. Use an action operation.',
+            OLD.id, COALESCE(OLD.terminal_status, OLD.status)
+            USING ERRCODE = 'P0001';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ── §RCP  receipt ──────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_rcp_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, pg_catalog AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN RETURN NEW; END IF;
+    IF OLD.status IN ('posted','reversed','cancelled')
+       OR OLD.terminal_status IS NOT NULL THEN
+        RAISE EXCEPTION
+            'receipt % is in terminal status ''%'' and cannot be modified directly. Use an action operation.',
+            OLD.id, COALESCE(OLD.terminal_status, OLD.status)
+            USING ERRCODE = 'P0001';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+-- ── §SES  service_sheet ────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION document.trg_ssh_immutability_guard()
+RETURNS trigger LANGUAGE plpgsql SET search_path = document, pg_catalog AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN RETURN NEW; END IF;
+    IF OLD.status IN ('posted','reversed','cancelled')
+       OR OLD.terminal_status IS NOT NULL THEN
+        RAISE EXCEPTION
+            'service_sheet % is in terminal status ''%'' and cannot be modified directly. Use an action operation.',
+            OLD.id, COALESCE(OLD.terminal_status, OLD.status)
+            USING ERRCODE = 'P0001';
+    END IF;
+    RETURN NEW;
 END;
 $$;

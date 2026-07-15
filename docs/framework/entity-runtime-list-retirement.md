@@ -1,12 +1,12 @@
 # Initiative: `@athyper/entity-runtime/list` retirement
 
 **Status:** discovery complete; awaiting decision on retirement cadence.
-**Prior framing:** "Migrate `EntityListPage` → `runtime-record`."
+**Prior framing:** "Migrate `EntityListPage` â†’ `runtime-record`."
 **Actual framing:** "Delete dead code in `@athyper/entity-runtime`. Apps already migrated."
 
 ## TL;DR
 
-The strategic initiative we queued at the end of Phase C — porting `EntityListPage` to a modern home — turned out to be unnecessary. The migration is already done. Every active app consumes `@athyper/runtime-list/server/RuntimeListPage` via app-specific adapters (`NeonListPage`, `MeshListPage`, `AdminListPage`). The legacy `EntityListPage` and its 11 sibling components in `@athyper/entity-runtime/list` have **zero consumers** outside the package itself.
+The strategic initiative we queued at the end of Phase C â€” porting `EntityListPage` to a modern home â€” turned out to be unnecessary. The migration is already done. Every active app consumes `@athyper/runtime-list/server/RuntimeListPage` via app-specific adapters (`NeonListPage`, `MeshListPage`, `AdminListPage`). The legacy `EntityListPage` and its 11 sibling components in `@athyper/entity-runtime/list` have **zero consumers** outside the package itself.
 
 What remains is dead-code retirement, not a multi-sprint port. Bounded, low-risk, no feature-parity work.
 
@@ -18,16 +18,16 @@ Three list-page implementations exist in the monorepo. Only one is live.
 
 | Implementation | Location | Status | Consumers |
 |---|---|---|---|
-| `RuntimeListPage` | [`@athyper/runtime-list/server`](packages/shared/runtime-list/src/server/) | **active, production** | `NeonListPage`, `MeshListPage`, `AdminListPage` via adapter pattern |
-| `RuntimeListPage` (different file, same name) | [`@athyper/runtime-canvas/list/runtime-list-page.tsx`](packages/shared/runtime-canvas/src/list/runtime-list-page.tsx) | dead | Exported but no external import |
+| `RuntimeListPage` | [`@athyper/runtime-list/server`](packages/shared/runtime-domain/runtime-list/src/server/) | **active, production** | `NeonListPage`, `MeshListPage`, `AdminListPage` via adapter pattern |
+| `RuntimeListPage` (different file, same name) | [`@athyper/runtime-canvas/list/runtime-list-page.tsx`](packages/shared/runtime-domain/runtime-canvas/src/list/runtime-list-page.tsx) | dead | Exported but no external import |
 | `EntityListPage` | [`@athyper/entity-runtime/list/EntityListPage.tsx`](packages/product-deprecated/runtime-ui/entity-runtime/src/list/EntityListPage.tsx) | **dead** (3343 lines, 75 hooks) | None |
 
 The apps route through:
 
 ```
 apps/neon/app/(shell)/app/[entity]/page.tsx
-  → NeonListPage (@athyper/app-neon/list)
-    → RuntimeListPage (@athyper/runtime-list/server)
+  â†’ NeonListPage (@athyper/app-neon/list)
+    â†’ RuntimeListPage (@athyper/runtime-list/server)
 ```
 
 `EntityListPage` is **never instantiated**. It's exported from [`entity-runtime/src/index.ts:16`](packages/product-deprecated/runtime-ui/entity-runtime/src/index.ts#L16) and registered in [`renderer.registry.ts:41`](packages/product-deprecated/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts#L41) as the `table` renderer, but **neither the export nor the registry has a consumer**.
@@ -39,20 +39,20 @@ Same pattern repeats for the view-mode variants and the bulk/import pages:
 | Component | Location | Lines | External consumers |
 |---|---|---|---|
 | `EntityListPage` | `entity-runtime/list/EntityListPage.tsx` | 3343 | 0 |
-| `KanbanView` | `entity-runtime/list/KanbanView.tsx` | — | 0 |
-| `DashboardView` | `entity-runtime/list/DashboardView.tsx` | — | 0 (the finance-workbench `PeriodCloseDashboardView` is a different file) |
-| `ExcelView` | `entity-runtime/list/ExcelView.tsx` | — | 0 |
-| `FilterDrawer` | `entity-runtime/list/FilterDrawer.tsx` | — | 0 (only `EntityListPage` imports it) |
-| `SortDrawer` | `entity-runtime/list/SortDrawer.tsx` | — | 0 |
-| `GroupDrawer` | `entity-runtime/list/GroupDrawer.tsx` | — | 0 |
-| `ColumnDrawer` | `entity-runtime/list/ColumnDrawer.tsx` | — | 0 |
-| `GroupedListView` | `entity-runtime/list/GroupedListView.tsx` | — | 0 |
-| `RowActionMenu` | `entity-runtime/list/RowActionMenu.tsx` | — | 0 |
-| `RowMetaStrip` | `entity-runtime/list/RowMetaStrip.tsx` | — | 0 |
-| `EntityBulkPage` | `entity-runtime/bulk/EntityBulkPage.tsx` | — | 0 |
-| `EntityImportPage` | `entity-runtime/import/EntityImportPage.tsx` | — | 0 |
-| `useEntityListUrl` | `entity-runtime/list/useEntityListUrl.ts` | — | 0 (only `EntityListPage`) |
-| `listRendererMap` | `entity-runtime/metadata/renderer.registry.ts` | — | 0 |
+| `KanbanView` | `entity-runtime/list/KanbanView.tsx` | â€” | 0 |
+| `DashboardView` | `entity-runtime/list/DashboardView.tsx` | â€” | 0 (the finance-workbench `PeriodCloseDashboardView` is a different file) |
+| `ExcelView` | `entity-runtime/list/ExcelView.tsx` | â€” | 0 |
+| `FilterDrawer` | `entity-runtime/list/FilterDrawer.tsx` | â€” | 0 (only `EntityListPage` imports it) |
+| `SortDrawer` | `entity-runtime/list/SortDrawer.tsx` | â€” | 0 |
+| `GroupDrawer` | `entity-runtime/list/GroupDrawer.tsx` | â€” | 0 |
+| `ColumnDrawer` | `entity-runtime/list/ColumnDrawer.tsx` | â€” | 0 |
+| `GroupedListView` | `entity-runtime/list/GroupedListView.tsx` | â€” | 0 |
+| `RowActionMenu` | `entity-runtime/list/RowActionMenu.tsx` | â€” | 0 |
+| `RowMetaStrip` | `entity-runtime/list/RowMetaStrip.tsx` | â€” | 0 |
+| `EntityBulkPage` | `entity-runtime/bulk/EntityBulkPage.tsx` | â€” | 0 |
+| `EntityImportPage` | `entity-runtime/import/EntityImportPage.tsx` | â€” | 0 |
+| `useEntityListUrl` | `entity-runtime/list/useEntityListUrl.ts` | â€” | 0 (only `EntityListPage`) |
+| `listRendererMap` | `entity-runtime/metadata/renderer.registry.ts` | â€” | 0 |
 
 Verification command for each:
 
@@ -76,7 +76,7 @@ In every case the output is either empty or references only barrels within `enti
 
 ### What stays in `entity-runtime`
 
-The package is not entirely dead — only its `list`, `bulk`, and `import` subtrees are. The following exports are live and consumed by `@athyper/document-runtime`:
+The package is not entirely dead â€” only its `list`, `bulk`, and `import` subtrees are. The following exports are live and consumed by `@athyper/document-runtime`:
 
 | Subpath | Active consumer | Decision |
 |---|---|---|
@@ -84,7 +84,7 @@ The package is not entirely dead — only its `list`, `bulk`, and `import` subtr
 | `./field-renderers` | `document-runtime/items/metaLineRuntime`, `document-runtime/pages/DocumentDetailPage` | keep |
 | `./actions` | `document-runtime/pages/DocumentDetailPage` | keep |
 | `./panels` | `document-runtime/pages/DocumentDetailPage` | keep |
-| `./detail` (= `EntityDetailPage`) | TBD audit | likely keep — referenced by `detailRendererMap` which may still be consulted |
+| `./detail` (= `EntityDetailPage`) | TBD audit | likely keep â€” referenced by `detailRendererMap` which may still be consulted |
 | `./form` | TBD audit | needs the same dead-code check before retirement |
 | `./edit` | TBD audit | same |
 | `./intake` | TBD audit | same |
@@ -93,7 +93,7 @@ Detail/form/edit/intake are out of scope for this initiative; they need their ow
 
 ## Recommended path
 
-### Stage R1 — Retire the list subtree (~1 day)
+### Stage R1 â€” Retire the list subtree (~1 day)
 
 Single PR, surgically delete:
 
@@ -121,29 +121,29 @@ Single PR, surgically delete:
    - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/virtualFilterLabels.ts`
    - `packages/product-deprecated/runtime-ui/entity-runtime/src/list/index.ts`
 
-2. **Re-exports** in [`entity-runtime/src/index.ts`](packages/product-deprecated/runtime-ui/entity-runtime/src/index.ts) — drop `EntityListPage`, `KanbanView`, `DashboardView`, `ExcelView`, `useEntityListUrl`, etc.
+2. **Re-exports** in [`entity-runtime/src/index.ts`](packages/product-deprecated/runtime-ui/entity-runtime/src/index.ts) â€” drop `EntityListPage`, `KanbanView`, `DashboardView`, `ExcelView`, `useEntityListUrl`, etc.
 
-3. **Renderer map** in [`entity-runtime/src/metadata/renderer.registry.ts`](packages/product-deprecated/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts) — delete `listRendererMap` and `ListRendererKey`. Decide whether to keep `detailRendererMap` (depends on detail-page audit).
+3. **Renderer map** in [`entity-runtime/src/metadata/renderer.registry.ts`](packages/product-deprecated/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts) â€” delete `listRendererMap` and `ListRendererKey`. Decide whether to keep `detailRendererMap` (depends on detail-page audit).
 
-4. **Subpath export** in [`entity-runtime/package.json`](packages/product-deprecated/runtime-ui/entity-runtime/package.json) — drop `"./list": "./src/list/index.ts"`.
+4. **Subpath export** in [`entity-runtime/package.json`](packages/product-deprecated/runtime-ui/entity-runtime/package.json) â€” drop `"./list": "./src/list/index.ts"`.
 
 5. **Verification**:
    - `pnpm typecheck` across all packages.
    - `pnpm test` runtime-line-item, metadata-client, api-client.
-   - `verify-plane-boundaries.ts` — should stay green.
+   - `verify-plane-boundaries.ts` â€” should stay green.
 
-### Stage R2 — Retire the bulk + import subtrees (~half day)
+### Stage R2 â€” Retire the bulk + import subtrees (~half day)
 
 Same structural pattern as R1, smaller surface:
 - `packages/product-deprecated/runtime-ui/entity-runtime/src/bulk/`
 - `packages/product-deprecated/runtime-ui/entity-runtime/src/import/`
 - Subpath exports `./bulk` and `./import` removed from package.json.
 
-### Stage R3 (optional, deferred) — Retire `runtime-canvas/list/runtime-list-page.tsx`
+### Stage R3 (optional, deferred) â€” Retire `runtime-canvas/list/runtime-list-page.tsx`
 
-Same dead-code analysis applies. Lower priority since `runtime-canvas` is not on the legacy ban list — the dead code there is just clutter, not a structural issue.
+Same dead-code analysis applies. Lower priority since `runtime-canvas` is not on the legacy ban list â€” the dead code there is just clutter, not a structural issue.
 
-### Stage R4 (audit only) — Map remaining `entity-runtime` exports
+### Stage R4 (audit only) â€” Map remaining `entity-runtime` exports
 
 Audit the surviving exports (`./detail`, `./form`, `./edit`, `./intake`, etc.) the same way. Some may also be dead. Future retirement initiatives address them.
 
@@ -165,19 +165,19 @@ Audit the surviving exports (`./detail`, `./form`, `./edit`, `./intake`, etc.) t
 | R3 runtime-canvas RuntimeListPage retirement | ~half day | low; defer until R1+R2 ship |
 | R4 audit of remaining `entity-runtime` subtrees | ~1 day | discovery only, no code |
 
-**Total: ~2 days for R1+R2, the value-delivering steps.** Compare to the ~2-3 sprint budget the original "EntityListPage → runtime-record" framing implied.
+**Total: ~2 days for R1+R2, the value-delivering steps.** Compare to the ~2-3 sprint budget the original "EntityListPage â†’ runtime-record" framing implied.
 
 ## Why this re-scoping matters
 
-The discovery cost was ~2 hours and saved an effort budget of 2-3 sprints. The original initiative description ("port a 3343-line legacy file to runtime-record") rested on an assumption — that `EntityListPage` was load-bearing — that turned out to be wrong.
+The discovery cost was ~2 hours and saved an effort budget of 2-3 sprints. The original initiative description ("port a 3343-line legacy file to runtime-record") rested on an assumption â€” that `EntityListPage` was load-bearing â€” that turned out to be wrong.
 
 Pattern worth applying to future initiatives: before scoping a "migrate X to Y" effort, run a consumer audit of X. A handful of grep calls catches cases where the migration is either unnecessary (X is dead) or already done (X has been replaced; the remaining surface is just cleanup).
 
 ## Open questions
 
-1. **`detailRendererMap`** in [`renderer.registry.ts:30`](packages/product-deprecated/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts#L30). Grep confirmed no external consumer — `detailRendererMap` and `DetailRendererKey` only appear in the definition file plus two internal barrels (`entity-runtime/src/index.ts:75,85` and `entity-runtime/src/metadata/index.ts:33,39`). Despite that, **intentionally deferred to R4** along with the rest of the `./detail` audit, so R1 stays surgical to the list subtree. Deleting `detailRendererMap` in R1 would pull `./detail` into scope unnecessarily.
+1. **`detailRendererMap`** in [`renderer.registry.ts:30`](packages/product-deprecated/runtime-ui/entity-runtime/src/metadata/renderer.registry.ts#L30). Grep confirmed no external consumer â€” `detailRendererMap` and `DetailRendererKey` only appear in the definition file plus two internal barrels (`entity-runtime/src/index.ts:75,85` and `entity-runtime/src/metadata/index.ts:33,39`). Despite that, **intentionally deferred to R4** along with the rest of the `./detail` audit, so R1 stays surgical to the list subtree. Deleting `detailRendererMap` in R1 would pull `./detail` into scope unnecessarily.
 2. **`runtime-canvas/src/index.tsx:54`** re-exports `RuntimeListPage`. Does anything outside the package read it? Likely no; confirm before R3.
-3. **migration-log.md** — the retirement gets an entry when R1 lands: a brief paragraph noting that `entity-runtime/list` is being progressively retired because apps already use `runtime-list`, with a pointer to this doc.
+3. **migration-log.md** â€” the retirement gets an entry when R1 lands: a brief paragraph noting that `entity-runtime/list` is being progressively retired because apps already use `runtime-list`, with a pointer to this doc.
 
 ## Recommendation
 

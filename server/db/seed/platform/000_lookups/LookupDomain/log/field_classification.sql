@@ -1,7 +1,3 @@
--- LookupDomain/log/field_classification.sql
--- Lookup values for domain: log.field_classification
--- Idempotent: WHERE NOT EXISTS guard
-
 INSERT INTO control.lookup_value
     (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.code, v.name, v.domain_code, v.description, v.sort_order, true, 'active',

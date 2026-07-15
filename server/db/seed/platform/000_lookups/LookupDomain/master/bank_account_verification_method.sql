@@ -1,12 +1,3 @@
--- LookupDomain/master/bank_account_verification_method.sql
--- Lookup values for domain: master.bank_account_verification_method
--- Idempotent: WHERE NOT EXISTS guard
-
--- Migrate any existing 'vendor_portal' code rows to 'supplier_portal' (rename applied 2026-05)
-UPDATE control.lookup_value
-   SET code = 'supplier_portal', name = 'Supplier Portal', description = 'Self-service supplier portal entry'
- WHERE domain_code = 'master.bank_account_verification_method' AND code = 'vendor_portal' AND tenant_id IS NULL;
-
 INSERT INTO control.lookup_value (code, name, domain_code, description, sort_order, is_system, status, created_by)
 SELECT v.* FROM (VALUES
     ('micro_deposit',   'Micro-Deposit',       'master.bank_account_verification_method', 'Trial amounts verification',          10, true, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

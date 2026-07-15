@@ -132,8 +132,8 @@ async function main(): Promise<void> {
        WHERE source_doc_type IN (
          'PURCHASE_REQUISITION_LINE',
          'COMMITMENT_LINE',
-         'GOODS_RECEIPT_LINE',
-         'SERVICE_ENTRY_SHEET_LINE'
+         'RECEIPT_LINE',
+         'SERVICE_SHEET_LINE'
        )
        GROUP BY source_doc_type
     `);

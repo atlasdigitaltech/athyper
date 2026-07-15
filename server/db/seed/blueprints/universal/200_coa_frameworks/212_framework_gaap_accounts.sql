@@ -1,15 +1,5 @@
--- ============================================================================
--- UNIVERSAL — US GAAP OPERATING CHART OF ACCOUNTS
--- ============================================================================
--- File:     212_framework_gaap_accounts.sql
--- Schema:   master.gl_account
--- Purpose:  US GAAP GL account seed for COA-GAAP.
---           Uses USGAAP-* account codes and maps every posting account back to
---           COA-GROUP via metadata._group_map.
--- Depends:  200_chart_catalog.sql (COA-GAAP chart)
---           210_group_chart_accounts.sql (COA-GROUP taxonomy)
--- Idempotent: Yes - ON CONFLICT (tenant_id, chart_of_account_id, code) DO UPDATE
--- ============================================================================
+-- COA-GAAP operating chart with USGAAP-* codes. Every posting account maps back
+-- to COA-GROUP via metadata._group_map for consolidation.
 
 DO $seed$
 DECLARE

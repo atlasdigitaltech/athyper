@@ -50,12 +50,14 @@ CREATE TABLE IF NOT EXISTS document.payment_entry (
     currency_code           character(3)    NOT NULL,
     base_currency_code      character(3)    NOT NULL,
     exchange_rate           numeric(18,10),
+    fx_rate_snapshot        jsonb,
     payment_amount          numeric(18,4)   NOT NULL,
     base_amount             numeric(18,4),
 
     -- Payment currency (third leg when paying in a different currency)
     payment_currency_code   character(3),
     payment_exchange_rate   numeric(18,10),
+    payment_fx_rate_snapshot jsonb,
     payment_currency_amount numeric(18,4),
 
     -- Fiscal scope
@@ -131,6 +133,19 @@ CREATE TABLE IF NOT EXISTS document.payment_entry (
         'down_payment','urgent','netting')),
     CONSTRAINT pe_direction_chk     CHECK (payment_direction IN ('OUTBOUND','INBOUND')),
     CONSTRAINT pe_amount_pos        CHECK (payment_amount > 0),
+    CONSTRAINT pe_currency_triad_chk CHECK (
+        status = 'draft'
+        OR (
+            (currency_code = base_currency_code AND exchange_rate = 1.0)
+            OR (currency_code <> base_currency_code AND exchange_rate IS NOT NULL AND exchange_rate > 0)
+        )),
+    CONSTRAINT pe_payment_currency_triad_chk CHECK (
+        payment_currency_code IS NULL
+        OR status = 'draft'
+        OR (
+            (payment_currency_code = base_currency_code AND payment_exchange_rate = 1.0)
+            OR (payment_currency_code <> base_currency_code AND payment_exchange_rate IS NOT NULL AND payment_exchange_rate > 0)
+        )),
     CONSTRAINT pe_period_chk        CHECK (period_number BETWEEN 1 AND 16),
     CONSTRAINT pe_no_self_reversal  CHECK (reversal_of_id IS DISTINCT FROM id),
     CONSTRAINT pe_void_chk          CHECK (NOT is_voided OR voided_at IS NOT NULL),
@@ -145,6 +160,11 @@ COMMENT ON TABLE document.payment_entry IS
 -- ============================================================================
 -- §11.1  document.payment_entry_allocation
 -- ============================================================================
+
+COMMENT ON COLUMN document.payment_entry.fx_rate_snapshot IS
+    'Explains how document-currency exchange_rate was resolved by fx.resolve_rate for payment accounting.';
+COMMENT ON COLUMN document.payment_entry.payment_fx_rate_snapshot IS
+    'Explains how payment_exchange_rate was resolved by fx.resolve_rate for payment/bank currency settlement.';
 
 CREATE TABLE IF NOT EXISTS document.payment_entry_allocation (
     -- Identity
