@@ -16,4 +16,13 @@ Before deleting a compatibility path, add its observed window and qualification 
 pnpm retire:meta-entity --route=<route-id> --current=<stable-report.json>
 ```
 
+Each route record must include the owner, release ID, observation release ID,
+`releaseCompleted: true`, the required number of complete releases, explicit
+`compatibilityTraffic: 0`, `shadowValidationPassed: true`,
+`shadowDifferences: 0`, a schema-versioned qualification artifact with
+`passed: true`, retained rollback-flag details, and complete runbook coverage.
+The command fails closed when any field, file, or observation window is
+missing. Passing the command is a prerequisite for the deletion change; it
+does not delete the compatibility route itself.
+
 The checked-in baseline is not silently rewritten after a regression. Baseline changes require a passing report and review from the route owner; temporary regressions use a named, reasoned, expiring entry in `meta-entity-performance-exceptions.json`.

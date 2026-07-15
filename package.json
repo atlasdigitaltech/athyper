@@ -46,6 +46,7 @@
     "qualify:meta-entity": "node scripts/performance/qualify-meta-entity.mjs",
     "perf:capture:p0": "node scripts/performance/capture-p0-baseline.mjs",
       "test:meta-entity-governance": "node --test scripts/performance/qualify-meta-entity.test.mjs",
+    "test:meta-entity-retirement": "node --test scripts/performance/verify-meta-entity-retirement.test.mjs",
       "test:meta-entity-dependencies": "node --test scripts/policy/verify-meta-entity-dependencies.test.mjs",
     "retire:meta-entity": "node scripts/performance/verify-meta-entity-retirement.mjs",
     "policy:release-gate": "node scripts/policy/verify-release-gate.mjs",

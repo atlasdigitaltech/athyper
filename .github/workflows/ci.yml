@@ -196,6 +196,9 @@ jobs:
       - name: Verify performance phase history and legacy boundary
         run: pnpm policy:performance-phase-history
 
+      - name: Verify meta-entity retirement evidence boundary
+        run: pnpm test:meta-entity-retirement
+
   # P0 performance baseline. Advisory until two stable captured runs have
   # been reviewed. Enable by setting the PERF_BASE_URL repository variable.
   performance-baseline:
