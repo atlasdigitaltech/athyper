@@ -3,6 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bookmark, Check, Lock, RotateCcw, Save, Star, Trash2, Users, X } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Button,
+} from "@athyper/ui";
 import type {
   ResolvedColumn,
   RuntimeField,
@@ -18,7 +27,12 @@ import { PaletteButton } from "./palette-button";
 import { PaletteDrawer } from "./palette-drawer";
 import { buildSaveableListState, parseFilterDraft, serializeOrganizeState, sortEntriesToParam } from "./organize-url";
 import { useOrganizePanel } from "./organize-state";
-import { ORGANIZE_INPUT_CLASS, ORGANIZE_SECTION_LABEL_CLASS } from "./palette-styles";
+import {
+  ORGANIZE_CONTROL_LABEL_CLASS,
+  ORGANIZE_INPUT_CLASS,
+  ORGANIZE_SEGMENTED_GROUP_CLASS,
+  organizeSegmentClass,
+} from "./palette-styles";
 
 interface SavedViewsControlProps {
   entityCode:        string;
@@ -155,8 +169,18 @@ export function SavedViewsControl({
     filterableFields,
     allColumns,
   });
-  const saveTabVisible = Boolean(savedViewsApiHref) && changeSummary.changeCount > 0;
-  const renderedActiveTab: SavedViewsTab = saveTabVisible ? activeTab : "available";
+  const hasChanges = changeSummary.changeCount > 0;
+  const workspaceEnabled = Boolean(savedViewsApiHref);
+  const saveTabVisible = workspaceEnabled;
+  const renderedActiveTab: SavedViewsTab = workspaceEnabled ? activeTab : "available";
+  const canUpdateBaseline = Boolean(
+    baselineView &&
+    normalizeScope(baselineView) === "private" &&
+    baselineView.can_delete,
+  );
+  const rightTabLabel = hasChanges
+    ? canUpdateBaseline ? "Edit view" : "Save view"
+    : baselineView ? "View details" : "Save view";
   const baselineLabel = baselineView?.name ?? "System view";
   const defaults = {
     columns:  defaultColumnNames,
@@ -165,7 +189,7 @@ export function SavedViewsControl({
 
   const togglePanel = () => {
     if (!panel.open) {
-      setActiveTab(saveTabVisible && !baselineView ? "save" : "available");
+      setActiveTab(workspaceEnabled && (baselineView || hasChanges) ? "save" : "available");
     }
     panel.toggle();
   };
@@ -274,19 +298,21 @@ export function SavedViewsControl({
     }
   };
 
+  const buildCurrentSaveableState = (): SaveableListState => buildSaveableListState({
+    activeSort,
+    filters: filterDraft,
+    columns: columns.map((column) => column.name),
+    group: groupField,
+    viewMode,
+    density,
+  });
+
   const saveCurrentView = async () => {
     const trimmedName = name.trim();
     if (!trimmedName || !savedViewsApiHref) return;
     setSaving(true);
     setError(null);
-    const state: SaveableListState = buildSaveableListState({
-      activeSort,
-      filters: filterDraft,
-      columns: columns.map((column) => column.name),
-      group: groupField,
-      viewMode,
-      density,
-    });
+    const state = buildCurrentSaveableState();
     const config = {
       _v: 1,
       entity: entityCode,
@@ -349,6 +375,188 @@ export function SavedViewsControl({
     }
   };
 
+  const updateCurrentView = async () => {
+    if (!baselineView || !canUpdateBaseline || !savedViewsApiHref) return;
+    setSaving(true);
+    setError(null);
+    const state = buildCurrentSaveableState();
+    const config = {
+      _v: 1,
+      entity: entityCode,
+      surface: `${entityCode}.list`,
+      ...state,
+    };
+
+    try {
+      const response = await fetch(savedViewResourceHref(savedViewsApiHref, entityCode, baselineView.id), {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          ...csrfHeader(),
+        },
+        body: JSON.stringify({
+          name: baselineView.name,
+          config,
+        }),
+      });
+      const body = await response.json().catch(() => null) as Partial<SavedView> | null;
+      if (!response.ok || !body?.id) {
+        throw new Error(readMessage(body) ?? `Update returned ${response.status}`);
+      }
+
+      const updated: SavedView = {
+        ...baselineView,
+        id:         body.id,
+        name:       body.name ?? baselineView.name,
+        is_default: body.is_default ?? baselineView.is_default,
+        is_shared:  body.is_shared ?? baselineView.is_shared,
+        can_delete: body.can_delete ?? baselineView.can_delete,
+        scope:      body.scope ?? baselineView.scope,
+        owner_name: body.owner_name ?? baselineView.owner_name,
+        created_at: body.created_at ?? baselineView.created_at,
+        updated_at: body.updated_at ?? new Date().toISOString(),
+        state,
+        config:     body.config ?? config,
+      };
+      setLocalViews((prev) => prev.map((view) => view.id === updated.id ? updated : view));
+      setName("");
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Could not update this view.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const availableViewsContent = (
+    <section className="space-y-2">
+      <h3 className="text-sm font-medium text-foreground">Available views</h3>
+
+      <div className="overflow-hidden rounded-md border bg-background">
+        <SystemViewRow
+          active={systemViewActive}
+          isDefault={!defaultView}
+          disabled={!canApplySystemView}
+          settingDefault={clearingDefault}
+          canSetDefault={Boolean(savedViewsApiHref)}
+          onSelect={useSystemView}
+          onSetDefault={() => void makeSystemDefault()}
+        />
+        {localViews.map((view) => (
+          <SavedViewRow
+            key={view.id}
+            view={view}
+            active={displayActiveSavedViewId === view.id}
+            first={false}
+            deleting={deletingViewId === view.id}
+            settingDefault={defaultingViewId === view.id}
+            canSetDefault={Boolean(savedViewsApiHref) && normalizeScope(view) !== "system"}
+            canDelete={Boolean(savedViewsApiHref) && Boolean(view.can_delete)}
+            onSelect={() => applyView(view.id)}
+            onSetDefault={() => void setDefaultView(view)}
+            onDelete={() => requestDeleteView(view)}
+          />
+        ))}
+      </div>
+      {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
+      {defaultError && <p className="text-sm text-destructive">{defaultError}</p>}
+    </section>
+  );
+
+  const saveViewContent = (
+    <form className="space-y-4" onSubmit={(event) => {
+      event.preventDefault();
+      void saveCurrentView();
+    }}>
+      <div>
+        <h3 className="text-sm font-medium text-foreground">
+          {canUpdateBaseline ? "Edit saved view" : baselineView ? "Save as a new view" : "Save this view"}
+        </h3>
+      </div>
+
+      <ChangeReview
+        summary={changeSummary}
+        baselineLabel={baselineLabel}
+        onResetChange={resetChange}
+      />
+
+      {canUpdateBaseline && baselineView && (
+        <div className="rounded-md border bg-background p-3">
+          <span className={ORGANIZE_CONTROL_LABEL_CLASS}>Current view</span>
+          <p className="mt-1 text-sm font-medium text-foreground">{baselineView.name}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Your private view</p>
+        </div>
+      )}
+
+      <label className="block space-y-1.5">
+        <span className={ORGANIZE_CONTROL_LABEL_CLASS}>
+          {baselineView ? "Name for a new copy" : "View name"}
+        </span>
+        <input
+          type="text"
+          value={name}
+          placeholder={baselineView?.name ?? "e.g. Active liabilities"}
+          onChange={(event) => setName(event.currentTarget.value)}
+          className={ORGANIZE_INPUT_CLASS}
+        />
+      </label>
+
+      {!canUpdateBaseline && (
+        <div className="space-y-1.5">
+          <span className={ORGANIZE_CONTROL_LABEL_CLASS}>Scope</span>
+          <div className={`grid grid-cols-2 ${ORGANIZE_SEGMENTED_GROUP_CLASS}`}>
+            <ScopeButton
+              active={saveScope === "private"}
+              icon={Lock}
+              label="Private"
+              onClick={() => setSaveScope("private")}
+            />
+            <ScopeButton
+              active={saveScope === "shared"}
+              icon={Users}
+              label="Shared"
+              onClick={() => setSaveScope("shared")}
+            />
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <div className={canUpdateBaseline ? "grid gap-2 sm:grid-cols-2" : ""}>
+        {canUpdateBaseline && (
+          <Button
+            type="button"
+            disabled={saving || changeSummary.changeCount === 0}
+            onClick={() => void updateCurrentView()}
+            variant="primary"
+            size="md"
+            className="w-full"
+          >
+            <Save aria-hidden="true" className="size-4" />
+            {saving ? "Updating..." : "Update view"}
+          </Button>
+        )}
+        <Button
+          type="submit"
+          disabled={saving || !name.trim() || changeSummary.changeCount === 0}
+          variant={canUpdateBaseline ? "outline" : "primary"}
+          size="md"
+          className="w-full"
+        >
+          <Save aria-hidden="true" className="size-4" />
+          {saving ? "Saving..." : baselineView ? "Save as new view" : "Save View"}
+        </Button>
+      </div>
+    </form>
+  );
+
+  const rightPaneContent = hasChanges
+    ? saveViewContent
+    : baselineView
+      ? <SavedViewDetails view={baselineView} canUpdate={canUpdateBaseline} />
+      : <NoSavedViewChanges />;
+
   return (
     <>
       <PaletteButton
@@ -362,13 +570,20 @@ export function SavedViewsControl({
         onClick={togglePanel}
       />
       {panel.open && (
-        <PaletteDrawer anchorRef={buttonRef} title="Saved Views" icon={Bookmark} onClose={closePanel}>
-          <div className="flex flex-col gap-4">
+        <PaletteDrawer
+          anchorRef={buttonRef}
+          title="Saved Views"
+          icon={Bookmark}
+          onClose={closePanel}
+          workspace
+          workspaceWidth="wide"
+        >
+          <div className="flex h-full min-h-0 flex-col">
             {saveTabVisible && (
               <div
                 role="tablist"
-                aria-label="Saved view options"
-                className="grid grid-cols-2 rounded-md border bg-muted/30 p-1"
+                aria-label="Saved view sections"
+                className={`flex shrink-0 border-b p-2 md:hidden ${ORGANIZE_SEGMENTED_GROUP_CLASS}`}
               >
                 <SavedViewTabButton
                   active={renderedActiveTab === "available"}
@@ -378,102 +593,39 @@ export function SavedViewsControl({
                 />
                 <SavedViewTabButton
                   active={renderedActiveTab === "save"}
-                  icon={Save}
-                  label="Save Current View"
+                  icon={hasChanges ? Save : Bookmark}
+                  label={rightTabLabel}
                   onClick={() => setActiveTab("save")}
                 />
               </div>
             )}
 
-            {renderedActiveTab === "available" ? (
-              <section className="space-y-2">
-                <h3 className="text-sm font-medium text-foreground">Available views</h3>
-
-                <div className="overflow-hidden rounded-md border bg-background">
-                  <SystemViewRow
-                    active={systemViewActive}
-                    isDefault={!defaultView}
-                    disabled={!canApplySystemView}
-                    settingDefault={clearingDefault}
-                    canSetDefault={Boolean(savedViewsApiHref)}
-                    onSelect={useSystemView}
-                    onSetDefault={() => void makeSystemDefault()}
-                  />
-                  {localViews.map((view) => (
-                    <SavedViewRow
-                      key={view.id}
-                      view={view}
-                      active={displayActiveSavedViewId === view.id}
-                      first={false}
-                      deleting={deletingViewId === view.id}
-                      settingDefault={defaultingViewId === view.id}
-                      canSetDefault={Boolean(savedViewsApiHref) && normalizeScope(view) !== "system"}
-                      canDelete={Boolean(savedViewsApiHref) && Boolean(view.can_delete)}
-                      onSelect={() => applyView(view.id)}
-                      onSetDefault={() => void setDefaultView(view)}
-                      onDelete={() => requestDeleteView(view)}
-                    />
-                  ))}
+            <div className={saveTabVisible
+              ? "min-h-0 flex-1 md:grid md:grid-cols-[minmax(320px,0.95fr)_minmax(420px,1.25fr)]"
+              : "min-h-0 flex-1"}
+            >
+              <section className={[
+                "min-h-0 min-w-0 flex-col border-b md:border-b-0",
+                saveTabVisible ? "md:flex md:border-r" : "flex",
+                saveTabVisible && renderedActiveTab !== "available" ? "hidden md:flex" : "flex",
+              ].join(" ")}>
+                <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-5">
+                  {availableViewsContent}
                 </div>
-                {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
-                {defaultError && <p className="text-sm text-destructive">{defaultError}</p>}
               </section>
-            ) : (
-              <form className="space-y-4" onSubmit={(event) => {
-                event.preventDefault();
-                void saveCurrentView();
-              }}>
-                <div>
-                  <h3 className="text-sm font-medium text-foreground">Save this view</h3>
-                </div>
 
-                <ChangeReview
-                  summary={changeSummary}
-                  baselineLabel={baselineLabel}
-                  onResetChange={resetChange}
-                />
-
-                <label className="block space-y-1.5">
-                  <span className={ORGANIZE_SECTION_LABEL_CLASS}>View name</span>
-                  <input
-                    type="text"
-                    value={name}
-                    placeholder="e.g. Active liabilities"
-                    onChange={(event) => setName(event.currentTarget.value)}
-                    className={ORGANIZE_INPUT_CLASS}
-                  />
-                </label>
-
-                <div className="space-y-1.5">
-                  <span className={ORGANIZE_SECTION_LABEL_CLASS}>Scope</span>
-                  <div className="grid grid-cols-2 overflow-hidden rounded-md border bg-background">
-                    <ScopeButton
-                      active={saveScope === "private"}
-                      icon={Lock}
-                      label="Private"
-                      onClick={() => setSaveScope("private")}
-                    />
-                    <ScopeButton
-                      active={saveScope === "shared"}
-                      icon={Users}
-                      label="Shared"
-                      onClick={() => setSaveScope("shared")}
-                    />
+              {saveTabVisible && (
+                <section className={[
+                  "min-h-0 min-w-0 flex-col",
+                  renderedActiveTab === "save" ? "flex" : "hidden",
+                  "md:flex",
+                ].join(" ")}>
+                  <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-5">
+                    {rightPaneContent}
                   </div>
-                </div>
-
-                {error && <p className="text-sm text-destructive">{error}</p>}
-
-                <button
-                  type="submit"
-                  disabled={saving || !name.trim() || changeSummary.changeCount === 0}
-                  className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-foreground px-3 text-sm font-medium text-background transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <Save aria-hidden="true" className="size-4" />
-                  {saving ? "Saving..." : "Save View"}
-                </button>
-              </form>
-            )}
+                </section>
+              )}
+            </div>
             {deleteTarget && (
               <DeleteSavedViewDialog
                 view={deleteTarget}
@@ -488,6 +640,66 @@ export function SavedViewsControl({
         </PaletteDrawer>
       )}
     </>
+  );
+}
+
+function SavedViewDetails({
+  view,
+  canUpdate,
+}: {
+  view:       SavedView;
+  canUpdate:  boolean;
+}) {
+  const scope = normalizeScope(view);
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h3 className="text-sm font-medium text-foreground">View details</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {canUpdate
+            ? "This view is active. Adjust the list, then return here to update it."
+            : "This view is active and ready to use."}
+        </p>
+      </div>
+
+      <dl className="divide-y rounded-md border bg-background">
+        <div className="flex min-w-0 items-start justify-between gap-4 px-3 py-2.5">
+          <dt className="shrink-0 text-xs font-medium text-muted-foreground">Name</dt>
+          <dd className="min-w-0 break-words text-right text-sm font-medium text-foreground">{view.name}</dd>
+        </div>
+        <div className="flex items-start justify-between gap-4 px-3 py-2.5">
+          <dt className="shrink-0 text-xs font-medium text-muted-foreground">Scope</dt>
+          <dd className="text-right text-sm text-foreground">{scopeLabel(scope)}</dd>
+        </div>
+        {view.is_default && (
+          <div className="flex items-center justify-between gap-4 px-3 py-2.5">
+            <dt className="shrink-0 text-xs font-medium text-muted-foreground">Status</dt>
+            <dd className="text-right text-sm text-foreground">Default view</dd>
+          </div>
+        )}
+      </dl>
+
+      <div className="rounded-md border border-dashed bg-muted/20 p-4">
+        <p className="text-sm font-medium text-foreground">No unsaved changes</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Change filters, sorting, columns, density, or layout in the list. Then reopen Saved Views to review and save the changes.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function NoSavedViewChanges() {
+  return (
+    <section className="flex min-h-full items-center justify-center">
+      <div className="max-w-sm rounded-md border border-dashed bg-muted/20 p-6 text-center">
+        <h3 className="text-sm font-medium text-foreground">Save a view</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Adjust the list, then reopen Saved Views to save your filters, columns, sorting, and layout.
+        </p>
+      </div>
+    </section>
   );
 }
 
@@ -508,12 +720,7 @@ function SavedViewTabButton({
       role="tab"
       aria-selected={active}
       onClick={onClick}
-      className={[
-        "inline-flex h-9 min-w-0 items-center justify-center gap-2 rounded px-2 text-sm font-medium transition-colors",
-        active
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
-      ].join(" ")}
+      className={`inline-flex h-9 min-w-0 items-center justify-center gap-2 px-2 ${organizeSegmentClass(active)}`}
     >
       <Icon aria-hidden="true" className="size-4 shrink-0" />
       <span className="min-w-0 truncate">{label}</span>
@@ -540,17 +747,19 @@ function ChangeReview({
         {summary.sections.map((section) => (
           <div key={section.key} className="space-y-1.5">
             <div className="flex min-w-0 items-center justify-between gap-2">
-              <h5 className="text-xs font-medium text-muted-foreground">{section.label}</h5>
+              <h5 className={ORGANIZE_CONTROL_LABEL_CLASS}>{section.label}</h5>
               {section.reset && (
-                <button
+                <Button
                   type="button"
                   onClick={() => onResetChange(section.reset!)}
                   aria-label={`Clear all ${section.label.toLowerCase()} changes`}
-                  className="inline-flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  variant="ghost"
+                  size="compact"
+                  className="h-7 shrink-0 px-2 text-xs text-muted-foreground"
                 >
                   <X aria-hidden="true" className="size-3.5" />
                   Clear all
-                </button>
+                </Button>
               )}
             </div>
             <div className="space-y-1">
@@ -566,15 +775,17 @@ function ChangeReview({
                     {changeSymbol(item.kind)}
                   </span>
                   <span className="min-w-0 truncate">{item.label}</span>
-                  <button
+                  <Button
                     type="button"
                     title="Remove this change"
                     aria-label={`Remove change: ${item.label}`}
                     onClick={() => onResetChange(item.reset)}
-                    className="ml-auto inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    variant="ghost"
+                    size="iconCompact"
+                    className="ml-auto shrink-0 text-muted-foreground"
                   >
                     <X aria-hidden="true" className="size-3.5" />
-                  </button>
+                  </Button>
                 </div>
               ))}
             </div>
@@ -631,7 +842,7 @@ function SystemViewRow({
           <RotateCcw aria-hidden="true" className="size-4" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-foreground">System view</span>
+          <span className="block whitespace-normal break-words text-sm font-medium text-foreground">System view</span>
           <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <span>System</span>
             {isDefault && <span className="rounded-full border px-1.5 py-0.5">Default</span>}
@@ -641,7 +852,7 @@ function SystemViewRow({
       <div className="flex shrink-0 items-center gap-1 pr-3">
         {active && <Check aria-hidden="true" className="size-4" />}
         {canSetDefault && (
-          <button
+          <Button
             type="button"
             title={isDefault ? "System view is your default" : "Make system view my default"}
             aria-label={isDefault ? "System view is your default view" : "Make system view my default view"}
@@ -652,26 +863,30 @@ function SystemViewRow({
               onSetDefault();
             }}
             onKeyDown={(event) => event.stopPropagation()}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            variant="ghost"
+            size="iconSm"
+            className="text-muted-foreground"
           >
             <Star
               aria-hidden="true"
               className="size-4"
               fill={isDefault ? "currentColor" : "none"}
             />
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="button"
           title="System view cannot be deleted"
           aria-label="System view cannot be deleted"
           disabled
           onClick={(event) => event.stopPropagation()}
           onKeyDown={(event) => event.stopPropagation()}
-          className="inline-flex h-8 w-8 cursor-not-allowed items-center justify-center rounded-md text-muted-foreground/40 opacity-60"
+          variant="ghost"
+          size="iconSm"
+          className="cursor-not-allowed text-muted-foreground/40 opacity-60"
         >
           <Trash2 aria-hidden="true" className="size-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -733,7 +948,7 @@ function SavedViewRow({
           <Icon aria-hidden="true" className="size-4" />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-foreground">{view.name}</span>
+          <span className="block whitespace-normal break-words text-sm font-medium text-foreground">{view.name}</span>
           <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <span>{scopeLabel(scope)}</span>
             {view.is_default && <span className="rounded-full border px-1.5 py-0.5">Default</span>}
@@ -743,7 +958,7 @@ function SavedViewRow({
       <div className="flex shrink-0 items-center gap-1 pr-3">
         {active && <Check aria-hidden="true" className="size-4" />}
         {canSetDefault && (
-          <button
+          <Button
             type="button"
             title={view.is_default ? `${view.name} is your default` : `Make ${view.name} my default`}
             aria-label={view.is_default ? `${view.name} is your default view` : `Make ${view.name} my default view`}
@@ -754,16 +969,18 @@ function SavedViewRow({
               onSetDefault();
             }}
             onKeyDown={(event) => event.stopPropagation()}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+            variant="ghost"
+            size="iconSm"
+            className="text-muted-foreground"
           >
             <Star
               aria-hidden="true"
               className="size-4"
               fill={view.is_default ? "currentColor" : "none"}
             />
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="button"
           title={canDelete ? `Delete ${view.name}` : "Only the owner can delete this view"}
           aria-label={canDelete ? `Delete ${view.name}` : "This view cannot be deleted"}
@@ -773,15 +990,12 @@ function SavedViewRow({
             if (canDelete) onDelete();
           }}
           onKeyDown={(event) => event.stopPropagation()}
-          className={[
-            "inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            canDelete
-              ? "text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-              : "cursor-not-allowed text-muted-foreground/40 opacity-60",
-          ].join(" ")}
+          variant={canDelete ? "destructive" : "ghost"}
+          size="iconSm"
+          className={canDelete ? undefined : "cursor-not-allowed text-muted-foreground/40 opacity-60"}
         >
           <Trash2 aria-hidden="true" className="size-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -798,66 +1012,53 @@ function DeleteSavedViewDialog({
   onCancel:  () => void;
   onConfirm: () => void;
 }) {
-  const cancelRef = useRef<HTMLButtonElement | null>(null);
-  const titleId = `delete-saved-view-title-${view.id}`;
-  const descriptionId = `delete-saved-view-description-${view.id}`;
-
-  useEffect(() => {
-    cancelRef.current?.focus();
-
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !deleting) {
-        event.preventDefault();
-        onCancel();
-      }
-    };
-
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [deleting, onCancel]);
-
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Cancel delete saved view"
-        disabled={deleting}
-        onClick={onCancel}
-        className="absolute inset-0 cursor-default bg-foreground/35"
-      />
-      <div
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !deleting) onCancel();
+      }}
+    >
+      <DialogContent
         role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descriptionId}
-        className="relative w-full max-w-sm rounded-md border bg-popover p-4 text-popover-foreground shadow-2xl"
+        aria-describedby={`delete-saved-view-description-${view.id}`}
+        onEscapeKeyDown={(event) => {
+          if (deleting) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (deleting) event.preventDefault();
+        }}
+        className="max-w-sm"
       >
-        <h3 id={titleId} className="text-sm font-medium text-foreground">Delete saved view?</h3>
-        <p id={descriptionId} className="mt-2 text-sm text-muted-foreground">
-          Delete "{view.name}"? This cannot be undone.
-        </p>
-        <div className="mt-4 flex items-center justify-end gap-2">
-          <button
-            ref={cancelRef}
+        <DialogHeader>
+          <DialogTitle>Delete saved view?</DialogTitle>
+          <DialogDescription id={`delete-saved-view-description-${view.id}`}>
+            Delete "{view.name}"? This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button
             type="button"
             disabled={deleting}
             onClick={onCancel}
-            className="inline-flex h-9 items-center justify-center rounded-md border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+            variant="outline"
+            size="md"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             disabled={deleting}
             onClick={onConfirm}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-destructive px-3 text-sm font-medium text-destructive-foreground transition-colors hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            variant="destructive"
+            size="md"
           >
             <Trash2 aria-hidden="true" className="size-4" />
             {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -877,10 +1078,7 @@ function ScopeButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={[
-        "inline-flex h-9 items-center justify-center gap-2 text-sm font-medium transition-colors",
-        active ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      ].join(" ")}
+      className={`h-9 ${organizeSegmentClass(active)} inline-flex items-center justify-center gap-2 px-2`}
     >
       <Icon aria-hidden="true" className="size-4" />
       {label}

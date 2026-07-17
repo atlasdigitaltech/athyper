@@ -1,11 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
-
-const STABLE_SCROLL_GUTTER_STYLE: CSSProperties = {
-  scrollbarGutter: "stable",
-};
-
-const ENTITY_LIST_SCROLL_CLASS =
-  "min-h-0 flex-1 overflow-auto pr-4";
+import type { ReactNode } from "react";
 
 // â”€â”€â”€ PageFrame â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -195,63 +188,6 @@ export function BoundaryBanner({ title, children }: BoundaryBannerProps) {
     <div className="flex items-baseline gap-2 text-xs text-warning">
       <span className="shrink-0 text-sm font-medium">{title}:</span>
       {children && <span className="text-warning">{children}</span>}
-    </div>
-  );
-}
-
-// ─── EntityListPageFrame ──────────────────────────────────────────────────────
-
-export interface EntityListPageFrameProps {
-  eyebrow?:     string;
-  title?:       string;
-  description?: string;
-  commandBar?:  ReactNode;
-  actions?:     ReactNode;
-  toolbar?:     ReactNode;
-  children:     ReactNode;
-}
-
-export function EntityListPageFrame({
-  eyebrow,
-  title,
-  description,
-  commandBar,
-  actions,
-  toolbar,
-  children,
-}: EntityListPageFrameProps) {
-  const hasHeader = commandBar || eyebrow || title || description || actions || toolbar;
-
-  return (
-    <div className="flex h-full min-w-0 flex-col gap-2.5">
-      {hasHeader && (
-        <div className="flex shrink-0 flex-col gap-3 rounded-xl border bg-card py-3 pl-3 pr-4 shadow-sm">
-          {commandBar ? (
-            commandBar
-          ) : (
-            <>
-              <div className="flex min-w-0 items-start justify-between gap-4">
-                <div className="min-w-0">
-                  {eyebrow && (
-                    <p className="mb-1 truncate text-xs text-muted-foreground">{eyebrow}</p>
-                  )}
-                  {title && (
-                    <h1 className="truncate text-xl font-semibold leading-tight text-foreground">{title}</h1>
-                  )}
-                  {description && (
-                    <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-                  )}
-                </div>
-                {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-              </div>
-              {toolbar && <div className="min-w-0 border-t pt-3">{toolbar}</div>}
-            </>
-          )}
-        </div>
-      )}
-      <div className={ENTITY_LIST_SCROLL_CLASS} style={STABLE_SCROLL_GUTTER_STYLE}>
-        {children}
-      </div>
     </div>
   );
 }

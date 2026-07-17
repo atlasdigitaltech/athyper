@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, type ReactNode, type CSSProperties } from "react";
+import { useState, useRef, type ReactNode, type CSSProperties, type ComponentPropsWithoutRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
@@ -46,6 +46,13 @@ export interface DrawerShellProps {
   footerEnd?: ReactNode;
   /** Optional footer-bar geometry override for a drawer family. */
   footerClassName?: string;
+  /** Optional class override for the scroll body. */
+  bodyClassName?: string;
+  /** Optional overlay styling for non-modal embedded drawers. */
+  overlayClassName?: string;
+  /** Radix focus lifecycle hooks for callers with an external trigger. */
+  onOpenAutoFocus?: ComponentPropsWithoutRef<typeof DialogPrimitive.Content>["onOpenAutoFocus"];
+  onCloseAutoFocus?: ComponentPropsWithoutRef<typeof DialogPrimitive.Content>["onCloseAutoFocus"];
   children?: ReactNode;
   className?: string;
 }
@@ -105,6 +112,10 @@ export function DrawerShell({
   footerStart,
   footerEnd,
   footerClassName,
+  bodyClassName,
+  overlayClassName,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
   children,
   className,
 }: DrawerShellProps) {
@@ -162,12 +173,15 @@ export function DrawerShell({
             "fixed inset-0 z-modal",
             "data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out",
             overlayScrimVariants({ tone: OVERLAY_TONE[intent] }),
+            overlayClassName,
           )}
         />
 
         {/* Drawer panel */}
         <DialogPrimitive.Content
           aria-describedby={undefined}
+          onOpenAutoFocus={onOpenAutoFocus}
+          onCloseAutoFocus={onCloseAutoFocus}
           data-advanced-picker-portal-root="true"
           data-drawer-shell-content="true"
           style={{ width: effectiveWidth, maxWidth: maxWidthCss } as CSSProperties}
@@ -250,7 +264,7 @@ export function DrawerShell({
           )}
 
           {/* Body */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className={cn("flex-1 min-h-0 overflow-y-auto", bodyClassName)}>
             {children}
           </div>
 

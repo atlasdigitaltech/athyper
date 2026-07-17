@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@athyper/ui";
 import type { RuntimeField } from "../../core/types";
 import {
   ORGANIZE_ICON_BUTTON_CLASS,
@@ -28,7 +29,6 @@ export function FieldCombobox({
   noResultsMessage,
   onChange,
 }: FieldComboboxProps) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -44,44 +44,35 @@ export function FieldCombobox({
   useEffect(() => {
     if (!open) return;
     setQuery("");
-    window.setTimeout(() => searchRef.current?.focus(), 0);
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative min-w-0 flex-1">
-      <button
-        type="button"
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-        className={`${ORGANIZE_INPUT_CLASS} flex min-w-0 items-center gap-2 text-left transition-colors hover:bg-muted/50`}
-      >
-        <span className={selectedField ? "min-w-0 flex-1 truncate" : "min-w-0 flex-1 truncate text-muted-foreground"}>
-          {selectedField?.label ?? placeholder}
-        </span>
-        <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-      </button>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={ariaLabel}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          className={`${ORGANIZE_INPUT_CLASS} flex min-w-0 items-center gap-2 text-left transition-colors hover:bg-muted/50`}
+        >
+          <span className={selectedField ? "min-w-0 flex-1 truncate" : "min-w-0 flex-1 truncate text-muted-foreground"}>
+            {selectedField?.label ?? placeholder}
+          </span>
+          <ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+        </button>
+      </PopoverTrigger>
 
-      {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover p-2 text-foreground shadow-lg">
+      <PopoverContent
+        align="start"
+        sideOffset={4}
+        aria-label={ariaLabel}
+        className="w-[min(24rem,calc(100vw-2rem))] p-2 text-foreground"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          searchRef.current?.focus();
+        }}
+      >
           <label className="relative block">
             <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -134,8 +125,7 @@ export function FieldCombobox({
               })
             )}
           </div>
-        </div>
-      )}
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }

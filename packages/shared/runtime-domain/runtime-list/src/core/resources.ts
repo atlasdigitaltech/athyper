@@ -51,7 +51,7 @@ export const runtimeListText = {
       `Loaded ${formatRuntimeListCount(rowCount)} ${rowCount === 1 ? "record" : "records"}`
     ),
     loadedRowsUseFilters: (rowCount: number) => (
-      `Loaded ${formatRuntimeListCount(rowCount)} rows. Use filters or search to narrow results, or click Next to view more.`
+      `${formatRuntimeListCount(rowCount)} rows loaded. Use filters or search, or select Next for more.`
     ),
     matchesInLoadedRows: (matchCount: number) => (
       `${formatRuntimeListCount(matchCount)} ${matchCount === 1 ? "match" : "matches"} in loaded rows`
@@ -87,6 +87,7 @@ export const runtimeListText = {
     accessScopeUnavailable: "Access scope could not be resolved.",
     couldNotLoadMoreRecords: "Could not load more records.",
     couldNotLoadNextRecords: "Could not load the next records.",
+    couldNotLoadPreviousRecords: "Could not load the previous records.",
     entityDescriptorUnavailable: "Entity descriptor could not be loaded.",
     loadingMoreRows: "Loading more rows...",
     loadingPage: (page: number) => `Loading page ${page}.`,

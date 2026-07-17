@@ -48,6 +48,9 @@ COPY packages/apps/neon/navigation/package.json ./packages/apps/neon/navigation/
 COPY packages/apps/neon/route-manifest/package.json ./packages/apps/neon/route-manifest/
 COPY packages/apps/neon/shell/package.json ./packages/apps/neon/shell/
 COPY packages/domain/finance/finance-workbench/package.json ./packages/domain/finance/finance-workbench/
+COPY packages/product/neon/package.json ./packages/product/neon/
+COPY packages/product/admin/package.json ./packages/product/admin/
+COPY packages/product/mesh/package.json ./packages/product/mesh/
 COPY packages/shared/data-integration/api-client/package.json ./packages/shared/data-integration/api-client/
 COPY packages/shared/data-integration/api-contracts/package.json ./packages/shared/data-integration/api-contracts/
 COPY packages/shared/platform-auth/auth-bff/package.json ./packages/shared/platform-auth/auth-bff/
@@ -128,4 +131,3 @@ EXPOSE 3000
 
 # Dev: tsx watch for hot-reload (PORT is injected by Docker compose via env)
 CMD ["pnpm", "run", "dev"]
-

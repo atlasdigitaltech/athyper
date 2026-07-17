@@ -1,6 +1,6 @@
 "use client";
 
-import { ORGANIZE_SECONDARY_BUTTON_CLASS } from "./palette-styles";
+import { Button } from "@athyper/ui";
 
 interface PaletteDrawerActionsProps {
   onApply:        () => void;
@@ -8,6 +8,10 @@ interface PaletteDrawerActionsProps {
   onDiscard:      () => void;
   hasChanges?:    boolean;
   applyDisabled?: boolean;
+  applyLabel?:    string;
+  resetLabel?:    string;
+  discardLabel?:  string;
+  layout?:        "grid" | "inline";
 }
 
 export function PaletteDrawerActions({
@@ -16,33 +20,62 @@ export function PaletteDrawerActions({
   onDiscard,
   hasChanges,
   applyDisabled = false,
+  applyLabel = "Apply",
+  resetLabel = "Reset",
+  discardLabel = "Discard",
+  layout = "grid",
 }: PaletteDrawerActionsProps) {
   const canApply = (hasChanges ?? !applyDisabled) && !applyDisabled;
+  const applyButton = (
+    <Button
+      type="button"
+      onClick={onApply}
+      disabled={!canApply}
+      variant="primary"
+      size="md"
+      className={layout === "inline" ? undefined : "w-full"}
+    >
+      {applyLabel}
+    </Button>
+  );
+  const resetButton = (
+    <Button
+      type="button"
+      onClick={onReset}
+      variant="outline"
+      size="md"
+      className={layout === "inline" ? undefined : "w-full"}
+    >
+      {resetLabel}
+    </Button>
+  );
+  const discardButton = (
+    <Button
+      type="button"
+      onClick={onDiscard}
+      variant="ghost"
+      size="md"
+      className={layout === "inline" ? "text-muted-foreground" : "w-full text-muted-foreground"}
+    >
+      {discardLabel}
+    </Button>
+  );
+
+  if (layout === "inline") {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="mr-auto">{resetButton}</div>
+        {discardButton}
+        {applyButton}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-      <button
-        type="button"
-        onClick={onApply}
-        disabled={!canApply}
-        className="inline-flex h-9 items-center justify-center rounded-md bg-foreground px-3 text-sm font-medium text-background shadow-sm transition-colors hover:bg-foreground/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        Apply
-      </button>
-      <button
-        type="button"
-        onClick={onReset}
-        className={ORGANIZE_SECONDARY_BUTTON_CLASS}
-      >
-        Reset
-      </button>
-      <button
-        type="button"
-        onClick={onDiscard}
-        className="inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        Discard
-      </button>
+      {applyButton}
+      {resetButton}
+      {discardButton}
     </div>
   );
 }

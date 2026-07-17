@@ -91,6 +91,7 @@ export interface IamRoutesDeps {
   /** Optional tenant-level cache metrics. No-op when omitted. */
   sessionMetrics?: CacheMetrics;
   bootstrapMetrics?: CacheMetrics;
+  terminationMetrics?: (reason: string, outcome: "success" | "degraded" | "failure") => void;
   /**
    * Keycloak config for WebAuthn AIA enrollment and KC→App credential sync.
    * When omitted the WebAuthn routes return 501 Not Implemented.

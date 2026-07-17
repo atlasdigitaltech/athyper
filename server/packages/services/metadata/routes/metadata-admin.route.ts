@@ -51,6 +51,7 @@
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import { normalizeEntityFeatureFlags, normalizeEntityListFeatures } from "@athyper/api-contracts/metadata-normalizers";
 import { extractOrgHeaders, resolveTenantId, verifyBearer } from "@athyper/svc-shared";
 import {
   validateEntityContractWrite,
@@ -457,7 +458,20 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
       const updates: Record<string, any> = { updated_by: ctx.pId, updated_at: new Date() };
       for (const column of ENTITY_CONTRACT_COLUMNS) {
         if (!(column in validation.values)) continue;
-        const value = validation.values[column];
+        let value = validation.values[column];
+        if (column === "display_config") {
+          const displayConfig = asRecord(value);
+          const listFeatures = normalizeEntityListFeatures(
+            displayConfig?.["list_features"] ?? displayConfig?.["listFeatures"],
+          );
+          if (displayConfig && listFeatures) {
+            value = { ...displayConfig, list_features: listFeatures };
+            delete (value as Record<string, unknown>)["listFeatures"];
+          }
+        } else if (column === "feature_flags") {
+          const featureFlags = asRecord(value);
+          if (featureFlags) value = normalizeEntityFeatureFlags(featureFlags);
+        }
         updates[column] = value === null || column === "data_policy"
           ? (value ?? {})
           : mergeJsonPatch(current[column], value);

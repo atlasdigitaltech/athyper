@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowUpDown,
@@ -26,6 +26,11 @@ import { LIST_URL_PARAMS as P } from "../../core/types";
 import type { RuntimeListFeatures } from "../../adapter/types";
 import { PaletteButton } from "./palette-button";
 import { PalettePanel } from "./palette-panel";
+import {
+  ORGANIZE_CONTROL_LABEL_CLASS,
+  ORGANIZE_SEGMENTED_GROUP_CLASS,
+  organizeSegmentClass,
+} from "./palette-styles";
 import { serializeOrganizeState } from "./organize-url";
 import { useOrganizePanel } from "./organize-state";
 
@@ -81,7 +86,6 @@ export function OrganizeSettingsControl({
   buttonSize = "default",
 }: OrganizeSettingsControlProps) {
   const router = useRouter();
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
   const sortPanel = useOrganizePanel("sort");
   const groupPanel = useOrganizePanel("group");
@@ -114,21 +118,25 @@ export function OrganizeSettingsControl({
 
   return (
     <>
-      <PaletteButton
-        ref={buttonRef}
-        icon={SlidersHorizontal}
-        label="Organize settings"
-        expanded={open}
-        size={buttonSize}
-        chrome="default"
-        onClick={() => setOpen((value) => !value)}
-      />
-      {open && (
-        <PalettePanel anchorRef={buttonRef} title="Organize" width={404} onClose={() => setOpen(false)}>
-          <div className="space-y-4">
+      <PalettePanel
+        open={open}
+        onOpenChange={setOpen}
+        title="Organize"
+        width={404}
+        trigger={(
+          <PaletteButton
+            icon={SlidersHorizontal}
+            label="Organize settings"
+            expanded={open}
+            size={buttonSize}
+            chrome="default"
+          />
+        )}
+      >
+          <div className="space-y-5">
             {(showSort || showGroup || showColumns) && (
-              <section className="space-y-1.5">
-                <h3 className="px-0.5 text-xs font-medium text-muted-foreground">Arrange</h3>
+              <section className="space-y-3 border-t border-border/60 pt-5 first:border-t-0 first:pt-0">
+                <h3 className={`px-0.5 ${ORGANIZE_CONTROL_LABEL_CLASS}`}>Arrange</h3>
                 <div className="overflow-hidden rounded-md border bg-background">
                   {showSort && (
                     <SettingsRow
@@ -158,21 +166,16 @@ export function OrganizeSettingsControl({
               </section>
             )}
 
-            <section className="space-y-1.5">
-              <h3 className="px-0.5 text-xs font-medium text-muted-foreground">Density</h3>
-              <div className="grid grid-cols-3 overflow-hidden rounded-md border bg-muted/30 p-1">
+            <section className="space-y-3 border-t border-border/60 pt-5 first:border-t-0 first:pt-0">
+              <h3 className={`px-0.5 ${ORGANIZE_CONTROL_LABEL_CLASS}`}>Density</h3>
+              <div className={`grid grid-cols-3 ${ORGANIZE_SEGMENTED_GROUP_CLASS}`}>
                 {DENSITIES.map((option) => (
                   <button
                     key={option.value}
                     type="button"
                     aria-pressed={density === option.value}
                     onClick={() => commitDensity(option.value)}
-                    className={[
-                      "h-9 rounded px-2 text-sm font-medium transition-colors",
-                      density === option.value
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-background/70 hover:text-foreground",
-                    ].join(" ")}
+                    className={`h-9 px-2 ${organizeSegmentClass(density === option.value)}`}
                   >
                     {option.label}
                   </button>
@@ -181,8 +184,8 @@ export function OrganizeSettingsControl({
             </section>
 
             {showView && (
-              <section className="space-y-1.5">
-                <h3 className="px-0.5 text-xs font-medium text-muted-foreground">View</h3>
+              <section className="space-y-3 border-t border-border/60 pt-5 first:border-t-0 first:pt-0">
+                <h3 className={`px-0.5 ${ORGANIZE_CONTROL_LABEL_CLASS}`}>View</h3>
                 <div className="overflow-hidden rounded-md border bg-background">
                   {features.viewModes.map((mode) => {
                     const Icon = VIEW_ICONS[mode];
@@ -204,8 +207,7 @@ export function OrganizeSettingsControl({
               </section>
             )}
           </div>
-        </PalettePanel>
-      )}
+      </PalettePanel>
     </>
   );
 }

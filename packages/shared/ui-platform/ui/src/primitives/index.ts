@@ -38,4 +38,6 @@ export {
 } from "./dropdown-menu";
 export { RelativeTimeCell, type RelativeTimeCellProps } from "./relative-time-cell";
 export { DrawerShell, type DrawerShellProps, type DrawerIntent } from "./drawer-shell";
-
+export {
+  Popover, PopoverTrigger, PopoverAnchor, PopoverClose, PopoverPortal, PopoverContent,
+} from "./popover";

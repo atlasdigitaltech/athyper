@@ -4,11 +4,13 @@ import { Clock3, LogOut } from "lucide-react";
 
 export function SessionWarningDialog({
   secondsRemaining,
+  reason = "idle",
   pending,
   onContinue,
   onLogout,
 }: {
   secondsRemaining: number;
+  reason?: "idle" | "absolute";
   pending: boolean;
   onContinue: () => void;
   onLogout: () => void;
@@ -33,7 +35,9 @@ export function SessionWarningDialog({
             Still there?
           </h2>
           <p id="session-warning-description" className="mt-2 text-center text-sm leading-6 text-muted-foreground">
-            Your session will close soon because there has not been activity.
+             {reason === "absolute"
+               ? "Your session is reaching its maximum lifetime and cannot be extended."
+               : "Your session will close soon because there has not been activity."}
           </p>
           <p aria-live="polite" aria-atomic="true" className="mt-4 text-center text-xs text-muted-foreground/70">
             Signing out in{" "}
@@ -42,14 +46,14 @@ export function SessionWarningDialog({
             </span>
           </p>
           <div className="mt-6 flex flex-col gap-3">
-            <button
-              type="button"
-              onClick={onContinue}
-              disabled={pending}
+              <button
+                type="button"
+                onClick={onContinue}
+                disabled={pending || reason === "absolute"}
               className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-foreground px-4 py-2.5 text-sm font-semibold text-background shadow-sm hover:bg-foreground/90 disabled:pointer-events-none disabled:opacity-60"
             >
               <Clock3 className="h-4 w-4" aria-hidden="true" />
-              {pending ? "Checking session..." : "Continue session"}
+              {reason === "absolute" ? "Continue unavailable" : pending ? "Checking session..." : "Continue session"}
             </button>
             <button
               type="button"

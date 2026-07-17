@@ -1,4 +1,5 @@
 import type { MetaEntityRuntimeDescriptor, MetaEntityField } from "@athyper/runtime-contracts";
+import { normalizeEntityListFeatures } from "@athyper/api-contracts/metadata-normalizers";
 import type {
   RuntimeColumnAggregation,
   RuntimeDescriptor,
@@ -9,6 +10,7 @@ import type {
   RuntimeFilterOperator,
   RuntimeFilterOption,
   RuntimeFilterOptionSource,
+  RuntimeListFeatureOverrides,
   RuntimeListPresentationConfig,
   RuntimeScopeFieldRole,
   ViewMode,
@@ -423,6 +425,31 @@ function readViewModes(displayConfig: Record<string, unknown> | null): ViewMode[
   return modes.length > 0 ? [...new Set(modes)] : undefined;
 }
 
+function readListFeatures(displayConfig: Record<string, unknown> | null): RuntimeListFeatureOverrides | undefined {
+  const raw = normalizeEntityListFeatures(displayConfig?.["list_features"] ?? displayConfig?.["listFeatures"]);
+  if (!raw) return undefined;
+
+  const features: RuntimeListFeatureOverrides = {
+    savedViews:          readBoolean(raw["saved_views"]),
+    bulkActions:         readBoolean(raw["bulk_actions"]),
+    export:              readBoolean(raw["export"]),
+    import:              readBoolean(raw["import"]),
+    columnCustomization: readBoolean(raw["column_customization"]),
+    grouping:            readBoolean(raw["grouping"]),
+    multiSort:           readBoolean(raw["multi_sort"]),
+    maxSortLevels:       readNumber(raw["max_sort_levels"]),
+    searchMode:          normalizeSearchMode(raw["search_mode"]),
+    maxPageSize:         readNumber(raw["max_page_size"]),
+  };
+
+  const present = Object.values(features).some((value) => value !== undefined);
+  return present ? features : undefined;
+}
+
+function normalizeSearchMode(value: unknown): RuntimeListFeatureOverrides["searchMode"] {
+  return value === "server" || value === "client" || value === "both" ? value : undefined;
+}
+
 function readListPresentation(meta: MetaEntityRuntimeDescriptor): RuntimeListPresentationConfig | undefined {
   const displayConfig = readDisplayConfig(meta);
   if (!displayConfig) return undefined;
@@ -431,6 +458,7 @@ function readListPresentation(meta: MetaEntityRuntimeDescriptor): RuntimeListPre
   const presentation: RuntimeListPresentationConfig = {
     defaultViewMode: mapViewMode(displayConfig["list_renderer"]),
     viewModes:       readViewModes(displayConfig),
+    features:        readListFeatures(displayConfig),
     compact: {
       titleField:    readString(displayConfig["title_field"]),
       subtitleField: readString(displayConfig["subtitle_field"]),
@@ -447,6 +475,7 @@ function readListPresentation(meta: MetaEntityRuntimeDescriptor): RuntimeListPre
   return {
     ...(presentation.defaultViewMode ? { defaultViewMode: presentation.defaultViewMode } : {}),
     ...(presentation.viewModes ? { viewModes: presentation.viewModes } : {}),
+    ...(presentation.features ? { features: presentation.features } : {}),
     ...(hasCompactConfig ? { compact: presentation.compact } : {}),
   };
 }

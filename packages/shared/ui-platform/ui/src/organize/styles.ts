@@ -49,11 +49,30 @@ export const ORGANIZE_FIELD_CARD_CLASS =
 export const ORGANIZE_FIELD_LABEL_CLASS   = LABEL_XS;
 export const ORGANIZE_META_TEXT_CLASS     = META_XS;
 export const ORGANIZE_SECTION_LABEL_CLASS = SECTION_LABEL_XS;
+/** Shared 14px control-group heading used by Organize and Saved Views. */
+export const ORGANIZE_CONTROL_LABEL_CLASS = "text-sm font-medium text-muted-foreground" as const;
 
 // ── Secondary action button ───────────────────────────────────────────────────
 
 export const ORGANIZE_SECONDARY_BUTTON_CLASS =
   "inline-flex h-9 w-full items-center justify-center rounded-md border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:border-muted-foreground/30 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/**
+ * Shared track and option treatment for mutually exclusive organize choices.
+ * Matches the canonical ViewModeSwitcher selection treatment so organize
+ * controls remain consistent across themes and product surfaces.
+ */
+export const ORGANIZE_SEGMENTED_GROUP_CLASS =
+  "overflow-hidden rounded-md border border-input bg-background p-1";
+
+export function organizeSegmentClass(selected: boolean): string {
+  return [
+    "rounded text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    selected
+      ? "bg-accent text-accent-foreground shadow-sm"
+      : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+  ].join(" ");
+}
 
 // ── Chip / pill helpers ───────────────────────────────────────────────────────
 

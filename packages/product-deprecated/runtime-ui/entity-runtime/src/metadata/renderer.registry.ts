@@ -9,7 +9,6 @@
  */
 
 import { EntityDetailPage } from "../detail";
-import { EntityListPage, KanbanView, DashboardView, ExcelView } from "../list";
 
 // Re-export the lines registry from runtime-shared so callers can
 // import everything from a single "@athyper/entity-runtime/metadata" path.
@@ -33,16 +32,4 @@ export const detailRendererMap = {
   ledger:   EntityDetailPage,
 } as const;
 
-/**
- * Maps display_config.list_renderer → the React component that renders
- * the list view for that strategy.
- */
-export const listRendererMap = {
-  table:       EntityListPage,
-  kanban:      KanbanView,
-  dashboard:   DashboardView,
-  spreadsheet: ExcelView,
-} as const;
-
 export type DetailRendererKey = keyof typeof detailRendererMap;
-export type ListRendererKey   = keyof typeof listRendererMap;

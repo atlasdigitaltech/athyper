@@ -11,8 +11,8 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { AppWindow, ArrowDown, ArrowUp, ArrowUpDown, Check, Copy, ExternalLink } from "lucide-react";
-import type { ResolvedColumn, RuntimeRecordRow, SortEntry, ViewDensity } from "../core/types";
+import { AppWindow, ArrowDown, ArrowUp, ArrowUpDown, Check, ExternalLink } from "lucide-react";
+import type { ActiveFilterEntry, ResolvedColumn, RuntimeRecordRow, SortEntry, ViewDensity } from "../core/types";
 import type { RuntimeListFeatures } from "../adapter/types";
 import { formatRuntimeColumnValue, humanizeToken, resolveRecordId } from "../core/formatters";
 import { buildGroupedRuntimeRows } from "../core/grouping";
@@ -31,6 +31,8 @@ import { useRuntimeBookmarkState } from "./runtime-bookmark-toggle";
 import { RuntimeRowMetaStrip } from "./runtime-row-meta-strip";
 import { useCommentCounts } from "@athyper/query";
 import { RuntimeSelectionBar } from "./runtime-selection-bar";
+import { RuntimeColumnFilterButton } from "./runtime-column-filter-button";
+import { RuntimeRowContextMenu } from "./runtime-row-context-menu";
 
 interface SelectionIslandProps {
   entityCode:      string;
@@ -38,6 +40,7 @@ interface SelectionIslandProps {
   columns:         ResolvedColumn[];
   features:        RuntimeListFeatures;
   detailHrefBase:  string;
+  activeFilters?:  ActiveFilterEntry[];
   activeSort:      SortEntry[];
   groupField?:     string;
   density:         ViewDensity;
@@ -54,6 +57,7 @@ export function SelectionIsland({
   columns,
   features,
   detailHrefBase,
+  activeFilters = [],
   activeSort,
   groupField,
   density,
@@ -78,6 +82,10 @@ export function SelectionIsland({
   const [ctxMenu, setCtxMenu] = useState<{ row: RuntimeRecordRow; id: string | null; x: number; y: number } | null>(null);
   const [ctxCopied, setCtxCopied] = useState<string | null>(null);
   const lazyLoadSentinelRef = useRef<HTMLDivElement | null>(null);
+  const activeFilterNames = useMemo(
+    () => new Set(activeFilters.map((filter) => filter.fieldName)),
+    [activeFilters],
+  );
 
   const rowSource = lazyList.enabled ? lazyList.loadedRows : rows;
   const loadedRows = useMemo(() => (
@@ -106,6 +114,7 @@ export function SelectionIsland({
   );
   const { counts: commentCountMap } = useCommentCounts(entityCode, displayRowIds);
   const extraColumnCount = (features.bulkActions ? 1 : 0) + 1;
+  const hasDataFooter = lazyList.enabled || !search.enabled || !query.trim();
 
   useEffect(() => {
     setLocalMatchCount(loadedRows.length);
@@ -232,9 +241,7 @@ export function SelectionIsland({
   const handleRowContextMenu = useCallback((row: RuntimeRecordRow, id: string | null, e: React.MouseEvent) => {
     e.preventDefault();
     setCtxCopied(null);
-    const x = Math.min(e.clientX, window.innerWidth - 340);
-    const y = Math.min(e.clientY, window.innerHeight - 320);
-    setCtxMenu({ row, id, x, y });
+    setCtxMenu({ row, id, x: e.clientX, y: e.clientY });
   }, []);
 
   const ctxCopyItems = useMemo(() => {
@@ -249,7 +256,10 @@ export function SelectionIsland({
 
   return (
     <div className="relative" data-runtime-list-region>
-      <div className={runtimeTableChrome.shell} style={runtimeTableScrollStyle}>
+      <div
+        className={`${runtimeTableChrome.shell} ${hasDataFooter ? runtimeTableChrome.shellWithFooter : ""}`}
+        style={runtimeTableScrollStyle}
+      >
         <table className={runtimeTableChrome.table}>
           <thead className={runtimeTableChrome.head}>
             <tr>
@@ -273,18 +283,27 @@ export function SelectionIsland({
                     className={runtimeTableChrome.headerCell}
                     style={runtimeStickyHeaderCellStyle}
                   >
-                    {col.isSortable ? (
-                      <button
-                        type="button"
-                        onClick={(e) => handleSortClick(e, col.name)}
-                        className={runtimeTableChrome.headerButton}
-                      >
-                        {col.label}
-                        <RuntimeSortIcon dir={sortEntry?.dir} />
-                      </button>
-                    ) : (
-                      col.label
-                    )}
+                    <div className={runtimeTableChrome.headerContent}>
+                      {col.isSortable ? (
+                        <button
+                          type="button"
+                          onClick={(e) => handleSortClick(e, col.name)}
+                          className={runtimeTableChrome.headerButton}
+                        >
+                          {col.label}
+                          <RuntimeSortIcon dir={sortEntry?.dir} />
+                        </button>
+                      ) : (
+                        <span>{col.label}</span>
+                      )}
+                      {col.isFilterable && (
+                        <RuntimeColumnFilterButton
+                          fieldName={col.name}
+                          fieldLabel={col.label}
+                          active={activeFilterNames.has(col.name)}
+                        />
+                      )}
+                    </div>
                   </th>
                 );
               })}
@@ -411,6 +430,7 @@ export function SelectionIsland({
           datasetLoadedRowCount={lazyList.loadedRowCount}
           total={footerTotal}
           rawSearchParams={rawSearchParams}
+          attached
         />
       )}
 
@@ -426,72 +446,41 @@ export function SelectionIsland({
         />
       )}
 
-      {/* Right-click context menu */}
       {ctxMenu && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setCtxMenu(null)}
-            onContextMenu={(e) => { e.preventDefault(); setCtxMenu(null); }}
-          />
-          <div
-            className="fixed z-50 min-w-[260px] max-w-[320px] overflow-hidden rounded-lg border bg-popover py-1 shadow-md"
-            style={{ left: ctxMenu.x, top: ctxMenu.y }}
-          >
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-              onClick={() => {
+        <RuntimeRowContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          actions={[
+            {
+              label: "Open in new tab",
+              icon: ExternalLink,
+              onSelect: () => {
                 if (ctxMenu.id) window.open(`${detailHrefBase}/${ctxMenu.id}`, "_blank", "noopener,noreferrer");
                 setCtxMenu(null);
-              }}
-            >
-              <ExternalLink className="h-4 w-4 shrink-0" />
-              Open in new tab
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-              onClick={() => {
+              },
+            },
+            {
+              label: "Open in new window",
+              icon: AppWindow,
+              onSelect: () => {
                 if (ctxMenu.id) window.open(`${detailHrefBase}/${ctxMenu.id}`, "_blank", "noopener,noreferrer,width=1280,height=800");
                 setCtxMenu(null);
-              }}
-            >
-              <AppWindow className="h-4 w-4 shrink-0" />
-              Open in new window
-            </button>
-            {ctxCopyItems.length > 0 && (
-              <>
-                <div className="my-1 h-px bg-border" />
-                <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground/60">
-                  Copy field
-                </div>
-                <div className="max-h-[220px] overflow-y-auto">
-                  {ctxCopyItems.map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      className="grid w-full grid-cols-[7.5rem_minmax(0,1fr)_1rem] items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-muted"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(item.value);
-                        setCtxCopied(item.key);
-                        window.setTimeout(() => setCtxCopied(null), 1200);
-                      }}
-                    >
-                      <span className="truncate text-sm text-muted-foreground">{item.label}</span>
-                      <span className="truncate text-sm font-medium text-foreground">{item.value}</span>
-                      {ctxCopied === item.key ? (
-                        <Check className="h-3.5 w-3.5 text-success" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5 text-muted-foreground/50" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </>
+              },
+            },
+          ]}
+          copyItems={ctxCopyItems}
+          copiedKey={ctxCopied}
+          onCopy={(item) => {
+            void navigator.clipboard.writeText(item.value);
+            setCtxCopied(item.key);
+            setCtxMenu(null);
+            window.setTimeout(() => setCtxCopied(null), 1200);
+          }}
+          onOpenChange={(next) => {
+            if (!next) setCtxMenu(null);
+          }}
+        />
       )}
     </div>
   );
@@ -542,9 +531,9 @@ function RuntimeSelectionCheckbox({
     >
       {mixed ? (
         <span aria-hidden="true" className="h-0.5 w-2 rounded-full bg-current" />
-      ) : (
+      ) : checked ? (
         <Check aria-hidden="true" className="size-2.5 stroke-[3]" />
-      )}
+      ) : null}
     </button>
   );
 }

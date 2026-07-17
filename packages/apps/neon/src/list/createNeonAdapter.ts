@@ -11,6 +11,7 @@ import type {
   RuntimeListLazyControls,
   RuntimeListState,
   SavedView,
+  RuntimeListFeatureConfig,
 } from "@athyper/runtime-list/adapter";
 import {
   applyAccessScopeToRawParams,
@@ -18,11 +19,12 @@ import {
   resolveRuntimeAccessScope,
 } from "@athyper/runtime-list/core";
 import { toRuntimeDescriptor } from "./descriptorConverter";
-import { NeonRuntimeListPageFrame } from "./NeonRuntimeListPageFrame";
 
-// ─── Feature flags for the neon plane ─────────────────────────────────────────
+// ─── Fallback list policy for the neon plane ──────────────────────────────────
+// Entity descriptor metadata is resolved above this policy at request time.
+// Keep these values only for entities that have not declared list_features yet.
 
-const NEON_FEATURES: RuntimeListServerAdapter["features"] = {
+const NEON_LIST_FEATURE_DEFAULTS: RuntimeListServerAdapter["features"] = {
   savedViews:          true,
   bulkActions:         true,
   export:              true,
@@ -74,6 +76,10 @@ export interface NeonAdapterConfig {
     descriptor:  RuntimeDescriptor,
     accessScope: RuntimeAccessScope,
   ) => Promise<Partial<RuntimeListLazyControls> | null>;
+  resolveListFeatures?: (
+    entityCode: string,
+    descriptor: RuntimeDescriptor,
+  ) => RuntimeListFeatureConfig | null | Promise<RuntimeListFeatureConfig | null>;
 
   // Optional saved view hooks — wire when the saved-views API is ready
   fetchSavedViews?: (entityCode: string) => Promise<SavedView[]>;
@@ -122,7 +128,7 @@ export function createNeonAdapter(config: NeonAdapterConfig): RuntimeListServerA
 
   return {
     plane: "neon",
-    features: NEON_FEATURES,
+    features: NEON_LIST_FEATURE_DEFAULTS,
 
     async fetchDescriptor(entityCode: string): Promise<RuntimeDescriptor | null> {
       const meta = await fetchMetaDescriptor(entityCode);
@@ -169,6 +175,10 @@ export function createNeonAdapter(config: NeonAdapterConfig): RuntimeListServerA
       accessScope: RuntimeAccessScope,
     ): Promise<Partial<RuntimeListLazyControls> | null> {
       return config.resolveLazyListControls?.(entityCode, descriptor, accessScope) ?? null;
+    },
+
+    async resolveListFeatures(entityCode: string, descriptor: RuntimeDescriptor) {
+      return (await config.resolveListFeatures?.(entityCode, descriptor)) ?? null;
     },
 
     async fetchRecords(
@@ -222,7 +232,5 @@ export function createNeonAdapter(config: NeonAdapterConfig): RuntimeListServerA
     entityFieldOptionsApiHrefBase: (code: string) => runtimePath.list(code),
     entitySavedViewsApiHref: (code: string) => config.savedViewsApiHref?.(code) ?? null,
 
-    // Shell — neon uses @athyper/surface-kit PageFrame
-    PageFrame: NeonRuntimeListPageFrame,
   };
 }

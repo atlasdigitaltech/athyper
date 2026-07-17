@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Rows3 } from "lucide-react";
 import type { ViewDensity } from "../../core/types";
@@ -28,7 +27,6 @@ export function DensityControl({
   rawSearchParams,
 }: DensityControlProps) {
   const router = useRouter();
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panel = useOrganizePanel("density");
 
   const commit = (value: ViewDensity) => {
@@ -40,16 +38,20 @@ export function DensityControl({
 
   return (
     <>
+      <PalettePanel
+        open={panel.open}
+        onOpenChange={(next) => next ? panel.show() : panel.close()}
+        title="Density"
+        width={280}
+        trigger={(
       <PaletteButton
-        ref={buttonRef}
         icon={Rows3}
         label="Density"
         active={density !== "compact"}
         expanded={panel.open}
-        onClick={panel.toggle}
       />
-      {panel.open && (
-        <PalettePanel anchorRef={buttonRef} title="Density" width={280} onClose={panel.close}>
+        )}
+      >
           <div className="grid gap-1 rounded-md border p-1">
             {DENSITIES.map((option) => (
               <button
@@ -66,8 +68,7 @@ export function DensityControl({
               </button>
             ))}
           </div>
-        </PalettePanel>
-      )}
+      </PalettePanel>
     </>
   );
 }

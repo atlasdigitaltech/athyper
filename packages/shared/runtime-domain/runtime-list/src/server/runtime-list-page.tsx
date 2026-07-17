@@ -3,8 +3,10 @@ import { RuntimeListClientProvider } from "../islands/runtime-list-context";
 import { RuntimeListCommandBar } from "../islands/runtime-list-command-bar";
 import { RuntimeListPresenter, RuntimeListToolbar } from "./runtime-list-presenter";
 import { RuntimeListActions } from "./runtime-list-actions";
+import { OrganizePaletteProvider } from "../islands/organize/organize-state";
 import type { RuntimeListServerAdapter, RuntimeListSlots } from "../adapter/types";
 import type { RawSearchParams } from "../core/types";
+import { RuntimeListPageFrame } from "../page/runtime-list-page-frame";
 
 interface RuntimeListPageProps {
   adapter:      RuntimeListServerAdapter;
@@ -20,7 +22,7 @@ export async function RuntimeListPage({
   slots,
 }: RuntimeListPageProps) {
   const props = await resolvePresenterProps(adapter, entityCode, searchParams);
-  const { PageFrame } = adapter;
+  const PageFrame = adapter.PageFrame ?? RuntimeListPageFrame;
 
   const hasActions = Boolean(props.createHref) || props.toolbarActions.length > 0;
   const clientSearch = props.viewMode === "list"
@@ -29,26 +31,28 @@ export async function RuntimeListPage({
 
   return (
     <RuntimeListClientProvider adapter={props.clientAdapter} search={clientSearch} lazyList={props.lazyList}>
-      <PageFrame
-        eyebrow={props.eyebrow}
-        title={props.entityName}
-        description=""
-        commandBar={<RuntimeListCommandBar {...props} slots={slots} />}
-        actions={
-          hasActions ? (
-            <RuntimeListActions
-              createHref={props.createHref}
-              toolbarActions={props.toolbarActions}
-            />
-          ) : undefined
-        }
-        toolbar={<RuntimeListToolbar {...props} slots={slots} />}
-      >
-        <RuntimeListPresenter
-          {...props}
-          slots={slots}
-        />
-      </PageFrame>
+      <OrganizePaletteProvider>
+        <PageFrame
+          eyebrow={props.eyebrow}
+          title={props.entityName}
+          description=""
+          commandBar={<RuntimeListCommandBar {...props} slots={slots} />}
+          actions={
+            hasActions ? (
+              <RuntimeListActions
+                createHref={props.createHref}
+                toolbarActions={props.toolbarActions}
+              />
+            ) : undefined
+          }
+          toolbar={<RuntimeListToolbar {...props} slots={slots} />}
+        >
+          <RuntimeListPresenter
+            {...props}
+            slots={slots}
+          />
+        </PageFrame>
+      </OrganizePaletteProvider>
     </RuntimeListClientProvider>
   );
 }

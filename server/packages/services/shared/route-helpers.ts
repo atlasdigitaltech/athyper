@@ -266,9 +266,23 @@ export async function resolveVerifiedRequestContext(
       status: 403,
     };
   }
-  let tenantId = normalizeClaimString(hints.trustedTenantId) ?? "";
+  const trustedTenantId = normalizeClaimString(hints.trustedTenantId);
+  let tenantId = trustedTenantId ?? "";
   let tenantCode = "";
   let companyCode = "";
+
+  // The host tenant-stamp is authoritative for the UUID, but it does not
+  // populate the tenant code on the request context. Keep the token/host
+  // binding fail-closed when both are present, then hydrate the code below
+  // from the same tenant row before comparing it with X-Org/X-Tenant-Code.
+  if (trustedTenantId && tenantIdClaim && trustedTenantId !== tenantIdClaim) {
+    return {
+      ok: false,
+      error: "AUTH_CONTEXT_MISMATCH",
+      message: "Requested organization is not authorized by the verified token.",
+      status: 403,
+    };
+  }
 
   if (tenantCodeFromClaims) {
     const org = splitOrgHeader(tenantCodeFromClaims);
@@ -298,6 +312,25 @@ export async function resolveVerifiedRequestContext(
   if (!tenantCode && tenantCodeFromClaims) {
     return { ok: false, error: "AUTH_CONTEXT_REQUIRED", message: "Token tenant context is invalid.", status: 403 };
   }
+
+  if (tenantId && !tenantCode) {
+    const trustedTenant = await db
+      .selectFrom("master.tenant as t")
+      .select(["t.id", "t.code"])
+      .where("t.id", "=", tenantId)
+      .where("t.realm_key", "=", realmKey)
+      .executeTakeFirst();
+    if (!trustedTenant) {
+      return {
+        ok: false,
+        error: "AUTH_CONTEXT_DENIED",
+        message: "The verified tenant is not available in the requested realm.",
+        status: 403,
+      };
+    }
+    tenantCode = trustedTenant.code as string;
+  }
+
   // allowed_tenants is discovery metadata only. Tenant authorization is
   // resolved from the BFF tenant header and the DB identity binding.
   if (!tenantCode && !tenantId) {

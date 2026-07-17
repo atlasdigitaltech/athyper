@@ -1,5 +1,0 @@
-{
-  "extends": "@athyper/config/tsconfig-react",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist" },
-  "include": ["src"]
-}

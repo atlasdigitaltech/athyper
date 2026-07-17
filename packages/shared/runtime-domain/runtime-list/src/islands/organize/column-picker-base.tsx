@@ -31,7 +31,6 @@ import { ReorderActionsBar, ReorderHandle } from "./reorder-handle";
 import {
   ORGANIZE_ICON_BUTTON_CLASS,
   ORGANIZE_SEARCH_INPUT_WITH_CLEAR_CLASS,
-  ORGANIZE_SECTION_LABEL_CLASS,
 } from "./palette-styles";
 
 type DropPlacement = "before" | "after";
@@ -276,7 +275,7 @@ export function ColumnPickerBase({
             />
           )}
         >
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-5">
             <label className="relative block">
               <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -391,9 +390,9 @@ function ColumnSection({
   children:       React.ReactNode;
 }) {
   return (
-    <section className="space-y-2">
+    <section className="space-y-3 border-t border-border/60 pt-5 first:border-t-0 first:pt-0">
       <div className="flex items-center justify-between gap-3">
-        <h3 className={ORGANIZE_SECTION_LABEL_CLASS}>{title}</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         <button
           type="button"
           disabled={actionDisabled}

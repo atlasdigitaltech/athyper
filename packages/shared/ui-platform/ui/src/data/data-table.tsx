@@ -453,7 +453,7 @@ export function DataTable<TData>({
 
   return (
     <div className={cn("space-y-3", className)}>
-      <div ref={setTableContainerNode} className={cn("rounded-md border", tableContainerClassName)}>
+      <div ref={setTableContainerNode} className={cn("w-full min-w-0 rounded-md border", tableContainerClassName)}>
         <table className="w-full caption-bottom text-sm">
           <colgroup>
             {table.getVisibleLeafColumns().map((column) => (
@@ -697,4 +697,3 @@ export function textColumn<TData>(
 }
 
 export { type ColumnDef, type SortingState, type RowSelectionState };
-

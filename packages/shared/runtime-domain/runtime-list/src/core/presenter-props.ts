@@ -5,7 +5,7 @@ import type {
   SavedView,
   ResolvedToolbarAction,
 } from "../adapter/types";
-import { normalizeRuntimeListFeatures } from "../adapter/types";
+import { resolveRuntimeListFeaturesWithDiagnostics } from "../adapter/types";
 import type {
   RawSearchParams,
   RuntimeAccessScope,
@@ -67,17 +67,23 @@ export async function resolvePresenterProps(
   if (!descriptor) {
     return buildUnavailableProps(adapter, entityCode, rawSearchParams);
   }
-  const rawFeatures = normalizeRuntimeListFeatures(adapter.features);
-
   // 2. Parse URL state
   const urlState = parseListSearchParams(rawSearchParams);
 
-  // 3. Saved views — parallel, don't need descriptor
-  const [savedViews, accessScope] = await Promise.all([
+  // 3. Resolve entity features, saved views, and access scope in parallel.
+  // The descriptor's explicit list feature metadata wins over adapter defaults.
+  const [entityFeatureOverrides, savedViews, accessScope] = await Promise.all([
+    adapter.resolveListFeatures?.(entityCode, descriptor) ?? Promise.resolve(null),
     adapter.fetchSavedViews?.(entityCode) ?? Promise.resolve([] as SavedView[]),
     adapter.resolveAccessScope?.(entityCode, descriptor) ??
       Promise.resolve(createDelegatedAccessScope(adapter.plane, descriptor)),
   ]);
+  const featureResolution = resolveRuntimeListFeaturesWithDiagnostics({
+    descriptor,
+    adapterDefaults: adapter.features,
+    entityOverride: entityFeatureOverrides,
+  });
+  const rawFeatures = featureResolution.features;
   const implicitDefaultView = shouldApplyImplicitDefaultView(rawSearchParams, urlState)
     ? findPrincipalDefaultSavedView(savedViews)
     : null;
@@ -168,6 +174,9 @@ export async function resolvePresenterProps(
     ? { ...sanitizedState, search: undefined, page, pageSize }
     : { ...sanitizedState, page, pageSize };
   const recordFetchParams = effectiveStateToRawParams(recordFetchState);
+  // Runtime-list currently consumes legacy page/totalPages pagination. Keep
+  // the initial server render on the same contract as its lazy page requests.
+  recordFetchParams["query_v1"] = "0";
   const response = await adapter.fetchRecords(entityCode, recordFetchParams, descriptor, accessScope);
   const isFullyLoaded = response.isFullyLoaded ?? inferFullyLoaded(response.records.length, response.pagination, page);
   const scopeFingerprint = buildRuntimeListScopeFingerprint(accessScope);
@@ -248,6 +257,7 @@ export async function resolvePresenterProps(
     accessScope,
 
     features,
+    featureDiagnostics: featureResolution.diagnostics,
     clientAdapter,
 
     filterableFields,
@@ -522,7 +532,8 @@ async function buildAccessDeniedProps(
   accessScope:    RuntimeAccessScope,
 ): Promise<RuntimeListPresenterProps> {
   const urlState = parseListSearchParams(rawSearchParams);
-  const features = normalizeRuntimeListFeatures(adapter.features);
+  const featureResolution = resolveRuntimeListFeaturesWithDiagnostics({ adapterDefaults: adapter.features });
+  const features = featureResolution.features;
   const clientAdapter: RuntimeListClientAdapter = {
     entityCode,
     features,
@@ -562,6 +573,7 @@ async function buildAccessDeniedProps(
     activeSavedViewId:null,
     accessScope,
     features,
+    featureDiagnostics: featureResolution.diagnostics,
     clientAdapter,
     filterableFields: [],
     sortableFields:   [],
@@ -576,7 +588,8 @@ async function buildUnavailableProps(
 ): Promise<RuntimeListPresenterProps> {
   const urlState    = parseListSearchParams(rawSearchParams);
   const accessScope = unavailableAccessScope(adapter, runtimeListText.system.entityDescriptorUnavailable);
-  const features = normalizeRuntimeListFeatures(adapter.features);
+  const featureResolution = resolveRuntimeListFeaturesWithDiagnostics({ adapterDefaults: adapter.features });
+  const features = featureResolution.features;
   const clientAdapter: RuntimeListClientAdapter = {
     entityCode,
     features,
@@ -616,6 +629,7 @@ async function buildUnavailableProps(
     activeSavedViewId:null,
     accessScope,
     features,
+    featureDiagnostics: featureResolution.diagnostics,
     clientAdapter,
     filterableFields: [],
     sortableFields:   [],

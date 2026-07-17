@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { AppWindow, ArrowDown, ArrowUp, ArrowUpDown, Check, Copy, ExternalLink } from "lucide-react";
-import type { ResolvedColumn, RuntimeRecordRow, SortEntry, ViewDensity } from "../core/types";
+import { AppWindow, ArrowDown, ArrowUp, ArrowUpDown, Check, ExternalLink } from "lucide-react";
+import type { ActiveFilterEntry, ResolvedColumn, RuntimeRecordRow, SortEntry, ViewDensity } from "../core/types";
 import { formatRuntimeColumnValue, humanizeToken, resolveRecordId } from "../core/formatters";
 import { buildGroupedRuntimeRows } from "../core/grouping";
 import { filterRuntimeRows } from "../core/search";
@@ -22,6 +22,8 @@ import { useRuntimeBookmarkState } from "./runtime-bookmark-toggle";
 import { RuntimeRowMetaStrip } from "./runtime-row-meta-strip";
 import { useCommentCounts } from "@athyper/query";
 import { RuntimeSelectionBar } from "./runtime-selection-bar";
+import { RuntimeColumnFilterButton } from "./runtime-column-filter-button";
+import { RuntimeRowContextMenu } from "./runtime-row-context-menu";
 
 const MIN_COLUMN_WIDTH = 96;
 const MAX_COLUMN_WIDTH = 720;
@@ -33,6 +35,7 @@ interface RuntimeExcelTableIslandProps {
   columns:         ResolvedColumn[];
   rows:            RuntimeRecordRow[];
   density:         ViewDensity;
+  activeFilters?:  ActiveFilterEntry[];
   activeSort:      SortEntry[];
   groupColumn?:    ResolvedColumn;
   selectable:      boolean;
@@ -54,6 +57,7 @@ export function RuntimeExcelTableIsland({
   columns,
   rows,
   density,
+  activeFilters = [],
   activeSort,
   groupColumn,
   selectable,
@@ -80,6 +84,11 @@ export function RuntimeExcelTableIsland({
   const [ctxMenu, setCtxMenu] = useState<{ row: RuntimeRecordRow; href: string | null; x: number; y: number } | null>(null);
   const [ctxCopied, setCtxCopied] = useState<string | null>(null);
   const lazyLoadSentinelRef = useRef<HTMLDivElement | null>(null);
+  const activeFilterNames = useMemo(
+    () => new Set(activeFilters.map((filter) => filter.fieldName)),
+    [activeFilters],
+  );
+  const hasDataFooter = lazyList.enabled || !search.enabled || !query.trim();
   const cellDensity = runtimeExcelCellDensity(density);
   const rowSource = lazyList.enabled ? lazyList.loadedRows : rows;
   const loadedRows = useMemo(() => (
@@ -268,9 +277,7 @@ export function RuntimeExcelTableIsland({
   const handleRowContextMenu = useCallback((row: RuntimeRecordRow, href: string | null, e: React.MouseEvent) => {
     e.preventDefault();
     setCtxCopied(null);
-    const x = Math.min(e.clientX, window.innerWidth - 340);
-    const y = Math.min(e.clientY, window.innerHeight - 320);
-    setCtxMenu({ row, href, x, y });
+    setCtxMenu({ row, href, x: e.clientX, y: e.clientY });
   }, []);
 
   const ctxCopyItems = useMemo(() => {
@@ -292,7 +299,7 @@ export function RuntimeExcelTableIsland({
   return (
     <div className="relative" data-runtime-list-region>
       <div
-        className={runtimeTableChrome.shell}
+        className={`${runtimeTableChrome.shell} ${hasDataFooter ? runtimeTableChrome.shellWithFooter : ""}`}
         style={{ ...runtimeTableScrollStyle, minWidth: "100%", width: tableWidth }}
       >
         <table
@@ -306,7 +313,7 @@ export function RuntimeExcelTableIsland({
             ))}
             <col style={{ width: EXCEL_META_COLUMN_WIDTH }} />
           </colgroup>
-          <thead className="bg-muted">
+          <thead className={runtimeTableChrome.head}>
             <tr>
               {selectable && (
                 <th
@@ -337,17 +344,26 @@ export function RuntimeExcelTableIsland({
                       index === 0 ? "border-l-0" : "",
                     ].join(" ")}
                   >
-                    {column.isSortable ? (
-                      <a
-                        href={sortHref(listBaseHref, rawSearchParams, column.name)}
-                        className={`${runtimeTableChrome.headerButton} min-w-0 pr-3`}
-                      >
-                        <span className="truncate">{column.label}</span>
-                        <RuntimeSortIcon dir={sortEntry?.dir} />
-                      </a>
-                    ) : (
-                      <span className="block truncate pr-3">{column.label}</span>
-                    )}
+                    <div className={`${runtimeTableChrome.headerContent} pr-3`}>
+                      {column.isSortable ? (
+                        <a
+                          href={sortHref(listBaseHref, rawSearchParams, column.name)}
+                          className={runtimeTableChrome.headerButton}
+                        >
+                          <span className="truncate">{column.label}</span>
+                          <RuntimeSortIcon dir={sortEntry?.dir} />
+                        </a>
+                      ) : (
+                        <span className="min-w-0 truncate">{column.label}</span>
+                      )}
+                      {column.isFilterable && (
+                        <RuntimeColumnFilterButton
+                          fieldName={column.name}
+                          fieldLabel={column.label}
+                          active={activeFilterNames.has(column.name)}
+                        />
+                      )}
+                    </div>
                     <button
                       type="button"
                       aria-label={`Resize ${column.label} column`}
@@ -487,6 +503,7 @@ export function RuntimeExcelTableIsland({
           datasetLoadedRowCount={lazyList.loadedRowCount}
           total={footerTotal}
           rawSearchParams={rawSearchParams}
+          attached
         />
       )}
 
@@ -501,72 +518,41 @@ export function RuntimeExcelTableIsland({
         />
       )}
 
-      {/* Right-click context menu */}
       {ctxMenu && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setCtxMenu(null)}
-            onContextMenu={(e) => { e.preventDefault(); setCtxMenu(null); }}
-          />
-          <div
-            className="fixed z-50 min-w-[260px] max-w-[320px] overflow-hidden rounded-lg border bg-popover py-1 shadow-md"
-            style={{ left: ctxMenu.x, top: ctxMenu.y }}
-          >
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-              onClick={() => {
+        <RuntimeRowContextMenu
+          open
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          actions={[
+            {
+              label: "Open in new tab",
+              icon: ExternalLink,
+              onSelect: () => {
                 if (ctxMenu.href) window.open(ctxMenu.href, "_blank", "noopener,noreferrer");
                 setCtxMenu(null);
-              }}
-            >
-              <ExternalLink className="h-4 w-4 shrink-0" />
-              Open in new tab
-            </button>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
-              onClick={() => {
+              },
+            },
+            {
+              label: "Open in new window",
+              icon: AppWindow,
+              onSelect: () => {
                 if (ctxMenu.href) window.open(ctxMenu.href, "_blank", "noopener,noreferrer,width=1280,height=800");
                 setCtxMenu(null);
-              }}
-            >
-              <AppWindow className="h-4 w-4 shrink-0" />
-              Open in new window
-            </button>
-            {ctxCopyItems.length > 0 && (
-              <>
-                <div className="my-1 h-px bg-border" />
-                <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground/60">
-                  Copy field
-                </div>
-                <div className="max-h-[220px] overflow-y-auto">
-                  {ctxCopyItems.map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      className="grid w-full grid-cols-[7.5rem_minmax(0,1fr)_1rem] items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-muted"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(item.value);
-                        setCtxCopied(item.key);
-                        window.setTimeout(() => setCtxCopied(null), 1200);
-                      }}
-                    >
-                      <span className="truncate text-sm text-muted-foreground">{item.label}</span>
-                      <span className="truncate text-sm font-medium text-foreground">{item.value}</span>
-                      {ctxCopied === item.key ? (
-                        <Check className="h-3.5 w-3.5 text-success" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5 text-muted-foreground/50" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </>
+              },
+            },
+          ]}
+          copyItems={ctxCopyItems}
+          copiedKey={ctxCopied}
+          onCopy={(item) => {
+            void navigator.clipboard.writeText(item.value);
+            setCtxCopied(item.key);
+            setCtxMenu(null);
+            window.setTimeout(() => setCtxCopied(null), 1200);
+          }}
+          onOpenChange={(next) => {
+            if (!next) setCtxMenu(null);
+          }}
+        />
       )}
     </div>
   );
@@ -606,9 +592,9 @@ function ExcelSelectionCheckbox({
     >
       {mixed ? (
         <span aria-hidden="true" className="h-0.5 w-2 rounded-full bg-current" />
-      ) : (
+      ) : checked ? (
         <Check aria-hidden="true" className="size-2.5 stroke-[3]" />
-      )}
+      ) : null}
     </button>
   );
 }

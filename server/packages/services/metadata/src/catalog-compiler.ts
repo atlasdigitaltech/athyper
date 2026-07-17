@@ -163,6 +163,12 @@ export class CatalogCompiler {
       }
     }
     const summary = { total: graph.entities.length, compiled, persisted, failed: graph.entities.length - compiled, entityCodes: graph.entities.map((entity) => entity.entity_code), diagnostics, graph };
+    if (diagnostics.length > 0) {
+      this.logger?.warn?.("entity_catalog_compile_diagnostics", {
+        failedEntities: [...new Set(diagnostics.map((diagnostic) => diagnostic.entityCode))],
+        diagnostics,
+      });
+    }
     this.logger?.info?.("entity_catalog_compile_complete", { total: summary.total, compiled, persisted, failed: summary.failed, diagnostics: diagnostics.length });
     return summary;
   }

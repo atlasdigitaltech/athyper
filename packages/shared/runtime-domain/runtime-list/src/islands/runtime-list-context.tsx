@@ -17,6 +17,7 @@ import { buildServerSearchParams } from "../core/search";
 type ServerSearchReason = "manual" | "enter" | "zeroLoadedMatches";
 type ServerSearchState = "idle" | "pending" | "complete" | "error";
 type LazyLoadState = "idle" | "loading" | "error";
+type LazyLoadDirection = "next" | "previous";
 
 interface ServerSearchSnapshot {
   state:      ServerSearchState;
@@ -58,6 +59,7 @@ interface LazyListContextState {
   previousWindowStartPage?: number;
   loadingPage?:         number;
   state:                LazyLoadState;
+  errorDirection?:      LazyLoadDirection;
   errorMessage?:        string;
   ariaMessage:          string;
   maxLoadedRowsReached: boolean;
@@ -113,6 +115,7 @@ export function RuntimeListClientProvider({
   const [lazyLoad, setLazyLoad] = useState<{
     state: LazyLoadState;
     page?: number;
+    direction?: LazyLoadDirection;
     message?: string;
     ariaMessage: string;
   }>({ state: "idle", ariaMessage: "" });
@@ -400,7 +403,17 @@ export function RuntimeListClientProvider({
     pageRequestKeysRef.current.add(requestKey);
     const controller = new AbortController();
     pageAbortRefs.current.set(requestKey, controller);
-    setLazyLoad({ state: "loading", page, ariaMessage: runtimeListText.system.loadingPage(page) });
+    let didTimeout = false;
+    const requestTimeout = setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, search.controls.serverSearchTimeoutMs);
+    setLazyLoad({
+      state: "loading",
+      page,
+      direction: "next",
+      ariaMessage: runtimeListText.system.loadingPage(page),
+    });
 
     const params = buildListPageParams(lazyList.rawSearchParams, page, lazyList.pageSize, serverQuery);
     const href = `${adapter.recordsApiHref}?${params.toString()}`;
@@ -438,15 +451,21 @@ export function RuntimeListClientProvider({
       })
       .catch((error: unknown) => {
         pageRequestKeysRef.current.delete(requestKey);
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        const isAbortError = error instanceof DOMException && error.name === "AbortError";
+        const isCurrentTimedOutRequest = didTimeout && pageAbortRefs.current.get(requestKey) === controller;
+        if (isAbortError && !isCurrentTimedOutRequest) return;
         setLazyLoad({
           state: "error",
           page,
-          message: error instanceof Error ? error.message : runtimeListText.system.couldNotLoadMoreRecords,
+          direction: "next",
+          message: isCurrentTimedOutRequest
+            ? runtimeListText.system.couldNotLoadMoreRecords
+            : error instanceof Error ? error.message : runtimeListText.system.couldNotLoadMoreRecords,
           ariaMessage: runtimeListText.system.couldNotLoadMoreRecords,
         });
       })
       .finally(() => {
+        clearTimeout(requestTimeout);
         if (pageAbortRefs.current.get(requestKey) === controller) {
           pageAbortRefs.current.delete(requestKey);
         }
@@ -460,6 +479,7 @@ export function RuntimeListClientProvider({
     lazyList.pageSize,
     lazyList.rawSearchParams,
     pageMap,
+    search.controls.serverSearchTimeoutMs,
     serverPageMap,
     trimmedQuery,
   ]);
@@ -479,6 +499,10 @@ export function RuntimeListClientProvider({
       : firstPage + pageCount - 1;
     const pageNumbers = rangePages(firstPage, lastPage);
     const requestKey = `${serverQuery || "loaded"}:window:${firstPage}-${lastPage}`;
+    const direction: LazyLoadDirection = firstPage < activeWindowStartPage ? "previous" : "next";
+    const windowLoadFailureMessage = direction === "previous"
+      ? runtimeListText.system.couldNotLoadPreviousRecords
+      : runtimeListText.system.couldNotLoadNextRecords;
 
     if (!lazyList.enabled || !adapter.recordsApiHref || pageNumbers.length === 0) return;
     if (pageRequestKeysRef.current.has(requestKey)) return;
@@ -487,9 +511,15 @@ export function RuntimeListClientProvider({
     pageRequestKeysRef.current.add(requestKey);
     const controller = new AbortController();
     pageAbortRefs.current.set(requestKey, controller);
+    let didTimeout = false;
+    const requestTimeout = setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, search.controls.serverSearchTimeoutMs);
     setLazyLoad({
       state:       "loading",
       page:        firstPage,
+      direction,
       ariaMessage: runtimeListText.system.loadingRowsOnward((firstPage - 1) * lazyList.pageSize + 1),
     });
 
@@ -530,15 +560,21 @@ export function RuntimeListClientProvider({
         scrollRuntimeListToTop();
       })
       .catch((error: unknown) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
+        const isAbortError = error instanceof DOMException && error.name === "AbortError";
+        const isCurrentTimedOutRequest = didTimeout && pageAbortRefs.current.get(requestKey) === controller;
+        if (isAbortError && !isCurrentTimedOutRequest) return;
         setLazyLoad({
           state:       "error",
           page:        firstPage,
-          message:     error instanceof Error ? error.message : runtimeListText.system.couldNotLoadNextRecords,
-          ariaMessage: runtimeListText.system.couldNotLoadNextRecords,
+          direction,
+          message:     isCurrentTimedOutRequest
+            ? windowLoadFailureMessage
+            : error instanceof Error ? error.message : windowLoadFailureMessage,
+          ariaMessage: windowLoadFailureMessage,
         });
       })
       .finally(() => {
+        clearTimeout(requestTimeout);
         pageRequestKeysRef.current.delete(requestKey);
         if (pageAbortRefs.current.get(requestKey) === controller) {
           pageAbortRefs.current.delete(requestKey);
@@ -546,12 +582,14 @@ export function RuntimeListClientProvider({
       });
   }, [
     adapter.recordsApiHref,
+    activeWindowStartPage,
     hasActiveServerSearch,
     lazyList.controls.maxLoadedRows,
     lazyList.enabled,
     lazyList.pageSize,
     lazyList.rawSearchParams,
     listPagination,
+    search.controls.serverSearchTimeoutMs,
     serverPagination,
     trimmedQuery,
   ]);
@@ -592,6 +630,7 @@ export function RuntimeListClientProvider({
     previousWindowStartPage,
     loadingPage:          lazyLoad.state === "loading" ? lazyLoad.page : undefined,
     state:                lazyLoad.state,
+    errorDirection:       lazyLoad.state === "error" ? lazyLoad.direction : undefined,
     errorMessage:         lazyLoad.message,
     ariaMessage:          lazyLoad.ariaMessage,
     maxLoadedRowsReached: activeMaxLoadedRowsReached && !activeFullyLoaded,
@@ -614,6 +653,7 @@ export function RuntimeListClientProvider({
     lazyList.controls,
     lazyList.enabled,
     lazyLoad.ariaMessage,
+    lazyLoad.direction,
     lazyLoad.message,
     lazyLoad.page,
     lazyLoad.state,

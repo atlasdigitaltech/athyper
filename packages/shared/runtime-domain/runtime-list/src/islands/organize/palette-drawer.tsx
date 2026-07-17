@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type React from "react";
 import type { ComponentType, SVGProps } from "react";
 import { X } from "lucide-react";
+import {
+  DrawerShell,
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetTitle,
+} from "@athyper/ui";
 
 interface PaletteDrawerProps {
   anchorRef: React.RefObject<HTMLButtonElement | null>;
@@ -12,29 +19,21 @@ interface PaletteDrawerProps {
   onClose:   () => void;
   children:  React.ReactNode;
   footer?:   React.ReactNode;
-  /**
-   * Backdrop styling behind the drawer.
-   *   - `"dim"` (default): dim + blur the page underneath. Matches the
-   *     entity-list page-level UX where the drawer takes focus.
-   *   - `"transparent"`: invisible backdrop. Page underneath stays at
-   *     full clarity. Used by embedded grids (line items) where the
-   *     drawer is a secondary affordance within a parent document page
-   *     that shouldn't be visually displaced when opened.
-   *
-   * Click-to-close behaviour is identical in both modes.
-   */
+  /** Backdrop styling behind the drawer. */
   backdrop?: "dim" | "transparent";
+  /** Use the responsive two-pane workspace treatment (currently filters). */
+  workspace?: boolean;
+  /** Optional wider workspace treatment for content-heavy two-pane drawers. */
+  workspaceWidth?: "default" | "wide";
 }
 
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "textarea:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "[tabindex]:not([tabindex='-1'])",
-].join(",");
-
+/**
+ * Responsive list surface drawer.
+ *
+ * Desktop uses the shared resizable DrawerShell. Mobile uses the shared Sheet
+ * primitive, so focus restoration, escape handling, outside interaction, and
+ * available-height behavior stay with Radix instead of being duplicated here.
+ */
 export function PaletteDrawer({
   anchorRef,
   title,
@@ -43,127 +42,94 @@ export function PaletteDrawer({
   children,
   footer,
   backdrop = "dim",
+  workspace = false,
+  workspaceWidth = "default",
 }: PaletteDrawerProps) {
-  const drawerRef = useRef<HTMLDivElement | null>(null);
-  const [isDesktop, setIsDesktop] = useState(() => (
+  const isDesktop = useDesktopMediaQuery();
+  const overlayClassName = backdrop === "transparent" ? "bg-transparent backdrop-blur-0" : undefined;
+  const titleNode = (
+    <span className="flex min-w-0 items-center gap-2">
+      {Icon && <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />}
+      <span className="truncate">{title}</span>
+    </span>
+  );
+  const restoreFocus = (event: Event) => {
+    event.preventDefault();
+    anchorRef.current?.focus();
+  };
+  const handleOpenChange = (next: boolean) => {
+    if (!next) onClose();
+  };
+
+  if (isDesktop) {
+    return (
+      <DrawerShell
+        open
+        onOpenChange={handleOpenChange}
+        intent={backdrop === "transparent" ? "context" : "transactional"}
+        defaultWidth={workspace ? workspaceWidth === "wide" ? 860 : 640 : 520}
+        minWidth={workspace ? 480 : 380}
+        maxWidth={workspace ? workspaceWidth === "wide" ? "92vw" : "85vw" : "760px"}
+        expandable={workspace}
+        overlayClassName={overlayClassName}
+        bodyClassName={workspace ? "overflow-hidden" : "p-4"}
+        onCloseAutoFocus={restoreFocus}
+        title={titleNode}
+        footerStart={footer}
+        footerClassName={footer ? "!block p-4" : undefined}
+      >
+        {children}
+      </DrawerShell>
+    );
+  }
+
+  return (
+    <Sheet open onOpenChange={handleOpenChange}>
+      <SheetContent
+        side={workspace ? "right" : "bottom"}
+        showClose={false}
+        overlayClassName={overlayClassName}
+        onCloseAutoFocus={restoreFocus}
+        aria-describedby={undefined}
+        className={workspace
+          ? "h-full w-full gap-0 p-0"
+          : "h-[75dvh] max-h-[75dvh] gap-0 rounded-t-xl p-0"}
+      >
+        <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
+          <SheetTitle className="flex min-w-0 items-center gap-2 text-base font-medium">
+            {titleNode}
+          </SheetTitle>
+          <SheetClose asChild>
+            <button
+              type="button"
+              aria-label={`Close ${title}`}
+              className="inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X aria-hidden="true" className="size-5" />
+            </button>
+          </SheetClose>
+        </div>
+        <div className={workspace ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-y-auto p-4"}>
+          {children}
+        </div>
+        {footer && <div className="shrink-0 border-t bg-popover p-4">{footer}</div>}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function useDesktopMediaQuery(): boolean {
+  const [matches, setMatches] = useState(() => (
     typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches
   ));
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 768px)");
-    const update = () => setIsDesktop(media.matches);
+    const update = () => setMatches(media.matches);
     update();
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
 
-  useEffect(() => {
-    const drawer = drawerRef.current;
-    const focusable = drawer?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
-    focusable?.focus();
-
-    return () => {
-      anchorRef.current?.focus();
-    };
-  }, [anchorRef]);
-
-  useEffect(() => {
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-
-      if (event.key !== "Tab") return;
-      const drawer = drawerRef.current;
-      if (!drawer) return;
-      const focusable = Array.from(drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable.at(-1);
-      if (!first || !last) return;
-
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
-
-  return (
-    // z-modal (400) is required to stack above the page-level sticky chrome
-    // (`z-sticky` = 100; see RuntimeEntityHeader). Using a literal `z-50`
-    // here caused embedded consumers' page headers to render on top of
-    // the drawer's right edge — see the column-picker bug fix.
-    <div className="fixed inset-0 z-modal">
-      <button
-        type="button"
-        aria-label={`Discard ${title} changes`}
-        className={[
-          "absolute inset-0 cursor-default",
-          backdrop === "dim" ? "bg-foreground/20 backdrop-blur-[1px]" : "",
-        ].filter(Boolean).join(" ")}
-        onClick={onClose}
-      />
-      <div
-        ref={drawerRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className={[
-          "absolute flex min-h-80 flex-col overflow-hidden border bg-popover text-popover-foreground shadow-2xl",
-          isDesktop ? "rounded-none border-y-0 border-r-0" : "rounded-t-xl",
-        ].join(" ")}
-        style={isDesktop
-          ? {
-              top:       0,
-              right:     0,
-              bottom:    0,
-              left:      "auto",
-              width:     "clamp(480px, 40vw, 760px)",
-              height:    "100dvh",
-              maxHeight: "none",
-            }
-          : {
-              left:      0,
-              right:     0,
-              bottom:    0,
-              top:       "auto",
-              width:     "100vw",
-              height:    "75dvh",
-              maxHeight: "75dvh",
-            }}
-      >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
-          <h2 className="flex min-w-0 items-center gap-2 text-base font-medium text-foreground">
-            {Icon && <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />}
-            <span className="truncate">{title}</span>
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={`Discard ${title} changes`}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
-            <X aria-hidden="true" className="size-5" />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-auto p-4">
-          {children}
-        </div>
-        {footer && (
-          <div className="shrink-0 border-t bg-popover p-4">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  return matches;
 }

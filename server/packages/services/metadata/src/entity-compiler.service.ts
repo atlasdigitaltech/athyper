@@ -28,6 +28,7 @@ import {
 } from "./metadata-graph-validator.js";
 import { createCanonicalGraphLoader } from "./canonical-metadata-graph.js";
 import { evaluateExecutionEligibility } from "./execution-eligibility.js";
+import { normalizeEntityFeatureFlags, normalizeEntityListFeatures } from "@athyper/api-contracts/metadata-normalizers";
 import {
   applyTenantCatalogOverlay,
   resolveTenantOverlay,
@@ -158,6 +159,37 @@ export interface CompileAllSummary {
   persistedEntityCodes: string[];
   snapshotPersistenceFailedEntityCodes: string[];
   graphValidation: MetadataGraphValidationResult;
+}
+
+/** Compact, log-safe view of graph diagnostics. Individual entity details remain
+ * available on the returned graphValidation object, but are too noisy for API
+ * server logs during a system-wide preflight. */
+export interface MetadataDiagnosticLogSummary {
+  diagnosticCount: number;
+  affectedEntityCount: number;
+  codeCounts: Record<string, number>;
+  pathCounts: Record<string, number>;
+}
+
+export function summarizeMetadataDiagnostics(
+  diagnostics: Array<{ entityCode: string; code: string; path: string }>,
+): MetadataDiagnosticLogSummary {
+  const entityCodes = new Set<string>();
+  const codeCounts: Record<string, number> = {};
+  const pathCounts: Record<string, number> = {};
+
+  for (const diagnostic of diagnostics) {
+    entityCodes.add(diagnostic.entityCode);
+    codeCounts[diagnostic.code] = (codeCounts[diagnostic.code] ?? 0) + 1;
+    pathCounts[diagnostic.path] = (pathCounts[diagnostic.path] ?? 0) + 1;
+  }
+
+  return {
+    diagnosticCount: diagnostics.length,
+    affectedEntityCount: entityCodes.size,
+    codeCounts,
+    pathCounts,
+  };
 }
 
 interface EntityRow {
@@ -482,6 +514,9 @@ function normalizeDisplayConfig(
   colorToken: unknown,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...raw };
+  const listFeatures = normalizeEntityListFeatures(raw["list_features"] ?? raw["listFeatures"]);
+  if (listFeatures) out["list_features"] = listFeatures;
+  delete out["listFeatures"];
   for (const key of MOVED_DISPLAY_CONFIG_KEYS) delete out[key];
 
   const rawDetailRenderer = textConfig(raw["detail_renderer"]);
@@ -513,122 +548,6 @@ function normalizeDisplayConfig(
   if (!out["color"] && colorToken) out["color"] = colorToken;
 
   return withDefinedValues(out);
-}
-
-const BOOLEAN_FEATURE_KEYS = new Set([
-  "has_attachments",
-  "has_workflow",
-  "has_lifecycle",
-  "is_importable",
-  "is_exportable",
-  "is_bulk_editable",
-  "is_approvable",
-  "is_readonly",
-  "is_hidden",
-  "comments_enabled",
-  "event_history",
-  "version_control",
-  "has_lines",
-  "has_accounting_distribution",
-  "has_tasks",
-  "has_watchers",
-  "has_rules",
-  "has_integrations",
-  "quality_checks",
-  "record_reports",
-  "has_payment_schedule",
-  "has_budget_impact",
-  "has_related_documents",
-  "has_ai_classification",
-  "has_line_composer",
-  "line_references",
-  "catalog_feature_enabled",
-  "catalog_enabled",
-  "catalog_items_enabled",
-  "has_catalog_items",
-  "has_catalog",
-  "requires_owner_type_scope",
-  "is_company_scoped",
-  "singleton",
-  "pii_bearing",
-  "allow_address",
-  "allow_contact",
-  "has_roles",
-  "append_only_after_submission",
-  "reference_picker",
-  "line_editor",
-  "posting_controlled",
-  "dimension_controlled",
-]);
-
-const FEATURE_FLAG_ALIASES: Record<string, string[]> = {
-  is_approvable: ["approval_workflow"],
-  has_attachments: ["allow_attachments", "allow_attachment"],
-  is_exportable: ["allow_export", "export_enabled"],
-  is_importable: ["allow_import", "import_enabled"],
-  is_bulk_editable: ["allow_bulk_edit", "bulk_edit_enabled"],
-  comments_enabled: ["has_comments", "comments"],
-  event_history: ["has_events", "has_event_history", "audit_history"],
-  version_control: ["has_versions"],
-  has_lines: ["has_line_items", "line_editor"],
-  has_accounting_distribution: ["accounting_distribution", "has_distributions"],
-  is_readonly: ["readonly", "readOnly", "read_only"],
-};
-
-const LEGACY_FEATURE_FLAG_KEYS = new Set([
-  ...Object.values(FEATURE_FLAG_ALIASES).flat(),
-  "line_entity_code",
-  "identity_via",
-  "list_entity_code",
-  "parent_entity",
-  "parent_fk",
-  "parent_scope",
-  "duplicate_check",
-  "replacement_entity",
-]);
-
-function coerceFeatureBoolean(value: unknown): boolean | undefined {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value !== "string") return undefined;
-  const normalized = value.trim().toLowerCase();
-  if (["true", "t", "yes", "y", "1", "enabled", "on"].includes(normalized)) return true;
-  if (["false", "f", "no", "n", "0", "disabled", "off"].includes(normalized)) return false;
-  return undefined;
-}
-
-function normalizeFeatureFlags(raw: Record<string, unknown>): Record<string, unknown> {
-  const canonical: Record<string, unknown> = { ...raw };
-
-  for (const [target, aliases] of Object.entries(FEATURE_FLAG_ALIASES)) {
-    if (target in canonical) continue;
-    const alias = aliases.find((key) => key in raw);
-    if (alias) canonical[target] = raw[alias];
-  }
-
-  if (!("is_approvable" in canonical) && "approval_workflow" in raw) {
-    canonical["is_approvable"] = Boolean(raw["approval_workflow"]);
-  }
-  if (!("has_attachments" in canonical) && "allow_attachments" in raw) {
-    canonical["has_attachments"] = Boolean(raw["allow_attachments"]);
-  }
-  if (!("is_exportable" in canonical) && "allow_export" in raw) {
-    canonical["is_exportable"] = Boolean(raw["allow_export"]);
-  }
-
-  if (!("has_workflow" in canonical) && canonical["is_approvable"] === true) {
-    canonical["has_workflow"] = true;
-  }
-  for (const key of BOOLEAN_FEATURE_KEYS) {
-    if (!(key in canonical)) continue;
-    const boolValue = coerceFeatureBoolean(canonical[key]);
-    if (boolValue !== undefined) canonical[key] = boolValue;
-  }
-  for (const key of LEGACY_FEATURE_FLAG_KEYS) {
-    delete canonical[key];
-  }
-
-  return canonical;
 }
 
 const VALIDATION_REFERENCE_KEYS = new Set([
@@ -1045,17 +964,27 @@ export class EntityCompilerService {
     try {
       const graphValidation = await this.validateRuntimeGraph();
       const canonicalGraph = await createCanonicalGraphLoader(this.db)();
-      const eligibilityByCode = new Map(canonicalGraph.entities.map((entity) => [entity.entity_code, evaluateExecutionEligibility(entity)]));
-      const eligibilityDiagnostics = canonicalGraph.entities.flatMap((entity) => {
-        const result = eligibilityByCode.get(entity.entity_code);
-        if (!result || result.eligible) return [];
-        return result.diagnostics.map((diagnostic) => ({
-          entityCode: diagnostic.entityCode,
-          code: "RUNTIME_WRITE_CAPABILITY_INVALID" as const,
-          path: diagnostic.path,
-          message: diagnostic.message,
-        }));
-      });
+      // The canonical graph also contains active catalog-only entities. They
+      // are intentionally not execution candidates and must not be rejected
+      // by the execution admission gate.
+      const runtimeCandidateCodes = new Set(graphValidation.eligibleEntityCodes);
+      const eligibilityByCode = new Map(
+        canonicalGraph.entities
+          .filter((entity) => runtimeCandidateCodes.has(entity.entity_code))
+          .map((entity) => [entity.entity_code, evaluateExecutionEligibility(entity)]),
+      );
+      const eligibilityDiagnostics = canonicalGraph.entities
+        .filter((entity) => runtimeCandidateCodes.has(entity.entity_code))
+        .flatMap((entity) => {
+          const result = eligibilityByCode.get(entity.entity_code);
+          if (!result || result.eligible) return [];
+          return result.diagnostics.map((diagnostic) => ({
+            entityCode: diagnostic.entityCode,
+            code: "RUNTIME_WRITE_CAPABILITY_INVALID" as const,
+            path: diagnostic.path,
+            message: diagnostic.message,
+          }));
+        });
       graphValidation.diagnostics.push(...eligibilityDiagnostics);
       graphValidation.eligibleEntityCodes = graphValidation.eligibleEntityCodes.filter((code) => eligibilityByCode.get(code)?.eligible === true);
       if (eligibilityDiagnostics.length > 0) graphValidation.passed = false;
@@ -1063,7 +992,7 @@ export class EntityCompilerService {
       if (!graphValidation.passed) {
         this.logger?.error?.("entity_compile_graph_preflight_failed", {
           total,
-          diagnostics: graphValidation.diagnostics,
+          diagnostics: summarizeMetadataDiagnostics(graphValidation.diagnostics),
         });
         return {
           total,
@@ -1258,7 +1187,7 @@ export class EntityCompilerService {
     };
     const searchConfig = coerceRecord(entityRow.search_config) ?? {};
     const dataPolicy = coerceRecord(entityRow.data_policy) ?? {};
-    const featureFlags = normalizeFeatureFlags(coerceRecord(entityRow.feature_flags) ?? {});
+    const featureFlags = normalizeEntityFeatureFlags(coerceRecord(entityRow.feature_flags) ?? {});
     const versionHash = versionRow.version_hash ?? sha256(`${entityRow.id}:v${versionRow.version_no}`);
     const renderer = resolveCompiledEntityRenderer({
       entityClass: entityRow.entity_class,

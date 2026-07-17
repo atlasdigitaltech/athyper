@@ -14,8 +14,7 @@
   "dependencies": {
     "@athyper/collaboration-ui": "workspace:*",
     "@athyper/query": "workspace:*",
-    "@athyper/runtime-list": "workspace:*",
-    "@athyper/surface-kit": "workspace:*"
+    "@athyper/runtime-list": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

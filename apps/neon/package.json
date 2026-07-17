@@ -17,6 +17,7 @@
     "runtime:path-check": "tsx scripts/check-runtime-api-paths.ts --strict"
   },
   "dependencies": {
+    "@athyper/neon-runtime": "workspace:*",
     "@athyper/app-neon": "workspace:*",
     "@athyper/api-client": "workspace:*",
     "@athyper/api-contracts": "workspace:*",

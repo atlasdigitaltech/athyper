@@ -23,11 +23,16 @@ export interface ActiveUser {
   initials: string;
 }
 
+export type SessionWarningReason = "idle" | "absolute";
+export type SessionLifecycleState = "active" | "idle_warning" | "absolute_warning" | "continuing" | "terminating" | "terminated";
+
 interface SessionPayload {
   authenticated: true;
   activeOrg: string | null;
   organizations: Record<string, unknown>;
   accessExpiresAt: number;
+  createdAt?: number;
+  absoluteExpiresAt?: number;
   sessionPolicy?: unknown;
   displayName?: string;
   username?: string;
@@ -44,8 +49,13 @@ interface RefreshBody {
 }
 
 interface SessionActivityMessage {
-  type: "activity";
+  type: "activity" | "session_continued";
   at: number;
+}
+
+interface SessionLifecycleMessage {
+  type: "session_terminated";
+  reason: string;
 }
 
 const ACTIVITY_EVENTS = ["pointerdown", "keydown", "wheel", "touchstart", "scroll"] as const;
@@ -290,6 +300,8 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
   activeOrg: ActiveOrg | null;
   activeUser: ActiveUser | null;
   warningSeconds: number | null;
+  warningReason: SessionWarningReason | null;
+  lifecycleState: SessionLifecycleState;
   continuePending: boolean;
   continueSession: () => Promise<void>;
   logoutNow: () => void;
@@ -299,9 +311,12 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
   const [activeOrg, setActiveOrg] = useState<ActiveOrg | null>(() => initial ? activeOrgFromSession(initial) : null);
   const [activeUser, setActiveUser] = useState<ActiveUser | null>(() => initial ? activeUserFromSession(initial) : null);
   const [warningSeconds, setWarningSeconds] = useState<number | null>(null);
+  const [warningReason, setWarningReason] = useState<SessionWarningReason | null>(null);
+  const [lifecycleState, setLifecycleState] = useState<SessionLifecycleState>("active");
   const [continuePending, setContinuePending] = useState(false);
   const [sessionPolicy, setSessionPolicy] = useState<SessionPolicyDefaults>(() => normalizeClientSessionPolicy(initial?.sessionPolicy));
   const accessExpiresAtRef = useRef(0);
+  const absoluteExpiresAtRef = useRef(0);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityAtRef = useRef(Date.now());
   const lastHeartbeatAtRef = useRef(0);
@@ -323,16 +338,24 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
   const clearWarning = useCallback(() => {
     warningActiveRef.current = false;
     setWarningSeconds(null);
+    setWarningReason(null);
     setContinuePending(false);
+    setLifecycleState("active");
   }, []);
 
   const logoutNow = useCallback(() => {
     if (logoutStartedRef.current) return;
     logoutStartedRef.current = true;
+    setLifecycleState("terminating");
     clearRefreshTimer();
     // Security-sensitive browser capabilities (including document edit
     // workspaces) clear synchronously before navigation destroys the shell.
     window.dispatchEvent(new Event("athyper:session-logout"));
+    try {
+      channelRef.current?.postMessage({ type: "session_terminated", reason: "logout" } satisfies SessionLifecycleMessage);
+    } catch {
+      // BroadcastChannel is best-effort; server-side termination remains authoritative.
+    }
     window.location.assign(config.logoutPath);
   }, [clearRefreshTimer, config.logoutPath]);
 
@@ -395,6 +418,7 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
           setSessionPolicy((current) => isSameSessionPolicy(current, nextPolicy) ? current : nextPolicy);
         }
         accessExpiresAtRef.current = body.accessExpiresAt;
+        setLifecycleState("active");
         scheduleRefreshRef.current(body.accessExpiresAt, nextPolicy);
         return "ready";
       }
@@ -454,6 +478,10 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
     const controller = new AbortController();
     if (initial) {
       accessExpiresAtRef.current = initial.accessExpiresAt;
+      absoluteExpiresAtRef.current = initial.absoluteExpiresAt
+        ?? (typeof initial.createdAt === "number"
+          ? initial.createdAt + normalizeClientSessionPolicy(initial.sessionPolicy).absoluteTtlSeconds
+          : 0);
       scheduleTokenRefresh(initial.accessExpiresAt, normalizeClientSessionPolicy(initial.sessionPolicy));
     }
     const revalidateTimer = window.setTimeout(() => fetch("/api/auth/session", { cache: "no-store", signal: controller.signal })
@@ -470,6 +498,10 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
         setSessionPolicy((current) => isSameSessionPolicy(current, nextPolicy) ? current : nextPolicy);
         setActiveOrg(activeOrgFromSession(session));
         setActiveUser(activeUserFromSession(session));
+        absoluteExpiresAtRef.current = session.absoluteExpiresAt
+          ?? (typeof session.createdAt === "number"
+            ? session.createdAt + nextPolicy.absoluteTtlSeconds
+            : absoluteExpiresAtRef.current);
         scheduleTokenRefresh(session.accessExpiresAt, nextPolicy);
       })
       .catch((err) => {
@@ -511,7 +543,7 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
     const syncActivity = (at: number) => {
       if (!Number.isFinite(at) || at <= 0 || at <= lastActivityAtRef.current) return;
       lastActivityAtRef.current = at;
-      if (warningActiveRef.current) clearWarning();
+      if (warningActiveRef.current && warningReason === "idle") clearWarning();
     };
 
     const handleStorage = (event: StorageEvent) => {
@@ -523,9 +555,14 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
     if (typeof BroadcastChannel !== "undefined") {
       channel = new BroadcastChannel(channelName);
       channelRef.current = channel;
-      channel.onmessage = (event: MessageEvent<SessionActivityMessage>) => {
-        if (event.data?.type !== "activity") return;
-        syncActivity(event.data.at);
+      channel.onmessage = (event: MessageEvent<SessionActivityMessage | SessionLifecycleMessage>) => {
+        if (event.data?.type === "activity" || event.data?.type === "session_continued") {
+          syncActivity(event.data.at);
+          return;
+        }
+        if (event.data?.type === "session_terminated") {
+          logoutNow();
+        }
       };
     }
 
@@ -536,7 +573,7 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
       if (channelRef.current === channel) channelRef.current = null;
       channel?.close();
     };
-  }, [channelName, clearWarning, storageKey]);
+  }, [channelName, clearWarning, logoutNow, storageKey, warningReason]);
 
   useEffect(() => {
     const evaluateIdle = () => {
@@ -545,11 +582,24 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
       const elapsedSeconds = elapsedIdleSeconds();
       const { idleTimeoutSeconds, idleWarningSeconds } = sessionPolicy;
       const warningStartSeconds = idleTimeoutSeconds - idleWarningSeconds;
+      const absoluteRemainingSeconds = absoluteExpiresAtRef.current > 0
+        ? absoluteExpiresAtRef.current - Math.floor(Date.now() / 1000)
+        : Number.POSITIVE_INFINITY;
 
+      if (absoluteRemainingSeconds <= 0) { logoutNow(); return; }
+      if (absoluteRemainingSeconds <= idleWarningSeconds) {
+        warningActiveRef.current = true;
+        setLifecycleState("absolute_warning");
+        setWarningReason("absolute");
+        setWarningSeconds(Math.max(0, Math.ceil(absoluteRemainingSeconds)));
+        return;
+      }
       if (elapsedSeconds >= idleTimeoutSeconds) { logoutNow(); return; }
 
       if (elapsedSeconds >= warningStartSeconds) {
         warningActiveRef.current = true;
+        setLifecycleState("idle_warning");
+        setWarningReason("idle");
         setWarningSeconds(Math.max(0, Math.ceil(idleTimeoutSeconds - elapsedSeconds)));
         return;
       }
@@ -569,11 +619,24 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
       const elapsedSeconds = elapsedIdleSeconds();
       const { idleTimeoutSeconds, idleWarningSeconds } = sessionPolicy;
       const warningStartSeconds = idleTimeoutSeconds - idleWarningSeconds;
+      const absoluteRemainingSeconds = absoluteExpiresAtRef.current > 0
+        ? absoluteExpiresAtRef.current - Math.floor(Date.now() / 1000)
+        : Number.POSITIVE_INFINITY;
 
+      if (absoluteRemainingSeconds <= 0) { logoutNow(); return; }
+      if (absoluteRemainingSeconds <= idleWarningSeconds) {
+        warningActiveRef.current = true;
+        setLifecycleState("absolute_warning");
+        setWarningReason("absolute");
+        setWarningSeconds(Math.max(0, Math.ceil(absoluteRemainingSeconds)));
+        return;
+      }
       if (elapsedSeconds >= idleTimeoutSeconds) { logoutNow(); return; }
 
       if (elapsedSeconds >= warningStartSeconds) {
         warningActiveRef.current = true;
+        setLifecycleState("idle_warning");
+        setWarningReason("idle");
         setWarningSeconds(Math.max(0, Math.ceil(idleTimeoutSeconds - elapsedSeconds)));
         return;
       }
@@ -595,7 +658,13 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
   const continueSession = useCallback(async () => {
     if (continuePending || logoutStartedRef.current) return;
 
+    if (warningReason === "absolute") {
+      logoutNow();
+      return;
+    }
+
     setContinuePending(true);
+    setLifecycleState("continuing");
     const touched = await touchSession(true);
     if (!touched) { logoutNow(); return; }
 
@@ -604,7 +673,12 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
 
     clearWarning();
     recordActivity(Date.now());
-  }, [clearWarning, continuePending, logoutNow, recordActivity, refreshAccessToken, touchSession]);
+    try {
+      channelRef.current?.postMessage({ type: "session_continued", at: Date.now() } satisfies SessionActivityMessage);
+    } catch {
+      // BroadcastChannel is best-effort.
+    }
+  }, [clearWarning, continuePending, logoutNow, recordActivity, refreshAccessToken, touchSession, warningReason]);
 
-  return { activeOrg, activeUser, warningSeconds, continuePending, continueSession, logoutNow };
+  return { activeOrg, activeUser, warningSeconds, warningReason, lifecycleState, continuePending, continueSession, logoutNow };
 }

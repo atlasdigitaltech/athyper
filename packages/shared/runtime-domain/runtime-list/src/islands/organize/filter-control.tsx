@@ -22,7 +22,7 @@ import {
   sanitizeFilterValue,
   serializeOrganizeState,
 } from "./organize-url";
-import { useOrganizePanel } from "./organize-state";
+import { useOrganizeFilterPanel } from "./organize-state";
 
 interface FilterControlProps {
   fieldOptionsApiHrefBase?: string | null;
@@ -41,29 +41,74 @@ export function FilterControl({
 }: FilterControlProps) {
   const router = useRouter();
   const buttonRef = useRef<HTMLButtonElement | null>(null);
-  const panel = useOrganizePanel("filter");
+  const drawerAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const requestedFieldRef = useRef<HTMLDivElement | null>(null);
+  const panel = useOrganizeFilterPanel();
   const currentDraft = useMemo(
     () => parseFilterDraft(rawSearchParams, filterableFields),
     [filterableFields, rawSearchParams],
   );
+  const requestedFieldName = panel.requestedFieldName && filterableFields.some((field) => field.name === panel.requestedFieldName)
+    ? panel.requestedFieldName
+    : null;
   const [draft, setDraft] = useState<Record<string, string[]>>({});
   const [stagedFieldNames, setStagedFieldNames] = useState<string[]>(() => Object.keys(currentDraft));
   const [fieldSearch, setFieldSearch] = useState("");
+  const [showSuggestedFilters, setShowSuggestedFilters] = useState(true);
+  const [showRecentFilters, setShowRecentFilters] = useState(true);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [recentFieldNames, setRecentFieldNames] = useState<string[]>([]);
+  const [pendingFocusFieldName, setPendingFocusFieldName] = useState<string | null>(null);
+  const [mobileFilterView, setMobileFilterView] = useState<"add" | "selected">("add");
   const hasChanges = !filterDraftsEqual(draft, currentDraft, filterableFields);
   const activeFilterCount = Object.values(currentDraft)
     .filter((values) => normalizeFilterValues(values).length > 0).length;
 
   useEffect(() => {
-    if (panel.open) {
-      setDraft(currentDraft);
-      setStagedFieldNames(Object.keys(currentDraft));
-      setFieldSearch("");
-      setRecentFieldNames(readRecentFilterFields(listBaseHref));
+    if (!panel.open) {
+      setPendingFocusFieldName(null);
+      return;
     }
-  }, [currentDraft, listBaseHref, panel.open]);
+
+    drawerAnchorRef.current = panel.requestedTrigger ?? buttonRef.current;
+    setDraft(currentDraft);
+    setStagedFieldNames(Array.from(new Set([
+      ...Object.keys(currentDraft),
+      ...(requestedFieldName ? [requestedFieldName] : []),
+    ])));
+    setPendingFocusFieldName(requestedFieldName);
+    setMobileFilterView(requestedFieldName || Object.keys(currentDraft).length > 0 ? "selected" : "add");
+    setFieldSearch("");
+    if (requestedFieldName) setShowMoreFilters(false);
+    setRecentFieldNames(readRecentFilterFields(listBaseHref));
+  }, [currentDraft, listBaseHref, panel.open, panel.requestedTrigger, requestedFieldName]);
+
+  useEffect(() => {
+    if (!panel.open) return;
+    setShowSuggestedFilters(true);
+    setShowRecentFilters(true);
+  }, [panel.open]);
+
+  useEffect(() => {
+    if (!panel.open || !requestedFieldName || pendingFocusFieldName !== requestedFieldName) return;
+    const timer = window.setTimeout(() => {
+      const target = requestedFieldRef.current;
+      if (!target) return;
+
+      target.scrollIntoView?.({ block: "center" });
+      const editor = target.querySelector<HTMLElement>([
+        "[data-runtime-filter-editor] input:not([disabled])",
+        "[data-runtime-filter-editor] select:not([disabled])",
+        "[data-runtime-filter-editor] textarea:not([disabled])",
+        "[data-runtime-filter-editor] button:not([disabled])",
+        "[data-runtime-filter-editor] [tabindex]:not([tabindex='-1'])",
+      ].join(","));
+      (editor ?? target).focus({ preventScroll: true });
+      setPendingFocusFieldName(null);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [panel.open, pendingFocusFieldName, requestedFieldName]);
 
   if (filterableFields.length === 0) return null;
 
@@ -116,6 +161,7 @@ export function FilterControl({
   const addField = (fieldName: string) => {
     setStagedFieldNames((prev) => prev.includes(fieldName) ? prev : [...prev, fieldName]);
     setFieldSearch("");
+    setMobileFilterView("selected");
     rememberRecentFilterFields(listBaseHref, [fieldName], setRecentFieldNames);
   };
 
@@ -141,186 +187,263 @@ export function FilterControl({
       />
       {panel.open && (
         <PaletteDrawer
-          anchorRef={buttonRef}
+          anchorRef={drawerAnchorRef}
           title={`Filter${draftFilterCount > 0 ? ` ${draftFilterCount}` : ""}`}
           icon={Filter}
           onClose={panel.close}
+          workspace
           footer={(
             <PaletteDrawerActions
               onApply={apply}
               onReset={reset}
               onDiscard={panel.close}
               hasChanges={hasChanges}
+              applyLabel="Apply filters"
+              resetLabel="Clear all"
+              discardLabel="Cancel"
+              layout="inline"
             />
           )}
         >
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={fieldSearch}
-                onChange={(event) => setFieldSearch(event.currentTarget.value)}
-                placeholder="Add filter..."
-                className={ORGANIZE_SEARCH_INPUT_WITH_CLEAR_CLASS}
-              />
-              {fieldSearch && (
-                <button
-                  type="button"
-                  aria-label="Clear filter search"
-                  onClick={() => setFieldSearch("")}
-                  className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-                >
-                  <X aria-hidden="true" className="size-4" />
-                </button>
-              )}
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="flex shrink-0 border-b p-2 md:hidden" role="tablist" aria-label="Filter sections">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobileFilterView === "add"}
+                onClick={() => setMobileFilterView("add")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${mobileFilterView === "add" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+              >
+                Add filters
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobileFilterView === "selected"}
+                onClick={() => setMobileFilterView("selected")}
+                className={`flex-1 rounded-md px-3 py-2 text-sm font-medium ${mobileFilterView === "selected" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+              >
+                Selected{draftFilterCount > 0 ? ` (${draftFilterCount})` : ""}
+              </button>
             </div>
 
-            {searchResults !== null ? (
-              <FilterSearchResults
-                query={fieldSearch}
-                results={searchResults}
-                activeFieldNames={activeFieldNameSet}
-                advancedAvailable={advancedFields.length > 0}
-                onAdd={addField}
-                onOpenMore={() => {
-                  setFieldSearch("");
-                  setShowMoreFilters(true);
-                }}
-              />
-            ) : (
-              <>
-                {suggestedFields.length > 0 && (
-                  <section className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold">Suggested filters</h3>
-                      <span className="text-xs text-muted-foreground">Metadata driven</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {suggestedFields.map((field) => (
-                        <button
-                          key={field.name}
-                          type="button"
-                          onClick={() => addField(field.name)}
-                          className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
-                        >
-                          <Plus aria-hidden="true" className="size-3.5" />
-                          {field.label}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                {recentFields.length > 0 && (
-                  <section className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-semibold">Recently used</h3>
-                      <span className="text-xs text-muted-foreground">{recentFields.length}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {recentFields.map((field) => (
-                        <button
-                          key={field.name}
-                          type="button"
-                          onClick={() => addField(field.name)}
-                          className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
-                        >
-                          <Plus aria-hidden="true" className="size-3.5" />
-                          {field.label}
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                )}
-
-                <section className="space-y-2">
+            <div className="min-h-0 flex-1 md:grid md:grid-cols-[minmax(220px,0.85fr)_minmax(0,1.35fr)]">
+              <section className={`${mobileFilterView === "add" ? "flex" : "hidden"} min-h-0 flex-col border-b md:flex md:border-b-0 md:border-r`}>
+                <div
+                  data-runtime-filter-pane="available"
+                  className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4 md:p-5"
+                >
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Active filters</h3>
-                    {draftFilterCount > 0 && (
-                      <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-                        {draftFilterCount}
-                      </span>
+                    <h3 className="text-sm font-medium text-muted-foreground">Add filters</h3>
+                    <span className="text-sm text-muted-foreground">{searchableFields.length} available</span>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={fieldSearch}
+                      onChange={(event) => setFieldSearch(event.currentTarget.value)}
+                      placeholder="Search filters..."
+                      className={ORGANIZE_SEARCH_INPUT_WITH_CLEAR_CLASS}
+                    />
+                    {fieldSearch && (
+                      <button
+                        type="button"
+                        aria-label="Clear filter search"
+                        onClick={() => setFieldSearch("")}
+                        className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <X aria-hidden="true" className="size-4" />
+                      </button>
                     )}
                   </div>
+
+                  {searchResults !== null ? (
+                    <FilterSearchResults
+                      query={fieldSearch}
+                      results={searchResults}
+                      activeFieldNames={activeFieldNameSet}
+                      advancedAvailable={advancedFields.length > 0}
+                      onAdd={addField}
+                      onOpenMore={() => {
+                        setFieldSearch("");
+                        setShowMoreFilters(true);
+                      }}
+                    />
+                  ) : (
+                    <>
+                      {suggestedFields.length > 0 && (
+                        <section className="space-y-3 border-t border-border/60 pt-5">
+                          <button
+                            type="button"
+                            aria-expanded={showSuggestedFilters}
+                            aria-controls="suggested-filter-options"
+                            onClick={() => setShowSuggestedFilters((value) => !value)}
+                            className="flex w-full items-center gap-2 rounded-md py-1 text-left text-sm font-medium text-muted-foreground hover:text-foreground"
+                          >
+                            {showSuggestedFilters
+                              ? <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground" />
+                              : <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
+                            }
+                            <span className="flex-1">Suggested filters</span>
+                            <span className="text-sm font-normal text-muted-foreground">{suggestedFields.length}</span>
+                          </button>
+                          {showSuggestedFilters && (
+                            <div id="suggested-filter-options" className="divide-y overflow-hidden rounded-lg border px-1 pb-1">
+                              {suggestedFields.map((field) => (
+                                <FieldPickerRow
+                                  key={field.name}
+                                  field={field}
+                                  onAdd={() => addField(field.name)}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      )}
+
+                      {recentFields.length > 0 && (
+                        <section className="space-y-3 border-t border-border/60 pt-5">
+                          <button
+                            type="button"
+                            aria-expanded={showRecentFilters}
+                            aria-controls="recent-filter-options"
+                            onClick={() => setShowRecentFilters((value) => !value)}
+                            className="flex w-full items-center gap-2 rounded-md py-1 text-left text-sm font-medium text-muted-foreground hover:text-foreground"
+                          >
+                            {showRecentFilters
+                              ? <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground" />
+                              : <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
+                            }
+                            <span className="flex-1">Recently used</span>
+                            <span className="text-sm font-normal text-muted-foreground">{recentFields.length}</span>
+                          </button>
+                          {showRecentFilters && (
+                            <div id="recent-filter-options" className="divide-y overflow-hidden rounded-lg border px-1 pb-1">
+                              {recentFields.map((field) => (
+                                <FieldPickerRow
+                                  key={field.name}
+                                  field={field}
+                                  onAdd={() => addField(field.name)}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      )}
+
+                      {advancedFields.length > 0 && (
+                        <section className="space-y-3 border-t border-border/60 pt-5">
+                          <button
+                            type="button"
+                            onClick={() => setShowMoreFilters((value) => !value)}
+                            className="flex w-full items-center gap-2 rounded-md py-1 text-left text-sm font-medium text-muted-foreground hover:text-foreground"
+                          >
+                            {showMoreFilters
+                              ? <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground" />
+                              : <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
+                            }
+                            <span className="flex-1">All filters</span>
+                            <span className="text-sm font-normal text-muted-foreground">{advancedFields.length}</span>
+                          </button>
+
+                          {showMoreFilters && (
+                            <div className="space-y-3">
+                              {advancedGroups.map((group) => {
+                                const collapsed = collapsedGroups[group.key] ?? false;
+                                return (
+                                  <div key={group.key} className="rounded-lg border">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleGroup(group.key)}
+                                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium hover:bg-muted/50"
+                                    >
+                                      {collapsed
+                                        ? <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
+                                        : <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground" />
+                                      }
+                                      <span className="flex-1">{group.label}</span>
+                                      <span className="text-xs font-normal text-muted-foreground">{group.fields.length}</span>
+                                    </button>
+                                    {!collapsed && (
+                                      <div className="divide-y px-1 pb-1">
+                                        {group.fields.map((field) => (
+                                          <FieldPickerRow
+                                            key={field.name}
+                                            field={field}
+                                            onAdd={() => addField(field.name)}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </section>
+                      )}
+                    </>
+                  )}
+                </div>
+              </section>
+
+              <section className={`${mobileFilterView === "selected" ? "flex" : "hidden"} min-h-0 flex-col md:flex`}>
+                <div className="flex shrink-0 items-center justify-between border-b px-4 py-3 md:px-5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground">Selected filters</h3>
+                    <p className="text-sm text-muted-foreground">Review conditions before applying them.</p>
+                  </div>
+                  {draftFilterCount > 0 && (
+                    <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+                      {draftFilterCount}
+                    </span>
+                  )}
+                </div>
+                <div
+                  data-runtime-filter-pane="selected"
+                  className="min-h-0 flex-1 overflow-y-auto p-4 md:p-5"
+                >
                   {activeFields.length === 0 ? (
-                    <div className="rounded-lg border border-dashed px-4 py-6 text-center">
+                    <div className="rounded-lg border border-dashed px-4 py-8 text-center">
                       <p className="text-sm font-medium">No filters selected</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {prototypeFields.length > 0
-                          ? "Add suggested filters from the metadata above."
-                          : "Open More filters to choose from the available fields."}
+                        Choose a filter to narrow the results.
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => setMobileFilterView("add")}
+                        className="mt-4 inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-muted md:hidden"
+                      >
+                        <Plus aria-hidden="true" className="size-3.5" />
+                        Add a filter
+                      </button>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       {activeFields.map((field) => (
-                        <ActiveFilterRow
+                        <div
                           key={field.name}
-                          field={field}
-                          fieldOptionsApiHrefBase={fieldOptionsApiHrefBase}
-                          values={draft[field.name] ?? []}
-                          onChange={(values) => setFieldValues(field.name, values)}
-                          onRemove={() => removeField(field.name)}
-                        />
+                          ref={field.name === requestedFieldName ? requestedFieldRef : undefined}
+                          data-runtime-filter-field={field.name}
+                          tabIndex={-1}
+                          className="outline-none"
+                        >
+                          <ActiveFilterRow
+                            field={field}
+                            fieldOptionsApiHrefBase={fieldOptionsApiHrefBase}
+                            values={draft[field.name] ?? []}
+                            onChange={(values) => setFieldValues(field.name, values)}
+                            onRemove={() => removeField(field.name)}
+                          />
+                        </div>
                       ))}
                     </div>
                   )}
-                </section>
-
-                {advancedFields.length > 0 && (
-                  <section className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowMoreFilters((value) => !value)}
-                      className="flex w-full items-center gap-2 rounded-md py-1 text-left text-sm font-semibold hover:text-foreground"
-                    >
-                      {showMoreFilters
-                        ? <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground" />
-                        : <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
-                      }
-                      <span className="flex-1">More filters</span>
-                      <span className="text-xs font-normal text-muted-foreground">{advancedFields.length}</span>
-                    </button>
-
-                    {showMoreFilters && (
-                      <div className="space-y-3">
-                        {advancedGroups.map((group) => {
-                          const collapsed = collapsedGroups[group.key] ?? false;
-                          return (
-                            <div key={group.key} className="rounded-lg border">
-                              <button
-                                type="button"
-                                onClick={() => toggleGroup(group.key)}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium hover:bg-muted/50"
-                              >
-                                {collapsed
-                                  ? <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
-                                  : <ChevronDown aria-hidden="true" className="size-4 text-muted-foreground" />
-                                }
-                                <span className="flex-1">{group.label}</span>
-                                <span className="text-xs font-normal text-muted-foreground">{group.fields.length}</span>
-                              </button>
-                              {!collapsed && (
-                                <div className="divide-y px-1 pb-1">
-                                  {group.fields.map((field) => (
-                                    <FieldPickerRow
-                                      key={field.name}
-                                      field={field}
-                                      onAdd={() => addField(field.name)}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </section>
-                )}
-              </>
-            )}
+                </div>
+              </section>
+            </div>
           </div>
         </PaletteDrawer>
       )}
@@ -609,7 +732,6 @@ function FieldPickerRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">{field.label}</span>
-        <span className="text-xs text-muted-foreground">{filterKindLabel(field)}</span>
       </span>
       <span className="text-xs font-medium text-muted-foreground">Add</span>
     </button>
@@ -642,10 +764,12 @@ function ActiveFilterRow({
         onClear={onRemove}
         headerActions={nullPresenceActions}
       >
-        {allowsAnyFilterOperator(field, ["relative", "between", "gte", "lte", "gt", "lt", "eq"])
-          ? <DateFilterEditor field={field} values={values} onChange={onChange} />
-          : <PresenceOnlyFilterEditor field={field} values={values} onChange={onChange} />
-        }
+        <div data-runtime-filter-editor>
+          {allowsAnyFilterOperator(field, ["relative", "between", "gte", "lte", "gt", "lt", "eq"])
+            ? <DateFilterEditor field={field} values={values} onChange={onChange} />
+            : <PresenceOnlyFilterEditor field={field} values={values} onChange={onChange} />
+          }
+        </div>
       </ActiveFilterCard>
     );
   }
@@ -656,12 +780,14 @@ function ActiveFilterRow({
       onClear={onRemove}
       headerActions={nullPresenceActions}
     >
-      <FilterFieldController
-        field={field}
-        fieldOptionsApiHrefBase={fieldOptionsApiHrefBase}
-        values={values}
-        onChange={onChange}
-      />
+      <div data-runtime-filter-editor>
+        <FilterFieldController
+          field={field}
+          fieldOptionsApiHrefBase={fieldOptionsApiHrefBase}
+          values={values}
+          onChange={onChange}
+        />
+      </div>
     </ActiveFilterCard>
   );
 }
@@ -1208,6 +1334,26 @@ function DateFilterEditor({
   const activePresetKey: DateRangePresetKey | null = value.startsWith("@")
     ? (value.slice(1) as DateRangePresetKey)
     : null;
+  const [pickerValue, setPickerValue] = useState<{
+    from: string | null;
+    to: string | null;
+    preset: DateRangePresetKey | null;
+  }>({
+    from: range.from || null,
+    to: range.to || null,
+    preset: activePresetKey,
+  });
+
+  // Keep the calendar's first custom click locally when the field only
+  // accepts complete ranges (for example, `between`). The server-facing
+  // filter value is updated once the second endpoint makes the range valid.
+  useEffect(() => {
+    setPickerValue({
+      from: range.from || null,
+      to: range.to || null,
+      preset: activePresetKey,
+    });
+  }, [activePresetKey, range.from, range.to, value]);
 
   // Unified presets list — merges the legacy shortcut chips with the new
   // fiscal-aware ones. When `showShortcuts` is on, presets go into the
@@ -1222,13 +1368,18 @@ function DateFilterEditor({
           <p className={ORGANIZE_SECTION_LABEL_CLASS}>Filter by date</p>
         )}
         <DateRangePicker
-          value={{
-            from: range.from || null,
-            to: range.to || null,
-            preset: activePresetKey,
-          }}
+          value={pickerValue}
           onChange={(next) => {
-            if (!next) { onChange([]); return; }
+            if (!next) {
+              setPickerValue({ from: null, to: null, preset: null });
+              onChange([]);
+              return;
+            }
+            setPickerValue({
+              from: next.from ?? null,
+              to: next.to ?? null,
+              preset: next.preset ?? null,
+            });
             // Preset chip picked → emit "@<key>" so the server can re-resolve
             // at query time (saved views stay "current"). Custom range picked →
             // emit concrete dates via the boundary helper.
@@ -1236,11 +1387,14 @@ function DateFilterEditor({
               onChange([`@${next.preset}`]);
               return;
             }
-            onChange(dateBoundaryFilterValue(field, next.from ?? "", next.to ?? ""));
+            const serialized = dateBoundaryFilterValue(field, next.from ?? "", next.to ?? "");
+            if (serialized.length > 0) onChange(serialized);
           }}
           presets={presets}
           placeholder="dd/mm/yyyy"
-          popoverAlign="center"
+          popoverAlign="end"
+          months={1}
+          size="sm"
           dateFormat="%d/%m/%Y"
         />
       </div>
@@ -1376,17 +1530,18 @@ function BooleanFilterEditor({
   ] as const;
 
   return (
-    <div className="grid h-8 grid-cols-3 overflow-hidden rounded-md border">
+    <div className="grid h-9 grid-cols-3 gap-0.5 rounded-lg border bg-background p-0.5">
       {options.map(([optionValue, label]) => {
         const selected = value === optionValue;
         return (
           <button
             key={optionValue || "any"}
             type="button"
+            aria-pressed={selected}
             onClick={() => onChange(optionValue ? [optionValue] : [])}
             className={[
-              "border-r text-xs font-medium last:border-r-0",
-              selected ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              "rounded-md text-sm font-medium transition-colors",
+              selected ? "bg-muted text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
             ].join(" ")}
           >
             {label}

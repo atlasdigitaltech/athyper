@@ -9,6 +9,7 @@
     ".": "./src/index.ts",
     "./common": "./src/schemas/common.ts",
     "./metadata": "./src/schemas/metadata.ts",
+    "./metadata-normalizers": "./src/schemas/metadata-normalizers.ts",
     "./records": "./src/schemas/records.ts",
     "./documents": "./src/schemas/documents.ts",
     "./document-edit-draft": "./src/schemas/document-edit-draft.ts",

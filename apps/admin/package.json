@@ -11,6 +11,7 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@athyper/admin-studio": "workspace:*",
     "@athyper/api-contracts": "workspace:*",
     "@athyper/app-admin": "workspace:*",
     "@athyper/app-admin-command-hub": "workspace:*",

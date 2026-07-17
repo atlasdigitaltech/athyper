@@ -62,6 +62,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify deployment profiles and package boundaries
+        run: pnpm policy:release-boundaries
+
       - name: Generate Prisma/Kysely types
         run: pnpm --filter @athyper/adapter-db run prisma:generate
 

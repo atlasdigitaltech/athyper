@@ -138,6 +138,7 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
               onChange={handleChange}
               placeholder={placeholder}
               className="h-full w-full bg-transparent pl-9 pr-8 text-sm font-normal text-foreground placeholder:font-normal placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ paddingLeft: "2.25rem" }}
               {...rest}
             />
             <div className="absolute right-2.5 flex items-center gap-1">
@@ -225,4 +226,3 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
 );
 
 SearchInput.displayName = "search-input";
-

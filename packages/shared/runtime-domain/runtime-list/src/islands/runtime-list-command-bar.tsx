@@ -1,13 +1,14 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MoreVertical, Plus, RefreshCw } from "lucide-react";
+import { Button } from "@athyper/ui";
 import type { RuntimeListPresenterProps } from "../adapter/types";
 import type { ResolvedToolbarAction } from "../core/types";
-import { OrganizePaletteProvider } from "./organize/organize-state";
 import { SearchControl } from "./organize/search-control";
 import { FilterControl } from "./organize/filter-control";
+import { OrganizePaletteProvider } from "./organize/organize-state";
 import { SortControl } from "./organize/sort-control";
 import { GroupControl } from "./organize/group-control";
 import { ColumnControl } from "./organize/column-control";
@@ -71,12 +72,15 @@ export function RuntimeListCommandBar(props: RuntimeListCommandBarProps) {
 
   return (
     <OrganizePaletteProvider>
-      <div className="flex min-w-0 flex-wrap items-center gap-3" data-runtime-list-command-bar>
+      <div
+        className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-3"
+        data-runtime-list-command-bar
+      >
         <ListNavigationSegment title={entityName} listHref={clientAdapter.listBaseHref} />
 
         {slots?.organizeLeading}
 
-        <div className="ml-auto flex h-10 min-w-0 w-[16rem] items-center overflow-hidden rounded-lg border bg-background shadow-sm max-sm:order-3 max-sm:ml-0 max-sm:w-full max-sm:flex-none max-[820px]:order-3 max-[820px]:ml-0 max-[820px]:!w-full max-[820px]:flex-none sm:w-[18rem] md:w-[22rem] lg:w-[22rem] xl:w-[26rem]">
+        <div className="col-span-2 row-start-2 flex h-10 min-w-0 w-full items-center overflow-hidden rounded-lg border bg-background shadow-sm md:col-span-1 md:col-start-2 md:row-start-1 md:max-w-sm md:justify-self-end">
           <SearchControl
             searchValue={searchValue}
             pageSize={pageSize}
@@ -133,15 +137,19 @@ export function RuntimeListCommandBar(props: RuntimeListCommandBarProps) {
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 max-sm:order-2 max-sm:ml-auto max-[820px]:order-2 max-[820px]:ml-auto">
+        <div className="col-start-2 row-start-1 flex shrink-0 items-center gap-2 md:col-start-3">
           {createHref && (
-            <a
-              href={createHref}
-              className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-foreground px-3 text-sm font-semibold leading-5 text-background shadow-sm transition-opacity hover:opacity-90"
+            <Button
+              asChild
+              variant="primary"
+              size="lg"
+              className="w-10 shrink-0 px-0 md:w-auto md:px-4"
             >
-              <Plus aria-hidden="true" className="size-4" />
-              {runtimeListText.actions.createNew}
-            </a>
+              <a href={createHref}>
+                <Plus aria-hidden="true" className="size-4" />
+                <span className="hidden md:inline">{runtimeListText.actions.createNew}</span>
+              </a>
+            </Button>
           )}
 
           <RuntimeListMoreMenu actions={toolbarActions} />
@@ -180,7 +188,7 @@ function ListNavigationSegment({
   };
 
   return (
-    <div className="flex h-10 min-w-0 shrink items-center overflow-hidden rounded-lg border bg-background shadow-sm max-sm:order-1 max-sm:flex-1 max-[820px]:order-1 max-[820px]:flex-1">
+    <div className="col-start-1 row-start-1 flex h-10 min-w-0 items-center overflow-hidden rounded-lg border bg-background shadow-sm">
       <button
         type="button"
         aria-label="Back"
@@ -261,7 +269,6 @@ function HiddenArrangeDrawers({
 
 function RuntimeListMoreMenu({ actions }: { actions: ResolvedToolbarAction[] }) {
   const router = useRouter();
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
   const [isRefreshing, startRefreshTransition] = useTransition();
   const visibleActions = actions.filter((action) => !action.disabled);
@@ -273,19 +280,24 @@ function RuntimeListMoreMenu({ actions }: { actions: ResolvedToolbarAction[] }) 
 
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        aria-label="More actions"
-        aria-expanded={open}
+      <PalettePanel
+        open={open}
+        onOpenChange={setOpen}
         title="More actions"
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-background text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+        width={280}
+        trigger={(
+          <Button
+            variant="ghost"
+            size="lg"
+            aria-label="More actions"
+            aria-expanded={open}
+            title="More actions"
+            className="size-10 shrink-0 p-0"
+          >
+            <MoreVertical aria-hidden="true" className="size-5" />
+          </Button>
+        )}
       >
-        <MoreVertical aria-hidden="true" className="size-5" />
-      </button>
-      {open && (
-        <PalettePanel anchorRef={buttonRef} title="More actions" width={280} onClose={() => setOpen(false)}>
           <div className="space-y-3">
             <section className="space-y-1.5">
               <h3 className="px-0.5 text-xs font-medium text-muted-foreground">Entity operations</h3>
@@ -296,14 +308,15 @@ function RuntimeListMoreMenu({ actions }: { actions: ResolvedToolbarAction[] }) 
               ) : (
                 <div className="overflow-hidden rounded-md border bg-background">
                   {visibleActions.map((action) => (
-                    <a
+                    <Button
                       key={action.key}
-                      href={action.href}
-                      className="block border-t px-3 py-2.5 text-sm font-medium text-foreground first:border-t-0 hover:bg-muted/70"
-                      onClick={() => setOpen(false)}
+                      asChild
+                      variant="ghost"
+                      size="md"
+                      className="w-full justify-start rounded-none border-t px-3 py-2.5 text-left text-foreground first:border-t-0"
                     >
-                      {action.label}
-                    </a>
+                      <a href={action.href} onClick={() => setOpen(false)}>{action.label}</a>
+                    </Button>
                   ))}
                 </div>
               )}
@@ -312,12 +325,14 @@ function RuntimeListMoreMenu({ actions }: { actions: ResolvedToolbarAction[] }) 
             <section className="space-y-1.5">
               <h3 className="px-0.5 text-xs font-medium text-muted-foreground">List</h3>
               <div className="overflow-hidden rounded-md border bg-background">
-                <button
+                <Button
                   type="button"
                   onClick={reloadList}
                   disabled={isRefreshing}
                   aria-busy={isRefreshing}
-                  className="flex min-h-10 w-full items-center gap-2 px-3 py-2 text-left text-sm font-medium text-foreground hover:bg-muted/70"
+                  variant="ghost"
+                  size="md"
+                  className="min-h-10 w-full justify-start rounded-none px-3 py-2 text-left text-foreground"
                 >
                   <RefreshCw
                     aria-hidden="true"
@@ -326,12 +341,11 @@ function RuntimeListMoreMenu({ actions }: { actions: ResolvedToolbarAction[] }) 
                   <span className="min-w-0 flex-1 truncate">
                     {isRefreshing ? "Reloading list…" : "Reload list"}
                   </span>
-                </button>
+                </Button>
               </div>
             </section>
           </div>
-        </PalettePanel>
-      )}
+      </PalettePanel>
     </>
   );
 }

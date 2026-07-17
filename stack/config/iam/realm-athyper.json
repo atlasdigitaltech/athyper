@@ -909,7 +909,7 @@
         "client.session.max.lifespan": "14400",
         "client.offline.session.idle.timeout": "0",
         "client.offline.session.max.lifespan": "0",
-        "backchannel.logout.url": "https://admin.athyper.local/api/auth/backchannel-logout"
+        "backchannel.logout.url": "${ADMIN_PUBLIC_WEB_URL}/api/auth/backchannel-logout"
       },
       "authenticationFlowBindingOverrides": {
         "browser": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -1064,7 +1064,7 @@
         "pkce.code.challenge.method": "S256",
         "realm_key": "athyper",
         "plane": "mesh",
-        "backchannel.logout.url": "https://mesh.athyper.local/api/auth/backchannel-logout"
+        "backchannel.logout.url": "${MESH_PUBLIC_WEB_URL}/api/auth/backchannel-logout"
       },
       "authenticationFlowBindingOverrides": {
         "browser": "c4f7b626-43ef-4cb4-a8df-b531dfc38d5a"
@@ -1187,7 +1187,7 @@
         "admin_plane_access": "false",
         "mutation_surface": "tenant_owned_neon_only",
         "pkce.code.challenge.method": "S256",
-        "backchannel.logout.url": "https://neon.athyper.local/api/auth/backchannel-logout"
+        "backchannel.logout.url": "${NEON_PUBLIC_WEB_URL}/api/auth/backchannel-logout"
       },
       "authenticationFlowBindingOverrides": {
         "browser": "c4f7b626-43ef-4cb4-a8df-b531dfc38d5a"

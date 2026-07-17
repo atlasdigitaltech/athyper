@@ -192,7 +192,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function normalizeListSearchParams(params: Record<string, string>): Record<string, string> {
-  const passthroughKeys = new Set(["page", "page_size", "q", "sort", "group", "facets", "picker_tree", "search_scope"]);
+  const passthroughKeys = new Set(["page", "page_size", "q", "sort", "group", "facets", "picker_tree", "search_scope", "query_v1"]);
   // Map legacy paging aliases to the canonical page_size so older picker
   // callers (and any third-party tooling) don't accidentally rewrite as
   // `filter.size` / `filter.limit` — a bogus column filter that breaks

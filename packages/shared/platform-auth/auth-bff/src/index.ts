@@ -44,6 +44,11 @@ export interface OrgMembership {
   legalEntityId?: string;
   legalEntityCode?: string;
   legalEntityName?: string;
+  networkAccountId?: string;
+  networkAccountCode?: string;
+  networkAccountName?: string;
+  networkAccountRole?: string;
+  networkRelationshipType?: string;
   keycloakOrganizationId?: string;
   keycloakOrganizationAlias?: string;
   workContextDomain?: "procurement" | "sales";
@@ -74,6 +79,13 @@ export interface V4Session {
   organizations: Record<string, OrgMembership>;
   activeOrg: string | null;
   activeWorkContext?: NeonWorkContext;
+  /** Optional act-as/delegation context carried by enriched session providers. */
+  activeDelegation?: {
+    delegationId?: string;
+    delegatorId?: string;
+    delegatorName?: string;
+    delegatorPersona?: string;
+  };
   authEpoch?: number;
   activeWorkbench: string | null;
   scope: string;
@@ -140,6 +152,8 @@ export interface PublicSession {
   activeWorkContext?: NeonWorkContext;
   activeWorkbench: string | null;
   accessExpiresAt: number;
+  createdAt: number;
+  absoluteExpiresAt: number;
   mfaRequired: boolean;
   mfaVerified: boolean;
   sessionPolicy: SessionPolicyDefaults;
@@ -207,6 +221,12 @@ export {
  * revalidation entirely (refresh-time check still runs).
  */
 import { enforceSessionPipeline } from "./auth-pipeline";
+import {
+  notifyIamSubjectCleanup,
+  terminateSession,
+  terminateSubjectSessions,
+  type SessionTerminationReason,
+} from "./session-termination";
 
 function getRoleRecheckIntervalSeconds(): number {
   const raw = Number(process.env.AUTH_ROLE_RECHECK_INTERVAL_S);
@@ -743,6 +763,29 @@ interface AuthErrorBody {
   retryAfter?: number;
 }
 
+interface AuthAuditScopeRef {
+  id?: string | null;
+  code?: string | null;
+  name?: string | null;
+  type?: string | null;
+  role?: string | null;
+  relationshipType?: string | null;
+}
+
+interface AuthAuditScope {
+  tenant?: AuthAuditScopeRef | null;
+  legalEntity?: AuthAuditScopeRef | null;
+  procurementOrganization?: AuthAuditScopeRef | null;
+  meshAccount?: AuthAuditScopeRef | null;
+  adminTenant?: AuthAuditScopeRef | null;
+  actAs?: {
+    delegationId?: string | null;
+    delegatorId?: string | null;
+    delegatorName?: string | null;
+    delegatorPersona?: string | null;
+  } | null;
+}
+
 interface AuthAuditEvent {
   eventType: string;
   outcome: "success" | "failure" | "blocked" | "partial";
@@ -756,6 +799,7 @@ interface AuthAuditEvent {
   activeOrg?: string | null;
   activeWorkContext?: NeonWorkContext | undefined;
   activeWorkbench?: string | null;
+  scope?: AuthAuditScope | undefined;
   reasonCode?: AuthErrorCode | string | undefined;
   detail?: Record<string, unknown> | undefined;
 }
@@ -2732,6 +2776,12 @@ export async function handleRefresh(plane: PlaneKey, request: NextRequest): Prom
     await redis.sRem(userSessionsKey(session.sessionNamespace, session.userId), sid);
     await redis.sAdd(userSessionsKey(session.sessionNamespace, session.userId), newSid);
     await redis.expire(userSessionsKey(session.sessionNamespace, session.userId), sessionTtl);
+    if (updated.keycloakSessionId) {
+      const reverseKey = kcSessionReverseKey(updated.keycloakSessionId);
+      await redis.sRem(reverseKey, `${updated.sessionNamespace}:${sid}`).catch(() => {});
+      await redis.sAdd(reverseKey, `${updated.sessionNamespace}:${newSid}`).catch(() => {});
+      await redis.expire(reverseKey, sessionTtl).catch(() => {});
+    }
 
     const response = NextResponse.json({
       ok: true,
@@ -2860,6 +2910,8 @@ export async function handleLogout(plane: PlaneKey, request: NextRequest): Promi
   const sid = request.cookies.get(effectiveCookieName(config.cookieName))?.value ?? null;
   let logoutUrl = `${publicBaseUrl}${config.loginPath}`;
   let loggedOutSession: V4Session | null = null;
+  let logoutCleanupDetail: Record<string, unknown> | undefined;
+  let logoutScope: AuthAuditScope | undefined;
 
   if (sid) {
     const realmKey = normalizeRealmKey(request.cookies.get(effectiveCookieName(config.realmCookieName))?.value, plane);
@@ -2923,7 +2975,20 @@ export async function handleLogout(plane: PlaneKey, request: NextRequest): Promi
         if (effectiveSid !== sid) {
           await redis.del(sidRotationKey(namespace, sid)).catch(() => {});
         }
+        const localSubjectSessionsDeleted = await terminateSubjectSessions(redis, session.userId);
+        const iamCleanup = await notifyIamSubjectCleanup({
+          accessToken: session.accessToken,
+          subjectId: session.userId,
+          reason: "manual_logout",
+          requestId,
+          auditContext: sessionAuditScope(session),
+        });
         loggedOutSession = session;
+        logoutScope = sessionAuditScope(session);
+        logoutCleanupDetail = {
+          localSubjectSessionsDeleted,
+          iamCleanup,
+        };
       } else if (raw) {
         await destroySession(redis, namespace, effectiveSid);
         if (effectiveSid !== sid) {
@@ -2951,7 +3016,11 @@ export async function handleLogout(plane: PlaneKey, request: NextRequest): Promi
     sidHash: sid ? hashValue(sid) : undefined,
     activeOrg: loggedOutSession?.activeOrg,
     activeWorkbench: loggedOutSession?.activeWorkbench,
-    detail: { hadSession: Boolean(loggedOutSession) },
+    scope: logoutScope,
+    detail: {
+      hadSession: Boolean(loggedOutSession),
+      cleanup: logoutCleanupDetail,
+    },
   });
   return response;
 }
@@ -3358,21 +3427,49 @@ async function destroySessionWithRefreshRevocation(
       });
     });
   }
-  await destroySession(redis, session.sessionNamespace, sid, session);
+  const reason: SessionTerminationReason = trigger === "idle" ? "idle_timeout" : "absolute_timeout";
+  await destroySession(redis, session.sessionNamespace, sid, session, reason);
+  const localSubjectSessionsDeleted = await terminateSubjectSessions(redis, session.userId);
+  const iamCleanup = await notifyIamSubjectCleanup({
+    accessToken: session.accessToken,
+    subjectId: session.userId,
+    reason,
+    requestId,
+    auditContext: sessionAuditScope(session),
+  });
+  await recordAuthAudit({
+    eventType: "session_subject_cleanup",
+    outcome: iamCleanup.ok || localSubjectSessionsDeleted > 0 ? "success" : "partial",
+    planeKey: plane,
+    realmKey: session.realmKey,
+    sessionNamespace: session.sessionNamespace,
+    requestId,
+    userId: session.userId,
+    username: session.username,
+    sidHash: hashValue(sid),
+    activeOrg: session.activeOrg,
+    activeWorkbench: session.activeWorkbench,
+    scope: sessionAuditScope(session),
+    reasonCode: reason,
+    detail: { trigger, localSubjectSessionsDeleted, iamCleanup },
+  });
 }
 
 async function destroySession(
   redis: RedisClient,
   namespace: string,
   sid: string,
-  session?: Pick<V4Session, "userId">,
+  session?: Pick<V4Session, "userId" | "keycloakSessionId">,
+  reason: SessionTerminationReason = "manual_logout",
 ): Promise<void> {
   clearVerifiedSessionCache(namespace, sid);
-  await redis.del(sessKey(namespace, sid)).catch(() => {});
-  await redis.del(sidRotationKey(namespace, sid)).catch(() => {});
-  if (session?.userId) {
-    await redis.sRem(userSessionsKey(namespace, session.userId), sid).catch(() => {});
-  }
+  await terminateSession(redis, {
+    namespace,
+    sid,
+    userId: session?.userId,
+    keycloakSessionId: session?.keycloakSessionId,
+    reason,
+  });
 }
 
 function requestIdFrom(request: NextRequest): string {
@@ -3415,6 +3512,8 @@ function toPublicSession(plane: PlaneKey, session: V4Session, sessionPolicy: Ses
     activeOrg: session.activeOrg,
     activeWorkbench: session.activeWorkbench,
     accessExpiresAt: session.accessExpiresAt,
+    createdAt: session.createdAt,
+    absoluteExpiresAt: session.createdAt + sessionPolicy.absoluteTtlSeconds,
     mfaRequired: session.mfaRequired,
     mfaVerified: session.mfaVerified,
     sessionPolicy,
@@ -3529,10 +3628,97 @@ function buildAuthAuditPayload(event: AuthAuditEvent): Record<string, unknown> {
   if (event.activeOrg) payload.activeOrgHash = hashValue(event.activeOrg);
   if (event.activeWorkbench) payload.activeWorkbench = event.activeWorkbench;
   if (event.reasonCode) payload.reasonCode = event.reasonCode;
+  if (event.scope) payload.scope = redactAuthAuditScope(event.scope);
 
   const detail = redactAuthAuditRecord(event.detail);
   if (detail && Object.keys(detail).length > 0) payload.detail = detail;
   return payload;
+}
+
+function redactAuthAuditScope(scope: AuthAuditScope): Record<string, unknown> {
+  const redactRef = (ref: AuthAuditScopeRef | null | undefined): Record<string, unknown> | null => {
+    if (!ref) return null;
+    return {
+      ...(ref.id ? { idHash: hashValue(ref.id) } : {}),
+      ...(ref.code ? { codeHash: hashValue(ref.code) } : {}),
+      ...(ref.name ? { nameHash: hashValue(ref.name) } : {}),
+      ...(ref.type ? { type: ref.type } : {}),
+      ...(ref.role ? { role: ref.role } : {}),
+      ...(ref.relationshipType ? { relationshipType: ref.relationshipType } : {}),
+    };
+  };
+
+  return {
+    ...(scope.tenant !== undefined ? { tenant: redactRef(scope.tenant) } : {}),
+    ...(scope.legalEntity !== undefined ? { legalEntity: redactRef(scope.legalEntity) } : {}),
+    ...(scope.procurementOrganization !== undefined
+      ? { procurementOrganization: redactRef(scope.procurementOrganization) }
+      : {}),
+    ...(scope.meshAccount !== undefined ? { meshAccount: redactRef(scope.meshAccount) } : {}),
+    ...(scope.adminTenant !== undefined ? { adminTenant: redactRef(scope.adminTenant) } : {}),
+    ...(scope.actAs !== undefined
+      ? {
+          actAs: scope.actAs
+            ? {
+                ...(scope.actAs.delegationId ? { delegationIdHash: hashValue(scope.actAs.delegationId) } : {}),
+                ...(scope.actAs.delegatorId ? { delegatorIdHash: hashValue(scope.actAs.delegatorId) } : {}),
+                ...(scope.actAs.delegatorName ? { delegatorNameHash: hashValue(scope.actAs.delegatorName) } : {}),
+                ...(scope.actAs.delegatorPersona ? { delegatorPersona: scope.actAs.delegatorPersona } : {}),
+              }
+            : null,
+        }
+      : {}),
+  };
+}
+
+function sessionAuditScope(session: Pick<V4Session, "planeKey" | "activeOrg" | "activeWorkContext" | "organizations" | "activeDelegation">): AuthAuditScope {
+  const alias = resolveCanonicalActiveOrgAlias(session);
+  const membership = alias ? session.organizations[alias] : undefined;
+  const legalEntity = membership?.legalEntityId || membership?.legalEntityCode || membership?.legalEntityName
+    ? {
+        id: membership.legalEntityId,
+        code: membership.legalEntityCode,
+        name: membership.legalEntityName,
+        type: "legal_entity",
+      }
+    : null;
+  const procurementOrganization = membership?.organizationId || membership?.organizationCode || membership?.organizationName
+    ? {
+        id: membership.organizationId,
+        code: membership.organizationCode,
+        name: membership.organizationName,
+        type: membership.contextType ?? "operating_organization",
+      }
+    : null;
+  const meshAccount = membership?.networkAccountId || membership?.networkAccountCode || membership?.networkAccountName
+    ? {
+        id: membership.networkAccountId,
+        code: membership.networkAccountCode,
+        name: membership.networkAccountName,
+        role: membership.networkAccountRole,
+        relationshipType: membership.networkRelationshipType,
+        type: "mesh_account",
+      }
+    : null;
+  const tenant = membership?.tenantId || membership?.tenantCode || membership?.tenantName
+    ? { id: membership.tenantId, code: membership.tenantCode, name: membership.tenantName, type: "tenant" }
+    : null;
+
+  return {
+    tenant,
+    legalEntity,
+    procurementOrganization,
+    meshAccount,
+    adminTenant: session.planeKey === "admin" ? tenant : null,
+    actAs: session.activeDelegation
+      ? {
+          delegationId: session.activeDelegation.delegationId,
+          delegatorId: session.activeDelegation.delegatorId,
+          delegatorName: session.activeDelegation.delegatorName,
+          delegatorPersona: session.activeDelegation.delegatorPersona,
+        }
+      : null,
+  };
 }
 
 function redactAuthAuditRecord(record: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
@@ -4096,6 +4282,11 @@ function optionalOrgMembershipMetadata(value: Record<string, unknown>): Partial<
   if ((v = m(["legalEntityId", "legal_entity_id"]))) result.legalEntityId = v;
   if ((v = m(["legalEntityCode", "legal_entity_code"]))) result.legalEntityCode = v;
   if ((v = m(["legalEntityName", "legal_entity_name"]))) result.legalEntityName = v;
+  if ((v = m(["networkAccountId", "network_account_id"]))) result.networkAccountId = v;
+  if ((v = m(["networkAccountCode", "network_account_code"]))) result.networkAccountCode = v;
+  if ((v = m(["networkAccountName", "network_account_name"]))) result.networkAccountName = v;
+  if ((v = m(["networkAccountRole", "network_account_role"]))) result.networkAccountRole = v;
+  if ((v = m(["networkRelationshipType", "network_relationship_type"]))) result.networkRelationshipType = v;
   if ((v = m(["keycloakOrganizationId", "keycloak_organization_id"]))) result.keycloakOrganizationId = v;
   if ((v = m(["keycloakOrganizationAlias", "keycloak_organization_alias"]))) result.keycloakOrganizationAlias = v;
   if ((v = m(["workContextDomain", "work_context_domain", "domain"]))) {
@@ -5133,8 +5324,6 @@ async function handleBackchannelLogout(plane: PlaneKey, request: NextRequest): P
     return new Response("audience mismatch", { status: 400 });
   }
 
-  const SESSION_NAMESPACES = ["neon", "mesh", "admin", "platform"] as const;
-
   // Primary wipe path: use KC session reverse index if sid is present.
   if (sid && typeof sid === "string") {
     const reverseKey = kcSessionReverseKey(sid);
@@ -5144,21 +5333,21 @@ async function handleBackchannelLogout(plane: PlaneKey, request: NextRequest): P
       if (colonIdx < 0) continue;
       const ns = entry.slice(0, colonIdx);
       const appSid = entry.slice(colonIdx + 1);
-      await redis.del(sessKey(ns, appSid)).catch(() => {});
-      if (sub) await redis.sRem(userSessionsKey(ns, sub), appSid).catch(() => {});
+      clearVerifiedSessionCache(ns, appSid);
+      await terminateSession(redis, {
+        namespace: ns,
+        sid: appSid,
+        ...(sub ? { userId: sub } : {}),
+        keycloakSessionId: sid,
+        reason: "keycloak_backchannel_logout",
+      });
     }
     await redis.del(reverseKey).catch(() => {});
   }
 
   // Fallback: if no sid in token, wipe all sessions for the sub across all planes.
   if (!sid && sub && typeof sub === "string") {
-    for (const ns of SESSION_NAMESPACES) {
-      const sids = await redis.sMembers(userSessionsKey(ns, sub)).catch(() => [] as string[]);
-      if (sids.length > 0) {
-        await redis.del(sids.map((s) => sessKey(ns, s))).catch(() => {});
-      }
-      await redis.del(userSessionsKey(ns, sub)).catch(() => {});
-    }
+    await terminateSubjectSessions(redis, sub);
   }
 
   return new Response(null, { status: 200 });

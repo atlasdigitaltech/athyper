@@ -171,7 +171,7 @@ export async function loadCanonicalMetadataGraph(query: MetadataGraphQuery): Pro
       e.runtime_enabled, e.primary_key, e.tenant_column, e.read_capability,
       e.write_capability, e.status, e.is_active, e.module_id, e.display_config,
       e.identity_config, e.search_config, e.data_policy, e.feature_flags,
-      e.governance_level, e.security_tier, e.mutability, ecp.id
+      e.governance_level, e.security_tier, e.mutability, ecp.class_key
     ORDER BY COALESCE(NULLIF(e.entity_code, ''), e.name)
   `);
 

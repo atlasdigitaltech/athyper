@@ -22,6 +22,12 @@ describe("production execution descriptor integration", () => {
     expect(route).not.toContain("legacyDescriptorFingerprintCacheEnabled");
   });
 
+  it("does not log catalog-only relation targets as compiled route errors", () => {
+    expect(route).toContain("error instanceof ExecutionDescriptorNotFoundError");
+    expect(route).toContain("if (!(error instanceof ExecutionDescriptorNotFoundError)) throw error;");
+    expect(route).toContain("Catalog-only entities");
+  });
+
   it("does not scan or delete Redis keys in the descriptor recovery listener", () => {
     expect(listener).not.toContain("redis.scan(");
     expect(listener).not.toContain("redis.del(");

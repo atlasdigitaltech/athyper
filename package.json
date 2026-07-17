@@ -34,6 +34,12 @@
     "policy:style-tokens": "tsx scripts/policy/audit-style-tokens.ts",
     "policy:style-tokens:strict": "tsx scripts/policy/audit-style-tokens.ts --strict",
     "policy:server-boundaries": "node scripts/policy/verify-server-boundaries.mjs",
+    "policy:canonical-packages": "node scripts/policy/verify-canonical-package-rules.mjs",
+    "policy:shared-purity": "node scripts/policy/verify-shared-package-purity.mjs",
+    "policy:no-source-junctions": "node scripts/policy/verify-no-source-junctions.mjs",
+    "policy:deployment-profiles": "node scripts/policy/verify-deployment-profiles.mjs",
+    "policy:release-boundaries": "pnpm policy:canonical-packages && pnpm policy:shared-purity && pnpm policy:no-source-junctions && pnpm policy:deployment-profiles",
+    "release:phase10:audit": "node scripts/release/phase10-deletion-audit.mjs",
     "policy:neon-mesh-boundary": "node scripts/policy/verify-neon-mesh-boundary.mjs",
     "policy:mesh-boundaries": "node scripts/policy/verify-plane-boundaries.mjs",
     "policy:plane-boundaries": "node scripts/policy/verify-plane-boundaries.mjs",
@@ -43,6 +49,7 @@
     "policy:legacy-runtime-retirement": "node scripts/policy/verify-legacy-runtime-retirement.mjs",
     "policy:meta-entity": "node scripts/policy/verify-meta-entity-governance.mjs && node scripts/policy/verify-meta-entity-test-matrix.mjs && node scripts/policy/verify-meta-entity-dependencies.mjs",
     "policy:meta-entity-hygiene": "pnpm --dir server run meta:hygiene",
+    "package:ownership:inventory": "node scripts/package-ownership-inventory.mjs",
     "policy:records-identity-boundary": "node scripts/policy/verify-records-identity-boundary.mjs",
     "qualify:meta-entity": "node scripts/performance/qualify-meta-entity.mjs",
     "perf:capture:p0": "node scripts/performance/capture-p0-baseline.mjs",
@@ -60,7 +67,7 @@
     "policy:shared-grouping": "node scripts/policy/verify-shared-naming.mjs",
     "document-open-rollout-ci-gate": "tsx --tsconfig apps/neon/tsconfig.json scripts/document-open-rollout-ci-gate.mjs",
     "document-open-rollout-snapshot-export": "tsx --tsconfig apps/neon/tsconfig.json scripts/document-open-rollout-snapshot-export.mjs",
-    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:typography && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries && pnpm policy:shared-ownership && pnpm policy:shared-naming && pnpm policy:shared-grouping && pnpm policy:legacy-package-ids && pnpm policy:legacy-runtime-retirement && pnpm policy:meta-entity"
+    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:typography && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:canonical-packages && pnpm policy:shared-purity && pnpm policy:no-source-junctions && pnpm policy:deployment-profiles && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries && pnpm policy:shared-ownership && pnpm policy:shared-naming && pnpm policy:shared-grouping && pnpm policy:legacy-package-ids && pnpm policy:legacy-runtime-retirement && pnpm policy:meta-entity"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

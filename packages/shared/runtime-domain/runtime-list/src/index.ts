@@ -1,5 +1,6 @@
 // Main entry — server component + adapter types
 export { RuntimeListPage } from "./server/runtime-list-page";
+export { RuntimeListPageFrame } from "./page/runtime-list-page-frame";
 export { RuntimeListCommandBar } from "./islands/runtime-list-command-bar";
 export {
   runtimeCompactCardDensity,
@@ -12,6 +13,11 @@ export type {
   RuntimeListClientAdapter,
   RuntimeListPresenterProps,
   RuntimeListFeatures,
+  RuntimeListFeatureDiagnostics,
+  RuntimeListFeatureResolution,
+  RuntimeListFeatureSource,
+  RuntimeListFeatureConfig,
+  RuntimeListFeatureOverrides,
   RuntimeListSlots,
   RuntimeListPageFrameProps,
   EntityListResponse,

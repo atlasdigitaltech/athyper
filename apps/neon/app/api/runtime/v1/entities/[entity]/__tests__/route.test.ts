@@ -101,7 +101,7 @@ describe("GET /api/runtime/v1/entities/[entity]", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
-  it("translates ?size= into page_size on the record-list fetch", async () => {
+  it("preserves offset page and query-mode controls on the record-list fetch", async () => {
     vi.mocked(getMetaEntityRuntimeDescriptor).mockResolvedValueOnce(descriptor() as never);
     vi.mocked(getMetaEntityRecordList).mockResolvedValueOnce({
       state: { status: "available" },
@@ -109,10 +109,34 @@ describe("GET /api/runtime/v1/entities/[entity]", () => {
       pagination: null,
       isFullyLoaded: true,
     } as never);
-    await GET(new Request("http://localhost/api/runtime/v1/entities/purchase_invoice?status=draft&page=2"), params());
+    await GET(new Request("http://localhost/api/runtime/v1/entities/purchase_invoice?status=draft&page=2&query_v1=0"), params());
     expect(getMetaEntityRecordList).toHaveBeenCalledTimes(1);
     const callArgs = vi.mocked(getMetaEntityRecordList).mock.calls[0]!;
-    expect(callArgs[1]).toMatchObject({ "filter.status": "draft", page: "2" });
+    expect(callArgs[1]).toMatchObject({ "filter.status": "draft", page: "2", query_v1: "0" });
+  });
+
+  it("does not add a duplicate descriptor read gate to lazy page requests", async () => {
+    vi.mocked(getMetaEntityRuntimeDescriptor).mockResolvedValueOnce(
+      descriptor({ canRead: false }) as never,
+    );
+    vi.mocked(getMetaEntityRecordList).mockResolvedValueOnce({
+      state: { status: "available" },
+      records: [{ id: "rec-21" }],
+      pagination: { page: 2, total: 21, totalPages: 2 },
+      isFullyLoaded: true,
+    } as never);
+
+    const res = await GET(
+      new Request("http://localhost/api/runtime/v1/entities/purchase_invoice?page=2&page_size=20"),
+      params(),
+    );
+
+    expect(res.status).toBe(200);
+    expect(getMetaEntityRecordList).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(getMetaEntityRecordList).mock.calls[0]?.[1]).toMatchObject({
+      page: "2",
+      page_size: "20",
+    });
   });
 });
 

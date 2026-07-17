@@ -87,6 +87,7 @@ export function SearchControl({
         }}
         placeholder={runtimeListText.search.placeholder}
         autoComplete="off"
+        style={{ paddingLeft: chrome === "merged" ? "2.5rem" : "2.25rem" }}
         className={[
           "runtime-search-input",
           chrome === "merged"

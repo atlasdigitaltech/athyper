@@ -11,6 +11,7 @@ interface RuntimeListPaginationProps {
   rowCount:        number;
   listBaseHref:    string;
   rawSearchParams: Record<string, string | string[] | undefined>;
+  attached?:       boolean;
 }
 
 export function RuntimeListPagination({
@@ -21,6 +22,7 @@ export function RuntimeListPagination({
   rowCount,
   listBaseHref,
   rawSearchParams,
+  attached = false,
 }: RuntimeListPaginationProps) {
   const hasPrevious = page > 1;
   const hasNext     = totalPages !== undefined ? page < totalPages : rowCount >= pageSize;
@@ -31,16 +33,25 @@ export function RuntimeListPagination({
   const prevHref = serializeListState(listBaseHref, rawSearchParams, { page: String(page - 1) });
   const nextHref = serializeListState(listBaseHref, rawSearchParams, { page: String(page + 1) });
 
+  const footerClassName = [
+    runtimeTableChrome.footer,
+    attached ? runtimeTableChrome.footerAttached : runtimeTableChrome.footerDetached,
+  ].join(" ");
+
   return (
-    <div className={runtimeTableChrome.footer}>
+    <div
+      className={footerClassName}
+      data-runtime-data-footer
+      data-attached={attached ? "true" : "false"}
+    >
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-        <span>
-        {total !== undefined
-          ? runtimeListText.summary.showingRecordRange(start, end, total)
-          : runtimeListText.summary.showingRecordCount(rowCount)}
+        <span className="text-sm font-medium leading-5 text-foreground" aria-live="polite">
+          {total !== undefined
+            ? runtimeListText.summary.showingRecordRange(start, end, total)
+            : runtimeListText.summary.showingRecordCount(rowCount)}
         </span>
       </div>
-      <div className="flex flex-wrap items-center gap-2 md:ml-auto md:justify-end">
+      <div className="flex w-full flex-wrap items-center gap-2 md:ml-auto md:w-auto md:justify-end">
         <RuntimePaginationControls
           previous={hasPrevious ? { kind: "link", href: prevHref } : { kind: "disabled" }}
           pageLabel={runtimeListText.summary.page(page, totalPages)}

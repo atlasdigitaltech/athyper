@@ -32,6 +32,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@athyper/admin-studio':
+        specifier: workspace:*
+        version: link:../../packages/product/admin
       '@athyper/api-contracts':
         specifier: workspace:*
         version: link:../../packages/shared/data-integration/api-contracts
@@ -195,6 +198,9 @@ importers:
       '@athyper/mesh-exchange-contracts':
         specifier: workspace:*
         version: link:../../packages/shared/data-integration/mesh-exchange-contracts
+      '@athyper/mesh-runtime':
+        specifier: workspace:*
+        version: link:../../packages/product/mesh
       '@athyper/runtime-shared':
         specifier: workspace:*
         version: link:../../packages/shared/runtime-domain/runtime-shared
@@ -316,6 +322,9 @@ importers:
       '@athyper/metadata-client':
         specifier: workspace:*
         version: link:../../packages/shared/data-integration/metadata-client
+      '@athyper/neon-runtime':
+        specifier: workspace:*
+        version: link:../../packages/product/neon
       '@athyper/query':
         specifier: workspace:*
         version: link:../../packages/shared/data-integration/query
@@ -413,9 +422,6 @@ importers:
       '@athyper/runtime-list':
         specifier: workspace:*
         version: link:../../shared/runtime-domain/runtime-list
-      '@athyper/surface-kit':
-        specifier: workspace:*
-        version: link:../../shared/ui-platform/surface-kit
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -564,9 +570,6 @@ importers:
       '@athyper/session-plane':
         specifier: workspace:*
         version: link:../../shared/platform-auth/session-plane
-      '@athyper/surface-kit':
-        specifier: workspace:*
-        version: link:../../shared/ui-platform/surface-kit
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -1036,6 +1039,72 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+
+  packages/product/admin:
+    dependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../shared/data-integration/api-contracts
+      '@athyper/metadata-client':
+        specifier: workspace:*
+        version: link:../../shared/data-integration/metadata-client
+      '@athyper/runtime-contracts':
+        specifier: workspace:*
+        version: link:../../shared/runtime-domain/runtime-contracts
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../shared/data-integration/config
+      '@athyper/tsconfig':
+        specifier: workspace:*
+        version: link:../../../tooling/tsconfig
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/product/mesh:
+    dependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../shared/data-integration/api-contracts
+      '@athyper/mesh-exchange-contracts':
+        specifier: workspace:*
+        version: link:../../shared/data-integration/mesh-exchange-contracts
+      '@athyper/metadata-client':
+        specifier: workspace:*
+        version: link:../../shared/data-integration/metadata-client
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../shared/data-integration/config
+      '@athyper/tsconfig':
+        specifier: workspace:*
+        version: link:../../../tooling/tsconfig
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
+  packages/product/neon:
+    dependencies:
+      '@athyper/api-contracts':
+        specifier: workspace:*
+        version: link:../../shared/data-integration/api-contracts
+      '@athyper/runtime-contracts':
+        specifier: workspace:*
+        version: link:../../shared/runtime-domain/runtime-contracts
+      '@athyper/runtime-shared':
+        specifier: workspace:*
+        version: link:../../shared/runtime-domain/runtime-shared
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../shared/data-integration/config
+      '@athyper/tsconfig':
+        specifier: workspace:*
+        version: link:../../../tooling/tsconfig
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
 
   packages/shared/business-domain/cascade:
     devDependencies:

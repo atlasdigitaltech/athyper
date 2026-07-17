@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import type { RefObject } from "react";
-import { formatRuntimeListCount, runtimeListText } from "../core/resources";
+import { LoaderCircle } from "lucide-react";
+import { runtimeListText } from "../core/resources";
 import { runtimeTableChrome } from "../core/table-chrome";
 import { RuntimePaginationControls } from "../server/runtime-pagination-controls";
 import { useRuntimeListSearch } from "./runtime-list-context";
@@ -18,6 +19,7 @@ interface RuntimeLazyLoadFooterProps {
   datasetLoadedRowCount:  number;
   total?:                 number;
   rawSearchParams:        Record<string, string | string[] | undefined>;
+  attached?:              boolean;
 }
 
 export function RuntimeLazyLoadFooter({
@@ -31,14 +33,22 @@ export function RuntimeLazyLoadFooter({
   datasetLoadedRowCount,
   total,
   rawSearchParams,
+  attached = false,
 }: RuntimeLazyLoadFooterProps) {
   const { lazyList, search, runSearchAll } = useRuntimeListSearch();
   const trimmedQuery = query.trim();
   const isLoadedSearch = Boolean(trimmedQuery) && !isServerSearch;
+  const visibleRowCount = rowCount;
+  const visibleLoadedRowCount = isServerSearch ? loadedRowCount : lazyList.activeRows.length;
+  const visibleTotal = isServerSearch ? total : lazyList.activePagination?.total ?? total;
+  const canSearchAll = isLoadedSearch &&
+    visibleTotal !== undefined &&
+    datasetLoadedRowCount < visibleTotal;
+  const actionsBusy = lazyList.state === "loading";
 
   useEffect(() => {
     const node = sentinelRef.current;
-    if (isLoadedSearch || !node || !lazyList.hasNextPage || lazyList.state === "loading") return;
+    if (isLoadedSearch || !node || !lazyList.hasNextPage || lazyList.state !== "idle") return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -64,22 +74,39 @@ export function RuntimeLazyLoadFooter({
     lazyList.hasPreviousWindow ||
     lazyList.maxLoadedRowsReached ||
     firstLoadedPage > 1;
-  const start = rowCount > 0 ? (firstLoadedPage - 1) * pageSize + 1 : 0;
-  const end = rowCount > 0
-    ? total ? Math.min(start + loadedRowCount - 1, total) : start + loadedRowCount - 1
+  const start = visibleRowCount > 0 ? (firstLoadedPage - 1) * pageSize + 1 : 0;
+  const end = visibleRowCount > 0
+    ? visibleTotal ? Math.min(start + visibleLoadedRowCount - 1, visibleTotal) : start + visibleLoadedRowCount - 1
     : 0;
-  const displayedPageSize = Math.max(pageSize, loadedRowCount);
+  const windowPageCount = Math.max(1, Math.floor(lazyList.controls.maxLoadedRows / Math.max(1, pageSize)));
+  const windowRowCapacity = windowPageCount * pageSize;
+  // Keep the window denominator stable on the final partial window. Using the
+  // last window's 124 visible rows for a 324-row/200-row-window list incorrectly
+  // produced `Page 2 of 3` instead of `Page 2 of 2`.
+  const displayedPageSize = isWindowMode
+    ? windowRowCapacity
+    : Math.max(pageSize, visibleLoadedRowCount);
   const displayPage = start > 0 ? Math.floor((start - 1) / displayedPageSize) + 1 : page;
-  const displayPageCount = total !== undefined
-    ? Math.max(1, Math.ceil(total / displayedPageSize))
+  const displayPageCount = visibleTotal !== undefined
+    ? Math.max(1, Math.ceil(visibleTotal / displayedPageSize))
     : undefined;
+  const reachedDatasetEnd = visibleTotal !== undefined &&
+    end >= visibleTotal &&
+    !lazyList.hasNextPage &&
+    !lazyList.hasNextWindow;
+  // A late next-window failure is stale once the complete terminal range is
+  // already visible. Keep previous-window failures visible and retryable.
+  const suppressTerminalNextError = lazyList.state === "error" &&
+    reachedDatasetEnd &&
+    lazyList.errorDirection !== "previous";
+  const visibleErrorMessage = suppressTerminalNextError ? undefined : lazyList.errorMessage;
   const summary = resolveFooterSummary({
     isLoadedSearch,
     isServerSearch,
-    rowCount,
-    loadedRowCount,
+    rowCount: visibleRowCount,
+    loadedRowCount: visibleLoadedRowCount,
     datasetLoadedRowCount,
-    total,
+    total: visibleTotal,
     start,
     end,
   });
@@ -87,18 +114,21 @@ export function RuntimeLazyLoadFooter({
     isLoadedSearch,
     maxLoadedRowsReached: lazyList.maxLoadedRowsReached,
     datasetLoadedRowCount,
-    total,
+    total: visibleTotal,
   });
+  const isPersistentWindowGuidance = Boolean(limitMessage) &&
+    !isLoadedSearch &&
+    lazyList.maxLoadedRowsReached;
   const showPageNavigation = !isLoadedSearch;
   const loadingLabel = resolveLoadingLabel({
     isWindowMode,
     loadingPage: lazyList.loadingPage,
     pageSize,
     maxRows: lazyList.controls.maxLoadedRows,
-    total,
+    total: visibleTotal,
   });
   const runFooterSearchAll = () => {
-    if (!isLoadedSearch || !trimmedQuery || !total) return;
+    if (!canSearchAll || !trimmedQuery || actionsBusy) return;
     runSearchAll({
       rawSearchParams,
       pageSize,
@@ -106,28 +136,44 @@ export function RuntimeLazyLoadFooter({
       debounceMs: search.controls.manualSearchAllDebounceMs,
     });
   };
+  const footerClassName = [
+    runtimeTableChrome.footer,
+    attached ? runtimeTableChrome.footerAttached : runtimeTableChrome.footerDetached,
+  ].join(" ");
 
   return (
-    <div className={runtimeTableChrome.footer}>
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-        <span aria-live="polite">
+    <div
+      className={footerClassName}
+      data-runtime-data-footer
+      data-attached={attached ? "true" : "false"}
+    >
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="text-sm font-medium leading-5 text-foreground" aria-live="polite">
           {summary}
         </span>
         {lazyList.state === "loading" && (
-          <span>{loadingLabel}</span>
+          <span className="inline-flex items-center gap-1.5">
+            <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />
+            {loadingLabel}
+          </span>
         )}
-        {lazyList.state === "error" && lazyList.errorMessage && (
-          <span className="text-destructive">{lazyList.errorMessage}</span>
+        {lazyList.state === "error" && visibleErrorMessage && (
+          <span role="alert" className="text-destructive">{visibleErrorMessage}</span>
         )}
         {limitMessage && (
-          <span>{limitMessage}</span>
+          <>
+            <span aria-hidden="true" className="hidden size-1 rounded-full bg-muted-foreground/40 sm:inline-block" />
+            <span className={isPersistentWindowGuidance ? "text-sm leading-5" : undefined}>
+              {limitMessage}
+            </span>
+          </>
         )}
-        {lazyList.ariaMessage && (
+        {lazyList.ariaMessage && !suppressTerminalNextError && (
           <span className="sr-only" aria-live="polite">{lazyList.ariaMessage}</span>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 md:ml-auto md:justify-end">
+      <div className="grid w-full shrink-0 grid-cols-1 gap-2 md:ml-auto md:flex md:w-auto md:flex-wrap md:items-center md:justify-end">
         {showPageNavigation && (
           <RuntimePaginationControls
             previous={lazyList.hasPreviousWindow
@@ -142,13 +188,14 @@ export function RuntimeLazyLoadFooter({
           />
         )}
 
-        {isLoadedSearch && total !== undefined && (
+        {canSearchAll && (
           <button
             type="button"
             onClick={runFooterSearchAll}
-            className={runtimeTableChrome.footerButtonPrimary}
+            disabled={actionsBusy}
+            className={`${runtimeTableChrome.footerButtonPrimary} w-full disabled:opacity-60 md:w-auto`}
           >
-            {runtimeListText.actions.searchInAllRecords(total)}
+            {runtimeListText.actions.searchInAllRecords(visibleTotal)}
           </button>
         )}
 
@@ -157,9 +204,11 @@ export function RuntimeLazyLoadFooter({
             type="button"
             onClick={lazyList.loadNextPage}
             disabled={lazyList.state === "loading"}
-            className={`${runtimeTableChrome.footerButton} bg-background disabled:opacity-60`}
+            className={`${runtimeTableChrome.footerButton} w-full bg-background disabled:opacity-60 md:w-auto`}
           >
-            {runtimeListText.actions.loadMoreRows}
+            {lazyList.state === "error"
+              ? runtimeListText.actions.tryAgain
+              : runtimeListText.actions.loadMoreRows}
           </button>
         )}
       </div>
@@ -214,6 +263,9 @@ function resolveFooterLimitMessage({
   datasetLoadedRowCount: number;
   total?:                number;
 }): string {
+  if (isLoadedSearch && total !== undefined && datasetLoadedRowCount >= total) {
+    return runtimeListText.search.searchedAllRecords;
+  }
   if (isLoadedSearch && total !== undefined && datasetLoadedRowCount < total) {
     return runtimeListText.summary.moreMatchesMayExist;
   }
@@ -225,11 +277,11 @@ function resolveFooterLimitMessage({
 }
 
 function resolveLoadingLabel({
-  isWindowMode,
-  loadingPage,
-  pageSize,
-  maxRows,
-  total,
+  isWindowMode: _isWindowMode,
+  loadingPage: _loadingPage,
+  pageSize: _pageSize,
+  maxRows: _maxRows,
+  total: _total,
 }: {
   isWindowMode: boolean;
   loadingPage?: number;
@@ -237,19 +289,5 @@ function resolveLoadingLabel({
   maxRows:     number;
   total?:      number;
 }): string {
-  if (isWindowMode && loadingPage) {
-    return runtimeListText.system.loadingRows(formatWindowRange(loadingPage, pageSize, maxRows, total));
-  }
   return runtimeListText.system.loadingMoreRows;
-}
-
-function formatWindowRange(
-  startPage: number,
-  pageSize:  number,
-  maxRows:   number,
-  total?:    number,
-): string {
-  const start = (startPage - 1) * pageSize + 1;
-  const end = total ? Math.min(start + maxRows - 1, total) : start + maxRows - 1;
-  return `${formatRuntimeListCount(start)}-${formatRuntimeListCount(end)}`;
 }

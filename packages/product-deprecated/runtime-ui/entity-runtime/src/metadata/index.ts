@@ -31,11 +31,9 @@ export {
 
 export {
   detailRendererMap,
-  listRendererMap,
   registerLinesRenderer,
   resolveLinesRenderer,
   type LinesRenderer,
   type LinesRendererProps,
   type DetailRendererKey,
-  type ListRendererKey,
 } from "./renderer.registry";

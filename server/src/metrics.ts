@@ -112,6 +112,12 @@ const authContextMismatchSuppressed = new Map<string, number>();
 const tokenClaimsInvalid = new Map<string, number>();
 // key: "method\0aliasPath\0canonicalPath" → count
 const deprecatedRouteHits = new Map<string, number>();
+const authTerminationEvents = new Map<string, number>();
+
+export function recordAuthTermination(reason: string, outcome: "success" | "degraded" | "failure"): void {
+  const key = `${reason}\0${outcome}`;
+  authTerminationEvents.set(key, (authTerminationEvents.get(key) ?? 0) + 1);
+}
 
 function key(labels: LabelSet): string {
   return `${labels.tenant}\0${labels.operation}\0${labels.service}`;
@@ -338,6 +344,9 @@ const HELP = [
   "",
   "# HELP athyper_deprecated_route_hits_total Hits on deprecated runtime route aliases (gates safe-removal precondition)",
   "# TYPE athyper_deprecated_route_hits_total counter",
+  "",
+  "# HELP auth_session_termination_total Session termination events by reason and outcome",
+  "# TYPE auth_session_termination_total counter",
 ].join("\n");
 
 function escape(v: string): string {
@@ -520,6 +529,11 @@ export function metricsHandler(_req: Request, res: Response): void {
       lines.push(
         `athyper_deprecated_route_hits_total{method="${escape(method)}",alias="${escape(aliasPath)}",canonical="${escape(canonical)}"} ${count}`,
       );
+    }
+    if (authTerminationEvents.size > 0) lines.push("");
+    for (const [k, count] of authTerminationEvents) {
+      const [reason, outcome] = k.split("\0");
+      lines.push(`auth_session_termination_total{reason="${escape(reason ?? "unknown")}",outcome="${escape(outcome ?? "unknown")}"} ${count}`);
     }
     if (deprecatedRouteHits.size > 0) lines.push("");
 

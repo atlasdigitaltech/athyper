@@ -20,6 +20,7 @@
 
 import { sql } from "kysely";
 import type { Kysely } from "kysely";
+import { terminateFrontendSessions } from "../session/termination.service.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -270,19 +271,7 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
    * This closes the 8-hour window where a deactivated user's web session remained valid.
    */
   async function invalidateFrontendSessions(sub: string): Promise<number> {
-    let invalidated = 0;
-
-    for (const ns of uniqueSessionNamespaces) {
-      const indexKey = `user_sessions:${ns}:${sub}`;
-      const sids = await cache.smembers(indexKey);
-      if (sids.length === 0) continue;
-
-      const sessKeys = sids.map((sid) => `sess:${ns}:${sid}`);
-      await cache.del([...sessKeys, indexKey]);
-      invalidated += sids.length;
-    }
-
-    return invalidated;
+    return terminateFrontendSessions(cache, sub);
   }
 
   async function invalidatePrincipalSessions(principalId: string): Promise<{

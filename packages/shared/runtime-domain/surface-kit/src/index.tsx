@@ -5,7 +5,7 @@ const STABLE_SCROLL_GUTTER_STYLE: CSSProperties = {
 };
 
 const ENTITY_LIST_SCROLL_CLASS =
-  "min-h-0 flex-1 overflow-auto pr-4";
+  "min-h-0 flex-1 overflow-auto";
 
 // â”€â”€â”€ PageFrame â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -225,7 +225,7 @@ export function EntityListPageFrame({
   return (
     <div className="flex h-full min-w-0 flex-col gap-2.5">
       {hasHeader && (
-        <div className="flex shrink-0 flex-col gap-3 rounded-xl border bg-card py-3 pl-3 pr-4 shadow-sm">
+        <div className="w-full min-w-0 flex shrink-0 flex-col gap-3 rounded-xl border bg-card py-3 pl-3 pr-4 shadow-sm">
           {commandBar ? (
             commandBar
           ) : (

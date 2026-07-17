@@ -1,0 +1,30 @@
+{
+  "name": "@athyper/neon-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@athyper/api-contracts": "workspace:*",
+    "@athyper/runtime-contracts": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@athyper/tsconfig": "workspace:*",
+    "typescript": "^5.9.3"
+  }
+}

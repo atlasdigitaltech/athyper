@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { Button } from "@athyper/ui";
 import type { ResolvedToolbarAction } from "../core/types";
 import { runtimeListText } from "../core/resources";
 
@@ -8,23 +9,22 @@ interface RuntimeListActionsProps {
 }
 
 export function RuntimeListActions({ createHref, toolbarActions }: RuntimeListActionsProps) {
-  const btnCls = "inline-flex h-8 items-center gap-1.5 rounded-md border bg-foreground px-3 text-sm font-medium text-background hover:opacity-90 disabled:opacity-50";
-  const secCls = "inline-flex h-9 items-center rounded-md border px-3 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50";
-
   return (
     <div className="flex items-center gap-2">
       {createHref && (
-        <a href={createHref} className={btnCls}>
-          <Plus className="size-4" />
-          {runtimeListText.actions.createNew}
-        </a>
+        <Button asChild variant="primary" size="sm">
+          <a href={createHref}>
+            <Plus aria-hidden="true" className="size-4" />
+            {runtimeListText.actions.createNew}
+          </a>
+        </Button>
       )}
       {toolbarActions
         .filter((a) => !a.disabled)
         .map((a) => (
-          <a key={a.key} href={a.href} className={secCls}>
-            {a.label}
-          </a>
+          <Button key={a.key} asChild variant="ghost" size="sm">
+            <a href={a.href}>{a.label}</a>
+          </Button>
         ))}
     </div>
   );

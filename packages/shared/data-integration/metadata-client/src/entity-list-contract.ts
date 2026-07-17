@@ -11,13 +11,14 @@
  *   3. Canonical defaults (server search, 25 rows, list mode)
  */
 
-import type { CompiledEntity } from "@athyper/api-contracts/metadata";
+import type { CompiledEntity, EntityListFeatures } from "@athyper/api-contracts/metadata";
 import type {
   EntityListViewMode,
   ColumnPresentation,
   EntityListSortEntry,
 } from "@athyper/api-contracts/entity-list";
 import { resolvePresentationConfig } from "./compiled-reader";
+import { normalizeEntityListFeatures } from "@athyper/api-contracts/metadata-normalizers";
 
 // Maps display_config v2 canonical view-mode names → EntityListViewMode names.
 // Canonical: "table" | "compact" | "kanban" | "dashboard" | "spreadsheet"
@@ -73,9 +74,11 @@ export interface EntityListContract {
   defaultPageSize: number;
 
   // ── Search ────────────────────────────────────────────────────────────────
-  /** "server" = full-text via ?q= (default when search_config.enabled); "client" = in-view filter */
-  searchMode: "server" | "client";
+  /** "server" = full-text via ?q=, "client" = in-view filter, "both" = expose both paths. */
+  searchMode: "server" | "client" | "both";
   searchableFieldNames: string[];
+  /** Canonical presentation feature overrides from display_config.list_features. */
+  listFeatures: EntityListFeatures;
 
   // ── Navigation / identity ─────────────────────────────────────────────────
   /** Ordered field names tried when building the record detail href. */
@@ -329,10 +332,14 @@ export function resolveEntityListContract(entity: CompiledEntity): EntityListCon
     }));
 
   const searchableFieldNames = resolveSearchableFieldNames(entity);
-  const searchMode: "server" | "client" =
-    searchableFieldNames.length > 0 && entity.search_config?.enabled !== false
-      ? "server"
-      : "client";
+  const listFeatures = normalizeEntityListFeatures(
+    entity.display_config.list_features ?? (entity.display_config as Record<string, unknown>)["listFeatures"],
+  ) as EntityListFeatures | undefined;
+  const configuredSearchMode = listFeatures?.search_mode;
+  const searchMode: EntityListContract["searchMode"] =
+    entity.search_config?.enabled === false
+      ? "client"
+      : configuredSearchMode ?? (searchableFieldNames.length > 0 ? "server" : "client");
 
   const { scopeMode, scopeFieldName } = resolveScope(entity);
 
@@ -348,6 +355,7 @@ export function resolveEntityListContract(entity: CompiledEntity): EntityListCon
     defaultPageSize: rawPresentationConfig.defaultPageSize ?? 25,
     searchMode,
     searchableFieldNames,
+    listFeatures: listFeatures ?? {},
     navFieldNames: resolveNavFieldNames(entity),
     usesIdNavigation: resolveUsesIdNavigation(entity),
     statusFieldNames: resolveStatusFieldNames(entity),

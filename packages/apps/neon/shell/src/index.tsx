@@ -127,7 +127,7 @@ export function PlaneShell({
 }) {
   const brandAssets = getPublicBrandAssets(PLANE);
   const pathname = useBrowserPathname();
-  const { activeOrg, activeUser, warningSeconds, continuePending, continueSession, logoutNow } = usePlaneSessionLifecycle(PLANE, initialSession);
+  const { activeOrg, activeUser, warningSeconds, warningReason, continuePending, continueSession, logoutNow } = usePlaneSessionLifecycle(PLANE, initialSession);
   const [panelTab, setPanelTab] = useState<PanelTab>(null);
   const closePanel = useCallback(() => setPanelTab(null), []);
 
@@ -201,6 +201,7 @@ export function PlaneShell({
         {warningSeconds !== null && (
           <SessionWarningDialog
             secondsRemaining={warningSeconds}
+            reason={warningReason ?? "idle"}
             pending={continuePending}
             onContinue={() => { void continueSession(); }}
             onLogout={logoutNow}

@@ -30,7 +30,7 @@ import {
   entityRowToPickerOption,
   resolveEntityPickerOptionConfig,
 } from "@athyper/runtime-shared/entity-search";
-import { resolveRuntimeStatusColors, runtimeStatusBarClass } from "../list/listPresentation";
+import { resolveRuntimeStatusColors, runtimeStatusBarClass } from "../presentation/status-presentation";
 
 type ChildRecord = Record<string, unknown>;
 type OperationalPresentationName = Exclude<NonNullable<SummaryCardsConfig["presentation"]>, "cards">;

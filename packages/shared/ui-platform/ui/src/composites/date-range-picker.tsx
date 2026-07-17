@@ -12,13 +12,14 @@
  * resolved dates, and the server re-resolves at query time. See
  * @athyper/finance-rules::resolveDateRangePreset for the shared predicate.
  *
- * Two-month view is shown on `md:` viewports and above (768px+); narrower
- * viewports get one calendar. Because the popover renders in a portal, the
- * viewport breakpoint is the right lens — the trigger's own width doesn't
- * constrain the popover.
+ * Two-month view is shown on `md:` viewports and above (768px+) when `months`
+ * is `2`; narrower viewports get one calendar. Consumers such as filter
+ * workspaces can request a compact one-month layout at every viewport. Because
+ * the popover renders in a portal, the viewport breakpoint is the right lens —
+ * the trigger's own width doesn't constrain the popover.
  */
 
-import { useCallback, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { CalendarDays, Check, X } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { cn } from "@athyper/theme/utils";
@@ -34,6 +35,12 @@ import {
   type PresetResolutionContext,
 } from "@athyper/finance-rules";
 import { CalendarGrid } from "./calendar-grid";
+
+const MODAL_PORTAL_ROOT_SELECTOR = [
+  "[data-advanced-picker-portal-root='true']",
+  "[data-drawer-shell-content='true']",
+  "[role='dialog']",
+].join(", ");
 
 export interface DateRangeValue {
   from: string | null;
@@ -92,6 +99,8 @@ export interface DateRangePickerProps {
   popoverAlign?: "start" | "center" | "end";
   /** Density variant, forwarded to both CalendarGrid panels. See DatePicker. */
   size?: "sm" | "md";
+  /** Number of calendar months shown in the popover. Filter editors use one. */
+  months?: 1 | 2;
   className?: string;
   id?: string;
 }
@@ -207,6 +216,7 @@ export function DateRangePicker(props: DateRangePickerProps): React.JSX.Element 
     popoverSide = "bottom",
     popoverAlign = "start",
     size = "md",
+    months = 2,
     className,
     id: externalId,
   } = props;
@@ -218,6 +228,22 @@ export function DateRangePicker(props: DateRangePickerProps): React.JSX.Element 
 
   const current: DateRangeValue = value ?? { from: null, to: null, preset: null };
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLDivElement | null>(null);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+
+  // Radix Dialog's scroll lock permits wheel/touch scrolling only inside its
+  // content shard. Keep nested date pickers inside the enclosing drawer/dialog
+  // instead of portalling them to document.body, while retaining body as the
+  // fallback for standalone consumers.
+  useEffect(() => {
+    if (!open) {
+      setPortalContainer(null);
+      return;
+    }
+    setPortalContainer(
+      triggerRef.current?.closest<HTMLElement>(MODAL_PORTAL_ROOT_SELECTOR) ?? null,
+    );
+  }, [open]);
 
   // View month for the LEFT calendar. Right calendar always shows leftView + 1.
   const [leftView, setLeftView] = useState(() =>
@@ -275,7 +301,7 @@ export function DateRangePicker(props: DateRangePickerProps): React.JSX.Element 
 
   return (
     <Popover.Root open={open} onOpenChange={disabled ? undefined : setOpen}>
-      <div className="relative">
+      <div ref={triggerRef} className="relative">
         <Popover.Trigger asChild>
           <button
             type="button"
@@ -319,10 +345,11 @@ export function DateRangePicker(props: DateRangePickerProps): React.JSX.Element 
         )}
       </div>
 
-      <Popover.Portal>
+      <Popover.Portal container={portalContainer ?? undefined}>
         <Popover.Content
           className={cn(
-            "z-popover rounded-xl border border-border bg-background shadow-xl",
+            "z-popover flex w-[calc(100vw-1rem)] max-w-[22rem] max-h-[var(--radix-popover-content-available-height)] min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-xl",
+            "md:w-auto md:max-w-none",
             "animate-in fade-in-0 zoom-in-95",
             size === "sm" ? "p-2" : "p-3",
           )}
@@ -333,12 +360,13 @@ export function DateRangePicker(props: DateRangePickerProps): React.JSX.Element 
           collisionPadding={{ top: 80, bottom: 12, left: 12, right: 12 }}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <div className="flex flex-col gap-3 md:flex-row">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className="flex flex-col gap-3 md:flex-row">
             {presets.length > 0 && (
               <aside
                 role="listbox"
                 aria-label="Date range presets"
-                className="flex flex-row flex-wrap gap-1 md:w-36 md:flex-col md:flex-nowrap md:border-r md:border-border md:pr-3"
+                className="flex max-h-36 flex-row flex-nowrap gap-1 overflow-x-auto overflow-y-hidden pb-1 md:max-h-none md:w-36 md:flex-col md:flex-nowrap md:overflow-x-visible md:overflow-y-auto md:border-r md:border-border md:pb-0 md:pr-3"
               >
                 {presets.map((p, i) => {
                   const isActive = current.preset === p.key;
@@ -365,7 +393,7 @@ export function DateRangePicker(props: DateRangePickerProps): React.JSX.Element 
                         disabled={disabled}
                         onClick={() => applyPreset(p.key)}
                         className={cn(
-                          "rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
+                          "shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           isActive
                             ? "bg-accent text-accent-foreground"
@@ -399,12 +427,12 @@ export function DateRangePicker(props: DateRangePickerProps): React.JSX.Element 
                   onRangeClick={handleRangeClick}
                   hideFooter
                   fixedView={leftView}
-                  hidePagerControls={{ nextMonth: true, nextYear: true }}
+                  onViewChange={setLeftView}
                   size={size}
                 />
               </div>
               {/* Right calendar — hidden below the container-query breakpoint. */}
-              <div className="hidden md:block">
+              {months === 2 && <div className="hidden md:block">
                 <CalendarGrid
                   value={null}
                   onChange={() => { /* range mode */ }}
@@ -421,53 +449,22 @@ export function DateRangePicker(props: DateRangePickerProps): React.JSX.Element 
                   onRangeClick={handleRangeClick}
                   hideFooter
                   fixedView={rightView}
-                  hidePagerControls={{ prevMonth: true, prevYear: true }}
+                  hidePagerControls={{
+                    prevYear: true,
+                    nextYear: true,
+                    prevMonth: true,
+                    nextMonth: true,
+                    yearPicker: true,
+                  }}
                   size={size}
                 />
-              </div>
+              </div>}
             </div>
           </div>
+          </div>
 
-          {/* Footer — external pager buttons that drive both months together */}
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-2">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setLeftView((v) => addMonth(v, -12))}
-                disabled={disabled}
-                className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
-                aria-label="Previous year"
-              >
-                « Year
-              </button>
-              <button
-                type="button"
-                onClick={() => setLeftView((v) => addMonth(v, -1))}
-                disabled={disabled}
-                className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
-                aria-label="Previous month"
-              >
-                ‹ Month
-              </button>
-              <button
-                type="button"
-                onClick={() => setLeftView((v) => addMonth(v, 1))}
-                disabled={disabled}
-                className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
-                aria-label="Next month"
-              >
-                Month ›
-              </button>
-              <button
-                type="button"
-                onClick={() => setLeftView((v) => addMonth(v, 12))}
-                disabled={disabled}
-                className="rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40"
-                aria-label="Next year"
-              >
-                Year »
-              </button>
-            </div>
+          {/* Footer actions: navigation lives in the calendar header. */}
+          <div className="sticky bottom-0 z-10 mt-3 flex min-h-9 shrink-0 items-center justify-end border-t border-border bg-background pt-2">
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -502,4 +499,3 @@ export function DateRangePicker(props: DateRangePickerProps): React.JSX.Element 
 }
 
 export type { DateRangePresetKey };
-

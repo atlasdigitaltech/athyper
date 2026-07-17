@@ -1,5 +1,6 @@
 import {
   LIST_URL_PARAMS as P,
+  type ActiveFilterEntry,
   type ResolvedColumn,
   type RuntimeListPresentation,
   type RuntimeRecordRow,
@@ -15,6 +16,7 @@ interface RuntimeExcelTableProps {
   allColumns:       ResolvedColumn[];
   rows:             RuntimeRecordRow[];
   density:          ViewDensity;
+  activeFilters?:   ActiveFilterEntry[];
   activeSort:       SortEntry[];
   groupField?:      string;
   selectable:       boolean;
@@ -32,6 +34,7 @@ export function RuntimeExcelTable({
   allColumns,
   rows,
   density,
+  activeFilters = [],
   activeSort,
   groupField,
   selectable,
@@ -60,6 +63,7 @@ export function RuntimeExcelTable({
       columns={effectiveColumns}
       rows={rows}
       density={density}
+      activeFilters={activeFilters}
       activeSort={activeSort}
       groupColumn={groupColumn}
       selectable={selectable}

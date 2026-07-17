@@ -5,7 +5,6 @@ import type {
   RuntimeListServerAdapter,
 } from "@athyper/runtime-list/adapter";
 import { createDelegatedAccessScope, resolveRuntimeAccessScope } from "@athyper/runtime-list/core";
-import { EntityListPageFrame } from "@athyper/surface-kit";
 
 export function resolveMeshAccessScope(
   descriptor: RuntimeDescriptor,
@@ -41,5 +40,4 @@ export const meshAdapter: RuntimeListServerAdapter = {
   entityDetailHref: (code, id) => `/workspace/${code}/${id}`,
   entityNewHref:    (code) => `/workspace/${code}/new`,
 
-  PageFrame: EntityListPageFrame,
 };

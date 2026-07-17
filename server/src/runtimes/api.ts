@@ -78,6 +78,7 @@ import {
   recordAuthContextMismatchSuppressed,
   recordDeprecatedRouteHit,
   recordTokenClaimsInvalid,
+  recordAuthTermination,
   registerJobQueues,
   registerMetricCollectors,
 } from "../metrics.js";
@@ -1057,6 +1058,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
     sessionMetrics: createCacheMetrics("session"),
     bootstrapMetrics: createCacheMetrics("bootstrap"),
+    terminationMetrics: recordAuthTermination,
     kc: {
       baseUrl:       kcBaseUrl,
       realm:         config.iam.realm,
@@ -1490,10 +1492,50 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // Compiles all system entities first so snapshot.entity_compiled rows exist,
   // then validates the 10-point checklist. Never blocks boot or affects /readyz.
   lifecycle.onReady(async () => {
-    await createCatalogCompiler(_db, logger).compileAll();
-    const compiler = createEntityCompilerService(_db, logger, getRecordsCapabilityHandlerManifest());
-    const compileSummary = await compiler.compileAllSystemEntities();
-    await runComplianceSuiteIfDev(_db, logger, compileSummary);
+    const startedAt = Date.now();
+    logger.info("entity_compile_pipeline_started", {
+      mode: "catalog_then_execution",
+      environment: config.env,
+    });
+    try {
+      logger.info("entity_catalog_compile_started");
+      const catalogSummary = await createCatalogCompiler(_db, logger).compileAll();
+      logger.info("entity_catalog_compile_finished", {
+        total: catalogSummary.total,
+        compiled: catalogSummary.compiled,
+        persisted: catalogSummary.persisted,
+        failed: catalogSummary.failed,
+        diagnostics: catalogSummary.diagnostics.length,
+        durationMs: Date.now() - startedAt,
+      });
+
+      logger.info("entity_execution_compile_started");
+      const compiler = createEntityCompilerService(_db, logger, getRecordsCapabilityHandlerManifest());
+      const compileSummary = await compiler.compileAllSystemEntities();
+      logger.info("entity_execution_compile_finished", {
+        total: compileSummary.total,
+        compiled: compileSummary.compiled,
+        failed: compileSummary.failed,
+        eligible: compileSummary.eligibleEntityCodes.length,
+        persisted: compileSummary.persistedEntityCodes.length,
+        snapshotPersistenceFailed: compileSummary.snapshotPersistenceFailedEntityCodes.length,
+        graphPassed: compileSummary.graphValidation.passed,
+        diagnostics: compileSummary.graphValidation.diagnostics.length,
+        durationMs: Date.now() - startedAt,
+      });
+
+      logger.info("entity_compliance_started");
+      await runComplianceSuiteIfDev(_db, logger, compileSummary);
+      logger.info("entity_compile_pipeline_finished", {
+        durationMs: Date.now() - startedAt,
+      });
+    } catch (err) {
+      logger.error("entity_compile_pipeline_failed", {
+        durationMs: Date.now() - startedAt,
+        err: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+    }
   });
 
   // ─── Signal handlers ───────────────────────────────────────────────────────

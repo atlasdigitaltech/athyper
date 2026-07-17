@@ -1,4 +1,5 @@
 @config "../tailwind.config.ts";
+@source "../../../packages/shared";
 
 @import "@athyper/theme/presets/neon-base.css";
 @import "@athyper/theme/base.css";

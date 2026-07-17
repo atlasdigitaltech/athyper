@@ -11,6 +11,7 @@
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@athyper/mesh-runtime": "workspace:*",
     "@athyper/adapter-db": "workspace:*",
     "@athyper/auth-bff": "workspace:*",
     "@athyper/bff-relay": "workspace:*",

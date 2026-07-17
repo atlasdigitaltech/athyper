@@ -1,4 +1,5 @@
 @config "../tailwind.config.ts";
+@source "../../../packages/shared";
 
 @import "../../../packages/shared/ui-platform/theme/src/presets/base.css";
 @import "../../../packages/shared/ui-platform/theme/src/presets/neon-base.css";

@@ -34,6 +34,7 @@ import {
   type ExecutionDescriptorProviderResult,
 } from "../src/execution-descriptor/index.js";
 import { TenantOverlayValidationError } from "../src/tenant-overlay-resolver.js";
+import { normalizeEntityFeatureFlags, normalizeEntityListFeatures } from "@athyper/api-contracts/metadata-normalizers";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -221,6 +222,9 @@ function normalizeDisplayConfig(
   colorToken: unknown,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...raw };
+  const listFeatures = normalizeEntityListFeatures(raw["list_features"] ?? raw["listFeatures"]);
+  if (listFeatures) out["list_features"] = listFeatures;
+  delete out["listFeatures"];
   for (const key of MOVED_DISPLAY_CONFIG_KEYS) delete out[key];
 
   const detailRenderer = normalizeDetailRenderer(raw["detail_renderer"]);
@@ -248,136 +252,6 @@ function normalizeDisplayConfig(
   if (!out["color"] && colorToken) out["color"] = colorToken;
 
   return Object.fromEntries(Object.entries(out).filter(([, value]) => value !== undefined));
-}
-
-/**
- * Normalize raw DB feature_flags JSON into the canonical CompiledEntity contract shape.
- *
- * Legacy DB flag names are mapped to their canonical equivalents so that
- * resolveTabs() and the client renderers always see a consistent flag set.
- * Legacy aliases are preserved alongside canonical names as a safety net
- * for the ?? fallback logic in resolveTabs() during the migration window.
- */
-const BOOLEAN_FEATURE_KEYS = new Set([
-  "has_attachments",
-  "has_workflow",
-  "has_lifecycle",
-  "is_importable",
-  "is_exportable",
-  "is_bulk_editable",
-  "is_approvable",
-  "is_readonly",
-  "is_hidden",
-  "comments_enabled",
-  "event_history",
-  "version_control",
-  "has_lines",
-  "has_accounting_distribution",
-  "has_tasks",
-  "has_watchers",
-  "has_rules",
-  "has_integrations",
-  "quality_checks",
-  "record_reports",
-  "has_payment_schedule",
-  "has_budget_impact",
-  "has_related_documents",
-  "has_ai_classification",
-  "has_line_composer",
-  "line_references",
-  "catalog_feature_enabled",
-  "catalog_enabled",
-  "catalog_items_enabled",
-  "has_catalog_items",
-  "has_catalog",
-  "requires_owner_type_scope",
-  "is_company_scoped",
-  "singleton",
-  "pii_bearing",
-  "allow_address",
-  "allow_contact",
-  "has_roles",
-  "append_only_after_submission",
-  "reference_picker",
-  "line_editor",
-  "posting_controlled",
-  "dimension_controlled",
-]);
-
-const FEATURE_FLAG_ALIASES: Record<string, string[]> = {
-  is_approvable: ["approval_workflow"],
-  has_attachments: ["allow_attachments", "allow_attachment"],
-  is_exportable: ["allow_export", "export_enabled"],
-  is_importable: ["allow_import", "import_enabled"],
-  is_bulk_editable: ["allow_bulk_edit", "bulk_edit_enabled"],
-  comments_enabled: ["has_comments", "comments"],
-  event_history: ["has_events", "has_event_history", "audit_history"],
-  version_control: ["has_versions"],
-  has_lines: ["has_line_items", "line_editor"],
-  has_accounting_distribution: ["accounting_distribution", "has_distributions"],
-  is_readonly: ["readonly", "readOnly", "read_only"],
-};
-
-const LEGACY_FEATURE_FLAG_KEYS = new Set([
-  ...Object.values(FEATURE_FLAG_ALIASES).flat(),
-  "line_entity_code",
-  "identity_via",
-  "list_entity_code",
-  "parent_entity",
-  "parent_fk",
-  "parent_scope",
-  "duplicate_check",
-  "replacement_entity",
-]);
-
-function coerceFeatureBoolean(value: unknown): boolean | undefined {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value !== "string") return undefined;
-  const normalized = value.trim().toLowerCase();
-  if (["true", "t", "yes", "y", "1", "enabled", "on"].includes(normalized)) return true;
-  if (["false", "f", "no", "n", "0", "disabled", "off"].includes(normalized)) return false;
-  return undefined;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeFeatureFlags(raw: Record<string, unknown>): Record<string, unknown> {
-  const canonical: Record<string, unknown> = { ...raw };
-
-  for (const [target, aliases] of Object.entries(FEATURE_FLAG_ALIASES)) {
-    if (target in canonical) continue;
-    const alias = aliases.find((key) => key in raw);
-    if (alias) canonical[target] = raw[alias];
-  }
-
-  // DB may store is_approvable or approval_workflow; canonical: is_approvable
-  if (!("is_approvable" in canonical) && ("approval_workflow" in raw)) {
-    canonical["is_approvable"] = Boolean(raw["approval_workflow"]);
-  }
-
-  // allow_attachments → has_attachments (canonical)
-  if (!("has_attachments" in canonical) && ("allow_attachments" in raw)) {
-    canonical["has_attachments"] = Boolean(raw["allow_attachments"]);
-  }
-
-  // allow_export / is_exportable (canonical)
-  if (!("is_exportable" in canonical) && ("allow_export" in raw)) {
-    canonical["is_exportable"] = Boolean(raw["allow_export"]);
-  }
-
-  if (!("has_workflow" in canonical) && canonical["is_approvable"] === true) {
-    canonical["has_workflow"] = true;
-  }
-  for (const key of BOOLEAN_FEATURE_KEYS) {
-    if (!(key in canonical)) continue;
-    const boolValue = coerceFeatureBoolean(canonical[key]);
-    if (boolValue !== undefined) canonical[key] = boolValue;
-  }
-  for (const key of LEGACY_FEATURE_FLAG_KEYS) {
-    delete canonical[key];
-  }
-
-  return canonical;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -751,11 +625,23 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       if (executionDescriptorProvider && tenantId) {
         const locals = res.locals as Record<string, unknown>;
         const requestMemo = (locals["executionDescriptorMemo"] ??= new Map()) as Map<string, Promise<ExecutionDescriptorProviderResult>>;
-        executionResolution = await executionDescriptorProvider.get({ plane, tenantId, entityCode }, requestMemo);
-        locals["descriptorCacheState"] = executionResolution.cacheState;
-        locals["descriptorHash"] = executionResolution.descriptor.identity.compiledHash;
-        res.setHeader("X-Descriptor-Cache", executionResolution.cacheState);
-        res.setHeader("X-Descriptor-Hash", executionResolution.descriptor.identity.compiledHash);
+        try {
+          executionResolution = await executionDescriptorProvider.get({ plane, tenantId, entityCode }, requestMemo);
+          locals["descriptorCacheState"] = executionResolution.cacheState;
+          locals["descriptorHash"] = executionResolution.descriptor.identity.compiledHash;
+          res.setHeader("X-Descriptor-Cache", executionResolution.cacheState);
+          res.setHeader("X-Descriptor-Hash", executionResolution.descriptor.identity.compiledHash);
+        } catch (error) {
+          // The compiled route also serves callers that discover relation
+          // targets from catalog metadata. Catalog-only entities (for
+          // example commitment_line and pricing_component) intentionally do
+          // not have execution descriptors. Let the authoritative lookup
+          // below return its normal ENTITY_NOT_FOUND response instead of
+          // turning that expected miss into a compiled_entity_route_error.
+          // Other provider failures remain fatal and are handled by the
+          // route-level error middleware.
+          if (!(error instanceof ExecutionDescriptorNotFoundError)) throw error;
+        }
       }
 
       // Production path: validate the legacy UI payload against the provider's
@@ -992,7 +878,7 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
 
       // ── Build feature_flags ───────────────────────────────────────────────
       const rawFlags = (entityRow.feature_flags ?? {}) as Record<string, unknown>;
-      const featureFlags = normalizeFeatureFlags(rawFlags);
+      const featureFlags = normalizeEntityFeatureFlags(rawFlags);
       if (lifecycleStages.length > 0) {
         (featureFlags as Record<string, unknown>)["has_lifecycle"] = true;
       }

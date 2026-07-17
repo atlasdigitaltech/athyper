@@ -79,12 +79,15 @@ export interface CalendarGridProps {
   onRangeClick?: (iso: string) => void;
   /** Whether to hide the "Clear" and "Today" footer (range picker owns them). */
   hideFooter?: boolean;
+  /** Updates the visible month when the grid is controlled by a parent picker. */
+  onViewChange?: (view: { year: number; month: number }) => void;
   /** Whether to render this grid without the year-picker overlay trigger. */
   hidePagerControls?: {
     prevYear?: boolean;
     nextYear?: boolean;
     prevMonth?: boolean;
     nextMonth?: boolean;
+    yearPicker?: boolean;
   };
   /**
    * When set, the grid renders in a fixed month/year (uncontrolled internal
@@ -217,6 +220,7 @@ export function CalendarGrid({
   rangeEnd,
   onRangeClick,
   hideFooter,
+  onViewChange,
   hidePagerControls,
   fixedView,
   size = "md",
@@ -245,9 +249,13 @@ export function CalendarGrid({
   const [internalView, setInternalView] = useState(initView);
   const view = fixedView ?? internalView;
   const setView = useCallback((next: { year: number; month: number } | ((v: { year: number; month: number }) => { year: number; month: number })) => {
-    if (fixedView) return;
+    if (fixedView) {
+      const nextView = typeof next === "function" ? next(fixedView) : next;
+      onViewChange?.(nextView);
+      return;
+    }
     setInternalView(next);
-  }, [fixedView]);
+  }, [fixedView, onViewChange]);
   const [yearPicker, setYearPicker] = useState(false);
   const [yearPage, setYearPage] = useState(() => Math.floor(initView().year / 12) * 12);
   const [focused, setFocused] = useState<string>(() => value ?? rangeStart ?? todayISO);
@@ -474,56 +482,70 @@ export function CalendarGrid({
   return (
     <div className={cn(T.container, "select-none")}>
       <div className="flex items-center justify-between px-1 pb-2">
-        <button
-          type="button"
-          onClick={prevYear}
-          disabled={disabled}
-          className={cn("flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40", T.pagerButton)}
-          aria-label="Previous year"
-        >
-          <ChevronsLeft className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={prevMonth}
-          disabled={disabled}
-          className={cn("flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40", T.pagerButton)}
-          aria-label="Previous month"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+        {!hidePagerControls?.prevYear && (
+          <button
+            type="button"
+            onClick={prevYear}
+            disabled={disabled}
+            className={cn("flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40", T.pagerButton)}
+            aria-label="Previous year"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </button>
+        )}
+        {!hidePagerControls?.prevMonth && (
+          <button
+            type="button"
+            onClick={prevMonth}
+            disabled={disabled}
+            className={cn("flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40", T.pagerButton)}
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() => {
-            setYearPage(Math.floor(view.year / 12) * 12);
-            setYearPicker(true);
-          }}
-          disabled={disabled}
-          className={cn("flex-1 text-center font-semibold text-foreground transition-colors hover:text-primary disabled:pointer-events-none", T.monthLabel)}
-          title="Pick a year"
-        >
-          {monthLabel(view.year, view.month, locale)}
-        </button>
+        {hidePagerControls?.yearPicker ? (
+          <span className={cn("flex-1 text-center font-semibold text-foreground", T.monthLabel)}>
+            {monthLabel(view.year, view.month, locale)}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setYearPage(Math.floor(view.year / 12) * 12);
+              setYearPicker(true);
+            }}
+            disabled={disabled}
+            className={cn("flex-1 text-center font-semibold text-foreground transition-colors hover:text-primary disabled:pointer-events-none", T.monthLabel)}
+            title="Pick a year"
+          >
+            {monthLabel(view.year, view.month, locale)}
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={nextMonth}
-          disabled={disabled}
-          className={cn("flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40", T.pagerButton)}
-          aria-label="Next month"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          onClick={nextYear}
-          disabled={disabled}
-          className={cn("flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40", T.pagerButton)}
-          aria-label="Next year"
-        >
-          <ChevronsRight className="h-4 w-4" />
-        </button>
+        {!hidePagerControls?.nextMonth && (
+          <button
+            type="button"
+            onClick={nextMonth}
+            disabled={disabled}
+            className={cn("flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40", T.pagerButton)}
+            aria-label="Next month"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        )}
+        {!hidePagerControls?.nextYear && (
+          <button
+            type="button"
+            onClick={nextYear}
+            disabled={disabled}
+            className={cn("flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-40", T.pagerButton)}
+            aria-label="Next year"
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-7 pb-1" aria-hidden="true">

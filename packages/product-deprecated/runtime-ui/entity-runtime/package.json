@@ -12,7 +12,6 @@
     "./form": "./src/form/index.ts",
     "./field-renderers": "./src/field-renderers/index.ts",
     "./actions": "./src/actions/index.ts",
-    "./bulk": "./src/bulk/index.ts",
     "./import": "./src/import/index.ts",
     "./intake": "./src/intake/index.ts",
     "./panels": "./src/panels/index.ts",

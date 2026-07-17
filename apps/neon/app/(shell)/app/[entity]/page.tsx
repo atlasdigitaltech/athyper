@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { NeonListPage } from "@athyper/app-neon/list";
+import { AthyperListPage } from "@athyper/app-neon/list";
 import { getMetaEntityRecordList } from "@/lib/server/meta-entity-records";
 import { getMetaEntityRuntimeDescriptor } from "@/lib/server/meta-entity-runtime";
 import { getRuntimeSavedViews, getRuntimeSavedViewState } from "@/lib/server/runtime-saved-views";
@@ -34,7 +34,7 @@ export default async function RuntimeListRoute({
   }
 
   return (
-    <NeonListPage
+    <AthyperListPage
       entityCode={entityCode}
       searchParams={resolvedSearchParams}
       adapterConfig={{

@@ -660,6 +660,24 @@ export type EntityCreateRedirect = z.infer<typeof EntityCreateRedirectSchema>;
 export const EntityDisplayConfigSchema = z.record(z.string(), z.unknown());
 export type EntityDisplayConfig = z.infer<typeof EntityDisplayConfigSchema>;
 
+/**
+ * Entity-level list surface overrides.  These are presentation policy inputs;
+ * authorization is still enforced by the corresponding server endpoints.
+ */
+export const EntityListFeaturesSchema = z.object({
+  saved_views:          z.boolean().optional(),
+  bulk_actions:         z.boolean().optional(),
+  export:               z.boolean().optional(),
+  import:               z.boolean().optional(),
+  column_customization: z.boolean().optional(),
+  grouping:             z.boolean().optional(),
+  multi_sort:           z.boolean().optional(),
+  max_sort_levels:      z.number().int().min(1).optional(),
+  search_mode:          z.enum(["server", "client", "both"]).optional(),
+  max_page_size:        z.number().int().positive().optional(),
+}).passthrough();
+export type EntityListFeatures = z.infer<typeof EntityListFeaturesSchema>;
+
 export const EntitySearchConfigSchema = z.object({
   enabled: z.boolean().optional(),
   fields: z.array(z.string()).optional(),
@@ -1033,6 +1051,8 @@ export const CompiledEntitySchema = z.object({
     default_sort_field: z.string().optional(),
     default_sort_order: z.enum(["asc", "desc"]).optional(),
     list_columns: z.array(z.string()).optional(),
+    /** Entity-specific list UI feature policy; security remains server-enforced. */
+    list_features: EntityListFeaturesSchema.optional(),
     /** Compiler-owned runtime presentation switches; never injected by a BFF. */
     runtime_canvas_flags: z.object({
       descriptorSurfaceShell: z.boolean().optional(),

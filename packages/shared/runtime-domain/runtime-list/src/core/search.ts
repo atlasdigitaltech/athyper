@@ -106,6 +106,9 @@ export function buildServerSearchParams(
   params.set("q", query.trim());
   params.set("search_scope", "all");
   params.set("page_size", String(pageSize));
+  // Server-search results are subsequently extended by the page-based lazy
+  // loader, so both requests must use the same offset pagination contract.
+  params.set("query_v1", "0");
   return params;
 }
 

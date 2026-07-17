@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { DateRangePicker, DEFAULT_PRESETS, FISCAL_PRESETS } from "../date-range-picker";
 
 describe("DateRangePicker — trigger label", () => {
@@ -33,7 +33,7 @@ describe("DateRangePicker — trigger label", () => {
         dateFormat="%d/%m/%Y"
       />,
     );
-    const text = screen.getByRole("button", { expanded: false }).textContent ?? ";
+    const text = screen.getByRole("button", { expanded: false }).textContent ?? "";
     expect(text.match(/30\/06\/2026/g)?.length).toBe(1);
     expect(text).not.toContain("–");
   });
@@ -88,6 +88,21 @@ describe("DateRangePicker — presets", () => {
     render(<DateRangePicker value={null} presets={[]} />);
     fireEvent.click(screen.getByRole("button", { expanded: false }));
     expect(screen.queryByRole("listbox", { name: /presets/i })).toBeNull();
+  });
+
+  it("keeps the popover inside an enclosing dialog for scroll-lock compatibility", async () => {
+    const { container } = render(
+      <div role="dialog">
+        <DateRangePicker value={null} presets={FISCAL_PRESETS} locale="en" />
+      </div>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { expanded: false }));
+
+    await waitFor(() => {
+      expect(container.querySelector("[data-radix-popper-content-wrapper]")).toBeTruthy();
+    });
+    expect(container.querySelector("[data-radix-popper-content-wrapper]")).toBeTruthy();
   });
 
   it("FISCAL_PRESETS surfaces fiscal-aware chips", () => {
@@ -176,4 +191,3 @@ describe("DateRangePicker — clear + accessibility", () => {
     expect(trigger.getAttribute("aria-invalid")).toBe("true");
   });
 });
-

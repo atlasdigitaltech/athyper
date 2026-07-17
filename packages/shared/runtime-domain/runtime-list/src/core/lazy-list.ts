@@ -15,6 +15,8 @@ export const DEFAULT_LAZY_LIST_CONTROLS: RuntimeListLazyControls = {
   maxLoadedRows:             200,
 };
 
+const RUNTIME_LIST_PAGE_CACHE_VERSION = "v2";
+
 export function normalizeLazyListControls(
   input: Partial<RuntimeListLazyControls> | null | undefined,
 ): RuntimeListLazyControls {
@@ -51,6 +53,10 @@ export function buildListPageParams(
 
   params.set("page", String(Math.max(1, Math.floor(page))));
   params.set("page_size", String(Math.max(1, Math.floor(pageSize))));
+  // The runtime-list loader is offset-page based. Explicitly opt out of the
+  // cursor contract until this client carries navigation.nextCursor between
+  // requests; otherwise every page request resolves to the first cursor page.
+  params.set("query_v1", "0");
   if (trimmedServerQuery) {
     params.set("q", trimmedServerQuery);
     params.set("search_scope", "all");
@@ -75,7 +81,9 @@ export function buildRuntimeListBrowserCacheKey(
   const params = stableParams
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join("&");
-  return `runtime-list:${entityCode}:${pageSize}:${hashStableString(scopeFingerprint)}:${params}`;
+  // Version the persisted page map so clients do not restore pages cached
+  // under an incompatible pagination contract.
+  return `runtime-list:${RUNTIME_LIST_PAGE_CACHE_VERSION}:${entityCode}:${pageSize}:${hashStableString(scopeFingerprint)}:${params}`;
 }
 
 export function buildRuntimeListScopeFingerprint(accessScope: RuntimeAccessScope | null | undefined): string {

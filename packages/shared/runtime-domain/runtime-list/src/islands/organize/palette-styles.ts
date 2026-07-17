@@ -21,7 +21,10 @@ export {
   ORGANIZE_FIELD_LABEL_CLASS,
   ORGANIZE_META_TEXT_CLASS,
   ORGANIZE_SECTION_LABEL_CLASS,
+  ORGANIZE_CONTROL_LABEL_CLASS,
   ORGANIZE_SECONDARY_BUTTON_CLASS,
+  ORGANIZE_SEGMENTED_GROUP_CLASS,
+  organizeSegmentClass,
   organizeChipClass,
   filterValuePillClass,
 } from "@athyper/ui/organize";

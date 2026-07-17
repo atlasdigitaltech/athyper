@@ -261,6 +261,33 @@ export type ViewMode    = "list" | "compact" | "board" | "dashboard" | "excel";
 export type ViewDensity = "compact" | "comfortable" | "spacious";
 export type RuntimeColumnAggregation = "sum" | "count" | "avg" | "min" | "max";
 
+/**
+ * Optional entity-level list feature overrides.
+ *
+ * This is intentionally a partial configuration.  The adapter/application
+ * policy supplies the fallback values and the runtime resolver produces the
+ * complete `RuntimeListFeatures` contract consumed by the UI.
+ */
+export interface RuntimeListFeatureConfig {
+  savedViews?:          boolean;
+  bulkActions?:         boolean;
+  export?:              boolean;
+  import?:              boolean;
+  columnCustomization?: boolean;
+  grouping?:            boolean;
+  multiSort?:           boolean;
+  maxSortLevels?:       number;
+  viewModes?:           ViewMode[];
+  searchMode?:          "server" | "client" | "both";
+  maxPageSize?:         number;
+}
+
+/**
+ * Entity presentation overrides intentionally omit `viewModes`: the existing
+ * `listPresentation.viewModes` field is the canonical entity view-mode policy.
+ */
+export type RuntimeListFeatureOverrides = Omit<RuntimeListFeatureConfig, "viewModes">;
+
 export interface RuntimeCompactPresentationConfig {
   titleField?:    string;
   subtitleField?: string;
@@ -276,6 +303,8 @@ export interface RuntimeExcelPresentationConfig {
 export interface RuntimeListPresentationConfig {
   defaultViewMode?: ViewMode;
   viewModes?:       ViewMode[];
+  /** Entity-specific list UI feature overrides from display_config.list_features. */
+  features?:        RuntimeListFeatureOverrides;
   compact?:         RuntimeCompactPresentationConfig;
   excel?:           RuntimeExcelPresentationConfig;
 }

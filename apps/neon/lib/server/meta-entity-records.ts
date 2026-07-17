@@ -57,13 +57,15 @@ export const getMetaEntityRecordList = cache(
     }
 
     const queryMode = entityQueryMode(descriptor);
+    const requestedQueryV1 = firstParam(searchParams["query_v1"]);
+    const useEntityQueryV1 = queryMode === "serve" && !isExplicitlyDisabled(requestedQueryV1);
     const legacyQuery = buildRecordListQuery(searchParams, scope.filters);
     const v1Query = buildRecordListQuery({
       ...searchParams,
       query_v1: "1",
       count_mode: searchParams["count_mode"] ?? "none",
     }, scope.filters);
-    const result = await fetchRecordRows(entityCode, queryMode === "serve" ? v1Query : legacyQuery, headers, descriptor);
+    const result = await fetchRecordRows(entityCode, useEntityQueryV1 ? v1Query : legacyQuery, headers, descriptor);
     if (result.status === "unavailable") {
       return unavailable(result.message);
     }
@@ -192,6 +194,15 @@ function setParam(params: URLSearchParams, key: string, value: string | string[]
   if (item !== undefined && item !== "") {
     params.set(key, item);
   }
+}
+
+function firstParam(value: string | string[] | undefined): string | undefined {
+  const item = Array.isArray(value) ? value[0] : value;
+  return item?.trim() || undefined;
+}
+
+function isExplicitlyDisabled(value: string | undefined): boolean {
+  return value !== undefined && ["0", "false", "no"].includes(value.toLowerCase());
 }
 
 function unavailable(message: string): MetaEntityRecordList {

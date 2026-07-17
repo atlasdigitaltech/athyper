@@ -19,7 +19,10 @@ export function RuntimePaginationControls({
   pageLabel,
 }: RuntimePaginationControlsProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div
+      className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 md:flex md:w-auto"
+      data-runtime-pagination-controls
+    >
       <RuntimePaginationActionControl
         action={previous}
         label={runtimeListText.actions.previous}
@@ -60,10 +63,13 @@ function RuntimePaginationActionControl({
       {icon}
     </>
   );
+  const placementClassName = direction === "previous"
+    ? "justify-self-end"
+    : "justify-self-start";
 
   if (action.kind === "link") {
     return (
-      <a className={runtimeTableChrome.footerButton} href={action.href}>
+      <a className={`${runtimeTableChrome.footerButton} ${placementClassName}`} href={action.href}>
         {content}
       </a>
     );
@@ -75,7 +81,7 @@ function RuntimePaginationActionControl({
         type="button"
         onClick={action.onClick}
         disabled={action.disabled}
-        className={`${runtimeTableChrome.footerButton} disabled:opacity-60`}
+        className={`${runtimeTableChrome.footerButton} ${placementClassName} disabled:opacity-60`}
       >
         {content}
       </button>
@@ -83,7 +89,7 @@ function RuntimePaginationActionControl({
   }
 
   return (
-    <span className={runtimeTableChrome.footerButtonDisabled}>
+    <span className={`${runtimeTableChrome.footerButtonDisabled} ${placementClassName}`}>
       {content}
     </span>
   );

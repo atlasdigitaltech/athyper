@@ -5,7 +5,6 @@ import type {
   RuntimeListServerAdapter,
 } from "@athyper/runtime-list/adapter";
 import { createDelegatedAccessScope, resolveRuntimeAccessScope } from "@athyper/runtime-list/core";
-import { EntityListPageFrame } from "@athyper/surface-kit";
 
 export function resolveAdminAccessScope(
   descriptor: RuntimeDescriptor,
@@ -38,5 +37,4 @@ export const adminAdapter: RuntimeListServerAdapter = {
   entityDetailHref: (code, id) => `/admin/${code}/${id}`,
   entityNewHref:    (code) => `/admin/${code}/new`,
 
-  PageFrame: EntityListPageFrame,
 };

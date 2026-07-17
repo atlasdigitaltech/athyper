@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import type { ResolvedColumn, RuntimeRecordRow, SortEntry, ViewDensity } from "../core/types";
+import type { ActiveFilterEntry, ResolvedColumn, RuntimeRecordRow, SortEntry, ViewDensity } from "../core/types";
 import { formatRuntimeColumnValue, humanizeToken, resolveRecordId } from "../core/formatters";
 import { buildGroupedRuntimeRows } from "../core/grouping";
 import {
@@ -9,32 +9,41 @@ import {
   runtimeTableScrollStyle,
 } from "../core/table-chrome";
 import { firstParam, serializeListState } from "../core/url-state";
+import { RuntimeColumnFilterButton } from "../islands/runtime-column-filter-button";
 
 interface RuntimeListTableProps {
   columns:      ResolvedColumn[];
   rows:         RuntimeRecordRow[];
   density:      ViewDensity;
+  activeFilters?: ActiveFilterEntry[];
   activeSort:   SortEntry[];
   groupField?:  string;
   listBaseHref: string;
   rawSearchParams: Record<string, string | string[] | undefined>;
+  hasFooter?:   boolean;
 }
 
 export function RuntimeListTable({
   columns,
   rows,
   density,
+  activeFilters = [],
   activeSort,
   groupField,
   listBaseHref,
   rawSearchParams,
+  hasFooter = false,
 }: RuntimeListTableProps) {
   const cellPadding = runtimeTableCellPadding(density);
   const groupColumn = groupField ? columns.find((column) => column.name === groupField) : undefined;
   const groupedRows = buildGroupedRuntimeRows(rows, groupColumn);
+  const activeFilterNames = new Set(activeFilters.map((filter) => filter.fieldName));
 
   return (
-    <div className={runtimeTableChrome.shell} style={runtimeTableScrollStyle}>
+    <div
+      className={`${runtimeTableChrome.shell} ${hasFooter ? runtimeTableChrome.shellWithFooter : ""}`}
+      style={runtimeTableScrollStyle}
+    >
       <table className={runtimeTableChrome.table}>
         <thead className={runtimeTableChrome.head}>
           <tr>
@@ -48,17 +57,26 @@ export function RuntimeListTable({
                   className={runtimeTableChrome.headerCell}
                   style={runtimeStickyHeaderCellStyle}
                 >
-                  {col.isSortable ? (
-                    <a
-                      href={sortHref(listBaseHref, rawSearchParams, col.name)}
-                      className={runtimeTableChrome.headerButton}
-                    >
-                      {col.label}
-                      <RuntimeSortIcon dir={sortEntry?.dir} />
-                    </a>
-                  ) : (
-                    col.label
-                  )}
+                  <div className={runtimeTableChrome.headerContent}>
+                    {col.isSortable ? (
+                      <a
+                        href={sortHref(listBaseHref, rawSearchParams, col.name)}
+                        className={runtimeTableChrome.headerButton}
+                      >
+                        {col.label}
+                        <RuntimeSortIcon dir={sortEntry?.dir} />
+                      </a>
+                    ) : (
+                      <span>{col.label}</span>
+                    )}
+                    {col.isFilterable && (
+                      <RuntimeColumnFilterButton
+                        fieldName={col.name}
+                        fieldLabel={col.label}
+                        active={activeFilterNames.has(col.name)}
+                      />
+                    )}
+                  </div>
                 </th>
               );
             })}
