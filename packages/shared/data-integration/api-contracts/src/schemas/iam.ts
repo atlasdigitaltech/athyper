@@ -88,21 +88,24 @@ export type DelegationGrantResponse = z.infer<typeof DelegationGrantResponseSche
 // ─── MFA step-up ─────────────────────────────────────────────────────────────
 
 export const MfaActionClassSchema = z.enum([
+  "iam_admin",
+  "tenant_settings",
   "delegation_accept",
+  "payment_release",
   "security_change",
-  // Extend as new step-up action classes land in the runtime.
 ]);
 export type MfaActionClass = z.infer<typeof MfaActionClassSchema>;
 
 export const MfaElevateRequestSchema = z.object({
   action_class: MfaActionClassSchema,
-  code: z.string(),
-  method_type: z.string().optional(),
 });
 export type MfaElevateRequest = z.infer<typeof MfaElevateRequestSchema>;
 
 export const MfaElevateResponseSchema = z.object({
   ok: z.boolean(),
+  elevated: z.boolean().optional(),
+  action_class: MfaActionClassSchema.optional(),
+  ttl_sec: z.number().optional(),
   message: z.string().optional(),
 });
 export type MfaElevateResponse = z.infer<typeof MfaElevateResponseSchema>;

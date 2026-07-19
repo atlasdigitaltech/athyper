@@ -22,8 +22,6 @@
  */
 
 import { useEffect, useMemo } from "react";
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import type { ChildCollectionContract } from "@athyper/runtime-contracts";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { markDocumentEditPerformanceOnce } from "./document-edit-performance-marks";
@@ -31,6 +29,10 @@ import {
   useOptionalDocumentEditCoordinator,
   useOptionalDocumentEditSection,
 } from "./document-edit-coordinator";
+import {
+  useOptionalRecordWorkspaceChildCollection,
+  type RecordWorkspaceChildCollectionSource,
+} from "../record-query";
 
 // ─── Public types ────────────────────────────────────────────────────
 
@@ -52,6 +54,8 @@ export interface DocumentChildBindings {
  * surface config. These resolve against `MetaEntityRuntimeDescriptor.relations`.
  */
 export interface DocumentChildRelations {
+  /** Effective surface that owns and authorizes these relations. */
+  surfaceKey?: string;
   /** Relation for the line entity, usually "lines". */
   lines: string;
   /** Relation for pricing_component, usually "pricing_components". */
@@ -130,7 +134,6 @@ export interface UseDocumentChildrenOptions {
 
 export function useDocumentChildren(opts: UseDocumentChildrenOptions): DocumentChildrenResult {
   const { parentId, relations, bindings, staleTimeMs = 30_000 } = opts;
-  const entityCode = opts.entityCode ?? "";
   const enabled = Boolean(parentId);
   const coordinator = useOptionalDocumentEditCoordinator();
 
@@ -161,58 +164,57 @@ export function useDocumentChildren(opts: UseDocumentChildrenOptions): DocumentC
     preferredKeys: ["schedules", "schedule_lines", "delivery_schedules"],
   });
 
-  const linesQuery = useChildRelationQuery({
-    entityCode,
-    relationName: relations?.lines,
-    bindingCode:  bindings?.line,
-    parentId:    parentId ?? "",
-    enabled:     enabled && !linesCoordinatorQuery.isActive && Boolean(relations?.lines || bindings?.line),
-    staleTimeMs,
-    queryKey:    ["doc-child-lines", entityCode, relations?.lines ?? bindings?.line ?? "", parentId ?? ""],
-  });
-
-  const pcQuery = useChildRelationQuery({
-    entityCode,
-    relationName: relations?.pricingComponents,
-    bindingCode:  bindings?.pricingComponent,
-    parentId:    parentId ?? "",
-    enabled:     enabled && !pcCoordinatorQuery.isActive && Boolean(relations?.pricingComponents || bindings?.pricingComponent),
-    staleTimeMs,
-    queryKey:    ["doc-child-pc", entityCode, relations?.pricingComponents ?? bindings?.pricingComponent ?? "", parentId ?? ""],
-  });
-
-  const adQuery = useChildRelationQuery({
-    entityCode,
-    relationName: relations?.distributions,
-    bindingCode:  bindings?.distribution,
-    parentId:    parentId ?? "",
-    enabled:     enabled && !adCoordinatorQuery.isActive && Boolean(relations?.distributions || bindings?.distribution),
-    staleTimeMs,
-    queryKey:    ["doc-child-ad", entityCode, relations?.distributions ?? bindings?.distribution ?? "", parentId ?? ""],
-  });
-
-  const scheduleQuery = useChildRelationQuery({
-    entityCode,
-    relationName: relations?.schedules,
-    parentId:    parentId ?? "",
-    enabled:     enabled && !scheduleCoordinatorQuery.isActive && Boolean(relations?.schedules),
-    staleTimeMs,
-    queryKey:    ["doc-child-schedules", entityCode, relations?.schedules ?? "", parentId ?? ""],
-  });
+  const surfaceKey = relations?.surfaceKey;
+  const linesQuery = useOptionalRecordWorkspaceChildCollection<unknown>(
+    documentCollectionKey(surfaceKey, "lines"),
+    {
+      source: childSource(relations?.lines, bindings?.line),
+      surfaceKey,
+      enabled: enabled && !linesCoordinatorQuery.isActive,
+      staleTime: staleTimeMs,
+    },
+  );
+  const pcQuery = useOptionalRecordWorkspaceChildCollection<unknown>(
+    documentCollectionKey(surfaceKey, "pricing-components"),
+    {
+      source: childSource(relations?.pricingComponents, bindings?.pricingComponent),
+      surfaceKey,
+      enabled: enabled && !pcCoordinatorQuery.isActive,
+      staleTime: staleTimeMs,
+    },
+  );
+  const adQuery = useOptionalRecordWorkspaceChildCollection<unknown>(
+    documentCollectionKey(surfaceKey, "distributions"),
+    {
+      source: childSource(relations?.distributions, bindings?.distribution),
+      surfaceKey,
+      enabled: enabled && !adCoordinatorQuery.isActive,
+      staleTime: staleTimeMs,
+    },
+  );
+  const scheduleQuery = useOptionalRecordWorkspaceChildCollection<unknown>(
+    documentCollectionKey(surfaceKey, "schedules"),
+    {
+      source: childSource(relations?.schedules),
+      surfaceKey,
+      enabled: enabled && !scheduleCoordinatorQuery.isActive,
+      staleTime: staleTimeMs,
+    },
+  );
 
   // ─── Amendment 6 split: header-scope vs by-line PC ─────────────────
   const linesRows = linesCoordinatorQuery.isActive
     ? linesCoordinatorQuery.rows ?? []
-    : linesQuery.data ?? [];
+    : readCollectionRows(linesQuery.data);
   const pricingComponentRows = pcCoordinatorQuery.isActive
     ? pcCoordinatorQuery.rows ?? []
-    : pcQuery.data ?? [];
+    : readCollectionRows(pcQuery.data);
   const distributionRows = adCoordinatorQuery.isActive
     ? adCoordinatorQuery.rows ?? []
-    : adQuery.data ?? [];
+    : readCollectionRows(adQuery.data);
   const scheduleRows = scheduleCoordinatorQuery.isActive
     ? scheduleCoordinatorQuery.rows ?? []
-    : scheduleQuery.data ?? [];
+    : readCollectionRows(scheduleQuery.data);
 
   const pricingComponentSlices = useMemo(() => {
     const rows = pricingComponentRows;
@@ -362,38 +364,28 @@ function useCoordinatorChildCollectionQuery(
   };
 }
 
-interface ChildRelationQueryOptions {
-  entityCode:    string;
-  relationName?: string;
-  bindingCode?:  string;
-  parentId:      string;
-  enabled:       boolean;
-  staleTimeMs:   number;
-  queryKey:      ReadonlyArray<unknown>;
+function documentCollectionKey(surfaceKey: string | undefined, slot: string): string {
+  return `${surfaceKey ?? "document-children"}:${slot}`;
 }
 
-function useChildRelationQuery(opts: ChildRelationQueryOptions): UseQueryResult<ReadonlyArray<RuntimeRecordRow>, Error> {
-  return useQuery({
-    queryKey:  opts.queryKey,
-    queryFn:   async () => {
-      if (!opts.parentId) return [];
-      const href = opts.relationName && opts.entityCode
-        ? runtimePath.relationRecords(opts.entityCode, opts.relationName, opts.parentId)
-        : opts.bindingCode
-          ? runtimePath.bindingRecords(opts.bindingCode, opts.parentId)
-          : null;
-      if (!href) return [];
-      const res = await fetch(href, { cache: "no-store" });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null) as { message?: string } | null;
-        throw new Error(body?.message ?? `${opts.relationName ?? opts.bindingCode}: ${res.status}`);
-      }
-      const body = await res.json() as { records?: ReadonlyArray<RuntimeRecordRow> };
-      return Array.isArray(body.records) ? body.records : [];
-    },
-    enabled:    opts.enabled,
-    staleTime:  opts.staleTimeMs,
-  });
+function childSource(
+  relationCode: string | undefined,
+  bindingCode?: string,
+): RecordWorkspaceChildCollectionSource | undefined {
+  if (relationCode) return { kind: "relation", relationCode };
+  if (bindingCode) return { kind: "binding", bindingCode };
+  return undefined;
+}
+
+function readCollectionRows(value: unknown): ReadonlyArray<RuntimeRecordRow> {
+  if (Array.isArray(value)) return value.filter(isRecord) as RuntimeRecordRow[];
+  if (!isRecord(value)) return [];
+  const rows = Array.isArray(value["records"])
+    ? value["records"]
+    : Array.isArray(value["data"])
+      ? value["data"]
+      : [];
+  return rows.filter(isRecord) as RuntimeRecordRow[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────

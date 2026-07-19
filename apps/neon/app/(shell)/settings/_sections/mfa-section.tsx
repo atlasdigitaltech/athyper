@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  CheckCircle2, KeyRound, QrCode, RefreshCw, ShieldOff, Smartphone,
-  Trash2, Copy, Check, AlertTriangle, Fingerprint, Monitor, Plus,
+  KeyRound, RefreshCw, ShieldOff, Smartphone,
+  Trash2, AlertTriangle, Fingerprint, Monitor, Plus,
   ShieldCheck, ShieldAlert,
 } from "lucide-react";
 import {
@@ -15,11 +15,12 @@ import {
 import { cn } from "@athyper/theme/utils";
 import { getCsrfToken } from "@/lib/bff-fetch";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface MfaMethod {
   id: string;
   method_type: string;
+  authority?: string | null;
   is_enabled: boolean;
   is_verified: boolean;
   is_primary: boolean;
@@ -29,13 +30,6 @@ interface MfaMethod {
   keycloak_sync_status: string | null;
   updated_at: string | null;
   user_label?: string | null;
-}
-
-interface EnrollBeginResult {
-  mfa_config_id: string;
-  secret_base32: string;
-  otpauth_uri:   string;
-  qr_svg:        string;
 }
 
 interface TrustedDevice {
@@ -48,7 +42,7 @@ interface TrustedDevice {
   created_at: string;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const METHOD_LABELS: Record<string, string> = {
   totp:     "Authenticator App",
@@ -72,23 +66,7 @@ const SYNC_VARIANT: Record<string, "success" | "warning" | "destructive" | "mute
   synced: "success", pending: "warning", error: "destructive", drift: "warning", skipped: "muted",
 };
 
-// ── CopyButton ────────────────────────────────────────────────────────────────
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={() => { void navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1800); }}
-      className="ml-1.5 text-muted-foreground hover:text-foreground transition-colors"
-      title="Copy"
-    >
-      {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-    </button>
-  );
-}
-
-// ── StepUpDialog ──────────────────────────────────────────────────────────────
+// â”€â”€ StepUpDialog â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function StepUpDialog({ open, onOpenChange, actionClass, onElevated }: {
   open: boolean;
@@ -96,7 +74,6 @@ function StepUpDialog({ open, onOpenChange, actionClass, onElevated }: {
   actionClass: string;
   onElevated: () => void;
 }) {
-  const [code, setCode]   = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const elevate = useMutation({
@@ -104,12 +81,24 @@ function StepUpDialog({ open, onOpenChange, actionClass, onElevated }: {
       const res = await fetch("/api/iam/mfa/elevate", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-        body: JSON.stringify({ action_class: actionClass, code: code.trim(), method_type: "totp" }),
+        body: JSON.stringify({ action_class: actionClass }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Invalid code");
     },
-    onSuccess: () => { onOpenChange(false); setCode(""); setError(null); onElevated(); },
-    onError: (e) => setError(e instanceof Error ? e.message : "Invalid code"),
+    onSuccess: () => { onOpenChange(false); setError(null); onElevated(); },
+    onError: () => {
+      void fetch("/api/auth/step-up/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+        body: JSON.stringify({ action_class: actionClass, returnUrl: window.location.href }),
+      })
+        .then(async (res) => {
+          const body = await res.json().catch(() => ({})) as { reauthenticate_url?: string; message?: string };
+          if (!res.ok || !body.reauthenticate_url) throw new Error(body.message ?? "Keycloak step-up could not be started");
+          window.location.assign(body.reauthenticate_url);
+        })
+        .catch((err: unknown) => setError(err instanceof Error ? err.message : "Keycloak step-up could not be started"));
+    },
   });
 
   return (
@@ -117,143 +106,64 @@ function StepUpDialog({ open, onOpenChange, actionClass, onElevated }: {
       <DialogContent className="max-w-sm">
         <DialogHeader><DialogTitle>Security Verification</DialogTitle></DialogHeader>
         <div className="space-y-3 py-2">
-          <p className="text-sm text-muted-foreground">Enter your current authenticator code to confirm this action.</p>
-          <div className="space-y-1">
-            <Label className="text-xs">TOTP Code</Label>
-            <Input
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="000000"
-              className="font-mono text-center text-xlst"
-              maxLength={6}
-              autoFocus
-              onKeyDown={(e) => e.key === "Enter" && code.length === 6 && elevate.mutate()}
-            />
-          </div>
+          <p className="text-sm text-muted-foreground">Complete MFA in Keycloak to confirm this action.</p>
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => elevate.mutate()} disabled={code.length !== 6 || elevate.isPending}>Verify</Button>
+          <Button onClick={() => elevate.mutate()} disabled={elevate.isPending}>Continue with Keycloak</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-// ── TotpEnrollWizard ──────────────────────────────────────────────────────────
+// â”€â”€ TotpEnrollWizard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-type WizardStep = "idle" | "qr" | "verify" | "done";
+// Keycloak owns TOTP enrollment; no local secret, QR or verification UI is registered.
 
-function TotpEnrollWizard({ onDone }: { onDone: () => void }) {
-  const [step, setStep]       = useState<WizardStep>("idle");
-  const [pending, setPending] = useState<EnrollBeginResult | null>(null);
-  const [code, setCode]       = useState("");
-  const [error, setError]     = useState<string | null>(null);
 
-  const begin = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/iam/mfa/totp/begin", { method: "POST", headers: { "X-CSRF-Token": getCsrfToken() } });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Failed to start enrollment");
-      return res.json() as Promise<EnrollBeginResult>;
-    },
-    onSuccess: (data) => { setPending(data); setStep("qr"); setError(null); },
-    onError: (e) => setError(e instanceof Error ? e.message : "Failed"),
-  });
+function KeycloakTotpEnrollCard() {
+  const [error, setError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
 
-  const verify = useMutation({
-    mutationFn: async () => {
-      if (!pending) throw new Error("No pending enrollment");
-      const res = await fetch("/api/iam/mfa/totp/verify", {
+  async function startEnrollment() {
+    setStarting(true);
+    setError(null);
+    try {
+      const redirectUri = `${window.location.origin}/settings?section=security&mfa_sync=1`;
+      const res = await fetch("/api/iam/mfa/totp/begin", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-        body: JSON.stringify({ mfa_config_id: pending.mfa_config_id, code: code.trim() }),
+        body: JSON.stringify({ redirect_uri: redirectUri }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Invalid code");
-    },
-    onSuccess: () => { setStep("done"); setError(null); },
-    onError: (e) => setError(e instanceof Error ? e.message : "Invalid code — try again"),
-  });
-
-  if (step === "idle") {
-    return (
-      <div className="mt-3">
-        {error && <p className="mb-2 text-xs text-destructive">{error}</p>}
-        <Button variant="outline" size="sm" onClick={() => begin.mutate()} disabled={begin.isPending}>
-          <QrCode className="mr-1.5 h-3.5 w-3.5" /> Set up authenticator
-        </Button>
-      </div>
-    );
+      const data = await res.json().catch(() => ({})) as { redirect_url?: string; message?: string };
+      if (!res.ok || !data.redirect_url) throw new Error(data.message ?? "Failed to start Keycloak enrollment");
+      window.location.assign(data.redirect_url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to start enrollment");
+      setStarting(false);
+    }
   }
 
-  if (step === "qr" && pending) {
-    const formattedSecret = pending.secret_base32.match(/.{1,4}/g)?.join(" ") ?? pending.secret_base32;
-    return (
-      <div className="mt-3 rounded-lg border border-border p-4 space-y-4">
-        <div>
-          <p className="text-sm font-medium">Scan the QR code</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Open your authenticator app and scan this code.</p>
-        </div>
-        <div
-          className="flex items-center justify-center rounded-md border border-border bg-muted p-2 w-fit"
-          dangerouslySetInnerHTML={{ __html: pending.qr_svg }}
-        />
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Can't scan? Enter this key manually:</p>
-          <div className="flex items-center rounded-md border border-border bg-muted px-3 py-1.5">
-            <code className="flex-1 font-mono text-xs">{formattedSecret}</code>
-            <CopyButton text={pending.secret_base32} />
-          </div>
-        </div>
-        <Button size="sm" onClick={() => { setStep("verify"); setCode(""); setError(null); }}>
-          I've scanned the code
-        </Button>
+  return (
+    <div className="mt-3 rounded-lg border border-border p-4 space-y-3">
+      <div>
+        <p className="text-sm font-medium">Authenticator app</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Keycloak securely generates, stores, and verifies your TOTP secret.
+        </p>
       </div>
-    );
-  }
-
-  if (step === "verify") {
-    return (
-      <div className="mt-3 rounded-lg border border-border p-4 space-y-3">
-        <div>
-          <p className="text-sm font-medium">Verify the code</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Enter the 6-digit code from your authenticator app.</p>
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Verification Code</Label>
-          <Input
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="000000"
-            className="max-w-35 font-mono text-center text-lgst"
-            maxLength={6}
-            autoFocus
-            onKeyDown={(e) => e.key === "Enter" && code.length === 6 && verify.mutate()}
-          />
-        </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={() => { setStep("qr"); setError(null); }}>Back</Button>
-          <Button size="sm" onClick={() => verify.mutate()} disabled={code.length !== 6 || verify.isPending}>Verify</Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "done") {
-    return (
-      <div className="mt-3 flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 p-3 text-sm text-success">
-        <CheckCircle2 className="h-4 w-4 shrink-0" />
-        <span>Authenticator app enrolled successfully.</span>
-        <Button variant="ghost" size="sm" className="ml-auto h-6 text-xs" onClick={() => { setStep("idle"); onDone(); }}>Done</Button>
-      </div>
-    );
-  }
-
-  return null;
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <Button variant="outline" size="sm" onClick={() => void startEnrollment()} disabled={starting}>
+        <Smartphone className="mr-1.5 h-3.5 w-3.5" />
+        {starting ? "Opening Keycloak..." : "Set up authenticator"}
+      </Button>
+    </div>
+  );
 }
 
-// ── WebAuthnEnrollCard ────────────────────────────────────────────────────────
+// â”€â”€ WebAuthnEnrollCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function WebAuthnEnrollCard({ onSyncDone }: { onSyncDone: () => void }) {
   const [error, setError]   = useState<string | null>(null);
@@ -321,7 +231,7 @@ function WebAuthnEnrollCard({ onSyncDone }: { onSyncDone: () => void }) {
   );
 }
 
-// ── TrustedDevicesPanel ───────────────────────────────────────────────────────
+// â”€â”€ TrustedDevicesPanel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function TrustedDevicesPanel() {
   const qc = useQueryClient();
@@ -473,7 +383,7 @@ function TrustedDevicesPanel() {
   );
 }
 
-// ── MfaSection ────────────────────────────────────────────────────────────────
+// â”€â”€ MfaSection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function MfaSection({ active }: { active: boolean }) {
   const qc = useQueryClient();
@@ -601,7 +511,7 @@ export function MfaSection({ active }: { active: boolean }) {
           {!totpMethod && (
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">Use any TOTP authenticator app (Google Authenticator, Authy, etc.).</p>
-              <TotpEnrollWizard onDone={() => qc.invalidateQueries({ queryKey: ["iam-mfa-methods"] })} />
+              <KeycloakTotpEnrollCard />
             </div>
           )}
           {!webauthnMethod && (
@@ -617,7 +527,7 @@ export function MfaSection({ active }: { active: boolean }) {
       <div className="rounded-md bg-muted/40 px-4 py-3 space-y-1 text-xs text-muted-foreground">
         <p className="font-medium text-foreground text-xs">Security notes</p>
         <ul className="list-disc list-inside space-y-0.5">
-          <li>Removing a method requires a live TOTP step-up verification.</li>
+          <li>Removing a method requires a fresh Keycloak MFA step-up.</li>
           <li>If you lose access, contact your administrator to re-enroll.</li>
           <li>Trusted devices expire after 30 days.</li>
           <li>High-risk actions (delegation, session rebuild) always require step-up regardless of trusted device.</li>

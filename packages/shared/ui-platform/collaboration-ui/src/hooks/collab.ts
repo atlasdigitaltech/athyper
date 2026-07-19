@@ -12,7 +12,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { queryKeys } from "@athyper/api-contracts/query-keys";
 import { getCsrfToken } from "@athyper/runtime-shared/client";
 
@@ -44,6 +44,20 @@ export interface EntityComment {
   createdAt: string;
   updatedAt: string | null;
   replyCount?: number;
+  /** Enriched by the list response; renderers must not fetch these per row. */
+  attachments?: CommentAttachmentSummary[];
+  /** Enriched by the list response; renderers must not fetch these per row. */
+  reactions?: ReactionSummary[];
+  /** Nested reply tree returned with the root page. */
+  replies?: EntityComment[];
+}
+
+export interface CommentAttachmentSummary {
+  attachmentId: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  downloadUrl: string;
 }
 
 /**
@@ -108,10 +122,13 @@ async function collabMutate<T = unknown>(
 
 // ── useComments ───────────────────────────────────────────────────────────────
 
-interface CommentsPage {
+export interface CommentsPage {
   ok: boolean;
   data: EntityComment[];
   hasMore: boolean;
+  count: number;
+  unreadCount: number;
+  config: { intents: CommentIntentOption[] };
 }
 
 export function useComments(
@@ -144,8 +161,12 @@ export function useComments(
   });
 
   return {
+    page: query.data,
     comments: query.data?.data ?? [],
     hasMore: query.data?.hasMore ?? false,
+    count: query.data?.count ?? 0,
+    unreadCount: query.data?.unreadCount ?? 0,
+    intents: query.data?.config?.intents ?? [],
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
@@ -154,72 +175,55 @@ export function useComments(
 
 // ── useReactions ──────────────────────────────────────────────────────────────
 
-interface ReactionsResponse {
-  ok: boolean;
-  data: ReactionSummary[];
-}
+export function useReactions(
+  commentId: string | null,
+  initialReactions: ReactionSummary[],
+  onMutated?: () => void | Promise<unknown>,
+) {
+  const [reactions, setReactions] = useState(initialReactions);
 
-export function useReactions(commentId: string | null) {
-  const queryClient = useQueryClient();
-  const qk = queryKeys.collab.reactions(commentId ?? "");
-
-  const query = useQuery<ReactionsResponse>({
-    queryKey: qk,
-    queryFn: ({ signal }) =>
-      collabGet<ReactionsResponse>(
-        `/api/collab/comments/${commentId}/reactions`,
-        signal,
-      ),
-    enabled: !!commentId,
-    staleTime: 30 * 1000,
-  });
+  useEffect(() => {
+    setReactions(initialReactions);
+  }, [commentId, initialReactions]);
 
   const toggleMutation = useMutation({
     mutationFn: ({ reactionType }: { reactionType: string }) =>
       collabMutate(`/api/collab/comments/${commentId}/reactions`, "POST", {
         reactionType,
       }),
-    onMutate: async ({ reactionType }) => {
-      await queryClient.cancelQueries({ queryKey: qk });
-      const prev = queryClient.getQueryData<ReactionsResponse>(qk);
-      if (prev) {
-        const existing = prev.data.find((r) => r.reactionType === reactionType);
-        const optimistic: ReactionSummary[] = existing?.reacted
-          ? prev.data
-              .map((r) =>
-                r.reactionType === reactionType
-                  ? { ...r, count: r.count - 1, reacted: false }
-                  : r,
-              )
-              .filter((r) => r.count > 0)
-          : [
-              ...prev.data.filter((r) => r.reactionType !== reactionType),
-              {
-                reactionType,
-                emoji: existing?.emoji ?? reactionType,
-                count: (existing?.count ?? 0) + 1,
-                reacted: true,
-              },
-            ];
-        queryClient.setQueryData<ReactionsResponse>(qk, {
-          ok: true,
-          data: optimistic,
-        });
-      }
+    onMutate: ({ reactionType }) => {
+      const prev = reactions;
+      const existing = prev.find((reaction) => reaction.reactionType === reactionType);
+      const optimistic: ReactionSummary[] = existing?.reacted
+        ? prev
+            .map((reaction) => reaction.reactionType === reactionType
+              ? { ...reaction, count: reaction.count - 1, reacted: false }
+              : reaction)
+            .filter((reaction) => reaction.count > 0)
+        : [
+            ...prev.filter((reaction) => reaction.reactionType !== reactionType),
+            {
+              reactionType,
+              emoji: existing?.emoji ?? reactionType,
+              count: (existing?.count ?? 0) + 1,
+              reacted: true,
+            },
+          ];
+      setReactions(optimistic);
       return { prev };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(qk, ctx.prev);
+      if (ctx?.prev) setReactions(ctx.prev);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: qk });
+      void onMutated?.();
     },
   });
 
   return {
-    reactions: query.data?.data ?? [],
-    isLoading: query.isLoading,
-    error: query.error,
+    reactions,
+    isLoading: false,
+    error: toggleMutation.error,
     toggleReaction: (reactionType: string) =>
       toggleMutation.mutate({ reactionType }),
   };
@@ -368,29 +372,59 @@ interface LookupBundleResponse {
   }>;
 }
 
-export function useCommentIntents() {
-  const query = useQuery<LookupBundleResponse>({
+const COMMENT_INTENTS_SESSION_KEY = "athyper:session:lookup:master.comment_intent:v1";
+
+function readSessionCommentIntents(): CommentIntentOption[] | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(COMMENT_INTENTS_SESSION_KEY) ?? "null") as unknown;
+    return Array.isArray(parsed) ? parsed as CommentIntentOption[] : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function storeSessionCommentIntents(intents: CommentIntentOption[]): void {
+  if (typeof window === "undefined") return;
+  try { sessionStorage.setItem(COMMENT_INTENTS_SESSION_KEY, JSON.stringify(intents)); } catch { /* optional cache */ }
+}
+
+export function useCommentIntents(initialOptions?: CommentIntentOption[]) {
+  const queryClient = useQueryClient();
+  const query = useQuery<CommentIntentOption[]>({
     queryKey: ["lookup", "master.comment_intent"],
-    queryFn: ({ signal }) =>
-      collabGet<LookupBundleResponse>(
+    queryFn: async ({ signal }) => {
+      const response = await collabGet<LookupBundleResponse>(
         "/api/relay/metadata/lookups/master.comment_intent",
         signal,
-      ),
-    staleTime: 5 * 60 * 1000,
+      );
+      const intents = (response.values ?? [])
+        .filter((value) => value.status === "active")
+        .map((value) => ({
+          code: value.code,
+          name: value.name,
+          description: value.description ?? undefined,
+          sortOrder: value.sort_order,
+          metadata: value.metadata ?? undefined,
+        }));
+      storeSessionCommentIntents(intents);
+      return intents;
+    },
+    initialData: initialOptions !== undefined
+      ? initialOptions
+      : readSessionCommentIntents(),
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
   });
 
-  const intents: CommentIntentOption[] = (query.data?.values ?? [])
-    .filter((v) => v.status === "active")
-    .map((v) => ({
-      code: v.code,
-      name: v.name,
-      description: v.description ?? undefined,
-      sortOrder: v.sort_order,
-      metadata: v.metadata ?? undefined,
-    }));
+  useEffect(() => {
+    if (initialOptions === undefined) return;
+    queryClient.setQueryData(["lookup", "master.comment_intent"], initialOptions);
+    storeSessionCommentIntents(initialOptions);
+  }, [initialOptions, queryClient]);
 
   return {
-    intents,
+    intents: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error,
   };
@@ -413,9 +447,10 @@ export function useDraft(
   entityType: string | null,
   entityId: string | null,
   parentCommentId?: string,
+  options?: { enabled?: boolean },
 ) {
   const queryClient = useQueryClient();
-  const enabled = !!entityType && !!entityId;
+  const enabled = (options?.enabled ?? true) && !!entityType && !!entityId;
 
   const draftKey = queryKeys.collab.draft(
     entityType ?? "",
@@ -481,32 +516,6 @@ export function useDraft(
   };
 }
 
-// ── useReplies ────────────────────────────────────────────────────────────────
-
-interface RepliesResponse {
-  ok: boolean;
-  data: EntityComment[];
-}
-
-export function useReplies(parentId: string, enabled: boolean) {
-  const query = useQuery<RepliesResponse>({
-    queryKey: queryKeys.collab.replies(parentId),
-    queryFn: ({ signal }) =>
-      collabGet<RepliesResponse>(
-        `/api/collab/comments/${parentId}/replies`,
-        signal,
-      ),
-    enabled,
-    staleTime: 30 * 1000,
-  });
-
-  return {
-    replies: query.data?.data ?? [],
-    isLoading: query.isLoading,
-    error: query.error,
-  };
-}
-
 // ── useCollabUnreadCount ──────────────────────────────────────────────────────
 
 interface UnreadCountResponse {
@@ -517,8 +526,13 @@ interface UnreadCountResponse {
 export function useCollabUnreadCount(
   entityType: string | null,
   entityId: string | null,
+  options?: {
+    initialCount?: number;
+    queryEnabled?: boolean;
+    onMarkedRead?: () => void | Promise<void>;
+  },
 ) {
-  const enabled = !!entityType && !!entityId;
+  const enabled = (options?.queryEnabled ?? true) && !!entityType && !!entityId;
 
   const params = new URLSearchParams();
   if (entityType) params.set("entityType", entityType);
@@ -537,13 +551,28 @@ export function useCollabUnreadCount(
     enabled,
     staleTime: 30 * 1000,
     refetchInterval: 30 * 1000,
+    initialData: options?.initialCount === undefined
+      ? undefined
+      : { ok: true, count: options.initialCount },
   });
+
+  useEffect(() => {
+    if (options?.initialCount === undefined) return;
+    queryClient.setQueryData<UnreadCountResponse>(qk, {
+      ok: true,
+      count: options.initialCount,
+    });
+    // qk is structurally stable for this entity pair; depending on its array
+    // identity would rerun this effect on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityId, entityType, options?.initialCount, queryClient]);
 
   const markAllReadMutation = useMutation({
     mutationFn: () =>
       collabMutate(`/api/collab/comments/mark-all-read?${params}`, "POST"),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: qk });
+      queryClient.setQueryData<UnreadCountResponse>(qk, { ok: true, count: 0 });
+      void options?.onMarkedRead?.();
     },
   });
 

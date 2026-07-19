@@ -9,6 +9,9 @@ vi.mock("@/lib/server/session", () => ({
 }));
 vi.mock("@/lib/server/meta-entity-runtime", () => ({
   getMetaEntityRuntimeDescriptor: vi.fn(),
+  getMetaEntityRuntimeDescriptorCacheState: vi.fn((descriptor: unknown) => (
+    descriptor ? "warm" : "bypass"
+  )),
 }));
 vi.mock("@/lib/server/meta-entity-records", () => ({
   getMetaEntityRecordDetail: vi.fn(),
@@ -59,7 +62,9 @@ const PARENT_DESCRIPTOR = {
 const CHILD_DESCRIPTOR = {
   entityCode: "purchase_invoice_line",
   capabilities: { canRead: true },
-  fields: [],
+  fields: [
+    { name: "purchase_invoice_id", columnName: "purchase_invoice_id", isFilterable: true, isComputed: false },
+  ],
 };
 
 const PO_DESCRIPTOR = {
@@ -72,9 +77,9 @@ const SCHEDULE_DESCRIPTOR = {
   entityCode: "schedule_line",
   capabilities: { canRead: true },
   fields: [
-    { name: "source_doc_type", isComputed: false },
-    { name: "source_doc_id", isComputed: false },
-    { name: "is_current_version", isComputed: true },
+    { name: "source_doc_type", columnName: "source_doc_type", isFilterable: true, isComputed: false },
+    { name: "source_doc_id", columnName: "source_doc_id", isFilterable: true, isComputed: false },
+    { name: "is_current_version", columnName: "is_current_version", isFilterable: false, isComputed: true },
   ],
 };
 
@@ -102,7 +107,13 @@ describe("GET /api/runtime/v1/entities/[entity]/relations/[relation]/records/[pa
     fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ data: [{ id: "line-1" }, { id: "line-2" }], pagination: { total: 2 } }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Entity-Query": "v1",
+          "X-Descriptor-Cache": "l1_hit",
+          "X-List-Cache": "hit",
+          "Server-Timing": "framework_db_pool;dur=2, framework_db_sql;dur=4",
+        },
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
@@ -187,6 +198,64 @@ describe("GET /api/runtime/v1/entities/[entity]/relations/[relation]/records/[pa
     const u = new URL(url as string);
     expect(u.pathname).toBe("/api/runtime/v1/entities/purchase_invoice_line");
     expect(u.searchParams.get("filter.purchase_invoice_id")).toBe("inv-1");
+    expect(u.searchParams.get("query_v1")).toBe("1");
+    expect(u.searchParams.get("count_mode")).toBe("none");
+    expect(res.headers.get("X-Athyper-Relation-Query")).toBe("v1");
+    expect(res.headers.get("X-Athyper-Relation-Query-Reason")).toBe("compiled_filter_contract");
+    expect(res.headers.get("X-Athyper-Record-Cache")).toBe("hit");
+    expect(res.headers.get("X-Athyper-Parent-Descriptor-Cache")).toBe("warm");
+    expect(res.headers.get("X-Athyper-Child-Descriptor-Cache")).toBe("warm");
+    expect(res.headers.get("Server-Timing")).toContain("relation_records");
+    expect(res.headers.get("Server-Timing")).toContain("framework_db_pool;dur=2");
+  });
+
+  it("keeps the legacy compatibility path when explicit filter metadata is incomplete", async () => {
+    vi.mocked(getMetaEntityRuntimeDescriptor).mockImplementation((code: string) => {
+      if (code === "purchase_invoice") return Promise.resolve(PARENT_DESCRIPTOR as never);
+      if (code === "purchase_invoice_line") {
+        return Promise.resolve({
+          ...CHILD_DESCRIPTOR,
+          fields: [{
+            name: "purchase_invoice_id",
+            columnName: "purchase_invoice_id",
+            isFilterable: false,
+            isComputed: false,
+          }],
+        } as never);
+      }
+      return Promise.resolve(null as never);
+    });
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
+      data: [{ id: "line-1" }],
+      pagination: { total: 1 },
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+
+    const res = await GET(new Request("http://localhost"), params());
+    expect(res.status).toBe(200);
+    const upstreamUrl = new URL(fetchMock.mock.calls[0]![0] as string);
+    expect(upstreamUrl.searchParams.has("query_v1")).toBe(false);
+    expect(res.headers.get("X-Athyper-Relation-Query")).toBe("legacy");
+    expect(res.headers.get("X-Athyper-Relation-Query-Reason")).toBe("filter_contract_incomplete");
+  });
+
+  it("follows query-v1 cursors without falling back to offset pagination", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: "line-1" }],
+        pagination: { page_size: 1, has_more: true, next_cursor: "cursor-2", count_mode: "none" },
+      }), { status: 200, headers: { "Content-Type": "application/json", "X-Entity-Query": "v1" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        data: [{ id: "line-2" }],
+        pagination: { page_size: 1, has_more: false, count_mode: "none" },
+      }), { status: 200, headers: { "Content-Type": "application/json", "X-Entity-Query": "v1" } }));
+
+    const res = await GET(new Request("http://localhost"), params());
+    expect(res.status).toBe(200);
+    expect((await res.json()).records).toEqual([{ id: "line-1" }, { id: "line-2" }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const secondUrl = new URL(fetchMock.mock.calls[1]![0] as string);
+    expect(secondUrl.searchParams.get("cursor")).toBe("cursor-2");
+    expect(secondUrl.searchParams.get("query_v1")).toBe("1");
   });
 
   // Hyphen-to-underscore slug normalization on entity (matches rules handler behavior)

@@ -1,5 +1,5 @@
 /**
- * Finance Setup Workbench — read-only endpoints (Phase 1).
+ * Finance Setup Workbench — scoped reads and tenant-isolated setup mutations.
  *
  *   GET  /finance/setup/readiness
  *          ?scopeType=company&scopeCode=ACFB
@@ -20,7 +20,7 @@
  *   Server resolves scopeCode → UUID internally.
  */
 
-import type { RequestHandler, Router } from "express";
+import type { Request, RequestHandler, Router } from "express";
 import { verifyBearer, resolveTenantId, resolvePrincipalIdWithJit } from "@athyper/svc-shared";
 import { checkPermission } from "@athyper/svc-iam";
 import type { FinanceRouteDeps } from "./finance.route.js";
@@ -53,6 +53,25 @@ import {
   setPrimaryBook,
   toggleHouseBank,
 } from "../services/finance-setup-mutations.service.js";
+import {
+  assignFiscalCalendar,
+  generateFiscalPeriods,
+  loadFiscalCalendarDesigner,
+  previewFiscalCalendar,
+  retireFiscalCalendar,
+  saveFiscalCalendar,
+  type SaveFiscalCalendarInput,
+} from "../services/fiscal-calendar.service.js";
+import {
+  loadPostingRoleCoverage,
+  retirePostingRoleAccountMap,
+  savePostingRoleAccountMap,
+  tracePostingRoleResolution,
+} from "../services/posting-role.service.js";
+
+// Phase 1/2: authenticated users in the resolved tenant can use Finance Setup.
+// Phase 3 turns this on together with tenant/legal-entity/company scope policy.
+const ENFORCE_PHASE3_FINANCE_SETUP_PERMISSION = false;
 
 export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps): void {
   const { db, auth, logger } = deps;
@@ -278,6 +297,50 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
       return { status: 200, body: rows };
     }),
   );
+  router.get(
+    "/finance/setup/configure/fiscal-calendar",
+    createScopedGetHandler(deps, async (db, tenantId, scopeCode) => {
+      const payload = await loadFiscalCalendarDesigner(db, tenantId, scopeCode);
+      return { status: 200, body: payload };
+    }),
+  );
+  router.get(
+    "/finance/setup/configure/fiscal-calendar/:calendarId/preview",
+    createScopedGetHandler(deps, async (db, tenantId, scopeCode, req) => {
+      const calendarId = String(req.params["calendarId"] ?? "");
+      const fiscalYear = Number(req.query["fiscalYear"]);
+      if (!calendarId || !Number.isInteger(fiscalYear)) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "calendarId and fiscalYear are required." } };
+      }
+      const payload = await previewFiscalCalendar(db, tenantId, scopeCode, calendarId, fiscalYear);
+      return { status: 200, body: payload };
+    }),
+  );
+  router.get(
+    "/finance/setup/configure/posting-role-coverage",
+    createScopedGetHandler(deps, async (db, tenantId, scopeCode, req) => {
+      const asOfDate = String(req.query["asOfDate"] ?? new Date().toISOString().slice(0, 10));
+      if (!isIsoDate(asOfDate)) return { status: 400, body: { error: "INVALID_DATE", message: "asOfDate must be YYYY-MM-DD." } };
+      const payload = await loadPostingRoleCoverage(db, tenantId, scopeCode, asOfDate);
+      return { status: 200, body: payload };
+    }),
+  );
+  router.get(
+    "/finance/setup/configure/posting-role-resolution-trace",
+    createScopedGetHandler(deps, async (db, tenantId, scopeCode, req) => {
+      const roleCode = String(req.query["roleCode"] ?? "");
+      const bookCode = String(req.query["bookCode"] ?? "");
+      const asOfDate = String(req.query["asOfDate"] ?? new Date().toISOString().slice(0, 10));
+      if (!roleCode || !bookCode) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "roleCode and bookCode are required." } };
+      }
+      if (!isIsoDate(asOfDate)) return { status: 400, body: { error: "INVALID_DATE", message: "asOfDate must be YYYY-MM-DD." } };
+      const trace = await tracePostingRoleResolution(db, {
+        tenantId, companyCode: scopeCode, roleCode, bookCode, asOfDate,
+      });
+      return { status: 200, body: trace };
+    }),
+  );
 
   // ─── Operate workspace ───────────────────────────────────────────────────
   router.get(
@@ -299,7 +362,7 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
   // Phase 2 — mutation endpoints
   // ═══════════════════════════════════════════════════════════════════════════
   //
-  // All mutations require permission `FINANCE_SETUP.CONFIGURE` on the tenant.
+  // The permission code is retained in every route for the Phase 3 switch-on.
   // Actor is resolved via resolvePrincipalIdWithJit (canonical pattern).
   // On success we return 200 with the mutation result body.
 
@@ -416,13 +479,146 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
       return { status: 200, body: result };
     }),
   );
+
+  router.post("/finance/setup/mutations/fiscal-calendar",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const body = ctx.body as Omit<SaveFiscalCalendarInput, "tenantId" | "actorId" | "calendarId">;
+      const result = await saveFiscalCalendar(db, {
+        ...body,
+        tenantId: ctx.tenantId,
+        actorId: ctx.principalId,
+      });
+      return { status: 201, body: result };
+    }),
+  );
+
+  router.post("/finance/setup/mutations/posting-role-account-map",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const body = ctx.body as {
+        companyCode?: string; roleCode?: string; ledgerBookId?: string; glAccountId?: string;
+        effectiveFrom?: string; effectiveTo?: string | null; priority?: number;
+      };
+      if (!body.companyCode || !body.roleCode || !body.ledgerBookId || !body.glAccountId || !body.effectiveFrom) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "companyCode, roleCode, ledgerBookId, glAccountId, and effectiveFrom are required." } };
+      }
+      if (!isIsoDate(body.effectiveFrom) || (body.effectiveTo && !isIsoDate(body.effectiveTo))) {
+        return { status: 400, body: { error: "INVALID_DATE", message: "Effective dates must be YYYY-MM-DD." } };
+      }
+      const result = await savePostingRoleAccountMap(db, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId,
+        companyCode: body.companyCode, roleCode: body.roleCode,
+        ledgerBookId: body.ledgerBookId, glAccountId: body.glAccountId,
+        effectiveFrom: body.effectiveFrom, effectiveTo: body.effectiveTo,
+        priority: body.priority,
+      });
+      return { status: 201, body: result };
+    }),
+  );
+
+  router.put("/finance/setup/mutations/posting-role-account-map/:mappingId",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const mappingId = String(ctx.params["mappingId"] ?? "");
+      const body = ctx.body as {
+        companyCode?: string; roleCode?: string; ledgerBookId?: string; glAccountId?: string;
+        effectiveFrom?: string; effectiveTo?: string | null; priority?: number;
+      };
+      if (!mappingId || !body.companyCode || !body.roleCode || !body.ledgerBookId || !body.glAccountId || !body.effectiveFrom) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "mappingId and complete assignment fields are required." } };
+      }
+      if (!isIsoDate(body.effectiveFrom) || (body.effectiveTo && !isIsoDate(body.effectiveTo))) {
+        return { status: 400, body: { error: "INVALID_DATE", message: "Effective dates must be YYYY-MM-DD." } };
+      }
+      const result = await savePostingRoleAccountMap(db, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId, mappingId,
+        companyCode: body.companyCode, roleCode: body.roleCode,
+        ledgerBookId: body.ledgerBookId, glAccountId: body.glAccountId,
+        effectiveFrom: body.effectiveFrom, effectiveTo: body.effectiveTo,
+        priority: body.priority,
+      });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.delete("/finance/setup/mutations/posting-role-account-map/:mappingId",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const mappingId = String(ctx.params["mappingId"] ?? "");
+      const body = ctx.body as { companyCode?: string };
+      if (!mappingId || !body.companyCode) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "mappingId and companyCode are required." } };
+      }
+      const result = await retirePostingRoleAccountMap(db, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId, mappingId, companyCode: body.companyCode,
+      });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.put("/finance/setup/mutations/fiscal-calendar/:calendarId",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const calendarId = String(ctx.params["calendarId"] ?? "");
+      if (!calendarId) return { status: 400, body: { error: "MISSING_PARAMS", message: "calendarId is required." } };
+      const body = ctx.body as Omit<SaveFiscalCalendarInput, "tenantId" | "actorId" | "calendarId">;
+      const result = await saveFiscalCalendar(db, {
+        ...body,
+        tenantId: ctx.tenantId,
+        actorId: ctx.principalId,
+        calendarId,
+      });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.delete("/finance/setup/mutations/fiscal-calendar/:calendarId",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const calendarId = String(ctx.params["calendarId"] ?? "");
+      if (!calendarId) return { status: 400, body: { error: "MISSING_PARAMS", message: "calendarId is required." } };
+      const result = await retireFiscalCalendar(db, ctx.tenantId, ctx.principalId, calendarId);
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.post("/finance/setup/mutations/fiscal-calendar/:calendarId/assign",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const calendarId = String(ctx.params["calendarId"] ?? "");
+      const body = ctx.body as { companyCode?: string; fiscalYearFrom?: number };
+      if (!calendarId || !body.companyCode || !Number.isInteger(body.fiscalYearFrom)) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "calendarId, companyCode, and fiscalYearFrom are required." } };
+      }
+      const result = await assignFiscalCalendar(db, {
+        tenantId: ctx.tenantId,
+        actorId: ctx.principalId,
+        companyCode: body.companyCode,
+        calendarId,
+        fiscalYearFrom: body.fiscalYearFrom!,
+      });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.post("/finance/setup/mutations/fiscal-calendar/:calendarId/generate",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const calendarId = String(ctx.params["calendarId"] ?? "");
+      const body = ctx.body as { companyCode?: string; fiscalYear?: number };
+      if (!calendarId || !body.companyCode || !Number.isInteger(body.fiscalYear)) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "calendarId, companyCode, and fiscalYear are required." } };
+      }
+      const result = await generateFiscalPeriods(db, {
+        tenantId: ctx.tenantId,
+        actorId: ctx.principalId,
+        companyCode: body.companyCode,
+        calendarId,
+        fiscalYear: body.fiscalYear!,
+      });
+      return { status: 200, body: result };
+    }),
+  );
 }
 
 /**
  * Factory for mutation handlers with:
  *   - Bearer + tenant resolution
  *   - Principal resolution (resolvePrincipalIdWithJit — canonical)
- *   - Permission check
+ *   - Optional Phase 3 permission check
  *   - Typed error mapping (Service errors carry .status + .code)
  */
 function createMutationHandler(
@@ -463,15 +659,16 @@ function createMutationHandler(
         return;
       }
 
-      // Permission gate — fail closed.
-      const decision = await checkPermission(deps.db, tenantId, principalId, permissionCode);
-      if (decision.decision !== "allow") {
-        res.status(403).json({
-          error:   "PERMISSION_DENIED",
-          message: `Missing permission ${permissionCode}.`,
-          details: { decision: decision.decision, reason: decision.reason },
-        });
-        return;
+      if (ENFORCE_PHASE3_FINANCE_SETUP_PERMISSION) {
+        const decision = await checkPermission(deps.db, tenantId, principalId, permissionCode);
+        if (decision.decision !== "allow") {
+          res.status(403).json({
+            error:   "PERMISSION_DENIED",
+            message: `Missing permission ${permissionCode}.`,
+            details: { decision: decision.decision, reason: decision.reason },
+          });
+          return;
+        }
       }
 
       try {
@@ -511,6 +708,7 @@ function createScopedGetHandler(
     db: any,
     tenantId: string,
     scopeCode: string,
+    req: Request,
   ) => Promise<{ status: number; body: unknown }>,
 ): RequestHandler {
   return async (req, res, next) => {
@@ -537,11 +735,17 @@ function createScopedGetHandler(
         return;
       }
 
-      const result = await runner(deps.db, tenantId, scopeCode);
+      const result = await runner(deps.db, tenantId, scopeCode, req);
       res.status(result.status).json(result.body);
     } catch (err) {
       deps.logger?.error("finance_setup_workspace_error", { err: String(err) });
       next(err);
     }
   };
+}
+
+function isIsoDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }

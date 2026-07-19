@@ -122,7 +122,24 @@ function currentFiscalPeriod(fiscalYearStartMonth: number): { fiscalYear: number
   return { fiscalYear, period };
 }
 
-function previousFiscalPeriod(scope: FinanceScope, fiscalYearStartMonth: number): { fiscalYear: number; period: number } {
+function currentFiscalPeriodFromRows(
+  periods: FiscalPeriodRow[] | undefined,
+  fallbackStartMonth: number,
+  fiscalYear: number,
+): { fiscalYear: number; period: number } {
+  const today = formatDateInput(new Date());
+  const match = periods?.find((period) =>
+    period.periodType === "normal" && period.startDate <= today && period.endDate >= today,
+  );
+  if (!match) return currentFiscalPeriod(fallbackStartMonth);
+  return { fiscalYear, period: match.periodNumber };
+}
+
+function previousFiscalPeriod(
+  scope: FinanceScope,
+  fiscalYearStartMonth: number,
+  periods?: FiscalPeriodRow[],
+): { fiscalYear: number; period: number } {
   const base = typeof scope.period === "number"
     ? { fiscalYear: scope.fiscalYear, period: scope.period }
     : currentFiscalPeriod(fiscalYearStartMonth);
@@ -131,7 +148,10 @@ function previousFiscalPeriod(scope: FinanceScope, fiscalYearStartMonth: number)
     return { fiscalYear: base.fiscalYear, period: base.period - 1 };
   }
 
-  return { fiscalYear: base.fiscalYear - 1, period: 12 };
+  const lastNormalPeriod = Math.max(1, ...(periods ?? [])
+    .filter((period) => period.periodType === "normal")
+    .map((period) => period.periodNumber));
+  return { fiscalYear: base.fiscalYear - 1, period: lastNormalPeriod };
 }
 
 function triggerLabel(
@@ -140,6 +160,7 @@ function triggerLabel(
   dateFrom?: string | null,
   dateTo?: string | null,
   relativeRange?: string | null,
+  periods?: FiscalPeriodRow[],
 ): string {
   if (relativeRange) {
     return RELATIVE_OPTIONS.find((option) => option.id === relativeRange)?.label ?? "Relative range";
@@ -149,8 +170,25 @@ function triggerLabel(
   }
   const label = scope.period == null
     ? "Full Year"
-    : periodLabel(scope.fiscalYear, scope.period, fiscalYearStartMonth);
+    : fiscalPeriodDisplayLabel(scope.fiscalYear, scope.period, fiscalYearStartMonth, periods);
   return `FY ${scope.fiscalYear} - ${label}`;
+}
+
+function fiscalPeriodDisplayLabel(
+  fiscalYear: number,
+  periodNumber: number,
+  fiscalYearStartMonth: number,
+  periods?: FiscalPeriodRow[],
+) {
+  const period = periods?.find((row) => row.periodNumber === periodNumber);
+  if (!period) return periodLabel(fiscalYear, periodNumber, fiscalYearStartMonth);
+  if (period.periodType === "opening") return "Opening";
+  if (period.periodType === "adjustment") return `Adjustment P${periodNumber}`;
+  if (period.periodType === "closing") return `Closing P${periodNumber}`;
+  const start = new Date(`${period.startDate}T00:00:00Z`);
+  const end = new Date(`${period.endDate}T00:00:00Z`);
+  const formatter = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", timeZone: "UTC" });
+  return `${formatter.format(start)}–${formatter.format(end)}`;
 }
 
 function periodNumbers(periods?: FiscalPeriodRow[]): number[] {
@@ -217,7 +255,7 @@ export function FiscalLensChooser({
   }, [periodRailCenter, railPeriods]);
   const canMoveRailLeft = railPeriods.length > 0 && periodRailCenter > railPeriods[0]!;
   const canMoveRailRight = railPeriods.length > 0 && periodRailCenter < railPeriods[railPeriods.length - 1]!;
-  const label = triggerLabel(scope, fiscalYearStartMonth, dateFrom, dateTo, relativeRange);
+  const label = triggerLabel(scope, fiscalYearStartMonth, dateFrom, dateTo, relativeRange, periods);
 
   function chooseFiscalPeriod(period: number | null) {
     onChange({ ...scope, fiscalYear: draftYear, period }, CLEAR_DATE_LENS);
@@ -225,13 +263,13 @@ export function FiscalLensChooser({
   }
 
   function chooseCurrentPeriod() {
-    const current = currentFiscalPeriod(fiscalYearStartMonth);
+    const current = currentFiscalPeriodFromRows(periods, fiscalYearStartMonth, scope.fiscalYear);
     onChange({ ...scope, fiscalYear: current.fiscalYear, period: current.period }, CLEAR_DATE_LENS);
     setOpen(false);
   }
 
   function choosePreviousPeriod() {
-    const previous = previousFiscalPeriod(scope, fiscalYearStartMonth);
+    const previous = previousFiscalPeriod(scope, fiscalYearStartMonth, periods);
     onChange({ ...scope, fiscalYear: previous.fiscalYear, period: previous.period }, CLEAR_DATE_LENS);
     setOpen(false);
   }
@@ -247,7 +285,10 @@ export function FiscalLensChooser({
   }
 
   function chooseDatePreset(preset: (typeof DATE_PRESETS)[number]) {
-    const range = preset.resolve(fiscalYearStartMonth);
+    const firstNormal = periods?.find((period) => period.periodType === "normal");
+    const range = preset.id === "fiscal_ytd" && firstNormal
+      ? { from: firstNormal.startDate, to: formatDateInput(new Date()) }
+      : preset.resolve(fiscalYearStartMonth);
     setDraftFrom(range.from);
     setDraftTo(range.to);
     onChange(
@@ -436,7 +477,12 @@ export function FiscalLensChooser({
                       </span>
                       <span className="flex items-center text-xs text-muted-foreground">
                         <span className="truncate">
-                          {periodLabel(draftYear, period, fiscalYearStartMonth)}
+                          {fiscalPeriodDisplayLabel(
+                            draftYear,
+                            period,
+                            fiscalYearStartMonth,
+                            draftYear === scope.fiscalYear ? periods : undefined,
+                          )}
                           {" "}
                           <span className="text-muted-foreground/80">
                             {periodStatusLabel(status ?? null)}

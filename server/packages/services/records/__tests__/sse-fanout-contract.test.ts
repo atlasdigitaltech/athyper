@@ -17,4 +17,11 @@ describe("record SSE release contract", () => {
     expect(route).toContain("sse_slow_client_disconnect");
     expect(fanout).toContain("unsubscribe(channel)");
   });
+
+  it("resolves optional stream columns from metadata instead of assuming row_version", () => {
+    expect(route).toContain("function resolveStreamColumn(");
+    expect(route).toContain('resolveStreamColumn(fieldMap, "row_version", configuredVersionColumn)');
+    expect(route).toContain('const initialEtag = versionColumn ? String(initialRow?.[versionColumn] ?? 0) : "0";');
+    expect(route).not.toContain('.select(["status", "row_version"])');
+  });
 });

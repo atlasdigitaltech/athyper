@@ -9,6 +9,8 @@
     ".": "./src/index.ts",
     "./common": "./src/schemas/common.ts",
     "./metadata": "./src/schemas/metadata.ts",
+    "./entity-cache-policy": "./src/schemas/entity-cache-policy.ts",
+    "./meta-entity-contract-v2": "./src/schemas/meta-entity-contract-v2.ts",
     "./metadata-normalizers": "./src/schemas/metadata-normalizers.ts",
     "./records": "./src/schemas/records.ts",
     "./documents": "./src/schemas/documents.ts",

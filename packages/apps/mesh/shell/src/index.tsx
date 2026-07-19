@@ -103,17 +103,23 @@ export function PlaneShell({
   supportMode = false,
   inboxCount = 0,
   FavoritesPanelComponent,
+  navigate,
 }: {
   children: ReactNode;
   supportMode?: boolean;
   inboxCount?: number;
   FavoritesPanelComponent?: ComponentType<FavoritesPanelSlotProps>;
+  navigate?: (href: string) => void;
 }) {
   const brandAssets = getPublicBrandAssets(PLANE);
   const pathname = useBrowserPathname();
   const { activeOrg, warningSeconds, warningReason, continuePending, continueSession, logoutNow } = usePlaneSessionLifecycle(PLANE);
   const [panelTab, setPanelTab] = useState<PanelTab>(null);
   const closePanel = useCallback(() => setPanelTab(null), []);
+  const navigateTo = useCallback((href: string) => {
+    if (navigate) navigate(href);
+    else window.location.assign(href);
+  }, [navigate]);
 
   // mesh: all nav items shown as workspace icons
   const workspaces = MESH_NAV_ITEMS.map(toWorkspace);
@@ -126,15 +132,15 @@ export function PlaneShell({
     setPanelTab(null);
 
     const workspace = workspaces.find((c) => c.key === key);
-    if (workspace?.href) { window.location.assign(workspace.href); return; }
+    if (workspace?.href) { navigateTo(workspace.href); return; }
 
     const item = MESH_NAV_ITEMS.find((c) => c.key === key);
-    if (item) { window.location.assign(item.href); return; }
+    if (item) { navigateTo(item.href); return; }
 
     const globalHref = GLOBAL_RAIL_HREFS[key];
-    if (globalHref) { window.location.assign(globalHref); return; }
+    if (globalHref) { navigateTo(globalHref); return; }
 
-    if (key === "home") window.location.assign(config.defaultPath);
+    if (key === "home") navigateTo(config.defaultPath);
   }
 
   return (
@@ -158,15 +164,15 @@ export function PlaneShell({
         <Topbar
           brandSlot={
             <a href={config.defaultPath} aria-label="mesh"
-              className="flex items-center gap-1.5 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={(event) => navigateAnchor(event, config.defaultPath, navigateTo)}
+              className="flex items-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <img alt="" aria-hidden="true" className="h-[26px] w-[26px] shrink-0 rounded-sm object-cover"
-                draggable={false} src={brandAssets.appIcon} />
-              <span className="hidden text-xl font-medium leading-none text-foreground lg:block">mesh</span>
+              <img alt="Mesh" className="h-5 w-auto max-w-36 object-contain"
+                draggable={false} src={brandAssets.wordmarkBlack} />
             </a>
           }
           tenantSlot={<TenantSlot org={activeOrg} />}
-          onNotificationClick={() => { window.location.assign("/notifications"); }}
+          onNotificationClick={() => navigateTo("/notifications")}
           userSlot={<a href={config.logoutPath} className="rounded-full border px-3 py-1 text-xs font-medium">Account</a>}
         />
       }
@@ -192,4 +198,14 @@ export function PlaneShell({
       </>
     </ShellLayout>
   );
+}
+
+function navigateAnchor(
+  event: React.MouseEvent<HTMLAnchorElement>,
+  href: string,
+  navigate: (href: string) => void,
+): void {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  navigate(href);
 }

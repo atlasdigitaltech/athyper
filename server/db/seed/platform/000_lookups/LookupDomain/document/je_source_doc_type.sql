@@ -25,7 +25,9 @@ FROM (VALUES
     ('advance',          'Advance',          'document.je_source_doc_type', 'Originated from employee, customer, or supplier advance processing', 200),
     ('retention',        'Retention',        'document.je_source_doc_type', 'Originated from retention accrual or release', 210),
     ('tax_engine',       'Tax Engine',       'document.je_source_doc_type', 'Originated from VAT, WHT, or tax adjustment processing', 220),
-    ('import',           'Import',           'document.je_source_doc_type', 'Imported journal entry',                230)
+    ('import',           'Import',           'document.je_source_doc_type', 'Imported journal entry',                230),
+    ('finance_setup_test','Finance Setup Test','document.je_source_doc_type','Controlled post-and-reverse readiness test journal', 240),
+    ('cross_book',       'Cross-Book Derivation','document.je_source_doc_type','Derived automatically by an effective book posting rule', 250)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

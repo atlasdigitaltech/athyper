@@ -49,6 +49,34 @@ export interface ResolvedFormConfig {
   validationRules: Map<string, Record<string, unknown>>;
 }
 
+/** Canonical v2 surface bindings projected into the legacy field model. */
+export function resolveContractSurfaceFieldNames(entity: CompiledEntity, modes: string[]): string[] {
+  const contract = entity.contract_v2;
+  if (!contract) return [];
+  const fieldsById = new Map(contract.fields.map((field) => [field.id, field.name]));
+  const bindings = contract.surfaces
+    .filter((surface) => surface.surface.is_enabled && modes.includes(surface.surface.mode))
+    .sort((left, right) => left.surface.surface_key.localeCompare(right.surface.surface_key))
+    .flatMap((surface) => surface.fields
+      .filter((binding) => binding.visible)
+      .sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0)))
+    .map((binding) => fieldsById.get(binding.entity_field_id))
+    .filter((name): name is string => Boolean(name));
+  return [...new Set(bindings)];
+}
+
+function contractListFieldNames(entity: CompiledEntity): string[] {
+  return resolveContractSurfaceFieldNames(entity, ["list", "spreadsheet", "compact_card"]);
+}
+
+function contractIdentity(entity: CompiledEntity): { titleField?: string; subtitleField?: string } {
+  const identity = entity.contract_v2?.version_contract.identity_config;
+  return {
+    titleField: identity?.display_identity.title_field,
+    subtitleField: identity?.display_identity.subtitle_field ?? undefined,
+  };
+}
+
 /**
  * Resolve list view configuration from a compiled entity.
  *
@@ -68,7 +96,10 @@ export interface ResolvedFormConfig {
 export function resolveListConfig(entity: CompiledEntity): ResolvedListConfig {
   const { fields, display_config } = entity;
 
-  const listColumnNames = display_config.list_columns;
+  const canonicalListColumns = contractListFieldNames(entity);
+  const listColumnNames = canonicalListColumns.length > 0
+    ? canonicalListColumns
+    : display_config.list_columns;
   const hasAuthoritativeList = Array.isArray(listColumnNames) && listColumnNames.length > 0;
 
   let columns: EntityField[];
@@ -84,7 +115,10 @@ export function resolveListConfig(entity: CompiledEntity): ResolvedListConfig {
       .sort((a, b) => a.sort_order - b.sort_order);
   }
 
-  const searchFieldNames = entity.search_config?.enabled === false
+  const canonicalSearchFieldNames = entity.contract_v2?.version_contract.search_config.fields.map((field) => field.field);
+  const searchFieldNames = entity.contract_v2
+    ? (entity.contract_v2.version_contract.search_config.enabled ? canonicalSearchFieldNames : [])
+    : entity.search_config?.enabled === false
     ? []
     : entity.search_config?.fields?.length
       ? entity.search_config.fields
@@ -98,7 +132,7 @@ export function resolveListConfig(entity: CompiledEntity): ResolvedListConfig {
     searchFields,
     defaultSortField: display_config.default_sort_field,
     defaultSortOrder: display_config.default_sort_order ?? "asc",
-    titleField: display_config.title_field,
+    titleField: contractIdentity(entity).titleField ?? display_config.title_field,
   };
 }
 
@@ -108,19 +142,24 @@ export function resolveListConfig(entity: CompiledEntity): ResolvedListConfig {
 export function resolveDetailConfig(entity: CompiledEntity): ResolvedDetailConfig {
   const { fields, field_groups, display_config } = entity;
 
-  const titleField = display_config.title_field
-    ? fields.find((f) => f.name === display_config.title_field)
+  const identity = contractIdentity(entity);
+  const titleFieldName = identity.titleField ?? display_config.title_field;
+  const subtitleFieldName = identity.subtitleField ?? display_config.subtitle_field;
+  const titleField = titleFieldName
+    ? fields.find((f) => f.name === titleFieldName)
     : undefined;
 
-  const subtitleField = display_config.subtitle_field
-    ? fields.find((f) => f.name === display_config.subtitle_field)
+  const subtitleField = subtitleFieldName
+    ? fields.find((f) => f.name === subtitleFieldName)
     : undefined;
 
   // Top header: title + subtitle + key identifying fields
-  const headerFields = fields
-    .filter((f) => f.group_key === null || f.group_key === "identity")
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .slice(0, 6);
+  const detailFields = resolveContractSurfaceFieldNames(entity, ["detail", "header"]);
+  const headerFields = (detailFields.length > 0
+    ? detailFields.map((name) => fields.find((field) => field.name === name)).filter((field): field is EntityField => Boolean(field))
+    : fields.filter((f) => f.group_key === null || f.group_key === "identity")
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .slice(0, 6));
 
   // Sections from field groups
   const sections = [...field_groups]
@@ -152,7 +191,13 @@ function isEditableByContract(field: CompiledEntity["fields"][number]): boolean 
 export function resolveFormConfig(entity: CompiledEntity): ResolvedFormConfig {
   const { fields, field_groups } = entity;
 
+  const formBindings = resolveContractSurfaceFieldNames(entity, ["create", "edit"]);
+  const canonicalEditable = formBindings.length > 0
+    ? new Set(formBindings)
+    : null;
+
   const editableFields = fields.filter((f) => (
+    (!canonicalEditable || canonicalEditable.has(f.name)) &&
     !f.is_readonly &&
     f.origin !== "system" &&
     f.is_computed !== true &&
@@ -242,6 +287,20 @@ function normalizeRendererFamily(value: unknown): RendererFamily | undefined {
 }
 
 export function resolveRendererFamily(entity: CompiledEntity): RendererFamily {
+  const contract = entity.contract_v2;
+  if (contract) {
+    const detailSurface = contract.surfaces.find((surface) =>
+      surface.surface.is_enabled && ["detail", "header"].includes(surface.surface.mode),
+    );
+    const contractRenderer = normalizeRendererFamily(detailSurface?.surface.renderer_key);
+    if (contractRenderer) return contractRenderer;
+
+    const entityClass = contract.catalog.entity_class.trim().toUpperCase();
+    if (entityClass === "LEDGER" || entityClass === "LOG") return "ledger";
+    if (entityClass === "DOCUMENT" || entityClass === "DOCUMENT_RELATION") return "document";
+    return "master";
+  }
+
   const explicit = normalizeRendererFamily(entity.display_config.detail_renderer);
   if (explicit) return explicit;
 
@@ -326,13 +385,13 @@ export function resolveMasterConfig(entity: CompiledEntity): MasterConfig {
 
 // ── Semantic resolver detection ───────────────────────────────────────────────
 
-const STATUS_FIELD_NAMES = new Set([
-  "status", "record_status", "state", "lifecycle_state",
-  "approval_status", "workflow_status", "payment_status",
-]);
-
 function detectSemanticResolver(entity: CompiledEntity, fieldName: string): string | undefined {
-  if (!STATUS_FIELD_NAMES.has(fieldName) && !fieldName.endsWith("_status")) return undefined;
+  const explicitStatusFields = [
+    entity.contract_v2?.lifecycle?.status_field,
+    ...(entity.display_config.status_field_names ?? []),
+    entity.display_config.document_header?.status_field,
+  ].filter((name): name is string => Boolean(name));
+  if (!explicitStatusFields.includes(fieldName)) return undefined;
   // Use the per-entity status_resolver from display_config (set in entity engine seeds).
   // This is the authoritative source — no entity code matching needed.
   return entity.display_config.status_resolver ?? "kanbanStatusIntent";
@@ -368,7 +427,10 @@ export function resolvePresentationConfig(entity: CompiledEntity): EntityListPre
   const { fields, display_config } = entity;
 
   // Determine which fields appear in the list
-  const listColumnNames = display_config.list_columns;
+  const canonicalListColumns = contractListFieldNames(entity);
+  const listColumnNames = canonicalListColumns.length > 0
+    ? canonicalListColumns
+    : display_config.list_columns;
   const listFields: EntityField[] = listColumnNames
     ? fields.filter((f) => listColumnNames.includes(f.name))
     : fields.filter((f) => f.is_filterable || f.is_sortable).slice(0, 8);

@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { scopeCacheKey, scopeToParams, type FinanceScope } from "../lib/scope";
 
+const FINANCE_WORKBENCH_API = "/api/workbench/finance";
+
 // ── Shared types ──────────────────────────────────────────────────────────────
 
 export interface CycleRunTaskSummary {
@@ -47,10 +49,12 @@ export interface CycleTask {
   completedBy: string | null;
   completedAt: string | null;
   completionNotes: string | null;
+  evidencePayload: Record<string, unknown>;
   failureReason: string | null;
   taskName: string;
   description: string | null;
   completionMode: string;
+  systemCheckHandler: string | null;
   severity: string;
   slaHours: number | null;
   sortOrder: number;
@@ -96,13 +100,24 @@ export interface ChecklistData {
   summary: ChecklistSummary;
 }
 
+export interface GovernanceEvidenceData {
+  run: Record<string, unknown>;
+  certifications: Array<{ id: string; cert_code: string; status: string; content_hash: string | null }>;
+  deviations: Array<Record<string, unknown>>;
+  reportPacks: Array<Record<string, unknown>>;
+  importRequests: Array<Record<string, unknown>>;
+  journals: Array<Record<string, unknown>>;
+}
+
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 
-export function usePeriodCloseRuns(scope: FinanceScope) {
+export function usePeriodCloseRuns(scope: FinanceScope, cycleTypeCode?: string) {
   return useQuery<CycleRun[]>({
-    queryKey: ["finance", "period-close", "runs", ...scopeCacheKey(scope)],
+    queryKey: ["finance", "period-close", "runs", cycleTypeCode ?? "all", ...scopeCacheKey(scope)],
     queryFn: async () => {
-      const res = await fetch(`/api/finance/period-close/runs?${scopeToParams(scope)}`);
+      const params = scopeToParams(scope);
+      if (cycleTypeCode) params.set("cycleTypeCode", cycleTypeCode);
+      const res = await fetch(`${FINANCE_WORKBENCH_API}/period-close/runs?${params}`);
       if (!res.ok) throw new Error("Failed to load period close runs");
       return res.json() as Promise<CycleRun[]>;
     },
@@ -115,7 +130,7 @@ export function usePeriodCloseTasks(runId: string | null) {
   return useQuery<CycleRunTasksData>({
     queryKey: ["finance", "period-close", "tasks", runId],
     queryFn: async () => {
-      const res = await fetch(`/api/finance/period-close/runs/${runId}/tasks`);
+      const res = await fetch(`${FINANCE_WORKBENCH_API}/period-close/runs/${runId}/tasks`);
       if (!res.ok) throw new Error("Failed to load period close tasks");
       return res.json() as Promise<CycleRunTasksData>;
     },
@@ -124,11 +139,24 @@ export function usePeriodCloseTasks(runId: string | null) {
   });
 }
 
+export function useGovernanceEvidence(runId: string | null) {
+  return useQuery<GovernanceEvidenceData>({
+    queryKey: ["finance", "period-close", "governance", runId],
+    queryFn: async () => {
+      const res = await fetch(`${FINANCE_WORKBENCH_API}/period-close/runs/${runId}/governance`);
+      if (!res.ok) throw new Error("Failed to load governance evidence");
+      return res.json() as Promise<GovernanceEvidenceData>;
+    },
+    enabled: Boolean(runId),
+    staleTime: 10_000,
+  });
+}
+
 export function usePeriodCloseChecklist(scope: FinanceScope) {
   return useQuery<ChecklistData>({
     queryKey: ["finance", "period-close", "checklist", ...scopeCacheKey(scope)],
     queryFn: async () => {
-      const res = await fetch(`/api/finance/period-close/checklist?${scopeToParams(scope)}`);
+      const res = await fetch(`${FINANCE_WORKBENCH_API}/period-close/checklist?${scopeToParams(scope)}`);
       if (!res.ok) throw new Error("Failed to load period close checklist");
       return res.json() as Promise<ChecklistData>;
     },

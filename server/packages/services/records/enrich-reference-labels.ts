@@ -178,40 +178,20 @@ export async function enrichWithReferenceLabels(
       const resolved = labels.get(idValue) ?? {
         label: null, code: null, formattedValue: null, jurisdictionId: null,
       };
-      const baseName = referenceBaseName(spec.fieldName);
-
       assignIfBlank(next, `${spec.fieldName}_label`, resolved.label);
-      if (baseName !== spec.fieldName) {
-        assignIfBlank(next, `${baseName}_label`, resolved.label);
-      }
       if (spec.codeField) {
         assignIfBlank(next, `${spec.fieldName}_code`, resolved.code);
-        if (baseName !== spec.fieldName) {
-          assignIfBlank(next, `${baseName}_code`, resolved.code);
-        }
       }
       if (spec.descriptionField) {
         assignIfBlank(next, `${spec.fieldName}_formatted_address`, resolved.formattedValue);
-        if (baseName !== spec.fieldName) {
-          assignIfBlank(next, `${baseName}_formatted_address`, resolved.formattedValue);
-        }
       }
       assignIfBlank(next, `${spec.fieldName}_jurisdiction_id`, resolved.jurisdictionId);
-      if (baseName !== spec.fieldName) {
-        assignIfBlank(next, `${baseName}_jurisdiction_id`, resolved.jurisdictionId);
-      }
-      assignIdentityAliases(next, baseName, resolved);
     }
     return next;
   });
 }
 
 // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-export function referenceBaseName(fieldName: string): string {
-  if (fieldName.endsWith("_id")) return fieldName.slice(0, -3);
-  return fieldName;
-}
 
 function pickFkValue(row: Record<string, unknown>, columnName: string, fieldName: string): string | null {
   const candidates = [row[columnName], row[fieldName]];
@@ -247,21 +227,6 @@ function assignIfBlank(row: Record<string, unknown>, key: string, value: string 
   const existing = row[key];
   if (existing !== null && existing !== undefined && existing !== "") return;
   row[key] = value;
-}
-
-function assignIdentityAliases(
-  row: Record<string, unknown>,
-  baseName: string,
-  resolved: ResolvedTargetLabels,
-): void {
-  if (baseName === "supplier") {
-    assignIfBlank(row, "supplier_name", resolved.label);
-    assignIfBlank(row, "supplier_code", resolved.code);
-  }
-  if (baseName === "company_code") {
-    assignIfBlank(row, "company_code_name", resolved.label);
-    assignIfBlank(row, "company_code", resolved.code);
-  }
 }
 
 // â”€â”€ DB-backed discovery + fetch (overridable in tests) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

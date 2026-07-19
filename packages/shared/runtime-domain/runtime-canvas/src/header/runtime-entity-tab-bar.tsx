@@ -34,6 +34,7 @@ export interface RuntimeEntityTabBarProps {
   tabs: HeaderTab[];
   activeTab?: string;
   onTabChange?: (id: string) => void;
+  onTabIntent?: (id: string) => void;
   platformIcons?: PlatformPanelIcon[];
   onPlatformIconClick?: (id: string) => void;
   activePlatformIcon?: string;
@@ -44,6 +45,7 @@ export function RuntimeEntityTabBar({
   tabs,
   activeTab,
   onTabChange,
+  onTabIntent,
   platformIcons = [],
   onPlatformIconClick,
   activePlatformIcon,
@@ -138,6 +140,7 @@ export function RuntimeEntityTabBar({
         activeTab={activeTab}
         activeTabObj={activeTabObj}
         onTabChange={onTabChange}
+        onTabIntent={onTabIntent}
         platformIcons={platformIcons}
         onPlatformIconClick={onPlatformIconClick}
         activePlatformIcon={activePlatformIcon}
@@ -158,6 +161,7 @@ export function RuntimeEntityTabBar({
             tab={tab}
             active={activeTab === tab.id}
             onTabChange={onTabChange}
+            onTabIntent={onTabIntent}
           />
         ))}
 
@@ -184,6 +188,8 @@ export function RuntimeEntityTabBar({
                     <DropdownMenuItem
                       key={tab.id}
                       disabled={tab.disabled}
+                      onPointerEnter={() => !tab.disabled && onTabIntent?.(tab.id)}
+                      onFocus={() => !tab.disabled && onTabIntent?.(tab.id)}
                       onSelect={() => !tab.disabled && onTabChange?.(tab.id)}
                       aria-label={`Jump to ${tab.label}`}
                       className={cn("cursor-pointer gap-2", activeTab === tab.id && "bg-accent text-accent-foreground")}
@@ -224,10 +230,12 @@ function TabButton({
   tab,
   active,
   onTabChange,
+  onTabIntent,
 }: {
   tab: HeaderTab;
   active: boolean;
   onTabChange?: (id: string) => void;
+  onTabIntent?: (id: string) => void;
 }) {
   // Sections behave as scroll anchors, not panel switches — click scrolls to
   // the section, active state follows the visible section as the user scrolls.
@@ -239,13 +247,15 @@ function TabButton({
     <button
       type="button"
       disabled={tab.disabled}
+      onPointerEnter={() => !tab.disabled && onTabIntent?.(tab.id)}
+      onFocus={() => !tab.disabled && onTabIntent?.(tab.id)}
       onClick={() => !tab.disabled && onTabChange?.(tab.id)}
       aria-label={`Jump to ${tab.label}`}
       className={cn(
         headerTabButtonClass,
         "gap-1",
         active
-          ? "font-medium text-foreground after:absolute after:bottom-0 after:left-2 after:right-2 after:h-px after:bg-foreground/60 after:content-['']"
+          ? "font-semibold text-foreground after:absolute after:bottom-0 after:left-2 after:right-2 after:h-px after:bg-foreground/60 after:content-['']"
           : "text-muted-foreground hover:text-foreground",
         tab.disabled && "pointer-events-none opacity-50",
       )}
@@ -308,6 +318,7 @@ interface MobileTabBarProps {
   activeTab?: string;
   activeTabObj?: HeaderTab;
   onTabChange?: (id: string) => void;
+  onTabIntent?: (id: string) => void;
   platformIcons?: PlatformPanelIcon[];
   onPlatformIconClick?: (id: string) => void;
   activePlatformIcon?: string;
@@ -319,6 +330,7 @@ function MobileTabBar({
   activeTab,
   activeTabObj,
   onTabChange,
+  onTabIntent,
   platformIcons = [],
   onPlatformIconClick,
   activePlatformIcon,
@@ -360,6 +372,8 @@ function MobileTabBar({
                     key={tab.id}
                     type="button"
                     disabled={tab.disabled}
+                    onPointerDown={() => !tab.disabled && onTabIntent?.(tab.id)}
+                    onFocus={() => !tab.disabled && onTabIntent?.(tab.id)}
                     onClick={() => {
                       if (tab.disabled) return;
                       onTabChange?.(tab.id);

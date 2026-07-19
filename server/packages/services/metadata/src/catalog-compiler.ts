@@ -5,6 +5,10 @@ import {
   type CanonicalEntity,
   type CanonicalMetadataGraph,
 } from "./canonical-metadata-graph.js";
+import {
+  readCompiledEntityContract,
+  type CompiledEntityProjectionProvider,
+} from "./compiled-entity-projection.js";
 
 export interface CatalogCompilationDiagnostic {
   entityCode: string;
@@ -46,6 +50,8 @@ export interface CatalogEntityArtifact {
   fields: CanonicalEntity["fields"];
   relations: CanonicalEntity["relations"];
   operations: CanonicalEntity["operations"];
+  /** Canonical v2 projection; legacy catalog fields above are adapters. */
+  contract_v2?: unknown;
   diagnostics: CatalogCompilationDiagnostic[];
   compiled_at: string;
   compiled_hash: string;
@@ -62,6 +68,17 @@ export interface CatalogCompileSummary {
 }
 
 const hash = (value: unknown): string => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+
+function isTransientConnectionError(error: unknown): boolean {
+  const candidate = error as { code?: unknown; message?: unknown } | null;
+  const code = String(candidate?.code ?? "").toUpperCase();
+  const message = String(candidate?.message ?? error ?? "").toLowerCase();
+  return ["57P01", "57P02", "57P03", "08000", "08003", "08006", "08001", "08004", "ECONNRESET", "EPIPE"]
+    .includes(code)
+    || message.includes("client_idle_timeout")
+    || message.includes("connection terminated unexpectedly")
+    || message.includes("connection reset");
+}
 
 function compileEntity(entity: CanonicalEntity): CatalogEntityArtifact {
   const diagnostics: CatalogCompilationDiagnostic[] = [];
@@ -133,6 +150,7 @@ export class CatalogCompiler {
   constructor(
     private readonly db: Kysely<any>,
     private readonly logger?: { info?(event: string, fields?: Record<string, unknown>): void; warn?(event: string, fields?: Record<string, unknown>): void },
+    private readonly compiledEntityProvider?: CompiledEntityProjectionProvider,
   ) {}
 
   async compileAll(): Promise<CatalogCompileSummary> {
@@ -141,25 +159,91 @@ export class CatalogCompiler {
     let compiled = 0;
     let persisted = 0;
     for (const entity of graph.entities) {
-      const artifact = compileEntity(entity);
+      let artifact = compileEntity(entity);
+      if (this.compiledEntityProvider && entity.runtime_enabled && entity.effective_version) {
+        try {
+          const compiled = await this.compiledEntityProvider.loadRuntimeCompiledEntity(
+            entity.entity_code,
+            "00000000-0000-0000-0000-000000000000",
+          );
+          if (compiled) {
+            const contract = readCompiledEntityContract(compiled);
+            artifact = {
+              ...artifact,
+              diagnostics: [],
+              // Preserve the catalog artifact shape for catalog-only clients,
+              // but source every runtime definition from the one v2 output.
+              entity_id: contract.catalog.id,
+              entity_code: contract.catalog.entity_code,
+              name: contract.catalog.label_singular,
+              slug: contract.catalog.slug,
+              entity_class: contract.catalog.entity_class,
+              ownership_model: contract.catalog.ownership_model,
+              module_id: contract.catalog.module_id,
+              status: contract.catalog.status,
+              runtime_enabled: contract.version_contract.runtime_enabled,
+              table_schema: contract.version_contract.table_schema,
+              table_name: contract.version_contract.table_name,
+              backing_type: contract.version_contract.backing_type,
+              primary_key: contract.version_contract.primary_key,
+              tenant_column: contract.version_contract.tenant_column,
+              read_capability: contract.version_contract.read_capability,
+              write_capability: contract.version_contract.write_capability,
+              governance_level: contract.version_contract.governance_level,
+              security_tier: contract.version_contract.security_tier,
+              mutability: contract.version_contract.mutability,
+              display_config: compiled.display_config,
+              identity_config: contract.version_contract.identity_config,
+              search_config: contract.version_contract.search_config,
+              data_policy: contract.version_contract.data_policy,
+              fields: compiled.fields as unknown as CatalogEntityArtifact["fields"],
+              relations: contract.relations as unknown as CatalogEntityArtifact["relations"],
+              operations: contract.operations as unknown as CatalogEntityArtifact["operations"],
+              contract_v2: contract,
+            };
+          }
+        } catch (error) {
+          this.logger?.warn?.("catalog_v2_projection_failed", {
+            entityCode: entity.entity_code,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
       diagnostics.push(...artifact.diagnostics);
       if (artifact.diagnostics.length > 0) continue;
       compiled++;
-      try {
-        if (!entity.effective_version) continue;
-        await this.db.insertInto("snapshot.entity_compiled" as never).values({
-          tenant_id: null,
-          entity_version_id: entity.effective_version.id,
-          artifact_kind: "catalog",
-          compiled_json: artifact as never,
-          compiled_hash: artifact.compiled_hash,
-          compliance_report: { diagnostic_count: 0, artifact_kind: "catalog" },
-          created_by: "00000000-0000-0000-0000-000000000000",
-        } as never).onConflict((oc: any) => oc.columns(["tenant_id", "entity_version_id", "artifact_kind"] as never[]).doNothing()).execute();
-        persisted++;
-      } catch (error) {
-        diagnostics.push({ entityCode: entity.entity_code, path: "snapshot.entity_compiled", message: error instanceof Error ? error.message : String(error) });
-        this.logger?.warn?.("catalog_snapshot_persistence_failed", { entityCode: entity.entity_code, error: String(error) });
+      if (!entity.effective_version) continue;
+      let persistenceError: unknown;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await this.db.insertInto("snapshot.entity_compiled" as never).values({
+            tenant_id: null,
+            entity_version_id: entity.effective_version.id,
+            artifact_kind: "catalog",
+            compiled_json: artifact as never,
+            compiled_hash: artifact.compiled_hash,
+            compliance_report: { diagnostic_count: 0, artifact_kind: "catalog" },
+            created_by: "00000000-0000-0000-0000-000000000000",
+          } as never).onConflict((oc: any) => oc.columns(["tenant_id", "entity_version_id", "artifact_kind"] as never[]).doNothing()).execute();
+          persisted++;
+          persistenceError = undefined;
+          break;
+        } catch (error) {
+          persistenceError = error;
+          if (attempt === 1 && isTransientConnectionError(error)) {
+            this.logger?.warn?.("catalog_snapshot_persistence_retry", {
+              entityCode: entity.entity_code,
+              error: error instanceof Error ? error.message : String(error),
+            });
+            continue;
+          }
+          break;
+        }
+      }
+      if (persistenceError !== undefined) {
+        const message = persistenceError instanceof Error ? persistenceError.message : String(persistenceError);
+        diagnostics.push({ entityCode: entity.entity_code, path: "snapshot.entity_compiled", message });
+        this.logger?.warn?.("catalog_snapshot_persistence_failed", { entityCode: entity.entity_code, error: message });
       }
     }
     const summary = { total: graph.entities.length, compiled, persisted, failed: graph.entities.length - compiled, entityCodes: graph.entities.map((entity) => entity.entity_code), diagnostics, graph };
@@ -174,6 +258,10 @@ export class CatalogCompiler {
   }
 }
 
-export function createCatalogCompiler(db: Kysely<any>, logger?: CatalogCompiler["logger"]): CatalogCompiler {
-  return new CatalogCompiler(db, logger);
+export function createCatalogCompiler(
+  db: Kysely<any>,
+  logger?: CatalogCompiler["logger"],
+  compiledEntityProvider?: CompiledEntityProjectionProvider,
+): CatalogCompiler {
+  return new CatalogCompiler(db, logger, compiledEntityProvider);
 }

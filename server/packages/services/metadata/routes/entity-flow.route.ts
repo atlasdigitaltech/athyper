@@ -23,6 +23,11 @@ import {
 } from "@athyper/svc-shared";
 import { hasModuleAccess, type ModuleAccessResolverOptions } from "./module-visibility.guard.js";
 import { getEffectiveModuleAccess } from "@athyper/svc-iam";
+import {
+  readCompiledEntityContract,
+  type CompiledEntityProjectionProvider,
+} from "../src/compiled-entity-projection.js";
+import type { MetaEntityContractV2 } from "@athyper/api-contracts/meta-entity-contract-v2";
 
 export interface EntityFlowRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +44,8 @@ export interface EntityFlowRoutesDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
   };
+  /** Authoritative Phase B compiler projection. */
+  compiledEntityProvider?: CompiledEntityProjectionProvider;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string, personaId: string) => Promise<Record<string, { decision: string } | undefined>>;
   getEffectiveModuleAccess?: typeof getEffectiveModuleAccess;
@@ -243,8 +250,48 @@ function mergeProfileMaps(
   }
 }
 
+/** Enrich the flow adapter from the canonical field/relation projection. */
+function projectFlowFieldFromContract(
+  row: Record<string, unknown>,
+  contract: MetaEntityContractV2,
+): Record<string, unknown> {
+  const fieldName = textConfig(row["field_name"]);
+  const field = fieldName ? contract.fields.find((candidate) => candidate.name === fieldName) : undefined;
+  if (!field) return row;
+
+  const typeConfig = field.type_config;
+  if (typeConfig.kind === "reference") {
+    const relation = contract.relations.find((candidate) => candidate.relation_code === typeConfig.relation);
+    const current = asRecord(row["reference_config"]) ?? {};
+    return {
+      ...row,
+      data_type: field.data_type,
+      field_label: field.label,
+      reference_config: {
+        ...current,
+        relation: typeConfig.relation,
+        target_entity: relation?.target_entity_code ?? current["target_entity"],
+        target_field: relation?.target_field ?? current["target_field"] ?? "id",
+        display_field: typeConfig.display.label_field,
+        ...(typeConfig.display.code_field ? { code_field: typeConfig.display.code_field } : {}),
+        ...(typeConfig.display.description_field ? { description_field: typeConfig.display.description_field } : {}),
+      },
+    };
+  }
+  if (typeConfig.kind === "money") {
+    const current = asRecord(row["money_config"]) ?? {};
+    return {
+      ...row,
+      data_type: field.data_type,
+      field_label: field.label,
+      money_config: { ...current, minor_units: typeConfig.minor_units },
+    };
+  }
+  return { ...row, data_type: field.data_type, field_label: field.label };
+}
+
 export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps): Router {
-  const { db, auth, logger, checkPermissionBatch, getEffectiveModuleAccess, cache } = deps;
+  const { db, auth, logger, checkPermissionBatch, getEffectiveModuleAccess, cache, compiledEntityProvider } = deps;
   const moduleAccessCache = cache
     ? {
       get: cache.get,
@@ -283,33 +330,48 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
       const tenantId = xOrg ? await resolveTenantId(db, xOrg, xRealm) : null;
 
       // ── Entity version ────────────────────────────────────────────────────
-      // Mirror compiled-entity.route: prefer tenant-specific row over platform
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let entityQuery: any = db
-        .selectFrom("control.entity as e")
-        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
-        .select([
-          sql<string>`COALESCE(e.entity_code, e.name)`.as("entity_code"),
-          sql<string | null>`e.module_id`.as("module_id"),
-          sql<string>`ev.id`.as("version_id"),
-        ])
-        .where(sql`COALESCE(e.entity_code, e.name)`, "=", entityCode)
-        .where("ev.status", "=", "EFFECTIVE")
-        .where("e.runtime_enabled", "=", true)
-        .where("e.status", "=", "ACTIVE")
-        .where("e.is_active", "=", true)
-        .where("e.read_capability", "<>", "none");
-
-      if (tenantId) {
-        entityQuery = entityQuery
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .where((eb: any) => eb.or([eb("e.tenant_id", "=", tenantId), eb("e.tenant_id", "is", null)]))
-          .orderBy(sql`e.tenant_id NULLS LAST`);
+      let entityContract: MetaEntityContractV2 | null = null;
+      let entityRow: { entity_code: string; module_id: string | null; version_id: string } | undefined;
+      if (compiledEntityProvider && tenantId) {
+        const compiled = await compiledEntityProvider.loadRuntimeCompiledEntity(entityCode, tenantId);
+        if (compiled) {
+          entityContract = readCompiledEntityContract(compiled);
+          entityRow = {
+            entity_code: entityContract.catalog.entity_code,
+            module_id: entityContract.catalog.module_id,
+            version_id: entityContract.version_contract.entity_version_id,
+          };
+        }
       } else {
-        entityQuery = entityQuery.where("e.tenant_id", "is", null);
-      }
+        // Compatibility path for callers that do not register the compiler.
+        // Production API wiring always supplies compiledEntityProvider.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let entityQuery: any = db
+          .selectFrom("control.entity as e")
+          .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+          .select([
+            sql<string>`COALESCE(e.entity_code, e.name)`.as("entity_code"),
+            sql<string | null>`e.module_id`.as("module_id"),
+            sql<string>`ev.id`.as("version_id"),
+          ])
+          .where(sql`COALESCE(e.entity_code, e.name)`, "=", entityCode)
+          .where("ev.status", "=", "EFFECTIVE")
+          .where("e.runtime_enabled", "=", true)
+          .where("e.status", "=", "ACTIVE")
+          .where("e.is_active", "=", true)
+          .where("e.read_capability", "<>", "none");
 
-      const entityRow = await entityQuery.limit(1).executeTakeFirst();
+        if (tenantId) {
+          entityQuery = entityQuery
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            .where((eb: any) => eb.or([eb("e.tenant_id", "=", tenantId), eb("e.tenant_id", "is", null)]))
+            .orderBy(sql`e.tenant_id NULLS LAST`);
+        } else {
+          entityQuery = entityQuery.where("e.tenant_id", "is", null);
+        }
+
+        entityRow = await entityQuery.limit(1).executeTakeFirst();
+      }
 
       if (!entityRow) {
         res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
@@ -406,7 +468,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
       const stepIds = stepRows.map((s) => s.id as string);
 
       // ── Field bindings + entity_field name/label/data_type ────────────────
-      const fieldRows = await db
+      const rawFieldRows = await db
         .selectFrom("control.entity_flow_field as eff")
         .innerJoin("control.entity_field as ef", "ef.id", "eff.entity_field_id")
         .select([
@@ -445,6 +507,9 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
         .where("ef.runtime_enabled", "=", true)
         .orderBy("eff.sort_order", "asc")
         .execute();
+      const fieldRows = entityContract
+        ? rawFieldRows.map((row) => projectFlowFieldFromContract(row as Record<string, unknown>, entityContract!))
+        : rawFieldRows;
       const referencePickerProfiles = await loadReferencePickerProfiles(db, fieldRows, tenantId);
 
       // ── Section descriptors (composite intake) ────────────────────────────
@@ -524,8 +589,17 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             .where("ef.runtime_enabled", "=", true)
             .orderBy("ef.sort_order", "asc")
             .execute();
-          mergeProfileMaps(referencePickerProfiles, await loadReferencePickerProfiles(db, rows, tenantId));
-          childFieldsByEntity.set(code, rows);
+          const childContract = compiledEntityProvider && tenantId
+            ? await compiledEntityProvider.loadRuntimeCompiledEntity(code, tenantId).then((compiled) => {
+              if (!compiled) return null;
+              try { return readCompiledEntityContract(compiled); } catch { return null; }
+            })
+            : null;
+          const projectedRows = childContract
+            ? rows.map((row) => projectFlowFieldFromContract(row as Record<string, unknown>, childContract))
+            : rows;
+          mergeProfileMaps(referencePickerProfiles, await loadReferencePickerProfiles(db, projectedRows, tenantId));
+          childFieldsByEntity.set(code, projectedRows);
         }
       }
 

@@ -1,4 +1,5 @@
 import type { MetaEntityField } from "@athyper/runtime-contracts";
+import { formatZonedDateTime, resolveTemporalKind } from "@athyper/temporal";
 import {
   readRuntimeRecordField,
   runtimeRecordData,
@@ -9,9 +10,12 @@ export type FieldRecord = RuntimeFieldRecord;
 
 export function formatFieldValue(record: FieldRecord, field: MetaEntityField): string {
   const value = readRecordValue(record, field);
-  const label = readReferenceLabel(record, field, value);
-  const isReferenceField = field.display?.renderer === "reference_label";
-  if (!isReferenceField || !label) {
+  const renderer = field.display?.renderer;
+  const isReferenceField = renderer === "reference_label";
+  const isLookupField = renderer === "lookup_label";
+  const label = readReferenceLabel(record, field, value)
+    ?? (isLookupField ? readStaticOptionLabel(field, value) : null);
+  if (!label) {
     // Safety net ONLY fires for fields whose descriptor claims they render as
     // a reference label but the data layer didn't provide the join. Fields
     // that never declared reference_label (primary keys, raw audit ids,
@@ -21,8 +25,17 @@ export function formatFieldValue(record: FieldRecord, field: MetaEntityField): s
       : formatRecordValue(value, field);
   }
 
-  const code = readReferenceCode(record, field, value);
-  return formatReferenceDisplay(label, code, field.display?.format);
+  const code = readReferenceCode(record, field, value)
+    ?? (!isReferenceField ? toNonBlankString(value) : null);
+  return isReferenceField
+    ? formatReferenceDisplay(label, code, field.display?.format)
+    : formatLookupDisplay(label, code, field.display?.format);
+}
+
+export function hasResolvedFieldLabel(record: FieldRecord, field: MetaEntityField): boolean {
+  const value = readRecordValue(record, field);
+  return readReferenceLabel(record, field, value) !== null
+    || (field.display?.renderer === "lookup_label" && readStaticOptionLabel(field, value) !== null);
 }
 
 export function formatFieldTitle(record: FieldRecord, field: MetaEntityField): string | undefined {
@@ -49,8 +62,6 @@ function readReferenceLabel(record: FieldRecord, field: MetaEntityField, value: 
     `${field.name}_name`,
     `${field.columnName}_label`,
     `${field.columnName}_name`,
-    `${referenceBaseName(field.name)}_label`,
-    `${referenceBaseName(field.name)}_name`,
   ]);
 }
 
@@ -62,8 +73,35 @@ function readReferenceCode(record: FieldRecord, field: MetaEntityField, value: u
   return readCompanionValue(record, field, [
     `${field.name}_code`,
     `${field.columnName}_code`,
-    `${referenceBaseName(field.name)}_code`,
   ]);
+}
+
+function readStaticOptionLabel(field: MetaEntityField, value: unknown): string | null {
+  const source = field.editor?.optionSource ?? field.optionSource;
+  if (source?.kind === "static") {
+    const selected = source.options.find((option) => option.value === String(value));
+    return selected ? toNonBlankString(selected.label) : null;
+  }
+  if (source?.kind === "lifecycle") {
+    const selected = source.options.find((option) => option.value === String(value))
+      ?? source.fallbackOptions.find((option) => option.value === String(value));
+    if (selected) return toNonBlankString(selected.label);
+    reportLifecycleLabelMiss(field, value);
+  }
+  return null;
+}
+
+const reportedLifecycleLabelMisses = new Set<string>();
+
+function reportLifecycleLabelMiss(field: MetaEntityField, value: unknown): void {
+  const key = `${field.name}:${String(value)}`;
+  if (reportedLifecycleLabelMisses.has(key)) return;
+  reportedLifecycleLabelMisses.add(key);
+  // eslint-disable-next-line no-console
+  console.warn(
+    `[lifecycle-label-missing] field "${field.name}" has no label for state "${String(value)}"; `
+    + "rendering the stored code. Verify the entity lifecycle binding and lifecycle_state.name.",
+  );
 }
 
 function readCompanionValue(record: FieldRecord, field: MetaEntityField, keys: string[]): string | null {
@@ -88,17 +126,21 @@ export function toNonBlankString(value: unknown): string | null {
   return text ? text : null;
 }
 
-function referenceBaseName(fieldName: string): string {
-  if (fieldName.endsWith("_id")) return fieldName.slice(0, -"_id".length);
-  if (fieldName.endsWith("_code")) return fieldName.slice(0, -"_code".length);
-  return fieldName;
+function formatReferenceDisplay(label: string, code: string | null, format: string | undefined): string {
+  if (!code || code === label) return label;
+  if (format === "label") return label;
+  if (format === "code") return code;
+  if (format === "code_label") return `${code} - ${label}`;
+  if (format === "label_code") return `${label} (${code})`;
+  return label;
 }
 
-function formatReferenceDisplay(label: string, code: string | null, format: string | undefined): string {
+function formatLookupDisplay(label: string, code: string | null, format: string | undefined): string {
   if (!code || code === label) return label;
   if (format === "code") return code;
   if (format === "code_label") return `${code} - ${label}`;
-  return `${label} (${code})`;
+  if (format === "label_code") return `${label} (${code})`;
+  return label;
 }
 
 export function formatRecordValue(value: unknown, field?: MetaEntityField): string {
@@ -130,9 +172,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const warnedUuidFields = new Set<string>();
 
 function looksLikeReferenceField(field: MetaEntityField): boolean {
-  if (field.dataType?.toLowerCase() === "uuid") return true;
-  const name = field.name.toLowerCase();
-  return name.endsWith("_id") || name.endsWith("_by") || name === "id";
+  return field.display?.renderer === "reference_label";
 }
 
 function formatRecordValueWithUuidSafetyNet(value: unknown, field: MetaEntityField): string {
@@ -164,9 +204,20 @@ export function formatRecordTitle(value: unknown, field: MetaEntityField): strin
   return displayValue === "-" ? undefined : displayValue;
 }
 
+type TemporalDisplayKind = "date" | "datetime" | "zonedDateTime";
+
 function formatTemporalValue(value: unknown, field: MetaEntityField): string | null {
   const kind = resolveTemporalDisplayKind(value, field);
   if (!kind) return null;
+
+  if (kind === "zonedDateTime") {
+    if (!isZonedDateTimeValue(value)) return null;
+    try {
+      return formatZonedDateTime(value, { locale: "en-GB", showZone: true });
+    } catch {
+      return null;
+    }
+  }
 
   const date = parseTemporalDate(value);
   if (!date) return null;
@@ -191,7 +242,14 @@ function formatTemporalValue(value: unknown, field: MetaEntityField): string | n
 }
 
 function formatTemporalTitle(value: unknown, field: MetaEntityField): string | null {
-  if (!resolveTemporalDisplayKind(value, field)) return null;
+  const kind = resolveTemporalDisplayKind(value, field);
+  if (!kind) return null;
+
+  if (kind === "zonedDateTime") {
+    return isZonedDateTimeValue(value)
+      ? `Zone: ${value.timeZone}; local time: ${value.localDateTime}`
+      : null;
+  }
 
   const original = typeof value === "string" ? value.trim() : "";
   if (original && isDateOnlyText(original)) return `Date: ${original}`;
@@ -200,30 +258,21 @@ function formatTemporalTitle(value: unknown, field: MetaEntityField): string | n
   return date ? `UTC: ${date.toISOString()}` : null;
 }
 
-function resolveTemporalDisplayKind(value: unknown, field: MetaEntityField): "date" | "datetime" | null {
-  const dataType = field.dataType.toLowerCase();
-  if (dataType === "date") return "date";
-  if (isTimestampDataType(dataType)) return "datetime";
-  if (field.name.toLowerCase().endsWith("_at") && isTemporalLikeValue(value)) return "datetime";
+function resolveTemporalDisplayKind(value: unknown, field: MetaEntityField): TemporalDisplayKind | null {
+  const resolution = resolveTemporalKind(field);
+  if (resolution.status === "resolved") {
+    if (resolution.kind === "businessDate") return "date";
+    if (resolution.kind === "zonedDateTime") return "zonedDateTime";
+    return resolution.displayMode === "date" ? "date" : "datetime";
+  }
+
   return null;
 }
 
-function isTimestampDataType(dataType: string): boolean {
-  return [
-    "datetime",
-    "timestamp",
-    "timestamptz",
-    "timestampz",
-    "timestamp with time zone",
-    "timestamp without time zone",
-  ].includes(dataType);
-}
-
-function isTemporalLikeValue(value: unknown): boolean {
-  if (value instanceof Date) return true;
-  if (typeof value !== "string") return false;
-  const text = value.trim();
-  return isDateOnlyText(text) || /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}/.test(text);
+function isZonedDateTimeValue(value: unknown): value is { localDateTime: string; timeZone: string } {
+  return isRecord(value)
+    && typeof value["localDateTime"] === "string"
+    && typeof value["timeZone"] === "string";
 }
 
 function parseTemporalDate(value: unknown): Date | null {

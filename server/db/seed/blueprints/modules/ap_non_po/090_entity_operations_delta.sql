@@ -42,51 +42,71 @@ WHERE tenant_id IS NULL
   AND handler_type = 'NAVIGATE';
 
 INSERT INTO control.entity_operation
-    (tenant_id, entity_name, permission_code, surface, placement,
+    (tenant_id, entity_name, entity_version_id, permission_code, surface, placement,
      handler_type, handler_target, is_record_required, sort_order, created_by)
-VALUES
-    (NULL, 'purchase_invoice', 'hold',
+SELECT
+    v.tenant_id,
+    v.entity_name,
+    ev.id,
+    v.permission_code,
+    v.surface,
+    v.placement,
+    v.handler_type,
+    v.handler_target,
+    v.is_record_required,
+    v.sort_order,
+    v.created_by::uuid
+FROM (VALUES
+    (NULL::uuid, 'purchase_invoice', 'hold',
      'DETAIL', 'OVERFLOW', 'MODAL', 'put_on_hold',
      true, 110, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'purchase_invoice', 'release_hold',
+    (NULL::uuid, 'purchase_invoice', 'release_hold',
      'DETAIL', 'OVERFLOW', 'MODAL', 'release_hold',
      true, 120, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'purchase_invoice', 'propose_payment',
+    (NULL::uuid, 'purchase_invoice', 'propose_payment',
      'DETAIL', 'TOOLBAR', 'NAVIGATE', '/app/payment_entry/new?invoice={id}',
      true, 130, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'purchase_invoice', 'view_je',
+    (NULL::uuid, 'purchase_invoice', 'view_je',
      'DETAIL', 'OVERFLOW', 'NAVIGATE', '/app/journal_entry?source_id={id}',
      true, 140, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'purchase_invoice', 'match_advance',
+    (NULL::uuid, 'purchase_invoice', 'match_advance',
      'DETAIL', 'OVERFLOW', 'MODAL', 'match_supplier_advance',
      true, 150, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'purchase_invoice', 'allocate_payment',
+    (NULL::uuid, 'purchase_invoice', 'allocate_payment',
      'DETAIL', 'OVERFLOW', 'MODAL', 'allocate_payment',
      true, 160, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'payment_entry', 'transmit',
+    (NULL::uuid, 'payment_entry', 'transmit',
      'DETAIL', 'TOOLBAR', 'MODAL', 'transmit_to_bank',
      true, 120, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'payment_entry', 'print',
+    (NULL::uuid, 'payment_entry', 'print',
      'DETAIL', 'OVERFLOW', 'API', 'print_remittance',
      true, 130, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'payment_entry', 'mark_cleared',
+    (NULL::uuid, 'payment_entry', 'mark_cleared',
      'DETAIL', 'TOOLBAR', 'MODAL', 'mark_bank_cleared',
      true, 140, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'payment_entry', 'allocate',
+    (NULL::uuid, 'payment_entry', 'allocate',
      'DETAIL', 'PRIMARY', 'MODAL', 'allocate_to_invoice',
      true, 150, '00000000-0000-0000-0000-000000000000'),
 
-    (NULL, 'payment_entry', 'unallocate',
+    (NULL::uuid, 'payment_entry', 'unallocate',
      'DETAIL', 'OVERFLOW', 'MODAL', 'unallocate',
      true, 160, '00000000-0000-0000-0000-000000000000')
-
-ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
+) AS v(tenant_id, entity_name, permission_code, surface, placement,
+       handler_type, handler_target, is_record_required, sort_order, created_by)
+JOIN control.entity e
+  ON e.tenant_id IS NULL
+ AND e.entity_code = v.entity_name
+JOIN control.entity_version ev
+  ON ev.entity_id = e.id
+ AND ev.tenant_id IS NULL
+ AND ev.status = 'EFFECTIVE'
+ON CONFLICT ON CONSTRAINT eo_v2_binding_uq DO NOTHING;

@@ -15,6 +15,7 @@ import {
 import {
   compileMetaEntityRuntimeDescriptor,
   resolveRuntimeOperations,
+  type EffectiveRecordWorkspaceManifest,
   type MetaEntityCapabilities,
   type MetaEntityField,
   type MetaEntityOperation,
@@ -53,6 +54,7 @@ export type { SurfaceErrorContext } from "./surfaces/surface-shell";
 export type { RuntimeListPagination, RuntimeListState, RuntimeRecordRow } from "@athyper/runtime-shared/core";
 export { RuntimeListPage };
 export { RuntimeEditState } from "./edit/runtime-edit-form";
+export * from "./record-query";
 export {
   DocumentObjectPageWorkspace,
   type DocumentObjectPageWorkspaceProps,
@@ -169,6 +171,7 @@ interface RuntimeDetailPageProps extends RuntimeBaseProps {
   id: string;
   record?: RuntimeRecordRow;
   processState?: ProcessRuntimeState;
+  workspaceManifest?: EffectiveRecordWorkspaceManifest;
   detailState?: RuntimeListState;
 }
 
@@ -276,7 +279,7 @@ function mergeInitialRecord(
   };
 }
 
-export function RuntimeDetailPage({ plane, entity, id, descriptor, record, processState, detailState }: RuntimeDetailPageProps) {
+export function RuntimeDetailPage({ plane, entity, id, descriptor, record, processState, workspaceManifest, detailState }: RuntimeDetailPageProps) {
   const contract = resolveRuntimeDescriptor(entity, descriptor);
   const flags = readRuntimeCanvasFlags(contract);
   const chrome = buildRuntimeRecordChromeModel({
@@ -295,6 +298,7 @@ export function RuntimeDetailPage({ plane, entity, id, descriptor, record, proce
       recordId={id}
       chrome={chrome}
       processState={processState}
+      workspaceManifest={workspaceManifest}
       flags={flags}
     >
       {flags.descriptorSurfaceShell ? (

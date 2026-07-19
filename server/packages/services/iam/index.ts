@@ -1,6 +1,15 @@
 export { registerIamRoutes, type IamRoutesDeps } from "./routes/index.js";
 export { createIamOutboxWorker, type IamOutboxWorkerDeps, type OutboxWorkerCache } from "./outbox/iam-outbox-worker.js";
 export { type CacheClient, type CacheMetrics } from "./session/session.service.js";
+export {
+  createStepUpBinding,
+  createStepUpService,
+  hasFreshKeycloakStepUpAssurance,
+  requireStepUp,
+  type ActionClass,
+  type StepUpBinding,
+  type StepUpService,
+} from "./mfa/step-up.service.js";
 export { checkPermission, checkPermissionBatch, requireAllow } from "./permission/permission.service.js";
 export { getEffectiveModuleAccess, type EffectiveModuleAccess } from "./permission/module-access.service.js";
 export { createCompanyCodeScopeService, type CompanyCodeAccess, type ScopeResolutionResult } from "./permission/company-code-scope.service.js";

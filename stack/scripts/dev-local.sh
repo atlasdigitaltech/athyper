@@ -17,6 +17,10 @@
 #   ./dev-local.sh --no-infra     : skip stack-profile/up (infra already up)
 #   ./dev-local.sh --stop-only    : just stop the 6 app containers, do nothing else
 #
+# Note: file attachments (Tika/docparser) require BOTH --with-jobs AND the
+# render profile running. Start render separately first if needed:
+#   stack/scripts/stack-profile/up.sh render
+#
 # Container naming: ${COMPOSE_PROJECT_NAME}-<svc>-1 (matches stack-service/stop.sh).
 # ============================================================
 

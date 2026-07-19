@@ -187,13 +187,10 @@ function referenceDisplayValue(
   // Both aliases are part of the resolver response contract. The base alias
   // preserves existing snapshotted labels while the full alias is freshly
   // resolved from the target declared by reference_config.
-  const base = field.name.endsWith("_id") ? field.name.slice(0, -3) : field.name;
-  const label = valueLabel(rowData[`${field.name}_label`])
-    || valueLabel(rowData[`${base}_label`]);
+  const label = valueLabel(rowData[`${field.name}_label`]);
   if (!label) return "-"; // Never leak an unresolved technical key to the UI.
 
-  const code = valueLabel(rowData[`${field.name}_code`])
-    || valueLabel(rowData[`${base}_code`]);
+  const code = valueLabel(rowData[`${field.name}_code`]);
   const config = field.reference_config as Record<string, unknown>;
   const picker = config["picker"] as Record<string, unknown> | undefined;
   const showCode = picker?.["show_code"] === true;
@@ -286,7 +283,7 @@ function buildColumn(
   const isQuantity = isQuantityLikeFieldName(field.name);
   const isLongText = isLongTextField(field);
   const lowerName = field.name.toLowerCase();
-  const isStatus = lowerName === "status" || lowerName.endsWith("_status");
+  const isStatus = field.ui_type === "status";
   const isItemIdentity = lowerName === "item" || lowerName === "item_id" || lowerName === "item_code" || lowerName === "item_name";
   const align = isClassification ? "center" : isNumeric ? "right" : undefined;
   const size = isClassification ? 64

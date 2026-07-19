@@ -1,4 +1,5 @@
 import type { ActiveFilterEntry } from "../core/types";
+import Link from "next/link";
 import { runtimeListText } from "../core/resources";
 import { serializeListState } from "../core/url-state";
 
@@ -30,13 +31,13 @@ export function RuntimeListFilterChips({
             <span className="truncate">
               <span className="text-foreground">{f.label}</span>: {f.value}
             </span>
-            <a
+            <Link
               href={clearHref}
               aria-label={runtimeListText.aria.removeFilter(f.label)}
               className="shrink-0 rounded-sm opacity-70 hover:opacity-100"
             >
               &times;
-            </a>
+            </Link>
           </span>
         );
       })}

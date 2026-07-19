@@ -10,8 +10,13 @@
  */
 
 import type { RequestHandler, Router } from "express";
+import { sql } from "kysely";
 import { type FinanceRouteDeps, parseScopeParams, resolveCompanyIds } from "./finance.route.js";
 import { verifyBearer, resolveTenantId, resolvePrincipalIdOrNull } from "@athyper/svc-shared";
+import {
+  evaluateFinanceGovernanceTask,
+  hashCertificationSnapshot,
+} from "../services/finance-governance.service.js";
 
 export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger } = deps;
@@ -33,6 +38,9 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
       const companies = await resolveCompanyIds(db, tenantId, parsed);
       if (companies.length === 0) { res.json([]); return; }
       const companyCodes = companies.map((c) => c.company_code);
+      const cycleTypeCode = typeof req.query["cycleTypeCode"] === "string"
+        ? req.query["cycleTypeCode"].trim()
+        : "";
 
       let q = db
         .selectFrom("governance.cycle_run as cr")
@@ -63,6 +71,12 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
         .where("cr.fiscal_year", "=", parsed.fiscalYear);
 
       if (parsed.period !== null) q = q.where("cr.period_number", "=", parsed.period) as typeof q;
+      if (cycleTypeCode) {
+        const acceptedCodes = cycleTypeCode === "OPENING_BALANCE_MIGRATION"
+          ? ["OPENING_BALANCE_MIGRATION", "OPENING_BALANCE"]
+          : [cycleTypeCode];
+        q = q.where("ct.type_code", "in", acceptedCodes) as typeof q;
+      }
 
       const runs = await q
         .orderBy("cr.fiscal_year", "desc")
@@ -153,9 +167,11 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           "ctsk.due_at as dueAt",
           "ctsk.completed_by as completedBy", "ctsk.completed_at as completedAt",
           "ctsk.completion_notes as completionNotes",
+          "ctsk.evidence_payload as evidencePayload",
           "ctsk.failure_reason as failureReason",
           "tpl.task_name as taskName", "tpl.description",
           "tpl.completion_mode as completionMode",
+          "tpl.system_check_handler as systemCheckHandler",
           "tpl.severity", "tpl.sla_hours as slaHours",
           "tpl.sort_order as sortOrder",
           "cph.phase_code as phaseCode", "cph.phase_name as phaseName",
@@ -284,11 +300,11 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
       if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
 
       const body = req.body as Record<string, unknown>;
-      const { scopeId, fiscalYear, periodNumber, cycleTypeCode = "MONTHLY_CLOSE" } = body as {
-        scopeId: string; fiscalYear: number; periodNumber: number; cycleTypeCode?: string;
+      const { scopeId, fiscalYear, periodNumber, cycleTypeCode = "MONTHLY_CLOSE", runData = {} } = body as {
+        scopeId: string; fiscalYear: number; periodNumber: number; cycleTypeCode?: string; runData?: Record<string, unknown>;
       };
 
-      if (!scopeId || !fiscalYear || !periodNumber) {
+      if (!scopeId || !fiscalYear || periodNumber === undefined || periodNumber === null) {
         res.status(400).json({ error: "MISSING_FIELDS", message: "scopeId, fiscalYear, and periodNumber are required" });
         return;
       }
@@ -297,6 +313,7 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
       const companies = await resolveCompanyIds(db, tenantId, { scopeType: "company", scopeId });
       if (companies.length === 0) { res.status(404).json({ error: "COMPANY_NOT_FOUND" }); return; }
       const companyCode = companies[0]!.company_code as string;
+      const companyCodeId = companies[0]!.company_code_id as string;
 
       // Find the cycle type for FINANCE domain
       const cycleType = await db
@@ -304,13 +321,38 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
         .select(["ct.id", "ct.type_code"])
         .where("ct.tenant_id", "=", tenantId)
         .where("ct.domain",    "=", "FINANCE")
-        .where("ct.type_code", "=", String(cycleTypeCode))
+        .where("ct.type_code", "in", String(cycleTypeCode) === "OPENING_BALANCE_MIGRATION"
+          ? ["OPENING_BALANCE_MIGRATION", "OPENING_BALANCE"]
+          : [String(cycleTypeCode)])
         .where("ct.is_active", "=", true)
         .executeTakeFirst() as { id: string; type_code: string } | undefined;
 
       if (!cycleType) {
         res.status(422).json({ error: "CYCLE_TYPE_NOT_FOUND", cycleTypeCode });
         return;
+      }
+
+      if (["OPENING_BALANCE_MIGRATION", "OPENING_BALANCE"].includes(cycleType.type_code) && periodNumber !== 0) {
+        res.status(422).json({
+          error: "OPENING_BALANCE_REQUIRES_PERIOD_0",
+          message: "Opening-balance cycles can only be started for fiscal period 0.",
+        });
+        return;
+      }
+      if (["OPENING_BALANCE_MIGRATION", "OPENING_BALANCE"].includes(cycleType.type_code)) {
+        const requiredRunData = ["migration_strategy", "source_system", "source_cutoff_date"];
+        const missingRunData = requiredRunData.filter((key) => {
+          const value = runData[key];
+          return typeof value !== "string" || value.trim().length === 0;
+        });
+        if (missingRunData.length > 0) {
+          res.status(400).json({
+            error: "OPENING_BALANCE_CONTEXT_REQUIRED",
+            message: "Opening-balance cycles require migration_strategy, source_system, and source_cutoff_date.",
+            missing: missingRunData,
+          });
+          return;
+        }
       }
 
       // Determine next run_number
@@ -326,9 +368,27 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
 
       const runNumber = (lastRun?.maxRun ?? 0) + 1;
 
-      // Calculate period_end_date (last day of month for this period in fiscal year)
-      // Assumes calendar-year fiscal year; period N = month N.
-      const periodEndDate = new Date(fiscalYear, periodNumber, 0); // day 0 = last day of month N
+      // Resolve the generated fiscal period. This supports non-calendar-year,
+      // 4-4-5, 13-period, and custom calendars without duplicating date math.
+      const fiscalPeriod = await db
+        .selectFrom("master.fiscal_period as fp")
+        .select(["fp.id", "fp.end_date as endDate", "fp.period_type as periodType"])
+        .where("fp.tenant_id", "=", tenantId)
+        .where("fp.company_code_id", "=", companyCodeId)
+        .where("fp.fiscal_year", "=", fiscalYear)
+        .where("fp.period_number", "=", periodNumber)
+        .executeTakeFirst() as { id: string; endDate: string | Date; periodType: string } | undefined;
+
+      if (!fiscalPeriod) {
+        res.status(422).json({
+          error: "FISCAL_PERIOD_NOT_GENERATED",
+          message: `Generate FY ${fiscalYear} period ${periodNumber} before starting its close cycle.`,
+        });
+        return;
+      }
+      const periodEndDate = fiscalPeriod.endDate instanceof Date
+        ? fiscalPeriod.endDate.toISOString().slice(0, 10)
+        : String(fiscalPeriod.endDate).slice(0, 10);
 
       // Get the first phase for this cycle type
       const firstPhase = await db
@@ -355,11 +415,12 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           run_number:        runNumber,
           status:            "OPEN",
           current_phase_id:  firstPhase?.id ?? null,
-          period_end_date:   periodEndDate.toISOString().slice(0, 10),
+          period_end_date:   periodEndDate,
           cycle_start_date:  today.toISOString().slice(0, 10),
           cycle_target_date: targetDate.toISOString().slice(0, 10),
           started_at:        new Date(),
           started_by:        principalId,
+          domain_data:       { ...runData, company_code: companyCode },
           created_by:        principalId,
         })
         .returning(["id"])
@@ -429,10 +490,14 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
 
       const runId  = req.params["runId"]  as string;
       const taskId = req.params["taskId"] as string;
-      const { action, remarks } = req.body as { action: "complete" | "reopen"; remarks?: string };
+      const { action, remarks, evidencePayload } = req.body as {
+        action: "complete" | "reopen" | "evaluate";
+        remarks?: string;
+        evidencePayload?: Record<string, unknown>;
+      };
 
-      if (action !== "complete" && action !== "reopen") {
-        res.status(400).json({ error: "INVALID_ACTION", message: "action must be 'complete' or 'reopen'" });
+      if (!['complete', 'reopen', 'evaluate'].includes(action)) {
+        res.status(400).json({ error: "INVALID_ACTION", message: "action must be 'complete', 'reopen', or 'evaluate'" });
         return;
       }
 
@@ -443,15 +508,71 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           jb.onRef("cr.id", "=", "ctsk.cycle_run_id")
             .on("cr.tenant_id", "=", tenantId),
         )
-        .select(["ctsk.id", "ctsk.status", "ctsk.is_mandatory"])
+        .innerJoin("governance.cycle_task_template as tpl", (jb) =>
+          jb.onRef("tpl.id", "=", "ctsk.template_id").on("tpl.tenant_id", "=", tenantId),
+        )
+        .select([
+          "ctsk.id", "ctsk.status", "ctsk.is_mandatory", "ctsk.phase_id as phaseId",
+          "cr.current_phase_id as currentPhaseId", "tpl.completion_mode as completionMode",
+          "tpl.system_check_handler as systemCheckHandler",
+        ])
         .where("ctsk.id",          "=", taskId)
         .where("ctsk.cycle_run_id","=", runId)
         .where("ctsk.tenant_id",   "=", tenantId)
-        .executeTakeFirst() as { id: string; status: string; is_mandatory: boolean } | undefined;
+        .executeTakeFirst() as {
+          id: string; status: string; is_mandatory: boolean; phaseId: string;
+          currentPhaseId: string | null; completionMode: string; systemCheckHandler: string | null;
+        } | undefined;
 
       if (!task) { res.status(404).json({ error: "TASK_NOT_FOUND" }); return; }
 
+      if (action !== "reopen" && task.phaseId !== task.currentPhaseId) {
+        res.status(422).json({ error: "TASK_PHASE_NOT_ACTIVE", message: "Only tasks in the run's current phase can be executed." });
+        return;
+      }
+
+      if (action !== "reopen") {
+        const { rows: dependencyRows } = await sql<{
+          can_start: boolean; blocking_count: number; blocking_tasks: string[];
+        }>`SELECT * FROM governance.check_task_dependencies(${runId}::uuid, ${taskId}::uuid)`.execute(db);
+        const dependency = dependencyRows[0];
+        if (dependency && !dependency.can_start) {
+          res.status(422).json({
+            error: "TASK_DEPENDENCY_BLOCKED",
+            blockers: dependency.blocking_tasks,
+          });
+          return;
+        }
+      }
+
+      if (action === "evaluate") {
+        if (task.completionMode === "MANUAL" || !task.systemCheckHandler) {
+          res.status(422).json({ error: "TASK_NOT_EXECUTABLE", message: "This task has no system-check handler." });
+          return;
+        }
+        const result = await evaluateFinanceGovernanceTask(db, { tenantId, runId, taskId });
+        if (!result) { res.status(422).json({ error: "TASK_NOT_EXECUTABLE" }); return; }
+        const now = new Date();
+        await db.updateTable("governance.cycle_task").set(result.passed ? {
+          status: "COMPLETED", completed_at: now, completed_by: principalId,
+          completion_notes: result.summary, evidence_payload: result,
+          failure_reason: null, failed_at: null, updated_at: now, updated_by: principalId,
+          execution_meta: { last_handler: result.handler, last_checked_at: result.checkedAt },
+        } : {
+          status: "FAILED", completed_at: null, completed_by: null,
+          completion_notes: null, evidence_payload: result,
+          failure_reason: result.summary, failed_at: now, updated_at: now, updated_by: principalId,
+          execution_meta: { last_handler: result.handler, last_checked_at: result.checkedAt },
+        }).where("id", "=", taskId).where("tenant_id", "=", tenantId).execute();
+        res.json({ taskId, action, status: result.passed ? "COMPLETED" : "FAILED", result });
+        return;
+      }
+
       if (action === "complete") {
+        if (task.completionMode === "SYSTEM") {
+          res.status(422).json({ error: "SYSTEM_TASK_REQUIRES_EVALUATION", message: "Run the system check; system tasks cannot be manually completed." });
+          return;
+        }
         if (!["PENDING", "IN_PROGRESS", "FAILED"].includes(task.status)) {
           res.status(422).json({ error: "INVALID_STATUS", message: `Task is ${task.status}, cannot complete` });
           return;
@@ -463,6 +584,7 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
             completed_at:     new Date(),
             completed_by:     principalId,
             completion_notes: remarks ?? null,
+            evidence_payload: evidencePayload ?? {},
             failure_reason:   null,
             updated_at:       new Date(),
             updated_by:       principalId,
@@ -532,10 +654,10 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
         .innerJoin("governance.cycle_type as ct", (jb) =>
           jb.onRef("ct.id", "=", "cr.cycle_type_id").on("ct.tenant_id", "=", tenantId),
         )
-        .select(["cr.id", "cr.status", "cr.cycle_type_id", "ct.id as ctId"])
+        .select(["cr.id", "cr.status", "cr.cycle_type_id", "cr.current_phase_id as currentPhaseId", "ct.id as ctId"])
         .where("cr.id",        "=", runId)
         .where("cr.tenant_id", "=", tenantId)
-        .executeTakeFirst() as { id: string; status: string; cycle_type_id: string; ctId: string } | undefined;
+        .executeTakeFirst() as { id: string; status: string; cycle_type_id: string; currentPhaseId: string | null; ctId: string } | undefined;
 
       if (!run) { res.status(404).json({ error: "RUN_NOT_FOUND" }); return; }
       if (["COMPLETED", "CERTIFIED", "CLOSED"].includes(run.status)) {
@@ -553,6 +675,10 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
         .executeTakeFirst() as { id: string; sort_order: number } | undefined;
 
       if (!phase) { res.status(404).json({ error: "PHASE_NOT_FOUND", phaseCode }); return; }
+      if (run.currentPhaseId !== phase.id) {
+        res.status(422).json({ error: "PHASE_NOT_ACTIVE", message: "Only the run's current phase can be signed off." });
+        return;
+      }
 
       // Blocker check — mandatory incomplete / failed / blocked tasks in this phase
       const tasks = await db
@@ -589,6 +715,24 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
       const now = new Date();
 
       if (nextPhase) {
+        const { rows: crossGateRows } = await sql<{
+          gate_passed: boolean;
+          blocking_count: number;
+          blocking_cycles: unknown;
+        }>`
+          SELECT gate_passed, blocking_count, blocking_cycles
+            FROM governance.check_cross_cycle_gate(${runId}::uuid, ${nextPhase.id}::uuid)
+        `.execute(db);
+        const crossGate = crossGateRows[0];
+        if (crossGate && !crossGate.gate_passed) {
+          res.status(422).json({
+            error: "CROSS_CYCLE_GATE_BLOCKED",
+            targetPhaseCode: nextPhase.phase_code,
+            blockers: crossGate.blocking_cycles,
+          });
+          return;
+        }
+
         // Advance to next phase
         await db
           .updateTable("governance.cycle_run")
@@ -630,6 +774,280 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
         });
       }
     } catch (err) { logger?.error("period_close_sign_off_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  // Consolidated evidence lens used by Opening Balance, Readiness, Monthly,
+  // and Year-End workbenches. Accounting documents remain in their domains.
+  router.get("/finance/period-close/runs/:runId/governance", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const tenantId = await resolveTenantId(
+        db,
+        (req.headers["x-org"] as string) ?? "",
+        (req.headers["x-realm"] as string) ?? "athyper",
+      );
+      if (!tenantId) { res.status(403).json({ error: "TENANT_NOT_FOUND" }); return; }
+      const runId = req.params["runId"] as string;
+      const { rows } = await sql<{
+        run: Record<string, unknown>;
+        certifications: unknown;
+        deviations: unknown;
+        report_packs: unknown;
+        import_requests: unknown;
+        journals: unknown;
+      }>`
+        WITH selected_run AS (
+          SELECT cr.*, ct.type_code
+            FROM governance.cycle_run cr
+            JOIN governance.cycle_type ct ON ct.tenant_id = cr.tenant_id AND ct.id = cr.cycle_type_id
+           WHERE cr.tenant_id = ${tenantId}::uuid AND cr.id = ${runId}::uuid
+        ), import_ids AS (
+          SELECT value::uuid AS id
+            FROM selected_run, jsonb_array_elements_text(coalesce(domain_data->'import_request_ids', '[]'::jsonb))
+        )
+        SELECT to_jsonb(sr) AS run,
+               coalesce((SELECT jsonb_agg(to_jsonb(c) ORDER BY c.cert_code, c.cert_version DESC)
+                           FROM governance.cycle_certification c WHERE c.tenant_id = ${tenantId}::uuid AND c.cycle_run_id = sr.id), '[]'::jsonb) AS certifications,
+               coalesce((SELECT jsonb_agg(to_jsonb(d) ORDER BY d.created_at DESC)
+                           FROM governance.cycle_deviation d WHERE d.tenant_id = ${tenantId}::uuid AND d.cycle_run_id = sr.id), '[]'::jsonb) AS deviations,
+               coalesce((SELECT jsonb_agg(to_jsonb(rp) ORDER BY rp.created_at DESC)
+                           FROM governance.report_pack rp WHERE rp.tenant_id = ${tenantId}::uuid AND rp.cycle_run_id = sr.id), '[]'::jsonb) AS report_packs,
+               coalesce((SELECT jsonb_agg(to_jsonb(ir) ORDER BY ir.created_at DESC)
+                           FROM document.import_request ir WHERE ir.tenant_id = ${tenantId}::uuid AND ir.id IN (SELECT id FROM import_ids)), '[]'::jsonb) AS import_requests,
+               coalesce((SELECT jsonb_agg(to_jsonb(je) ORDER BY je.created_at DESC)
+                           FROM document.journal_entry je JOIN master.company_code cc ON cc.id = je.company_code_id
+                          WHERE je.tenant_id = ${tenantId}::uuid AND cc.code = sr.entity_code
+                            AND je.fiscal_year = sr.fiscal_year AND je.period_number = sr.period_number
+                            AND (je.source_doc_type IN ('opening_balance','year_end_close') OR je.source_doc_id IN (SELECT id FROM import_ids))), '[]'::jsonb) AS journals
+          FROM selected_run sr
+      `.execute(db);
+      if (!rows[0]) { res.status(404).json({ error: "RUN_NOT_FOUND" }); return; }
+      res.json({
+        run: rows[0].run,
+        certifications: rows[0].certifications,
+        deviations: rows[0].deviations,
+        reportPacks: rows[0].report_packs,
+        importRequests: rows[0].import_requests,
+        journals: rows[0].journals,
+      });
+    } catch (err) { logger?.error("finance_governance_evidence_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  router.post("/finance/period-close/runs/:runId/certifications", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const sub = (claims["sub"] as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, (req.headers["x-org"] as string) ?? "", xRealm);
+      if (!tenantId) { res.status(403).json({ error: "TENANT_NOT_FOUND" }); return; }
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+      const runId = req.params["runId"] as string;
+      const { certCode, action, notes, snapshot = {} } = req.body as {
+        certCode: string; action: "certify" | "attest"; notes?: string; snapshot?: Record<string, unknown>;
+      };
+      if (!certCode || !["certify", "attest"].includes(action)) {
+        res.status(400).json({ error: "INVALID_CERTIFICATION_COMMAND" }); return;
+      }
+      const { rows: runRows } = await sql<{ entity_code: string; type_code: string; incomplete_codes: string[]; critical: number }>`
+        SELECT cr.entity_code, ct.type_code,
+               coalesce(array_agg(DISTINCT task.task_code) FILTER
+                 (WHERE task.is_mandatory AND task.status <> 'COMPLETED'), '{}') AS incomplete_codes,
+               count(DISTINCT dev.id) FILTER (WHERE dev.severity = 'CRITICAL' AND dev.status NOT IN ('RESOLVED','REJECTED','EXPIRED','REVOKED'))::int AS critical
+          FROM governance.cycle_run cr
+          JOIN governance.cycle_type ct ON ct.tenant_id = cr.tenant_id AND ct.id = cr.cycle_type_id
+          LEFT JOIN governance.cycle_task task ON task.tenant_id = cr.tenant_id AND task.cycle_run_id = cr.id
+          LEFT JOIN governance.cycle_deviation dev ON dev.tenant_id = cr.tenant_id AND dev.cycle_run_id = cr.id
+         WHERE cr.tenant_id = ${tenantId}::uuid AND cr.id = ${runId}::uuid
+         GROUP BY cr.entity_code, ct.type_code
+      `.execute(db);
+      const run = runRows[0];
+      if (!run) { res.status(404).json({ error: "RUN_NOT_FOUND" }); return; }
+      const protectedFinal = certCode === "FINANCE_POSTING_READY" || certCode === "OPEN_BAL_FINAL";
+      const certificationTaskCodes: Record<string, string[]> = {
+        FINANCE_POSTING_READY: ["FSR_FINAL_CERTIFICATION"],
+        OPEN_BAL_FINAL: ["OB_FINAL_CERTIFICATION"],
+        MONTHLY_CLOSE_FINAL: ["CONTROLLER_CERTIFICATION"],
+        YEAR_END_FINAL: ["YE_CONTROLLER_CERTIFICATION", "YE_CFO_ATTESTATION"],
+      };
+      const allowedIncomplete = new Set(certificationTaskCodes[certCode] ?? []);
+      const blockingIncomplete = run.incomplete_codes.filter((code) => !allowedIncomplete.has(code));
+      if ((protectedFinal || allowedIncomplete.size > 0) && (blockingIncomplete.length > 0 || run.critical > 0)) {
+        res.status(422).json({ error: "CERTIFICATION_BLOCKED", incompleteMandatoryTasks: blockingIncomplete, criticalDeviations: run.critical });
+        return;
+      }
+      const { rows: existingRows } = await sql<{
+        id: string; cert_version: number; status: string; snapshot_payload: Record<string, unknown> | null;
+      }>`
+        SELECT id, cert_version, status, snapshot_payload
+          FROM governance.cycle_certification
+         WHERE tenant_id = ${tenantId}::uuid AND cycle_run_id = ${runId}::uuid AND cert_code = ${certCode}
+         ORDER BY cert_version DESC LIMIT 1
+      `.execute(db);
+      const existing = existingRows[0];
+      if (action === "attest" && existing?.status !== "CERTIFIED") {
+        res.status(422).json({ error: "CERTIFICATION_NOT_CERTIFIED", currentStatus: existing?.status ?? null }); return;
+      }
+      const now = new Date();
+      const fullSnapshot = {
+        ...(existing?.snapshot_payload ?? {}), ...snapshot,
+        cycleRunId: runId, cycleTypeCode: run.type_code, entityCode: run.entity_code,
+        certCode, certifiedAt: action === "certify" ? now.toISOString() : undefined,
+        attestedAt: action === "attest" ? now.toISOString() : undefined,
+      };
+      const contentHash = hashCertificationSnapshot(fullSnapshot);
+      let certificationId = existing?.id;
+      if (!existing) {
+        const inserted = await db.insertInto("governance.cycle_certification").values({
+          tenant_id: tenantId, entity_code: run.entity_code, cycle_run_id: runId,
+          cert_code: certCode, cert_version: 1, cert_type: "STANDARD",
+          status: "CERTIFIED", content_hash: contentHash, snapshot_payload: fullSnapshot,
+          controller_notes: notes ?? null, certified_by: principalId, certified_at: now,
+          created_by: principalId,
+        }).returning("id").executeTakeFirst();
+        certificationId = (inserted as { id: string } | undefined)?.id;
+      } else {
+        await db.updateTable("governance.cycle_certification").set(action === "certify" ? {
+          status: "CERTIFIED", content_hash: contentHash, snapshot_payload: fullSnapshot,
+          controller_notes: notes ?? null, certified_by: principalId, certified_at: now,
+          updated_at: now, updated_by: principalId,
+        } : {
+          status: "ATTESTED", content_hash: contentHash, snapshot_payload: fullSnapshot,
+          attestation_notes: notes ?? null, attested_by: principalId, attested_at: now,
+          updated_at: now, updated_by: principalId,
+        }).where("tenant_id", "=", tenantId).where("id", "=", existing.id).execute();
+      }
+      const completedTaskCodes = action === "attest"
+        ? certCode === "YEAR_END_FINAL" ? ["YE_CFO_ATTESTATION"] : certificationTaskCodes[certCode] ?? []
+        : certCode === "MONTHLY_CLOSE_FINAL" ? ["CONTROLLER_CERTIFICATION"]
+          : certCode === "YEAR_END_FINAL" ? ["YE_CONTROLLER_CERTIFICATION"] : [];
+      if (completedTaskCodes.length > 0) {
+        await db.updateTable("governance.cycle_task").set({
+          status: "COMPLETED", completed_by: principalId, completed_at: now,
+          completion_notes: notes ?? `${certCode} ${action}`,
+          evidence_payload: { certificationId, certCode, action, contentHash },
+          updated_at: now, updated_by: principalId,
+        }).where("tenant_id", "=", tenantId).where("cycle_run_id", "=", runId)
+          .where("task_code", "in", completedTaskCodes).execute();
+      }
+      res.json({ certificationId, certCode, status: action === "certify" ? "CERTIFIED" : "ATTESTED", contentHash });
+    } catch (err) { logger?.error("finance_certification_command_error", { err: String(err) }); next(err); }
+  }) as RequestHandler);
+
+  router.post("/finance/period-close/runs/:runId/period-command", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const sub = (claims["sub"] as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, (req.headers["x-org"] as string) ?? "", xRealm);
+      if (!tenantId) { res.status(403).json({ error: "TENANT_NOT_FOUND" }); return; }
+      const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
+      if (!principalId) { res.status(403).json({ error: "PRINCIPAL_NOT_FOUND" }); return; }
+      const runId = req.params["runId"] as string;
+      const { targetStatus, bookIds, reason } = req.body as { targetStatus: "open" | "soft_close" | "hard_close"; bookIds?: string[]; reason?: string };
+      if (!["open", "soft_close", "hard_close"].includes(targetStatus)) { res.status(400).json({ error: "INVALID_PERIOD_STATUS" }); return; }
+      const { rows: runRows } = await sql<{ company_code_id: string; fiscal_year: number; period_number: number; type_code: string }>`
+        SELECT cc.id AS company_code_id, cr.fiscal_year, cr.period_number, ct.type_code
+          FROM governance.cycle_run cr
+          JOIN governance.cycle_type ct ON ct.tenant_id = cr.tenant_id AND ct.id = cr.cycle_type_id
+          JOIN master.company_code cc ON cc.tenant_id = cr.tenant_id AND cc.code = cr.entity_code
+         WHERE cr.tenant_id = ${tenantId}::uuid AND cr.id = ${runId}::uuid
+      `.execute(db);
+      const run = runRows[0];
+      if (!run) { res.status(404).json({ error: "RUN_NOT_FOUND" }); return; }
+      const selectedBookIds = Array.isArray(bookIds) ? bookIds : [];
+      const { rows: periodRows } = await sql<{ book_id: string; status: string }>`
+        SELECT book_id, status FROM governance.book_period_status
+         WHERE tenant_id = ${tenantId}::uuid AND company_code_id = ${run.company_code_id}::uuid
+           AND fiscal_year = ${run.fiscal_year} AND period_number = ${run.period_number}
+           AND (${sql.val(selectedBookIds)}::uuid[] = '{}'::uuid[] OR book_id = ANY(${sql.val(selectedBookIds)}::uuid[]))
+      `.execute(db);
+      if (periodRows.length === 0) { res.status(422).json({ error: "BOOK_PERIOD_STATUS_NOT_FOUND" }); return; }
+      const invalidTransitions = periodRows.filter((row) => {
+        if (row.status === targetStatus) return false;
+        if (targetStatus === "soft_close") return row.status !== "open";
+        if (targetStatus === "hard_close") return row.status !== "soft_close";
+        return !["future", "soft_close", "hard_close"].includes(row.status);
+      });
+      if (invalidTransitions.length > 0) {
+        res.status(422).json({ error: "INVALID_PERIOD_TRANSITION", targetStatus, currentStatuses: invalidTransitions }); return;
+      }
+      const isReopen = targetStatus === "open" && periodRows.some((row) => ["soft_close", "hard_close"].includes(row.status));
+      if (isReopen && !reason?.trim()) {
+        res.status(422).json({ error: "PERIOD_REOPEN_REASON_REQUIRED" }); return;
+      }
+      if (targetStatus === "hard_close") {
+        const requiredCert = run.period_number === 0 ? "OPEN_BAL_FINAL" : run.type_code === "YEAR_END_CLOSE" ? "YEAR_END_FINAL" : "MONTHLY_CLOSE_FINAL";
+        const { rows: certRows } = await sql<{ count: number }>`
+          SELECT count(*)::int AS count FROM governance.cycle_certification
+           WHERE tenant_id = ${tenantId}::uuid AND cycle_run_id = ${runId}::uuid
+             AND cert_code = ${requiredCert} AND status = 'ATTESTED'
+        `.execute(db);
+        if ((certRows[0]?.count ?? 0) === 0) {
+          res.status(422).json({ error: "PERIOD_COMMAND_CERTIFICATION_REQUIRED", requiredCert }); return;
+        }
+      }
+      await db.transaction().execute(async (trx) => {
+        const now = new Date();
+        let q = trx.updateTable("governance.book_period_status").set({
+          status: targetStatus,
+          opened_at: targetStatus === "open" ? now : undefined,
+          opened_by: targetStatus === "open" ? principalId : undefined,
+          soft_closed_at: targetStatus === "soft_close" ? now : undefined,
+          soft_closed_by: targetStatus === "soft_close" ? principalId : undefined,
+          hard_closed_at: targetStatus === "hard_close" ? now : undefined,
+          hard_closed_by: targetStatus === "hard_close" ? principalId : undefined,
+          reopen_count: isReopen ? sql`reopen_count + 1` : undefined,
+          last_reopen_reason: targetStatus === "open" ? reason ?? null : undefined,
+          status_changed_at: now, status_changed_by: principalId, updated_at: now, updated_by: principalId,
+        }).where("tenant_id", "=", tenantId).where("company_code_id", "=", run.company_code_id)
+          .where("fiscal_year", "=", run.fiscal_year).where("period_number", "=", run.period_number);
+        if (selectedBookIds.length > 0) q = q.where("book_id", "in", selectedBookIds);
+        await q.execute();
+        const { rows: aggregateRows } = await sql<{ fiscal_status: "future" | "open" | "soft_close" | "hard_close" }>`
+          SELECT CASE
+                   WHEN bool_and(status = 'hard_close') THEN 'hard_close'
+                   WHEN bool_and(status IN ('soft_close','hard_close')) THEN 'soft_close'
+                   WHEN bool_or(status = 'open') THEN 'open'
+                   ELSE 'future'
+                 END AS fiscal_status
+            FROM governance.book_period_status
+           WHERE tenant_id = ${tenantId}::uuid AND company_code_id = ${run.company_code_id}::uuid
+             AND fiscal_year = ${run.fiscal_year} AND period_number = ${run.period_number}
+        `.execute(trx);
+        const fiscalStatus = aggregateRows[0]?.fiscal_status ?? targetStatus;
+        await trx.updateTable("master.fiscal_period").set({
+          status: fiscalStatus,
+          opened_at: fiscalStatus === "open" ? now : undefined,
+          opened_by: fiscalStatus === "open" ? principalId : undefined,
+          soft_closed_at: fiscalStatus === "soft_close" ? now : undefined,
+          soft_closed_by: fiscalStatus === "soft_close" ? principalId : undefined,
+          hard_closed_at: fiscalStatus === "hard_close" ? now : undefined,
+          hard_closed_by: fiscalStatus === "hard_close" ? principalId : undefined,
+          status_changed_at: now, status_changed_by: principalId, updated_at: now, updated_by: principalId,
+        }).where("tenant_id", "=", tenantId).where("company_code_id", "=", run.company_code_id)
+          .where("fiscal_year", "=", run.fiscal_year).where("period_number", "=", run.period_number).execute();
+        await sql`
+          INSERT INTO event.outbox
+            (tenant_id, topic, event_type, event_key, entity_type, entity_id,
+             aggregate_type, aggregate_id, actor_id, source, payload, created_by)
+          VALUES (
+            ${tenantId}::uuid, 'fin', 'finance.period.status_changed',
+            ${`cross-book-period:${runId}:${targetStatus}:${now.toISOString()}`}, 'cycle_run', ${runId}::uuid,
+            'cycle_run', ${runId}::uuid, ${principalId}::uuid, 'finance.period-command',
+            ${JSON.stringify({
+              runId, companyCodeId: run.company_code_id, fiscalYear: run.fiscal_year,
+              periodNumber: run.period_number, targetStatus, bookIds: selectedBookIds,
+            })}::jsonb, ${principalId}::uuid
+          )
+          ON CONFLICT (tenant_id, event_key) WHERE event_key IS NOT NULL DO NOTHING
+        `.execute(trx);
+      });
+      res.json({ runId, targetStatus, fiscalYear: run.fiscal_year, periodNumber: run.period_number, bookIds: selectedBookIds });
+    } catch (err) { logger?.error("finance_period_command_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
 
   return router;

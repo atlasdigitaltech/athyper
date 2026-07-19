@@ -1753,3 +1753,17 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Drop dead publish_state_id column from entity (never written, no FK, redundant with 1:1 join)
 ALTER TABLE control.entity DROP COLUMN IF EXISTS publish_state_id;
+
+-- Cross-book executor accepts only the canonical strategy vocabulary. These
+-- constraints are repeated here so upgrades harden tables created by an older DDL.
+DO $$ BEGIN ALTER TABLE control.book_posting_rule ADD CONSTRAINT bpr_account_strategy_chk
+    CHECK (account_strategy IN ('same', 'map', 'profile'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.book_posting_rule ADD CONSTRAINT bpr_amount_strategy_chk
+    CHECK (amount_strategy IN ('mirror', 'multiply', 'formula', 'suppress'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE control.book_posting_rule ADD CONSTRAINT bpr_recognition_timing_chk
+    CHECK (recognition_timing IN ('simultaneous', 'deferred', 'on_close'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;

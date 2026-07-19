@@ -580,8 +580,7 @@ function renderRuntimeCell(
 }
 
 function isStatusColumn(col: ResolvedColumn): boolean {
-  const name = col.name.toLowerCase();
-  return col.uiType === "status" || name === "status" || name.endsWith("_status");
+  return col.uiType === "status";
 }
 
 function cx(...classes: Array<string | false | null | undefined>): string {

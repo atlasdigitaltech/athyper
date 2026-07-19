@@ -40,6 +40,6 @@ describe("runtime-list pagination query mode", () => {
   it("does not reuse page maps cached under the previous pagination contract", () => {
     const cacheKey = buildRuntimeListBrowserCacheKey("journal_entry", {}, 20);
 
-    expect(cacheKey).toMatch(/^runtime-list:v2:journal_entry:20:/);
+    expect(cacheKey).toMatch(/^runtime-list:v3:journal_entry:20:/);
   });
 });

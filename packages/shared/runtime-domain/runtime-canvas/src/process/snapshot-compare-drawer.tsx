@@ -26,12 +26,11 @@
  *     names for that section.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Minus, Plus, ArrowRight } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
 import { DrawerPeekShell } from "@athyper/ui/surfaces/shells";
-import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import type { MetaEntityField, MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import type {
   FieldDelta,
@@ -49,6 +48,7 @@ import {
   type SnapshotChildContracts,
   type SnapshotChildSlot,
 } from "./snapshot-field-rules";
+import { useOptionalRecordWorkspaceSnapshotCompare } from "../record-query";
 
 export interface SnapshotCompareDrawerProps {
   open: boolean;
@@ -75,19 +75,18 @@ export interface SnapshotCompareDrawerProps {
 export function SnapshotCompareDrawer({
   open,
   onOpenChange,
-  entityCode,
-  recordId,
   leftSnapshotId,
   rightSnapshotId,
   contract,
   childContracts,
 }: SnapshotCompareDrawerProps) {
-  const { loading, error, diff } = useSnapshotCompare(
-    entityCode,
-    recordId,
+  const compareQuery = useOptionalRecordWorkspaceSnapshotCompare<SnapshotCompareResponse>(
     open ? leftSnapshotId  : null,
     open ? rightSnapshotId : null,
   );
+  const diff = compareQuery.data ?? null;
+  const loading = compareQuery.fetchStatus === "fetching" && compareQuery.data === undefined;
+  const error = compareQuery.error?.message ?? null;
 
   const title = diff
     ? `Compare #${diff.left.chain_seq} → #${diff.right.chain_seq}`
@@ -124,63 +123,6 @@ export function SnapshotCompareDrawer({
 }
 
 // ─── Fetch hook ─────────────────────────────────────────────────────────────
-
-function useSnapshotCompare(
-  entityCode: string,
-  recordId:   string,
-  leftId:     string | null,
-  rightId:    string | null,
-): {
-  loading: boolean;
-  error:   string | null;
-  diff:    SnapshotCompareResponse | null;
-} {
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
-  const [diff,    setDiff]    = useState<SnapshotCompareResponse | null>(null);
-
-  useEffect(() => {
-    if (!leftId || !rightId) {
-      setLoading(false);
-      setError(null);
-      setDiff(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-
-    fetch(runtimePath.entitySnapshotCompare(entityCode, recordId), {
-      signal: controller.signal,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ leftSnapshotId: leftId, rightSnapshotId: rightId }),
-      cache:  "no-store",
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => null) as { message?: string } | null;
-          throw new Error(body?.message ?? `Compare API returned ${res.status}`);
-        }
-        const body = await res.json() as SnapshotCompareResponse;
-        if (!controller.signal.aborted) setDiff(body);
-      })
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!controller.signal.aborted) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [entityCode, recordId, leftId, rightId]);
-
-  return { loading, error, diff };
-}
 
 // ─── Body ───────────────────────────────────────────────────────────────────
 

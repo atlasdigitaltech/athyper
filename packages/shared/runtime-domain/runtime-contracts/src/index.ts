@@ -7,3 +7,5 @@ export * from "./source-adapter";
 export * from "./document-edit-runtime";
 export * from "./document-edit-runtime-compiler";
 export * from "./runtime-bootstrap";
+export * from "./compatibility-fallback";
+export * from "./record-workspace";

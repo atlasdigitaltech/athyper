@@ -1,24 +1,25 @@
-﻿<#-- =======================================================================
-     Neon Keycloak Login Theme — login-reset-password.ftl
+<#-- =======================================================================
+     Neon Keycloak Login Theme � login-reset-password.ftl
      Forgot password / password reset email entry page.
      Left panel mirrors login.ftl exactly (neon logo + carousel).
      ======================================================================= -->
+<#include "_iam-context.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>${msg("emailForgotTitle")} — ${realm.displayName}</title>
-  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <title>${iamTitle(msg("emailForgotTitle"))}</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
 </head>
 <body>
-<div class="kc-page">
+<div class="iam-shell kc-page" data-plane="${iamPlane}">
 
-  <!-- ── Left branding panel ── -->
+  <!-- -- Left branding panel -- -->
   <div class="kc-panel-left">
 
     <#include "_neon-brand-logo.ftl">
@@ -47,7 +48,7 @@
       <div class="kc-slide">
         <p class="kc-slide-ws">Projects &amp; Services</p>
         <h3>Deliver Brilliance.<br>Control Every Cost.</h3>
-        <p class="kc-slide-desc">Manage projects, service workflows, budgets, and revenue-linked execution — all in one command center.</p>
+        <p class="kc-slide-desc">Manage projects, service workflows, budgets, and revenue-linked execution � all in one command center.</p>
       </div>
       <div class="kc-slide">
         <p class="kc-slide-ws">Operations</p>
@@ -72,7 +73,7 @@
     </div>
   </div><!-- /.kc-panel-left -->
 
-  <!-- ── Right form panel ── -->
+  <!-- -- Right form panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
       <div class="kc-form-card">
@@ -122,7 +123,7 @@
               ${msg("emailForgotTitle")}
             </button>
             <a class="kc-link kc-back-link" href="${url.loginUrl}">
-              ← ${msg("backToLogin")}
+              ? ${msg("backToLogin")}
             </a>
           </div>
         </form>

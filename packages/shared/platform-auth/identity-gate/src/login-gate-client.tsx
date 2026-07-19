@@ -8,17 +8,19 @@ import {
   AuthShell,
   AthyperSignInIcon,
   ErrorBanner,
+  LoadingState,
   PrimaryAction,
   SecondaryAction,
   TextLinkButton,
 } from "./components";
+import { useMinimumAuthReveal, waitForMinimumAuthTransition } from "./auth-transition-timing";
 import { authErrorMessageFromSearch } from "./errors";
 import { getAuthExperience } from "./experience";
 import type { BrowserLocationSnapshot } from "./types";
 import { buildLoginHref, readFinalDestinationFromSearch } from "./url";
 import { getDefaultWorkbenchForPlane } from "./workbench";
 
-type DiscoveryMode = "email" | "returning" | "awaiting" | "verified";
+type DiscoveryMode = "email" | "returning" | "awaiting" | "verified" | "routed";
 
 interface DiscoveryCandidate {
   id: string;
@@ -37,6 +39,7 @@ interface DiscoveryCandidate {
   networkAccountName?: string | null;
   networkAccountRole?: string | null;
   networkRelationshipType?: string | null;
+  resolutionKind: "identity" | "verified-domain";
 }
 
 interface RememberedOrganization {
@@ -50,6 +53,7 @@ interface RememberedOrganization {
   tenantName?: string;
   displayName: string;
   subtitle?: string;
+  authMethodLabel?: string;
   initials: string;
   hostname: string | null;
   loginUrl: string;
@@ -65,6 +69,7 @@ interface RememberedOrganization {
 interface DiscoveryStartResponse {
   status?: string;
   verified?: boolean;
+  routed?: boolean;
   token?: string;
   identifier?: string;
   email?: string | null;
@@ -129,6 +134,7 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
   const [resendAvailableAt, setResendAvailableAt] = useState(0);
   const [nowMs, setNowMs] = useState(Date.now());
   const [rememberedOrganizations, setRememberedOrganizations] = useState<RememberedOrganization[]>([]);
+  const minimumRevealReady = useMinimumAuthReveal();
 
   function startDifferentSignIn() {
     setEmail("");
@@ -206,6 +212,7 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
   });
 
   async function verifyDiscoveryToken(token: string) {
+    const transitionStartedAt = Date.now();
     setLoading("verify");
     setDiscoveryError(null);
     setVerificationToken(token);
@@ -228,6 +235,7 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
       setShowNativeFallback(false);
       setDiscoveryError(err instanceof Error ? err.message : "We could not verify this sign-in link.");
     } finally {
+      await waitForMinimumAuthTransition(transitionStartedAt);
       setLoading(null);
     }
   }
@@ -261,13 +269,19 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
         setShowNativeFallback(true);
         throw new Error(data.message ?? "Discovery is temporarily unavailable. Use direct sign-in below.");
       }
-      if ((data.status === "verified" || data.verified) && data.token) {
+      const selectionReady = (
+        data.status === "verified"
+        || data.status === "routed"
+        || data.verified
+        || data.routed
+      ) && data.token;
+      if (selectionReady && data.token) {
         setVerificationToken(data.token);
         setVerifiedEmail(data.identifier ?? data.email ?? data.emailHint ?? data.identifierHint ?? trimmed);
         setCandidates(data.candidates ?? []);
         setDebugVerifyUrl(null);
         setSubmittedEmailHint(null);
-        setMode("verified");
+        setMode(data.status === "routed" || data.routed ? "routed" : "verified");
         return;
       }
       const cooldownSeconds = typeof data.resendCooldownSeconds === "number"
@@ -291,6 +305,7 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
 
   async function selectWorkspace(candidate: DiscoveryCandidate) {
     if (!verificationToken) return;
+    const transitionStartedAt = Date.now();
     setLoading(`select:${candidate.id}`);
     setDiscoveryError(null);
     try {
@@ -309,8 +324,10 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
         throw new Error(data.message ?? `We could not prepare this ${plane === "mesh" ? "network account" : "organization"} sign-in.`);
       }
       rememberOrganization(plane, candidate, safeRememberedLoginUrl(data.loginUrl), verifiedEmail ?? email.trim());
+      await waitForMinimumAuthTransition(transitionStartedAt);
       window.location.assign(data.loginUrl);
     } catch (err) {
+      await waitForMinimumAuthTransition(transitionStartedAt);
       setDiscoveryError(err instanceof Error ? err.message : `We could not prepare this ${plane === "mesh" ? "network account" : "organization"} sign-in.`);
       setLoading(null);
     }
@@ -318,6 +335,7 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
 
   async function selectRememberedOrganization(organization: RememberedOrganization) {
     const key = rememberedOrganizationKey(organization);
+    const transitionStartedAt = Date.now();
     setLoading(`remembered:${key}`);
     setDiscoveryError(null);
     try {
@@ -330,11 +348,29 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
       if (!res.ok || !data.loginUrl) {
         throw new Error(data.message ?? `We could not prepare this ${plane === "mesh" ? "network account" : "organization"} sign-in.`);
       }
+      await waitForMinimumAuthTransition(transitionStartedAt);
       window.location.assign(data.loginUrl);
     } catch (err) {
+      await waitForMinimumAuthTransition(transitionStartedAt);
       setDiscoveryError(err instanceof Error ? err.message : `We could not prepare this ${plane === "mesh" ? "network account" : "organization"} sign-in.`);
       setLoading(null);
     }
+  }
+
+  async function startNativeSignIn() {
+    if (loading !== null) return;
+    const transitionStartedAt = Date.now();
+    setLoading("native");
+    await waitForMinimumAuthTransition(transitionStartedAt);
+    window.location.assign(nativeHref);
+  }
+
+  async function clearStaleSession() {
+    if (loading !== null) return;
+    const transitionStartedAt = Date.now();
+    setLoading("logout");
+    await waitForMinimumAuthTransition(transitionStartedAt);
+    window.location.href = config.logoutPath;
   }
 
   const sessionReasonBanner =
@@ -344,6 +380,21 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
         ? "Your session could not be found. Please sign in again."
         : null;
 
+  const fullPageTransition = loading === "verify"
+    || loading === "native"
+    || loading === "logout"
+    || loading?.startsWith("select:")
+    || loading?.startsWith("remembered:");
+
+  if (!minimumRevealReady || fullPageTransition) {
+    return (
+      <LoadingState
+        plane={plane}
+        message={minimumRevealReady ? "Continuing secure sign-in..." : "Preparing secure sign-in..."}
+      />
+    );
+  }
+
   return (
     <AuthShell
       plane={plane}
@@ -351,12 +402,12 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
       subtitle={shellCopy.subtitle}
       variant="brand"
       footer={
-        <div className="flex flex-col items-start gap-2 text-left text-[11px] leading-4 text-muted-foreground/60 sm:flex-row sm:items-center sm:justify-between sm:text-xs sm:leading-5">
+        <div className="flex flex-col items-start gap-2 text-left sm:flex-row sm:items-center sm:justify-between">
           <span>&copy; {new Date().getFullYear()} athyper. All rights reserved.</span>
           <button
             className="transition-colors hover:text-foreground disabled:opacity-50"
             disabled={loading !== null}
-            onClick={() => { setLoading("logout"); window.location.href = config.logoutPath; }}
+            onClick={() => { void clearStaleSession(); }}
             type="button"
           >
             Clear stale session
@@ -396,17 +447,17 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
             }}
           >
             <div className="space-y-1.5">
-              <label className="text-sm font-medium" htmlFor={`${plane}-identifier`}>
-                User ID or Email
+              <label className="auth-iam-label text-sm font-medium" htmlFor={`${plane}-identifier`}>
+                Work email or user ID
               </label>
               <input
                 autoComplete="username"
-                className="h-11 w-full rounded-md border border-border bg-background px-3 text-base outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-foreground"
+                className="auth-iam-control h-11 w-full rounded-md border border-border bg-background px-3 text-base outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-foreground"
                 disabled={loading !== null}
                 id={`${plane}-identifier`}
                 inputMode="text"
                 onChange={(event) => setEmail(event.target.value)}
-                placeholder="you@company.com or userid"
+                placeholder="you@company.com or user ID"
                 type="text"
                 value={email}
               />
@@ -430,10 +481,9 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
             resendWaitSeconds={Math.max(0, Math.ceil((resendAvailableAt - nowMs) / 1000))}
           />
         ) : null}
-        {mode === "verified" ? (
+        {mode === "verified" || mode === "routed" ? (
           <VerifiedOrganizations
             candidates={candidates}
-            email={verifiedEmail}
             loading={loading}
             onDifferentEmail={() => {
               startDifferentSignIn();
@@ -450,11 +500,7 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
             </p>
           <SecondaryAction
             disabled={loading !== null}
-            onClick={() => {
-              if (loading !== null) return;
-              setLoading("native");
-              window.location.assign(nativeHref);
-            }}
+            onClick={() => { void startNativeSignIn(); }}
           >
             <span className="flex items-center justify-center gap-2">
               <AthyperSignInIcon plane={plane} />
@@ -489,7 +535,7 @@ function ReturningOrganizations({
       <div className="max-h-[52vh] space-y-2 overflow-y-auto overscroll-contain pr-1">
         {organizations.map((organization) => (
           <button
-            className="flex w-full items-start gap-3 rounded-md bg-muted px-3 py-3 text-left transition-colors hover:bg-muted/80 disabled:opacity-60"
+            className="auth-organization-row flex w-full items-start gap-3 rounded-md bg-muted text-left transition-colors hover:bg-muted/80 disabled:opacity-60"
             disabled={loading !== null}
             key={`${rememberedOrganizationKey(organization)}:${organization.lastVisitedAt}`}
             onClick={() => {
@@ -501,17 +547,23 @@ function ReturningOrganizations({
               {organization.initials}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{rememberedOrganizationTitle(plane, organization)}</span>
+              <span className="auth-organization-name block truncate">{rememberedOrganizationTitle(plane, organization)}</span>
               {showBoundaryDetails ? (
-                <span className="mt-1 grid gap-0.5 text-xs text-muted-foreground">
+                <span className="auth-organization-meta mt-1 grid gap-0.5 text-muted-foreground">
                   {rememberedOrganizationDetails(plane, organization).map((detail) => (
                     <span className="block truncate" key={detail.label}>{detail.label}: {detail.value}</span>
                   ))}
+                  {organization.authMethodLabel ? (
+                    <span className="block truncate">Sign-in method: {organization.authMethodLabel}</span>
+                  ) : null}
                   <span className="block truncate">Last visited {relativeTime(organization.lastVisitedAt)}</span>
                 </span>
               ) : (
-                <span className="block truncate text-xs text-muted-foreground">
-                  Last visited {relativeTime(organization.lastVisitedAt)}
+                <span className="auth-organization-meta grid gap-0.5 text-muted-foreground">
+                  <span className="block truncate">Last visited {relativeTime(organization.lastVisitedAt)}</span>
+                  {organization.authMethodLabel ? (
+                    <span className="block truncate">Sign-in method: {organization.authMethodLabel}</span>
+                  ) : null}
                 </span>
               )}
             </span>
@@ -596,14 +648,12 @@ function AwaitingVerification({
 
 function VerifiedOrganizations({
   candidates,
-  email,
   loading,
   onDifferentEmail,
   onSelect,
   plane,
 }: {
   candidates: DiscoveryCandidate[];
-  email: string | null;
   loading: string | null;
   onDifferentEmail: () => void;
   onSelect: (candidate: DiscoveryCandidate) => void;
@@ -612,18 +662,11 @@ function VerifiedOrganizations({
   const showBoundaryDetails = plane !== "admin";
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-          <CheckIcon className="h-3.5 w-3.5 text-emerald-600" />
-          <span>Identity verified{email ? ` - ${email}` : ""}</span>
-        </p>
-        <p className="text-sm text-muted-foreground">{verifiedChoiceCopy(plane)}</p>
-      </div>
       {candidates.length > 0 ? (
         <div className="max-h-[52vh] space-y-2 overflow-y-auto overscroll-contain pr-1">
           {candidates.map((candidate) => (
             <button
-              className="flex w-full items-start gap-3 rounded-md bg-muted px-3 py-3 text-left transition-colors hover:bg-muted/80 disabled:opacity-60"
+              className="auth-organization-row flex w-full items-start gap-3 rounded-md bg-muted text-left transition-colors hover:bg-muted/80 disabled:opacity-60"
               disabled={loading !== null}
               key={candidate.id}
               onClick={() => onSelect(candidate)}
@@ -633,15 +676,19 @@ function VerifiedOrganizations({
                 {initials(candidateTitle(plane, candidate))}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{candidateTitle(plane, candidate)}</span>
+                <span className="auth-organization-name block truncate">{candidateTitle(plane, candidate)}</span>
                 {showBoundaryDetails ? (
-                  <span className="mt-1 grid gap-0.5 text-xs text-muted-foreground">
+                  <span className="auth-organization-meta mt-1 grid gap-0.5 text-muted-foreground">
                     {candidateDetails(plane, candidate).map((detail) => (
                       <span className="block truncate" key={detail.label}>{detail.label}: {detail.value}</span>
                     ))}
+                    <span className="block truncate">Sign-in method: {candidate.authMethodLabel}</span>
                   </span>
                 ) : (
-                  <span className="block truncate text-xs text-muted-foreground">{candidateOrganizationSubtitle(candidate)}</span>
+                  <span className="auth-organization-meta mt-1 grid gap-0.5 text-muted-foreground">
+                    <span className="block truncate">{candidateOrganizationSubtitle(candidate)}</span>
+                    <span className="block truncate">Sign-in method: {candidate.authMethodLabel}</span>
+                  </span>
                 )}
               </span>
               <ChevronRightIcon className="mt-2 h-4 w-4 text-muted-foreground" />
@@ -707,6 +754,12 @@ function discoveryShellCopy({
       subtitle: verifiedEmail ? `Identity verified - ${verifiedEmail}` : "Identity verified",
     };
   }
+  if (mode === "routed") {
+    return {
+      title: productName.toLowerCase() === "mesh" ? "Choose your network account" : "Choose your organization",
+      subtitle: "Select your organization sign-in method to continue",
+    };
+  }
   return {
     title: `Sign in to ${productName}`,
     subtitle: supportCopy,
@@ -762,6 +815,7 @@ function rememberOrganization(plane: PlaneKey, candidate: DiscoveryCandidate, lo
       tenantName: candidate.tenantName,
       displayName,
       subtitle: candidateOrganizationSubtitle(candidate),
+      authMethodLabel: candidate.authMethodLabel,
       initials: initials(displayName),
       hostname: candidate.hostname,
       loginUrl,
@@ -795,11 +849,6 @@ function rememberedOrganizationTitle(plane: PlaneKey, organization: RememberedOr
   return organization.displayName;
 }
 
-function verifiedChoiceCopy(plane: PlaneKey): string {
-  if (plane === "mesh") return "Choose the network account you want to sign in with.";
-  return "Choose the organization you want to sign in with.";
-}
-
 function candidateDetails(
   plane: PlaneKey,
   candidate: DiscoveryCandidate,
@@ -813,7 +862,7 @@ function candidateDetails(
 
   return compactDetails([
     ["Tenant", candidate.tenantName],
-    ["Organization / Legal Entity", candidateOrganizationName(candidate)],
+    [plane === "neon" ? "Organization" : "Organization / Legal Entity", candidateOrganizationName(candidate)],
   ]);
 }
 
@@ -832,7 +881,7 @@ function rememberedOrganizationDetails(
   return compactDetails([
     ["User ID", organization.loginHint],
     ["Tenant", organization.tenantName ?? organization.displayName],
-    ["Organization / Legal Entity", organization.displayName],
+    [plane === "neon" ? "Organization" : "Organization / Legal Entity", organization.displayName],
   ]);
 }
 
@@ -1071,12 +1120,3 @@ function MailIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-

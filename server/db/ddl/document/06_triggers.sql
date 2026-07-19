@@ -912,3 +912,23 @@ CREATE TRIGGER trg_ssh_immutability_guard
     FOR EACH ROW
     WHEN (OLD.status IN ('posted','reversed','cancelled') OR OLD.terminal_status IS NOT NULL)
     EXECUTE FUNCTION document.trg_ssh_immutability_guard();
+
+DROP TRIGGER IF EXISTS trg_je_finance_readiness_gate ON document.journal_entry;
+CREATE TRIGGER trg_je_finance_readiness_gate
+    BEFORE UPDATE OF status ON document.journal_entry
+    FOR EACH ROW
+    WHEN (NEW.status = 'posted' AND OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION document.trg_je_finance_readiness_gate_fn();
+
+COMMENT ON TRIGGER trg_je_finance_readiness_gate ON document.journal_entry IS
+    'Blocks production posting without FINANCE_POSTING_READY only for tenants enrolled by feature flag.';
+
+DROP TRIGGER IF EXISTS trg_je_enqueue_cross_book ON document.journal_entry;
+CREATE TRIGGER trg_je_enqueue_cross_book
+    AFTER UPDATE OF status ON document.journal_entry
+    FOR EACH ROW
+    WHEN (NEW.status = 'posted' AND OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION document.trg_je_enqueue_cross_book_fn();
+
+COMMENT ON TRIGGER trg_je_enqueue_cross_book ON document.journal_entry IS
+    'Publishes an idempotent fin outbox request for root-journal cross-book derivation.';

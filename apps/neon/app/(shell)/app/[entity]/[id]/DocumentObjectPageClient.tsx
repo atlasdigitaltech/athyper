@@ -19,6 +19,7 @@ import {
   getSurfaceRenderer,
   isProcessTabId,
   readRuntimeCanvasFlags,
+  RecordWorkspaceQueryBoundary,
   type DocumentEditCoordinatorIdentity,
   type DocumentEditOpenResult,
   type RuntimeRecordChromeModel,
@@ -40,6 +41,7 @@ import {
 } from "@athyper/content-ui";
 import type { DocumentEditSubmitResponseV1 } from "@athyper/api-contracts/document-edit-submit";
 import type {
+  EffectiveRecordWorkspaceManifest,
   MetaEntityRuntimeDescriptor,
   MetaEntitySurfaceKind,
   ProcessRuntimeState,
@@ -57,6 +59,7 @@ interface DocumentObjectPageClientProps {
   descriptor: MetaEntityRuntimeDescriptor;
   record: RuntimeRecordRow;
   processState?: ProcessRuntimeState;
+  workspaceManifest?: EffectiveRecordWorkspaceManifest;
   /**
    * When true (typical for `/.../[id]/edit` routes), the workspace fires
    * `enterEdit()` on mount. When omitted/false (typical for view routes at
@@ -64,12 +67,7 @@ interface DocumentObjectPageClientProps {
    * in the chrome action bar, which navigates to the `/edit` URL.
    */
   autoEnterEdit?: boolean;
-  /**
-   * Server-prefetched child descriptors keyed by snapshot collection slot.
-   * Consumed by the Versions/Compare drawers so per-row labels and value
-   * formatters use the child entity's field rules instead of raw column
-   * names. Absent slots fall back to raw rendering.
-   */
+  /** Compatibility-only value; record routes now resolve this on Versions intent. */
   snapshotChildContracts?: SnapshotChildContracts;
   /**
    * Optional v5 edit-runtime cache identity. Must be produced server-side from
@@ -182,16 +180,45 @@ function extractDocumentChildRelations(
   const surface = descriptor.surfaces.find(
     (s) => s.kind === "polymorphic_pc_lines" || s.kind === "document_lines",
   );
-  if (!surface) return undefined;
-  if (surface.kind !== "polymorphic_pc_lines" && surface.kind !== "document_lines") return undefined;
-  const relations = surface.config.relations;
-  if (!relations?.lines) return undefined;
-  return {
-    lines:             relations.lines,
-    pricingComponents: relations.pricingComponents,
-    distributions:     relations.distributions,
-    schedules:         relations.schedules,
-  };
+  const declaredRelations = new Map<string, string>();
+  for (const relation of descriptor.relations) {
+    declaredRelations.set(relation.key, relation.name);
+    declaredRelations.set(relation.name, relation.name);
+  }
+  if (surface && (surface.kind === "polymorphic_pc_lines" || surface.kind === "document_lines")) {
+    const relations = surface.config.relations;
+    const lines = declaredRelationOrUndefined(relations?.lines, declaredRelations);
+    if (!lines) return undefined;
+    return {
+      surfaceKey: surface.key,
+      lines,
+      pricingComponents: declaredRelationOrUndefined(relations.pricingComponents, declaredRelations),
+      distributions: declaredRelationOrUndefined(relations.distributions, declaredRelations),
+      schedules: declaredRelationOrUndefined(relations.schedules, declaredRelations),
+    };
+  }
+
+  // Metadata-native fallback for document descriptors that expose a standard
+  // line_items surface without the richer polymorphic document surface.
+  const lineSurface = descriptor.surfaces.find((candidate) => candidate.kind === "line_items");
+  if (
+    lineSurface?.kind === "line_items"
+    && lineSurface.relationName
+    && declaredRelations.has(lineSurface.relationName)
+  ) {
+    return {
+      surfaceKey: lineSurface.key,
+      lines: declaredRelations.get(lineSurface.relationName)!,
+    };
+  }
+  return undefined;
+}
+
+function declaredRelationOrUndefined(
+  relationName: string | undefined,
+  declaredRelations: ReadonlyMap<string, string>,
+): string | undefined {
+  return relationName ? declaredRelations.get(relationName) : undefined;
 }
 
 export default function DocumentObjectPageClient({
@@ -201,6 +228,7 @@ export default function DocumentObjectPageClient({
   descriptor,
   record,
   processState,
+  workspaceManifest,
   autoEnterEdit = false,
   snapshotChildContracts,
   editCoordinatorIdentity,
@@ -414,21 +442,23 @@ export default function DocumentObjectPageClient({
   }, [entityCode, recordId]);
 
   return (
-    <DocumentRuntimeContextProvider
-      descriptor={descriptor}
-      recordId={recordId}
-      record={recordData}
-      relations={documentRelations}
-      editCoordinatorIdentity={editCoordinatorIdentity}
-      editCoordinatorInitialCore={editCoordinatorInitialCore}
-      editCoordinatorInitialOpen={editCoordinatorInitialOpen}
-    >
-      <DocumentObjectPageWorkspace
+    <RecordWorkspaceQueryBoundary manifest={workspaceManifest}>
+      <DocumentRuntimeContextProvider
+        descriptor={descriptor}
+        recordId={recordId}
+        record={recordData}
+        relations={documentRelations}
+        editCoordinatorIdentity={editCoordinatorIdentity}
+        editCoordinatorInitialCore={editCoordinatorInitialCore}
+        editCoordinatorInitialOpen={editCoordinatorInitialOpen}
+      >
+        <DocumentObjectPageWorkspace
         contract={descriptor}
         record={effectiveRecord}
         recordId={recordId}
         recordUuid={recordUuid}
         processState={processState}
+        workspaceManifest={workspaceManifest}
         chrome={chrome}
         sections={sections}
         renderSection={renderSection}
@@ -444,8 +474,9 @@ export default function DocumentObjectPageClient({
         autoEnterEdit={autoEnterEdit}
         flags={flags}
         snapshotChildContracts={snapshotChildContracts}
-      />
-    </DocumentRuntimeContextProvider>
+        />
+      </DocumentRuntimeContextProvider>
+    </RecordWorkspaceQueryBoundary>
   );
 }
 

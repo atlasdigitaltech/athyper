@@ -12,8 +12,10 @@ import {
   AuditSummaryStrip,
   resolveAuditSummaryData,
 } from "../header/audit-summary-strip";
+import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 
 export interface ContextDrawerHostProps {
+  contract: MetaEntityRuntimeDescriptor;
   entity: RuntimeContextDrawerEntity;
   entityCode: string;
   recordId: string;
@@ -27,6 +29,7 @@ export interface ContextDrawerHostProps {
   commentsCount: number;
   attachmentsSummary: EntityContextDrawerAttachmentSummary;
   onCommentsCountChange: (count: number | null) => void;
+  onAttachmentsSummaryChange: (summary: EntityContextDrawerAttachmentSummary | null) => void;
   /** Drawer width persistence scope. Defaults to `"neon-entity"`. */
   widthScope?: string;
 }
@@ -38,6 +41,7 @@ export interface ContextDrawerHostProps {
  * is supplied by `useContextDrawer`; this component is pure presentation.
  */
 export function ContextDrawerHost({
+  contract,
   entity,
   entityCode,
   recordId,
@@ -50,6 +54,7 @@ export function ContextDrawerHost({
   commentsCount,
   attachmentsSummary,
   onCommentsCountChange,
+  onAttachmentsSummaryChange,
   widthScope = "neon-entity",
 }: ContextDrawerHostProps) {
   const auditSummary = resolveAuditSummaryData({ record: recordData, recordId });
@@ -82,6 +87,7 @@ export function ContextDrawerHost({
             entityCode={entityCode}
             recordId={recordId}
             recordUuid={recordUuid}
+            onSummaryChange={onAttachmentsSummaryChange}
           />
         )}
         {activePanel === "activity" && recordUuid && (
@@ -94,6 +100,8 @@ export function ContextDrawerHost({
               entityCode={entityCode}
               recordId={recordId}
               recordUuid={recordUuid}
+              fields={contract.fields}
+              recordData={recordData}
             />
           </div>
         )}

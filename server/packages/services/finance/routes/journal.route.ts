@@ -30,6 +30,7 @@ import { positiveFxRateInput, resolveFxRate } from "@athyper/svc-shared";
 import { randomUUID } from "node:crypto";
 import { ApproverResolverService, createWorkflowEngine } from "@athyper/svc-workflow";
 import { PolicyEngine } from "@athyper/svc-policy";
+import { resolvePostingReadinessGate } from "../services/finance-governance.service.js";
 
 type AnyDb = Kysely<any>;
 
@@ -144,19 +145,18 @@ export async function resolveFiscalPeriodByDate(
   companyCodeId: string,
   postingDate: string,
 ): Promise<{ id: string; fiscalYear: number; periodNumber: number } | null> {
-  const row = await db
-    .selectFrom("master.fiscal_period as fp")
-    .select([
-      "fp.id",
-      "fp.fiscal_year as fiscalYear",
-      "fp.period_number as periodNumber",
-    ])
-    .where("fp.tenant_id", "=", tenantId)
-    .where("fp.company_code_id", "=", companyCodeId)
-    .where("fp.start_date", "<=", postingDate)
-    .where("fp.end_date", ">=", postingDate)
-    .orderBy("fp.start_date", "desc")
-    .executeTakeFirst() as { id: string; fiscalYear: number; periodNumber: number } | undefined;
+  const result = await sql<{ id: string; fiscalYear: number; periodNumber: number }>`
+    SELECT fiscal_period_id AS id,
+           fiscal_year AS "fiscalYear",
+           period_number AS "periodNumber"
+      FROM master.resolve_fiscal_period(
+        ${tenantId}::uuid,
+        ${companyCodeId}::uuid,
+        ${postingDate}::date,
+        false
+      )
+  `.execute(db);
+  const row = result.rows[0];
 
   return row ?? null;
 }
@@ -558,6 +558,21 @@ async function autoApproveAndPostJournalEntry(
   journalEntryId: string,
   actorId: string,
 ): Promise<Record<string, unknown>> {
+  const journal = await db.selectFrom("document.journal_entry")
+    .select(["company_code_id as companyCodeId", "source_doc_type as sourceDocType", "is_reversal as isReversal"])
+    .where("tenant_id", "=", tenantId).where("id", "=", journalEntryId).executeTakeFirst() as
+      { companyCodeId: string; sourceDocType: string; isReversal: boolean } | undefined;
+  if (!journal) throw Object.assign(new Error("Journal entry was not found."), { code: "JOURNAL_NOT_FOUND" });
+  const controlledBypass = journal.isReversal || ["opening_balance", "finance_setup_test"].includes(journal.sourceDocType);
+  if (!controlledBypass) {
+    const readiness = await resolvePostingReadinessGate(db, tenantId, journal.companyCodeId);
+    if (readiness.enabled && !readiness.certified) {
+      throw Object.assign(
+        new Error("Production posting is blocked until FINANCE_POSTING_READY is certified for this company."),
+        { code: "FINANCE_POSTING_READINESS_REQUIRED" },
+      );
+    }
+  }
   return db.transaction().execute(async (trx) => {
     const approved = await (trx.updateTable("document.journal_entry") as any)
       .set({ status: "approved", updated_by: actorId })
@@ -786,6 +801,10 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
           "je.posted_at as postedAt",
           "je.reversed_by_id as reversedBy",
           "je.reversal_of_id as reversalOf",
+          "je.book_id as bookId",
+          "je.derived_from_je_id as derivedFromJournalId",
+          "je.posting_rule_id as postingRuleId",
+          "je.book_idempotency_key as bookIdempotencyKey",
         ])
         .where("je.id", "=", jeId)
         .where("je.tenant_id", "=", tenantId)
@@ -835,6 +854,29 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
         .orderBy("jl.line_no", "asc")
         .execute() as Array<Record<string, unknown>>;
 
+      const rootJournalId = String(je["derivedFromJournalId"] ?? je["id"]);
+      const { rows: crossBookRows } = await sql<Record<string, unknown>>`
+        SELECT d.id AS "derivationId", d.status, d.attempt_count AS "attemptCount",
+               d.last_attempt_at AS "lastAttemptAt", d.completed_at AS "completedAt",
+               d.error_code AS "errorCode", d.error_message AS "errorMessage",
+               d.evidence_payload AS "evidencePayload", d.idempotency_key AS "idempotencyKey",
+               d.source_journal_id AS "sourceJournalId", source.je_number AS "sourceJournalNumber",
+               source.book_id AS "sourceBookId", source_book.code AS "sourceBookCode",
+               d.target_journal_id AS "targetJournalId", target.je_number AS "targetJournalNumber",
+               target.status AS "targetJournalStatus", target.book_id AS "targetBookId",
+               target_book.code AS "targetBookCode", rule.id AS "postingRuleId",
+               rule.rule_code AS "postingRuleCode", rule.rule_name AS "postingRuleName",
+               d.posting_rule_version AS "postingRuleVersion"
+          FROM document.book_posting_derivation d
+          JOIN document.journal_entry source ON source.tenant_id = d.tenant_id AND source.id = d.source_journal_id
+          JOIN master.ledger_book source_book ON source_book.tenant_id = source.tenant_id AND source_book.id = source.book_id
+          JOIN control.book_posting_rule rule ON rule.tenant_id = d.tenant_id AND rule.id = d.posting_rule_id
+          LEFT JOIN document.journal_entry target ON target.tenant_id = d.tenant_id AND target.id = d.target_journal_id
+          LEFT JOIN master.ledger_book target_book ON target_book.tenant_id = target.tenant_id AND target_book.id = target.book_id
+         WHERE d.tenant_id = ${tenantId}::uuid AND d.source_journal_id = ${rootJournalId}::uuid
+         ORDER BY rule.priority, rule.rule_code
+      `.execute(db);
+
       res.json({
         je: {
           id: je["id"],
@@ -852,6 +894,10 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
           postedAt: je["postedAt"] ?? null,
           reversedBy: je["reversedBy"] ?? null,
           reversalOf: je["reversalOf"] ?? null,
+          bookId: je["bookId"],
+          derivedFromJournalId: je["derivedFromJournalId"] ?? null,
+          postingRuleId: je["postingRuleId"] ?? null,
+          bookIdempotencyKey: je["bookIdempotencyKey"] ?? null,
         },
         lines: lines.map((l) => ({
           id: l["id"],
@@ -872,11 +918,71 @@ export function createJournalRoutes(router: Router, deps: FinanceRouteDeps): Rou
           projectName: l["projectName"] ?? null,
           description: l["description"] ?? null,
         })),
+        crossBook: {
+          rootJournalId,
+          isDerived: Boolean(je["derivedFromJournalId"]),
+          derivations: crossBookRows,
+        },
       });
     } catch (err) {
       logger?.error("finance_posting_trace_error", { err: String(err) });
       next(err);
     }
+  }) as RequestHandler);
+
+  router.get("/finance/cross-book/monitor", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(403).json({ error: "TENANT_NOT_FOUND" }); return; }
+      const parsed = parseScopeParams(req.query as Record<string, unknown>);
+      if ("error" in parsed) { res.status(400).json({ error: parsed.error }); return; }
+      const companies = await resolveCompanyIds(db, tenantId, parsed);
+      if (companies.length === 0) { res.json({ summary: { total: 0, pending: 0, processing: 0, completed: 0, suppressed: 0, failed: 0 }, items: [] }); return; }
+      const companyIds = companies.map((company) => company.company_code_id);
+      const requestedStatus = typeof req.query["status"] === "string" ? req.query["status"].trim() : "";
+      const statuses = requestedStatus ? requestedStatus.split(",").map((value) => value.trim()).filter(Boolean) : [];
+      if (statuses.some((status) => !["pending", "processing", "completed", "suppressed", "failed"].includes(status))) {
+        res.status(400).json({ error: "INVALID_DERIVATION_STATUS" }); return;
+      }
+      const limit = Math.min(Math.max(Number(req.query["limit"] ?? 100), 1), 200);
+      const { rows } = await sql<Record<string, unknown>>`
+        SELECT d.id, d.status, d.attempt_count AS "attemptCount", d.last_attempt_at AS "lastAttemptAt",
+               d.completed_at AS "completedAt", d.error_code AS "errorCode", d.error_message AS "errorMessage",
+               d.evidence_payload AS "evidencePayload", d.idempotency_key AS "idempotencyKey",
+               source.id AS "sourceJournalId", source.je_number AS "sourceJournalNumber",
+               source.fiscal_year AS "fiscalYear", source.period_number AS "periodNumber",
+               source.posting_date AS "postingDate", source_book.code AS "sourceBookCode",
+               target.id AS "targetJournalId", target.je_number AS "targetJournalNumber",
+               target.status AS "targetJournalStatus", target_book.code AS "targetBookCode",
+               rule.rule_code AS "postingRuleCode", rule.rule_name AS "postingRuleName",
+               rule.version AS "currentRuleVersion", d.posting_rule_version AS "executedRuleVersion",
+               outbox.status AS "outboxStatus", outbox.attempts AS "outboxAttempts", outbox.last_error AS "outboxLastError"
+          FROM document.book_posting_derivation d
+          JOIN document.journal_entry source ON source.tenant_id = d.tenant_id AND source.id = d.source_journal_id
+          JOIN master.ledger_book source_book ON source_book.tenant_id = source.tenant_id AND source_book.id = source.book_id
+          JOIN control.book_posting_rule rule ON rule.tenant_id = d.tenant_id AND rule.id = d.posting_rule_id
+          LEFT JOIN document.journal_entry target ON target.tenant_id = d.tenant_id AND target.id = d.target_journal_id
+          LEFT JOIN master.ledger_book target_book ON target_book.tenant_id = target.tenant_id AND target_book.id = target.book_id
+          LEFT JOIN event.outbox outbox ON outbox.tenant_id = d.tenant_id AND outbox.event_key = 'cross-book:' || d.source_journal_id::text
+         WHERE d.tenant_id = ${tenantId}::uuid AND d.company_code_id = ANY(${sql.val(companyIds)}::uuid[])
+           AND (${sql.val(statuses)}::text[] = '{}'::text[] OR d.status = ANY(${sql.val(statuses)}::text[]))
+         ORDER BY coalesce(d.last_attempt_at, d.created_at) DESC LIMIT ${limit}
+      `.execute(db);
+      const { rows: summaryRows } = await sql<Record<string, number>>`
+        SELECT count(*)::int AS total,
+               count(*) FILTER (WHERE status = 'pending')::int AS pending,
+               count(*) FILTER (WHERE status = 'processing')::int AS processing,
+               count(*) FILTER (WHERE status = 'completed')::int AS completed,
+               count(*) FILTER (WHERE status = 'suppressed')::int AS suppressed,
+               count(*) FILTER (WHERE status = 'failed')::int AS failed
+          FROM document.book_posting_derivation
+         WHERE tenant_id = ${tenantId}::uuid AND company_code_id = ANY(${sql.val(companyIds)}::uuid[])
+      `.execute(db);
+      res.json({ summary: summaryRows[0], items: rows });
+    } catch (err) { logger?.error("finance_cross_book_monitor_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
 
   router.post("/finance/journals", (async (req, res, next) => {

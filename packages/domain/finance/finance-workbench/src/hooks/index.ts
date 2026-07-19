@@ -23,6 +23,41 @@ export { useCompleteTask, useSignOffPhase, useStartCloseRun } from "./usePeriodC
 export { useAccountAnalysis, type AccountAnalysisData, type AccountAnalysisPeriod } from "./useAccountAnalysis";
 export { useFinanceDashboardKpis, type FinanceDashboardKpis } from "./useFinanceDashboardKpis";
 export { useFiscalPeriods, type FiscalPeriodRow } from "./useFiscalPeriods";
+export {
+  useFiscalCalendarDesigner,
+  useFiscalCalendarPreview,
+  useSaveFiscalCalendar,
+  useAssignFiscalCalendar,
+  useGenerateFiscalPeriods,
+  useRetireFiscalCalendar,
+  type FiscalCalendarConfig,
+  type FiscalCalendarRule,
+  type FiscalCalendarDesignerPayload,
+  type FiscalCalendarPreview,
+  type FiscalCalendarSavePayload,
+} from "./useFiscalCalendarDesigner";
+export {
+  usePostingRoleCoverage,
+  usePostingRoleResolutionTrace,
+  useSavePostingRoleAccountMap,
+  useRetirePostingRoleAccountMap,
+  type PostingRoleCoveragePayload,
+  type PostingRoleCoverageRow,
+  type PostingRoleCoverageCell,
+  type PostingRoleResolutionTrace,
+} from "./usePostingRoleCoverage";
+export {
+  useCrossBookPostingMonitor,
+  type CrossBookMonitorPayload,
+  type CrossBookDerivationRow,
+  type CrossBookDerivationStatus,
+} from "./useCrossBookPostingMonitor";
+export {
+  useFinanceAggregateEntities,
+  type AggregateEntityDefinition,
+  type AggregateEntityResult,
+  type AggregateRuntimeRecord,
+} from "./useFinanceAggregateEntities";
 export { useCreateJournal, type CreateJournalPayload, type CreateJournalLine, type CreateJournalResult } from "./useCreateJournal";
 export { useReverseJournal, type ReverseJournalPayload, type ReverseJournalResult } from "./useReverseJournal";
 export {

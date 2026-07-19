@@ -287,8 +287,14 @@ REM ----------------------------
 REM Bring up stack (PROFILE-AWARE)
 REM ----------------------------
 if "!USE_PROFILE!"=="1" (
-  echo Running: docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" --profile "!ACTIVE_PROFILE!" !COMPOSE_FILES! up -d --remove-orphans
-  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" --profile "!ACTIVE_PROFILE!" !COMPOSE_FILES! up -d --remove-orphans
+  REM Always include "core" alongside the requested profile so that core-profile
+  REM services (memorycache, dbpool-*, virusscan ...) remain visible for depends_on
+  REM validation. COMPOSE_PROFILES is used instead of --profile to guarantee both
+  REM profiles are active regardless of Docker Compose version merge behaviour.
+  set "EFFECTIVE_PROFILES=core,!ACTIVE_PROFILE!"
+  echo Running: docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" !COMPOSE_FILES! up -d --remove-orphans [profiles=!EFFECTIVE_PROFILES!]
+  set "COMPOSE_PROFILES=!EFFECTIVE_PROFILES!"
+  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" !COMPOSE_FILES! up -d --remove-orphans
 ) else (
   echo Running: docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" !COMPOSE_FILES! up -d --remove-orphans [all profiles]
   set "COMPOSE_PROFILES=!ALL_COMPOSE_PROFILES!"
@@ -306,7 +312,8 @@ echo NOTE: --scale docrender=N is not forwarded by this script. To run multiple 
 
 REM Show status (same profile rules)
 if "!USE_PROFILE!"=="1" (
-  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" --profile "!ACTIVE_PROFILE!" !COMPOSE_FILES! ps
+  set "COMPOSE_PROFILES=!EFFECTIVE_PROFILES!"
+  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" !COMPOSE_FILES! ps
 ) else (
   docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" !COMPOSE_FILES! ps
 )

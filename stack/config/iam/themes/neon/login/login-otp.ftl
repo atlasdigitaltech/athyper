@@ -1,16 +1,19 @@
-﻿<#-- =======================================================================
+<#-- =======================================================================
      Neon Keycloak Login Theme — login-otp.ftl
      OTP authenticator code entry page — matches login.ftl split-panel layout.
      ======================================================================= -->
+<#include "_iam-context.ftl">
+<#include "_identity-field.ftl">
+<#include "_greeting.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>${msg("loginTitle", realm.displayName)}</title>
-  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <title>${iamTitle(msg("loginTitle", realm.displayName))}</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
   <style>
@@ -37,9 +40,9 @@
   </style>
 </head>
 <body>
-<div class="kc-page">
+<div class="iam-shell kc-page" data-plane="${iamPlane}">
 
-  <!-- ── Left branding panel ── -->
+  <!-- -- Left branding panel -- -->
   <div class="kc-panel-left">
 
     <#include "_neon-brand-logo.ftl">
@@ -63,25 +66,20 @@
     </div>
   </div><!-- /.kc-panel-left -->
 
-  <!-- ── Right form panel ── -->
+  <!-- -- Right form panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
       <div class="kc-form-card">
 
         <#include "_neon-brand-mobile.ftl">
 
-        <!-- Signed-in-as indicator -->
-        <#if auth?has_content && auth.showUsername() && !auth.showResetCredentials()>
-        <div class="kc-username-chip">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-          <span>${auth.attemptedUsername}</span>
-          <a href="${url.loginRestartFlowUrl}" class="kc-chip-restart" data-kc-change-user title="Use another user ID">Change</a>
-        </div>
-        </#if>
-
         <!-- Header -->
         <div class="kc-header">
-          <h2>${msg("doLogIn")}</h2>
+          <#assign _verifiedFirstName = "">
+          <#if user?? && user.firstName??>
+            <#assign _verifiedFirstName = user.firstName>
+          </#if>
+          <@iamGreeting verifiedName=_verifiedFirstName />
           <p>Enter the one-time code from your authenticator app to continue.</p>
         </div>
 
@@ -94,6 +92,10 @@
 
         <!-- OTP form -->
         <form class="kc-form" action="${url.loginAction}" method="post">
+
+        <#if auth?has_content && auth.showUsername() && !auth.showResetCredentials()>
+          <@iamLockedIdentity username=auth.attemptedUsername />
+        </#if>
 
         <!-- OTP device selector (shown when user has multiple OTP devices) -->
         <#if otpLogin.userOtpCredentials?size gt 1>

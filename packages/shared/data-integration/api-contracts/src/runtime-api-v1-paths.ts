@@ -49,6 +49,8 @@ export const runtimePath = {
   // snapshots = full graph at each gate event (Versions tab).
   entitySnapshots: (entity: string, id: string) =>
     `${ROOT}/entities/${enc(entity)}/${enc(id)}/snapshots`,
+  snapshotChildContracts: (entity: string, id: string) =>
+    `${ROOT}/entities/${enc(entity)}/${enc(id)}/snapshot-child-contracts`,
   /** Detail — full graph payload for one snapshot. Powers View Snapshot,
    *  and the future Compare / Restore flows. */
   entitySnapshot: (entity: string, id: string, snapshotId: string) =>

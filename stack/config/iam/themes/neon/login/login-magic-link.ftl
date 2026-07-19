@@ -1,26 +1,27 @@
-﻿<#-- =======================================================================
-     Neon Keycloak Login Theme — login-magic-link.ftl
+<#-- =======================================================================
+     Neon Keycloak Login Theme � login-magic-link.ftl
      Magic link / passwordless email sign-in entry page.
      Used by the keycloak-magic-link authenticator extension:
        https://github.com/p2-inc/keycloak-magic-link
      Matches the split-panel layout of login.ftl.
      ======================================================================= -->
+<#include "_iam-context.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Sign in with Magic Link — ${realm.displayName}</title>
-  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <title>${iamTitle("Sign in with Magic Link")}</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
 </head>
 <body>
-<div class="kc-page">
+<div class="iam-shell kc-page" data-plane="${iamPlane}">
 
-  <!-- ── Left branding panel ── -->
+  <!-- -- Left branding panel -- -->
   <div class="kc-panel-left">
 
     <#include "_neon-brand-logo.ftl">
@@ -47,7 +48,7 @@
     </div>
   </div>
 
-  <!-- ── Right form panel ── -->
+  <!-- -- Right form panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
     <div class="kc-form-card">
@@ -62,7 +63,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
           </svg>
-          Magic Link — Passwordless
+          Magic Link � Passwordless
         </span>
       </div>
 
@@ -79,9 +80,9 @@
         </div>
       </#if>
 
-      <!-- ── Show "check your email" state after submission ── -->
+      <!-- -- Show "check your email" state after submission -- -->
       <#if actionUri??>
-        <!-- Form has been submitted — show confirmation -->
+        <!-- Form has been submitted � show confirmation -->
         <div class="kc-magic-sent">
           <div class="kc-magic-sent-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="32" height="32" aria-hidden="true">
@@ -92,7 +93,7 @@
           <p class="kc-magic-sent-title">Check your inbox</p>
           <p class="kc-magic-sent-body">
             We sent a sign-in link to your email address.
-            Click it to sign in — the link is valid for <strong>15 minutes</strong>
+            Click it to sign in � the link is valid for <strong>15 minutes</strong>
             and can only be used once.
           </p>
           <p class="kc-magic-sent-tip">
@@ -101,7 +102,7 @@
           </p>
         </div>
       <#else>
-        <!-- ── Email entry form ── -->
+        <!-- -- Email entry form -- -->
         <form class="kc-form" action="${url.loginAction}" method="post">
           <div class="kc-field">
             <label for="email">Email address</label>

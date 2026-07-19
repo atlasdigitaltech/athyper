@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   compileDocumentRuntimePlan,
   hasCompiledDocumentItems,
+  resolveCompiledLineEntityCode,
   resolveCompiledEntityRenderer,
 } from "../entity-compiler.service.js";
 
@@ -35,6 +36,14 @@ describe("compiled entity renderer", () => {
       displayConfig: {},
       featureFlags: { has_lines: true },
     })).toBe(false);
+  });
+
+  it("derives the legacy line entity projection from the canonical lines relation", () => {
+    expect(resolveCompiledLineEntityCode({
+      relations: [{ name: "lines", relation_kind: "has_many", target_entity: "journal_line" }],
+      displayConfig: {},
+      featureFlags: { has_lines: true },
+    })).toBe("journal_line");
   });
 
   it("preserves simple entities instead of normalizing them to master", () => {

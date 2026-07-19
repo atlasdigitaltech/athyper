@@ -1,6 +1,7 @@
 "use client";
 
-import { CommentList } from "@athyper/collaboration-ui";
+import { CommentList, type CommentsPage } from "@athyper/collaboration-ui";
+import { useRecordWorkspaceComments } from "../record-query";
 
 export interface CommentsPanelProps {
   entityCode: string;
@@ -19,6 +20,10 @@ export function CommentsPanel({
   searchOpen,
   showFilters,
 }: CommentsPanelProps) {
+  const comments = useRecordWorkspaceComments<CommentsPage>({
+    params: { limit: 50, offset: 0 },
+  });
+
   return (
     <CommentList
       entityType={entityCode}
@@ -26,6 +31,10 @@ export function CommentsPanel({
       onCountChange={onCountChange}
       searchOpen={searchOpen}
       showFilters={showFilters}
+      page={comments.data}
+      pageLoading={comments.isLoading}
+      pageError={comments.error}
+      onRefresh={() => comments.refetch()}
     />
   );
 }

@@ -4,6 +4,7 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import { extractOrgHeaders, resolveTenantId, verifyBearer } from "@athyper/svc-shared";
+import { MetaEntityContractV2Schema } from "@athyper/api-contracts/meta-entity-contract-v2";
 
 import { executionDescriptorGenerationKeys, type ExecutionDescriptorIdentity } from "../src/execution-descriptor/index.js";
 import { loadPublicEntityOperations } from "./entity-operations.route.js";
@@ -206,24 +207,32 @@ export function createRuntimeBootstrapLoader(input: {
   return async ({ entityCode, tenantId }) => {
     const compiledEntity = await input.loadCompiledEntity(entityCode, tenantId);
     if (!compiledEntity) return null;
-    const relations = Array.isArray(compiledEntity["relations"])
-      ? compiledEntity["relations"] as JsonObject[] : [];
+    const parsedContract = MetaEntityContractV2Schema.safeParse(compiledEntity["contract_v2"]);
+    const contract = parsedContract.success ? parsedContract.data : null;
+    // v2 is authoritative. The legacy relation array is retained only for
+    // snapshots created before the Phase B compiler cutover.
+    const relations = contract
+      ? contract.relations as unknown as JsonObject[]
+      : Array.isArray(compiledEntity["relations"])
+        ? compiledEntity["relations"] as JsonObject[] : [];
     const relationTargets = new Map<string, string>();
     for (const relation of relations) {
-      const target = stringValue(relation["target_entity"] ?? relation["targetEntity"]);
-      const name = stringValue(relation["name"]);
+      const target = stringValue(relation["target_entity_code"] ?? relation["target_entity"] ?? relation["targetEntity"]);
+      const name = stringValue(relation["relation_code"] ?? relation["name"]);
       if (target && name && !relationTargets.has(target)) relationTargets.set(target, name);
     }
     const [operations, policy, lifecycleStateMasks, permissionAliases, children] = await Promise.all([
-      loadPublicEntityOperations(input.db, entityCode, tenantId),
+      contract ? projectContractOperations(contract) : loadPublicEntityOperations(input.db, entityCode, tenantId),
       loadPolicy(input.db, entityCode, tenantId),
       loadLifecycleMasks(input.db, entityCode, tenantId),
       loadPermissionAliases(input.db),
       Promise.all([...relationTargets].map(async ([childCode, relationName]) => {
         const child = await input.loadCompiledEntity(childCode, tenantId);
         if (!child) return null;
+        const childContractResult = MetaEntityContractV2Schema.safeParse(child["contract_v2"]);
+        const childContract = childContractResult.success ? childContractResult.data : null;
         const [childOperations, childPolicy, childMasks] = await Promise.all([
-          loadPublicEntityOperations(input.db, childCode, tenantId),
+          childContract ? projectContractOperations(childContract) : loadPublicEntityOperations(input.db, childCode, tenantId),
           loadPolicy(input.db, childCode, tenantId),
           loadLifecycleMasks(input.db, childCode, tenantId),
         ]);
@@ -249,6 +258,36 @@ export function createRuntimeBootstrapLoader(input: {
       childProjections: children.filter((child): child is RuntimeBootstrapChild => child !== null),
     };
   };
+}
+
+/** Principal-agnostic operation projection sourced from contract_v2. */
+async function projectContractOperations(
+  contract: import("@athyper/api-contracts/meta-entity-contract-v2").MetaEntityContractV2,
+): Promise<JsonObject[]> {
+  return contract.operations
+    .filter((operation) => operation.enabled && operation.surface !== "hidden")
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map((operation) => ({
+      id: operation.id,
+      entity_name: contract.catalog.entity_code,
+      permission_code: operation.permission_code,
+      operation_code: operation.operation_code,
+      surface: operation.surface,
+      placement: operation.placement,
+      handler_type: operation.handler_type,
+      handler_target: operation.handler_target ?? null,
+      execution_target: operation.execution_target ?? null,
+      is_record_required: operation.record_required,
+      sort_order: operation.sort_order,
+      label_override: operation.label,
+      icon_override: operation.icon ?? null,
+      is_enabled: operation.enabled,
+      selection_config: operation.selection_config ?? null,
+      intent: operation.intent,
+      requires_confirmation: operation.confirmation.required,
+      requires_reason: operation.reason_required,
+      source: "entity_operation",
+    }));
 }
 
 export function projectRuntimeBootstrapPermissions(
@@ -307,13 +346,17 @@ async function loadLifecycleMasks(db: AnyDb, entityCode: string, tenantId: strin
          AND (tenant_id = ${tenantId}::uuid OR tenant_id IS NULL)
        ORDER BY entity_name, tenant_id NULLS LAST, priority ASC
     )
-    SELECT p.record_status, p.can_edit, p.can_delete, p.can_transition_to, p.disabled_reason,
+    SELECT ls.code AS record_status,
+           COALESCE(p.can_edit, false) AS can_edit,
+           COALESCE(p.can_delete, false) AS can_delete,
+           p.can_transition_to,
+           COALESCE(p.disabled_reason, 'lifecycle_locked') AS disabled_reason,
            ls.name AS state_name, ls.config->>'badge_variant' AS badge_variant,
            ls.config->>'ui_color' AS ui_color, ls.config->>'icon_key' AS icon_key
-      FROM preferred p
-      LEFT JOIN chosen_lifecycle cl ON true
-      LEFT JOIN control.lifecycle_state ls ON ls.lifecycle_id = cl.lifecycle_id AND ls.code = p.record_status
-     ORDER BY p.record_status
+      FROM chosen_lifecycle cl
+      JOIN control.lifecycle_state ls ON ls.lifecycle_id = cl.lifecycle_id
+      LEFT JOIN preferred p ON p.record_status = ls.code
+     ORDER BY ls.sort_order, ls.code
   `.execute(db);
   return result.rows.map((row) => ({
     recordStatus: row.record_status,

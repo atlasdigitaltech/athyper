@@ -37,6 +37,15 @@ services:
     cap_add:
       - DAC_OVERRIDE
 
+  # Host-run attachment workers translate http://docparser:9998 to
+  # http://127.0.0.1:9998 in stack/scripts/app/api-up.bat.
+  docparser:
+    ports:
+      - "127.0.0.1:9998:9998"
+    networks:
+      internal: null
+      edge: null
+
   objectstorage:
     user: "0:0"
     cap_add:

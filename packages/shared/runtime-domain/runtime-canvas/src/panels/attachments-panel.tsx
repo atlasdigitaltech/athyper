@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Upload, Loader2, Pencil, X, FolderPlus, Folder, FolderOpen,
   ChevronRight, ChevronDown, FileText, Image as ImageIcon,
@@ -10,13 +10,19 @@ import {
   CheckCircle, Check, MoreHorizontal, Trash2, Link2, Info,
 } from "lucide-react";
 import { Skeleton, Button } from "@athyper/ui/primitives";
+import { DRAWER_CONTROL, DRAWER_DETAIL_SURFACE, DRAWER_ITEM_TITLE, DRAWER_LABEL, DRAWER_META, DRAWER_SECTION_HEADING, DRAWER_VALUE } from "@athyper/ui/typography";
 import { cn } from "@athyper/theme/utils";
 import { formatBytes } from "@athyper/runtime-shared/core";
 import { getCsrfToken } from "@athyper/runtime-shared/client";
+import { queryKeys } from "@athyper/api-contracts/query-keys";
+import {
+  useRecordWorkspaceAttachmentWorkspace,
+  useRecordWorkspaceQueryContext,
+} from "../record-query";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface AttachmentFolder {
+export interface AttachmentFolder {
   id:            string;
   name:          string;
   parent_id:     string | null;
@@ -24,7 +30,7 @@ interface AttachmentFolder {
   created_at:    string;
 }
 
-interface Attachment {
+export interface Attachment {
   id:              string;
   filename:        string;
   size_bytes:      number;
@@ -409,7 +415,7 @@ function UploadQueueTray({ files }: { files: QueuedFile[] }) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-3 py-2">
-        <span className="text-xs font-medium text-foreground">
+        <span className={DRAWER_ITEM_TITLE}>
           Uploading {done + 1} of {total} {total === 1 ? "file" : "files"}…
         </span>
         <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
@@ -419,7 +425,7 @@ function UploadQueueTray({ files }: { files: QueuedFile[] }) {
           <div key={qf.id} className="flex items-center gap-3 px-3 py-2">
             <DocIcon contentType={qf.file.type ?? ""} className="size-4 shrink-0" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium text-foreground">{qf.file.name}</p>
+              <p className={cn("truncate", DRAWER_ITEM_TITLE)}>{qf.file.name}</p>
               <div className="mt-0.5">
                 {qf.state === "uploading" && (
                   <div className="flex items-center gap-2">
@@ -429,12 +435,12 @@ function UploadQueueTray({ files }: { files: QueuedFile[] }) {
                         style={{ width: `${qf.progress}%` }}
                       />
                     </div>
-                    <span className="shrink-0 tabular-nums text-xs text-muted-foreground">{qf.progress}%</span>
+                    <span className={cn("shrink-0 tabular-nums", DRAWER_META)}>{qf.progress}%</span>
                   </div>
                 )}
-                {qf.state === "queued"   && <span className="text-xs text-muted-foreground">Waiting…</span>}
-                {qf.state === "uploaded" && <span className="text-xs text-muted-foreground">Uploaded</span>}
-                {qf.state === "failed"   && <span className="text-xs text-destructive">{qf.error ?? "Upload failed"}</span>}
+                {qf.state === "queued"   && <span className={DRAWER_META}>Waiting…</span>}
+                {qf.state === "uploaded" && <span className={DRAWER_META}>Uploaded</span>}
+                {qf.state === "failed"   && <span className={cn(DRAWER_META, "text-destructive")}>{qf.error ?? "Upload failed"}</span>}
               </div>
             </div>
             <div className="shrink-0">
@@ -489,7 +495,7 @@ function FailureStrip({ files, onDismiss }: { files: FailedUpload[]; onDismiss()
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <AlertTriangle className="size-3.5 shrink-0 text-destructive" />
-          <span className="text-xs font-medium text-destructive">
+          <span className={cn(DRAWER_ITEM_TITLE, "text-destructive")}>
             {files.length} {files.length === 1 ? "file" : "files"} failed to upload
           </span>
         </div>
@@ -973,6 +979,20 @@ export interface AttachmentsPanelProps {
   recordId:   string;
   /** UUID of the record — required for master entities whose recordId is a string code. */
   recordUuid?: string;
+  onSummaryChange?: (summary: AttachmentWorkspaceResponse["summary"]) => void;
+}
+
+export interface AttachmentWorkspaceResponse {
+  ok: boolean;
+  attachments: Attachment[];
+  folders: AttachmentFolder[];
+  summary: {
+    count: number;
+    totalBytes: number;
+    internalCount: number;
+    sharedCount: number;
+    quarantinedCount: number;
+  };
 }
 
 // ── File row ──────────────────────────────────────────────────────────────────
@@ -1124,19 +1144,19 @@ function FileRow({
             </div>
           ) : (
             <div className="flex flex-wrap items-center gap-1.5">
-              <p className="truncate text-sm font-medium text-foreground">{att.filename}</p>
+              <p className={cn("truncate", DRAWER_ITEM_TITLE)}>{att.filename}</p>
               {isJustAdded && <JustAddedBadge />}
             </div>
           )}
 
           {/* Meta line: ● visibility · ext · size · uploader · relative time */}
           {isScanning ? (
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <p className={cn("mt-0.5 flex items-center gap-1", DRAWER_META)}>
               <Shield className="size-3 shrink-0 animate-pulse" />
               Security scan in progress
             </p>
           ) : (
-            <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+            <div className={cn("mt-0.5 flex items-center gap-1", DRAWER_META)}>
               <VisibilityPill att={att} apiBase={apiBase} onUpdated={onDeleted} disabled={selectionMode} />
               <span>·</span>
               <span>{fileExt(att.filename)}</span>
@@ -1167,59 +1187,59 @@ function FileRow({
           {/* Move to folder picker */}
           {movingMode && !selectionMode && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Move to:</span>
+              <span className={DRAWER_LABEL}>Move to:</span>
               <button onClick={() => void handleMove(null)} disabled={isMoving || att.folder_id === null}
-                className="rounded border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40">
+                className="rounded border border-border px-2 py-0.5 text-sm hover:bg-muted disabled:opacity-40">
                 Uncategorized
               </button>
               {folders.map((f) => (
                 <button key={f.id} onClick={() => void handleMove(f.id)} disabled={isMoving || att.folder_id === f.id}
-                  className="rounded border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40">
+                  className="rounded border border-border px-2 py-0.5 text-sm hover:bg-muted disabled:opacity-40">
                   {f.name}
                 </button>
               ))}
-              <button onClick={() => setMovingMode(false)} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
+              <button onClick={() => setMovingMode(false)} className={cn("hover:text-foreground", DRAWER_CONTROL)}>Cancel</button>
             </div>
           )}
 
           {/* Inline info panel */}
           {showInfo && !renamingMode && !selectionMode && (
-            <div className="mt-2 space-y-1 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs">
+            <div className={cn("mt-2 space-y-1 px-3 py-2 text-sm", DRAWER_DETAIL_SURFACE)}>
               {att.created_by_name && (
                 <div className="flex items-center gap-2">
-                  <span className="w-20 shrink-0 text-muted-foreground">Uploaded by</span>
-                  <span className="text-foreground">{att.created_by_name}</span>
+                  <span className={cn("w-20 shrink-0", DRAWER_LABEL)}>Uploaded by</span>
+                  <span className={DRAWER_VALUE}>{att.created_by_name}</span>
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <span className="w-20 shrink-0 text-muted-foreground">Uploaded on</span>
-                <span className="text-foreground">{formatDate(att.created_at, true)}</span>
+                <span className={cn("w-20 shrink-0", DRAWER_LABEL)}>Uploaded on</span>
+                <span className={DRAWER_VALUE}>{formatDate(att.created_at, true)}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-20 shrink-0 text-muted-foreground">Size</span>
-                <span className="text-foreground">{formatBytes(att.size_bytes)}</span>
+                <span className={cn("w-20 shrink-0", DRAWER_LABEL)}>Size</span>
+                <span className={DRAWER_VALUE}>{formatBytes(att.size_bytes)}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-20 shrink-0 text-muted-foreground">Type</span>
-                <span className="text-foreground">{att.content_type}</span>
+                <span className={cn("w-20 shrink-0", DRAWER_LABEL)}>Type</span>
+                <span className={DRAWER_VALUE}>{att.content_type}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-20 shrink-0 text-muted-foreground">Visibility</span>
-                <span className="capitalize text-foreground">{(att.visibility ?? "internal").replace(/_/g, " ")}</span>
+                <span className={cn("w-20 shrink-0", DRAWER_LABEL)}>Visibility</span>
+                <span className={cn("capitalize", DRAWER_VALUE)}>{(att.visibility ?? "internal").replace(/_/g, " ")}</span>
               </div>
               {att.scan_status && (
                 <div className="flex items-center gap-2">
-                  <span className="w-20 shrink-0 text-muted-foreground">Scan</span>
-                  <span className="capitalize text-foreground">{att.scan_status}</span>
+                  <span className={cn("w-20 shrink-0", DRAWER_LABEL)}>Scan</span>
+                  <span className={cn("capitalize", DRAWER_VALUE)}>{att.scan_status}</span>
                 </div>
               )}
               {att.version_no && (
                 <div className="flex items-center gap-2">
-                  <span className="w-20 shrink-0 text-muted-foreground">Version</span>
-                  <span className="text-foreground">{att.version_no}</span>
+                  <span className={cn("w-20 shrink-0", DRAWER_LABEL)}>Version</span>
+                  <span className={DRAWER_VALUE}>{att.version_no}</span>
                 </div>
               )}
-              <button type="button" onClick={startRename} className="mt-1 text-xs text-primary hover:underline">
+              <button type="button" onClick={startRename} className="mt-1 text-sm font-medium text-primary hover:underline">
                 Rename file…
               </button>
             </div>
@@ -1283,7 +1303,7 @@ function SummaryHeader({ attachments }: { attachments: Attachment[] }) {
       {quarantined > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
           <ShieldX className="size-3.5 shrink-0 text-destructive" />
-          <span className="text-xs font-medium text-destructive">
+          <span className={cn(DRAWER_ITEM_TITLE, "text-destructive")}>
             {quarantined} {quarantined === 1 ? "file" : "files"} quarantined — download disabled
           </span>
         </div>
@@ -1291,7 +1311,7 @@ function SummaryHeader({ attachments }: { attachments: Attachment[] }) {
       {shared > 0 && (
         <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
           <Globe className="size-3.5 shrink-0 text-primary" />
-          <span className="text-xs font-medium text-primary">
+          <span className={cn(DRAWER_ITEM_TITLE, "text-primary")}>
             {shared} {shared === 1 ? "file" : "files"} shared with supplier
           </span>
         </div>
@@ -1302,8 +1322,9 @@ function SummaryHeader({ attachments }: { attachments: Attachment[] }) {
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export function AttachmentsPanel({ entityCode, recordId, recordUuid }: AttachmentsPanelProps) {
+export function AttachmentsPanel({ entityCode, recordId, recordUuid, onSummaryChange }: AttachmentsPanelProps) {
   const queryClient    = useQueryClient();
+  const workspaceContext = useRecordWorkspaceQueryContext();
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
   const justAddedTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1348,8 +1369,10 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
   const apiId      = recordUuid ?? recordId;
   const apiBase    = `/api/relay/api/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(apiId)}/attachments`;
   const folderBase = `/api/relay/api/documents/${encodeURIComponent(entityCode)}/${encodeURIComponent(apiId)}/folders`;
-  const attachmentQueryKey = useMemo(() => ["attachments", entityCode, apiId] as const, [entityCode, apiId]);
-  const folderQueryKey     = useMemo(() => ["attachment-folders", entityCode, apiId] as const, [entityCode, apiId]);
+  const attachmentQueryKey = useMemo(
+    () => queryKeys.recordWorkspace.attachmentWorkspace(workspaceContext.keyInput),
+    [workspaceContext.keyInput],
+  );
 
   // ── Cleanup ────────────────────────────────────────────────────────────────
 
@@ -1359,23 +1382,15 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
 
   // ── Queries ────────────────────────────────────────────────────────────────
 
-  const { data: serverAttachments = [], isLoading: loadingFiles } = useQuery<Attachment[]>({
-    queryKey: attachmentQueryKey,
-    queryFn:  async ({ signal }) => {
-      const res = await fetch(apiBase, { signal });
-      return res.ok ? (res.json() as Promise<Attachment[]>) : [];
-    },
-    staleTime: 30_000,
-  });
+  const attachmentWorkspace = useRecordWorkspaceAttachmentWorkspace<AttachmentWorkspaceResponse>();
+  const serverAttachments = attachmentWorkspace.data?.attachments ?? [];
+  const folders = attachmentWorkspace.data?.folders ?? [];
+  const loadingFiles = attachmentWorkspace.isLoading;
+  const loadingFolders = attachmentWorkspace.isLoading;
 
-  const { data: folders = [], isLoading: loadingFolders } = useQuery<AttachmentFolder[]>({
-    queryKey: folderQueryKey,
-    queryFn:  async ({ signal }) => {
-      const res = await fetch(folderBase, { signal });
-      return res.ok ? (res.json() as Promise<AttachmentFolder[]>) : [];
-    },
-    staleTime: 30_000,
-  });
+  useEffect(() => {
+    if (attachmentWorkspace.data?.summary) onSummaryChange?.(attachmentWorkspace.data.summary);
+  }, [attachmentWorkspace.data?.summary, onSummaryChange]);
 
   const attachments = useMemo(
     () => mergeWithOptimistic(serverAttachments, optimisticUploads),
@@ -1392,16 +1407,15 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
       idSet.forEach((id) => next.delete(id));
       return next;
     });
-    queryClient.setQueryData<Attachment[]>(attachmentQueryKey, (current) =>
-      current?.filter((att) => !idSet.has(att.id)) ?? current,
-    );
+    queryClient.setQueryData<AttachmentWorkspaceResponse>(attachmentQueryKey, (current) => current
+      ? { ...current, attachments: current.attachments.filter((att) => !idSet.has(att.id)) }
+      : current);
   }, [attachmentQueryKey, queryClient]);
 
   const refresh = useCallback((removedId?: string) => {
     if (removedId) forgetLocalAttachments([removedId]);
     void queryClient.invalidateQueries({ queryKey: attachmentQueryKey });
-    void queryClient.invalidateQueries({ queryKey: folderQueryKey });
-  }, [queryClient, attachmentQueryKey, folderQueryKey, forgetLocalAttachments]);
+  }, [queryClient, attachmentQueryKey, forgetLocalAttachments]);
 
   // ── Selection helpers ──────────────────────────────────────────────────────
 
@@ -1573,9 +1587,9 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
     if (uploadedAttachments.length > 0) {
       const uploadedIds = uploadedAttachments.map((att) => att.id);
       setOptimisticUploads((prev) => prependAttachments(prev, uploadedAttachments));
-      queryClient.setQueryData<Attachment[]>(attachmentQueryKey, (current) =>
-        prependAttachments(current, uploadedAttachments),
-      );
+      queryClient.setQueryData<AttachmentWorkspaceResponse>(attachmentQueryKey, (current) => current
+        ? { ...current, attachments: prependAttachments(current.attachments, uploadedAttachments) }
+        : current);
       setJustAddedIds((prev) => new Set([...prev, ...uploadedIds]));
       setSuccessStrip({ id: Date.now(), count: uploadedAttachments.length });
       if (justAddedTimerRef.current) clearTimeout(justAddedTimerRef.current);
@@ -1626,7 +1640,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
       if (res.ok) {
         const folder = await res.json() as AttachmentFolder;
         setExpandedFolders((prev) => new Set(prev).add(folder.id));
-        void queryClient.invalidateQueries({ queryKey: folderQueryKey });
+        void queryClient.invalidateQueries({ queryKey: attachmentQueryKey });
         setCreatingFolder(false); setNewFolderName("");
       }
     } finally { setIsSavingFolder(false); }
@@ -1641,7 +1655,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
         method: "PATCH", headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body: JSON.stringify({ name }),
       });
-      void queryClient.invalidateQueries({ queryKey: folderQueryKey });
+      void queryClient.invalidateQueries({ queryKey: attachmentQueryKey });
       setRenamingFolderId(null); setFolderRenameVal("");
     } finally { setIsSavingFolderRename(false); }
   };
@@ -1727,9 +1741,6 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
   const allVisibleSelected = visibleOrderedIds.length > 0
     && visibleOrderedIds.every((id) => selectedIds.has(id));
 
-  const isMac    = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
-  const shortcut = isMac ? "⌘K" : "Ctrl K";
-
   const tabs: { key: FileCategory; label: string }[] = [
     { key: "all",    label: "All" },
     { key: "images", label: "Images" },
@@ -1798,13 +1809,13 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                   <button key={tab.key} type="button"
                     onClick={() => setCategory(isActive && tab.key !== "all" ? "all" : tab.key)}
                     className={cn(
-                      "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                      "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-colors",
                       isActive ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
                       isZero && !isActive && "opacity-50",
                     )}
                   >
                     {tab.label}
-                    <span className={cn("text-xs opacity-70", isActive && "opacity-90")}>{counts[tab.key]}</span>
+                    <span className={cn("text-sm opacity-70", isActive && "opacity-90")}>{counts[tab.key]}</span>
                     {isActive && tab.key !== "all" && (
                       <span className="ml-0.5 opacity-70 hover:opacity-100"
                         onClick={(e) => { e.stopPropagation(); setCategory("all"); }}
@@ -1814,7 +1825,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                 );
               })}
             </div>
-            <Button variant="outline" size="sm" className="h-7 shrink-0 gap-1.5 text-xs"
+            <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 text-sm"
               onClick={() => { setCreatingFolder(true); setNewFolderName(""); }}>
               <FolderPlus className="h-3.5 w-3.5" />New Folder
             </Button>
@@ -1828,13 +1839,10 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
               <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <input type="search" placeholder="Search files…" value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-14 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
-              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 select-none rounded border border-border bg-muted px-1 py-0.5 text-xs text-muted-foreground">
-                {shortcut}
-              </span>
+                className="w-full rounded-md border border-input bg-background py-1.5 pl-8 pr-3 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" />
             </div>
             <select value={sort} onChange={(e) => setSort(e.target.value as SortOption)}
-              className="rounded-md border border-input bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+              className="rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring">
               <option value="date-desc">Newest first</option>
               <option value="date-asc">Oldest first</option>
               <option value="name-asc">Name A→Z</option>
@@ -1856,11 +1864,11 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                 if (e.key === "Escape") { setCreatingFolder(false); setNewFolderName(""); }
               }}
               className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none" />
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-primary hover:text-primary"
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-sm text-primary hover:text-primary"
               onClick={() => void createFolder()} disabled={isSavingFolder || !newFolderName.trim()}>
               {isSavingFolder ? <Loader2 className="h-3 w-3 animate-spin" /> : "Create"}
             </Button>
-            <Button variant="ghost" size="sm" className="h-6 px-2 text-xs"
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-sm"
               onClick={() => { setCreatingFolder(false); setNewFolderName(""); }}>Cancel</Button>
           </div>
         )}
@@ -1936,8 +1944,8 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
         ) : !hasUploaded ? (
           <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center">
             <Upload className="h-7 w-7 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">No attachments yet</p>
-            <p className="text-xs text-muted-foreground">Drop files anywhere in this panel to upload</p>
+            <p className={DRAWER_VALUE}>No attachments yet</p>
+            <p className={DRAWER_META}>Drop files anywhere in this panel to upload</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -1946,8 +1954,8 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
             {sortedJustAdded.length > 0 && (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mediumst text-muted-foreground">Just added</span>
-                  <span className="text-xs text-muted-foreground">{justAddedScanned} of {sortedJustAdded.length} scanned</span>
+                  <span className={DRAWER_SECTION_HEADING}>Just added</span>
+                  <span className={DRAWER_META}>{justAddedScanned} of {sortedJustAdded.length} scanned</span>
                 </div>
                 <div className="space-y-1.5">
                   {sortedJustAdded.map((att) => (
@@ -1962,7 +1970,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                 {(folders.length > 0 || uncategorizedEarlier.length > 0) && (
                   <div className="flex items-center gap-2 pt-1">
                     <div className="h-px flex-1 bg-border" />
-                    <span className="text-xs font-mediumst text-muted-foreground">Earlier</span>
+                    <span className={DRAWER_SECTION_HEADING}>Earlier</span>
                     <div className="h-px flex-1 bg-border" />
                   </div>
                 )}
@@ -1998,18 +2006,18 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{folder.name}</span>
                     )}
 
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                    <span className={cn("shrink-0", DRAWER_META)}>
                       {folderFiles.length} {folderFiles.length === 1 ? "file" : "files"}
                     </span>
 
                     <div className="flex shrink-0 items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                       {isRenaming ? (
                         <>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-primary hover:text-primary"
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-sm text-primary hover:text-primary"
                             onClick={() => void renameFolder(folder.id)} disabled={isSavingFolderRename}>
                             {isSavingFolderRename ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
                           </Button>
-                          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs"
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-sm"
                             onClick={() => { setRenamingFolderId(null); setFolderRenameVal(""); }}>Cancel</Button>
                         </>
                       ) : (
@@ -2047,7 +2055,7 @@ export function AttachmentsPanel({ entityCode, recordId, recordUuid }: Attachmen
                 {folders.length > 0 && (
                   <div className="mb-2 flex items-center gap-2">
                     <div className="h-px flex-1 bg-border" />
-                    <span className="text-xs text-muted-foreground">Uncategorized</span>
+                    <span className={DRAWER_META}>Uncategorized</span>
                     <div className="h-px flex-1 bg-border" />
                   </div>
                 )}

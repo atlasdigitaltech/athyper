@@ -49,3 +49,4 @@ export {
 } from "./bookmarks";
 export { useCommentAttachments } from "./hooks/attachments";
 export type { StagedAttachment, CommentAttachmentItem } from "./hooks/attachments";
+export type { CommentsPage } from "./hooks/collab";

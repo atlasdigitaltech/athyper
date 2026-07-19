@@ -47,6 +47,8 @@ export interface TopbarProps {
   // ── Right zone ──────────────────────────────────────────
   /** Unread notification count. */
   notificationCount?: number;
+  /** Whether the notifications destination is currently selected. */
+  notificationActive?: boolean;
   onNotificationClick?: () => void;
   /** Avatar / user menu slot. */
   userSlot?: ReactNode;
@@ -68,6 +70,7 @@ export function Topbar({
   delegationIndicator,
   onSearchClick,
   notificationCount = 0,
+  notificationActive = false,
   onNotificationClick,
   userSlot,
 }: TopbarProps) {
@@ -80,10 +83,10 @@ export function Topbar({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0 md:hidden"
+          className="h-10 w-10 shrink-0 rounded-lg md:hidden"
           onClick={onMenuToggle}
         >
-          <Menu className="h-4 w-4" />
+          <Menu className="h-6 w-6" />
           <span className="sr-only">Open menu</span>
         </Button>
 
@@ -124,7 +127,7 @@ export function Topbar({
             aria-label="Open launcher"
             className="hidden min-w-60 items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60 sm:flex"
           >
-            <Search className="h-3.5 w-3.5 shrink-0" />
+            <Search className="h-6 w-6 shrink-0" />
             <span className="flex-1 text-left">Search or do anything…</span>
             <kbd className="hidden items-center gap-0.5 rounded border border-border bg-background px-1 py-0.5 font-mono text-xs font-normal text-muted-foreground lg:flex">
               <span>⌘</span><span>K</span>
@@ -134,11 +137,11 @@ export function Topbar({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 sm:hidden"
+            className="h-10 w-10 rounded-lg sm:hidden"
             onClick={onSearchClick}
             aria-label="Open launcher"
           >
-            <Search className="h-4 w-4" />
+            <Search className="h-6 w-6" />
           </Button>
         </>
       )}
@@ -146,16 +149,17 @@ export function Topbar({
       <VSep />
 
       {/* ── Right zone ─────────────────────────────────────── */}
-      <div className="flex shrink-0 items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-2">
         {/* Notifications */}
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-7 w-7"
+          className={`relative h-10 w-10 rounded-lg ${notificationActive ? "bg-muted text-foreground" : "text-muted-foreground"}`}
           onClick={onNotificationClick}
+          aria-current={notificationActive ? "page" : undefined}
           aria-label={`Notifications${notificationCount > 0 ? ` (${notificationCount} unread)` : ""}`}
         >
-          <Bell className="h-4 w-4" />
+          <Bell className="h-6 w-6" />
           <NavBadge count={notificationCount} variant="overlay" />
         </Button>
 
@@ -165,4 +169,3 @@ export function Topbar({
     </div>
   );
 }
-

@@ -87,6 +87,7 @@ import {
   createFrameworkPerformanceMiddleware,
   startFrameworkPhase,
 } from "../framework-performance.js";
+import { resolveEntityQueryRuntimeConfig } from "../entity-query-runtime-config.js";
 
 /**
  * HTTP-date string for the `Sunset` response header on @deprecated routes.
@@ -1075,6 +1076,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
     cache: descriptorCache,
     executionDescriptorProvider,
+    compiledEntityProvider: deps.entityCompiler,
     loadEffectiveCompiledEntity: async (entityCode, tenantId) =>
       deps.entityCompiler.loadRuntimeCompiledEntity(entityCode, tenantId) as unknown as Promise<Record<string, unknown> | null>,
     readAuthenticatedContext: () => {
@@ -1087,6 +1089,21 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     validateEntityVersionActivation: (versionId) => deps.entityCompiler.validateVersionForActivation(versionId),
   });
 
+  const entityQueryRuntimeConfig = resolveEntityQueryRuntimeConfig(process.env);
+  if (entityQueryRuntimeConfig.enabled) {
+    logger.info("entity_query_v1_ready", {
+      cursorSecretSource: entityQueryRuntimeConfig.cursorSecretSource,
+      cursorSecretBytes: entityQueryRuntimeConfig.cursorSecretBytes,
+    });
+  } else {
+    logger.error("entity_query_v1_disabled", {
+      reason: entityQueryRuntimeConfig.disabledReason,
+      cursorSecretSource: entityQueryRuntimeConfig.cursorSecretSource ?? "none",
+      cursorSecretBytes: entityQueryRuntimeConfig.cursorSecretBytes,
+      remediation: "Configure ENTITY_QUERY_CURSOR_SECRET with at least 32 UTF-8 bytes and restart the API runtime.",
+    });
+  }
+
   registerRecordsRoutes(apiRouter, {
     db:                   db.kysely,
     auth:                 routeAuth,
@@ -1098,7 +1115,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     checkPermissionBatch,
     permissionResolverRegistry,
     executionDescriptorProvider,
-    entityQueryCursorSecret: process.env["ENTITY_QUERY_CURSOR_SECRET"] ?? process.env["EXPORT_TOKEN_SECRET"],
+    entityQueryCursorSecret: entityQueryRuntimeConfig.cursorSecret,
     tokenSecret:          process.env["EXPORT_TOKEN_SECRET"],
     redis,
     readAuthenticatedContext: () => {
@@ -1140,6 +1157,10 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   registerDocumentsRoutes(apiRouter, {
     db: db.kysely,
     auth: routeAuth,
+    readAuthenticatedContext: () => {
+      const context = tryGetContext();
+      return context ? { tenantId: context.tenantId } : undefined;
+    },
     objectStorage: objectStorage
       ? {
           adapter: objectStorage,
@@ -1214,6 +1235,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   registerWorkflowRoutes(apiRouter, {
     db: db.kysely,
     auth: routeAuth,
+    cache: iamCache,
     logger,
     sourceEntityAdapter: new ConventionWorkflowSourceEntityAdapter(logger, {
       beforeComplete: async (trx, completion, targetStatus) => {
@@ -1499,7 +1521,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     });
     try {
       logger.info("entity_catalog_compile_started");
-      const catalogSummary = await createCatalogCompiler(_db, logger).compileAll();
+      const catalogSummary = await createCatalogCompiler(_db, logger, deps.entityCompiler).compileAll();
       logger.info("entity_catalog_compile_finished", {
         total: catalogSummary.total,
         compiled: catalogSummary.compiled,

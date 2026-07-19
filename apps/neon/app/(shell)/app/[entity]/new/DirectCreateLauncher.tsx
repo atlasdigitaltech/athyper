@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { csrfFetch } from "@/lib/bff-fetch";
 import { markDocumentEditPerformance } from "@athyper/runtime-canvas/document-runtime";
+import { invalidateRuntimeListEntity } from "@athyper/runtime-shared/client";
 
 /** DIRECT_CREATE intentionally has no form-before-create stage. */
 export function DirectCreateLauncher({ entity, editAfterCreate }: { entity: string; editAfterCreate: boolean }) {
@@ -28,6 +29,7 @@ export function DirectCreateLauncher({ entity, editAfterCreate }: { entity: stri
         return;
       }
       clearCreateKey(entity, idempotencyKey);
+      invalidateRuntimeListEntity(entity, "create");
       router.replace(`/app/${encodeURIComponent(entity)}/${encodeURIComponent(id)}${editAfterCreate ? "/edit" : ""}`);
     }).catch(() => { if (!cancelled) setMessage("Could not create record."); });
     return () => { cancelled = true; };

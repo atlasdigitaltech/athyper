@@ -4,13 +4,18 @@ import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { EntityOperation } from "@athyper/api-contracts/metadata";
 import type { FlowBundle } from "@athyper/api-contracts/documents";
-import { queryKeys } from "@athyper/api-contracts/query-keys";
+import { queryKeys, type RecordWorkspaceKeyInput } from "@athyper/api-contracts/query-keys";
 import { runtimePath } from "@athyper/api-contracts/runtime-paths";
-import { getCsrfToken } from "@athyper/runtime-shared/client";
+import {
+  getCsrfToken,
+  invalidateRuntimeListEntity,
+  runtimeListMutationReasonForOperation,
+} from "@athyper/runtime-shared/client";
 import type {
   RuntimeOperationExecutionInput,
   RuntimeOperationExecutionResult,
 } from "@athyper/runtime-contracts";
+import { invalidateRecordWorkspaceProcessResources } from "../record-query/invalidation";
 
 export interface UseOperationDispatchOptions {
   entityCode: string;
@@ -18,6 +23,7 @@ export interface UseOperationDispatchOptions {
   recordUuid?: string;
   statusFieldName?: string;
   userPermissions?: string[];
+  workspaceKeyInput?: RecordWorkspaceKeyInput;
   executeOperation?: (input: RuntimeOperationExecutionInput) => Promise<RuntimeOperationExecutionResult>;
 }
 
@@ -82,6 +88,7 @@ export function useOperationDispatch({
   recordUuid,
   statusFieldName,
   userPermissions = [],
+  workspaceKeyInput,
   executeOperation,
 }: UseOperationDispatchOptions): UseOperationDispatchReturn {
   const queryClient = useQueryClient();
@@ -125,6 +132,13 @@ export function useOperationDispatch({
 
   const refreshRecordQueries = useCallback(async () => {
     const detailKey = queryKeys.entityDetail.byId(entityCode, recordId);
+    const workspaceInvalidation = workspaceKeyInput
+      ? invalidateRecordWorkspaceProcessResources(queryClient, workspaceKeyInput)
+      : Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["runtime-process-state", entityCode, recordId] }),
+          queryClient.invalidateQueries({ queryKey: ["record-workflow", entityCode, recordId] }),
+          queryClient.invalidateQueries({ queryKey: ["record-approvals", entityCode, recordId] }),
+        ]).then(() => undefined);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: detailKey }),
       recordUuid && recordUuid !== recordId
@@ -134,13 +148,11 @@ export function useOperationDispatch({
       queryClient.invalidateQueries({ queryKey: queryKeys.workflowInbox.all }),
       queryClient.invalidateQueries({ queryKey: queryKeys.workflowInbox.count }),
       queryClient.invalidateQueries({ queryKey: queryKeys.entityOperations.byEntity(entityCode) }),
-      queryClient.invalidateQueries({ queryKey: ["runtime-process-state", entityCode, recordId] }),
-      queryClient.invalidateQueries({ queryKey: ["record-workflow", entityCode, recordId] }),
-      queryClient.invalidateQueries({ queryKey: ["record-approvals", entityCode, recordId] }),
+      workspaceInvalidation,
       queryClient.invalidateQueries({ queryKey: ["activity", entityCode] }),
     ]);
     await queryClient.refetchQueries({ queryKey: detailKey, exact: true });
-  }, [entityCode, queryClient, recordId, recordUuid]);
+  }, [entityCode, queryClient, recordId, recordUuid, workspaceKeyInput]);
 
   const postAction = useCallback(async (
     actionCode: string,
@@ -164,6 +176,7 @@ export function useOperationDispatch({
       }
       applyStatusToDetailCache(getExecutionStatus(result, statusFieldName));
       clearIdempotencyKey(targetId, actionCode);
+      invalidateRuntimeListEntity(entityCode, runtimeListMutationReasonForOperation(actionCode));
       await refreshRecordQueries();
       return;
     }
@@ -187,6 +200,7 @@ export function useOperationDispatch({
     const responseBody = await response.json().catch(() => ({})) as Record<string, unknown>;
     applyStatusToDetailCache(getRecordStatus(responseBody, statusFieldName));
     clearIdempotencyKey(targetId, actionCode);
+    invalidateRuntimeListEntity(entityCode, runtimeListMutationReasonForOperation(actionCode));
     await refreshRecordQueries();
   }, [applyStatusToDetailCache, clearIdempotencyKey, entityCode, executeOperation, getIdempotencyKey, refreshRecordQueries, statusFieldName]);
 

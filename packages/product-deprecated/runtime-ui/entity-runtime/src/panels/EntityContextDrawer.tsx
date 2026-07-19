@@ -130,7 +130,7 @@ export function EntityContextDrawer({
       onOpenChange={onOpenChange}
       intent="context"
       widthKey={activePanel ? `${widthScope}:${entity.entity_code}:${activePanel}` : undefined}
-      defaultWidth="60vw"
+      defaultWidth="80vw"
       minWidth="30vw"
       expandedWidth="80vw"
       maxWidth="85vw"

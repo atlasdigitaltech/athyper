@@ -8,11 +8,26 @@ export interface RuntimeDescriptor {
   routeSlug:    string;
   source:       { tableSchema: string; tableName: string };
   capabilities: { canCreate: boolean };
+  descriptorHash?: string;
+  cachePolicy?: RuntimeListCachePolicy;
   accessScope?: RuntimeAccessScopeConfig;
   listPresentation?: RuntimeListPresentationConfig;
   fields:       RuntimeField[];
   operations:   RuntimeOperation[];
   extensions?:  Record<string, unknown>;
+}
+
+export interface RuntimeListCachePolicy {
+  mode: "disabled" | "memory" | "stale_while_revalidate";
+  freshForSeconds: number;
+  retainForSeconds: number;
+  prefetch: "none" | "intent" | "viewport" | "eager";
+  restoreScroll: boolean;
+  invalidateOnMutation: boolean;
+  maxQueriesPerEntity: number;
+  maxRowsPerQuery: number;
+  storage: "memory" | "session" | "persistent";
+  source: "platform" | "entity_class" | "entity" | "tenant";
 }
 
 export type RuntimeScopePlane = "neon" | "mesh" | "admin";
@@ -232,6 +247,9 @@ export interface RuntimeListLazyPresenterState {
   pageSize:         number;
   rawSearchParams:  RawSearchParams;
   cacheKey:         string;
+  descriptorHash:   string;
+  scopeFingerprint: string;
+  cachePolicy:      RuntimeListCachePolicy;
   controls:         RuntimeListLazyControls;
 }
 

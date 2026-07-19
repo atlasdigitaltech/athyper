@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8" />
+<title>Finance Workbench Design</title>
+<style>
+body { font-family: Aptos, Arial, sans-serif; color:#202124; margin:42px; line-height:1.35; }
+h1 { color:#17365d; font-size:26pt; border-bottom:2px solid #2f75b5; padding-bottom:8px; }
+h2 { color:#1f4e79; font-size:17pt; margin-top:24px; border-bottom:1px solid #b4c7e7; padding-bottom:4px; }
+h3 { color:#365f91; font-size:12.5pt; margin-top:16px; }
+p { font-size:10.5pt; }
+li { font-size:10.5pt; margin:3px 0; }
+table { border-collapse:collapse; width:100%; margin:10px 0 16px; font-size:9.5pt; }
+th { background:#1f4e79; color:white; text-align:left; padding:7px; border:1px solid #9eabc0; }
+td { padding:6px; border:1px solid #c7d0dc; vertical-align:top; }
+tr:nth-child(even) td { background:#f3f6fa; }
+.cover { padding:35px 10px 70px; }
+.subtitle { color:#5b6573; font-size:14pt; }
+.callout { background:#eaf2f8; border-left:5px solid #2f75b5; padding:10px 14px; margin:12px 0; }
+.small { color:#5b6573; font-size:9pt; }
+</style>
+</head>
+<body>
+<div class="cover">
+<h1>Finance Workbench</h1>
+<p class="subtitle">Neon Finance Workspace and Governed Setup Design</p>
+<p><b>Document status:</b> Working design baseline</p>
+<p><b>Scope:</b> Finance landing dashboard, setup workbench, Entity App integration, governance workflows, and future authorization readiness.</p>
+<p class="small">Prepared for the Finance Module implementation. This document is intended to be opened directly in Microsoft Word.</p>
+</div>
+
+<h2>1. Executive Summary</h2>
+<p>The Finance Workspace provides a focused entry point from the Neon landing dashboard to the daily finance applications and the governed Finance Workbench. The design keeps simple masters and configuration records on the canonical Entity List/Record experience, while using workbench aggregate editors for multi-record setup and governed workbenches for activities that require validation, certification, evidence, or period controls.</p>
+<div class="callout"><b>Design principle:</b> the Workbench coordinates scope, dependencies, readiness, and workflow; the Entity App remains the consistent CRUD experience for individual records.</div>
+
+<h2>2. Neon Finance Workspace</h2>
+<p>The existing Neon landing dashboard already has the right high-level pattern: current organization and period context, attention cards, and workspace tiles. Finance should be added as a primary workspace with three immediate actions.</p>
+<table><tr><th>Entry point</th><th>Purpose</th><th>Primary users</th></tr>
+<tr><td>Journal Entry</td><td>Create, review, post, reverse, and search journal entries.</td><td>Accountant, Finance Manager</td></tr>
+<tr><td>Purchase Invoice</td><td>Capture, validate, approve, and monitor supplier invoices.</td><td>AP Accountant, Approver</td></tr>
+<tr><td>Finance Workbench</td><td>Finance setup, readiness, opening balances, close, posting coverage, and diagnostics.</td><td>Finance Manager, Controller</td></tr></table>
+<h3>Recommended dashboard cards</h3>
+<ul><li>My Work: journals and invoices requiring action.</li><li>Approvals: invoices, journals, and governance certifications waiting for approval.</li><li>Exceptions: posting failures, readiness blockers, unbalanced journals, and cross-book errors.</li><li>Current Period: company code, ledger book, fiscal period, and posting status.</li></ul>
+
+<h2>3. Global Scope Context</h2>
+<p>Every Finance screen must show the active Tenant, Legal Entity, Company Code, Ledger Book, and Fiscal Period where applicable. Scope is not a Phase 3 permission feature; tenant isolation remains enforced at all times.</p>
+<table><tr><th>UX element</th><th>Requirement</th></tr>
+<tr><td>Scope bar</td><td>Persistent indicator below the workspace header; allows permitted context changes and clearly shows the current selection.</td></tr>
+<tr><td>URL</td><td>Use scope-aware routes, for example <i>/workbench/finance/{tenant}/{legalEntity}/{companyCode}</i>.</td></tr>
+<tr><td>API</td><td>Carry scope in authenticated context and validate any scope identifiers in the request. Never trust a client-provided tenant identifier.</td></tr>
+<tr><td>Record metadata</td><td>Expose tenant, legal entity, company code, and ledger-book metadata on records and workbench results.</td></tr></table>
+
+<h2>4. Finance Workbench Home</h2>
+<p>The Finance Workbench home is an operational cockpit rather than a replacement for every Entity App. It should open with a readiness summary and provide direct navigation to the setup and governance areas.</p>
+<table><tr><th>Panel</th><th>Content</th><th>Action</th></tr>
+<tr><td>Posting readiness</td><td>Critical, warning, and passed checks for the current company code, book, and period.</td><td>Open readiness dashboard</td></tr>
+<tr><td>Period status</td><td>Current fiscal period, book-period status, open/soft-close/hard-close state.</td><td>Open period governance</td></tr>
+<tr><td>Setup progress</td><td>Phase 1 and Phase 2 completion by configuration domain.</td><td>Continue setup</td></tr>
+<tr><td>Attention required</td><td>Unresolved opening balance lines, missing posting roles, failed interfaces, and certification tasks.</td><td>Open filtered workbench</td></tr>
+<tr><td>Quick actions</td><td>New journal, new purchase invoice, import opening balances, run readiness checks.</td><td>Open target application</td></tr></table>
+
+<h2>5. Phase 1 — Core Finance Setup</h2>
+<table><tr><th>Area</th><th>Recommended UI</th><th>Existing design reuse</th></tr>
+<tr><td>Company and legal entity</td><td>Entity List/Record with scope banner.</td><td>Canonical entity metadata, list, record, CRUD APIs.</td></tr>
+<tr><td>Base currency and ledger books</td><td>Entity App for simple records; ledger-book activation panel in setup.</td><td>Existing ledger book and company relationships.</td></tr>
+<tr><td>Fiscal calendar and periods</td><td>Fiscal Calendar Designer aggregate editor with preview and generation.</td><td><i>control.fiscal_calendar_config</i>, <i>control.fiscal_calendar_period_rule</i>, company assignment, period generation service.</td></tr>
+<tr><td>Chart of Accounts and GL accounts</td><td>Entity List/Record with searchable account hierarchy and activation action.</td><td>Existing GL master, company GL activation, and posting controls.</td></tr>
+<tr><td>House banks and bank-account links</td><td>Bank setup workbench plus canonical bank-account Entity App.</td><td>Existing house-bank and bank-link DDL; temporal links remain aggregate-owned where needed.</td></tr>
+<tr><td>Opening balances</td><td>Opening Balance Workbench.</td><td>Governance cycle model, period-0 journals, validation, reconciliation, report pack, certification.</td></tr>
+<tr><td>Posting readiness</td><td>Posting Readiness Workbench and certification flow.</td><td><i>FIN_SETUP_READINESS</i>, book-period status, readiness checks, evidence.</td></tr></table>
+
+<h2>6. Phase 2 — Advanced Finance Configuration</h2>
+<table><tr><th>Area</th><th>Recommended UI</th><th>Implementation note</th></tr>
+<tr><td>Dimensions and mandatory policies</td><td>Dimension Policy aggregate editor.</td><td>Parent policy and allowed values should be edited with scope and effective-date context.</td></tr>
+<tr><td>Accounting profiles and posting templates</td><td>Accounting Profile aggregate editor with tabs for configuration, events, templates, book rules, posting roles, and dimension rules.</td><td>Reuse existing <i>acct_profile_*</i> and <i>book_posting_rule</i> structures.</td></tr>
+<tr><td>Tax and WHT</td><td>Tax Group and Rate Schedule aggregate editor.</td><td>Include jurisdictions, rates, components, WHT thresholds, rounding, and tax-account mapping.</td></tr>
+<tr><td>Payment methods and policies</td><td>Payment Method Policy editor.</td><td>Company policy, direction, currency, defaulting, and settlement behavior.</td></tr>
+<tr><td>Payment terms</td><td>Entity App for basic terms; aggregate editor for clauses, installments, and discounts.</td><td>Do not expose delete for child records that have no lifecycle storage.</td></tr>
+<tr><td>Bank interfaces and settlement</td><td>Bank Interface aggregate editor.</td><td>Keep provider credentials read-only in generic forms until encrypted credential mutation is available.</td></tr></table>
+
+<h2>7. Workbench Versus Entity App</h2>
+<table><tr><th>Use canonical Entity App</th><th>Use Finance Workbench</th></tr>
+<tr><td>Single master/configuration record.</td><td>Multi-step setup with dependencies and validation.</td></tr>
+<tr><td>Search, filter, create, edit, view.</td><td>Import, preview, validate, reconcile, certify, retry, and generate evidence.</td></tr>
+<tr><td>Simple CRUD lifecycle.</td><td>Aggregate ownership, period gates, book gates, and governed actions.</td></tr>
+<tr><td>Stable list and record layout.</td><td>Progress dashboards, task queues, exception views, and trace panels.</td></tr></table>
+<p>During Phases 1 and 2, detailed role permission controls may remain parked. CRUD screens should still be scope-aware, tenant-isolated, and designed so Phase 3 authorization can be introduced without changing the URLs, payloads, or screen structure.</p>
+
+<h2>8. Governance Workbenches</h2>
+<table><tr><th>Workbench</th><th>Governance behavior</th></tr>
+<tr><td>Opening Balances</td><td>Import request, chunk processing, period-0 draft journals, validation, reconciliation, retry, report pack, certification, and attestation.</td></tr>
+<tr><td>Posting Readiness</td><td>Run checks, show blockers, resolve issues, attach evidence, certify, and enforce production posting policy.</td></tr>
+<tr><td>Monthly Close</td><td>Use existing cycle type, phases, tasks, dependencies, book-period commands, and evidence pack.</td></tr>
+<tr><td>Annual Close</td><td>Annual tasks, carry-forward rules, cross-cycle dependencies, certification, and annual evidence.</td></tr>
+<tr><td>Posting Role Coverage</td><td>Coverage matrix by company code, ledger book, posting role, GL account, effective dates, and readiness status.</td></tr>
+<tr><td>Cross-book Diagnostics</td><td>Source/target journal trace, idempotency key, loop prevention, failures, retries, and governance evidence.</td></tr></table>
+<p>The existing governance schema should be reused for finance cycles wherever possible: cycle type, phase, task, dependency, run, certification, deviation, cross-dependency, carry-forward rule, book-period status, legal hold, manifest, and report pack. New finance-specific tables should be added only where the existing model cannot represent domain data.</p>
+
+<h2>9. Authorization Roadmap</h2>
+<p>Phase 3 introduces tenant-level, legal-entity-level, and company-code-level authorization, including multi-legal-entity and multi-company access rules. The Phase 1 and Phase 2 UI must therefore already provide:</p>
+<ul><li>Scope-aware URLs and request payloads.</li><li>Current-scope indicators.</li><li>Scope metadata on records and workbench items.</li><li>Server-side tenant RLS and tenant context enforcement.</li><li>Action boundaries that can later be mapped to permissions without redesign.</li></ul>
+
+<h2>10. API and Front-End Placement</h2>
+<table><tr><th>Layer</th><th>Recommended location</th></tr>
+<tr><td>Finance domain services</td><td><i>packages/domain/finance/finance-workbench/</i> for contracts, workflow models, and orchestration logic.</td></tr>
+<tr><td>Neon Workbench UI</td><td><i>apps/neon/app/(shell)/workbench/finance/</i>, reusing canonical Entity List/Record components.</td></tr>
+<tr><td>Neon APIs</td><td><i>apps/neon/app/api/workbench/finance/</i> for thin route handlers and request validation.</td></tr>
+<tr><td>Server finance services</td><td>Existing finance service package for period gates, posting roles, readiness, cross-book execution, and governance integration.</td></tr></table>
+
+<h2>11. Performance and Reliability Requirements</h2>
+<ul><li>Use paginated lists and server-side filtering; do not load all GL accounts or journal lines into the browser.</li><li>Cache stable metadata by tenant and effective version; invalidate after configuration changes.</li><li>Run expensive validation and report-pack generation as governed jobs with progress and retry state.</li><li>Keep snapshot persistence idempotent and retry recognized transient database disconnects.</li><li>Use trace IDs for imports, journals, cross-book entries, and governance runs.</li><li>Do not allow a background metadata compile or catalog persistence error to terminate the API process.</li></ul>
+
+<h2>12. Acceptance Criteria</h2>
+<ol><li>A Finance tile opens the Finance Workspace from the Neon dashboard.</li><li>Journal Entry, Purchase Invoice, and Finance Workbench are reachable with one click.</li><li>Every Finance screen displays the active tenant and organizational scope.</li><li>Simple masters use canonical Entity List/Record UX and respect physical lifecycle capabilities.</li><li>Aggregate editors preserve parent context and validate child configuration before save.</li><li>Opening balance, readiness, monthly close, annual close, and cross-book workflows show status, tasks, errors, retry, and evidence.</li><li>Tenant isolation remains enforced while Phase 3 permissions are parked.</li><li>The design supports later authorization at tenant, legal entity, and company-code levels without changing contracts.</li></ol>
+
+<p class="small">End of document.</p>
+</body></html>

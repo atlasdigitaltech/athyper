@@ -1,19 +1,33 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { PlaneShell } from "@athyper/app-mesh-shell";
 import { FavoritesPanelContainer } from "@athyper/app-mesh/collaboration";
+import {
+  RuntimeListBrowserCacheProvider,
+  runtimeListSessionScopeIdentity,
+} from "@athyper/runtime-list/browser-cache";
 
 export function AppShellClient({
   supportMode,
+  initialSession,
   children,
 }: {
   supportMode: boolean;
+  initialSession: unknown;
   children: ReactNode;
 }) {
+  const router = useRouter();
   return (
-    <PlaneShell supportMode={supportMode} FavoritesPanelComponent={FavoritesPanelContainer}>
-      {children}
-    </PlaneShell>
+    <RuntimeListBrowserCacheProvider scopeIdentity={runtimeListSessionScopeIdentity(initialSession)}>
+      <PlaneShell
+        supportMode={supportMode}
+        FavoritesPanelComponent={FavoritesPanelContainer}
+        navigate={(href) => router.push(href)}
+      >
+        {children}
+      </PlaneShell>
+    </RuntimeListBrowserCacheProvider>
   );
 }

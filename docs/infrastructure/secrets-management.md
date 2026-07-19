@@ -48,86 +48,25 @@ Three invariants this document enforces:
 
 ## 2. Secrets Inventory
 
-Every variable below must be injected in staging/production. In local dev, `.env.example`
-provides defaults — do not change these unless you are testing a specific auth scenario.
+> **Full variable reference** → [env-reference.md](env-reference.md). Variables marked ⚡ in that document are secrets that require injection in staging/production. The table below covers only rotation-critical impact notes not captured in the reference.
 
-### Database
-
-| Variable | Service | Why it matters |
-|---|---|---|
-| `DB_ADMIN_PASSWORD` | PostgreSQL | `POSTGRES_PASSWORD` in the DB container. All other DB passwords derive from this at seed time. Rotation requires `seed-db.sh` re-run. |
-| `DATABASE_URL` | PgBouncer apps pool | Full connection string including password. Used by all application DB queries via the `6432` pool. |
-| `DATABASE_ADMIN_URL` | Direct PostgreSQL | Bypasses PgBouncer — used by migrations and DDL scripts. Requires `postgres` superuser rights. |
-| `DBPOOL_APPS_PASSWORD` | PgBouncer apps | Written to `userlist.txt` at container start. Must match the Postgres role password in `DATABASE_URL`. |
-| `DBPOOL_SESSION_PASSWORD` | PgBouncer session | Written to `userlist.txt` at container start. Must match the Postgres role used by the session pool (`6433`). |
-
-### Redis / Cache
-
-| Variable | Service | Why it matters |
-|---|---|---|
-| `REDIS_URL` | Application | Full `redis://:password@host:port/db` URL. The `memorycache` service enforces a password via ACL — a missing or wrong password causes silent connection failures. |
-| `MEMORYCACHE_PASSWORD` | Redis ACL (`default` user) | The password for the standard Redis `default` ACL user. Written to `redis-acl.conf` as a SHA-256 hash. Rotation requires container restart. |
-| `REDIS_ADMIN_PASSWORD` | Redis ACL (`admin` user) | Full-access ACL user — used only for admin tooling (e.g. `redis-cli AUTH admin <password> CONFIG GET *`). Keep this separate from `MEMORYCACHE_PASSWORD`. |
-| `REDIS_EXPORTER_PASSWORD` | Redis Prometheus exporter | Read-only ACL user for metrics export. Separate password reduces blast radius if the exporter is compromised. |
-
-### Object Storage
-
-| Variable | Service | Why it matters |
-|---|---|---|
-| `S3_ACCESS_KEY` | MinIO / S3 | Also the MinIO root user login. Changing this requires updating the MinIO admin UI or running `mc admin user add`. |
-| `S3_SECRET_KEY` | MinIO / S3 | MinIO root password. Rotation without updating `DATABASE_URL`-equivalent S3 env vars causes all file upload/download to fail silently. |
-
-### IAM / Keycloak
-
-| Variable | Service | Why it matters |
-|---|---|---|
-| `IAM_ADMIN_PASSWORD` | Keycloak master realm admin | Bootstrap credential. After first boot, Keycloak does not re-read this from `.env` — it stores hashes in its own database. Rotating requires a `kcadm.sh` call or a realm wipe-and-reimport. |
-| `IAM_CLIENT_SECRET` | Keycloak API client | Shared secret between the API and the Keycloak `athyper-api-runtime` client. Rotation must be applied in both Keycloak (via admin console or realm JSON) and `.env` simultaneously or JWT verification breaks. |
-| `IAM_DB_PASSWORD` | Keycloak database | Password for the `keycloak` Postgres role. Used by Keycloak's JPA datasource. Rotating requires both a Postgres `ALTER ROLE` and a `.env` update before the KC container restarts. |
-
-### Application Runtime
-
-| Variable | Service | Why it matters |
-|---|---|---|
-| `CREDENTIAL_MASTER_KEY` | `CredentialEncryptionService` | AES key used to encrypt tenant credential payloads (webhook signing keys, endpoint auth tokens) in the database. **Rotation without a re-encryption migration invalidates all existing encrypted rows.** Minimum 32 characters. See the rotation note in §6. |
-| `RENDERER_INTERNAL_TOKEN` | Document renderer | `X-Renderer-Token` request header. The renderer rejects all requests missing this header — a wrong value causes all PDF generation to silently fail with 401. |
-
-### Gateway
-
-| Variable | Service | Why it matters |
-|---|---|---|
-| `GATEWAY_DASHBOARD_HTPASSWD` | Traefik dashboard | `user:bcrypt_hash` format. The dollar signs in bcrypt hashes must be doubled (`$$`) for Docker Compose interpolation — see generation command in §3. Wrong format causes Traefik to boot but reject all dashboard logins. |
-
-### Email
-
-| Variable | Service | Why it matters |
-|---|---|---|
-| `KC_SMTP_USERNAME` | Keycloak SMTP | Keycloak email provider credentials for password-reset and verification emails. |
-| `KC_SMTP_PASSWORD` | Keycloak SMTP | Keycloak SMTP auth password. A wrong value causes silent email delivery failure — no error in app logs, only in Keycloak event log. |
-
-### Telemetry
-
-| Variable | Service | Why it matters |
-|---|---|---|
-| `TELEMETRY_ADMIN_USER` | Grafana | `GF_SECURITY_ADMIN_USER`. Use the canonical name exactly — aliases to `GRAFANA_ADMIN_USER` have been removed. See §7. |
-| `TELEMETRY_ADMIN_PASSWORD` | Grafana | `GF_SECURITY_ADMIN_PASSWORD`. An empty or wrong value locks ops out of Loki, Tempo, and Prometheus dashboards — exactly when they are needed during incidents. See §7. |
-
-### secretstore / Infisical Bootstrap
-
-Only required when the `security-infisical` compose profile is active.
-`validate-env.sh` enforces these in non-local environments regardless of whether the profile
-is active — so the profile cannot be later enabled with placeholder keys.
-
-| Variable | Purpose | Generation |
-|---|---|---|
-| `INFISICAL_ENCRYPTION_KEY` | 32 hex chars (128-bit). Per-workspace data-key derivation. Distinct from `CREDENTIAL_MASTER_KEY`. | `openssl rand -hex 16` |
-| `INFISICAL_AUTH_SECRET` | ≥ 32 chars. Signs Infisical's own session JWTs. | `openssl rand -base64 32` |
-
-### Kernel Config Secrets
-
-| Pattern | Service | Why it matters |
-|---|---|---|
-| `ATHYPER_SUPER__IAM_SECRET__*` | Runtime kernel | SUPERSTAR env var pattern — read by the kernel config loader and projected into the kernel config struct at startup. These are service-internal secrets injected without exposing them in the kernel config JSON file. |
+| Variable | Rotation impact |
+|---|---|
+| `DB_ADMIN_PASSWORD` | All other DB passwords derive from this at seed time. Rotation requires `seed-db.sh` re-run. |
+| `DATABASE_URL` / `MESH_DATABASE_URL` | Full connection string. Rotation requires coordinated update of the Postgres role password, PgBouncer `userlist.txt`, and this variable before container restart. |
+| `DBPOOL_APPS_PASSWORD` / `DBPOOL_SESSION_PASSWORD` | Written to `userlist.txt` at container start. Must match the Postgres role password in `DATABASE_URL` / `REDIS_URL` chain — mismatch causes silent connection failures. |
+| `REDIS_URL` / `MEMORYCACHE_PASSWORD` | Redis ACL enforces password via SHA-256 hash in `redis-acl.conf`. Rotation requires re-rendering the ACL file and container restart. See §6 Redis ACL Rotation. |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Root MinIO credentials. Rotation requires updating MinIO admin UI or `mc admin user` before applying to `.env`. Changing without updating downstream config causes silent upload/download failure. |
+| `IAM_ADMIN_PASSWORD` | After first KC boot, KC stores its own hashes — it does not re-read this from `.env`. Rotating requires a `kcadm.sh` call or a realm wipe-and-reimport. |
+| `IAM_CLIENT_SECRET` | Must be updated in both Keycloak (Admin Console → Client Credentials → Regenerate) and `.env` atomically — any window between the two breaks all token exchanges. See §6. |
+| `IAM_DB_PASSWORD` | Requires both a Postgres `ALTER ROLE` and a `.env` update before KC container restart. |
+| `CREDENTIAL_MASTER_KEY` | **Rotation without a re-encryption migration (B3.4, not yet implemented) permanently invalidates all encrypted credential rows.** Minimum 32 chars. See §6. |
+| `RENDERER_INTERNAL_TOKEN` | Renderer rejects all requests missing the `X-Renderer-Token` header — wrong value causes all PDF generation to silently fail with 401. |
+| `VAPID_PUBLIC_KEY` | **Cannot be changed without invalidating all existing browser push subscriptions.** Users must re-subscribe. See §6. |
+| `KC_SMTP_PASSWORD` | Wrong value causes silent Keycloak email delivery failure — no error in app logs, only in the KC event log. |
+| `TELEMETRY_ADMIN_PASSWORD` | Empty or wrong value locks ops out of Loki / Tempo / Prometheus dashboards. See §7. |
+| `GATEWAY_DASHBOARD_HTPASSWD` | `user:bcrypt_hash` format. `$$` must double-escape `$` for Docker Compose. Wrong format boots Traefik but rejects all dashboard logins. See §3 for generation. |
+| `ATHYPER_SUPER__IAM_SECRET__*` | SUPERSTAR pattern — kernel config loader projects these into the config struct at startup. Not exposed in the kernel config JSON file. |
 
 ---
 
@@ -155,6 +94,15 @@ openssl rand -base64 32     # S3_SECRET_KEY
 # Application runtime
 openssl rand -base64 48     # CREDENTIAL_MASTER_KEY (must be >= 32 chars; 48-char b64 gives 360-bit key)
 openssl rand -hex 32        # RENDERER_INTERNAL_TOKEN
+
+# Web Push (VAPID) — generates a matched EC P-256 keypair
+npx web-push generate-vapid-keys
+# Output: Public Key: <value>  Private Key: <value>
+# Copy both values — they are a matched pair; never mix keys from different runs.
+# VAPID_SUBJECT per environment:
+#   local:      mailto:noreply@athyper.local
+#   staging:    mailto:noreply-stg@athyper.com
+#   production: mailto:noreply@athyper.com
 
 # IAM client secret
 openssl rand -base64 32     # IAM_CLIENT_SECRET
@@ -442,7 +390,112 @@ you which services to restart. After restarting, re-run `validate-env.sh` to con
 
 ---
 
-### `CREDENTIAL_MASTER_KEY` Rotation
+### VAPID Keys (`VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`)
+
+#### Provisioning per environment
+
+**Local:**
+```bash
+npx web-push generate-vapid-keys
+```
+Copy both values into `stack/env/.env` and `server/.env`:
+```
+VAPID_SUBJECT=mailto:noreply@athyper.local
+VAPID_PUBLIC_KEY=<Public Key from output>
+VAPID_PRIVATE_KEY=<Private Key from output>
+```
+The existing keypair in `.env.example` is a locally-generated dev key — it is safe for
+local use but must never appear in staging or production (V4: `validate-env.sh` guard
+will reject the known local public key in non-local environments).
+
+**Staging:**
+```bash
+npx web-push generate-vapid-keys
+```
+Add all three variables to `/opt/stack/athyper/secrets/.env`:
+```
+VAPID_SUBJECT=mailto:noreply-stg@athyper.com
+VAPID_PUBLIC_KEY=<Public Key>
+VAPID_PRIVATE_KEY=<Private Key>
+```
+`write-env-staging.sh` does not yet generate VAPID keys automatically (V2 gap).
+Until that is fixed, provisioning is manual. Run `validate-env.sh` to confirm the
+values are non-empty before starting the stack.
+
+**Production:**
+```bash
+npx web-push generate-vapid-keys
+```
+Store all three in your secrets manager (Infisical, Vault, or AWS SM) under the
+`athyper/production/push` path:
+```
+VAPID_SUBJECT=mailto:noreply@athyper.com
+VAPID_PUBLIC_KEY=<Public Key>
+VAPID_PRIVATE_KEY=<Private Key>
+```
+The fetch script (see §5) must write these into `/opt/stack/athyper/secrets/.env`
+before `up.sh` runs. `production.env.example` already references them as
+`${VAPID_PUBLIC_KEY}` / `${VAPID_PRIVATE_KEY}` — no template change needed.
+
+#### Rotation
+
+> **Warning:** rotating `VAPID_PUBLIC_KEY` invalidates **all existing browser push
+> subscriptions**. Every user who has granted push notification permission must be
+> re-subscribed. The client-side push registration code handles re-subscription
+> automatically on the next session that calls the subscription endpoint, but there
+> will be a window where push delivery fails for existing subscribers.
+
+1. Generate a new keypair: `npx web-push generate-vapid-keys`
+2. Update `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` in the secret
+   store and `.env`.
+3. Restart the jobs service (push adapter reads keys at startup):
+   ```bash
+   bash stack/scripts/stack-profile/restart.sh jobs
+   ```
+4. The old browser subscriptions will fail silently on the next push attempt.
+   The client re-subscribes on next load — no explicit migration is required.
+
+---
+
+### `CREDENTIAL_MASTER_KEY` Provisioning and Rotation
+
+#### Provisioning per environment
+
+**Local:**
+Optional — if absent, `bootstrap.ts` logs a warning and credential encryption is
+disabled (integration routes fall back to storing credentials in plaintext).
+```bash
+openssl rand -base64 48
+# Paste into server/.env as: CREDENTIAL_MASTER_KEY=<value>
+```
+`stack/env/.env` deliberately leaves `CREDENTIAL_MASTER_KEY` commented out — the
+stack compose services do not consume it directly; only the API server reads it.
+
+**Staging:**
+`write-env-staging.sh` generates and writes `CREDENTIAL_MASTER_KEY` automatically:
+```bash
+# Line 75 in write-env-staging.sh:
+CREDENTIAL_MASTER_KEY=$(openssl rand -base64 48 | tr -d '\n=')
+```
+The generated value is written to `/opt/stack/athyper/secrets/.env`. **Do not
+re-run `write-env-staging.sh` without running the B3.4 re-encryption migration
+first** — a new key makes all previously encrypted credential rows permanently
+unreadable.
+
+**Production:**
+Same generation command:
+```bash
+openssl rand -base64 48
+```
+Store in your secrets manager under `athyper/production/runtime`:
+```
+credential_master_key: <value>
+```
+`production.env.example` references it as `${CREDENTIAL_MASTER_KEY}`. The runtime
+API enforces a minimum of 32 characters and refuses to start if the value is absent
+(Zod validation at boot).
+
+#### Rotation
 
 > **Warning:** rotating `CREDENTIAL_MASTER_KEY` invalidates all encrypted credential rows
 > in the database (webhook signing keys, endpoint auth tokens, notification provider

@@ -39,6 +39,7 @@ export interface RuntimeEntityHeaderProps {
   onBack?: () => void;
   activeTab?: string;
   onTabChange?: (id: string) => void;
+  onTabIntent?: (id: string) => void;
   platformIcons?: RuntimeEntityTabBarProps["platformIcons"];
   onPlatformIconClick?: (id: string) => void;
   activePlatformIcon?: string;
@@ -102,6 +103,7 @@ export function RuntimeEntityHeader({
   onBack,
   activeTab,
   onTabChange,
+  onTabIntent,
   platformIcons,
   onPlatformIconClick,
   activePlatformIcon,
@@ -158,6 +160,7 @@ export function RuntimeEntityHeader({
       tabs={model.tabs ?? []}
       activeTab={activeTab}
       onTabChange={onTabChange}
+      onTabIntent={onTabIntent}
       platformIcons={platformIcons}
       onPlatformIconClick={onPlatformIconClick}
       activePlatformIcon={activePlatformIcon}

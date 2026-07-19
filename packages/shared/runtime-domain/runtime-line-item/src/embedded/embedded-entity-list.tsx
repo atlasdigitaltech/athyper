@@ -169,6 +169,12 @@ export interface EmbeddedEntityListProps {
   paginationMode?: "none" | "server";
   /** Initial page size when `paginationMode === "server"`. Default 25. */
   initialPageSize?: number;
+  /** Controlled server page for caller-owned canonical collection queries. */
+  currentPage?: number;
+  /** Controlled total count returned by the collection endpoint. */
+  totalCount?: number;
+  /** Page writer for caller-owned canonical collection queries. */
+  onPageChange?: (page: number) => void;
   /**
    * Bypass the server fetch and render these rows directly. The server
    * query is disabled (no waste). Draft-mode consumers merge their local
@@ -306,6 +312,9 @@ export function EmbeddedEntityList({
   rowExpansionToggle,
   paginationMode = "none",
   initialPageSize = DEFAULT_PAGE_SIZE,
+  currentPage: controlledPage,
+  totalCount: controlledTotalCount,
+  onPageChange,
   dataOverride,
   compiledEntity,
   metadataEnabled = true,
@@ -343,6 +352,7 @@ export function EmbeddedEntityList({
   const [userSort, setUserSort] = useState<EntityListSortEntry[] | undefined>(initialSort);
   const [userTouchedSort, setUserTouchedSort] = useState<boolean>(initialSort !== undefined);
   const [page, setPage] = useState<number>(1);
+  const effectivePage = controlledPage ?? page;
   const [internalSelection, setInternalSelection] = useState<RowSelectionState>({});
 
   const rowSelection = controlledSelection ?? internalSelection;
@@ -370,7 +380,7 @@ export function EmbeddedEntityList({
 
   // Server-side page index becomes stale when sort or scope changes — reset.
   useEffect(() => {
-    setPage(1);
+    if (controlledPage === undefined) setPage(1);
   }, [sort, scope?.parent_id, normalizedClientSearch]);
 
   const queryEnabled = dataOverride === undefined;
@@ -379,10 +389,10 @@ export function EmbeddedEntityList({
       sort,
       parent_id: scope?.parent_id,
       ...(paginationMode === "server"
-        ? { page, pageSize: initialPageSize }
+        ? { page: effectivePage, pageSize: initialPageSize }
         : {}),
     }),
-    [sort, scope?.parent_id, paginationMode, page, initialPageSize],
+    [sort, scope?.parent_id, paginationMode, effectivePage, initialPageSize],
   );
 
   const {
@@ -461,7 +471,7 @@ export function EmbeddedEntityList({
   const isLoading = loading ?? internalLoading;
 
   const pagination = listData?.pagination as { total?: number } | undefined;
-  const totalCount = pagination?.total;
+  const totalCount = controlledTotalCount ?? pagination?.total;
   const totalPages = totalCount !== undefined && paginationMode === "server"
     ? Math.max(1, Math.ceil(totalCount / initialPageSize))
     : undefined;
@@ -521,9 +531,9 @@ export function EmbeddedEntityList({
           {...(paginationMode === "server"
             ? {
                 totalCount,
-                currentPage: page,
+                currentPage: effectivePage,
                 totalPages,
-                onPageChange: setPage,
+                onPageChange: onPageChange ?? setPage,
               }
             : {})}
         />

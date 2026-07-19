@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  applyTenantCatalogOverlay,
   TenantOverlayValidationError,
   resolveTenantOverlay,
 } from "../tenant-overlay-resolver.js";
@@ -67,5 +68,62 @@ describe("tenant overlay resolver", () => {
     ), input);
 
     expect(result?.executionOverlay.defaultSort).toEqual([{ field: "name", direction: "asc", nulls: "last" }]);
+  });
+
+  it("applies a typed tenant cache policy without entity-name checks", async () => {
+    const result = await resolveTenantOverlay(queryFor(
+      [{ id: "overlay-a", priority: 100, version: 1 }],
+      [{
+        overlay_id: "overlay-a",
+        change_order: 1,
+        kind: "tweak_policy",
+        path: "policy",
+        value: { cachePolicy: { fresh_for_seconds: 45, retain_for_seconds: 240 } },
+      }],
+    ), input);
+
+    expect(result?.cachePolicyOverride).toEqual({
+      fresh_for_seconds: 45,
+      retain_for_seconds: 240,
+    });
+
+    const compiled = applyTenantCatalogOverlay({
+      fields,
+      cache_policy: {
+        mode: "stale_while_revalidate",
+        fresh_for_seconds: 20,
+        retain_for_seconds: 300,
+        prefetch: "intent",
+        restore_scroll: true,
+        invalidate_on_mutation: true,
+        max_queries_per_entity: 5,
+        max_rows_per_query: 200,
+        storage: "memory",
+        source: "entity_class",
+      },
+      data_policy: {},
+      class_profile: { cache_policy: { eager_prefetch_allowed: false } },
+      mutability: "mutable",
+      compiled_hash: "b".repeat(64),
+    } as any, result!);
+
+    expect(compiled.cache_policy).toMatchObject({
+      source: "tenant",
+      fresh_for_seconds: 45,
+      retain_for_seconds: 240,
+    });
+  });
+
+  it("rejects invalid tenant cache-policy combinations", async () => {
+    await expect(resolveTenantOverlay(queryFor(
+      [{ id: "overlay-a", priority: 100, version: 1 }],
+      [{
+        overlay_id: "overlay-a",
+        change_order: 1,
+        kind: "tweak_policy",
+        path: "policy",
+        value: { cachePolicy: { fresh_for_seconds: 60, retain_for_seconds: 10 } },
+      }],
+    ), input)).rejects.toBeInstanceOf(TenantOverlayValidationError);
   });
 });

@@ -1,25 +1,26 @@
-﻿<#-- =======================================================================
-     Neon Keycloak Login Theme — verify-email.ftl
+<#-- =======================================================================
+     Neon Keycloak Login Theme � verify-email.ftl
      Email verification page shown after social/email login when VERIFY_EMAIL
      required action is triggered.
      Matches the split-panel layout of login.ftl.
      ======================================================================= -->
+<#include "_iam-context.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Verify your email — ${realm.displayName}</title>
-  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <title>${iamTitle("Verify your email")}</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
 </head>
 <body>
-<div class="kc-page">
+<div class="iam-shell kc-page" data-plane="${iamPlane}">
 
-  <!-- ── Left branding panel ── -->
+  <!-- -- Left branding panel -- -->
   <div class="kc-panel-left">
 
     <#include "_neon-brand-logo.ftl">
@@ -46,7 +47,7 @@
     </div>
   </div>
 
-  <!-- ── Right form panel ── -->
+  <!-- -- Right form panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
     <div class="kc-form-card">

@@ -57,7 +57,21 @@ FROM (VALUES
      'House Bank Toggled',
      'log.activity_type',
      'A bank_account_house_config was activated or deactivated.',
-     205)
+     205),
+    ('finance_setup.fiscal_calendar_created', 'Fiscal Calendar Created', 'log.activity_type',
+     'A fiscal-calendar version was created.', 206),
+    ('finance_setup.fiscal_calendar_updated', 'Fiscal Calendar Updated', 'log.activity_type',
+     'A fiscal-calendar draft or successor version was updated.', 207),
+    ('finance_setup.fiscal_calendar_assigned', 'Fiscal Calendar Assigned', 'log.activity_type',
+     'A fiscal-calendar version was assigned to a company.', 208),
+    ('finance_setup.fiscal_periods_generated', 'Fiscal Periods Generated', 'log.activity_type',
+     'Fiscal periods and governance book gates were generated.', 209),
+    ('finance_setup.posting_role_map_assigned', 'Posting Role Account Assigned', 'log.activity_type',
+     'A posting role was assigned to a GL account for a company and ledger book.', 210),
+    ('finance_setup.posting_role_map_updated', 'Posting Role Account Updated', 'log.activity_type',
+     'A posting-role account assignment was superseded by a new version.', 211),
+    ('finance_setup.posting_role_map_retired', 'Posting Role Account Retired', 'log.activity_type',
+     'A posting-role account assignment was retired.', 212)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

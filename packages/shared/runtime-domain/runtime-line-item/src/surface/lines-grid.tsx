@@ -1177,8 +1177,6 @@ export function LinesGrid({
         // Rounded grid container — the toolbar + table + footer read as one
         // unified card. `overflow-hidden` clips the inner toolbar background
         // and table corners to the outer radius.
-        className="rounded-lg border border-border overflow-hidden"
-        toolbarClassName="min-h-10 bg-muted/40 px-5 py-1"
         // Flatten DataTable's default `rounded-md border` so the outer
         // grid's border isn't doubled up with the inner table's chrome.
         // The table container owns horizontal scroll because the outer

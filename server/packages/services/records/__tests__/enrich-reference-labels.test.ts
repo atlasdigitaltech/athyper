@@ -12,7 +12,6 @@ import {
   enrichSingleReferenceLabels,
   enrichWithReferenceLabels,
   isReferenceLabelEnrichmentEnabled,
-  referenceBaseName,
   specFromDiscoveredRow,
   type ReferenceFieldSpec,
   type ResolvedTargetLabels,
@@ -92,7 +91,7 @@ function ignoreDb(): never {
 }
 
 describe("enrichWithReferenceLabels — projection", () => {
-  it("attaches label + code on both companion key shapes", async () => {
+  it("attaches label + code to the explicit field companion keys", async () => {
     const rows = [{ gl_account_id: GL_A, amount: 100 }];
     const out = await enrichWithReferenceLabels(ignoreDb as never, {
       entityCode: "accounting_distribution",
@@ -111,9 +110,7 @@ describe("enrichWithReferenceLabels — projection", () => {
     expect(out[0]).toMatchObject({
       gl_account_id:       GL_A,
       gl_account_id_label: "HR & Payroll",
-      gl_account_label:    "HR & Payroll",
       gl_account_id_code:  "5100",
-      gl_account_code:     "5100",
       amount:              100,
     });
   });
@@ -139,8 +136,9 @@ describe("enrichWithReferenceLabels — projection", () => {
     expect(out[0]!["gl_account_label"]).toBe("SnapshottedLabel");
     // Mirror companion still gets the fresh value.
     expect(out[0]!["gl_account_id_label"]).toBe("FreshLabel");
-    // Blank pre-existing code is treated as missing and filled.
-    expect(out[0]!["gl_account_code"]).toBe("5100");
+    expect(out[0]!["gl_account_id_code"]).toBe("5100");
+    // Legacy aliases are not rewritten by metadata-driven enrichment.
+    expect(out[0]!["gl_account_code"]).toBe("");
   });
 
   it("does not write companion keys when target row is missing (preserves client-side picker fallback)", async () => {
@@ -181,7 +179,6 @@ describe("enrichWithReferenceLabels — projection", () => {
     });
 
     expect(out[0]!["approver_id_label"]).toBe("Jane Approver");
-    expect(out[0]!["approver_label"]).toBe("Jane Approver");
     expect(out[0]).not.toHaveProperty("approver_id_code");
     expect(out[0]).not.toHaveProperty("approver_code");
   });
@@ -279,10 +276,7 @@ describe("enrichWithReferenceLabels — projection", () => {
 
     expect(out[0]).toMatchObject({
       supplier_id_label: "Acme Supplies",
-      supplier_label:    "Acme Supplies",
       supplier_id_code:  "ACME",
-      supplier_code:     "ACME",
-      supplier_name:     "Acme Supplies",
     });
   });
 
@@ -309,13 +303,9 @@ describe("enrichWithReferenceLabels — projection", () => {
 
     expect(out[0]).toMatchObject({
       billto_address_id_label:             "HQ Billing",
-      billto_address_label:                "HQ Billing",
       billto_address_id_code:              "BILL-HQ",
-      billto_address_code:                 "BILL-HQ",
       billto_address_id_formatted_address: "1 Main Street",
-      billto_address_formatted_address:    "1 Main Street",
       billto_address_id_jurisdiction_id:   jurisdictionId,
-      billto_address_jurisdiction_id:      jurisdictionId,
     });
   });
 });
@@ -338,9 +328,7 @@ describe("enrichSingleReferenceLabels — single-row wrapper", () => {
     expect(out).toMatchObject({
       gl_account_id:       GL_A,
       gl_account_id_label: "Office Supplies",
-      gl_account_label:    "Office Supplies",
       gl_account_id_code:  "6200",
-      gl_account_code:     "6200",
       amount:              50,
     });
   });
@@ -420,19 +408,7 @@ describe("isReferenceLabelEnrichmentEnabled — rollout kill-switch", () => {
         fetchTargetLabels:  async () => new Map([[GL_A, { label: "GLA", code: "5100", formattedValue: null, jurisdictionId: null }]]),
       },
     });
-    expect(out[0]!["gl_account_label"]).toBe("GLA");
-  });
-});
-
-describe("referenceBaseName", () => {
-  it("strips _id suffix", () => {
-    expect(referenceBaseName("gl_account_id")).toBe("gl_account");
-  });
-  it("returns name unchanged when no _id suffix", () => {
-    expect(referenceBaseName("approver")).toBe("approver");
-  });
-  it("strips only the trailing _id", () => {
-    expect(referenceBaseName("source_line_id")).toBe("source_line");
+    expect(out[0]!["gl_account_id_label"]).toBe("GLA");
   });
 });
 

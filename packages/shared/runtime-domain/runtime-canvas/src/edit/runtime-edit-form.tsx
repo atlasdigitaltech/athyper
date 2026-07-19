@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FocusEvent, type FormEvent, type ReactNode } from "react";
 import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import type { EntityFieldDefaults } from "@athyper/cascade";
-import type {
-  DocumentEditRuntimeContract,
-  MetaEntityField,
-  MetaEntityRuntimeDescriptor,
-  ResolveChangeInvalidation,
-  ResolveChangeResponse,
+import {
+  type DocumentEditRuntimeContract,
+  type MetaEntityField,
+  type MetaEntityRuntimeDescriptor,
+  type ResolveChangeInvalidation,
+  type ResolveChangeResponse,
 } from "@athyper/runtime-contracts";
 import {
   buildMetaEntityFieldGroups,
@@ -18,7 +18,7 @@ import {
 } from "@athyper/runtime-shared/meta-entity";
 import { WorkPanel } from "@athyper/surface-kit";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
-import { csrfFetch } from "@athyper/runtime-shared/client";
+import { csrfFetch, invalidateRuntimeListEntity } from "@athyper/runtime-shared/client";
 import {
   runtimeEditFormDomId,
   useRuntimeEditFormActionPublisher,
@@ -608,6 +608,7 @@ export function RuntimeEditForm({
       setFieldErrors({});
       setFieldWarnings({});
       acknowledgeSaved();
+      invalidateRuntimeListEntity(entitySlug, isCreateMode ? "create" : "edit");
       if (isCreateMode) {
         const createdId = readRecordId(result);
         if (createdId) {
@@ -1810,9 +1811,9 @@ function resolveEditorControl(field: MetaEntityField): string | undefined {
   return field.editor?.control;
 }
 
-function resolveOptionSource(field: MetaEntityField): "lookup" | "reference" | "static" | null {
+function resolveOptionSource(field: MetaEntityField): "lookup" | "reference" | "static" | "lifecycle" | null {
   const declared = field.editor?.optionSource ?? field.optionSource;
-  if (declared?.kind === "lookup" || declared?.kind === "reference" || declared?.kind === "static") {
+  if (declared?.kind === "lookup" || declared?.kind === "reference" || declared?.kind === "static" || declared?.kind === "lifecycle") {
     return declared.kind;
   }
 
@@ -1824,8 +1825,6 @@ function resolveOptionSource(field: MetaEntityField): "lookup" | "reference" | "
     || readString(field.lookupConfig, "lookup_domain")
     || readString(field.lookupConfig, "lookupDomain")
     || readString(field.lookupConfig, "domain")
-    || field.name.endsWith("_type")
-    || isStatusField(field.name)
     || dataType === "enum"
     || dataType === "lifecycle_state"
     || hasStringArray(field.constraints, "options")
@@ -1840,22 +1839,11 @@ function resolveOptionSource(field: MetaEntityField): "lookup" | "reference" | "
     field.referenceEntity
     || field.referenceConfig
     || dataType === "reference"
-    || isLikelyReferenceField(field.name, dataType)
   ) {
     return "reference";
   }
 
   return null;
-}
-
-function isLikelyReferenceField(fieldName: string, dataType: string): boolean {
-  if (dataType !== "uuid") return false;
-  if (fieldName === "id" || fieldName === "tenant_id") return false;
-  return fieldName === "parent_id" || fieldName.endsWith("_id");
-}
-
-function isStatusField(fieldName: string): boolean {
-  return fieldName === "status" || fieldName.endsWith("_status");
 }
 
 function isRuntimeOption(value: unknown): value is RuntimeOption {

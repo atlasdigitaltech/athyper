@@ -43,6 +43,15 @@ VALUES
         false,
         '{"owner":"workflow-platform","rollout_intent":"phase_1_5_or_later_reserved","production_note":"Must remain disabled for Phase 1 merge."}'::jsonb,
         '00000000-0000-0000-0000-000000000000'
+    ),
+    (
+        'finance.posting_readiness_gate',
+        'Finance Posting Readiness Gate',
+        'Blocks production journal posting unless the company has a current FINANCE_POSTING_READY certification.',
+        'release_gate',
+        false,
+        '{"owner":"finance-platform","rollout_intent":"observe_then_tenant_pilot_then_enforce","production_note":"Keep globally disabled; enable with tenant_overrides only after readiness cycles are operational. Test and opening-balance journals remain governed by their dedicated workflows."}'::jsonb,
+        '00000000-0000-0000-0000-000000000000'
     )
 ON CONFLICT (code) DO UPDATE
 SET
@@ -52,4 +61,3 @@ SET
     metadata    = control.feature_flag.metadata || EXCLUDED.metadata,
     updated_at  = now(),
     updated_by  = EXCLUDED.created_by;
-

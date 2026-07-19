@@ -19,6 +19,10 @@ REM   dev-local.bat --with-jobs    : also start worker + scheduler windows
 REM   dev-local.bat --no-infra     : skip stack-profile/up (infra already up)
 REM   dev-local.bat --stop-only    : just stop the 6 app containers, do nothing else
 REM
+REM Note: file attachments (Tika/docparser) require BOTH --with-jobs AND the
+REM render profile running. Start render separately first if needed:
+REM   stack\scripts\stack-profile\up.bat render
+REM
 REM Container naming: ${COMPOSE_PROJECT_NAME}-<svc>-1 (matches stack-service/stop.bat).
 REM ============================================================
 

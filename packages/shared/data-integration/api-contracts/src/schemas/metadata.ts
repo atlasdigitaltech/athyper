@@ -16,6 +16,13 @@
  */
 import { z } from "zod";
 import { SemanticIntentSchema, UuidSchema } from "./common";
+import { MetaEntityContractV2Schema } from "./meta-entity-contract-v2";
+import {
+  EntityClassListCachePolicySchema,
+  EntityListCachePolicyOverrideSchema,
+  EntityListCachePolicySchema,
+  PLATFORM_DEFAULT_ENTITY_LIST_CACHE_POLICY,
+} from "./entity-cache-policy";
 import type { EntityClass } from "../enums";
 
 // ═══════════════════════════════════════════════════════════════
@@ -1043,14 +1050,23 @@ export const CompiledEntitySchema = z.object({
   field_groups: z.array(FieldGroupSchema),
   relations: z.array(CompiledEntityRelationSchema).default([]),
 
+  cache_policy: EntityListCachePolicySchema.default({
+    ...PLATFORM_DEFAULT_ENTITY_LIST_CACHE_POLICY,
+    source: "platform",
+  }),
+
   display_config: z.object({
     title_field: z.string().optional(),
-    subtitle_field: z.string().optional(),
+    // Compiled legacy projections preserve the canonical v2 null when an
+    // entity has no subtitle identity field.
+    subtitle_field: z.string().nullable().optional(),
     icon: z.string().optional(),
     color: z.string().optional(),
     default_sort_field: z.string().optional(),
     default_sort_order: z.enum(["asc", "desc"]).optional(),
     list_columns: z.array(z.string()).optional(),
+    /** Entity override; compiler resolves it over class and platform defaults. */
+    list_cache: EntityListCachePolicyOverrideSchema.optional(),
     /** Entity-specific list UI feature policy; security remains server-enforced. */
     list_features: EntityListFeaturesSchema.optional(),
     /** Compiler-owned runtime presentation switches; never injected by a BFF. */
@@ -1509,6 +1525,8 @@ export const CompiledEntitySchema = z.object({
   mutability: z.enum(["mutable", "immutable"]).optional(),
   document_runtime_plan: CompiledDocumentRuntimePlanSchema.optional(),
   capability_manifest: EntityCapabilityManifestSchema,
+  /** Canonical Phase B graph. Legacy fields above are derived adapters. */
+  contract_v2: MetaEntityContractV2Schema.optional(),
   compiled_at: z.string().datetime(),
   compiled_hash: z.string(),
 });
@@ -1727,6 +1745,8 @@ export const EntityClassProfileSchema = z.object({
   default_tabs: z.array(DetailTabSchema).optional(),
   /** Preferred detail page layout hint for this class. */
   default_layout: z.string().optional(),
+  /** Entity-class list-cache defaults and prefetch safety constraints. */
+  cache_policy: EntityClassListCachePolicySchema.optional(),
 });
 export type EntityClassProfile = z.infer<typeof EntityClassProfileSchema>;
 

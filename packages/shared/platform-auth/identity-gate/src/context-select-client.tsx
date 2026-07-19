@@ -12,6 +12,7 @@ import {
   SecondaryAction,
   TextLinkButton,
 } from "./components";
+import { useMinimumAuthReveal, waitForMinimumAuthTransition } from "./auth-transition-timing";
 import { getLastContext, setLastContext } from "./context-storage";
 import { csrfHeaders } from "./csrf";
 import { authErrorFromResponse, authErrorMessageFromSearch } from "./errors";
@@ -39,6 +40,7 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
   const [selectedOrg, setSelectedOrg] = useState<OrgEntry | null>(null);
   const [activating, setActivating] = useState<string | null>(null);
   const autoActivatedRef = useRef(false);
+  const minimumRevealReady = useMinimumAuthReveal();
 
   useEffect(() => {
     setLocation({
@@ -65,6 +67,7 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
 
   const activate = useCallback(
     async (org: OrgEntry, workbench: string) => {
+      const transitionStartedAt = Date.now();
       const key = `${org.alias}:${workbench}`;
       setActivating(key);
       setError(null);
@@ -82,9 +85,17 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
           };
           throw new Error(authErrorFromResponse(body));
         }
+        // Authenticated shell caches must not survive a principal scope change.
+        // The shell also compares its scope identity on render; this event covers
+        // same-document context activation integrations.
+        window.dispatchEvent(new CustomEvent("athyper:session-context-change", {
+          detail: { org: org.alias, workbench },
+        }));
         setLastContext(plane, org.alias, workbench);
+        await waitForMinimumAuthTransition(transitionStartedAt);
         window.location.replace(finalDestination);
       } catch (err) {
+        await waitForMinimumAuthTransition(transitionStartedAt);
         setError(err instanceof Error ? err.message : "Failed to activate context.");
         setActivating(null);
       }
@@ -173,8 +184,13 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
     }
   }, [activate, entries, plane, session]);
 
-  if (!location || (!session && !error && !pageError)) {
-    return <LoadingState plane={plane} message="Loading session..." />;
+  if (!minimumRevealReady || !location || (!session && !error && !pageError) || activating !== null) {
+    return (
+      <LoadingState
+        plane={plane}
+        message={activating !== null ? `Activating your ${config.appName} workspace...` : "Loading session..."}
+      />
+    );
   }
 
   const groups = groupByTenant(entries);
@@ -197,7 +213,7 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
             ? `Identity verified - ${identityLabel(session)}`
             : contextSelectSubtitle(plane)
       }
-      variant="compact"
+      variant="brand"
     >
       <div className="space-y-5">
         <ErrorBanner message={error ?? pageError} />
@@ -222,7 +238,6 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
             <OrgPicker
               activating={activating}
               groups={groups}
-              identity={identityLabel(session)}
               onDifferentSignIn={() => {
                 window.location.href = config.logoutPath;
               }}
@@ -245,14 +260,12 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
 function OrgPicker({
   activating,
   groups,
-  identity,
   onDifferentSignIn,
   onSelect,
   plane,
 }: {
   activating: string | null;
   groups: ReturnType<typeof groupByTenant>;
-  identity: string;
   onDifferentSignIn: () => void;
   onSelect: (org: OrgEntry) => void;
   plane: PlaneKey;
@@ -261,17 +274,10 @@ function OrgPicker({
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-          <CheckIcon className="h-3.5 w-3.5 text-emerald-600" />
-          <span>Identity verified - {identity}</span>
-        </p>
-        <p className="text-sm text-muted-foreground">{contextChoiceCopy(plane)}</p>
-      </div>
       <div className="max-h-[52vh] space-y-2 overflow-y-auto overscroll-contain pr-1">
         {orgs.map((org) => (
           <button
-            className="group flex w-full items-start gap-3 rounded-md bg-muted px-3 py-3 text-left transition-colors hover:bg-muted/80 disabled:cursor-not-allowed disabled:opacity-60"
+            className="auth-organization-row group flex w-full items-start gap-3 rounded-md bg-muted text-left transition-colors hover:bg-muted/80 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={activating !== null}
             key={org.alias}
             onClick={() => onSelect(org)}
@@ -281,10 +287,10 @@ function OrgPicker({
               {initials(org.name)}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">
+              <span className="auth-organization-name block truncate">
                 {activating?.startsWith(`${org.alias}:`) ? "Activating..." : org.name}
               </span>
-              <span className="mt-1 grid gap-0.5 text-xs text-muted-foreground">
+              <span className="auth-organization-meta mt-1 grid gap-0.5 text-muted-foreground">
                 {orgDetails(plane, org).map((detail) => (
                   <span className="block truncate" key={detail.label}>{detail.label}: {detail.value}</span>
                 ))}
@@ -325,25 +331,25 @@ function WorkbenchPicker({
             {initials(org.name)}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{org.name}</p>
-            <p className="truncate text-xs text-muted-foreground">{org.alias}</p>
+            <p className="auth-organization-name truncate">{org.name}</p>
+            <p className="auth-organization-meta truncate text-muted-foreground">{org.alias}</p>
           </div>
         </div>
       </AuthCard>
       <div className="grid gap-2">
         {org.workbenches.map((workbench) => (
           <button
-            className="group flex w-full items-center justify-between gap-3 rounded-lg border bg-card px-3 py-3 text-left text-card-foreground transition-colors hover:border-ring hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+            className="auth-organization-row group flex w-full items-center justify-between gap-3 rounded-md border bg-card text-left text-card-foreground transition-colors hover:border-ring hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
             disabled={activating !== null}
             key={workbench}
             onClick={() => onSelect(workbench)}
             type="button"
           >
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium group-hover:text-foreground">
+              <span className="auth-organization-name block truncate group-hover:text-foreground">
                 {activating === `${org.alias}:${workbench}` ? "Activating..." : getWorkbenchLabel(workbench, plane)}
               </span>
-              <span className="block text-xs leading-5 text-muted-foreground">
+              <span className="auth-organization-meta block text-muted-foreground">
                 {getWorkbenchDescription(workbench, plane)}
               </span>
             </span>
@@ -361,7 +367,7 @@ function ContextFooter({
   onClearStaleSession: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 text-xs leading-none text-muted-foreground/60">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <span>&copy; {new Date().getFullYear()} athyper. All rights reserved.</span>
       <button
         className="transition-colors hover:text-foreground disabled:opacity-50"
@@ -380,11 +386,6 @@ function contextSelectTitle(plane: PlaneKey): string {
 
 function contextSelectSubtitle(plane: PlaneKey): string {
   return plane === "mesh" ? "Choose a verified network account" : "Choose a verified organization";
-}
-
-function contextChoiceCopy(plane: PlaneKey): string {
-  if (plane === "mesh") return "Choose the network account you want to sign in with.";
-  return "Choose the organization you want to sign in with.";
 }
 
 function identityLabel(session: PublicSession): string {
@@ -411,7 +412,7 @@ function orgDetails(
 
   return compactDetails([
     ["Tenant", tenantDisplayName(org)],
-    ["Organization / Legal Entity", org.entityName],
+    ["Organization", org.entityName],
   ]);
 }
 
@@ -439,12 +440,3 @@ function ChevronRightIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-

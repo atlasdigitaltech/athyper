@@ -24,8 +24,9 @@ export interface DocumentSectionProps {
 }
 
 /**
- * `<section>` landmark with stable anchor, ID-keyed scroll registration,
- * and `scroll-margin-top` equal to the published EntityHeader offset.
+ * `<section>` landmark with stable anchor and ID-keyed scroll registration.
+ * The containing shell owns sticky-header compensation through its
+ * `scroll-padding-top`; adding a section margin here would double the offset.
  *
  * Element ID: `document-section-${id}` (namespaced to avoid hash-routing
  * collisions). The data-section-id attribute is consumed by the scrollspy
@@ -60,9 +61,7 @@ export function DocumentSection({
       id={elementId}
       data-section-id={id}
       aria-labelledby={title ? headingId : undefined}
-      style={{ scrollMarginTop: "calc(var(--entity-header-offset, 0px) + 1rem)" }}
       className={cn(
-        "scroll-mt-[calc(var(--entity-header-offset,0px)+1rem)]",
         "border-t border-border/60 first:border-t-0",
         "py-6",
         className,

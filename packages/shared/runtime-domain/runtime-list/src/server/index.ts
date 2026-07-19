@@ -9,3 +9,4 @@ export { RuntimeListFilterChips } from "./runtime-list-filter-chips";
 export { RuntimeListScopeChips } from "./runtime-list-scope-chips";
 export { RuntimeListEmpty } from "./runtime-list-empty";
 export { RuntimeListActions } from "./runtime-list-actions";
+export { MetaEntityListSkeleton, type MetaEntityListSkeletonProps } from "./meta-entity-list-skeleton";

@@ -40,7 +40,7 @@ import {
 
 type AccountingProfileMode = Extract<TaxonomyWorkbenchMode, "overview" | "profile" | "simulator">;
 
-const ACCOUNTING_PROFILE_WORKBENCH_HREF = "/finance/accounting-profiles";
+const ACCOUNTING_PROFILE_WORKBENCH_HREF = "/workbench/finance/accounting-profiles";
 const ACCOUNTING_PROFILE_WORKBENCH_ENTITIES = new Set([
   "accounting_profile",
   "intent_to_accounting_profile_rule",

@@ -13,6 +13,19 @@ import type {
 import { buildListPageParams } from "../core/lazy-list";
 import { runtimeListText } from "../core/resources";
 import { buildServerSearchParams } from "../core/search";
+import {
+  RUNTIME_LIST_PREFETCH_DIAGNOSTIC_EVENT,
+  consumeRuntimeListPrefetchMeasurement,
+} from "./runtime-list-intent-prefetch";
+import {
+  useRuntimeListBrowserCache,
+} from "../browser-cache/runtime-list-browser-cache-provider";
+import type {
+  RuntimeListBrowserCacheRead,
+  RuntimeListBrowserCacheIdentity,
+  RuntimeListBrowserCacheState,
+  RuntimeListCachedPage,
+} from "../browser-cache/runtime-list-browser-cache";
 
 type ServerSearchReason = "manual" | "enter" | "zeroLoadedMatches";
 type ServerSearchState = "idle" | "pending" | "complete" | "error";
@@ -33,16 +46,12 @@ interface RunSearchAllInput {
   debounceMs?:     number;
 }
 
-interface LoadedPage {
-  rows:        RuntimeRecordRow[];
-  pagination?: RuntimeListPagination;
-  savedAt:     number;
-  lastAccessed:number;
-}
+type LoadedPage = RuntimeListCachedPage;
 
 interface LazyListContextState {
   enabled:              boolean;
   controls:             RuntimeListLazyPresenterState["controls"];
+  cachePolicy:          RuntimeListLazyPresenterState["cachePolicy"];
   loadedRows:           RuntimeRecordRow[];
   loadedRowCount:       number;
   loadedPageNumbers:    number[];
@@ -63,7 +72,11 @@ interface LazyListContextState {
   errorMessage?:        string;
   ariaMessage:          string;
   maxLoadedRowsReached: boolean;
+  cacheState:           RuntimeListBrowserCacheState;
+  isRevalidating:       boolean;
+  refreshErrorMessage?: string;
   loadPage:             (page: number) => void;
+  refreshCurrentPage:   () => void;
   loadNextPage:         () => void;
   loadWindow:           (startPage: number) => void;
   loadNextWindow:       () => void;
@@ -88,6 +101,7 @@ interface RuntimeListClientContextValue {
 }
 
 const RuntimeListClientCtx = createContext<RuntimeListClientContextValue | null>(null);
+export const RUNTIME_LIST_CACHE_DIAGNOSTIC_EVENT = "athyper:runtime-list-cache";
 
 export function RuntimeListClientProvider({
   adapter,
@@ -100,10 +114,34 @@ export function RuntimeListClientProvider({
   lazyList: RuntimeListLazyPresenterState;
   children: React.ReactNode;
 }) {
+  const browserCache = useRuntimeListBrowserCache();
+  const cacheIdentity = useMemo<RuntimeListBrowserCacheIdentity>(() => ({
+    entityCode: adapter.entityCode,
+    queryKey: lazyList.cacheKey,
+    descriptorHash: lazyList.descriptorHash,
+    scopeFingerprint: lazyList.scopeFingerprint,
+    policy: lazyList.cachePolicy,
+  }), [
+    adapter.entityCode,
+    lazyList.cacheKey,
+    lazyList.cachePolicy,
+    lazyList.descriptorHash,
+    lazyList.scopeFingerprint,
+  ]);
+  browserCache.activateDescriptor(adapter.entityCode, lazyList.descriptorHash);
+  const [initialCacheRead] = useState<RuntimeListBrowserCacheRead>(() => browserCache.read(cacheIdentity));
+  const hasWarmSnapshot = hasUsableCacheSnapshot(initialCacheRead);
   const [query, setQueryState] = useState(search.initialQuery);
-  const [pageMap, setPageMap] = useState(() => buildInitialPageMap(lazyList));
-  const [listPagination, setListPagination] = useState<RuntimeListPagination | undefined>(lazyList.initialPagination);
-  const [localMatchCount, setLocalMatchCount] = useState(search.loadedCount);
+  const [pageMap, setPageMap] = useState(() => buildInitialPageMap(lazyList, initialCacheRead));
+  const [listPagination, setListPagination] = useState<RuntimeListPagination | undefined>(
+    () => cachePagination(initialCacheRead, lazyList.page) ?? lazyList.initialPagination,
+  );
+  const [localMatchCount, setLocalMatchCount] = useState(() =>
+    hasWarmSnapshot ? flattenPages(new Map(initialCacheRead.snapshot?.pages ?? [])).length : search.loadedCount,
+  );
+  const [cacheState, setCacheState] = useState<RuntimeListBrowserCacheState>(initialCacheRead.state);
+  const [isRevalidating, setIsRevalidating] = useState(hasWarmSnapshot);
+  const [refreshErrorMessage, setRefreshErrorMessage] = useState<string>();
   const [serverSearch, setServerSearch] = useState<ServerSearchSnapshot>(() => ({
     state: hasInitialServerSearch(search) ? "complete" : "idle",
     query: hasInitialServerSearch(search) ? search.initialQuery.trim() : "",
@@ -126,7 +164,9 @@ export function RuntimeListClientProvider({
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pageAbortRefs = useRef<Map<string, AbortController>>(new Map());
   const pageRequestKeysRef = useRef<Set<string>>(new Set());
-  const pageStorageWriteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pageCacheWriteRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollYRef = useRef<number | undefined>(undefined);
+  const initialWarmReconciliationRef = useRef(false);
 
   const cleanupRequest = useCallback(() => {
     if (delayRef.current) {
@@ -144,25 +184,38 @@ export function RuntimeListClientProvider({
   useEffect(() => cleanupRequest, [cleanupRequest]);
   useEffect(() => () => {
     abortPageRequests(pageAbortRefs.current, pageRequestKeysRef.current);
-    if (pageStorageWriteRef.current) {
-      clearTimeout(pageStorageWriteRef.current);
-      pageStorageWriteRef.current = null;
+    if (pageCacheWriteRef.current) {
+      clearTimeout(pageCacheWriteRef.current);
+      pageCacheWriteRef.current = null;
     }
   }, []);
 
   useEffect(() => {
-    abortPageRequests(pageAbortRefs.current, pageRequestKeysRef.current);
-    setQueryState(search.initialQuery);
-    setPageMap(buildInitialPageMap(lazyList));
-    setListPagination(lazyList.initialPagination);
-    setLocalMatchCount(lazyList.initialRows.length);
-    setServerPageMap(buildInitialServerPageMap(search, lazyList));
-    setServerPagination(hasInitialServerSearch(search) ? lazyList.initialPagination : undefined);
-    setServerSearch({
-      state: hasInitialServerSearch(search) ? "complete" : "idle",
-      query: hasInitialServerSearch(search) ? search.initialQuery.trim() : "",
-    });
-    setLazyLoad({ state: "idle", ariaMessage: "" });
+    const reconcileServerResult = () => {
+      abortPageRequests(pageAbortRefs.current, pageRequestKeysRef.current);
+      setQueryState(search.initialQuery);
+      setPageMap(buildInitialPageMap(lazyList));
+      setListPagination(lazyList.initialPagination);
+      setLocalMatchCount(lazyList.initialRows.length);
+      setServerPageMap(buildInitialServerPageMap(search, lazyList));
+      setServerPagination(hasInitialServerSearch(search) ? lazyList.initialPagination : undefined);
+      setServerSearch({
+        state: hasInitialServerSearch(search) ? "complete" : "idle",
+        query: hasInitialServerSearch(search) ? search.initialQuery.trim() : "",
+      });
+      setLazyLoad({ state: "idle", ariaMessage: "" });
+      setIsRevalidating(false);
+      setRefreshErrorMessage(undefined);
+    };
+
+    if (hasWarmSnapshot && !initialWarmReconciliationRef.current) {
+      initialWarmReconciliationRef.current = true;
+      const frame = window.requestAnimationFrame(reconcileServerResult);
+      return () => window.cancelAnimationFrame(frame);
+    }
+
+    reconcileServerResult();
+    return undefined;
   }, [
     lazyList.cacheKey,
     lazyList.initialPagination,
@@ -171,49 +224,78 @@ export function RuntimeListClientProvider({
     lazyList.pageSize,
     search.initialQuery,
     search.initialScope,
+    hasWarmSnapshot,
   ]);
 
   useEffect(() => {
-    if (!lazyList.enabled) return;
-    const storedPages = readStoredPageMap(
-      lazyList.cacheKey,
-      lazyList.controls.loadedPageCacheTtlSeconds,
-      lazyList.controls.maxLoadedRows,
-    );
-    if (storedPages.size === 0) return;
-
-    storedPages.set(lazyList.page, createLoadedPage(lazyList.initialRows, lazyList.initialPagination));
-    setPageMap(withPrunedPages(storedPages, lazyList.controls.maxLoadedRows, lazyList.page));
+    const cacheRead = initialCacheRead;
+    setCacheState(cacheRead.state);
+    reportBrowserCacheDiagnostic({
+      cacheKey: lazyList.cacheKey,
+      entityCode: adapter.entityCode,
+      state: cacheRead.state,
+      pageCount: cacheRead.snapshot?.pages.length ?? 0,
+    });
+    const prefetchMeasurement = consumeRuntimeListPrefetchMeasurement(adapter.entityCode);
+    if (prefetchMeasurement) {
+      const routeReadyLeadTimeMs = Math.max(0, Date.now() - prefetchMeasurement.startedAt);
+      window.dispatchEvent(new CustomEvent(RUNTIME_LIST_PREFETCH_DIAGNOSTIC_EVENT, {
+        detail: {
+          stage: "consumed",
+          entityCode: adapter.entityCode,
+          href: prefetchMeasurement.href,
+          intent: prefetchMeasurement.intent,
+          routeReadyLeadTimeMs,
+          browserCacheState: cacheRead.state,
+          observedAt: Date.now(),
+        },
+      }));
+      try {
+        window.performance.mark(`athyper:runtime-list:prefetch:${adapter.entityCode}:consumed`);
+        window.performance.measure(
+          `athyper:runtime-list:prefetch:${adapter.entityCode}:intent-to-consumed`,
+          `athyper:runtime-list:prefetch:${adapter.entityCode}:start`,
+          `athyper:runtime-list:prefetch:${adapter.entityCode}:consumed`,
+        );
+      } catch {
+        // Cross-navigation performance marks are diagnostic-only.
+      }
+    }
+    if (!cacheRead.snapshot?.pages.length) return;
+    scrollYRef.current = cacheRead.snapshot?.scrollY;
+    if (lazyList.cachePolicy.restoreScroll) restoreScrollPosition(cacheRead.snapshot?.scrollY);
   }, [
+    browserCache,
+    cacheIdentity,
     lazyList.cacheKey,
-    lazyList.controls.loadedPageCacheTtlSeconds,
     lazyList.controls.maxLoadedRows,
-    lazyList.enabled,
+    lazyList.cachePolicy.restoreScroll,
     lazyList.initialPagination,
     lazyList.initialRows,
     lazyList.page,
+    adapter.entityCode,
+    initialCacheRead,
   ]);
 
   useEffect(() => {
-    restoreScrollPosition(lazyList.cacheKey);
-  }, [lazyList.cacheKey]);
-
-  useEffect(() => {
-    if (pageStorageWriteRef.current) {
-      clearTimeout(pageStorageWriteRef.current);
-      pageStorageWriteRef.current = null;
+    if (pageCacheWriteRef.current) {
+      clearTimeout(pageCacheWriteRef.current);
+      pageCacheWriteRef.current = null;
     }
-    pageStorageWriteRef.current = setTimeout(() => {
-      writeStoredPageMap(lazyList.cacheKey, pageMap, lazyList.controls.loadedPageCacheTtlSeconds);
-      pageStorageWriteRef.current = null;
+    pageCacheWriteRef.current = setTimeout(() => {
+      browserCache.write(cacheIdentity, {
+        pages: [...pageMap.entries()],
+        ...(scrollYRef.current !== undefined ? { scrollY: scrollYRef.current } : {}),
+      }, { savedAt: oldestPageTimestamp(pageMap) });
+      pageCacheWriteRef.current = null;
     }, 500);
     return () => {
-      if (pageStorageWriteRef.current) {
-        clearTimeout(pageStorageWriteRef.current);
-        pageStorageWriteRef.current = null;
+      if (pageCacheWriteRef.current) {
+        clearTimeout(pageCacheWriteRef.current);
+        pageCacheWriteRef.current = null;
       }
     };
-  }, [lazyList.cacheKey, lazyList.controls.loadedPageCacheTtlSeconds, pageMap]);
+  }, [browserCache, cacheIdentity, pageMap]);
 
   const listRows = useMemo(() => flattenPages(pageMap), [pageMap]);
   const loadedPageNumbers = useMemo(() => [...pageMap.keys()].sort((a, b) => a - b), [pageMap]);
@@ -390,15 +472,16 @@ export function RuntimeListClientProvider({
     }
   }, [adapter.recordsApiHref, cleanupRequest, query, resetServerSearch, search.controls]);
 
-  const loadPage = useCallback((targetPage: number) => {
+  const loadPage = useCallback((targetPage: number, options?: { replace?: boolean }) => {
     const page = Math.max(1, Math.floor(targetPage));
     const serverQuery = hasActiveServerSearch ? trimmedQuery : "";
     const requestKey = `${serverQuery || "loaded"}:${page}`;
+    const replace = options?.replace === true;
 
     if (!lazyList.enabled || !adapter.recordsApiHref) return;
     if (pageRequestKeysRef.current.has(requestKey)) return;
-    if ((serverQuery ? serverPageMap : pageMap).has(page)) return;
-    if (activeMaxLoadedRowsReached) return;
+    if (!replace && (serverQuery ? serverPageMap : pageMap).has(page)) return;
+    if (!replace && activeMaxLoadedRowsReached) return;
 
     pageRequestKeysRef.current.add(requestKey);
     const controller = new AbortController();
@@ -408,6 +491,10 @@ export function RuntimeListClientProvider({
       didTimeout = true;
       controller.abort();
     }, search.controls.serverSearchTimeoutMs);
+    if (replace) {
+      setRefreshErrorMessage(undefined);
+      setIsRevalidating(true);
+    }
     setLazyLoad({
       state: "loading",
       page,
@@ -448,24 +535,32 @@ export function RuntimeListClientProvider({
           state: "idle",
           ariaMessage: runtimeListText.system.loadedPage(page),
         });
+        if (replace) setCacheState("fresh");
       })
       .catch((error: unknown) => {
         pageRequestKeysRef.current.delete(requestKey);
         const isAbortError = error instanceof DOMException && error.name === "AbortError";
         const isCurrentTimedOutRequest = didTimeout && pageAbortRefs.current.get(requestKey) === controller;
         if (isAbortError && !isCurrentTimedOutRequest) return;
-        setLazyLoad({
-          state: "error",
-          page,
-          direction: "next",
-          message: isCurrentTimedOutRequest
-            ? runtimeListText.system.couldNotLoadMoreRecords
-            : error instanceof Error ? error.message : runtimeListText.system.couldNotLoadMoreRecords,
-          ariaMessage: runtimeListText.system.couldNotLoadMoreRecords,
-        });
+        const message = isCurrentTimedOutRequest
+          ? runtimeListText.system.couldNotLoadMoreRecords
+          : error instanceof Error ? error.message : runtimeListText.system.couldNotLoadMoreRecords;
+        if (replace) {
+          setRefreshErrorMessage(message);
+          setLazyLoad({ state: "idle", ariaMessage: message });
+        } else {
+          setLazyLoad({
+            state: "error",
+            page,
+            direction: "next",
+            message,
+            ariaMessage: message,
+          });
+        }
       })
       .finally(() => {
         clearTimeout(requestTimeout);
+        if (replace) setIsRevalidating(false);
         if (pageAbortRefs.current.get(requestKey) === controller) {
           pageAbortRefs.current.delete(requestKey);
         }
@@ -483,6 +578,11 @@ export function RuntimeListClientProvider({
     serverPageMap,
     trimmedQuery,
   ]);
+
+  const refreshCurrentPage = useCallback(() => {
+    const page = activePagination?.page ?? lazyList.page;
+    loadPage(page, { replace: true });
+  }, [activePagination?.page, lazyList.page, loadPage]);
 
   const loadNextPage = useCallback(() => {
     if (hasNextPage && nextPage !== undefined) loadPage(nextPage);
@@ -604,16 +704,14 @@ export function RuntimeListClientProvider({
 
   const saveScrollPosition = useCallback(() => {
     if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.setItem(scrollStorageKey(lazyList.cacheKey), String(window.scrollY));
-    } catch {
-      // sessionStorage can be unavailable in hardened browser contexts.
-    }
-  }, [lazyList.cacheKey]);
+    scrollYRef.current = window.scrollY;
+    browserCache.updateScroll(cacheIdentity, window.scrollY);
+  }, [browserCache, cacheIdentity]);
 
   const lazyListValue = useMemo<LazyListContextState>(() => ({
     enabled:              lazyList.enabled,
     controls:             lazyList.controls,
+    cachePolicy:          lazyList.cachePolicy,
     loadedRows:           listRows,
     loadedRowCount:       listRows.length,
     loadedPageNumbers:    activeLoadedPageNumbers,
@@ -634,7 +732,11 @@ export function RuntimeListClientProvider({
     errorMessage:         lazyLoad.message,
     ariaMessage:          lazyLoad.ariaMessage,
     maxLoadedRowsReached: activeMaxLoadedRowsReached && !activeFullyLoaded,
+    cacheState,
+    isRevalidating,
+    refreshErrorMessage,
     loadPage,
+    refreshCurrentPage,
     loadNextPage,
     loadWindow,
     loadNextWindow,
@@ -647,10 +749,12 @@ export function RuntimeListClientProvider({
     activeRows,
     activeLoadedPageNumbers,
     baseFullyLoaded,
+    cacheState,
     hasNextPage,
     hasNextWindow,
     hasPreviousWindow,
     lazyList.controls,
+    lazyList.cachePolicy,
     lazyList.enabled,
     lazyLoad.ariaMessage,
     lazyLoad.direction,
@@ -659,6 +763,7 @@ export function RuntimeListClientProvider({
     lazyLoad.state,
     listPagination,
     listRows,
+    isRevalidating,
     loadedPageNumbers,
     loadNextWindow,
     loadNextPage,
@@ -667,6 +772,8 @@ export function RuntimeListClientProvider({
     loadWindow,
     nextPage,
     previousWindowStartPage,
+    refreshCurrentPage,
+    refreshErrorMessage,
     saveScrollPosition,
   ]);
 
@@ -754,10 +861,37 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function buildInitialPageMap(lazyList: RuntimeListLazyPresenterState): Map<number, LoadedPage> {
+function buildInitialPageMap(
+  lazyList: RuntimeListLazyPresenterState,
+  cacheRead?: RuntimeListBrowserCacheRead,
+): Map<number, LoadedPage> {
+  if (hasUsableCacheSnapshot(cacheRead)) {
+    return withPrunedPages(
+      new Map(cacheRead.snapshot.pages),
+      lazyList.controls.maxLoadedRows,
+      lazyList.page,
+    );
+  }
   const pages = new Map<number, LoadedPage>();
   pages.set(lazyList.page, createLoadedPage(lazyList.initialRows, lazyList.initialPagination));
   return withPrunedPages(pages, lazyList.controls.maxLoadedRows);
+}
+
+function hasUsableCacheSnapshot(
+  cacheRead: RuntimeListBrowserCacheRead | undefined,
+): cacheRead is RuntimeListBrowserCacheRead & { snapshot: NonNullable<RuntimeListBrowserCacheRead["snapshot"]> } {
+  return (cacheRead?.state === "fresh" || cacheRead?.state === "stale") &&
+    Boolean(cacheRead.snapshot?.pages.length);
+}
+
+function cachePagination(
+  cacheRead: RuntimeListBrowserCacheRead | undefined,
+  preferredPage: number,
+): RuntimeListPagination | undefined {
+  if (!hasUsableCacheSnapshot(cacheRead)) return undefined;
+  const pages = new Map(cacheRead.snapshot.pages);
+  return pages.get(preferredPage)?.pagination ??
+    [...pages.values()].sort((left, right) => right.lastAccessed - left.lastAccessed)[0]?.pagination;
 }
 
 function buildInitialServerPageMap(
@@ -882,82 +1016,57 @@ function countRows(pages: Map<number, LoadedPage>): number {
   return count;
 }
 
-type StoredPageMapPayload = {
-  savedAt: number;
-  pages: Array<[number, {
-    rows: RuntimeRecordRow[];
-    pagination?: RuntimeListPagination;
-    savedAt: number;
-    lastAccessed: number;
-  }]>;
-};
-
-function readStoredPageMap(
-  cacheKey:    string,
-  ttlSeconds:  number,
-  maxRows:     number,
-): Map<number, LoadedPage> {
-  if (typeof window === "undefined" || ttlSeconds <= 0) return new Map();
-  try {
-    const raw = window.sessionStorage.getItem(pageStorageKey(cacheKey));
-    if (!raw) return new Map();
-    const parsed = JSON.parse(raw) as StoredPageMapPayload;
-    if (!parsed || Date.now() - parsed.savedAt > ttlSeconds * 1000) return new Map();
-    const pages = new Map<number, LoadedPage>();
-    for (const [page, value] of parsed.pages ?? []) {
-      if (Number.isFinite(page) && Array.isArray(value.rows)) {
-        pages.set(Number(page), {
-          rows: value.rows,
-          pagination: value.pagination,
-          savedAt: value.savedAt,
-          lastAccessed: value.lastAccessed,
-        });
-      }
-    }
-    return withPrunedPages(pages, maxRows);
-  } catch {
-    return new Map();
-  }
-}
-
-function writeStoredPageMap(
-  cacheKey:    string,
-  pages:       Map<number, LoadedPage>,
-  ttlSeconds:  number,
-): void {
-  if (typeof window === "undefined" || ttlSeconds <= 0 || pages.size === 0) return;
-  try {
-    const payload: StoredPageMapPayload = {
-      savedAt: Date.now(),
-      pages: [...pages.entries()],
-    };
-    window.sessionStorage.setItem(pageStorageKey(cacheKey), JSON.stringify(payload));
-  } catch {
-    // Ignore quota and privacy-mode failures.
-  }
-}
-
-function pageStorageKey(cacheKey: string): string {
-  return `${cacheKey}:pages`;
-}
-
-function scrollStorageKey(cacheKey: string): string {
-  return `${cacheKey}:scroll`;
-}
-
-function restoreScrollPosition(cacheKey: string): void {
+function reportBrowserCacheDiagnostic(input: {
+  cacheKey: string;
+  entityCode: string;
+  state: RuntimeListBrowserCacheState;
+  pageCount: number;
+}): void {
   if (typeof window === "undefined") return;
+  const cache = input.state === "fresh"
+    ? "hit"
+    : input.state === "stale" || input.state === "expired"
+      ? "stale"
+      : input.state === "bypass"
+        ? "bypass"
+        : "miss";
+  window.dispatchEvent(new CustomEvent(RUNTIME_LIST_CACHE_DIAGNOSTIC_EVENT, {
+    detail: {
+      cache,
+      freshness: input.state,
+      cacheKeyHash: hashDiagnosticKey(input.cacheKey),
+      entityCode: input.entityCode,
+      pageCount: input.pageCount,
+      observedAt: Date.now(),
+    },
+  }));
   try {
-    const raw = window.sessionStorage.getItem(scrollStorageKey(cacheKey));
-    if (!raw) return;
-    const y = Number(raw);
-    if (!Number.isFinite(y) || y <= 0) return;
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => window.scrollTo({ top: y }));
-    });
+    window.performance.mark(`athyper:runtime-list:browser-cache:${cache}`);
   } catch {
-    // Best effort only.
+    // Performance marks are diagnostic-only and may be disabled by policy.
   }
+}
+
+function hashDiagnosticKey(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+function restoreScrollPosition(scrollY: number | undefined): void {
+  if (typeof window === "undefined" || !Number.isFinite(scrollY) || !scrollY || scrollY <= 0) return;
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => window.scrollTo({ top: scrollY }));
+  });
+}
+
+function oldestPageTimestamp(pages: Map<number, LoadedPage>): number {
+  let oldest = Date.now();
+  for (const page of pages.values()) oldest = Math.min(oldest, page.savedAt);
+  return oldest;
 }
 
 function abortPageRequests(

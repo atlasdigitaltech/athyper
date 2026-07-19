@@ -82,12 +82,12 @@ export const MODULE_PAGES: Record<string, ModulePage[]> = {
 
   // ── Finance ───────────────────────────────────────────────────────────────
   ACC: [
-    { key: "setup",     label: "Finance setup",    href: "/finance/setup" },
-    { key: "profiles",  label: "Accounting profiles", href: "/finance/accounting-profiles" },
-    { key: "ap",        label: "AP workbench",      href: "/finance/ap" },
-    { key: "ar",        label: "AR workbench",      href: "/finance/ar" },
-    { key: "journals",  label: "Journal entries",   href: "/finance/gl?tab=journals" },
-    { key: "gl",        label: "GL workbench",      href: "/finance/gl" },
+    { key: "workspace", label: "Finance workspace", href: "/finance" },
+    { key: "journals",  label: "Journal entries",   href: "/app/journal_entry" },
+    { key: "invoices",  label: "Purchase invoices", href: "/app/purchase_invoice" },
+    { key: "workbench", label: "Finance workbench",  href: "/workbench/finance" },
+    { key: "setup",     label: "Finance setup",      href: "/finance/setup" },
+    { key: "profiles",  label: "Accounting profiles", href: "/workbench/finance/accounting-profiles" },
   ],
   PAY: [
     { key: "runs",      label: "Payment runs",      href: "/document/payment-run" },

@@ -31,7 +31,12 @@ import {
   resolveCompanyIds,
 } from "./finance.route.js";
 import { verifyBearer, resolveTenantId, isUuid, resolvePrincipalIdOrNull, resolvePrincipalIdWithJit, extractOrgHeaders, verifyLock, isEntityOperationAllowed } from "@athyper/svc-shared";
-import { checkPermission, requireAllow } from "@athyper/svc-iam";
+import {
+  checkPermission,
+  createStepUpBinding,
+  requireAllow,
+  requireStepUp,
+} from "@athyper/svc-iam";
 import {
   restoreFromSnapshot,
   RestoreError,
@@ -475,6 +480,25 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger, cache, checkPermissionBatch } = deps;
   const businessLogger = createBusinessLogger(logger);
   const lifecycleSync = createFinanceLifecycleSyncHook(logger);
+
+  async function requirePaymentReleaseStepUp(
+    claims: Record<string, unknown>,
+    tenantId: string,
+    res: Parameters<RequestHandler>[1],
+  ): Promise<boolean> {
+    if (!cache) {
+      res.status(503).json({
+        error: "STEP_UP_UNAVAILABLE",
+        message: "Payment release verification is temporarily unavailable.",
+      });
+      return false;
+    }
+    return requireStepUp(
+      cache,
+      createStepUpBinding(claims, String(claims.sub ?? ""), tenantId, "payment_release"),
+      res,
+    );
+  }
 
   router.post("/finance/pricing-components", (async (req, res, next) => {
     try {
@@ -3358,6 +3382,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
       const sub = String(claims.sub ?? "unknown");
+      if (!await requirePaymentReleaseStepUp(claims, tenantId, res)) return;
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:submit:${tenantId}:${sub}`, 20, 60)) return;
       const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       const id = String(req.params["id"] ?? "");
@@ -3376,6 +3401,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
       const sub = String(claims.sub ?? "unknown");
+      if (!await requirePaymentReleaseStepUp(claims, tenantId, res)) return;
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:post:${tenantId}:${sub}`, 10, 60)) return;
       const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       const id = String(req.params["id"] ?? "");
@@ -3394,6 +3420,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       const tenantId = await resolveTenantId(db, xOrg, xRealm);
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
       const sub = String(claims.sub ?? "unknown");
+      if (!await requirePaymentReleaseStepUp(claims, tenantId, res)) return;
       if (!await enforceWriteRateLimit(cache, res, `ratelimit:finance:ap_payments:void:${tenantId}:${sub}`, 10, 60)) return;
       const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       const id = String(req.params["id"] ?? "");

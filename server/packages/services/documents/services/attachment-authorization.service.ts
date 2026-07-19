@@ -3,8 +3,9 @@ import { checkPermission } from "@athyper/svc-iam";
 import type { AttachmentAuthContext } from "@athyper/svc-shared";
 
 // This is deliberately a service boundary, rather than route-local checks:
-// attachments are resources of an entity and must use the same entity
-// operation permission vocabulary as records.
+// attachments are resources of an entity and must use the same permission
+// vocabulary as records. Reads use the platform-wide `read` permission; write
+// actions additionally require the entity's configured mutation operation.
 export type AttachmentAuthorizationAction =
   | "read" | "create_attachment" | "read_attachment"
   | "update_attachment" | "delete_attachment" | "reindex_attachment";
@@ -67,7 +68,14 @@ export async function authorizeAttachmentAccess(input: {
     return deny(error, message);
   };
 
-  const parentPermission = await resolveEntityOperationPermission(input.db, input.entityCode, tenantId, PARENT_ACTION[input.action]);
+  const parentAction = PARENT_ACTION[input.action];
+  // control.entity_operation is an action/mutation registry, not the source of
+  // runtime read capability. Readable entities are already resolved through
+  // control.entity.read_capability by the route, and every record read uses the
+  // canonical `read` permission granted through the persona permission chain.
+  const parentPermission = parentAction === "read"
+    ? "read"
+    : await resolveEntityOperationPermission(input.db, input.entityCode, tenantId, parentAction);
   if (!parentPermission) return deny("ENTITY_OPERATION_REQUIRED", `Entity '${input.entityCode}' has no active ${PARENT_ACTION[input.action]} operation.`);
   for (const permissionCode of [parentPermission, ATTACHMENT_PERMISSION[input.action]]) {
     const decision = await checkPermission(input.db, tenantId, input.context.principalId, permissionCode, {

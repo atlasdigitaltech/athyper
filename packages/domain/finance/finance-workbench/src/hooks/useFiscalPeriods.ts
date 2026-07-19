@@ -6,7 +6,7 @@ import type { FiscalPeriodStatus } from "../lib/period";
 /** Raw row returned by GET /api/finance/master/periods */
 export interface FiscalPeriodRow {
   periodNumber: number;
-  periodType: "normal" | "adjustment";
+  periodType: "opening" | "normal" | "adjustment" | "closing";
   startDate: string;   // "YYYY-MM-DD"
   endDate: string;
   status: FiscalPeriodStatus;

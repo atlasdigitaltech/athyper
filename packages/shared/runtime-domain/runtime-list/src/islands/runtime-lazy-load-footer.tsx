@@ -7,6 +7,12 @@ import { runtimeListText } from "../core/resources";
 import { runtimeTableChrome } from "../core/table-chrome";
 import { RuntimePaginationControls } from "../server/runtime-pagination-controls";
 import { useRuntimeListSearch } from "./runtime-list-context";
+import type { RuntimeListCachePolicy } from "../core/types";
+
+const INTENT_PREFETCH_SETTLE_MS = 750;
+const VIEWPORT_PREFETCH_SETTLE_MS = 5_000;
+const EAGER_PREFETCH_SETTLE_MS = 1_500;
+const AUTO_PREFETCH_IDLE_TIMEOUT_MS = 2_500;
 
 interface RuntimeLazyLoadFooterProps {
   sentinelRef:            RefObject<HTMLDivElement | null>;
@@ -48,20 +54,80 @@ export function RuntimeLazyLoadFooter({
 
   useEffect(() => {
     const node = sentinelRef.current;
-    if (isLoadedSearch || !node || !lazyList.hasNextPage || lazyList.state !== "idle") return;
+    const prefetchMode = lazyList.cachePolicy.prefetch;
+    if (isLoadedSearch || !node || !lazyList.hasNextPage || lazyList.state !== "idle"
+      || prefetchMode === "none") return;
+
+    let nearViewport = false;
+    let userIntentObserved = prefetchMode !== "intent";
+    let settleTimer: number | null = null;
+    let idleHandle: number | null = null;
+
+    const cancelScheduledLoad = () => {
+      if (settleTimer) window.clearTimeout(settleTimer);
+      settleTimer = null;
+      if (idleHandle !== null && "cancelIdleCallback" in window) {
+        window.cancelIdleCallback(idleHandle);
+      }
+      idleHandle = null;
+    };
+
+    const loadWhenIdle = () => {
+      if (!nearViewport || !userIntentObserved || document.visibilityState !== "visible"
+        || isConstrainedConnection()) return;
+      if ("requestIdleCallback" in window) {
+        idleHandle = window.requestIdleCallback(() => {
+          idleHandle = null;
+          if (nearViewport) lazyList.loadNextPage();
+        }, { timeout: AUTO_PREFETCH_IDLE_TIMEOUT_MS });
+        return;
+      }
+      lazyList.loadNextPage();
+    };
+
+    const scheduleLoad = () => {
+      cancelScheduledLoad();
+      if (!nearViewport || !userIntentObserved || isConstrainedConnection()) return;
+      settleTimer = window.setTimeout(
+        loadWhenIdle,
+        runtimeListPagePrefetchDelay(prefetchMode),
+      );
+    };
+
+    const observeIntent = () => {
+      if (userIntentObserved) return;
+      userIntentObserved = true;
+      scheduleLoad();
+    };
+    const observeKeyboardIntent = (event: KeyboardEvent) => {
+      if (["ArrowDown", "PageDown", "End", " "].includes(event.key)) observeIntent();
+    };
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          lazyList.loadNextPage();
-        }
+        nearViewport = entries.some((entry) => entry.isIntersecting);
+        scheduleLoad();
       },
       { rootMargin: `0px 0px ${lazyList.controls.lazyPrefetchDistancePx}px 0px` },
     );
+    if (prefetchMode === "intent") {
+      window.addEventListener("wheel", observeIntent, { passive: true, once: true });
+      window.addEventListener("touchmove", observeIntent, { passive: true, once: true });
+      window.addEventListener("scroll", observeIntent, { passive: true, once: true });
+      window.addEventListener("keydown", observeKeyboardIntent);
+    }
     observer.observe(node);
-    return () => observer.disconnect();
+    return () => {
+      cancelScheduledLoad();
+      observer.disconnect();
+      window.removeEventListener("wheel", observeIntent);
+      window.removeEventListener("touchmove", observeIntent);
+      window.removeEventListener("scroll", observeIntent);
+      window.removeEventListener("keydown", observeKeyboardIntent);
+    };
   }, [
     isLoadedSearch,
+    lazyList.cachePolicy.prefetch,
     lazyList.controls.lazyPrefetchDistancePx,
     lazyList.hasNextPage,
     lazyList.loadNextPage,
@@ -214,6 +280,21 @@ export function RuntimeLazyLoadFooter({
       </div>
     </div>
   );
+}
+
+export function runtimeListPagePrefetchDelay(
+  mode: RuntimeListCachePolicy["prefetch"],
+): number {
+  if (mode === "eager") return EAGER_PREFETCH_SETTLE_MS;
+  if (mode === "viewport") return VIEWPORT_PREFETCH_SETTLE_MS;
+  return INTENT_PREFETCH_SETTLE_MS;
+}
+
+function isConstrainedConnection(): boolean {
+  const connection = (navigator as Navigator & {
+    connection?: { saveData?: boolean; effectiveType?: string };
+  }).connection;
+  return connection?.saveData === true || connection?.effectiveType === "slow-2g" || connection?.effectiveType === "2g";
 }
 
 function resolveFooterSummary({

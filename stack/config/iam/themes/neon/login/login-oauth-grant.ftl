@@ -4,20 +4,21 @@
      NOTE: In KC 26.x `oauth` is a plain string — do NOT access oauth.client.*
      The form only needs url.loginAction + accept/cancel buttons.
      ======================================================================= -->
+<#include "_iam-context.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Grant Access</title>
-  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <title>${iamTitle("Grant Access")}</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
 </head>
 <body>
-<div class="kc-page">
+<div class="iam-shell kc-page" data-plane="${iamPlane}">
 
   <!-- ── Left branding panel ── -->
   <div class="kc-panel-left">

@@ -544,7 +544,7 @@ DO $$ BEGIN
         OWNER TO athyperadmin;
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
 DO $$ BEGIN
-    ALTER FUNCTION control.resolve_posting_role_account(uuid, uuid, text)
+    ALTER FUNCTION control.resolve_posting_role_account(uuid, text, uuid, text, date)
         OWNER TO athyperadmin;
 EXCEPTION WHEN OTHERS THEN NULL; END $$;
  

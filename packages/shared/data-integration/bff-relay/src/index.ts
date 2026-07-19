@@ -50,7 +50,14 @@ export function buildRuntimeHeaders(session: V4Session): Record<string, string> 
       ? session.activeOrg
       : orgAliases[0] ?? null);
   const activeMembership = activeOrgAlias ? session.organizations[activeOrgAlias] : undefined;
-  const activeContext = activeMembership ? toRelayWorkContext(activeMembership) : undefined;
+  // A session refresh can retain the selected typed context while its
+  // membership map is being re-hydrated. Keep relaying that context so the
+  // runtime receives a tenant stamp instead of treating the caller as
+  // tenant-less. When a matching membership is available it remains the
+  // preferred source, preserving the alias/header consistency contract.
+  const activeContext = activeMembership
+    ? toRelayWorkContext(activeMembership)
+    : session.activeWorkContext;
 
   // X-Org remains the compatibility contract for the runtime tenant stamp and
   // the platform/notification handlers. The typed headers below are the

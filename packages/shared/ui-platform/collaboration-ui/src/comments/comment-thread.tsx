@@ -8,10 +8,10 @@
  */
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, MessageSquare, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, MessageSquare } from "lucide-react";
 
 import { cn } from "@athyper/theme/utils";
-import { useReplies, type EntityComment } from "../hooks/collab";
+import type { EntityComment } from "../hooks/collab";
 
 export const MAX_DEPTH = 5;
 
@@ -21,6 +21,7 @@ export interface CommentCardProps {
   entityType: string;
   entityId: string;
   renderCard: (props: CommentCardProps) => React.ReactNode;
+  onMutated?: () => void | Promise<unknown>;
 }
 
 interface CommentThreadProps {
@@ -29,6 +30,8 @@ interface CommentThreadProps {
   entityType: string;
   entityId: string;
   replyCount?: number;
+  replies: EntityComment[];
+  onMutated?: () => void | Promise<unknown>;
   renderCard: (props: CommentCardProps) => React.ReactNode;
 }
 
@@ -38,11 +41,11 @@ export function CommentThread({
   entityType,
   entityId,
   replyCount,
+  replies,
+  onMutated,
   renderCard,
 }: CommentThreadProps) {
   const [expanded, setExpanded] = useState(false);
-
-  const { replies, isLoading } = useReplies(parentId, expanded);
   const count = replyCount ?? replies.length;
 
   if (count === 0 && !expanded) return null;
@@ -70,18 +73,13 @@ export function CommentThread({
 
       {expanded && (
         <div className="space-y-3">
-          {isLoading && (
-            <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
-              <Loader2 className="size-3 animate-spin" />
-              Loading replies…
-            </div>
-          )}
           {replies.map((reply) =>
             renderCard({
               comment: reply,
               depth: depth + 1,
               entityType,
               entityId,
+              onMutated,
               renderCard,
             }),
           )}

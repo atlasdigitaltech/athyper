@@ -983,6 +983,45 @@ describe("compileMetaEntityRuntimeDescriptor", () => {
     expect(descriptor.fields[1]?.optionSource).toBeUndefined();
   });
 
+  it("resolves a lifecycle option source from live lifecycle presentation metadata", () => {
+    const descriptor = compileMetaEntityRuntimeDescriptor({
+      entity_code: "journal_entry",
+      entity_name: "Journal Entry",
+      entity_class: "MASTER",
+      table_schema: "master",
+      table_name: "journal_entry",
+      fields: [{
+        name: "status",
+        label: "Status",
+        data_type: "lifecycle_state",
+        ui_hint: {
+          editor: { optionSource: { kind: "lifecycle", entityLifecycle: "current" } },
+          display: { renderer: "lookup_label", format: "label" },
+        },
+      }],
+      display_config: {},
+      feature_flags: {},
+    }, {
+      lifecycleStateMasks: [{
+        recordStatus: "posted",
+        canEdit: false,
+        canDelete: false,
+        disabledReason: "posted_locked",
+        presentation: { label: "Finalized", badgeVariant: "success", color: null, icon: null },
+      }],
+    });
+
+    expect(descriptor.fields[0]).toMatchObject({
+      optionSource: {
+        kind: "lifecycle",
+        entityLifecycle: "current",
+        options: [{ value: "posted", code: "posted", label: "Finalized" }],
+      },
+      editor: { control: "select" },
+      display: { renderer: "lookup_label", format: "label" },
+    });
+  });
+
   it("emits fieldGroups from explicit field_groups metadata with schema defaults applied", () => {
     const descriptor = compileMetaEntityRuntimeDescriptor({
       entity_code: "cost_center",

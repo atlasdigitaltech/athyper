@@ -1,8 +1,13 @@
 import "server-only";
 
-import { cache } from "react";
 import { getNeonServerSession } from "@/lib/server/session";
 import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";
+import {
+  buildSessionConfigurationIdentity,
+  getSessionConfiguration,
+  type SessionConfigurationCacheDiagnostic,
+} from "@/lib/server/session-configuration-cache";
+import type { RuntimeListDiagnosticRecorder } from "@/lib/server/runtime-list-observability";
 
 type RuntimeListState = {
   search?: string;
@@ -45,8 +50,16 @@ interface RuntimeSavedViewRecord {
   updated_at?: string;
 }
 
-export const getRuntimeSavedViews = cache(async (entityCode: string): Promise<SavedView[]> => {
-  const records = await fetchRuntimeSavedViewRecords(entityCode);
+const SAVED_VIEW_POLICY = {
+  freshForMs: 30_000,
+  staleForMs: 2 * 60_000,
+} as const;
+
+export async function getRuntimeSavedViews(
+  entityCode: string,
+  diagnostics?: RuntimeListDiagnosticRecorder,
+): Promise<SavedView[]> {
+  const records = await fetchRuntimeSavedViewRecords(entityCode, diagnostics);
   return records.map((view) => ({
     id:         view.id,
     name:       view.name,
@@ -59,44 +72,69 @@ export const getRuntimeSavedViews = cache(async (entityCode: string): Promise<Sa
     state:      view.config,
     config:     view.config,
   }));
-});
+}
 
-export const getRuntimeSavedViewState = cache(async (
+export async function getRuntimeSavedViewState(
   entityCode: string,
   viewId:     string,
-): Promise<Partial<RuntimeListState> | null> => {
-  const records = await fetchRuntimeSavedViewRecords(entityCode);
+  diagnostics?: RuntimeListDiagnosticRecorder,
+): Promise<Partial<RuntimeListState> | null> {
+  const records = await fetchRuntimeSavedViewRecords(entityCode, diagnostics);
   const view = records.find((item) => item.id === viewId);
   return view?.config ?? null;
-});
+}
 
-const fetchRuntimeSavedViewRecords = cache(async (entityCode: string): Promise<RuntimeSavedViewRecord[]> => {
+async function fetchRuntimeSavedViewRecords(
+  entityCode: string,
+  diagnostics?: RuntimeListDiagnosticRecorder,
+): Promise<RuntimeSavedViewRecord[]> {
   const session = await getNeonServerSession();
   if (!session) return [];
+  const sessionIdentity = buildSessionConfigurationIdentity(session);
+  if (!sessionIdentity) return [];
 
   try {
-    const response = await fetch(
-      buildRuntimeUrl(`/api/platform/saved-views/${encodeURIComponent(entityCode)}`),
-      {
-        headers: buildRuntimeHeaders(session),
-        cache:   "no-store",
+    return await getSessionConfiguration({
+      namespace: "saved_views",
+      sessionIdentity,
+      keyParts: { entityCode },
+      policy: SAVED_VIEW_POLICY,
+      loader: async () => {
+        const response = await fetch(
+          buildRuntimeUrl(`/api/platform/saved-views/${encodeURIComponent(entityCode)}`),
+          {
+            headers: buildRuntimeHeaders(session),
+            cache: "no-store",
+          },
+        );
+        if (!response.ok) throw new Error(`Saved views returned ${response.status}.`);
+
+        const json = await response.json() as unknown;
+        const items = Array.isArray(json)
+          ? json
+          : isRecord(json) && Array.isArray(json["data"]) ? json["data"] : null;
+        if (!items) throw new Error("Saved views response was malformed.");
+
+        return items.flatMap((item) => {
+          const view = normalizeSavedViewRecord(item);
+          return view ? [view] : [];
+        });
       },
-    );
-    if (!response.ok) return [];
-
-    const json = await response.json() as unknown;
-    const items = Array.isArray(json)
-      ? json
-      : isRecord(json) && Array.isArray(json["data"]) ? json["data"] : [];
-
-    return items.flatMap((item) => {
-      const view = normalizeSavedViewRecord(item);
-      return view ? [view] : [];
+      onDiagnostic: diagnostics
+        ? (event) => recordSavedViewDiagnostic(diagnostics, event)
+        : undefined,
     });
   } catch {
     return [];
   }
-});
+}
+
+function recordSavedViewDiagnostic(
+  diagnostics: RuntimeListDiagnosticRecorder,
+  event: SessionConfigurationCacheDiagnostic,
+): void {
+  diagnostics.record("saved_views", event.durationMs, event.cacheState);
+}
 
 function normalizeSavedViewRecord(value: unknown): RuntimeSavedViewRecord | null {
   if (!isRecord(value)) return null;

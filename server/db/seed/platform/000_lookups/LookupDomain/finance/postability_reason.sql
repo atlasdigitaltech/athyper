@@ -80,7 +80,28 @@ FROM (VALUES
     -- ── both scopes ─────────────────────────────────────────────────────────
     ('chart_assignment_inactive',  'Chart assignment inactive',          'finance.postability_reason',
      'company_code_chart_assignment.status <> active for the operating assignment.',
-     120, 'blocker', 'locked',          'both')
+     120, 'blocker', 'locked',          'both'),
+    ('posting_role_unknown', 'Posting role unknown', 'finance.postability_reason',
+     'The supplied role does not resolve to an active canonical posting role.',
+     130, 'blocker', 'locked', 'account'),
+    ('posting_role_book_not_assigned', 'Posting-role book not assigned', 'finance.postability_reason',
+     'The requested ledger book is not actively assigned to the company on the resolution date.',
+     140, 'blocker', 'locked', 'account'),
+    ('posting_role_mapping_missing', 'Posting-role mapping missing', 'finance.postability_reason',
+     'A required posting role has no effective GL-account assignment for the company and book.',
+     150, 'blocker', 'locked', 'account'),
+    ('posting_role_account_not_postable', 'Posting-role account not postable', 'finance.postability_reason',
+     'The mapped GL account is inactive, non-posting, or blocked for automatic posting.',
+     160, 'blocker', 'locked', 'account'),
+    ('posting_role_normal_balance_mismatch', 'Posting-role normal balance mismatch', 'finance.postability_reason',
+     'The mapped GL account normal balance is incompatible with the canonical posting role.',
+     170, 'blocker', 'locked', 'account'),
+    ('posting_role_resolved', 'Posting role resolved', 'finance.postability_reason',
+     'The canonical role resolved to an effective postable GL account.',
+     180, 'info', 'postable', 'account'),
+    ('posting_role_not_required', 'Posting role not required', 'finance.postability_reason',
+     'The role is available in the catalog but is not required by active company policies.',
+     190, 'info', 'read_only', 'account')
 ) AS v(code, name, domain_code, description, sort_order, severity, chip_hint, scope_kind)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

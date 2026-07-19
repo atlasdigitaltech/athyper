@@ -29,6 +29,7 @@ export {
   formatFieldValue,
   formatRecordTitle,
   formatRecordValue,
+  hasResolvedFieldLabel,
   readRecordValue,
   toNonBlankString,
 } from "./record-display";

@@ -8,7 +8,7 @@
  * Called once at runtime-list page level — never per-row.
  * Max 100 IDs per batch; splits automatically when page is larger.
  */
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { queryKeys } from "@athyper/api-contracts/query-keys";
 
@@ -19,6 +19,8 @@ function getCsrfToken(): string {
 }
 
 const MAX_BATCH = 100;
+const CACHE_BATCH_SIZE = 20;
+const RECORD_BOOKMARK_BATCH_KEY = "record-bookmarks";
 
 export interface BookmarkSnapshot {
   displayName?: string | null;
@@ -117,17 +119,18 @@ function removeFromGroups(
 
 export function useRecordBookmarks(entityCode: string, recordIds: string[]) {
   const qc         = useQueryClient();
-  const stableIds  = recordIds.slice().sort().join(",");
-  const queryKey   = ["record-bookmarks", entityCode, stableIds];
-
-  const { data = [], isLoading } = useQuery<string[]>({
-    queryKey,
-    queryFn:   () => fetchBookmarkedIds(entityCode, recordIds),
-    staleTime: 60_000,
-    enabled:   recordIds.length > 0,
+  const batches = chunkStableRecordIds(recordIds, CACHE_BATCH_SIZE);
+  const results = useQueries({
+    queries: batches.map((ids) => ({
+      queryKey: [RECORD_BOOKMARK_BATCH_KEY, entityCode, ids.slice().sort().join(",")],
+      queryFn:  () => fetchBookmarkedIds(entityCode, ids),
+      staleTime: 60_000,
+      enabled: ids.length > 0,
+    })),
   });
 
-  const bookmarkedIds = new Set(data);
+  const bookmarkedIds = new Set(results.flatMap((result) => result.data ?? []));
+  const queryPrefix = [RECORD_BOOKMARK_BATCH_KEY, entityCode];
 
   const { mutate, isPending } = useMutation({
     mutationFn: ({ recordId, snapshot }: { recordId: string; snapshot?: BookmarkSnapshot }) =>
@@ -135,23 +138,29 @@ export function useRecordBookmarks(entityCode: string, recordIds: string[]) {
 
     // Optimistic update — flip the local set immediately
     onMutate: async ({ recordId }) => {
-      await qc.cancelQueries({ queryKey });
-      const previous = qc.getQueryData<string[]>(queryKey) ?? [];
-      const next = bookmarkedIds.has(recordId)
-        ? previous.filter((id) => id !== recordId)
-        : [...previous, recordId];
-      qc.setQueryData(queryKey, next);
+      await qc.cancelQueries({ queryKey: queryPrefix });
+      const previous = qc.getQueriesData<string[]>({ queryKey: queryPrefix });
+      if (bookmarkedIds.has(recordId)) {
+        qc.setQueriesData<string[]>({ queryKey: queryPrefix }, (current = []) =>
+          current.filter((id) => id !== recordId));
+      } else {
+        const targetBatch = batches.find((ids) => ids.includes(recordId));
+        if (targetBatch) {
+          const targetKey = [RECORD_BOOKMARK_BATCH_KEY, entityCode, targetBatch.slice().sort().join(",")];
+          qc.setQueryData<string[]>(targetKey, (current = []) => [...new Set([...current, recordId])]);
+        }
+      }
       return { previous };
     },
 
     // Roll back on server error
     onError: (_err, _vars, ctx) => {
-      if (ctx?.previous) qc.setQueryData(queryKey, ctx.previous);
+      for (const [key, value] of ctx?.previous ?? []) qc.setQueryData(key, value);
     },
 
     // Revalidate to sync with server truth
     onSettled: () => {
-      qc.invalidateQueries({ queryKey });
+      qc.invalidateQueries({ queryKey: queryPrefix });
       qc.invalidateQueries({ queryKey: queryKeys.collab.bookmarks });
     },
   });
@@ -161,7 +170,16 @@ export function useRecordBookmarks(entityCode: string, recordIds: string[]) {
     [mutate],
   );
 
-  return { bookmarkedIds, toggle, isLoading, isPending };
+  return { bookmarkedIds, toggle, isLoading: results.some((result) => result.isLoading), isPending };
+}
+
+function chunkStableRecordIds(recordIds: string[], size: number): string[][] {
+  const uniqueIds = [...new Set(recordIds.filter(Boolean))];
+  const batches: string[][] = [];
+  for (let index = 0; index < uniqueIds.length; index += size) {
+    batches.push(uniqueIds.slice(index, index + size));
+  }
+  return batches;
 }
 
 export function useBookmarksList(options?: { enabled?: boolean }) {

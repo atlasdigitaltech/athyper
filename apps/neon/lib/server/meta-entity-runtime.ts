@@ -9,12 +9,20 @@ import {
   type EntityOperation,
 } from "@athyper/api-contracts/metadata";
 import {
+  MetaEntityContractV2Schema,
+  type MetaEntityContractV2,
+} from "@athyper/api-contracts/meta-entity-contract-v2";
+import {
   compileMetaEntityRuntimeDescriptor,
   MetaEntityRecordOperationOverlayV1Schema,
   MetaEntityRuntimeBootstrapV1Schema,
   MetaEntityLifecycleStateMaskSchema,
   type EntityRelationInput,
+  type CompiledMetaEntityFieldInput,
+  type CompiledMetaEntityInput,
   type MetaEntityField,
+  type MetaEntityLifecycleSummary,
+  type MetaEntityNumberingSummary,
   type MetaEntityLifecycleStateMask,
   type MetaEntityRuntimeDescriptor,
   type MetaEntityRuntimeBootstrapV1,
@@ -25,6 +33,10 @@ import { getNeonServerSession } from "@/lib/server/session";
 import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";
 import { isDocumentSaveAndTransitionEnabled } from "@/lib/server/document-edit-submit-policy";
 import { buildDocumentEditPermissionStamp } from "@/lib/server/document-edit-coordinator-identity";
+import {
+  buildSessionConfigurationIdentity,
+  getSessionConfiguration,
+} from "@/lib/server/session-configuration-cache";
 import { resolveDocumentOpenRollout } from "@/lib/server/document-runtime-feature-flags";
 import { runtimeDescriptorParity } from "@/lib/server/runtime-descriptor-parity";
 import {
@@ -44,10 +56,12 @@ import {
 const warnedRuntimeMetadata = new Set<string>();
 const DESCRIPTOR_CACHE_LIMIT = 200;
 const DESCRIPTOR_CACHE_TTL_MS = 60_000;
+const BOOTSTRAP_CACHE_LIMIT = 300;
+const BOOTSTRAP_CACHE_TTL_MS = 60_000;
 const COMPILED_CACHE_LIMIT = 300;
 const COMPILED_CACHE_TTL_MS = 30_000;
 const childRuntimeProjections = new WeakMap<MetaEntityRuntimeDescriptor, ReadonlyMap<string, ChildRuntimeProjection>>();
-const descriptorCacheStates = new WeakMap<MetaEntityRuntimeDescriptor, "cold" | "warm">();
+const descriptorCacheStates = new WeakMap<MetaEntityRuntimeDescriptor, "cold" | "warm" | "bypass">();
 const descriptorSharedCache = new ScopedRuntimeCache<MetaEntityRuntimeDescriptor>({
   limit: DESCRIPTOR_CACHE_LIMIT,
   ttlMs: DESCRIPTOR_CACHE_TTL_MS,
@@ -59,6 +73,10 @@ const descriptorSharedCache = new ScopedRuntimeCache<MetaEntityRuntimeDescriptor
 const compiledSharedCache = new ScopedRuntimeCache<CompiledEntity>({
   limit: COMPILED_CACHE_LIMIT,
   ttlMs: COMPILED_CACHE_TTL_MS,
+});
+const bootstrapSharedCache = new ScopedRuntimeCache<MetaEntityRuntimeBootstrapV1>({
+  limit: BOOTSTRAP_CACHE_LIMIT,
+  ttlMs: BOOTSTRAP_CACHE_TTL_MS,
 });
 
 export interface ChildRuntimeProjection {
@@ -267,16 +285,38 @@ type RuntimeLoadInput = {
 };
 
 async function loadBootstrapRuntimeDescriptor(input: RuntimeLoadInput): Promise<MetaEntityRuntimeDescriptor | undefined> {
-  const response = await fetchMetadata(
-    `/api/metadata/entities/${encodeURIComponent(input.entityCode)}/runtime-bootstrap`,
-    input.headers,
-  );
-  const parsed = MetaEntityRuntimeBootstrapV1Schema.safeParse(response ? await readJson(response) : null);
-  if (!parsed.success) return undefined;
-  const bootstrap = parsed.data as MetaEntityRuntimeBootstrapV1;
+  const bootstrapKey = buildSecurityScopeKey(input.session, input.entityCode);
+  let bootstrap = bootstrapSharedCache.get(bootstrapKey);
+  if (!bootstrap) {
+    const response = await fetchMetadata(
+      `/api/metadata/entities/${encodeURIComponent(input.entityCode)}/runtime-bootstrap`,
+      input.headers,
+    );
+    const parsed = MetaEntityRuntimeBootstrapV1Schema.safeParse(response ? await readJson(response) : null);
+    if (!parsed.success) return undefined;
+    bootstrap = parsed.data as MetaEntityRuntimeBootstrapV1;
+    bootstrapSharedCache.set(
+      bootstrapKey,
+      bootstrap,
+      input.cacheIdentity,
+      input.cacheGeneration,
+    );
+  }
   const compiledResult = CompiledEntitySchema.safeParse(bootstrap.compiledEntity);
   const operationResult = EntityOperationSchema.array().safeParse(bootstrap.operations);
   if (!compiledResult.success || !operationResult.success) return undefined;
+
+  const descriptorKey = buildDescriptorCacheKey(
+    input.session,
+    input.entityCode,
+    input.recordId,
+    bootstrap.bootstrapHash,
+  );
+  const cached = descriptorSharedCache.get(descriptorKey);
+  if (cached) {
+    descriptorCacheStates.set(cached, "warm");
+    return cached;
+  }
 
   let operations = operationResult.data;
   if (input.recordId) {
@@ -289,18 +329,6 @@ async function loadBootstrapRuntimeDescriptor(input: RuntimeLoadInput): Promise<
       const overlayOperations = EntityOperationSchema.array().safeParse(overlay.data.operations);
       if (overlayOperations.success) operations = [...operations, ...overlayOperations.data];
     }
-  }
-
-  const descriptorKey = buildDescriptorCacheKey(
-    input.session,
-    input.entityCode,
-    input.recordId,
-    bootstrap.bootstrapHash,
-  );
-  const cached = descriptorSharedCache.get(descriptorKey);
-  if (cached) {
-    descriptorCacheStates.set(cached, "warm");
-    return cached;
   }
 
   const relationProjections = projectBootstrapChildren(bootstrap);
@@ -337,7 +365,7 @@ async function loadLegacyRuntimeDescriptor(
     fetchEntityOperations(input.entityCode, input.headers, input.recordId),
     fetchEntityPolicy(input.entityCode, input.headers),
     fetchLifecycleStateMasks(input.entityCode, input.headers),
-    fetchPermissionAliasMap(input.headers),
+    fetchPermissionAliasMap(input.session, input.headers),
     fetchRelationRuntimeProjections(compiled.relations, input.headers),
   ]);
   const descriptor = compileProjectedDescriptor({
@@ -352,9 +380,178 @@ async function loadLegacyRuntimeDescriptor(
   });
   if (!descriptor) return undefined;
   childRuntimeProjections.set(descriptor, relationProjections);
-  descriptorCacheStates.set(descriptor, "cold");
+  descriptorCacheStates.set(descriptor, input.cacheEnabled ? "cold" : "bypass");
   if (input.cacheEnabled) descriptorSharedCache.set(descriptorKey, descriptor, input.cacheIdentity, input.cacheGeneration);
   return descriptor;
+}
+
+type CanonicalRuntimeInput = Omit<CompiledMetaEntityInput, "fields"> & {
+  fields: CompiledMetaEntityFieldInput[];
+  relations: EntityRelationInput[];
+  phaseBContract: MetaEntityContractV2;
+};
+
+/**
+ * Adapt the canonical v2 contract to the shared runtime compiler's historic
+ * input vocabulary.  The adapter is deliberately local to this boundary:
+ * runtime consumers never choose between legacy DB columns and v2 fields.
+ */
+function projectCanonicalRuntimeInput(compiled: CompiledEntity): CanonicalRuntimeInput {
+  const contract = MetaEntityContractV2Schema.parse(compiled.contract_v2);
+  const fieldsByName = new Map(contract.fields.map((field) => [field.name, field]));
+  const relationsByCode = new Map(contract.relations.map((relation) => [relation.relation_code, relation]));
+  const fieldNamesById = new Map(contract.fields.map((field) => [field.id, field.name]));
+
+  const fields = compiled.fields.map((field) => {
+    const canonical = fieldsByName.get(field.name);
+    if (!canonical) return field;
+
+    const typeConfig = canonical.type_config;
+    const referenceConfig = typeConfig.kind === "reference"
+      ? {
+          ...(isRecord(field.reference_config) ? field.reference_config : {}),
+          relation: typeConfig.relation,
+          target_entity: relationsByCode.get(typeConfig.relation)?.target_entity_code,
+          target_field: relationsByCode.get(typeConfig.relation)?.target_field ?? "id",
+          display_field: typeConfig.display.label_field,
+          ...(typeConfig.display.code_field ? { code_field: typeConfig.display.code_field } : {}),
+          ...(typeConfig.display.description_field ? { description_field: typeConfig.display.description_field } : {}),
+        }
+      : field.reference_config;
+    const moneyConfig = typeConfig.kind === "money"
+      ? {
+          ...(isRecord(field.money_config) ? field.money_config : {}),
+          minor_units: typeConfig.minor_units,
+          ...(typeConfig.currency.source === "field" && typeConfig.currency.field
+            ? { currency_field: typeConfig.currency.field }
+            : {}),
+          ...(typeConfig.currency.source === "constant" && typeConfig.currency.code
+            ? { currency_code: typeConfig.currency.code }
+            : {}),
+        }
+      : field.money_config;
+
+    return {
+      ...field,
+      label: canonical.label,
+      description: canonical.description ?? field.description,
+      data_type: canonical.data_type,
+      is_required: canonical.is_required,
+      is_readonly: canonical.is_read_only,
+      is_computed: canonical.is_computed,
+      is_write_once: canonical.is_write_once,
+      reference_config: referenceConfig,
+      money_config: moneyConfig,
+      type_config: typeConfig,
+    };
+  });
+
+  const listColumns = contract.surfaces
+    .filter((surface) => surface.surface.is_enabled && ["list", "spreadsheet", "compact_card"].includes(surface.surface.mode))
+    .sort((left, right) => left.surface.surface_key.localeCompare(right.surface.surface_key))
+    .flatMap((surface) => surface.fields
+      .filter((binding) => binding.visible)
+      .sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))
+      .map((binding) => fieldNamesById.get(binding.entity_field_id)))
+    .filter((name): name is string => Boolean(name));
+  const identity = contract.version_contract.identity_config.display_identity;
+  const listSurface = contract.surfaces.find((surface) => surface.surface.mode === "list" && surface.surface.is_enabled);
+  const lifecycleStages = contract.lifecycle
+    ? Object.entries(contract.lifecycle.states).map(([key, state]) => ({ key, label: state.label }))
+    : undefined;
+
+  const displayConfig: Record<string, unknown> = {
+    ...compiled.display_config,
+    title_field: identity.title_field,
+    subtitle_field: identity.subtitle_field ?? undefined,
+    ...(listColumns.length > 0 ? { list_columns: [...new Set(listColumns)] } : {}),
+    ...(listSurface?.surface.config.features ? { list_features: listSurface.surface.config.features } : {}),
+    ...(lifecycleStages ? { lifecycle_stages: lifecycleStages } : {}),
+  };
+
+  const documentRuntimeSurfaces = projectContractDocumentRuntimeSurfaces(contract);
+  if (documentRuntimeSurfaces.length > 0) {
+    const existingDocumentRuntime = isRecord(displayConfig["document_runtime"])
+      ? displayConfig["document_runtime"]
+      : {};
+    const existingSurfaces = Array.isArray(existingDocumentRuntime["surfaces"])
+      ? existingDocumentRuntime["surfaces"]
+      : [];
+    const projectedKeys = new Set(documentRuntimeSurfaces.map((surface) => surface.key));
+    const preservedSurfaces = existingSurfaces.filter((surface) =>
+      !isRecord(surface) || typeof surface["key"] !== "string" || !projectedKeys.has(surface["key"]),
+    );
+    displayConfig["document_runtime"] = {
+      ...existingDocumentRuntime,
+      surfaces: [...preservedSurfaces, ...documentRuntimeSurfaces],
+    };
+  }
+
+  const runtimeIdentityConfig = projectContractIdentityConfig(
+    contract.version_contract.identity_config,
+    compiled.identity_config,
+    fields,
+    contract.lifecycle?.status_field,
+  );
+
+  const relations: EntityRelationInput[] = contract.relations.map((relation) => ({
+    id: relation.id,
+    name: relation.relation_code,
+    relation_kind: relation.relation_kind,
+    target_entity: relation.target_entity_code,
+    resolution_kind: relation.resolution_kind,
+    fk_field: relation.source_field,
+    target_key: relation.target_field,
+    source_type_field: relation.polymorphic_type_field,
+    source_type_value: relation.polymorphic_type_value,
+    source_id_field: relation.polymorphic_id_field,
+    source_line_field: relation.source_line_field,
+    runtime_role: relation.runtime_role,
+    on_delete: relation.on_delete,
+    record_filter: relation.record_filter,
+  }));
+
+  return {
+    ...compiled,
+    fields,
+    relations,
+    display_config: displayConfig,
+    identity_config: runtimeIdentityConfig,
+    search_config: contract.version_contract.search_config,
+    data_policy: contract.version_contract.data_policy,
+    concurrency_policy: contract.version_contract.concurrency_config,
+    numbering_strategy: contract.numbering?.status === "active" ? "auto" : "none",
+    feature_flags: {
+      ...compiled.feature_flags,
+      ...(contract.lifecycle ? { has_lifecycle: true } : {}),
+    },
+    phaseBContract: contract,
+  };
+}
+
+function projectContractLifecycle(contract: MetaEntityContractV2): MetaEntityLifecycleSummary | null {
+  if (!contract.lifecycle) return null;
+  return {
+    enabled: true,
+    lifecycleId: contract.lifecycle.status_field,
+    states: Object.keys(contract.lifecycle.states),
+    terminalStates: Object.entries(contract.lifecycle.states)
+      .filter(([, state]) => state.is_terminal)
+      .map(([key]) => key),
+    transitions: Object.entries(contract.lifecycle.allowed_transitions)
+      .flatMap(([from, targets]) => targets.map((target) => `${from}->${target}`)),
+  };
+}
+
+function projectContractNumbering(contract: MetaEntityContractV2): MetaEntityNumberingSummary | null {
+  if (!contract.numbering) return null;
+  return {
+    enabled: contract.numbering.status === "active",
+    numberField: contract.numbering.number_field,
+    resetStrategy: contract.numbering.reset_strategy,
+    uniquenessScope: contract.numbering.uniqueness_scope,
+    segments: contract.numbering.segments,
+  };
 }
 
 function projectBootstrapChildren(
@@ -366,13 +563,17 @@ function projectBootstrapChildren(
     const operations = EntityOperationSchema.array().safeParse(child.operations);
     if (!compiled.success || !operations.success) continue;
     try {
-      const descriptor = compileMetaEntityRuntimeDescriptor(compiled.data, {
+      const runtimeInput = projectCanonicalRuntimeInput(compiled.data);
+      const descriptor = compileMetaEntityRuntimeDescriptor(runtimeInput, {
         operations: operations.data,
         entityPolicy: (child.policy ?? undefined) as RuntimeEntityPolicy | undefined,
         lifecycleStateMasks: child.lifecycleStateMasks,
         permissionAliasMap: bootstrap.permissionAliases,
         relations: [],
-        compiledAt: compiled.data.compiled_at,
+        lifecycle: projectContractLifecycle(runtimeInput.phaseBContract),
+        numbering: projectContractNumbering(runtimeInput.phaseBContract),
+        concurrencyPolicy: runtimeInput.phaseBContract.version_contract.concurrency_config,
+        compiledAt: runtimeInput.compiled_at,
       });
       entries.push([normalizeEntityCode(child.entityCode), { compiled: compiled.data, descriptor }]);
     } catch { /* a malformed optional child is fetched lazily when opened */ }
@@ -398,18 +599,22 @@ function compileProjectedDescriptor(input: {
   try {
     const tenantId = input.session.activeOrg
       ? input.session.organizations[input.session.activeOrg]?.tenantId : undefined;
-    const descriptor = compileMetaEntityRuntimeDescriptor(input.compiled, {
+    const runtimeInput = projectCanonicalRuntimeInput(input.compiled);
+    const descriptor = compileMetaEntityRuntimeDescriptor(runtimeInput, {
       operations: input.operations,
-      relations: input.compiled.relations,
+      relations: runtimeInput.relations,
       relationCapabilities,
       entityPolicy: input.entityPolicy,
+      lifecycle: projectContractLifecycle(runtimeInput.phaseBContract),
+      numbering: projectContractNumbering(runtimeInput.phaseBContract),
+      concurrencyPolicy: runtimeInput.phaseBContract.version_contract.concurrency_config,
       lifecycleStateMasks: input.lifecycleStateMasks,
       permissionAliasMap: input.permissionAliasMap,
       documentSaveAndTransitionEnabled: isDocumentSaveAndTransitionEnabled({ tenantId, entityCode: input.entityCode }),
-      compiledAt: input.compiled.compiled_at,
+      compiledAt: runtimeInput.compiled_at,
     });
     const canvasFlags = (descriptor.extensions?.["runtimeCanvasFlags"] ?? {}) as RuntimeCanvasFlags;
-    warnIfPrototypeContractDriftInDev(input.entityCode, input.compiled, descriptor);
+    warnIfPrototypeContractDriftInDev(input.entityCode, runtimeInput, descriptor);
     logDescriptorHealthInDev(descriptor, canvasFlags, input.compiled.capability_manifest);
     return descriptor;
   } catch (error) {
@@ -487,11 +692,15 @@ async function fetchRelationRuntimeProjections(
       fetchEntityPolicy(targetEntity, headers),
     ]);
     try {
-      const child = compileMetaEntityRuntimeDescriptor(compiled, {
+      const runtimeInput = projectCanonicalRuntimeInput(compiled);
+      const child = compileMetaEntityRuntimeDescriptor(runtimeInput, {
         operations,
         entityPolicy,
         relations: [],
-        compiledAt: compiled.compiled_at,
+        lifecycle: projectContractLifecycle(runtimeInput.phaseBContract),
+        numbering: projectContractNumbering(runtimeInput.phaseBContract),
+        concurrencyPolicy: runtimeInput.phaseBContract.version_contract.concurrency_config,
+        compiledAt: runtimeInput.compiled_at,
       });
       return [targetEntity, { compiled, descriptor: child }] as const;
     } catch {
@@ -510,16 +719,17 @@ export function getChildRuntimeProjection(
 
 export function getMetaEntityRuntimeDescriptorCacheState(
   descriptor: MetaEntityRuntimeDescriptor,
-): "cold" | "warm" {
-  return descriptorCacheStates.get(descriptor) ?? "cold";
+): "cold" | "warm" | "bypass" {
+  return descriptorCacheStates.get(descriptor) ?? "bypass";
 }
 
 export function invalidateMetaEntityRuntimeCaches(
   scope: RuntimeCacheInvalidationScope,
   generation?: number,
-): { descriptors: number; compiled: number } {
+): { descriptors: number; bootstrap: number; compiled: number } {
   return {
     descriptors: descriptorSharedCache.invalidate(scope, generation),
+    bootstrap: bootstrapSharedCache.invalidate(scope, generation),
     compiled: compiledSharedCache.invalidate(scope, generation),
   };
 }
@@ -572,7 +782,11 @@ function buildRuntimeCacheIdentity(session: V4Session, entityCode: string): Runt
 }
 
 function currentRuntimeCacheGeneration(): number {
-  return Math.max(descriptorSharedCache.generation, compiledSharedCache.generation);
+  return Math.max(
+    descriptorSharedCache.generation,
+    bootstrapSharedCache.generation,
+    compiledSharedCache.generation,
+  );
 }
 
 async function fetchEntityOperations(
@@ -638,21 +852,37 @@ async function fetchLifecycleStateMasks(
 }
 
 async function fetchPermissionAliasMap(
+  session: V4Session,
   headers: Record<string, string>,
 ): Promise<Record<string, string>> {
-  const response = await fetchMetadata(`/api/metadata/permission-aliases`, headers);
-  if (!response) return {};
+  const sessionIdentity = buildSessionConfigurationIdentity(session);
+  if (!sessionIdentity) return {};
 
-  const json = await readJson(response);
-  if (!isRecord(json)) return {};
+  try {
+    return await getSessionConfiguration({
+      namespace: "permission_aliases",
+      sessionIdentity,
+      policy: {
+        freshForMs: 5 * 60_000,
+        staleForMs: 30 * 60_000,
+      },
+      loader: async () => {
+        const response = await fetchMetadata(`/api/metadata/permission-aliases`, headers);
+        if (!response) throw new Error("Permission aliases are unavailable.");
 
-  // Drop any non-string values defensively — the alias table only carries
-  // alias_code → canonical_code text mappings.
-  const out: Record<string, string> = {};
-  for (const [alias, canonical] of Object.entries(json)) {
-    if (typeof alias === "string" && typeof canonical === "string") out[alias] = canonical;
+        const json = await readJson(response);
+        if (!isRecord(json)) throw new Error("Permission aliases response was malformed.");
+
+        const out: Record<string, string> = {};
+        for (const [alias, canonical] of Object.entries(json)) {
+          if (typeof canonical === "string") out[alias] = canonical;
+        }
+        return out;
+      },
+    });
+  } catch {
+    return {};
   }
-  return out;
 }
 
 async function fetchMetadata(
@@ -683,6 +913,77 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+function projectContractIdentityConfig(
+  canonical: MetaEntityContractV2["version_contract"]["identity_config"],
+  existingValue: unknown,
+  fields: ReadonlyArray<CompiledMetaEntityFieldInput>,
+  lifecycleStatusField?: string,
+): Record<string, unknown> {
+  const existing = isRecord(existingValue) ? existingValue : {};
+  const existingHeader = isRecord(existing["header"]) ? existing["header"] : {};
+  const { primary: _primary, secondary: _secondary, ...headerRest } = existingHeader;
+  const statusField = lifecycleStatusField
+    ?? (fields.some((field) => field.name === "status") ? "status" : undefined);
+
+  return {
+    ...existing,
+    primary_key_field: canonical.primary_key_field,
+    business_key_fields: canonical.business_key_fields,
+    natural_key_fields: canonical.natural_key_fields,
+    header: {
+      ...headerRest,
+      primary: { field: canonical.display_identity.title_field },
+      ...(canonical.display_identity.subtitle_field
+        ? { secondary: { field: canonical.display_identity.subtitle_field } }
+        : {}),
+      ...(statusField && !isRecord(existingHeader["status"])
+        ? { status: { field: statusField, processStateFirst: true } }
+        : {}),
+    },
+  };
+}
+
+function projectContractDocumentRuntimeSurfaces(
+  contract: MetaEntityContractV2,
+): Array<{
+  kind: "document_lines";
+  key: string;
+  label: string;
+  order: number;
+  placement: "main";
+  enabled: boolean;
+  config: Record<string, unknown>;
+}> {
+  return contract.surfaces.flatMap((entry, index) => {
+    const surface = entry.surface;
+    if (!surface.is_enabled || surface.mode !== "detail" || surface.renderer_key !== "line_items") return [];
+
+    const rendererConfig = isRecord(surface.config.renderer_config)
+      ? surface.config.renderer_config
+      : {};
+    const configuredRelation = stringValue(rendererConfig["relation"]);
+    const relation = contract.relations.find((candidate) =>
+      candidate.relation_code === configuredRelation
+      || candidate.runtime_role === configuredRelation,
+    );
+    if (!relation || relation.relation_kind !== "has_many") return [];
+
+    const { relation: _relation, ...surfaceConfig } = rendererConfig;
+    return [{
+      kind: "document_lines" as const,
+      key: surface.surface_key,
+      label: surface.label ?? "Line Items",
+      order: 20 + index,
+      placement: "main" as const,
+      enabled: true,
+      config: {
+        ...surfaceConfig,
+        relations: { lines: relation.relation_code },
+      },
+    }];
+  });
+}
+
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
@@ -694,7 +995,7 @@ function normalizeEntityCode(routeEntity: string): string {
 
 function warnIfPrototypeContractDriftInDev(
   entityCode: string,
-  entity: CompiledEntity,
+  entity: { display_config?: unknown },
   descriptor: MetaEntityRuntimeDescriptor,
 ): void {
   if (process.env.NODE_ENV !== "development") return;
@@ -703,14 +1004,15 @@ function warnIfPrototypeContractDriftInDev(
   if (!expected) return;
 
   const warnings: string[] = [];
-  if (entity.display_config.title_field !== expected.titleField) {
-    warnings.push(`title_field expected ${expected.titleField}, got ${entity.display_config.title_field ?? "<empty>"}`);
+  const displayConfig = isRecord(entity.display_config) ? entity.display_config : {};
+  if (displayConfig.title_field !== expected.titleField) {
+    warnings.push(`title_field expected ${expected.titleField}, got ${displayConfig.title_field ?? "<empty>"}`);
   }
-  if (entity.display_config.subtitle_field !== expected.subtitleField) {
-    warnings.push(`subtitle_field expected ${expected.subtitleField}, got ${entity.display_config.subtitle_field ?? "<empty>"}`);
+  if (displayConfig.subtitle_field !== expected.subtitleField) {
+    warnings.push(`subtitle_field expected ${expected.subtitleField}, got ${displayConfig.subtitle_field ?? "<empty>"}`);
   }
 
-  const listColumns = new Set(entity.display_config.list_columns ?? []);
+  const listColumns = new Set(Array.isArray(displayConfig.list_columns) ? displayConfig.list_columns : []);
   const missingListColumns = expected.listColumns.filter((fieldName) => !listColumns.has(fieldName));
   if (missingListColumns.length > 0) {
     warnings.push(`list_columns missing ${missingListColumns.join(", ")}`);
@@ -779,8 +1081,8 @@ function referenceContractWarnings(
   if (fieldItem.display?.renderer !== "reference_label") {
     warnings.push(`${fieldName} display renderer expected reference_label, got ${fieldItem.display?.renderer ?? "<empty>"}`);
   }
-  if (fieldItem.display?.format !== "label_code") {
-    warnings.push(`${fieldName} display format expected label_code, got ${fieldItem.display?.format ?? "<empty>"}`);
+  if (fieldItem.display?.format !== "label") {
+    warnings.push(`${fieldName} display format expected label, got ${fieldItem.display?.format ?? "<empty>"}`);
   }
 
   return warnings;

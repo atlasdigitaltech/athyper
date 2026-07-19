@@ -2,6 +2,14 @@ export { RuntimeListClientProvider, useRuntimeListClient } from "./runtime-list-
 export { OrganizePalette } from "./organize";
 export { RuntimeListCommandBar } from "./runtime-list-command-bar";
 export { SelectionIsland } from "./selection-island";
+export {
+  RUNTIME_LIST_PREFETCH_DIAGNOSTIC_EVENT,
+  RuntimeListIntentPrefetchLink,
+  RuntimeListIntentPrefetchLinks,
+  consumeRuntimeListPrefetchMeasurement,
+  isIntentPrefetchEligible,
+  type RuntimeListIntentPrefetchTarget,
+} from "./runtime-list-intent-prefetch";
 
 // Reusable column-picker primitive — router-free, callback-driven.
 // Consumed by `ColumnControl` (URL-mode wrapper) inside this package and

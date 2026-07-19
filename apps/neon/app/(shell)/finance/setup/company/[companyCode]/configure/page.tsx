@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import { ConfigureWorkspaceView } from "@athyper/finance-workbench";
 import { getNeonServerSession } from "@/lib/server/session";
 
-type ConfigureTab = "gl_controls" | "chart_assignment" | "book_assignment" | "house_banks";
+type ConfigureTab = "fiscal_calendar" | "posting_roles" | "dimension_policies" | "tax_configuration" | "payment_interfaces" | "gl_controls" | "chart_assignment" | "book_assignment" | "house_banks";
 
-const VALID_TABS: readonly ConfigureTab[] = ["gl_controls", "chart_assignment", "book_assignment", "house_banks"];
+const VALID_TABS: readonly ConfigureTab[] = ["fiscal_calendar", "posting_roles", "dimension_policies", "tax_configuration", "payment_interfaces", "gl_controls", "chart_assignment", "book_assignment", "house_banks"];
 
 function coerceTab(value: string | string[] | undefined): ConfigureTab | undefined {
   const raw = Array.isArray(value) ? value[0] : value;

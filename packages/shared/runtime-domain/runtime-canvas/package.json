@@ -13,6 +13,7 @@
     "./flow": "./src/flow/index.ts",
     "./header": "./src/header/index.ts",
     "./panels": "./src/panels/index.ts",
+    "./record-query": "./src/record-query/index.ts",
     "./surfaces": "./src/surfaces/index.ts"
   },
   "scripts": {

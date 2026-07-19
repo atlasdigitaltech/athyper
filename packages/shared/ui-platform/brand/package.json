@@ -6,7 +6,8 @@
   "main": "./src/index.tsx",
   "types": "./src/index.tsx",
   "exports": {
-    ".": "./src/index.tsx"
+    ".": "./src/index.tsx",
+    "./brand-manifest.json": "./brand-manifest.json"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

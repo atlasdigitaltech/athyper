@@ -137,6 +137,38 @@ describe("/api/relay/[...path] context mismatch handling", () => {
     expect(headers.get("X-Org")).toBe("athyper--oo--procurement--buying");
     expect(headers.get("X-Work-Context-ID")).toBe("oo-1");
   });
+
+  it("keeps the tenant stamp when the selected context precedes membership hydration", async () => {
+    vi.mocked(getNeonServerSession).mockResolvedValueOnce({
+      userId: "user-1",
+      activeOrg: null,
+      accessToken: "token-1",
+      realmKey: "athyper",
+      planeKey: "neon",
+      activeWorkContext: {
+        type: "operating_organization",
+        id: "oo-1",
+        code: "buying",
+        name: "Buying",
+        tenantId: "tenant-1",
+        domain: "procurement",
+        scopeVersion: 4,
+      },
+      organizations: {},
+    } as never);
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("{}", { status: 200 }));
+
+    await GET(new NextRequest("http://localhost/api/relay/api/documents/journal_entry/record-1/attachments"), {
+      params: Promise.resolve({ path: ["api", "documents", "journal_entry", "record-1", "attachments"] }),
+    });
+
+    const [, init] = vi.mocked(globalThis.fetch).mock.calls[0] as [string, RequestInit];
+    const headers = new Headers(init.headers);
+    expect(headers.get("X-Org")).toBeNull();
+    expect(headers.get("X-Tenant-ID")).toBe("tenant-1");
+    expect(headers.get("X-Work-Context-Type")).toBe("operating_organization");
+    expect(headers.get("X-Work-Context-ID")).toBe("oo-1");
+  });
 });
 
 

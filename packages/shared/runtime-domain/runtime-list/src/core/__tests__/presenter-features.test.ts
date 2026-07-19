@@ -98,7 +98,34 @@ describe("runtime list presenter feature enforcement", () => {
       expect.objectContaining({ page_size: "40", sort: "code:asc", query_v1: "0" }),
       expect.anything(),
       expect.anything(),
+      { visibleFieldNames: ["code", "status"] },
     );
+  });
+
+  it("starts records while non-query search configuration is still resolving", async () => {
+    let resolveSearchControls: ((value: null) => void) | undefined;
+    const searchControls = new Promise<null>((resolve) => {
+      resolveSearchControls = resolve;
+    });
+    const runtimeAdapter = adapter(descriptor());
+    runtimeAdapter.resolveAccessScope = vi.fn(async () => ({
+      plane: "neon" as const,
+      mode: "tenant" as const,
+      status: "ready" as const,
+      source: "resolved" as const,
+      protectedFields: [],
+      labels: [],
+    }));
+    runtimeAdapter.resolveSearchControls = vi.fn(async () => searchControls);
+    runtimeAdapter.resolveLazyListControls = vi.fn(async () => null);
+
+    const pending = resolvePresenterProps(runtimeAdapter, "invoice", {});
+
+    await vi.waitFor(() => {
+      expect(runtimeAdapter.fetchRecords).toHaveBeenCalledTimes(1);
+    });
+    resolveSearchControls?.(null);
+    await pending;
   });
 
   it("keeps client-only search from exposing a server records endpoint", async () => {

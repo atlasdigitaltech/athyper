@@ -3,16 +3,16 @@
 import { useState } from "react";
 import {
   Button, Dialog, DialogContent, DialogDescription,
-  DialogFooter, DialogHeader, DialogTitle, Input, Label,
+  DialogFooter, DialogHeader, DialogTitle,
 } from "@athyper/ui/primitives";
 import { bffFetch, BffError } from "@athyper/runtime-shared/client";
 import type { MfaActionClass, MfaElevateResponse } from "@athyper/api-contracts/iam";
 
 /**
- * MFA step-up dialog. Renders a six-digit TOTP input and submits it against
- * POST /api/iam/mfa/elevate with the action class returned by the upstream
- * mutation's STEP_UP_REQUIRED response. On success, calls `onElevated` so the
- * caller can retry the original mutation.
+ * MFA step-up dialog. Keycloak owns the challenge. If the current bearer token
+ * already contains fresh Keycloak MFA evidence, the IAM endpoint grants the
+ * short, session-bound elevation. Otherwise the BFF starts an action-specific
+ * Keycloak step-up transaction.
  */
 export interface stepUpDialogProps {
   open: boolean;
@@ -24,29 +24,38 @@ export interface stepUpDialogProps {
 export type StepUpDialogProps = stepUpDialogProps;
 
 export function stepUpDialog({ open, onOpenChange, actionClass, onElevated }: stepUpDialogProps) {
-  const [code, setCode]     = useState("");
   const [error, setError]   = useState("");
   const [loading, setLoad]  = useState(false);
 
   async function handleElevate() {
-    if (code.length !== 6) return;
     setError("");
     setLoad(true);
     try {
       const result = await bffFetch<MfaElevateResponse>("/api/iam/mfa/elevate", {
         method: "POST",
-        body: { action_class: actionClass, code: code.trim(), method_type: "totp" },
+        body: { action_class: actionClass },
       });
       if (!result.ok) {
-        setError(result.message ?? "Invalid code");
+        setError(result.message ?? "Keycloak MFA is required.");
         return;
       }
-      setCode("");
       onOpenChange(false);
       onElevated();
     } catch (err) {
-      const msg = err instanceof BffError ? err.message : "Failed to verify code";
-      setError(msg);
+      if (err instanceof BffError) {
+        try {
+          const stepUp = await bffFetch<{ reauthenticate_url?: string }>("/api/auth/step-up/start", {
+            method: "POST",
+            body: { action_class: actionClass, returnUrl: window.location.href },
+          });
+          if (!stepUp.reauthenticate_url) throw new Error("missing step-up URL");
+          window.location.assign(stepUp.reauthenticate_url);
+        } catch {
+          setError("Keycloak step-up could not be started. Try again.");
+        }
+        return;
+      }
+      setError("Keycloak MFA could not be started. Try again.");
     } finally {
       setLoad(false);
     }
@@ -56,33 +65,22 @@ export function stepUpDialog({ open, onOpenChange, actionClass, onElevated }: st
     <Dialog
       open={open}
       onOpenChange={(v) => {
-        if (!v) { setCode(""); setError(""); }
+        if (!v) setError("");
         onOpenChange(v);
       }}
     >
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Security Verification</DialogTitle>
-          <DialogDescription>Enter your current TOTP code to continue.</DialogDescription>
+          <DialogDescription>Complete MFA in Keycloak to continue.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-1">
-          <div>
-            <Label className="text-xs">TOTP Code</Label>
-            <Input
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              onKeyDown={(e) => { if (e.key === "Enter") void handleElevate(); }}
-              placeholder="000000"
-              className="mt-1 font-mono"
-              maxLength={6}
-            />
-          </div>
           {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={loading}>Cancel</Button>
-          <Button size="sm" onClick={handleElevate} disabled={loading || code.length !== 6}>
-            {loading ? "Verifying…" : "Verify"}
+          <Button size="sm" onClick={handleElevate} disabled={loading}>
+            {loading ? "Opening Keycloak…" : "Continue with Keycloak"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -91,4 +89,3 @@ export function stepUpDialog({ open, onOpenChange, actionClass, onElevated }: st
 }
 
 export const StepUpDialog = stepUpDialog;
-

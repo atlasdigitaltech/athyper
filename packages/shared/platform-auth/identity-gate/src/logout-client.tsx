@@ -5,6 +5,7 @@ import type { PlaneKey } from "@athyper/session-plane";
 import { getPlaneConfig } from "@athyper/session-plane";
 
 import { LoadingState } from "./components";
+import { waitForMinimumAuthTransition } from "./auth-transition-timing";
 import { clearLastContext } from "./context-storage";
 import { csrfHeaders } from "./csrf";
 
@@ -15,7 +16,9 @@ export function LogoutClient({ plane }: { plane: PlaneKey }) {
     const controller = new AbortController();
 
     async function logout() {
+      const transitionStartedAt = Date.now();
       clearLastContext(plane);
+      let redirectTarget = config.loginPath;
       try {
         const res = await fetch("/api/auth/logout", {
           method: "POST",
@@ -23,11 +26,12 @@ export function LogoutClient({ plane }: { plane: PlaneKey }) {
           signal: controller.signal,
         });
         const data = (await res.json().catch(() => ({}))) as { logoutUrl?: string };
-        window.location.assign(data.logoutUrl ?? config.loginPath);
+        redirectTarget = data.logoutUrl ?? config.loginPath;
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") return;
-        window.location.assign(config.loginPath);
       }
+      await waitForMinimumAuthTransition(transitionStartedAt);
+      if (!controller.signal.aborted) window.location.assign(redirectTarget);
     }
 
     void logout();
@@ -36,4 +40,3 @@ export function LogoutClient({ plane }: { plane: PlaneKey }) {
 
   return <LoadingState plane={plane} message="Signing out..." />;
 }
-

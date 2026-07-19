@@ -238,7 +238,7 @@ function RuntimeListTable({
   searchParams: RuntimeListSearchParams;
 }) {
   return (
-    <div className="overflow-x-auto rounded-md border">
+    <div className="overflow-x-auto rounded-md border bg-card">
       <table className="min-w-full divide-y divide-border text-sm">
         <thead className="bg-muted/30">
           <tr>
@@ -258,7 +258,7 @@ function RuntimeListTable({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-border bg-background">
+        <tbody className="divide-y divide-border bg-card">
           {records.map((record, rowIndex) => {
             const href = recordHref(contract, record);
             return (

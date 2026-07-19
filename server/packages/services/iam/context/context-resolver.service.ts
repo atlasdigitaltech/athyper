@@ -1,4 +1,5 @@
 import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
+import type { TenantMfaTrustPolicy } from "@athyper/auth-common";
 
 type AnyDb = Record<string, any>;
 
@@ -23,6 +24,8 @@ export interface OrgMembership {
   workContextDomain?: "procurement" | "sales";
   scopeVersion?: number;
   authEpoch?: number;
+  /** Tenant IdP policy resolved from the authenticated KC broker alias. */
+  mfaTrustPolicy?: TenantMfaTrustPolicy;
 }
 
 export interface PlaneContextResponse {
@@ -37,6 +40,8 @@ export interface PlaneContextQuery {
   sub: string;
   username?: string;
   workbenches: string[];
+  /** Keycloak broker alias from a validated identity-provider claim. */
+  providerAlias?: string;
 }
 
 export interface PlaneContextResolver {
@@ -73,6 +78,11 @@ export function createPlaneContextResolver(
           ? await resolveTenantAdminContexts(db, query)
           : await resolveTenantLegalEntityContexts(db, query);
 
+    // A missing or unrecognized provider alias deliberately leaves the policy
+    // unset. The BFF treats that as `never` for federated evidence, so a
+    // forged/ambiguous alias cannot make external MFA trusted.
+    await applyTenantMfaTrustPolicy(db, organizations, query);
+
     return {
       organizations,
       contextCount: Object.keys(organizations).length,
@@ -81,6 +91,37 @@ export function createPlaneContextResolver(
   }
 
   return { resolve };
+}
+
+async function applyTenantMfaTrustPolicy(
+  db: Kysely<AnyDb>,
+  organizations: Record<string, OrgMembership>,
+  query: PlaneContextQuery,
+): Promise<void> {
+  const providerAlias = query.providerAlias?.trim();
+  if (!providerAlias || Object.keys(organizations).length === 0) return;
+
+  try {
+    const tenantIds = [...new Set(Object.values(organizations).map((org) => org.tenantId).filter(Boolean))];
+    if (tenantIds.length === 0) return;
+    const result = await sql<{ tenant_id: string; mfa_trust_policy: TenantMfaTrustPolicy }>`
+      SELECT tenant_id::text AS tenant_id, mfa_trust_policy
+      FROM master.tenant_identity_provider
+      WHERE keycloak_alias = ${providerAlias}
+        AND realm_key = ${query.realmKey}
+        AND enabled = true
+        AND ${query.planeKey} = ANY(allowed_planes)
+        AND tenant_id IN (${sql.join(tenantIds.map((tenantId) => sql`${tenantId}::uuid`), sql`, `)})
+    `.execute(db);
+    const policyByTenant = new Map(result.rows.map((row) => [row.tenant_id, row.mfa_trust_policy]));
+    for (const organization of Object.values(organizations)) {
+      const policy = organization.tenantId ? policyByTenant.get(organization.tenantId) : undefined;
+      if (policy) organization.mfaTrustPolicy = policy;
+    }
+  } catch {
+    // Registry rollout and legacy installations may not have the table yet.
+    // Keep the policy absent; callers fail closed for federated assurance.
+  }
 }
 
 function normalizeWorkbenches(input: readonly string[], fallback: WorkbenchKey): WorkbenchKey[] {
@@ -141,6 +182,7 @@ function orgMetadata(input: Partial<OrgMembership>): Partial<OrgMembership> {
     ...(input.workContextDomain ? { workContextDomain: input.workContextDomain } : {}),
     ...(input.scopeVersion !== undefined ? { scopeVersion: input.scopeVersion } : {}),
     ...(input.authEpoch !== undefined ? { authEpoch: input.authEpoch } : {}),
+    ...(input.mfaTrustPolicy ? { mfaTrustPolicy: input.mfaTrustPolicy } : {}),
   };
 }
 

@@ -147,27 +147,7 @@ function stringifySearchFieldValue(row: RuntimeRecordRow, field: RuntimeListSear
     row[`${field.name}_label`] ?? valueFromData(row, `${field.name}_label`),
     row[`${field.name}_name`] ?? valueFromData(row, `${field.name}_name`),
     row[`${field.name}_code`] ?? valueFromData(row, `${field.name}_code`),
-    ...companionBaseNames(field).flatMap((base) => [
-      row[`${base}_label`] ?? valueFromData(row, `${base}_label`),
-      row[`${base}_name`] ?? valueFromData(row, `${base}_name`),
-      row[`${base}_code`] ?? valueFromData(row, `${base}_code`),
-    ]),
   ].map(stringifySearchValue).join(" ");
-}
-
-function companionBaseNames(field: RuntimeListSearchField): string[] {
-  const names = new Set<string>();
-  addReferenceBaseName(names, field.name);
-  if (field.columnName) addReferenceBaseName(names, field.columnName);
-  return [...names].filter((name) => name !== field.name && name !== field.columnName);
-}
-
-function addReferenceBaseName(names: Set<string>, fieldName: string): void {
-  if (fieldName.endsWith("_id")) {
-    names.add(fieldName.slice(0, -"_id".length));
-  } else if (fieldName.endsWith("_code")) {
-    names.add(fieldName.slice(0, -"_code".length));
-  }
 }
 
 function valueFromData(row: RuntimeRecordRow, fieldName: string): unknown {

@@ -13,22 +13,24 @@ interface FavoritesPanelContainerProps {
   activeTab: FavoritesPanelTab;
   onTabChange: (tab: FavoritesPanelTab) => void;
   onClose: () => void;
+  navigate: (href: string) => void;
 }
 
 export function FavoritesPanelContainer({
   activeTab,
   onTabChange,
   onClose,
+  navigate,
 }: FavoritesPanelContainerProps) {
   const { groups, isLoading, error, removeBookmark, isRemoving } = useBookmarksList();
   const { items: recentItems, dismiss } = useRecentItems();
 
   const handleNavigate = useCallback(
     (href: string) => {
-      window.location.assign(href);
+      navigate(href);
       onClose();
     },
-    [onClose],
+    [navigate, onClose],
   );
 
   const handleRemoveBookmark = useCallback(

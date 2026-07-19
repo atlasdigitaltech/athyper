@@ -190,6 +190,8 @@ call :pf "!DOCRENDER_SRC!" "render\docrender.conf" 0
 call :pf "!DOCPARSER_SRC!" "render\docparser-config.xml" 0
 
 REM ── Directory copies: CALL :pd "dir_rel" ─────────────────────────────────────
+REM Repo-managed outage bundle: always refresh it on config deployment.
+call :pds "gateway\fallback"
 call :pd "iam\themes\neon"
 call :pd "telemetry\provisioning"
 
@@ -353,6 +355,38 @@ endlocal & exit /b 0
 REM ── Subroutine :pd ───────────────────────────────────────────────────────────
 REM   Process one directory subtree.
 REM   %1 = dir_rel (relative to both REPO_CFG and LIVE_CFG)
+
+:pds
+setlocal
+set "DIR_REL=%~1"
+set "SRC_DIR=%REPO_CFG%\!DIR_REL!"
+set "DST_DIR=!LIVE_CFG!\!DIR_REL!"
+if not exist "!SRC_DIR!" (
+  echo   WARN: dir not found: !DIR_REL!
+  endlocal & exit /b 0
+)
+set "_S=!SRC_DIR:\=/!"
+set "_D=!DST_DIR:\=/!"
+if /I "!_S!"=="!_D!" (
+  echo   OK       !DIR_REL!  (local=repo^)
+  endlocal & exit /b 0
+)
+if /I "!MODE!"=="--diff" (
+  if not exist "!DST_DIR!" (echo   MISSING  !DIR_REL!) else echo   CHECK    !DIR_REL!  (run deployment to sync^)
+  endlocal & exit /b 0
+)
+if not exist "!DST_DIR!" mkdir "!DST_DIR!"
+if /I "!DIR_REL!"=="gateway\fallback" (
+  if exist "!DST_DIR!\index.html" del /Q "!DST_DIR!\index.html"
+  if exist "!DST_DIR!\maintenance.html" del /Q "!DST_DIR!\maintenance.html"
+)
+xcopy "!SRC_DIR!" "!DST_DIR!" /E /I /Y /Q >nul 2>&1
+if errorlevel 1 (
+  echo   FAIL     !DIR_REL!
+  endlocal & exit /b 1
+)
+echo   SYNCED   !DIR_REL!
+endlocal & exit /b 0
 
 :pd
 setlocal

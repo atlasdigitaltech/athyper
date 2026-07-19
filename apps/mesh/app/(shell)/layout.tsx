@@ -33,7 +33,10 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   const requiredActions = validation.session.requiredActions ?? [];
 
   return (
-    <AppShellClient supportMode={isSupportSession(PLANE_KEY, validation.session.realmKey)}>
+    <AppShellClient
+      supportMode={isSupportSession(PLANE_KEY, validation.session.realmKey)}
+      initialSession={validation.publicSession}
+    >
       <RequiredActionBannerSlot actions={requiredActions} />
       {children}
     </AppShellClient>

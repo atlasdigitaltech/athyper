@@ -28,4 +28,17 @@ describe("runtime table chrome", () => {
     expect(runtimeTableChrome.headerButton).toContain("min-w-0");
     expect(runtimeTableChrome.headerButton).not.toContain("flex-1");
   });
+
+  it("uses opaque semantic backgrounds for sticky headers", () => {
+    for (const className of [
+      runtimeTableChrome.head,
+      runtimeTableChrome.headerCell,
+      runtimeTableChrome.selectHeaderCell,
+      runtimeTableChrome.favoriteHeaderCell,
+      runtimeTableChrome.metaHeaderCell,
+    ]) {
+      expect(className).toMatch(/(?:^|\s)bg-muted(?:\s|$)/);
+      expect(className).not.toContain("bg-muted/");
+    }
+  });
 });

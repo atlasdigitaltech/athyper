@@ -168,9 +168,13 @@ function buildSelectedOptionLabels(
     const source = selectedOptionSource(field);
     if (!source) continue;
 
-    const staticLabel = field.optionSource?.kind === "static"
-      ? field.optionSource.options.find((option) => option.value === String(value))?.label
-      : undefined;
+    const optionSource = field.editor?.optionSource ?? field.optionSource;
+    const staticLabel = optionSource?.kind === "static"
+      ? optionSource.options.find((option) => option.value === String(value))?.label
+      : optionSource?.kind === "lifecycle"
+        ? (optionSource.options.find((option) => option.value === String(value))
+          ?? optionSource.fallbackOptions.find((option) => option.value === String(value)))?.label
+        : undefined;
     const label =
       staticLabel
       ?? firstRecordString(record, [
@@ -204,6 +208,7 @@ function selectedOptionSource(
   if (field.optionSource?.kind === "lookup") return "lookup";
   if (field.optionSource?.kind === "reference") return "reference";
   if (field.optionSource?.kind === "static") return "static";
+  if (field.optionSource?.kind === "lifecycle") return "static";
   if (field.enumDomainCode) return "lookup";
   if (field.referenceEntity) return "reference";
   return null;

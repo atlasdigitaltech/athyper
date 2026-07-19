@@ -17,7 +17,7 @@ import type {
   ColumnPresentation,
   EntityListSortEntry,
 } from "@athyper/api-contracts/entity-list";
-import { resolvePresentationConfig } from "./compiled-reader";
+import { resolvePresentationConfig, resolveContractSurfaceFieldNames } from "./compiled-reader";
 import { normalizeEntityListFeatures } from "@athyper/api-contracts/metadata-normalizers";
 
 // Maps display_config v2 canonical view-mode names → EntityListViewMode names.
@@ -123,9 +123,10 @@ export interface EntityListContract {
 
 function resolveArchetype(entity: CompiledEntity): EntityListArchetype {
   const dc = entity.display_config;
+  const entityClass = entity.contract_v2?.catalog.entity_class ?? entity.entity_class;
   if (
     dc.detail_renderer === "document" ||
-    entity.entity_class === "DOCUMENT" ||
+    entityClass === "DOCUMENT" ||
     entity.feature_flags.has_workflow ||
     entity.feature_flags.is_approvable
   ) return "doc";
@@ -133,8 +134,8 @@ function resolveArchetype(entity: CompiledEntity): EntityListArchetype {
   if (
     dc.detail_profile === "simple" ||
     dc.detail_profile === "read-only" ||
-    entity.entity_class === "REFERENCE" ||
-    entity.entity_class === "CONTROL"
+    entityClass === "REFERENCE" ||
+    entityClass === "CONTROL"
   ) return "simple";
 
   return "rich";
@@ -147,6 +148,18 @@ function archetypeDefaultModes(archetype: EntityListArchetype): EntityListViewMo
 }
 
 function resolveAllowedViewModes(entity: CompiledEntity, archetype: EntityListArchetype): EntityListViewMode[] {
+  const canonicalModes = [...new Set(entity.contract_v2?.surfaces
+    .filter((surface) => surface.surface.is_enabled)
+    .map((surface) => surface.surface.mode) ?? [])];
+  if (canonicalModes.length > 0) {
+    const mapped = canonicalModes.map((mode): EntityListViewMode | undefined => {
+      if (mode === "spreadsheet") return "excel";
+      if (mode === "compact_card") return "compact";
+      if (mode === "list") return "list";
+      return undefined;
+    }).filter((mode): mode is EntityListViewMode => mode !== undefined);
+    if (mapped.length > 0) return mapped;
+  }
   const rawModes = entity.display_config.view_modes;
   // Treat absent or the legacy ["table"] singleton (B.5 backfill placeholder) as "not configured".
   const isExplicitlySet = rawModes && rawModes.length > 0 &&
@@ -164,6 +177,11 @@ function resolveAllowedViewModes(entity: CompiledEntity, archetype: EntityListAr
 }
 
 function resolveDefaultViewMode(entity: CompiledEntity, allowedModes: EntityListViewMode[]): EntityListViewMode {
+  const canonicalDefault = entity.contract_v2?.surfaces.find((surface) => surface.surface.config.default_surface)?.surface.config.default_surface;
+  if (canonicalDefault) {
+    const mapped = canonicalDefault === "spreadsheet" ? "excel" : canonicalDefault === "compact_card" ? "compact" : canonicalDefault === "list" ? "list" : undefined;
+    if (mapped && allowedModes.includes(mapped)) return mapped;
+  }
   const renderer = entity.display_config.list_renderer;
   const fromRenderer = renderer ? B5_VIEW_MODE[renderer] : undefined;
   if (fromRenderer && allowedModes.includes(fromRenderer)) return fromRenderer;
@@ -171,6 +189,10 @@ function resolveDefaultViewMode(entity: CompiledEntity, allowedModes: EntityList
 }
 
 function resolveSearchableFieldNames(entity: CompiledEntity): string[] {
+  if (entity.contract_v2) {
+    if (!entity.contract_v2.version_contract.search_config.enabled) return [];
+    return entity.contract_v2.version_contract.search_config.fields.map((field) => field.field);
+  }
   if (entity.search_config?.enabled === false) return [];
   const configured = entity.search_config?.fields;
   if (configured?.length) return configured;
@@ -178,6 +200,7 @@ function resolveSearchableFieldNames(entity: CompiledEntity): string[] {
 }
 
 function resolveStatusFieldNames(entity: CompiledEntity): string[] {
+  if (entity.contract_v2?.lifecycle?.status_field) return [entity.contract_v2.lifecycle.status_field];
   const fromDc = entity.display_config.status_field_names;
   if (fromDc?.length) return fromDc;
   const fromDocHeader = entity.display_config.document_header?.status_field;
@@ -187,14 +210,14 @@ function resolveStatusFieldNames(entity: CompiledEntity): string[] {
 
 function resolveNavFieldNames(entity: CompiledEntity): string[] {
   const dc = entity.display_config;
-  const identity = entity.identity_config;
+  const identity = entity.contract_v2?.version_contract.identity_config ?? entity.identity_config;
 
   const seen = new Set(["id", "tenant_id"]);
   const result: string[] = [];
 
   const addHeuristic = (name: string | undefined) => {
-    // Heuristic fields (number_field, title_field): skip FK-like _id suffixes
-    if (!name || seen.has(name) || name.endsWith("_id")) return;
+    // Explicit display metadata is authoritative, regardless of field name.
+    if (!name || seen.has(name)) return;
     seen.add(name);
     result.push(name);
   };
@@ -217,8 +240,9 @@ function resolveNavFieldNames(entity: CompiledEntity): string[] {
 
 function resolveUsesIdNavigation(entity: CompiledEntity): boolean {
   const flags = entity.feature_flags as Record<string, unknown>;
-  const parent = entity.identity_config?.parent;
-  const hasParentBinding = !!(parent?.field ?? parent?.entity);
+  const parent = entity.contract_v2?.version_contract.identity_config.parent ?? entity.identity_config?.parent;
+  const parentRecord = parent && typeof parent === "object" ? parent as Record<string, unknown> : null;
+  const hasParentBinding = !!(parentRecord?.["field"] ?? parentRecord?.["entity"] ?? parentRecord?.["relation"]);
 
   // Structural entity-class and feature-flag cases
   if (
@@ -240,7 +264,8 @@ function resolveUsesIdNavigation(entity: CompiledEntity): boolean {
   if (businessKeys.length === 0) {
     const hasRefField = entity.fields.some((f) => {
       const n = f.name.toLowerCase();
-      return n !== "id" && n !== "tenant_id" && (n.endsWith("_id") || f.data_type === "reference");
+      return n !== "id" && n !== "tenant_id"
+        && (f.data_type === "reference" || Boolean(f.reference_config));
     });
     if (hasRefField) return true;
   }
@@ -337,9 +362,13 @@ export function resolveEntityListContract(entity: CompiledEntity): EntityListCon
   ) as EntityListFeatures | undefined;
   const configuredSearchMode = listFeatures?.search_mode;
   const searchMode: EntityListContract["searchMode"] =
-    entity.search_config?.enabled === false
-      ? "client"
-      : configuredSearchMode ?? (searchableFieldNames.length > 0 ? "server" : "client");
+    entity.contract_v2
+      ? (!entity.contract_v2.version_contract.search_config.enabled
+        ? "client"
+        : configuredSearchMode ?? (searchableFieldNames.length > 0 ? "server" : "client"))
+      : entity.search_config?.enabled === false
+        ? "client"
+        : configuredSearchMode ?? (searchableFieldNames.length > 0 ? "server" : "client");
 
   const { scopeMode, scopeFieldName } = resolveScope(entity);
 

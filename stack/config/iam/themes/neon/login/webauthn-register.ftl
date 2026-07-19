@@ -1,29 +1,30 @@
-﻿<#-- =======================================================================
-     Neon Keycloak Theme — webauthn-register.ftl
+<#-- =======================================================================
+     Neon Keycloak Theme � webauthn-register.ftl
      Uses KC's own webauthn-register.js for correct WebAuthn handling.
      ======================================================================= -->
+<#include "_iam-context.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Register Security Key — Neon</title>
-  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <title>${iamTitle("Register Security Key")}</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
 </head>
 <body>
-<div class="kc-page">
+<div class="iam-shell kc-page" data-plane="${iamPlane}">
 
-  <!-- ── Left panel ── -->
+  <!-- -- Left panel -- -->
   <div class="kc-panel-left">
     <#include "_neon-brand-logo.ftl">
     <div class="kc-carousel" id="kc-carousel">
       <div class="kc-slide active">
         <p class="kc-slide-ws">Security</p>
         <h3>Protect Every<br>Access Point.</h3>
-        <p class="kc-slide-desc">Hardware security keys and passkeys provide phishing-resistant authentication — the strongest second factor available.</p>
+        <p class="kc-slide-desc">Hardware security keys and passkeys provide phishing-resistant authentication � the strongest second factor available.</p>
       </div>
       <div class="kc-slide">
         <p class="kc-slide-ws">Finance</p>
@@ -43,7 +44,7 @@
     </div>
   </div>
 
-  <!-- ── Right panel ── -->
+  <!-- -- Right panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
       <div class="kc-form-card">
@@ -69,7 +70,7 @@
           </div>
         </#if>
 
-        <!-- KC standard webauthn form — field names/ids must match KC expectations -->
+        <!-- KC standard webauthn form � field names/ids must match KC expectations -->
         <form id="register" action="${url.loginAction}" method="post">
           <input type="hidden" id="clientDataJSON"        name="clientDataJSON"/>
           <input type="hidden" id="attestationObject"     name="attestationObject"/>

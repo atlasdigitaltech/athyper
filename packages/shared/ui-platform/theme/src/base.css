@@ -8,6 +8,7 @@
  */
 
 @import "tailwindcss";
+@import "./tokens/athyper.tokens.css";
 
 @layer utilities {
   .scrim-modal {

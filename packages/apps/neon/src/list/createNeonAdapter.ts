@@ -12,6 +12,7 @@ import type {
   RuntimeListState,
   SavedView,
   RuntimeListFeatureConfig,
+  RuntimeListRecordFetchOptions,
 } from "@athyper/runtime-list/adapter";
 import {
   applyAccessScopeToRawParams,
@@ -52,6 +53,7 @@ export interface NeonAdapterConfig {
     searchParams:   RawSearchParams,
     descriptor?:    MetaEntityRuntimeDescriptor,
     accessScope?:   RuntimeAccessScope,
+    options?:       RuntimeListRecordFetchOptions,
   ) => Promise<{
     records: unknown[];
     state?: unknown;
@@ -186,6 +188,7 @@ export function createNeonAdapter(config: NeonAdapterConfig): RuntimeListServerA
       rawSearchParams: RawSearchParams,
       _sharedDescriptor:RuntimeDescriptor,
       accessScope:     RuntimeAccessScope,
+      options?:         RuntimeListRecordFetchOptions,
     ): Promise<EntityListResponse> {
       // Reuse the original MetaEntityRuntimeDescriptor for scope filters, hydration,
       // and PII masking inside getMetaEntityRecordList.
@@ -203,7 +206,13 @@ export function createNeonAdapter(config: NeonAdapterConfig): RuntimeListServerA
         ...(pageSize !== undefined && { page_size: pageSize }),
       };
 
-      const result = await config.fetchRecords(entityCode, translatedParams, meta ?? undefined, accessScope);
+      const result = await config.fetchRecords(
+        entityCode,
+        translatedParams,
+        meta ?? undefined,
+        accessScope,
+        options,
+      );
       return {
         records:    result.records as EntityListResponse["records"],
         state:      result.state  as EntityListResponse["state"],

@@ -14,9 +14,8 @@ REM consistent before docker compose up. Called automatically by
 REM stack\scripts\stack-profile\up.bat. Can also be run standalone.
 REM
 REM Exit codes:
-REM   0 - all checks pass
+REM   0 - all checks pass (or warnings only - non-blocking, informational)
 REM   1 - fatal: missing required vars (stack will not start)
-REM   2 - warnings only (non-blocking, informational)
 REM ============================================================
 
 goto :main
@@ -34,6 +33,26 @@ if "!_val!"=="" (
 )
 if "!_rv_ok!"=="1" if "!_val:~0,2!"=="${" if "!_val:~-1!"=="}" (
   echo   FAIL  %~1 = !_val! ^(placeholder not resolved - inject from secrets manager^)
+  set /a ERRORS+=1
+)
+goto :eof
+
+REM ----------------------------
+REM Subroutine: require_min_length  %1=var-name  %2=minimum characters
+REM ----------------------------
+:require_min_length
+set "_ml_val=!ENV_%~1!"
+if "!_ml_val!"=="" goto :eof
+set "_ml_tail=!_ml_val!"
+set /a _ml_length=0
+:require_min_length_count
+if not "!_ml_tail!"=="" (
+  set "_ml_tail=!_ml_tail:~1!"
+  set /a _ml_length+=1
+  goto :require_min_length_count
+)
+if !_ml_length! LSS %~2 (
+  echo   FAIL  %~1 must contain at least %~2 characters
   set /a ERRORS+=1
 )
 goto :eof
@@ -146,6 +165,8 @@ REM ----------------------------
 echo [2/6] Required variables...
 call :require_var DATABASE_URL
 call :require_var REDIS_URL
+call :require_var ENTITY_QUERY_CURSOR_SECRET
+call :require_min_length ENTITY_QUERY_CURSOR_SECRET 32
 call :require_var ATTACHMENT_AUTH_STRICT
 call :require_var ATTACHMENT_MULTIPART_CLEANUP_STRICT
 call :require_var PUBLIC_BASE_URL
@@ -182,6 +203,7 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
   echo   Checking non-local secrets ^(must not be missing or placeholders^)...
   call :require_var CREDENTIAL_MASTER_KEY
   call :require_var DB_ADMIN_PASSWORD
+  call :require_var DB_ADMIN_USER
   call :require_var DB_HOST
   call :require_var DBPOOL_APPS_PASSWORD
   call :require_var DBPOOL_SESSION_PASSWORD
@@ -225,6 +247,10 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
   call :require_var APP_S3_SECRET_KEY
   call :require_var BACKUP_S3_ACCESS_KEY
   call :require_var BACKUP_S3_SECRET_KEY
+  call :require_var TEMPO_S3_ACCESS_KEY
+  call :require_var TEMPO_S3_SECRET_KEY
+  call :require_var LOKI_S3_ACCESS_KEY
+  call :require_var LOKI_S3_SECRET_KEY
   goto :sec3_done
 :sec3_local
   echo   Skipping ^(ENVIRONMENT=local^)
@@ -366,7 +392,7 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
   )
 
   REM Dev passwords must not appear in non-local
-  for %%V in (DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET ADMIN_WEB_CLIENT_SECRET ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET VAPID_PRIVATE_KEY ALERTMANAGER_SMTP_AUTH_PASSWORD) do (
+  for %%V in (DB_ADMIN_PASSWORD MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD IAM_ADMIN_PASSWORD S3_ACCESS_KEY S3_SECRET_KEY IAM_CLIENT_SECRET ADMIN_WEB_CLIENT_SECRET ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET VAPID_PRIVATE_KEY APP_S3_ACCESS_KEY APP_S3_SECRET_KEY BACKUP_S3_ACCESS_KEY BACKUP_S3_SECRET_KEY TEMPO_S3_ACCESS_KEY TEMPO_S3_SECRET_KEY LOKI_S3_ACCESS_KEY LOKI_S3_SECRET_KEY ALERTMANAGER_SMTP_AUTH_PASSWORD) do (
     if "!ENV_%%V!"=="athyperadmin" (
       echo   FAIL  %%V = 'athyperadmin' in !ENVIRONMENT! ^(dev password in non-local^)
       set /a ERRORS+=1
@@ -432,6 +458,16 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
     call :require_var TEMPO_S3_ACCESS_KEY
     call :require_var TEMPO_S3_SECRET_KEY
 :tempo_done
+
+  REM P2.10/Loki - storage backend must be s3 outside local
+  if /I "!ENV_LOKI_STORAGE_BACKEND!"=="s3" goto :loki_s3_ok
+    echo   FAIL  LOKI_STORAGE_BACKEND=!ENV_LOKI_STORAGE_BACKEND! in !ENVIRONMENT! ^(must be 's3' outside local^)
+    set /a ERRORS+=1
+    goto :loki_done
+:loki_s3_ok
+    call :require_var LOKI_S3_BUCKET
+    call :require_var LOKI_S3_ENDPOINT
+:loki_done
 
   REM I-21 - Infisical encryption key: format + default rejection
   set "IEK=!ENV_INFISICAL_ENCRYPTION_KEY!"
@@ -520,6 +556,14 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
     if "!ENV_MB_DB_CONNECTION_URI!"=="" (
       echo   FAIL  MB_DB_CONNECTION_URI is not set ^(required when analytics profile is enabled^)
       set /a ERRORS+=1
+    ) else (
+      echo !ENV_MB_DB_CONNECTION_URI! | findstr /I "analytics_ro" >nul
+      if errorlevel 1 (
+        echo   FAIL  MB_DB_CONNECTION_URI does not reference the 'analytics_ro' account
+        echo         Provision athyper_analytics_ro ^(GRANT SELECT on relevant schemas^),
+        echo         add it to PgBouncer's userlist, and update MB_DB_CONNECTION_URI.
+        set /a ERRORS+=1
+      )
     )
   )
 
@@ -527,8 +571,50 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
   goto :sec5_done
 
 :sec5_local
-  echo   OK ^(local - skipping production security checks^)
+  REM L7 — In local dev the API runs on the host. Pointing at a Traefik hostname
+  REM causes Traefik to route BFF calls into the container network -> 404s on session/stream.
+  if not "!ENV_APPS_ATHYPER_API_UPSTREAM_URL!"=="" (
+    echo !ENV_APPS_ATHYPER_API_UPSTREAM_URL! | findstr /B /C:"http://localhost" /C:"http://host.docker.internal" >nul
+    if errorlevel 1 (
+      echo   FAIL  APPS_ATHYPER_API_UPSTREAM_URL=!ENV_APPS_ATHYPER_API_UPSTREAM_URL! in local
+      echo         Must start with http://localhost or http://host.docker.internal
+      echo         ^(e.g. http://localhost:4000^) -- Traefik hostnames loop through
+      echo         the container network and produce 404s in local dev.
+      set /a ERRORS+=1
+    )
+  )
+  echo   OK ^(local - production security checks skipped^)
 :sec5_done
+
+REM ----------------------------
+REM 5b. PgBouncer INI template sanity check
+REM Staging/production ini files use __DB_HOST__ / __DB_PORT__ tokens substituted
+REM at container start. Validate that required keys are present in the template.
+REM ----------------------------
+echo [5b] PgBouncer template check...
+set "DBPOOL_APPS_CONFIG_VAL=!ENV_DBPOOL_APPS_CONFIG!"
+if "!DBPOOL_APPS_CONFIG_VAL!"=="" (
+  echo   WARN  DBPOOL_APPS_CONFIG not set -- skipping PgBouncer template check
+  set /a WARNINGS+=1
+) else (
+  set "DBPOOL_TPL=%STACK_DIR%\config\!DBPOOL_APPS_CONFIG_VAL!"
+  set "DBPOOL_TPL=!DBPOOL_TPL:/=\!"
+  if not exist "!DBPOOL_TPL!" (
+    echo   WARN  PgBouncer template not found: !DBPOOL_TPL! ^(DBPOOL_APPS_CONFIG=!DBPOOL_APPS_CONFIG_VAL!^)
+    set /a WARNINGS+=1
+  ) else (
+    set "PGBOUNCER_ERRORS=0"
+    for %%K in (listen_addr listen_port auth_type pool_mode) do (
+      findstr /C:"%%K" "!DBPOOL_TPL!" >nul 2>&1
+      if errorlevel 1 (
+        echo   FAIL  PgBouncer template missing required key: %%K ^(!DBPOOL_TPL!^)
+        set /a ERRORS+=1
+        set /a PGBOUNCER_ERRORS+=1
+      )
+    )
+    if "!PGBOUNCER_ERRORS!"=="0" echo   OK
+  )
+)
 
 REM ----------------------------
 REM 6. Recommendations
@@ -547,6 +633,42 @@ REM CREDENTIAL_MASTER_KEY: warn if absent in local (optional in dev)
 if /I "!ENVIRONMENT!"=="local" (
   if "!ENV_CREDENTIAL_MASTER_KEY!"=="" (
     echo   WARN  CREDENTIAL_MASTER_KEY not set - credential encryption disabled ^(optional in local dev^)
+    set /a WARNINGS+=1
+  )
+)
+
+REM L5 - Object storage: warn if S3_ENDPOINT is not set in local dev.
+REM The server silently disables attachments when S3_ENDPOINT is absent.
+if /I "!ENVIRONMENT!"=="local" (
+  if "!ENV_S3_ENDPOINT!"=="" (
+    echo   WARN  S3_ENDPOINT not set -- object storage ^(file attachments^) will be disabled.
+    echo         To enable: set S3_ENDPOINT=http://objectstorage:9000 and S3_ACCESS_KEY/S3_SECRET_KEY.
+    set /a WARNINGS+=1
+  )
+)
+
+REM L6 - Alloy ^(logshipper^) config syntax pre-flight.
+REM If alloy.alloy has a parse error logshipper enters an immediate crash loop.
+set "_ALLOY_CFG=!LIVE_CONFIG_ROOT!\telemetry\logging\alloy.alloy"
+if exist "!_ALLOY_CFG!" (
+  where docker >nul 2>&1
+  if not errorlevel 1 (
+    docker run --rm -v "!_ALLOY_CFG!:/etc/alloy/config.alloy:ro" grafana/alloy:v1.15.1 validate /etc/alloy/config.alloy >nul 2>&1
+    if errorlevel 1 (
+      echo   WARN  Alloy config has syntax errors -- logshipper will crash-loop on start
+      echo         Config: !_ALLOY_CFG!
+      set /a WARNINGS+=1
+    )
+  )
+)
+
+REM Certificate expiry check ^(all environments^)
+set "_CERT=!ENV_ATHYPER_SECRETS_ROOT!\gateway\certs\athyper.tls.local.crt"
+if "!_CERT!"=="" set "_CERT=!LIVE_CONFIG_ROOT:config=secrets!\gateway\certs\athyper.tls.local.crt"
+if exist "!_CERT!" (
+  for /f "usebackq tokens=*" %%R in (`powershell -NoProfile -Command "try { $c = New-Object Security.Cryptography.X509Certificates.X509Certificate2 '!_CERT!'; if ($c.NotAfter -lt [DateTime]::Now.AddDays(30)) { 'EXPIRING' } else { 'OK' } } catch { 'SKIP' }" 2^>nul`) do set "_CERT_STATUS=%%R"
+  if /I "!_CERT_STATUS!"=="EXPIRING" (
+    echo   WARN  TLS certificate expires within 30 days -- regenerate with generate-certs.bat
     set /a WARNINGS+=1
   )
 )

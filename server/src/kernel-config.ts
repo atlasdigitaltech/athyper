@@ -148,7 +148,7 @@ function stripLocked(value: unknown): unknown {
   if (typeof value !== "object" || value === null) return value;
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    if (k === "$comment" || k === "$schema") continue;
+    if (k.startsWith("$")) continue;
     if (v === "LOCKED_USE_ENV_VAR") continue;
     result[k] = stripLocked(v);
   }

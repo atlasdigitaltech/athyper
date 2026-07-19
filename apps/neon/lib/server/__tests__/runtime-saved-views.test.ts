@@ -9,13 +9,27 @@ vi.mock("@/lib/server/runtime-headers", () => ({
   buildRuntimeUrl: vi.fn((path: string) => `http://runtime.test${path}`),
 }));
 
-import { getRuntimeSavedViews } from "../runtime-saved-views";
+import { getRuntimeSavedViews, getRuntimeSavedViewState } from "../runtime-saved-views";
 import { getNeonServerSession } from "@/lib/server/session";
 
 describe("runtime saved-view visibility contract", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getNeonServerSession).mockResolvedValue({ userId: "user-1" } as never);
+    vi.mocked(getNeonServerSession).mockResolvedValue({
+      userId: "user-1",
+      planeKey: "neon",
+      realmKey: "athyper",
+      activeOrg: "org-1",
+      activeWorkbench: "finance",
+      organizations: {
+        "org-1": {
+          tenantId: "tenant-1",
+          organizationId: "company-1",
+          contextType: "company_code",
+          roles: ["finance"],
+        },
+      },
+    } as never);
   });
 
   it("returns private and shared views while preserving server ownership permissions", async () => {
@@ -41,5 +55,27 @@ describe("runtime saved-view visibility contract", () => {
 
     await expect(getRuntimeSavedViews("invoice-no-session-test")).resolves.toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("resolves the default view state from the same cached definition load", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      data: [
+        {
+          id: "default-view",
+          name: "My default",
+          is_default: true,
+          config: { density: "compact", pageSize: 50 },
+        },
+      ],
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const views = await getRuntimeSavedViews("invoice-default-cache-test");
+    const defaultView = views.find((view) => view.is_default);
+    await expect(
+      getRuntimeSavedViewState("invoice-default-cache-test", defaultView?.id ?? ""),
+    ).resolves.toEqual({ density: "compact", pageSize: 50 });
+
+    expect(fetchMock).toHaveBeenCalledOnce();
   });
 });

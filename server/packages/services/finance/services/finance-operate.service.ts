@@ -32,6 +32,7 @@ const CATEGORY_LABEL: Record<ConflictCategory, string> = {
   chart:      "Chart",
   book:       "Books",
   gl_control: "GL controls",
+  posting_role: "Posting roles",
   house_bank: "House banks",
   period:     "Period",
   assignment: "Assignment",

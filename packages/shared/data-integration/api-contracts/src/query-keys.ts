@@ -66,6 +66,131 @@ export const queryKeys = {
     byId: (code: string, id: string) => ["entity-detail", code, id] as const,
   },
 
+  /**
+   * Canonical cache namespace for a record object page. `cacheScopeKey` is
+   * produced by the effective workspace-manifest resolver and already varies
+   * by tenant, principal, permission stamp, descriptor, record and record
+   * state. Keeping it in every key prevents data crossing an authorization or
+   * lifecycle boundary while the explicit entity/record parts retain useful
+   * prefix invalidation and readable query diagnostics.
+   */
+  recordWorkspace: {
+    all: ["record-workspace"] as const,
+    root: (input: RecordWorkspaceKeyInput) => [
+      "record-workspace",
+      input.entityCode,
+      input.recordId,
+      input.cacheScopeKey,
+    ] as const,
+    manifest: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "manifest",
+    ] as const,
+    recordCore: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "record-core",
+    ] as const,
+    processState: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "process-state",
+    ] as const,
+    approvals: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "approvals",
+    ] as const,
+    lifecycleTimeline: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "lifecycle-timeline",
+    ] as const,
+    snapshotsRoot: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "snapshots",
+    ] as const,
+    snapshots: (input: RecordWorkspaceKeyInput, params?: RecordWorkspaceCollectionParams) => [
+      ...queryKeys.recordWorkspace.snapshotsRoot(input),
+      canonicalRecordWorkspaceParams(params),
+    ] as const,
+    snapshot: (input: RecordWorkspaceKeyInput, snapshotId: string) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "snapshot",
+      snapshotId,
+    ] as const,
+    snapshotCompareRoot: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "snapshot-compare",
+    ] as const,
+    snapshotCompare: (
+      input: RecordWorkspaceKeyInput,
+      leftSnapshotId: string,
+      rightSnapshotId: string,
+    ) => [
+      ...queryKeys.recordWorkspace.snapshotCompareRoot(input),
+      leftSnapshotId,
+      rightSnapshotId,
+    ] as const,
+    auditLog: (input: RecordWorkspaceKeyInput, params?: RecordWorkspaceCollectionParams) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "audit-log",
+      canonicalRecordWorkspaceParams(params),
+    ] as const,
+    childCollection: (
+      input: RecordWorkspaceKeyInput,
+      collectionKey: string,
+      params?: RecordWorkspaceCollectionParams,
+    ) => [
+      ...queryKeys.recordWorkspace.childCollectionRoot(input, collectionKey),
+      canonicalRecordWorkspaceParams(params),
+    ] as const,
+    childCollectionRoot: (
+      input: RecordWorkspaceKeyInput,
+      collectionKey: string,
+    ) => [
+      ...queryKeys.recordWorkspace.childCollectionsRoot(input),
+      collectionKey,
+    ] as const,
+    childCollectionsRoot: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "child-collection",
+    ] as const,
+    comments: (input: RecordWorkspaceKeyInput, params?: RecordWorkspaceCollectionParams) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "comments",
+      canonicalRecordWorkspaceParams(params),
+    ] as const,
+    commentSummary: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "comments-summary",
+    ] as const,
+    commentEnrichment: (input: RecordWorkspaceKeyInput, commentIds: readonly string[]) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "comments-enrichment",
+      [...new Set(commentIds)].sort(),
+    ] as const,
+    attachments: (input: RecordWorkspaceKeyInput, params?: RecordWorkspaceCollectionParams) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "attachments",
+      canonicalRecordWorkspaceParams(params),
+    ] as const,
+    attachmentWorkspace: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "attachment-workspace",
+    ] as const,
+    attachmentFolders: (input: RecordWorkspaceKeyInput) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "attachment-folders",
+    ] as const,
+    activity: (input: RecordWorkspaceKeyInput, params?: RecordWorkspaceCollectionParams) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "activity",
+      canonicalRecordWorkspaceParams(params),
+    ] as const,
+    support: (input: RecordWorkspaceKeyInput, supportKey: string) => [
+      ...queryKeys.recordWorkspace.root(input),
+      "support",
+      supportKey,
+    ] as const,
+  },
+
   // ── Documents ─────────────────────────────────────────────
   documentList: {
     all: ["document-list"] as const,
@@ -227,6 +352,31 @@ export interface DocumentWorkspaceKeyInput {
   documentId: string;
   /** Authorization-scoped cache discriminator, never a user display value. */
   projectionHash: string;
+}
+
+export interface RecordWorkspaceKeyInput {
+  entityCode: string;
+  recordId: string;
+  /** Opaque authorization- and record-state-sensitive key from the manifest. */
+  cacheScopeKey: string;
+}
+
+export type RecordWorkspaceCollectionParamValue = string | number | boolean | null;
+export type RecordWorkspaceCollectionParams = Readonly<Record<string, RecordWorkspaceCollectionParamValue>>;
+
+/**
+ * TanStack hashes object keys deterministically, but normalizing here also
+ * makes serialized diagnostics and adapter tests stable across callers.
+ */
+export function canonicalRecordWorkspaceParams(
+  params: RecordWorkspaceCollectionParams | undefined,
+): RecordWorkspaceCollectionParams {
+  if (!params) return {};
+  return Object.fromEntries(
+    Object.entries(params)
+      .filter(([, value]) => value !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
 }
 
 export interface DocumentWorkspaceNodeKeyOptions {

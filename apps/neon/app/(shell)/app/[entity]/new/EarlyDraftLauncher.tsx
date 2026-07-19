@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { csrfFetch } from "@/lib/bff-fetch";
 import { markDocumentEditPerformance } from "@athyper/runtime-canvas/document-runtime";
+import { invalidateRuntimeListEntity } from "@athyper/runtime-shared/client";
 
 export function EarlyDraftLauncher({ entity }: { entity: string }) {
   const router = useRouter();
@@ -39,6 +40,7 @@ export function EarlyDraftLauncher({ entity }: { entity: string }) {
         }
         markDocumentEditPerformance("draft-initiated-completed");
         clearDraftKey(entity, idempotencyKey);
+        invalidateRuntimeListEntity(entity, "create");
         // EARLY_DRAFT records must open through the edit route. The plain
         // record route intentionally renders the document in read-only mode.
         router.replace(`/app/${encodeURIComponent(entity)}/${encodeURIComponent(id)}/edit`);

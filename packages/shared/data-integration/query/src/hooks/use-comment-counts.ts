@@ -8,9 +8,10 @@
  * Called once at runtime-list page level — never per-row.
  * Max 100 IDs per batch; splits automatically when page is larger.
  */
-import { useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 
 const MAX_BATCH = 100;
+const CACHE_BATCH_SIZE = 20;
 
 export interface CommentCountEntry {
   total:   number;
@@ -46,15 +47,25 @@ async function fetchCommentCounts(
 }
 
 export function useCommentCounts(entityCode: string, recordIds: string[]) {
-  const stableIds = recordIds.slice().sort().join(",");
-  const queryKey  = ["comment-counts", entityCode, stableIds];
-
-  const { data = {}, isLoading } = useQuery<Record<string, CommentCountEntry>>({
-    queryKey,
-    queryFn:   () => fetchCommentCounts(entityCode, recordIds),
-    staleTime: 60_000,
-    enabled:   recordIds.length > 0,
+  const batches = chunkStableRecordIds(recordIds, CACHE_BATCH_SIZE);
+  const results = useQueries({
+    queries: batches.map((ids) => ({
+      queryKey: ["comment-counts", entityCode, ids.slice().sort().join(",")],
+      queryFn:  () => fetchCommentCounts(entityCode, ids),
+      staleTime: 60_000,
+      enabled: ids.length > 0,
+    })),
   });
 
-  return { counts: data, isLoading };
+  const counts = Object.assign({}, ...results.map((result) => result.data ?? {})) as Record<string, CommentCountEntry>;
+  return { counts, isLoading: results.some((result) => result.isLoading) };
+}
+
+export function chunkStableRecordIds(recordIds: string[], size: number): string[][] {
+  const uniqueIds = [...new Set(recordIds.filter(Boolean))];
+  const batches: string[][] = [];
+  for (let index = 0; index < uniqueIds.length; index += size) {
+    batches.push(uniqueIds.slice(index, index + size));
+  }
+  return batches;
 }

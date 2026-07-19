@@ -5607,3 +5607,44 @@ BEGIN
        AND ev.version_no = 1
        AND ef.name IN ('fx_rate_snapshot', 'payment_fx_rate_snapshot');
 END $$;
+
+-- A declared primary key is the canonical detail lookup contract. Keep it
+-- explicitly filterable so record bootstrap can use the compiled query path;
+-- no field-name inference is required at runtime.
+UPDATE control.entity_field ef
+   SET is_filterable = true,
+       updated_at = now()
+  FROM control.entity_version ev
+  JOIN control.entity e ON e.id = ev.entity_id
+ WHERE ef.entity_version_id = ev.id
+   AND ev.status = 'EFFECTIVE'
+   AND e.runtime_enabled = true
+   AND e.is_active = true
+   AND e.primary_key IS NOT NULL
+   AND (ef.name = e.primary_key OR ef.column_name = e.primary_key)
+   AND ef.is_computed = false
+   AND ef.is_filterable IS DISTINCT FROM true;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+          FROM control.entity e
+          JOIN control.entity_version ev
+            ON ev.entity_id = e.id
+           AND ev.status = 'EFFECTIVE'
+          LEFT JOIN control.entity_field ef
+            ON ef.entity_version_id = ev.id
+           AND (ef.name = e.primary_key OR ef.column_name = e.primary_key)
+         WHERE e.runtime_enabled = true
+           AND e.is_active = true
+           AND (
+               e.primary_key IS NULL
+               OR ef.id IS NULL
+               OR ef.is_computed = true
+               OR ef.is_filterable IS DISTINCT FROM true
+           )
+    ) THEN
+        RAISE EXCEPTION 'Every active runtime entity must declare a non-computed filterable primary-key field';
+    END IF;
+END $$;

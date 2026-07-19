@@ -3,10 +3,9 @@
  * Build canonical brand assets into packages/shared/ui-platform/brand/dist.
  *
  * Sources (per-product after brand split):
- *   packages/shared/ui-platform/brand/src/products/athyper/
- *   packages/apps/neon/brand/src/products/neon/
- *   packages/apps/mesh/brand/src/products/mesh/
- *   packages/apps/admin/brand/src/products/admin/
+ *   packages/apps/neon/brand/src/
+ *   packages/apps/mesh/brand/src/
+ *   packages/apps/admin/brand/src/
  *
  * Output:
  *   packages/shared/ui-platform/brand/dist/{product}/
@@ -23,15 +22,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 const distRoot = path.join(repoRoot, "packages/shared/ui-platform/brand/dist");
 
-const PRODUCTS = ["athyper", "neon", "mesh", "admin"] as const;
+const PRODUCTS = ["neon", "mesh", "admin"] as const;
 
 type ProductCode = (typeof PRODUCTS)[number];
 
 const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  athyper: path.join(repoRoot, "packages/shared/ui-platform/brand/src/products/athyper"),
-  neon:    path.join(repoRoot, "packages/apps/neon/brand/src/products/neon"),
-  mesh:    path.join(repoRoot, "packages/apps/mesh/brand/src/products/mesh"),
-  admin:   path.join(repoRoot, "packages/apps/admin/brand/src/products/admin"),
+  neon:    path.join(repoRoot, "packages/apps/neon/brand/src"),
+  mesh:    path.join(repoRoot, "packages/apps/mesh/brand/src"),
+  admin:   path.join(repoRoot, "packages/apps/admin/brand/src"),
 };
 const REQUIRED_PUBLIC_ASSET_KEYS = [
   "wordmarkBlack",

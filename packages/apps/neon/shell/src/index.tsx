@@ -33,17 +33,21 @@ function TenantSlot({ org }: { org: ActiveOrg | null }) {
   );
 }
 
-function ProfileSlot({ user }: { user: ActiveUser | null }) {
+function ProfileSlot({ user, active = false, navigate }: { user: ActiveUser | null; active?: boolean; navigate: (href: string) => void }) {
   const label = user ? `${user.displayName} — Settings` : "Settings";
   const content = user ? user.initials : "?";
   return (
     <a
       href="/settings"
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background text-xs font-semibold hover:opacity-80 transition-opacity"
+      onClick={(event) => navigateAnchor(event, "/settings", navigate)}
+      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${active ? "bg-muted" : ""}`}
       aria-label={label}
+      aria-current={active ? "page" : undefined}
       title={label}
     >
-      {content}
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-xs font-semibold uppercase text-background">
+        {content}
+      </span>
     </a>
   );
 }
@@ -116,6 +120,7 @@ export function PlaneShell({
   inboxCount = 0,
   notificationCount = 0,
   FavoritesPanelComponent,
+  navigate,
 }: {
   children: ReactNode;
   initialSession?: unknown;
@@ -124,12 +129,17 @@ export function PlaneShell({
   /** Unread in-app notification count for the Topbar bell badge. */
   notificationCount?: number;
   FavoritesPanelComponent?: ComponentType<FavoritesPanelSlotProps>;
+  navigate?: (href: string) => void;
 }) {
   const brandAssets = getPublicBrandAssets(PLANE);
   const pathname = useBrowserPathname();
   const { activeOrg, activeUser, warningSeconds, warningReason, continuePending, continueSession, logoutNow } = usePlaneSessionLifecycle(PLANE, initialSession);
   const [panelTab, setPanelTab] = useState<PanelTab>(null);
   const closePanel = useCallback(() => setPanelTab(null), []);
+  const navigateTo = useCallback((href: string) => {
+    if (navigate) navigate(href);
+    else window.location.assign(href);
+  }, [navigate]);
 
   // neon: only "tester" is a workspace rail item; real workspace rail is driven by deriveNavTree in AppNavRail
   const workspaceItems = NEON_NAV_ITEMS.filter((item) => item.key === "tester");
@@ -143,15 +153,15 @@ export function PlaneShell({
     setPanelTab(null);
 
     const workspace = workspaces.find((c) => c.key === key);
-    if (workspace?.href) { window.location.assign(workspace.href); return; }
+    if (workspace?.href) { navigateTo(workspace.href); return; }
 
     const item = NEON_NAV_ITEMS.find((c) => c.key === key);
-    if (item) { window.location.assign(item.href); return; }
+    if (item) { navigateTo(item.href); return; }
 
     const globalHref = GLOBAL_RAIL_HREFS[key];
-    if (globalHref) { window.location.assign(globalHref); return; }
+    if (globalHref) { navigateTo(globalHref); return; }
 
-    if (key === "home") window.location.assign(config.defaultPath);
+    if (key === "home") navigateTo(config.defaultPath);
   }
 
   return (
@@ -174,18 +184,19 @@ export function PlaneShell({
       topbar={
         <Topbar
           brandSlot={
-            <a href={config.defaultPath} aria-label="neon"
-              className="flex items-center gap-1.5 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <a href={config.defaultPath} aria-label="Neon"
+              onClick={(event) => navigateAnchor(event, config.defaultPath, navigateTo)}
+              className="flex items-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <img alt="" aria-hidden="true" className="h-[26px] w-[26px] shrink-0 rounded-sm object-cover"
-                draggable={false} src={brandAssets.appIcon} />
-              <span className="hidden text-xl font-medium leading-none text-foreground lg:block">neon</span>
+              <img alt="Neon" className="h-5 w-auto max-w-36 object-contain"
+                draggable={false} src={brandAssets.wordmarkBlack} />
             </a>
           }
           tenantSlot={<TenantSlot org={activeOrg} />}
           notificationCount={notificationCount}
-          onNotificationClick={() => { window.location.assign("/notifications"); }}
-          userSlot={<ProfileSlot user={activeUser} />}
+          notificationActive={pathname !== null && pathMatchesHref(pathname, "/notifications")}
+          onNotificationClick={() => navigateTo("/notifications")}
+          userSlot={<ProfileSlot user={activeUser} active={pathname !== null && pathMatchesHref(pathname, "/settings")} navigate={navigateTo} />}
         />
       }
       banner={supportMode ? (
@@ -210,4 +221,14 @@ export function PlaneShell({
       </>
     </ShellLayout>
   );
+}
+
+function navigateAnchor(
+  event: React.MouseEvent<HTMLAnchorElement>,
+  href: string,
+  navigate: (href: string) => void,
+): void {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  event.preventDefault();
+  navigate(href);
 }

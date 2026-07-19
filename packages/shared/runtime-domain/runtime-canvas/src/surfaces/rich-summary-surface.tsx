@@ -44,13 +44,13 @@ export function RichSummarySurfaceRenderer({
   return (
     <WorkPanel title={surface.label}>
       {entries.length === 0 ? (
-        <div className="flex min-h-24 items-center justify-center rounded-md border bg-background p-4 text-center">
+        <div className="flex min-h-24 items-center justify-center rounded-md border bg-card p-4 text-center">
           <p className="text-sm text-muted-foreground">No record data is available for this surface.</p>
         </div>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {entries.map((entry) => (
-            <div key={entry.key} className="rounded-md border bg-background p-3">
+            <div key={entry.key} className="rounded-md border bg-card p-3">
               <p className="text-xs font-medium text-muted-foreground">{entry.label}</p>
               <p className="mt-1 truncate text-sm font-medium text-foreground" title={formatValue(entry.value)}>
                 {formatValue(entry.value)}

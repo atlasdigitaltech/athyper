@@ -54,7 +54,11 @@ http:
 
     athyper-circuit-breaker:
       circuitBreaker:
-        expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.30 || NetworkErrorRatio() > 0.10"
+        # Local API traffic is too sparse for a response-code ratio: two
+        # deterministic application 500s can otherwise trip the shared plane
+        # and turn unrelated Activity/auth requests into gateway 503s. Protect
+        # the local upstream connection without amplifying handler defects.
+        expression: "NetworkErrorRatio() > 0.10"
         checkPeriod: 10s
         fallbackDuration: 10s
         recoveryDuration: 10s

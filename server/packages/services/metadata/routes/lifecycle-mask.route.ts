@@ -85,21 +85,19 @@ export function createLifecycleMaskRoute(router: Router, deps: LifecycleMaskRout
            ORDER BY entity_name, tenant_id NULLS LAST, priority ASC
         )
         SELECT
-          p.record_status,
-          p.can_edit,
-          p.can_delete,
+          ls.code                       AS record_status,
+          COALESCE(p.can_edit, false)   AS can_edit,
+          COALESCE(p.can_delete, false) AS can_delete,
           p.can_transition_to,
-          p.disabled_reason,
+          COALESCE(p.disabled_reason, 'lifecycle_locked') AS disabled_reason,
           ls.name                       AS state_name,
           ls.config->>'badge_variant'   AS badge_variant,
           ls.config->>'ui_color'        AS ui_color,
           ls.config->>'icon_key'        AS icon_key
-        FROM preferred p
-        LEFT JOIN chosen_lifecycle cl ON true
-        LEFT JOIN control.lifecycle_state ls
-               ON ls.lifecycle_id = cl.lifecycle_id
-              AND ls.code = p.record_status
-        ORDER BY p.record_status
+        FROM chosen_lifecycle cl
+        JOIN control.lifecycle_state ls ON ls.lifecycle_id = cl.lifecycle_id
+        LEFT JOIN preferred p ON p.record_status = ls.code
+        ORDER BY ls.sort_order, ls.code
       `.execute(db);
 
       // Project to the descriptor's MetaEntityLifecycleStateMask shape (camelCase).

@@ -31,6 +31,7 @@ const CATEGORY_LABEL: Record<FinanceSetupConflict["category"], string> = {
   chart:       "Chart",
   book:        "Books",
   gl_control:  "GL controls",
+  posting_role:"Posting roles",
   house_bank:  "House banks",
   period:      "Period",
   assignment:  "Assignment",

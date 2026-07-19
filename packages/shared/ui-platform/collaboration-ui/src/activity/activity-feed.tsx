@@ -6,8 +6,11 @@ import {
   Copy, ExternalLink, ArrowUpDown, Check,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
+import { DRAWER_CONTROL, DRAWER_LABEL, DRAWER_META, DRAWER_SECTION_HEADING, DRAWER_VALUE } from "@athyper/ui/typography";
 import type { ActivityEntry } from "@athyper/api-contracts/workflow";
 import { formatBytes } from "@athyper/runtime-shared/core";
+import { formatFieldValue, formatRecordValue } from "@athyper/runtime-shared/meta-entity";
+type ActivityField = Parameters<typeof formatFieldValue>[1];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -248,13 +251,13 @@ function DetailLine({ dl }: { dl: DiffLine }) {
     <span className="flex flex-wrap items-center gap-1">
       {dl.prefix && <span>{dl.prefix}</span>}
       {dl.before && (
-        <span className="inline-flex items-center rounded border border-border bg-secondary px-1.5 py-0 text-xs font-normal text-foreground">
+        <span className="inline-flex items-center rounded border border-border bg-muted/40 px-1.5 py-0 text-sm text-foreground">
           {dl.before}
         </span>
       )}
       {dl.before && dl.after && <ArrowRight className="size-2.5 shrink-0 text-muted-foreground" />}
       {dl.after && (
-        <span className="inline-flex items-center rounded border border-border bg-secondary px-1.5 py-0 text-xs font-medium text-foreground">
+        <span className="inline-flex items-center rounded border border-border bg-muted/40 px-1.5 py-0 text-sm font-medium text-foreground">
           {dl.after}
         </span>
       )}
@@ -265,53 +268,115 @@ function DetailLine({ dl }: { dl: DiffLine }) {
 
 // ── Audit panel ───────────────────────────────────────────────────────────────
 
-function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAuditLog?: (eventId: string) => void }) {
+function activityField(fields: ActivityField[] | undefined, name: string): ActivityField | undefined {
+  return fields?.find((field) => field.name === name || field.columnName === name);
+}
+
+function formatChangedValue(value: unknown, fieldName: string, fields?: ActivityField[], recordData?: Record<string, unknown>): string {
+  const field = activityField(fields, fieldName);
+  if (!field) return formatRecordValue(value);
+  const snapshot = {
+    ...(recordData ?? {}),
+    data: { ...(recordData ?? {}), [field.name]: value, [field.columnName]: value },
+  };
+  return formatFieldValue(snapshot, field);
+}
+
+function AuditPanel({ entry, onOpenAuditLog, fields, recordData }: {
+  entry: ActivityEntry;
+  onOpenAuditLog?: (eventId: string) => void;
+  fields?: ActivityField[];
+  recordData?: Record<string, unknown>;
+}) {
   const d          = entry.detail as Record<string, unknown> | null;
-  const before     = d?.before as Record<string, unknown> | null;
-  const after      = d?.after  as Record<string, unknown> | null;
+  const before     = d?.before ? { ...(d.before as Record<string, unknown>) } : null;
+  const after      = d?.after  ? { ...(d.after as Record<string, unknown>) } : null;
   const diffFields = detailChangedFieldNames(d, before, after);
   const hasDiff    = diffFields.length > 0;
+  const displayBefore = before
+    ? Object.fromEntries(Object.entries(before).map(([field, value]) => [field, formatChangedValue(value, field, fields, recordData)]))
+    : null;
+  const displayAfter = after
+    ? Object.fromEntries(Object.entries(after).map(([field, value]) => [field, formatChangedValue(value, field, fields, recordData)]))
+    : null;
+  if (before && displayBefore) Object.assign(before, displayBefore);
+  if (after && displayAfter) Object.assign(after, displayAfter);
   const hasSession = !!(d?.ip_address || d?.device || d?.session_id || d?.correlation_id);
   const sourceLog  = typeof d?.source_log === "string" ? d.source_log : "log.activity_log";
   const canOpenAuditLog = sourceLog.startsWith("log.");
+  const [showEventDetails, setShowEventDetails] = useState(false);
 
   const copyId = useCallback(async () => {
     await navigator.clipboard.writeText(entry.id).catch(() => {});
   }, [entry.id]);
 
   return (
-    <div className="mx-3 mb-3 mt-0.5 rounded-lg border border-border bg-muted/20 p-3 text-xs">
+    <div className="mx-3 mb-3 mt-0.5 rounded-lg border border-border bg-card p-4 text-sm">
 
+      <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">{entry.activity_type}</span>
+        <span aria-hidden>·</span>
+        <span>{formatTimestamp(entry.created_at)}</span>
+        {!entry.actor_name && <><span aria-hidden>Â·</span><span>System</span></>}
+        {entry.actor_name && <><span aria-hidden>·</span><span>{entry.actor_name}</span></>}
+        <button
+          type="button"
+          onClick={() => setShowEventDetails((value) => !value)}
+          className="text-xs font-medium text-primary hover:underline"
+        >
+          {showEventDetails ? "Hide event details" : "Event details"}
+        </button>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={copyId}
+            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs text-foreground transition-colors hover:bg-muted"
+          >
+            <Copy className="size-3" />Copy ID
+          </button>
+          {canOpenAuditLog && (
+            <button
+              type="button"
+              onClick={() => onOpenAuditLog?.(entry.id)}
+              className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs text-foreground transition-colors hover:bg-muted"
+            >
+              <ExternalLink className="size-3" />Open audit log
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showEventDetails && <div className="mb-2 rounded-md border border-border/70 bg-muted/30 p-3">
       {/* EVENT */}
-      <p className="mb-1.5 text-xs font-medium text-muted-foreground">Event</p>
+      <p className={cn("mb-2", DRAWER_SECTION_HEADING)}>Event</p>
       <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1">
-        <span className="text-muted-foreground">Event code</span>
+        <span className="font-medium text-muted-foreground">Event code</span>
         <span className="break-all font-mono text-xs text-foreground">{entry.activity_type}</span>
-        <span className="text-muted-foreground">Event ID</span>
+        <span className="font-medium text-muted-foreground">Event ID</span>
         <span className="break-all font-mono text-xs text-foreground">{entry.id}</span>
-        <span className="text-muted-foreground">Source</span>
+        <span className="font-medium text-muted-foreground">Source</span>
         <span className="font-mono text-xs text-foreground">{sourceLog}</span>
         {!!d?.entity_id && (
           <>
-            <span className="text-muted-foreground">Entity</span>
+            <span className="font-medium text-muted-foreground">Entity</span>
             <span className="break-all font-mono text-xs text-foreground">
               {d.entity_table ? `${String(d.entity_table)} · ` : ""}{String(d.entity_id)}
             </span>
           </>
         )}
-        <span className="text-muted-foreground">Timestamp</span>
-        <span className="font-mono text-xs text-foreground">{formatTimestamp(entry.created_at)}</span>
-      </div>
+        <span className={DRAWER_LABEL}>Timestamp</span>
+        <span className={cn("tabular-nums", DRAWER_VALUE)}>{formatTimestamp(entry.created_at)}</span>
+      </div></div>}
 
       {/* CHANGE */}
       {(hasDiff || entry.from_state || entry.to_state) && (
         <>
           <div className="my-2.5 border-t border-border" />
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Change</p>
+          <p className={cn("mb-2", DRAWER_SECTION_HEADING)}>Change</p>
           <div className="grid grid-cols-[110px_1fr_1fr] gap-x-2 gap-y-1">
-            <span className="text-xs font-medium text-muted-foreground">Field</span>
-            <span className="text-xs font-medium text-muted-foreground">Before</span>
-            <span className="text-xs font-medium text-muted-foreground">After</span>
+            <span className="font-medium text-muted-foreground">Field</span>
+            <span className="font-medium text-muted-foreground">Before</span>
+            <span className="font-medium text-muted-foreground">After</span>
             {hasDiff
               ? diffFields.map((field) => (
                   <Row3
@@ -334,35 +399,35 @@ function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAud
       {(hasSession || entry.actor_name) && (
         <>
           <div className="my-2.5 border-t border-border" />
-          <p className="mb-1.5 text-xs font-medium text-muted-foreground">Session</p>
+          <p className={cn("mb-2", DRAWER_SECTION_HEADING)}>Session</p>
           <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1">
             {entry.actor_name && (
               <>
-                <span className="text-muted-foreground">Actor</span>
+                <span className="font-medium text-muted-foreground">Actor</span>
                 <span className="text-foreground">{entry.actor_name}</span>
               </>
             )}
             {!!d?.ip_address && (
               <>
-                <span className="text-muted-foreground">IP address</span>
+                <span className="font-medium text-muted-foreground">IP address</span>
                 <span className="font-mono text-xs text-foreground">{String(d.ip_address)}</span>
               </>
             )}
             {!!d?.device && (
               <>
-                <span className="text-muted-foreground">Device</span>
+                <span className="font-medium text-muted-foreground">Device</span>
                 <span className="text-foreground">{String(d.device)}</span>
               </>
             )}
             {!!d?.session_id && (
               <>
-                <span className="text-muted-foreground">Session</span>
+                <span className="font-medium text-muted-foreground">Session</span>
                 <span className="font-mono text-xs text-foreground">{String(d.session_id)}</span>
               </>
             )}
             {!!d?.correlation_id && (
               <>
-                <span className="text-muted-foreground">Correlation</span>
+                <span className="font-medium text-muted-foreground">Correlation</span>
                 <span className="break-all font-mono text-xs text-foreground">{String(d.correlation_id)}</span>
               </>
             )}
@@ -370,25 +435,6 @@ function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAud
         </>
       )}
 
-      {/* Actions */}
-      <div className="mt-3 flex gap-2 border-t border-border pt-2.5">
-        <button
-          type="button"
-          onClick={copyId}
-          className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs text-foreground transition-colors hover:bg-muted"
-        >
-          <Copy className="size-3" />Copy event ID
-        </button>
-        {canOpenAuditLog && (
-          <button
-            type="button"
-            onClick={() => onOpenAuditLog?.(entry.id)}
-            className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-card px-2.5 text-xs text-foreground transition-colors hover:bg-muted"
-          >
-            <ExternalLink className="size-3" />Open in audit log
-          </button>
-        )}
-      </div>
     </div>
   );
 }
@@ -396,9 +442,9 @@ function AuditPanel({ entry, onOpenAuditLog }: { entry: ActivityEntry; onOpenAud
 function Row3({ label, before, after }: { label: string; before: string; after: string }) {
   return (
     <>
-      <span className="text-muted-foreground">{label}</span>
-      <span className="rounded border border-border bg-card px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{before}</span>
-      <span className="rounded border border-primary/20 bg-primary/5 px-1.5 py-0.5 font-mono text-xs font-medium text-foreground">{after}</span>
+      <span className="font-medium text-muted-foreground">{label}</span>
+      <span className="rounded border border-border bg-card px-1.5 py-0.5 text-sm text-foreground">{before}</span>
+      <span className="rounded border border-border bg-card px-1.5 py-0.5 text-sm font-medium text-foreground">{after}</span>
     </>
   );
 }
@@ -411,12 +457,16 @@ function ActivityRow({
   isExpanded,
   onToggleExpand,
   onOpenAuditLog,
+  fields,
+  recordData,
 }: {
   entry:            ActivityEntry;
   isLast:           boolean;
   isExpanded:       boolean;
   onToggleExpand:   () => void;
   onOpenAuditLog?:  (eventId: string) => void;
+  fields?:           ActivityField[];
+  recordData?:       Record<string, unknown>;
 }) {
   const time   = formatTime(entry.created_at);
   const actor  = entry.actor_name ?? "System";
@@ -435,18 +485,18 @@ function ActivityRow({
         )}
       >
         {/* Time */}
-        <span className="whitespace-nowrap pt-0.5 text-xs tabular-nums text-muted-foreground">
+        <span className={cn("whitespace-nowrap pt-0.5 tabular-nums", DRAWER_CONTROL)}>
           {time}
         </span>
 
         {/* Content */}
         <div className="min-w-0">
-          <p className="text-sm leading-snug text-foreground">
+          <p className={cn("leading-snug", DRAWER_VALUE)}>
             <span className="font-medium">{actor}</span>
             {verb && ` ${verb}`}
           </p>
           {dl && (
-            <div className="mt-0.5 text-xs text-muted-foreground">
+            <div className={cn("mt-0.5", DRAWER_META)}>
               <DetailLine dl={dl} />
             </div>
           )}
@@ -458,7 +508,8 @@ function ActivityRow({
             type="button"
             onClick={onToggleExpand}
             className={cn(
-              "flex items-center gap-1 whitespace-nowrap pt-0.5 text-xs transition-colors",
+              "flex items-center gap-1 whitespace-nowrap pt-0.5 transition-colors",
+              DRAWER_CONTROL,
               isExpanded
                 ? "rounded bg-muted px-2 py-1 text-foreground"
                 : "text-muted-foreground hover:text-foreground",
@@ -474,7 +525,7 @@ function ActivityRow({
 
       {isExpanded && (
         <div className={cn(!isLast && "border-b border-border")}>
-          <AuditPanel entry={entry} onOpenAuditLog={onOpenAuditLog} />
+          <AuditPanel entry={entry} onOpenAuditLog={onOpenAuditLog} fields={fields} recordData={recordData} />
         </div>
       )}
     </>
@@ -487,6 +538,8 @@ export interface ActivityFeedProps {
   entries?:         ActivityEntry[];
   className?:       string;
   onOpenAuditLog?:  (eventId: string) => void;
+  fields?:           ActivityField[];
+  recordData?:       Record<string, unknown>;
 }
 
 const CHIPS: Array<{ key: FilterMode; label: string }> = [
@@ -503,7 +556,7 @@ const SORT_OPTIONS: Array<{ key: SortMode; label: string }> = [
   { key: "oldest", label: "Oldest first" },
 ];
 
-export function ActivityFeed({ entries = [], className, onOpenAuditLog }: ActivityFeedProps) {
+export function ActivityFeed({ entries = [], className, onOpenAuditLog, fields, recordData }: ActivityFeedProps) {
   const [search,      setSearch]      = useState("");
   const [filter,      setFilter]      = useState<FilterMode>("all");
   const [sort,        setSort]        = useState<SortMode>("newest");
@@ -584,8 +637,9 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
   return (
     <div className={cn("flex flex-col gap-3", className)}>
 
+      <div className="flex flex-wrap items-center gap-3">
       {/* Search */}
-      <div className="relative">
+      <div className="relative order-2 min-w-[220px] flex-1 lg:order-2 lg:ml-auto lg:max-w-sm">
         <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <input
           ref={searchRef}
@@ -593,16 +647,13 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
           placeholder="Search activity…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-16 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
-        <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 py-0.5 text-xs text-muted-foreground">
-          Ctrl K
-        </kbd>
       </div>
 
       {/* Filter chips + sort control */}
-      <div className="flex items-center gap-2">
-        <div className="flex flex-1 flex-wrap items-center gap-1">
+      <div className="order-1 flex items-center gap-2 lg:contents">
+        <div className="flex flex-1 flex-wrap items-center gap-1 lg:order-1 lg:flex-none">
           {CHIPS.filter((c) => c.key === "all" || chipCounts[c.key] > 0).map((chip) => {
             const active = filter === chip.key;
             return (
@@ -611,7 +662,7 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
                 type="button"
                 onClick={() => setFilter(chip.key)}
                 className={cn(
-                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                  "flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-colors",
                   active
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -619,7 +670,7 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
               >
                 {chip.label}
                 {chip.key !== "all" && chipCounts[chip.key] > 0 && (
-                  <span className={cn("tabular-nums text-xs", active ? "opacity-80" : "opacity-60")}>
+                  <span className={cn("tabular-nums text-sm", active ? "opacity-80" : "opacity-60")}>
                     {chipCounts[chip.key]}
                   </span>
                 )}
@@ -629,11 +680,11 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
         </div>
 
         {/* Sort */}
-        <div className="relative shrink-0" ref={sortRef}>
+        <div className="relative order-3 shrink-0" ref={sortRef}>
           <button
             type="button"
             onClick={() => setSortOpen((v) => !v)}
-            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className={cn("flex items-center gap-1 transition-colors hover:text-foreground", DRAWER_CONTROL)}
           >
             <ArrowUpDown className="size-3" />
             {currentSort.label}
@@ -646,7 +697,7 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
                   key={opt.key}
                   type="button"
                   onClick={() => { setSort(opt.key); setSortOpen(false); }}
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-xs transition-colors hover:bg-muted"
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-sm transition-colors hover:bg-muted"
                 >
                   <span className="flex size-3.5 items-center justify-center shrink-0">
                     {sort === opt.key && <Check className="size-3 text-primary" />}
@@ -659,6 +710,7 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
             </div>
           )}
         </div>
+      </div>
       </div>
 
       {/* Empty state */}
@@ -676,11 +728,11 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
         <div key={group.label}>
           {/* Day header */}
           <div className="mb-1.5 flex items-center gap-2">
-            <span className="shrink-0 text-xs font-medium text-muted-foreground">
+            <span className="shrink-0 text-sm font-semibold text-foreground">
               {group.label}
             </span>
             <div className="h-px flex-1 bg-border" />
-            <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
+            <span className="shrink-0 tabular-nums text-sm font-medium text-muted-foreground">
               {group.count} event{group.count !== 1 ? "s" : ""}
             </span>
           </div>
@@ -695,6 +747,8 @@ export function ActivityFeed({ entries = [], className, onOpenAuditLog }: Activi
                 isExpanded={expandedIds.has(entry.id)}
                 onToggleExpand={() => toggleExpand(entry.id)}
                 onOpenAuditLog={onOpenAuditLog}
+                fields={fields}
+                recordData={recordData}
               />
             ))}
           </div>

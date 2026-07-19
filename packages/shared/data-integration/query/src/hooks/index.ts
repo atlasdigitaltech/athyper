@@ -18,6 +18,7 @@ import { type InboxItem, type ApprovalAction, type ApprovalContext, type Workflo
 import { type Notification, type SavedView } from "@athyper/api-contracts/platform";
 import { type MetadataClient, type RecordsClient, type WorkflowClient, type PlatformClient, type DocumentsClient, type EntityListParams } from "@athyper/api-client";
 import { type DocumentDetail, type FlowBundle, type StatusTransitionRequest } from "@athyper/api-contracts/documents";
+import { invalidateRuntimeListEntity } from "@athyper/runtime-shared/client";
 
 declare const process: { env?: { NODE_ENV?: string } };
 
@@ -188,6 +189,7 @@ export function useCreateEntity(entityCode: string) {
     mutationFn: (data: Record<string, unknown>) => records().create(entityCode, { data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.entityList.byType(entityCode) });
+      invalidateRuntimeListEntity(entityCode, "create");
     },
   });
 }
@@ -200,6 +202,7 @@ export function useUpdateEntity(entityCode: string, id: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.entityDetail.byId(entityCode, id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.entityList.byType(entityCode) });
       queryClient.invalidateQueries({ queryKey: ["activity", entityCode] });
+      invalidateRuntimeListEntity(entityCode, "edit");
     },
   });
 }
@@ -211,6 +214,7 @@ export function useDeleteEntity(entityCode: string) {
     onSuccess: (_data, id) => {
       queryClient.removeQueries({ queryKey: queryKeys.entityDetail.byId(entityCode, id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.entityList.byType(entityCode) });
+      invalidateRuntimeListEntity(entityCode, "delete");
     },
   });
 }
@@ -241,6 +245,7 @@ export function useCreateDocument(docType: string) {
     mutationFn: (data: Record<string, unknown>) => documents().create(docType, { data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.documentList.byType(docType) });
+      invalidateRuntimeListEntity(docType, "create");
     },
   });
 }
@@ -252,6 +257,7 @@ export function useDocumentStatusTransition(docType: string, id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.documentDetail.byId(docType, id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.documentList.byType(docType) });
+      invalidateRuntimeListEntity(docType, "status_transition");
     },
   });
 }

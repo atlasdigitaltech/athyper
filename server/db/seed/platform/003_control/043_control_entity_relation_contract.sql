@@ -352,7 +352,6 @@ BEGIN
         (SELECT count(*) FROM control.entity_relation);
 END $$;
 
-
 -- Journal entry / journal line / journal line reference relations.
 DO $$
 DECLARE
@@ -747,4 +746,66 @@ BEGIN
        AND ef.name = p.field_name;
 END $$;
 
+-- Child collection filters are part of the compiled read contract. Any field
+-- used to resolve a has-many relation must be explicitly filterable so the
+-- runtime can use the descriptor-backed keyset query instead of the legacy
+-- compatibility list pipeline. This is metadata-driven and applies equally to
+-- platform entities and future tenant-authored child collections.
+WITH relation_filter_fields AS (
+    SELECT DISTINCT
+           child_ev.id AS entity_version_id,
+           required.field_name
+      FROM control.entity_relation er
+      JOIN control.entity_version parent_ev
+        ON parent_ev.id = er.entity_version_id
+       AND parent_ev.status = 'EFFECTIVE'
+      JOIN control.entity child
+        ON child.entity_code = COALESCE(er.target_entity_code, er.target_entity)
+       AND child.tenant_id IS NOT DISTINCT FROM er.tenant_id
+      JOIN control.entity_version child_ev
+        ON child_ev.entity_id = child.id
+       AND child_ev.status = 'EFFECTIVE'
+      CROSS JOIN LATERAL unnest(array_remove(ARRAY[
+          CASE WHEN COALESCE(er.resolution_kind, 'fk') = 'fk' THEN er.fk_field END,
+          CASE WHEN er.resolution_kind = 'polymorphic' THEN er.source_type_field END,
+          CASE WHEN er.resolution_kind = 'polymorphic' THEN er.source_id_field END
+      ]::text[], NULL)) AS required(field_name)
+     WHERE er.relation_kind = 'has_many'
+)
+UPDATE control.entity_field ef
+   SET is_filterable = true,
+       updated_at = now()
+  FROM relation_filter_fields required
+ WHERE ef.entity_version_id = required.entity_version_id
+   AND (ef.name = required.field_name OR ef.column_name = required.field_name)
+   AND ef.is_computed = false
+   AND ef.is_filterable IS DISTINCT FROM true;
 
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+          FROM control.entity_relation er
+          JOIN control.entity_version parent_ev
+            ON parent_ev.id = er.entity_version_id
+           AND parent_ev.status = 'EFFECTIVE'
+          JOIN control.entity child
+            ON child.entity_code = COALESCE(er.target_entity_code, er.target_entity)
+           AND child.tenant_id IS NOT DISTINCT FROM er.tenant_id
+          JOIN control.entity_version child_ev
+            ON child_ev.entity_id = child.id
+           AND child_ev.status = 'EFFECTIVE'
+          CROSS JOIN LATERAL unnest(array_remove(ARRAY[
+              CASE WHEN COALESCE(er.resolution_kind, 'fk') = 'fk' THEN er.fk_field END,
+              CASE WHEN er.resolution_kind = 'polymorphic' THEN er.source_type_field END,
+              CASE WHEN er.resolution_kind = 'polymorphic' THEN er.source_id_field END
+          ]::text[], NULL)) AS required(field_name)
+          LEFT JOIN control.entity_field ef
+            ON ef.entity_version_id = child_ev.id
+           AND (ef.name = required.field_name OR ef.column_name = required.field_name)
+         WHERE er.relation_kind = 'has_many'
+           AND (ef.id IS NULL OR ef.is_computed = true OR ef.is_filterable IS DISTINCT FROM true)
+    ) THEN
+        RAISE EXCEPTION 'Active has-many relation filters must resolve to explicit non-computed filterable child fields';
+    END IF;
+END $$;

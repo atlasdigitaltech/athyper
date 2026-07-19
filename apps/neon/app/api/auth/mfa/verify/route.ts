@@ -1,4 +1,4 @@
-// GET|POST /api/auth/mfa/verify — read MFA challenge state and submit TOTP/WebAuthn proof to elevate the session.
+// GET|POST /api/auth/mfa/verify — read the Keycloak-owned MFA gate and start re-authentication when required.
 import { createMfaVerifyGetHandler, createMfaVerifyPostHandler } from "@athyper/auth-bff";
 import { PLANE_KEY } from "@/lib/plane";
 

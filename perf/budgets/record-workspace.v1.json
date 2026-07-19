@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.record-workspace-budgets",
+  "timingMs": {
+    "initialRecordUsable": 3000,
+    "warmRecordNavigation": 500,
+    "firstSurfaceReady": 1000
+  },
+  "calls": {
+    "core": 1,
+    "process": 1,
+    "approvals": 1,
+    "lifecycle": 1,
+    "collections": 1,
+    "versions": 1,
+    "comments": 2,
+    "attachments": 1,
+    "activity": 1,
+    "support": 2
+  },
+  "duplicates": {
+    "extraCalls": 0
+  },
+  "nPlusOne": {
+    "families": 0,
+    "calls": 0
+  },
+  "notes": {
+    "comments": "One comments bootstrap request plus an optional composer draft request.",
+    "unsupported": "Unsupported resources have a hard budget of zero calls; the entity matrix declares supported surfaces."
+  }
+}

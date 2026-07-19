@@ -444,3 +444,18 @@ CREATE POLICY tenant_update ON document.seed_gift FOR UPDATE USING     (tenant_i
 CREATE POLICY tenant_delete ON document.seed_gift FOR DELETE USING     (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON document.seed_gift FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON document.seed_gift FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- Durable cross-book derivation trace. Runtime workers write under tenant
+-- context; Finance users receive tenant-isolated read access through APIs.
+ALTER TABLE document.book_posting_derivation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.book_posting_derivation FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON document.book_posting_derivation;
+DROP POLICY IF EXISTS tenant_insert ON document.book_posting_derivation;
+DROP POLICY IF EXISTS tenant_update ON document.book_posting_derivation;
+DROP POLICY IF EXISTS admin_read    ON document.book_posting_derivation;
+DROP POLICY IF EXISTS admin_write   ON document.book_posting_derivation;
+CREATE POLICY tenant_read   ON document.book_posting_derivation FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.book_posting_derivation FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.book_posting_derivation FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON document.book_posting_derivation FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON document.book_posting_derivation FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

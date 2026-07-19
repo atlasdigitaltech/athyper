@@ -18,7 +18,7 @@ Canonical docs live under [docs/](docs/). The most-used entry points:
 | Architecture overview + v13 permission model | [docs/infrastructure/infrastructure-plan.md](docs/infrastructure/infrastructure-plan.md) |
 | Secrets management (inventory, rotation, backends) | [docs/infrastructure/secrets-management.md](docs/infrastructure/secrets-management.md) |
 | Weekly DB reset / re-seed / export runbook | [docs/infrastructure/weekly-reset-reseed-export.md](docs/infrastructure/weekly-reset-reseed-export.md) |
-| Env file contract | [docs/infrastructure/env-file-contract.md](docs/infrastructure/env-file-contract.md) |
+| Env variable reference (all vars + config layers) | [docs/infrastructure/env-reference.md](docs/infrastructure/env-reference.md) |
 | Stack scripts reference | [docs/infrastructure/scripts-reference.md](docs/infrastructure/scripts-reference.md) |
 | Docker services reference | [docs/infrastructure/docker-services.md](docs/infrastructure/docker-services.md) |
 | Mesh DB provisioning | [docs/infrastructure/mesh-seed-db.md](docs/infrastructure/mesh-seed-db.md) |

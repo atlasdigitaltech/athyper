@@ -211,3 +211,21 @@ CREATE POLICY tenant_update ON governance.cycle_carryforward_rule FOR UPDATE USI
 CREATE POLICY tenant_delete ON governance.cycle_carryforward_rule FOR DELETE USING     (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON governance.cycle_carryforward_rule FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON governance.cycle_carryforward_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- governance.report_pack
+-- Report packs contain cycle evidence and inherit the same tenant boundary as
+-- their parent cycle run. Storage access is authorized separately by the API.
+ALTER TABLE governance.report_pack ENABLE ROW LEVEL SECURITY;
+ALTER TABLE governance.report_pack FORCE  ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON governance.report_pack;
+DROP POLICY IF EXISTS tenant_insert ON governance.report_pack;
+DROP POLICY IF EXISTS tenant_update ON governance.report_pack;
+DROP POLICY IF EXISTS tenant_delete ON governance.report_pack;
+DROP POLICY IF EXISTS admin_read    ON governance.report_pack;
+DROP POLICY IF EXISTS admin_write   ON governance.report_pack;
+CREATE POLICY tenant_read   ON governance.report_pack FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON governance.report_pack FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON governance.report_pack FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON governance.report_pack FOR DELETE USING     (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON governance.report_pack FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON governance.report_pack FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);

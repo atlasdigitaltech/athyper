@@ -172,5 +172,6 @@ A developer working on a specific concern locally can opt in to extra profiles b
 | [`local-dev-setup.md`](local-dev-setup.md) | Windows local development â€” full setup, Options A/B/C, gotchas |
 | [`staging-setup.md`](staging-setup.md) | Ubuntu server runbook â€” Phases 0â€“26, v13 permission model |
 | [`infrastructure-plan.md`](infrastructure-plan.md) | Architecture overview, pre-deployment gates |
-| [`secrets-management.md`](secrets-management.md) | Secret inventory, generation, rotation, per-environment injection model |
+| [`env-reference.md`](env-reference.md) | Complete per-variable reference — all env vars, local/staging/production values, secret flags |
+| [`secrets-management.md`](secrets-management.md) | Secret generation commands, rotation runbooks, per-environment injection model |
 | [`weekly-reset-reseed-export.md`](weekly-reset-reseed-export.md) | Weekly DB reset / export / restore validation |

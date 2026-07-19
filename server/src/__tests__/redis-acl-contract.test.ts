@@ -37,6 +37,9 @@ describe("Redis ACL contract", () => {
       "~desc:v4:*",
       "~descriptor-runtime:*",
       "~execdesc:*",
+      "~listpage:v2:*",
+      "~entityquery-count:v1:*",
+      "~outbox:processed:v1:*",
       "~kc_admin_token",
       "~__health_probe__",
     ];
@@ -58,6 +61,16 @@ describe("Redis ACL contract", () => {
       expect(tokens.has("+subscribe"), `${aclFile.pathname} missing subscribe command`).toBe(true);
       expect(tokens.has("+unsubscribe"), `${aclFile.pathname} missing unsubscribe command`).toBe(true);
       expect(tokens.has("-@pubsub"), `${aclFile.pathname} should not deny the pubsub category`).toBe(false);
+    }
+  });
+
+  it("allows versioned descriptor and record invalidation channels", () => {
+    for (const aclFile of [aclTemplate, aclConfig]) {
+      const tokens = appAclTokens(aclFile);
+
+      expect(tokens.has("&execdesc:*"), `${aclFile.pathname} missing descriptor invalidation channels`).toBe(true);
+      expect(tokens.has("&record:*"), `${aclFile.pathname} missing record event channels`).toBe(true);
+      expect(tokens.has("&*"), `${aclFile.pathname} must not allow arbitrary channels`).toBe(false);
     }
   });
 

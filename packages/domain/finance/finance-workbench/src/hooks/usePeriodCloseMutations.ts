@@ -11,22 +11,25 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCsrfToken } from "@athyper/runtime-shared/client";
 import { scopeCacheKey, type FinanceScope } from "../lib/scope";
 
+const FINANCE_WORKBENCH_API = "/api/workbench/finance";
+
 // ── Task action ───────────────────────────────────────────────────────────────
 
 export interface TaskActionVars {
   taskId:   string;
-  action:   "complete" | "reopen";
+  action:   "complete" | "reopen" | "evaluate";
   remarks?: string;
+  evidencePayload?: Record<string, unknown>;
 }
 
 export function useCompleteTask(runId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ taskId, action, remarks }: TaskActionVars) =>
-      fetch(`/api/finance/period-close/runs/${runId}/tasks/${taskId}/action`, {
+    mutationFn: ({ taskId, action, remarks, evidencePayload }: TaskActionVars) =>
+      fetch(`${FINANCE_WORKBENCH_API}/period-close/runs/${runId}/tasks/${taskId}/action`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-        body:    JSON.stringify({ action, remarks }),
+        body:    JSON.stringify({ action, remarks, evidencePayload }),
       }).then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({})) as { error?: string };
@@ -51,7 +54,7 @@ export function useSignOffPhase(runId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ phaseCode, remarks }: SignOffVars) =>
-      fetch(`/api/finance/period-close/runs/${runId}/sign-off`, {
+      fetch(`${FINANCE_WORKBENCH_API}/period-close/runs/${runId}/sign-off`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body:    JSON.stringify({ phaseCode, remarks }),
@@ -70,18 +73,26 @@ export function useSignOffPhase(runId: string) {
 
 // ── Start new run ─────────────────────────────────────────────────────────────
 
-export function useStartCloseRun(scope: FinanceScope) {
+export interface StartGovernanceRunOptions {
+  cycleTypeCode?: string;
+  periodNumber?: number;
+  runData?: Record<string, unknown>;
+}
+
+export function useStartCloseRun(scope: FinanceScope, options: StartGovernanceRunOptions = {}) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      fetch("/api/finance/period-close/runs", {
+      fetch(`${FINANCE_WORKBENCH_API}/period-close/runs`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
         body:    JSON.stringify({
           scopeType:    scope.scopeType,
           scopeId:      scope.scopeId,
           fiscalYear:   scope.fiscalYear,
-          periodNumber: scope.period,
+          periodNumber: options.periodNumber ?? scope.period,
+          cycleTypeCode: options.cycleTypeCode ?? "MONTHLY_CLOSE",
+          runData: options.runData ?? {},
         }),
       }).then(async (res) => {
         if (!res.ok) {
@@ -94,6 +105,63 @@ export function useStartCloseRun(scope: FinanceScope) {
       void qc.invalidateQueries({
         queryKey: ["finance", "period-close", "runs", ...scopeCacheKey(scope)],
       });
+    },
+  });
+}
+
+export function useCertificationCommand(runId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { certCode: string; action: "certify" | "attest"; notes?: string }) =>
+      fetch(`${FINANCE_WORKBENCH_API}/period-close/runs/${runId}/certifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+        body: JSON.stringify(input),
+      }).then(async (res) => {
+        const body = await res.json().catch(() => ({})) as { error?: string; status?: string };
+        if (!res.ok) throw new Error(body.error ?? `Certification command failed (${res.status})`);
+        return body;
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["finance", "period-close", "governance", runId] });
+      void qc.invalidateQueries({ queryKey: ["finance", "period-close", "runs"] });
+    },
+  });
+}
+
+export function usePeriodCommand(runId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { targetStatus: "open" | "soft_close" | "hard_close"; bookIds?: string[]; reason?: string }) =>
+      fetch(`${FINANCE_WORKBENCH_API}/period-close/runs/${runId}/period-command`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+        body: JSON.stringify(input),
+      }).then(async (res) => {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        if (!res.ok) throw new Error(body.error ?? `Period command failed (${res.status})`);
+        return body;
+      }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["finance", "period-close"] });
+    },
+  });
+}
+
+export function useGenerateEvidencePack(runId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => fetch(`${FINANCE_WORKBENCH_API}/governance/report-packs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+      body: JSON.stringify({ cycleRunId: runId, reportType: "cycle_summary", format: "html" }),
+    }).then(async (res) => {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      if (!res.ok) throw new Error(body.error ?? `Evidence pack request failed (${res.status})`);
+      return body;
+    }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["finance", "period-close", "governance", runId] });
     },
   });
 }

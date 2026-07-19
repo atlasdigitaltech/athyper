@@ -8,7 +8,7 @@ import {
   setCachePrivate,
   verifyBearer,
 } from "@athyper/svc-shared";
-import { requireStepUp } from "../mfa/step-up.service.js";
+import { createStepUpBinding, requireStepUp } from "../mfa/step-up.service.js";
 import { checkPermission, requireAllow } from "../permission/permission.service.js";
 import type { CacheClient } from "../session/session.service.js";
 import {
@@ -34,6 +34,7 @@ export interface ParameterRoutesDeps {
 }
 
 interface ParameterReadAuth {
+  claims: Record<string, unknown>;
   sub: string;
   tenantId: string;
   xRealm: string;
@@ -114,7 +115,7 @@ export function createParameterRoutes(router: Router, deps: ParameterRoutesDeps)
       const auth_ = await resolveParameterAuth(req, res, db, auth);
       if (!auth_) return;
 
-      if (!await requireStepUp(cache, auth_.sub, auth_.tenantId, "iam_admin", res)) return;
+      if (!await requireStepUp(cache, createStepUpBinding(auth_.claims, auth_.sub, auth_.tenantId, "iam_admin"), res)) return;
       const decision = await checkPermission(db, auth_.tenantId, auth_.callerPrincipalId, "IAM.PARAMETER.MANAGE");
       if (!requireAllow(decision, res)) return;
 
@@ -238,7 +239,7 @@ async function resolveReadAuth(
     return null;
   }
 
-  return { sub, tenantId, xRealm };
+  return { claims, sub, tenantId, xRealm };
 }
 
 async function resolveParameterAuth(

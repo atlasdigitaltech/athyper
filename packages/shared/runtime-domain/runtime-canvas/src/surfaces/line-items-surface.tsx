@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import type { AccountingDistribution } from "@athyper/api-contracts/documents";
@@ -12,6 +12,7 @@ import type {
   MetaEntityLineItemsSurface,
   MetaEntityRuntimeDescriptor,
   DocumentEditRuntimeContract,
+  MetaEntityRelation,
 } from "@athyper/runtime-contracts";
 import { LineItemsSurface } from "@athyper/runtime-line-item/surface";
 import type { DocumentWorkspaceLineSubmit, LineFieldChangeResolver, LineRecord } from "@athyper/runtime-line-item";
@@ -23,6 +24,12 @@ import { useOptionalDocumentEditCoordinator } from "../document-runtime/document
 import { useOptionalDocumentRuntimeContext } from "../document-runtime/document-runtime-context";
 import { headerPrimaryActionClass } from "../header/header-chrome";
 import type { RuntimeSurfaceRendererProps } from "./types";
+import {
+  invalidateRecordWorkspaceChildCollection,
+  useOptionalRecordWorkspaceChildCollection,
+  useOptionalRecordWorkspaceQueryContext,
+  type RecordWorkspaceChildCollectionSource,
+} from "../record-query";
 
 // Fallback statuses used when the descriptor carries no lifecycle masks (legacy
 // platform entities or freshly-registered tenants). Removed once every
@@ -48,6 +55,7 @@ export function LineItemsSurfaceRenderer({
   const lineItemsSurface = surface as MetaEntityLineItemsSurface;
   const editCoordinator = useOptionalDocumentEditCoordinator();
   const documentRuntime = useOptionalDocumentRuntimeContext();
+  const recordWorkspace = useOptionalRecordWorkspaceQueryContext();
   const workspaceCollection = editCoordinator?.contract.childCollections.find((collection) =>
     collection.relationName === lineItemsSurface.relationName
     || collection.entityCode === lineItemsSurface.entityCode,
@@ -57,6 +65,20 @@ export function LineItemsSurfaceRenderer({
     && Boolean(editCoordinator && workspaceCollection);
   const lineResolveSeqRef = useRef(0);
   const lineResolveTabIdRef = useRef(createLineResolveTabId());
+  const declaredRelation = resolveDeclaredRelation(contract, lineItemsSurface.relationName);
+  const lineSource = resolveLineCollectionSource(lineItemsSurface, declaredRelation);
+  const lineCollectionKey = `${lineItemsSurface.key}:lines`;
+  const distributionCollectionKey = `${lineItemsSurface.key}:distributions`;
+  const lineQuery = useOptionalRecordWorkspaceChildCollection<unknown>(lineCollectionKey, {
+    source: lineSource,
+    surfaceKey: lineItemsSurface.key,
+    enabled: !documentRuntime,
+  });
+  const distributionQuery = useOptionalRecordWorkspaceChildCollection<unknown>(distributionCollectionKey, {
+    source: { kind: "distributions" },
+    surfaceKey: lineItemsSurface.key,
+    enabled: !documentRuntime && lineItemsSurface.displayMode === "split_accounting",
+  });
 
   const currencyCode = typeof record?.["currency_code"] === "string" ? record["currency_code"] : undefined;
   const companyCodeId = typeof record?.["company_code_id"] === "string" ? record["company_code_id"] : undefined;
@@ -126,15 +148,40 @@ export function LineItemsSurfaceRenderer({
     return { etag: response.etag, record: response.record };
   }, [editCoordinator]);
   const controlledData = useMemo(() => {
-    if (contract.renderer !== "document" || !documentRuntime) return undefined;
+    if (contract.renderer === "document" && documentRuntime) {
+      return {
+        lines: documentRuntime.children.lines.map((row) => flattenRuntimeRecord(row)) as unknown as LineRecord[],
+        distributions: documentRuntime.children.distributions.all.map((row) => flattenRuntimeRecord(row)) as unknown as AccountingDistribution[],
+        pricingComponents: documentRuntime.children.pricingComponents.all.map((row) => flattenRuntimeRecord(row)),
+        isLoading: documentRuntime.children.isLoading,
+        onRefresh: documentRuntime.children.onRefresh,
+      };
+    }
+    if (!recordWorkspace) return undefined;
     return {
-      lines: documentRuntime.children.lines.map((row) => flattenRuntimeRecord(row)) as unknown as LineRecord[],
-      distributions: documentRuntime.children.distributions.all.map((row) => flattenRuntimeRecord(row)) as unknown as AccountingDistribution[],
-      pricingComponents: documentRuntime.children.pricingComponents.all.map((row) => flattenRuntimeRecord(row)),
-      isLoading: documentRuntime.children.isLoading,
-      onRefresh: documentRuntime.children.onRefresh,
+      lines: readCollectionRows(lineQuery.data).map(flattenRecord) as unknown as LineRecord[],
+      distributions: readCollectionRows(distributionQuery.data).map(flattenRecord) as unknown as AccountingDistribution[],
+      pricingComponents: [],
+      isLoading: lineQuery.isLoading || distributionQuery.isLoading,
+      onRefresh: async () => {
+        await Promise.all([
+          lineQuery.refetch(),
+          lineItemsSurface.displayMode === "split_accounting"
+            ? distributionQuery.refetch()
+            : Promise.resolve(),
+        ]);
+      },
     };
-  }, [contract.renderer, documentRuntime]);
+  }, [
+    contract.renderer,
+    distributionQuery.data,
+    distributionQuery.isLoading,
+    documentRuntime,
+    lineItemsSurface.displayMode,
+    lineQuery.data,
+    lineQuery.isLoading,
+    recordWorkspace,
+  ]);
 
   return (
     <LineItemsSurface
@@ -156,39 +203,55 @@ export function LineItemsSurfaceRenderer({
 function ChildRecordsTable({
   surface,
   recordId,
+  contract,
 }: RuntimeSurfaceRendererProps) {
   if (surface.kind !== "child_records") return null;
   const childSurface = surface as MetaEntityChildRecordsSurface;
   const { entityCode, parentField, parentIdField, canCreate, canDelete, canEdit } = childSurface;
 
-  const linkField = parentIdField ?? parentField ?? deriveLinkField(entityCode);
-  const queryKey = ["child-records", entityCode, linkField, recordId] as const;
+  const declaredRelation = resolveDeclaredRelation(contract, childSurface.relationName);
+  const linkField = parentIdField
+    ?? parentField
+    ?? declaredRelation?.fkField
+    ?? declaredRelation?.sourceIdField;
+  const source: RecordWorkspaceChildCollectionSource | undefined = declaredRelation
+    ? { kind: "relation", relationCode: declaredRelation.name }
+    : linkField
+      ? { kind: "entity_filter", entityCode, parentField: linkField }
+      : undefined;
+  const collectionKey = childSurface.key;
+  const recordWorkspace = useOptionalRecordWorkspaceQueryContext();
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(1);
+  const paginationMode = childSurface.collection?.table?.pagination ?? "none";
+  const pageSize = childSurface.collection?.table?.pageSize ?? 25;
+  const childQuery = useOptionalRecordWorkspaceChildCollection<unknown>(collectionKey, {
+    source,
+    surfaceKey: childSurface.key,
+    pagination: paginationMode === "server" ? { page, pageSize } : undefined,
+    enabled: Boolean(source),
+  });
+  const data = useMemo(
+    () => readCollectionRows(childQuery.data).map(flattenRecord),
+    [childQuery.data],
+  );
+  const totalCount = readCollectionTotal(childQuery.data) ?? data.length;
   const deleteMutation = useMutation({
     mutationFn: (childRecordId: string) => deleteRelatedRecord(entityCode, childRecordId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey });
+      if (recordWorkspace) {
+        await invalidateRecordWorkspaceChildCollection(
+          queryClient,
+          recordWorkspace.keyInput,
+          collectionKey,
+        );
+      }
     },
   });
 
-  const { data, isLoading, isError } = useQuery<RelatedRecord[]>({
-    queryKey,
-    queryFn: async ({ signal }) => {
-      const params = new URLSearchParams({ [linkField]: recordId });
-      const res = await fetch(
-        `${runtimePath.list(entityCode)}?${params}`,
-        { signal, cache: "no-store" },
-      );
-      if (!res.ok) throw new Error(`Failed to load child records (${res.status})`);
-      const body = await res.json() as unknown;
-      const records = isApiListResponse(body) ? body.records : [];
-      return records.map(flattenRecord);
-    },
-    staleTime: 30_000,
-    enabled: !!recordId,
-  });
-
-  const createHref = canCreate ? buildCreateHref(entityCode, linkField, recordId) : null;
+  const createHref = canCreate && linkField
+    ? buildCreateHref(entityCode, linkField, recordId)
+    : null;
   const childLabel = childSurface.label ?? "Related Records";
   const collection: MetaEntityCollectionConfig = {
     ...childSurface.collection,
@@ -213,6 +276,9 @@ function ChildRecordsTable({
     },
   };
 
+  const configurationError = !source
+    ? `The ${childLabel} surface has no declared relation or parent field.`
+    : null;
   const deleteError = deleteMutation.error
     ? deleteMutation.error instanceof Error
       ? deleteMutation.error.message
@@ -239,16 +305,21 @@ function ChildRecordsTable({
     <ChildCollectionGrid
       entityCode={entityCode}
       label={childLabel}
-      count={data?.length}
+      count={totalCount}
       collection={collection}
       scope={{ parent_id: recordId }}
-      dataOverride={data ?? []}
-      loading={isLoading}
-      error={isError}
-      errorMessage="Failed to load records. Try refreshing the page."
+      dataOverride={data}
+      loading={childQuery.isLoading}
+      error={childQuery.isError || Boolean(configurationError)}
+      errorMessage={configurationError ?? "Failed to load records. Try refreshing the page."}
       emptyMessage={`No ${toInlineLabel(childLabel)} yet.`}
       primaryActionSlot={primaryActionSlot}
       summarySlot={summarySlot}
+      paginationMode={paginationMode}
+      initialPageSize={pageSize}
+      currentPage={page}
+      totalCount={totalCount}
+      onPageChange={setPage}
       onRowClick={canEdit
         ? (row) => {
             const href = buildEditHref(entityCode, row);
@@ -306,13 +377,46 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function isApiListResponse(value: unknown): value is { records: unknown[] } {
-  return isRecord(value) && Array.isArray(value["records"]);
+function resolveDeclaredRelation(
+  contract: MetaEntityRuntimeDescriptor,
+  relationName: string | undefined,
+): MetaEntityRelation | undefined {
+  if (!relationName) return undefined;
+  return contract.relations.find((relation) =>
+    relation.name === relationName || relation.key === relationName,
+  );
 }
 
-function deriveLinkField(entityCode: string): string {
-  const base = entityCode.replace(/_line$|_item$|_line_item$/, "");
-  return `${base}_id`;
+function resolveLineCollectionSource(
+  surface: MetaEntityLineItemsSurface,
+  relation: MetaEntityRelation | undefined,
+): RecordWorkspaceChildCollectionSource | undefined {
+  if (relation) return { kind: "relation", relationCode: relation.name };
+  // An explicitly configured but unresolved relation is a descriptor error;
+  // do not turn its UI key into a network relation request.
+  if (surface.relationName) return undefined;
+  const parentField = surface.parentIdField ?? surface.parentField;
+  if (parentField) {
+    return { kind: "entity_filter", entityCode: surface.entityCode, parentField };
+  }
+  // `line_items` itself is an explicit semantic declaration, so the dedicated
+  // lines resource is safe even when no relation code is needed by the API.
+  return { kind: "lines", lineEntityCode: surface.entityCode };
+}
+
+function readCollectionRows(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (!isRecord(value)) return [];
+  if (Array.isArray(value["records"])) return value["records"];
+  if (Array.isArray(value["data"])) return value["data"];
+  return [];
+}
+
+function readCollectionTotal(value: unknown): number | undefined {
+  if (!isRecord(value)) return undefined;
+  const pagination = isRecord(value["pagination"]) ? value["pagination"] : undefined;
+  const total = pagination?.["total"] ?? value["total"];
+  return typeof total === "number" && Number.isFinite(total) ? total : undefined;
 }
 
 function buildCreateHref(entityCode: string, linkField: string, recordId: string): string {

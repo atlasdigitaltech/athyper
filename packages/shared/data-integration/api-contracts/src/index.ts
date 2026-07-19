@@ -21,6 +21,8 @@
 
 export * from "./schemas/common";
 export * from "./schemas/metadata";
+export * from "./schemas/entity-cache-policy";
+export * from "./schemas/meta-entity-contract-v2";
 export * from "./schemas/metadata-normalizers";
 export * from "./schemas/field-contract-registry-core";
 export * from "./schemas/field-contract-registry";

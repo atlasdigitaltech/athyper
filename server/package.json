@@ -27,6 +27,8 @@
     "meta:hygiene": "tsx scripts/check-meta-entity-hygiene.ts",
     "pi-line-defaults:verify": "tsx scripts/verify-pi-line-default-resolver-coverage.ts",
     "p2p:field-contract:audit": "tsx scripts/audit-p2p-field-contract.ts",
+    "metadata:semantic-fallbacks:audit": "tsx scripts/audit-metadata-semantic-fallbacks.ts",
+    "metadata:cache-policy:audit": "tsx scripts/audit-metadata-cache-policy.ts",
     "lint": "tsx scripts/check-runtime-server-paths.ts --strict && tsx scripts/verify-pi-line-default-resolver-coverage.ts"
   },
   "dependencies": {
@@ -34,6 +36,7 @@
     "@athyper/adapter-db": "workspace:*",
     "@athyper/adapter-memory-cache": "workspace:*",
     "@athyper/adapter-object-storage": "workspace:*",
+    "@athyper/api-contracts": "workspace:*",
     "@athyper/auth-common": "workspace:*",
     "@athyper/runtime-contracts": "workspace:*",
     "@athyper/server-foundation": "workspace:*",

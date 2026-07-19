@@ -4,6 +4,7 @@ import { getPlaneConfig } from "@athyper/session-plane";
 import { getPublicBrandAssets } from "@athyper/brand";
 
 import { getAuthExperience, type MarketingSlide } from "./experience";
+import { BrandedAuthLoader } from "./branded-auth-loader";
 import type { AuthLayoutVariant } from "./types";
 
 declare const process:
@@ -98,7 +99,10 @@ export function AuthShell({
   const hero = getHeroCopy(plane);
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-background text-foreground">
+    <main
+      className="auth-iam-type min-h-screen overflow-x-hidden bg-background font-sans text-foreground"
+      data-auth-typography="iam"
+    >
       <style>{`
         @keyframes auth-progress {
           from { transform: scaleX(0); }
@@ -178,9 +182,175 @@ export function AuthShell({
             0 8px 18px color-mix(in oklab, var(--foreground) 8%, transparent);
         }
         .auth-showcase-card {
+          padding: var(--auth-card-padding);
           background: color-mix(in oklab, var(--card) 94%, var(--background));
           border-color: color-mix(in oklab, var(--foreground) 12%, transparent);
           box-shadow: 0 18px 60px color-mix(in oklab, var(--foreground) 9%, transparent);
+        }
+        .auth-iam-type {
+          --auth-card-padding: 1rem;
+          --auth-card-heading-size: 1.5rem;
+          --auth-card-heading-line-height: 1.25;
+          --auth-card-support-size: 0.875rem;
+          --auth-card-support-line-height: 1.25rem;
+          --auth-field-label-size: 0.875rem;
+          --auth-field-label-line-height: 1.25rem;
+          --auth-control-size: 1rem;
+          --auth-control-line-height: 1.5rem;
+          --auth-action-size: 1rem;
+          --auth-action-line-height: 1.25;
+          --auth-organization-row-padding: 0.75rem;
+          --auth-organization-name-size: 0.875rem;
+          --auth-organization-name-line-height: 1.25rem;
+          --auth-organization-meta-size: 0.75rem;
+          --auth-organization-meta-line-height: 1rem;
+          --auth-secondary-action-size: 0.875rem;
+          --auth-secondary-action-line-height: 1.25rem;
+          --auth-preview-wordmark-size: 1.25rem;
+          --auth-preview-status-size: 0.8125rem;
+          --auth-preview-desk-size: 1rem;
+          --auth-preview-record-code-size: 1rem;
+          --auth-preview-heading-size: 1.5rem;
+          --auth-preview-body-size: 1rem;
+          --auth-preview-body-line-height: 1.5rem;
+          --auth-preview-label-size: 0.75rem;
+          --auth-preview-value-size: 1rem;
+          --auth-preview-action-size: 0.875rem;
+          --auth-preview-section-label-size: 0.8125rem;
+          --auth-preview-section-heading-size: 1.25rem;
+          --auth-preview-section-body-size: 0.9375rem;
+          --auth-preview-section-body-line-height: 1.5rem;
+          --auth-preview-caption-size: 0.75rem;
+          --auth-preview-stat-size: 0.875rem;
+          --auth-preview-navigation-size: 0.875rem;
+          font-family: var(
+            --athyper-font-sans,
+            var(--font-geist-sans, Geist, ui-sans-serif, system-ui, sans-serif)
+          );
+        }
+        .auth-iam-card-header {
+          display: grid;
+          gap: 0.25rem;
+          margin-bottom: 1rem;
+        }
+        .auth-iam-heading {
+          margin: 0;
+          font-size: var(--auth-card-heading-size);
+          font-weight: 500;
+          line-height: var(--auth-card-heading-line-height);
+          letter-spacing: normal;
+        }
+        .auth-iam-support {
+          margin: 0;
+          font-size: var(--auth-card-support-size);
+          font-weight: 400;
+          line-height: var(--auth-card-support-line-height);
+        }
+        .auth-iam-label {
+          font-size: var(--auth-field-label-size);
+          font-weight: 500;
+          line-height: var(--auth-field-label-line-height);
+        }
+        .auth-iam-control {
+          font-size: var(--auth-control-size);
+          font-weight: 400;
+          line-height: var(--auth-control-line-height);
+        }
+        .auth-iam-action {
+          font-size: var(--auth-action-size);
+          font-weight: 500;
+          line-height: var(--auth-action-line-height);
+        }
+        .auth-organization-row {
+          padding: var(--auth-organization-row-padding);
+        }
+        .auth-organization-name {
+          font-size: var(--auth-organization-name-size);
+          font-weight: 500;
+          line-height: var(--auth-organization-name-line-height);
+        }
+        .auth-organization-meta {
+          font-size: var(--auth-organization-meta-size);
+          font-weight: 400;
+          line-height: var(--auth-organization-meta-line-height);
+        }
+        .auth-secondary-action {
+          font-size: var(--auth-secondary-action-size);
+          font-weight: 400;
+          line-height: var(--auth-secondary-action-line-height);
+        }
+        .auth-preview-wordmark {
+          font-size: var(--auth-preview-wordmark-size);
+        }
+        .auth-preview-status {
+          font-size: var(--auth-preview-status-size);
+          font-weight: 500;
+          line-height: 1.125rem;
+        }
+        .auth-preview-desk {
+          font-size: var(--auth-preview-desk-size);
+          font-weight: 500;
+          line-height: 1.5rem;
+        }
+        .auth-preview-record-code {
+          font-size: var(--auth-preview-record-code-size);
+          font-weight: 500;
+          line-height: 1.5rem;
+        }
+        .auth-preview-heading {
+          font-size: var(--auth-preview-heading-size);
+          font-weight: 500;
+          line-height: 1.25;
+        }
+        .auth-preview-body {
+          font-size: var(--auth-preview-body-size);
+          font-weight: 400;
+          line-height: var(--auth-preview-body-line-height);
+        }
+        .auth-preview-label {
+          font-size: var(--auth-preview-label-size);
+          font-weight: 500;
+          line-height: 1rem;
+        }
+        .auth-preview-value {
+          font-size: var(--auth-preview-value-size);
+          font-weight: 500;
+          line-height: 1.5rem;
+        }
+        .auth-preview-action {
+          font-size: var(--auth-preview-action-size);
+          font-weight: 500;
+          line-height: 1.25rem;
+        }
+        .auth-preview-section-label {
+          font-size: var(--auth-preview-section-label-size);
+          font-weight: 500;
+          line-height: 1.125rem;
+        }
+        .auth-preview-section-heading {
+          font-size: var(--auth-preview-section-heading-size);
+          font-weight: 500;
+          line-height: 1.5rem;
+        }
+        .auth-preview-section-body {
+          font-size: var(--auth-preview-section-body-size);
+          font-weight: 400;
+          line-height: var(--auth-preview-section-body-line-height);
+        }
+        .auth-preview-caption {
+          font-size: var(--auth-preview-caption-size);
+          font-weight: 500;
+          line-height: 1rem;
+        }
+        .auth-preview-stat {
+          font-size: var(--auth-preview-stat-size);
+          font-weight: 500;
+          line-height: 1.25rem;
+        }
+        .auth-preview-navigation {
+          font-size: var(--auth-preview-navigation-size);
+          font-weight: 500;
+          line-height: 1.25rem;
         }
         .auth-login-column {
           min-width: 0;
@@ -189,7 +359,31 @@ export function AuthShell({
         .auth-form-stack {
           width: 100%;
         }
+        .auth-mobile-product-context {
+          margin: 0 0 1rem;
+          max-width: 28rem;
+          font-size: 0.875rem;
+          font-weight: 400;
+          line-height: 1.25rem;
+        }
+        .auth-page-footer {
+          color: color-mix(in oklab, var(--foreground) 64%, transparent);
+          font-size: 0.875rem;
+          font-weight: 400;
+          line-height: 1.25rem;
+        }
         @media (min-width: 640px) {
+          .auth-iam-type {
+            --auth-card-padding: 1.5rem;
+            --auth-card-heading-size: 1.75rem;
+            --auth-card-support-size: 1rem;
+            --auth-card-support-line-height: 1.5rem;
+            --auth-organization-row-padding: 1rem;
+            --auth-organization-name-size: 1rem;
+            --auth-organization-name-line-height: 1.5rem;
+            --auth-organization-meta-size: 0.875rem;
+            --auth-organization-meta-line-height: 1.3125rem;
+          }
           .auth-login-column {
             width: min(34rem, calc(100vw - 4rem));
           }
@@ -198,8 +392,18 @@ export function AuthShell({
           }
         }
         @media (min-width: 1024px) {
+          .auth-login-column {
+            position: sticky;
+            top: 6.5rem;
+            align-self: start;
+          }
           .auth-form-stack {
-            width: min(28rem, 100%);
+            width: min(32rem, 100%);
+          }
+        }
+        @media (min-width: 1280px) {
+          .auth-form-stack {
+            width: min(34rem, 100%);
           }
         }
         .auth-preview-frame {
@@ -365,32 +569,31 @@ export function AuthShell({
         <div className="auth-showcase-grid pointer-events-none absolute inset-x-0 top-20 hidden h-[38rem] opacity-70 lg:block" />
         <AuthTopNav plane={plane} currentHost={currentHost} />
         <div className="relative mx-auto grid min-h-[calc(100vh-5rem)] max-w-7xl grid-cols-1 gap-8 px-5 pb-6 pt-2 sm:px-8 lg:grid-cols-[minmax(28rem,34rem)_minmax(0,1fr)] lg:items-start lg:gap-12 lg:px-10 xl:px-12">
-          <section className="flex min-h-[calc(100vh-5rem)] min-w-0 flex-col justify-between py-6 lg:py-10">
+          <section className="flex min-h-[calc(100vh-5rem)] min-w-0 flex-col justify-between py-4 sm:py-6 lg:py-6">
             <div className="auth-login-column">
-              <div className="space-y-3">
-                <h1 className="max-w-full whitespace-pre-line break-words text-4xl font-medium leading-[1.02] tracking-normal sm:text-5xl">
-                  {hero.title}
-                </h1>
-                <p className="max-w-sm text-base leading-6 text-muted-foreground">
-                  {hero.subtitle}
-                </p>
-              </div>
-              <div className="auth-form-stack mt-8">
-                <div className="auth-showcase-card w-full rounded-lg border p-4 sm:p-5">
-                  <div className="mb-4 space-y-1">
-                    <h2 className="text-2xl font-medium leading-tight">{title}</h2>
-                    {subtitle ? <p className="text-sm leading-5 text-muted-foreground">{subtitle}</p> : null}
+              <p className="auth-mobile-product-context text-muted-foreground lg:hidden">
+                {hero.subtitle}
+              </p>
+              <div className="auth-form-stack">
+                <div className="auth-showcase-card w-full rounded-lg border">
+                  <div className="auth-iam-card-header">
+                    <h2 className="auth-iam-heading">{title}</h2>
+                    {subtitle ? <p className="auth-iam-support text-muted-foreground">{subtitle}</p> : null}
                   </div>
                   {children}
                 </div>
               </div>
             </div>
-            {footer ? <div className="mt-8 w-full">{footer}</div> : null}
           </section>
-          <aside className="relative hidden min-h-0 lg:block lg:pt-10">
+          <aside className="relative hidden min-h-0 lg:block lg:pt-6">
             <BrandPanel plane={plane} />
           </aside>
         </div>
+        {footer ? (
+          <footer className="auth-page-footer relative mx-auto w-full max-w-7xl border-t px-5 py-4 sm:px-8 lg:px-10 xl:px-12">
+            {footer}
+          </footer>
+        ) : null}
       </div>
     </main>
   );
@@ -409,6 +612,7 @@ export function ProductMark({
       tone={inverted ? "light" : "dark"}
       className="text-4xl"
       iconClassName="h-12 w-12"
+      showIcon={false}
     />
   );
 }
@@ -459,6 +663,7 @@ function AuthTopNav({ plane, currentHost }: { plane: PlaneKey; currentHost: stri
         tone="dark"
         className="text-3xl"
         iconClassName="h-9 w-9"
+        showIcon={false}
       />
       <div className="hidden items-center gap-5 sm:flex">
         <PlaneSwitchLinks current={plane} currentHost={currentHost} />
@@ -586,22 +791,12 @@ export function LoadingState({
   message?: string;
   plane?: PlaneKey;
 }) {
-  const brandAssets = getPublicBrandAssets(plane);
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
-      <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex h-10 w-10 animate-pulse items-center justify-center rounded-md bg-primary">
-          <img
-            alt=""
-            aria-hidden="true"
-            className="h-6 w-6 rounded-sm object-cover"
-            draggable={false}
-            src={brandAssets.appIcon}
-          />
-        </div>
-        <p className="text-sm text-muted-foreground">{message}</p>
-      </div>
-    </main>
+    <BrandedAuthLoader
+      plane={plane}
+      message={message}
+      longWaitMessage="This secure request is taking longer than expected."
+    />
   );
 }
 
@@ -621,7 +816,7 @@ export function PrimaryAction({
   type?: "button" | "submit";
 }) {
   const className = [
-    "auth-mono-primary inline-flex w-full items-center justify-center gap-3 rounded-md px-4 text-base font-medium transition-colors",
+    "auth-iam-action auth-mono-primary inline-flex w-full items-center justify-center gap-3 rounded-md px-4 text-base font-medium transition-colors",
     size === "large" ? "h-[60px]" : "h-10",
     disabled ? "pointer-events-none opacity-60" : "",
   ].join(" ");
@@ -679,7 +874,7 @@ export function TextLinkButton({
 }) {
   return (
     <button
-      className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+      className="auth-secondary-action text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
       disabled={disabled}
       onClick={onClick}
       type="button"
@@ -810,7 +1005,7 @@ function BrandPanel({ plane }: { plane: PlaneKey }) {
                 key={item.label}
                 aria-label={`Show ${item.label} slide`}
                 aria-pressed={active}
-                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                className={`auth-preview-navigation rounded-full border px-2.5 py-1 transition-colors ${
                   active
                     ? "border-foreground bg-foreground text-background"
                     : "border-border bg-background text-muted-foreground hover:text-foreground"
@@ -860,19 +1055,19 @@ function PreviewWorkbench({
             <ProductLogoAsset
               plane={plane}
               tone="dark"
-              className="text-xl"
+              className="auth-preview-wordmark"
               iconClassName="h-6 w-6"
               showIcon={false}
             />
-            <span className="max-w-full rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            <span className="auth-preview-status max-w-full rounded-full border px-2 py-0.5 text-muted-foreground">
               {preview.status}
             </span>
           </div>
-          <p className="mt-2 truncate text-sm font-medium">{preview.title}</p>
+          <p className="auth-preview-desk mt-2 truncate">{preview.title}</p>
         </div>
         <div className="auth-record-card shrink-0 rounded-md border bg-background px-3 py-2 text-right">
-          <p key={preview.recordCode} className="auth-record-code text-sm font-medium">{preview.recordCode}</p>
-          <p className="mt-1 text-[11px] font-medium uppercase tracking-normal text-muted-foreground">
+          <p key={preview.recordCode} className="auth-preview-record-code auth-record-code">{preview.recordCode}</p>
+          <p className="auth-preview-caption mt-1 uppercase tracking-normal text-muted-foreground">
             <span>{preview.recordState}</span>
           </p>
         </div>
@@ -883,10 +1078,10 @@ function PreviewWorkbench({
         className="border-b px-4 py-3 animate-in fade-in slide-in-from-bottom-3 duration-500"
       >
         <div className="min-w-0">
-          <h2 className="max-w-2xl text-xl font-medium leading-tight">
+          <h2 className="auth-preview-heading max-w-2xl">
             {slide.title}
           </h2>
-          <p className="mt-2 max-w-xl text-sm leading-5 text-muted-foreground">
+          <p className="auth-preview-body mt-2 max-w-xl text-muted-foreground">
             {slide.body}
           </p>
         </div>
@@ -906,7 +1101,7 @@ function PreviewWorkbench({
             return (
               <button
                 aria-pressed={active}
-                className={`auth-preview-command flex h-10 items-center gap-2 rounded-md border px-3 text-left text-xs font-medium ${
+                className={`auth-preview-action auth-preview-command flex h-10 items-center gap-2 rounded-md border px-3 text-left ${
                   active ? "auth-preview-command-active" : "text-foreground"
                 }`}
                 key={command}
@@ -936,8 +1131,8 @@ function PreviewWorkbench({
 function PreviewMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 px-4 py-3">
-      <p className="text-[11px] font-medium uppercase tracking-normal text-muted-foreground">{label}</p>
-      <p className="mt-1 truncate text-sm font-medium">{value}</p>
+      <p className="auth-preview-label uppercase tracking-normal text-muted-foreground">{label}</p>
+      <p className="auth-preview-value mt-1 truncate">{value}</p>
     </div>
   );
 }
@@ -960,11 +1155,11 @@ function PreviewMotionSignal({
   return (
     <section className="p-4" aria-label={signal.title}>
       <div className="auth-motion-signal rounded-lg border p-4">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_16rem]">
           <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-normal text-muted-foreground">{signal.title}</p>
-            <h3 className="mt-1 truncate text-lg font-medium">{activeCommandLabel}</h3>
-            <p className="mt-1 max-w-lg text-sm leading-5 text-muted-foreground">{signal.detail}</p>
+            <p className="auth-preview-section-label uppercase tracking-normal text-muted-foreground">{signal.title}</p>
+            <h3 className="auth-preview-section-heading mt-1 truncate">{activeCommandLabel}</h3>
+            <p className="auth-preview-section-body mt-1 max-w-lg text-muted-foreground">{signal.detail}</p>
 
             <div className="mt-4 rounded-md border bg-background/70 p-3">
               {signal.kind === "network" ? (
@@ -993,8 +1188,8 @@ function PreviewMotionSignal({
 function SignalStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-sm bg-muted/50 px-2 py-1.5">
-      <p className="truncate text-[10px] font-medium uppercase tracking-normal text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-xs font-medium leading-4">{value}</p>
+      <p className="auth-preview-caption truncate uppercase tracking-normal text-muted-foreground">{label}</p>
+      <p className="auth-preview-stat mt-0.5">{value}</p>
     </div>
   );
 }
@@ -1047,12 +1242,12 @@ function WorkflowSignalGraph({
           />
         ) : null}
       </svg>
-      <div className="grid grid-cols-4 gap-1 text-center text-[10px] font-medium text-muted-foreground">
+      <div className="auth-preview-caption grid grid-cols-4 gap-1 text-center text-muted-foreground">
         {stages.map((stage, index) => (
           <button
             aria-label={`Show ${stage} stage`}
             aria-pressed={index === activeIndex}
-            className={`auth-signal-stage-button min-w-0 truncate rounded-sm px-1 py-1 text-[10px] font-medium ${
+            className={`auth-preview-caption auth-signal-stage-button min-w-0 truncate rounded-sm px-1 py-1 ${
               index === activeIndex ? "auth-signal-stage-button-active" : ""
             }`}
             key={`${stage}:label`}
@@ -1123,7 +1318,7 @@ function NetworkSignalGraph({
           <button
             aria-label={`Show ${stage} stage`}
             aria-pressed={index === activeIndex}
-            className={`auth-signal-stage-button min-w-0 truncate rounded-sm px-1 py-1 text-[10px] font-medium ${
+            className={`auth-preview-caption auth-signal-stage-button min-w-0 truncate rounded-sm px-1 py-1 ${
               index === activeIndex ? "auth-signal-stage-button-active" : ""
             }`}
             key={`${stage}:network-label`}
@@ -1162,7 +1357,7 @@ function ControlSignalGraph({
             onClick={() => onStageSelect(index)}
             type="button"
           >
-            <span className="block truncate text-[11px] font-medium">{stage}</span>
+            <span className="auth-preview-caption block truncate">{stage}</span>
             <span className="mt-1 block h-1 rounded-full bg-current opacity-40" />
           </button>
         );
@@ -1185,7 +1380,7 @@ function SignalBars({ bars }: { bars: PreviewSignal["bars"] }) {
               }}
             />
           </div>
-          <p className="mt-1 truncate text-center text-[10px] font-medium text-muted-foreground">{bar.label}</p>
+          <p className="auth-preview-caption mt-1 truncate text-center text-muted-foreground">{bar.label}</p>
         </div>
       ))}
     </div>

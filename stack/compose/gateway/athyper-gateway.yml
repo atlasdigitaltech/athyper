@@ -34,6 +34,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=athyper-edge
       - traefik.http.services.athyper-outage-page.loadbalancer.server.port=8080
+      - traefik.http.services.athyper-maintenance-page.loadbalancer.server.port=8081
 
   gateway:
     image: traefik:v3.6.13

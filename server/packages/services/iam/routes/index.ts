@@ -40,10 +40,9 @@
  *   POST   /api/iam/delegations                          — create delegation (operator write)
  *   PATCH  /api/iam/delegations/:grantId/revoke          — revoke delegation (operator write)
  *   GET    /api/iam/mfa                                  — list caller's MFA methods (self-service)
- *   POST   /api/iam/mfa/totp/begin                       — begin TOTP enrollment (self-service)
- *   POST   /api/iam/mfa/totp/verify                      — complete TOTP enrollment (self-service)
+ *   POST   /api/iam/mfa/totp/begin                       — begin Keycloak CONFIGURE_TOTP AIA
  *   DELETE /api/iam/mfa/:methodId                        — remove MFA method (self-service, security_change step-up)
- *   POST   /api/iam/mfa/elevate                          — verify live MFA code + grant step-up elevation
+ *   POST   /api/iam/mfa/elevate                          — consume Keycloak MFA evidence + grant elevation
  *   POST   /api/iam/mfa/webauthn/start                   — begin WebAuthn enrollment via KC AIA (returns redirect_url)
  *   POST   /api/iam/mfa/sync                             — pull KC credentials → reconcile mfa_config mirror
  *   GET    /api/iam/trusted-devices                      — list caller's active trusted devices (self-service)
@@ -73,6 +72,7 @@ import { createMfaRoutes } from "./mfa.routes.js";
 import { createCcaRoutes } from "./company-code-access.routes.js";
 import { createIamAdminRoutes } from "./iam-admin.routes.js";
 import { createParameterRoutes } from "./parameter.routes.js";
+import { createIdentityProviderRoutes } from "./identity-provider.routes.js";
 
 export interface IamRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -109,7 +109,6 @@ export interface IamRoutesDeps {
    * e.g. KC at iam.athyper.local + app at neon.athyper.local → "athyper.local"
    * Reads from WEBAUTHN_RP_ID env var when not passed explicitly.
    */
-  webauthnRpId?: string;
 }
 
 export function registerIamRoutes(router: Router, deps: IamRoutesDeps): Router {
@@ -126,17 +125,17 @@ export function registerIamRoutes(router: Router, deps: IamRoutesDeps): Router {
   createLogoutRoutes(router, deps);
   createOperatorRoutes(router, deps);
 
-  // Phase 5: MFA self-service + step-up elevation (+ Phase 1.1 WebAuthn AIA + sync)
+  // Phase 5: Keycloak-owned MFA AIA, metadata sync and step-up evidence.
   createMfaRoutes(router, {
     ...deps,
     kc: deps.kc,
-    webauthnRpId: deps.webauthnRpId ?? process.env.WEBAUTHN_RP_ID,
   });
 
   // Sprint 43: Company-code access admin + permission log viewer + IdP sync health
   createCcaRoutes(router, deps);
   createIamAdminRoutes(router, deps);
   createParameterRoutes(router, deps);
+  createIdentityProviderRoutes(router, deps);
 
   return router;
 }

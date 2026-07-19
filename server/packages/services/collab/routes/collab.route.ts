@@ -279,16 +279,16 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         res.status(400).json({ error: "entityType and entityId are required" });
         return;
       }
-      if (!isUuid(entityId)) {
-        res.json({ ok: true, data: [], hasMore: false });
+      const { tenantId, xRealm } = await resolveTenant(req, res, db);
+      if (!tenantId) {
+        res.json({ ok: true, data: [], hasMore: false, count: 0, unreadCount: 0, config: { intents: [] } });
         return;
       }
 
-      const { tenantId, xRealm } = await resolveTenant(req, res, db);
-      if (!tenantId) {
-        res.json({ ok: true, data: [], hasMore: false });
-        return;
-      }
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub
+        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
+        : SYSTEM_PRINCIPAL_UUID;
 
       let query = db
         .selectFrom("master.comment as c")
@@ -321,29 +321,227 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       const hasMore = rows.length > limit;
       const pageRows = rows.slice(0, limit);
+      const rootIds = pageRows.map((row) => row.id as string);
 
-      // Bulk-count replies for each root comment in this page
-      let replyCounts: Record<string, number> = {};
-      if (pageRows.length > 0) {
-        const commentIds = pageRows.map((r) => r.id as string);
-        const rcResult = await sql<{ parent_comment_id: string; cnt: string }>`
-          SELECT parent_comment_id, COUNT(*)::text AS cnt
-          FROM master.comment
-          WHERE parent_comment_id = ANY(${sql.val(commentIds)}::uuid[])
-            AND deleted_at IS NULL
-          GROUP BY parent_comment_id
-        `.execute(db);
-        for (const r of rcResult.rows) {
-          replyCounts[r.parent_comment_id] = Number(r.cnt);
-        }
+      type CommentEnrichmentRow = Record<string, unknown>;
+      type CommentCountRow = { total_count: string; unread_count: string; last_read_at: string | Date | null };
+      type IntentRow = {
+        code: string;
+        name: string;
+        description: string | null;
+        sort_order: number;
+        metadata: Record<string, unknown> | null;
+        tenant_id: string | null;
+      };
+
+      // The initial Comments surface is deliberately assembled as one enriched
+      // response. Replies, counts and lookup configuration are resolved in bulk;
+      // the browser must not issue one request per rendered comment.
+      const [replyResult, countResult, intentResult] = await Promise.all([
+        rootIds.length > 0
+          ? sql<CommentEnrichmentRow>`
+              WITH RECURSIVE thread AS (
+                SELECT c.*, p.name AS commenter_name
+                FROM master.comment c
+                LEFT JOIN master.principal p ON p.id = c.commenter_id
+                WHERE c.tenant_id = ${tenantId}::uuid
+                  AND c.parent_comment_id = ANY(${sql.val(rootIds)}::uuid[])
+                  AND c.deleted_at IS NULL
+                UNION ALL
+                SELECT child.*, p.name AS commenter_name
+                FROM master.comment child
+                JOIN thread parent ON child.parent_comment_id = parent.id
+                LEFT JOIN master.principal p ON p.id = child.commenter_id
+                WHERE child.tenant_id = ${tenantId}::uuid
+                  AND child.deleted_at IS NULL
+                  AND child.thread_depth <= 5
+              )
+              SELECT * FROM thread ORDER BY created_at ASC
+            `.execute(db)
+          : Promise.resolve({ rows: [] as CommentEnrichmentRow[] }),
+        sql<CommentCountRow>`
+          WITH cursor AS (
+            SELECT last_read_at
+            FROM master.comment_feed_cursor
+            WHERE tenant_id = ${tenantId}::uuid
+              AND principal_id = ${principalId}::uuid
+              AND entity_type = ${entityType}
+              AND entity_id = ${entityId}
+            LIMIT 1
+          )
+          SELECT
+            COUNT(*) FILTER (WHERE c.parent_comment_id IS NULL)::text AS total_count,
+            COUNT(*) FILTER (
+              WHERE c.parent_comment_id IS NULL
+                AND c.commenter_id <> ${principalId}::uuid
+                AND ((SELECT last_read_at FROM cursor) IS NULL
+                  OR c.created_at > (SELECT last_read_at FROM cursor))
+            )::text AS unread_count,
+            (SELECT last_read_at FROM cursor) AS last_read_at
+          FROM master.comment c
+          WHERE c.tenant_id = ${tenantId}::uuid
+            AND c.entity_type = ${entityType}
+            AND c.entity_id = ${entityId}
+            AND c.deleted_at IS NULL
+        `.execute(db),
+        sql<IntentRow>`
+          SELECT code, name, description, sort_order, metadata, tenant_id
+          FROM control.lookup_value
+          WHERE domain_code = 'master.comment_intent'
+            AND status = 'active'
+            AND (tenant_id IS NULL OR tenant_id = ${tenantId}::uuid)
+          ORDER BY sort_order ASC, code ASC, tenant_id NULLS FIRST
+        `.execute(db),
+      ]);
+
+      const replyRows = replyResult.rows;
+      const allRows = [...pageRows, ...replyRows];
+      const allCommentIds = allRows.map((row) => row.id as string);
+
+      type AttachmentRow = {
+        comment_id: string;
+        attachment_id: string;
+        file_name: string;
+        content_type: string;
+        size_bytes: string | number;
+      };
+      type ReactionRow = {
+        comment_id: string;
+        reaction_type: string;
+        emoji: string | null;
+        cnt: string;
+        self_count: string;
+      };
+      const [attachmentResult, reactionResult] = await Promise.all([
+        allCommentIds.length > 0
+          ? sql<AttachmentRow>`
+              SELECT
+                edl.entity_id AS comment_id,
+                a.id AS attachment_id,
+                a.file_name,
+                a.content_type,
+                a.size_bytes
+              FROM master.entity_document_link edl
+              JOIN master.attachment a
+                ON a.id = edl.attachment_id
+               AND a.tenant_id = edl.tenant_id
+              WHERE edl.tenant_id = ${tenantId}::uuid
+                AND edl.entity_type = 'master.comment'
+                AND edl.entity_id = ANY(${sql.val(allCommentIds)}::uuid[])
+                AND a.status = 'active'
+              ORDER BY edl.display_order ASC, a.created_at ASC
+            `.execute(db)
+          : Promise.resolve({ rows: [] as AttachmentRow[] }),
+        allCommentIds.length > 0
+          ? sql<ReactionRow>`
+              SELECT
+                cr.comment_id,
+                cr.reaction_type,
+                COALESCE((
+                  SELECT lv.metadata ->> 'emoji'
+                  FROM control.lookup_value lv
+                  WHERE lv.domain_code = 'master.reaction_type'
+                    AND lv.code = cr.reaction_type
+                    AND lv.status = 'active'
+                    AND (lv.tenant_id IS NULL OR lv.tenant_id = ${tenantId}::uuid)
+                  ORDER BY (lv.tenant_id IS NOT NULL) DESC
+                  LIMIT 1
+                ), cr.reaction_type) AS emoji,
+                COUNT(*)::text AS cnt,
+                COUNT(*) FILTER (WHERE cr.principal_id = ${principalId}::uuid)::text AS self_count
+              FROM master.comment_reaction cr
+              WHERE cr.tenant_id = ${tenantId}::uuid
+                AND cr.comment_id = ANY(${sql.val(allCommentIds)}::uuid[])
+              GROUP BY cr.comment_id, cr.reaction_type
+              ORDER BY cr.comment_id, cnt DESC
+            `.execute(db)
+          : Promise.resolve({ rows: [] as ReactionRow[] }),
+      ]);
+
+      const attachmentsByComment = new Map<string, Array<Record<string, unknown>>>();
+      for (const row of attachmentResult.rows) {
+        const items = attachmentsByComment.get(row.comment_id) ?? [];
+        items.push({
+          attachmentId: row.attachment_id,
+          fileName: row.file_name,
+          contentType: row.content_type,
+          sizeBytes: Number(row.size_bytes ?? 0),
+          downloadUrl: `/api/collab/attachments/${row.attachment_id}/download`,
+        });
+        attachmentsByComment.set(row.comment_id, items);
       }
 
-      const data = pageRows.map((row) => ({
-        ...toComment(row),
-        replyCount: replyCounts[row.id as string] ?? 0,
-      }));
+      const reactionsByComment = new Map<string, Array<Record<string, unknown>>>();
+      for (const row of reactionResult.rows) {
+        const items = reactionsByComment.get(row.comment_id) ?? [];
+        items.push({
+          reactionType: row.reaction_type,
+          emoji: row.emoji ?? row.reaction_type,
+          count: Number(row.cnt),
+          reacted: Number(row.self_count) > 0,
+        });
+        reactionsByComment.set(row.comment_id, items);
+      }
 
-      res.json({ ok: true, data, hasMore });
+      const lastReadAt = countResult.rows[0]?.last_read_at
+        ? new Date(countResult.rows[0].last_read_at).getTime()
+        : null;
+      type EnrichedComment = ReturnType<typeof toComment> & {
+        isUnread: boolean;
+        attachments: Array<Record<string, unknown>>;
+        reactions: Array<Record<string, unknown>>;
+        replies: EnrichedComment[];
+      };
+      const byId = new Map<string, EnrichedComment>();
+      for (const row of allRows) {
+        const id = row.id as string;
+        const createdAt = new Date(String(row.created_at)).getTime();
+        byId.set(id, {
+          ...toComment(row),
+          isUnread: String(row.commenter_id ?? row.created_by) !== principalId
+            && (lastReadAt === null || createdAt > lastReadAt),
+          attachments: attachmentsByComment.get(id) ?? [],
+          reactions: reactionsByComment.get(id) ?? [],
+          replies: [],
+        } as EnrichedComment);
+      }
+      for (const row of replyRows) {
+        const parentId = row.parent_comment_id as string | null;
+        const child = byId.get(row.id as string);
+        const parent = parentId ? byId.get(parentId) : undefined;
+        if (child && parent) parent.replies.push(child);
+      }
+      for (const comment of byId.values()) {
+        comment.replyCount = comment.replies.length;
+      }
+
+      const intentByCode = new Map<string, IntentRow>();
+      for (const row of intentResult.rows) {
+        if (!intentByCode.has(row.code) || row.tenant_id !== null) intentByCode.set(row.code, row);
+      }
+      const config = {
+        intents: [...intentByCode.values()].map((row) => ({
+          code: row.code,
+          name: row.name,
+          description: row.description ?? undefined,
+          sortOrder: Number(row.sort_order ?? 0),
+          metadata: row.metadata ?? undefined,
+        })),
+      };
+      const countRow = countResult.rows[0];
+      const data = rootIds.flatMap((id) => {
+        const comment = byId.get(id);
+        return comment ? [comment] : [];
+      });
+
+      res.json({
+        ok: true,
+        data,
+        hasMore,
+        count: Number(countRow?.total_count ?? data.length),
+        unreadCount: Number(countRow?.unread_count ?? 0),
+        config,
+      });
     } catch (err) {
       logger?.error("collab_list_error", { err: String(err) });
       next(err);
@@ -361,7 +559,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const entityType = req.query["entityType"] as string | undefined;
       const entityId   = req.query["entityId"]   as string | undefined;
 
-      if (!entityType || !entityId || !isUuid(entityId)) {
+      if (!entityType || !entityId) {
         res.json({ ok: true, count: 0 });
         return;
       }
@@ -437,11 +635,6 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         res.status(400).json({ error: "entityType and entityId are required" });
         return;
       }
-      if (!isUuid(entityId)) {
-        res.json({ ok: true });
-        return;
-      }
-
       const { tenantId, xRealm } = await resolveTenant(req, res, db);
       if (!tenantId) {
         res.status(400).json({ error: "Could not resolve tenant" });
@@ -2098,4 +2291,3 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
   return router;
 }
-

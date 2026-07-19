@@ -1,25 +1,28 @@
-﻿<#-- =======================================================================
+<#-- =======================================================================
      Neon Keycloak Login Theme — login.ftl
      Split-panel layout matching the Neon app login page (60 / 40).
      Left  : Neon SVG logo + auto-advancing workspace marketing carousel.
      Right : Welcome back / Sign in to your account + auth form + pinned footer.
      ======================================================================= -->
+<#include "_iam-context.ftl">
+<#include "_identity-field.ftl">
+<#include "_greeting.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>${msg("loginTitle", realm.displayName)}</title>
-  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <title>${iamTitle(msg("loginTitle", realm.displayName))}</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
 </head>
 <body>
-<div class="kc-page">
+<div class="iam-shell kc-page" data-plane="${iamPlane}">
 
-  <!-- ── Left branding panel ── -->
+  <!-- -- Left branding panel -- -->
   <div class="kc-panel-left">
 
     <!-- Neon SVG wordmark — mirrors apps/web login page exactly.
@@ -96,7 +99,7 @@
 
   </div><!-- /.kc-panel-left -->
 
-  <!-- ── Right form panel ── -->
+  <!-- -- Right form panel -- -->
   <div class="kc-panel-right">
 
     <!-- Centered form area (flex-1 pushes footer to bottom) -->
@@ -105,18 +108,9 @@
 
         <#include "_neon-brand-mobile.ftl">
 
-        <#-- Username chip: shown when user already entered username -->
-        <#if auth?? && auth.attemptedUsername?has_content>
-        <div class="kc-username-chip">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-          <span>${auth.attemptedUsername}</span>
-          <a href="${url.loginRestartFlowUrl}" class="kc-chip-restart" data-kc-change-user title="Use another user ID">Change</a>
-        </div>
-        </#if>
-
         <!-- Header -->
         <div class="kc-header">
-          <h2>Welcome back</h2>
+          <@iamGreeting verifiedName=(iamPresentationDisplayName!'') />
           <p>Sign in to your account</p>
         </div>
 
@@ -131,8 +125,10 @@
         <#if realm.password>
         <form class="kc-form" action="${url.loginAction}" method="post">
 
-          <#-- Hide username when already entered (username-first or post-org-selection) -->
-          <#if !(auth?? && auth.attemptedUsername?has_content)>
+          <#-- Keep one labelled identity row in both editable and locked modes. -->
+          <#if auth?? && auth.attemptedUsername?has_content>
+            <@iamLockedIdentity username=auth.attemptedUsername />
+          <#else>
           <#if !usernameEditDisabled?? || !usernameEditDisabled>
           <div class="kc-field">
             <#if !realm.loginWithEmailAllowed>

@@ -625,6 +625,50 @@ DO $$ BEGIN ALTER TABLE document.journal_entry ADD CONSTRAINT je_reversed_by_fk
     ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
 
+DO $$ BEGIN ALTER TABLE document.journal_entry ADD CONSTRAINT je_derived_from_fk
+    FOREIGN KEY (tenant_id, derived_from_je_id)
+    REFERENCES document.journal_entry (tenant_id, id)
+    ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+DO $$ BEGIN ALTER TABLE document.journal_entry ADD CONSTRAINT je_posting_rule_fk
+    FOREIGN KEY (tenant_id, posting_rule_id)
+    REFERENCES control.book_posting_rule (tenant_id, id)
+    ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+DO $$ BEGIN ALTER TABLE document.book_posting_derivation ADD CONSTRAINT bpd_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+DO $$ BEGIN ALTER TABLE document.book_posting_derivation ADD CONSTRAINT bpd_company_fk
+    FOREIGN KEY (tenant_id, company_code_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+DO $$ BEGIN ALTER TABLE document.book_posting_derivation ADD CONSTRAINT bpd_source_journal_fk
+    FOREIGN KEY (tenant_id, source_journal_id)
+    REFERENCES document.journal_entry (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+DO $$ BEGIN ALTER TABLE document.book_posting_derivation ADD CONSTRAINT bpd_target_journal_fk
+    FOREIGN KEY (tenant_id, target_journal_id)
+    REFERENCES document.journal_entry (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+DO $$ BEGIN ALTER TABLE document.book_posting_derivation ADD CONSTRAINT bpd_posting_rule_fk
+    FOREIGN KEY (tenant_id, posting_rule_id)
+    REFERENCES control.book_posting_rule (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+DO $$ BEGIN ALTER TABLE document.book_posting_derivation ADD CONSTRAINT bpd_created_by_fk
+    FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
+DO $$ BEGIN ALTER TABLE document.book_posting_derivation ADD CONSTRAINT bpd_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END; $$;
+
 
 -- ============================================================================
 -- Seed Gift Prototype (ATHQ-only) FKs + scope guard

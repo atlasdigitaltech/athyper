@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Clock, Lock, MessageSquare, Paperclip, type LucideIcon } from "lucide-react";
 import { formatBytes } from "@athyper/runtime-shared/core";
+import { DrawerHeaderTitle } from "@athyper/ui";
 import { DrawerPeekShell } from "@athyper/ui/surfaces/shells";
 
 const PANEL_META: Record<string, { label: string; Icon: LucideIcon }> = {
@@ -130,17 +131,7 @@ function panelTitle(activePanel: string | null, count: number | null | undefined
   const label = meta?.label ?? activePanel;
   const Icon = meta?.Icon;
 
-  return (
-    <span className="flex min-w-0 items-center gap-2">
-      {Icon && <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />}
-      <span className="truncate">{label}</span>
-      {count && count > 0 && (
-        <span className="inline-flex h-5 shrink-0 items-center rounded-full border border-border/60 bg-muted px-1.5 text-xs font-medium leading-none text-muted-foreground tabular-nums">
-          {count}
-        </span>
-      )}
-    </span>
-  );
+  return <DrawerHeaderTitle title={label} icon={Icon} count={count} />;
 }
 
 export function EntityContextDrawer({
@@ -165,7 +156,7 @@ export function EntityContextDrawer({
       open={open}
       onOpenChange={onOpenChange}
       widthKey={activePanel ? `${widthScope}:${entity.entity_code}:${activePanel}` : undefined}
-      defaultWidth="60vw"
+      defaultWidth="80vw"
       minWidth="30vw"
       expandedWidth="80vw"
       maxWidth="85vw"

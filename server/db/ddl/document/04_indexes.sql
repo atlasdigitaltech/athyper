@@ -733,6 +733,18 @@ CREATE INDEX IF NOT EXISTS seed_gift_created_idx
 CREATE INDEX IF NOT EXISTS seed_gift_recipient_idx
     ON document.seed_gift (tenant_id, lower(recipient_email))
     WHERE recipient_email IS NOT NULL;
+
+-- Cross-book posting monitoring and source/target trace.
+CREATE INDEX IF NOT EXISTS bpd_source_idx
+    ON document.book_posting_derivation (tenant_id, source_journal_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS bpd_target_idx
+    ON document.book_posting_derivation (tenant_id, target_journal_id)
+    WHERE target_journal_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS bpd_failure_idx
+    ON document.book_posting_derivation (tenant_id, company_code_id, last_attempt_at DESC)
+    WHERE status = 'failed';
+CREATE INDEX IF NOT EXISTS bpd_rule_status_idx
+    ON document.book_posting_derivation (tenant_id, posting_rule_id, status);
 CREATE INDEX IF NOT EXISTS seed_gift_source_ref_idx
     ON document.seed_gift (tenant_id, source_ref)
     WHERE source_ref IS NOT NULL;

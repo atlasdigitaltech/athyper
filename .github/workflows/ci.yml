@@ -431,6 +431,9 @@ jobs:
       - name: Run system seed (phase 2)
         run: pnpm --filter @athyper/db run db:setup:system
 
+      - name: Verify metadata semantic fallback coverage
+        run: pnpm --dir server run metadata:semantic-fallbacks:audit
+
       - name: Create athyperapp_test role (LOGIN, NOBYPASSRLS)
         env:
           PGPASSWORD: athyperadmin

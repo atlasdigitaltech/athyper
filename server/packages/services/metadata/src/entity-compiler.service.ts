@@ -28,6 +28,12 @@ import {
 } from "./metadata-graph-validator.js";
 import { createCanonicalGraphLoader } from "./canonical-metadata-graph.js";
 import { evaluateExecutionEligibility } from "./execution-eligibility.js";
+import { buildMetaEntityContractV2 } from "./meta-entity-contract-v2.js";
+import type { MetaEntityContractV2 } from "@athyper/api-contracts/meta-entity-contract-v2";
+import {
+  resolveEntityListCachePolicy,
+  type EntityListCachePolicy,
+} from "@athyper/api-contracts/entity-cache-policy";
 import { normalizeEntityFeatureFlags, normalizeEntityListFeatures } from "@athyper/api-contracts/metadata-normalizers";
 import {
   applyTenantCatalogOverlay,
@@ -37,6 +43,7 @@ import {
 
 export interface CompiledField {
   id: string;
+  entity_version_id: string;
   name: string;
   column_name: string;
   projection_alias_of: string | null;
@@ -80,6 +87,8 @@ export interface CompiledField {
   /** control.entity_field.defaults JSONB (cascade + on_source_change). */
   defaults: Record<string, unknown> | null;
   i18n_key: string | null;
+  semantic_roles: string[];
+  type_config: Record<string, unknown>;
 }
 
 export interface CompiledEntity {
@@ -113,6 +122,7 @@ export interface CompiledEntity {
     fields: string[];
   }>;
   relations: Array<Record<string, unknown>>;
+  cache_policy: EntityListCachePolicy;
   display_config: Record<string, unknown>;
   identity_config: Record<string, unknown>;
   search_config: Record<string, unknown>;
@@ -135,6 +145,8 @@ export interface CompiledEntity {
   execution_descriptor: SerializedExecutionDescriptorV1;
   /** Explicit optional-feature degradation report; errors abort activation. */
   execution_diagnostics: ExecutionDescriptorDiagnostic[];
+  /** Canonical v2 graph. Legacy response properties above are derived only. */
+  contract_v2?: MetaEntityContractV2;
 }
 
 export interface CompiledDocumentRuntimePlan {
@@ -195,11 +207,15 @@ export function summarizeMetadataDiagnostics(
 interface EntityRow {
   id: string;
   name: string;
+  module_id: string;
+  module_code: string | null;
   slug: string | null;
   entity_code: string;
   label_singular: string | null;
   label_plural: string | null;
+  description: string | null;
   entity_class: string;
+  ownership_model: "system" | "tenant" | "package" | "overlay";
   create_mode: string | null;
   draft_ttl_hours: number | null;
   numbering_strategy: string | null;
@@ -222,6 +238,9 @@ interface EntityRow {
   mutability: string;
   icon_key: string | null;
   color_token: string | null;
+  plane_eligibility: string[];
+  status: "DRAFT" | "ACTIVE" | "DEPRECATED" | "RETIRED";
+  is_active: boolean;
 }
 
 interface EntityVersionRow {
@@ -232,6 +251,7 @@ interface EntityVersionRow {
 
 interface EntityFieldRow {
   id: string;
+  entity_version_id: string;
   name: string;
   column_name: string;
   projection_alias_of: string | null;
@@ -271,6 +291,37 @@ interface EntityFieldRow {
   lookup_config: unknown | null;
   /** control.entity_field.defaults JSONB (parent-row cascade + on_source_change). */
   defaults: unknown | null;
+  semantic_roles?: unknown;
+  type_config?: unknown;
+}
+
+interface EntityVersionContractV2Row {
+  id: string;
+  tenant_id: string | null;
+  entity_version_id: string;
+  runtime_enabled: boolean;
+  api_exposure: string;
+  backing_type: string;
+  table_schema: string;
+  table_name: string;
+  primary_key: string | null;
+  tenant_column: string | null;
+  read_capability: string;
+  write_capability: string;
+  create_mode: string;
+  draft_ttl_hours: number | null;
+  governance_level: string;
+  security_tier: string;
+  mutability: string;
+  read_handler: string | null;
+  write_handler: string | null;
+  source_kind: string;
+  contract_hash: string | null;
+  identity_config: unknown;
+  search_config: unknown;
+  data_policy: unknown;
+  concurrency_config: unknown;
+  storage_config: unknown;
 }
 
 interface ClassProfileRow {
@@ -286,6 +337,7 @@ interface ClassProfileRow {
   field_flag_rules: unknown;
   security_tiers: unknown;
   compliance_profile: unknown;
+  cache_policy: unknown;
 }
 
 interface Logger {
@@ -407,6 +459,12 @@ function textConfig(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+}
+
 function booleanConfig(value: unknown): boolean | undefined {
   if (typeof value === "boolean") return value;
   if (typeof value === "number") return value !== 0;
@@ -456,7 +514,7 @@ export function hasCompiledDocumentItems(input: {
   featureFlags: Record<string, unknown>;
 }): boolean {
   if (booleanConfig(input.featureFlags["has_lines"]) !== true) return false;
-  const configuredLineEntity = textConfig(input.displayConfig["line_entity_code"]);
+  const configuredLineEntity = resolveCompiledLineEntityCode(input);
   return input.relations.some((relation) => {
     if (textConfig(relation["relation_kind"])?.toLowerCase() !== "has_many") return false;
     const name = textConfig(relation["name"])?.toLowerCase();
@@ -470,6 +528,32 @@ export function hasCompiledDocumentItems(input: {
       || surface === "line_items"
       || (!!configuredLineEntity && targetEntity === configuredLineEntity);
   });
+}
+
+/**
+ * Resolve the legacy line_entity_code projection from the canonical relation
+ * graph. The v2 contract owns the relation; this value exists only so older
+ * compiled-entity consumers do not report a false missing-lines diagnostic.
+ */
+export function resolveCompiledLineEntityCode(input: {
+  relations: Array<Record<string, unknown>>;
+  displayConfig: Record<string, unknown>;
+  featureFlags: Record<string, unknown>;
+}): string | undefined {
+  const configured = textConfig(input.displayConfig["line_entity_code"]);
+  if (configured) return configured;
+  if (booleanConfig(input.featureFlags["has_lines"]) !== true) return undefined;
+
+  const relation = input.relations.find((candidate) => {
+    if (textConfig(candidate["relation_kind"])?.toLowerCase() !== "has_many") return false;
+    const name = textConfig(candidate["name"])?.toLowerCase();
+    const uiBehavior = coerceRecord(candidate["ui_behavior"]);
+    const surface = textConfig(uiBehavior?.["surface"] ?? uiBehavior?.["surface_kind"])
+      ?.toLowerCase()
+      .replace(/[\s-]+/g, "_");
+    return name === "lines" || surface === "lines_tab" || surface === "line_items";
+  });
+  return relation ? textConfig(relation["target_entity"]) : undefined;
 }
 
 function normalizeDetailProfile(raw: Record<string, unknown>): "simple" | "rich" | "read-only" | undefined {
@@ -765,6 +849,7 @@ function mapField(
 
   return {
     id: row.id,
+    entity_version_id: row.entity_version_id,
     name: row.name,
     column_name: row.column_name,
     projection_alias_of: row.projection_alias_of ?? null,
@@ -805,7 +890,149 @@ function mapField(
     filter_config: coerceRecord(row.filter_config) ?? coerceRecord(rawUiHint?.["filter"]),
     defaults: coerceRecord(row.defaults),
     i18n_key: stringValue(rawUiHint?.["i18n_key"]),
+    semantic_roles: Array.isArray((row as EntityFieldRow & { semantic_roles?: unknown }).semantic_roles)
+      ? ((row as EntityFieldRow & { semantic_roles?: unknown }).semantic_roles as unknown[]).filter((v): v is string => typeof v === "string")
+      : [],
+    type_config: coerceRecord((row as EntityFieldRow & { type_config?: unknown }).type_config) ?? { kind: "scalar" },
   };
+}
+
+function canonicalIdentityConfig(
+  raw: Record<string, unknown>,
+  fields: ReadonlyArray<CompiledField> = [],
+  relations: ReadonlyArray<Record<string, unknown>> = [],
+): MetaEntityContractV2["version_contract"]["identity_config"] {
+  const display = coerceRecord(raw["display_identity"]) ?? {};
+  const duplicate = coerceRecord(raw["duplicate_check"]) ?? {};
+  const replacement = textConfig(raw["replacement_for"] ?? raw["replacement"]);
+  const fieldNames = new Set(fields.map((field) => field.name));
+  const primaryKey = textConfig(raw["primary_key_field"] ?? raw["primary_key"]);
+  const validFields = (value: unknown): string[] => stringArray(value).filter((field) => fieldNames.has(field));
+  const requestedTitle = textConfig(display["title_field"] ?? raw["title_field"]);
+  const titleField = requestedTitle && fieldNames.has(requestedTitle)
+    ? requestedTitle
+    : fieldNames.has("name") ? "name" : primaryKey && fieldNames.has(primaryKey) ? primaryKey : "id";
+  const relationCodes = new Set(relations.map((relation) => canonicalCode(relation["relation_code"] ?? relation["name"], "relation")));
+  const requestedParent = textConfig(raw["parent_entity"])
+    ?? textConfig(coerceRecord(raw["parent"])?.["relation"]);
+  const parentRelation = requestedParent && relationCodes.has(canonicalCode(requestedParent, "relation"))
+    ? canonicalCode(requestedParent, "relation")
+    : null;
+  const requestedSubtitle = textConfig(display["subtitle_field"] ?? raw["subtitle_field"]);
+  return {
+    primary_key_field: primaryKey && fieldNames.has(primaryKey) ? primaryKey : "id",
+    business_key_fields: validFields(raw["business_key_fields"]),
+    natural_key_fields: validFields(raw["natural_key_fields"]),
+    display_identity: {
+      title_field: titleField,
+      subtitle_field: requestedSubtitle && fieldNames.has(requestedSubtitle) ? requestedSubtitle : null,
+    },
+    parent: parentRelation ? { relation: parentRelation } : null,
+    identity_via: textConfig(raw["identity_via"]) ?? null,
+    list_entity_code: textConfig(raw["list_entity_code"]) ?? null,
+    duplicate_check: {
+      enabled: duplicate["enabled"] === true,
+      fields: validFields(duplicate["fields"]),
+      scope: ["company", "global"].includes(String(duplicate["scope"])) ? duplicate["scope"] as "company" | "global" : "tenant",
+    },
+    replacement: replacement ? { entity_code: replacement } : null,
+  };
+}
+
+function canonicalSearchConfig(
+  raw: Record<string, unknown>,
+  fields: ReadonlyArray<CompiledField>,
+): MetaEntityContractV2["version_contract"]["search_config"] {
+  const fieldNames = new Set(fields.map((field) => field.name));
+  const rawFields = Array.isArray(raw["fields"]) ? raw["fields"] : [];
+  const configured = rawFields.map((field) => {
+    if (typeof field === "string") return { field, weight: 1 };
+    const item = coerceRecord(field);
+    return item && typeof item["field"] === "string"
+      ? { field: item["field"], weight: Number(item["weight"] ?? 1) }
+      : null;
+  }).filter((field): field is { field: string; weight: number } => field !== null && fieldNames.has(field.field));
+  const fallback = fields.filter((field) => field.is_searchable).map((field) => ({ field: field.name, weight: 1 }));
+  return {
+    enabled: raw["enabled"] !== false,
+    mode: ["client", "both"].includes(String(raw["mode"])) ? raw["mode"] as "client" | "both" : "server",
+    fields: [...new Map((configured.length > 0 ? configured : fallback).map((field) => [field.field, {
+      field: field.field,
+      weight: Math.max(1, Math.min(100, Math.round(field.weight))),
+    }])).values()],
+    minimum_query_length: Number(raw["minimum_query_length"] ?? 2),
+    operator: ["prefix", "exact"].includes(String(raw["operator"])) ? raw["operator"] as "prefix" | "exact" : "contains",
+  };
+}
+
+function canonicalDataPolicy(
+  raw: Record<string, unknown>,
+  fields: ReadonlyArray<CompiledField>,
+): MetaEntityContractV2["version_contract"]["data_policy"] {
+  const retention = coerceRecord(raw["retention"]) ?? {};
+  const deletion = coerceRecord(raw["deletion"]) ?? {};
+  const configuredPii = Array.isArray(raw["pii_fields"])
+    ? raw["pii_fields"].filter((field): field is string => typeof field === "string")
+    : [];
+  const fieldNames = new Set(fields.map((field) => field.name));
+  return {
+    classification: ["public", "confidential", "restricted"].includes(String(raw["classification"]))
+      ? raw["classification"] as "public" | "confidential" | "restricted" : "internal",
+    retention: {
+      days: retention["days"] == null ? null : Number(retention["days"]),
+      legal_hold_eligible: retention["legal_hold_eligible"] === true,
+    },
+    deletion: { anonymize: deletion["anonymize"] === true },
+    pii_fields: (configuredPii.length > 0 ? configuredPii : fields.filter((field) => field.is_pii).map((field) => field.name))
+      .filter((field) => fieldNames.has(field)),
+  };
+}
+
+function canonicalConcurrencyConfig(
+  raw: Record<string, unknown>,
+  fields: ReadonlyArray<CompiledField> = [],
+): MetaEntityContractV2["version_contract"]["concurrency_config"] {
+  const configuredRowVersion = textConfig(raw["row_version_field"] ?? raw["rowVersionField"]);
+  const rowVersionField = configuredRowVersion
+    ? fields.find((field) => field.name === configuredRowVersion || field.column_name === configuredRowVersion)?.name ?? null
+    : null;
+  return {
+    strategy: ["version", "lease_plus_version"].includes(String(raw["strategy"])) ? raw["strategy"] as "version" | "lease_plus_version" : "none",
+    rollout: ["optional", "enforced"].includes(String(raw["rollout"])) ? raw["rollout"] as "optional" | "enforced" : "observe",
+    row_version_field: rowVersionField,
+    lock_required: raw["lock_required"] === true,
+  };
+}
+
+function canonicalStorageConfig(raw: Record<string, unknown>): MetaEntityContractV2["version_contract"]["storage_config"] {
+  const discriminator = coerceRecord(raw["discriminator"]);
+  const partition = coerceRecord(raw["partition"]);
+  const external = coerceRecord(raw["external_source"] ?? raw["externalSource"]);
+  const indexes = Array.isArray(raw["indexes"]) ? raw["indexes"].map((item) => {
+    const index = coerceRecord(item);
+    if (!index || typeof index["name"] !== "string" || !Array.isArray(index["columns"])) return null;
+    return {
+      name: index["name"],
+      columns: index["columns"].filter((value): value is string => typeof value === "string"),
+      unique: index["unique"] === true || index["is_unique"] === true,
+      method: ["gin", "gist", "hash"].includes(String(index["method"])) ? index["method"] as "gin" | "gist" | "hash" : "btree",
+      where: textConfig(index["where"] ?? index["where_clause"]),
+    };
+  }).filter((item): item is NonNullable<typeof item> => item !== null) : [];
+  return {
+    discriminator: discriminator && textConfig(discriminator["column"]) && textConfig(discriminator["value"])
+      ? { column: textConfig(discriminator["column"])!, value: textConfig(discriminator["value"])! } : null,
+    partition: partition && textConfig(partition["parent_entity"]) && textConfig(partition["key"])
+      ? { parent_entity: textConfig(partition["parent_entity"])!, key: textConfig(partition["key"])! } : null,
+    external_source: external && textConfig(external["provider"]) && textConfig(external["resource"])
+      ? { provider: textConfig(external["provider"])!, resource: textConfig(external["resource"])!, read_handler: textConfig(external["read_handler"]) ?? null } : null,
+    indexes: indexes as MetaEntityContractV2["version_contract"]["storage_config"]["indexes"],
+  };
+}
+
+function canonicalCode(value: unknown, fallback: string): string {
+  const normalized = String(value ?? fallback).toLowerCase().replace(/[^a-z0-9_]+/g, "_").replace(/^([^a-z_])/, "_$1");
+  return /^[a-z_][a-z0-9_]*$/.test(normalized) ? normalized : fallback;
 }
 
 export class EntityCompilerService {
@@ -1105,11 +1332,22 @@ export class EntityCompilerService {
       .select([
         "e.id",
         "e.name",
+        "e.module_id",
+        sql<string | null>`(
+          SELECT m.code
+            FROM shared.module AS m
+           WHERE m.id::text = e.module_id
+              OR lower(m.code) = lower(e.module_id)
+           ORDER BY CASE WHEN m.id::text = e.module_id THEN 0 ELSE 1 END
+           LIMIT 1
+        )`.as("module_code"),
         "e.slug",
         "e.entity_code",
         "e.label_singular",
         "e.label_plural",
+        "e.description",
         "e.entity_class",
+        "e.ownership_model",
         "e.create_mode",
         "e.draft_ttl_hours",
         "e.numbering_strategy",
@@ -1132,6 +1370,9 @@ export class EntityCompilerService {
         "e.mutability",
         "e.icon_key",
         "e.color_token",
+        "e.plane_eligibility",
+        "e.status",
+        "e.is_active",
       ] as never[])
       .where((eb: any) => eb.or([
         eb("e.name", "=", entityCode),
@@ -1160,6 +1401,8 @@ export class EntityCompilerService {
 
     if (!versionRow) return null;
 
+    const versionContract = await this.loadVersionContractV2(versionRow.id);
+
     const fieldRows = await this.db
       .selectFrom("control.entity_field as ef" as never)
       .selectAll("ef" as never)
@@ -1175,19 +1418,50 @@ export class EntityCompilerService {
     const fields = fieldRows.map((row) => mapField(row, referencePickerProfiles));
     const fieldGroups = await this.loadFieldGroups(entityRow.entity_class, fieldRows);
     const relations = await this.loadRelations(versionRow.id);
+    const surfaces = await this.loadContractSurfaces(versionRow.id, entityRow.id);
+    const contractOperations = await this.loadContractOperations(versionRow.id, entityRow.entity_code ?? entityRow.name);
+    const numbering = await this.loadContractNumbering(entityRow.id, fields);
+    const contractLifecycle = await this.loadContractLifecycle([entityRow.entity_code ?? entityRow.name, entityRow.name], fields);
+    const contractFlows = await this.loadContractFlows(
+      versionRow.id,
+      contractOperations.map((operation) => operation.operation_code),
+    );
     const displayConfig = normalizeDisplayConfig(
       coerceRecord(entityRow.display_config) ?? {},
       entityRow.icon_key,
       entityRow.color_token,
     );
     const identityConfig = {
-      ...(coerceRecord(entityRow.identity_config) ?? {}),
+      ...(coerceRecord(versionContract?.identity_config) ?? coerceRecord(entityRow.identity_config) ?? {}),
       primary_key: entityRow.primary_key,
       tenant_column: entityRow.tenant_column,
     };
-    const searchConfig = coerceRecord(entityRow.search_config) ?? {};
-    const dataPolicy = coerceRecord(entityRow.data_policy) ?? {};
+    const searchConfig = coerceRecord(versionContract?.search_config) ?? coerceRecord(entityRow.search_config) ?? {};
+    const dataPolicy = coerceRecord(versionContract?.data_policy) ?? coerceRecord(entityRow.data_policy) ?? {};
+    const effectiveMutability = versionContract?.mutability ?? entityRow.mutability;
+    const cachePolicy = resolveEntityListCachePolicy({
+      entityPolicy: coerceRecord(displayConfig["list_cache"] ?? displayConfig["listCache"]) ?? {},
+      entityClassPolicy: coerceRecord(classProfile?.["cache_policy"]) ?? {},
+      dataClassification: textConfig(dataPolicy["classification"]) ?? null,
+      mutable: !["locked", "immutable"].includes(effectiveMutability.trim().toLowerCase()),
+    });
+    const piiFields = new Set(stringArray(dataPolicy["pii_fields"]));
+    for (const field of fields) {
+      // PII is owned by data_policy. The legacy field flag is populated only
+      // as a derived compatibility projection for existing clients.
+      field.is_pii = piiFields.has(field.name);
+      if (field.semantic_roles.includes("money.primary_amount")) field.is_primary_amount = true;
+      if (field.semantic_roles.includes("money.currency")) field.is_primary_currency = true;
+    }
     const featureFlags = normalizeEntityFeatureFlags(coerceRecord(entityRow.feature_flags) ?? {});
+    const derivedLineEntityCode = resolveCompiledLineEntityCode({
+      relations,
+      displayConfig,
+      featureFlags,
+    });
+    if (!textConfig(displayConfig["line_entity_code"]) && derivedLineEntityCode) {
+      displayConfig["line_entity_code"] = derivedLineEntityCode;
+    }
     const versionHash = versionRow.version_hash ?? sha256(`${entityRow.id}:v${versionRow.version_no}`);
     const renderer = resolveCompiledEntityRenderer({
       entityClass: entityRow.entity_class,
@@ -1241,6 +1515,80 @@ export class EntityCompilerService {
       handlerManifest: this.handlerManifest,
     });
 
+    const contractV2 = buildMetaEntityContractV2({
+      catalog: {
+        id: entityRow.id,
+        tenant_id: null,
+        module_id: canonicalCode(entityRow.module_code ?? entityRow.module_id, "platform"),
+        entity_code: entityRow.entity_code,
+        slug: entityRow.slug ?? entityRow.entity_code.replace(/_/g, "-"),
+        entity_class: entityRow.entity_class,
+        ownership_model: entityRow.ownership_model,
+        label_singular: entityRow.label_singular ?? entityRow.name,
+        label_plural: entityRow.label_plural ?? `${entityRow.label_singular ?? entityRow.name}s`,
+        description: entityRow.description,
+        icon_key: entityRow.icon_key,
+        color_token: entityRow.color_token,
+        plane_eligibility: entityRow.plane_eligibility.filter((plane): plane is "neon" | "admin" | "mesh" => plane === "neon" || plane === "admin" || plane === "mesh"),
+        status: entityRow.status,
+        is_active: entityRow.is_active,
+      },
+      version_contract: {
+        id: versionContract?.id ?? versionRow.id,
+        tenant_id: versionContract?.tenant_id ?? null,
+        entity_version_id: versionRow.id,
+        runtime_enabled: versionContract?.runtime_enabled ?? entityRow.runtime_enabled,
+        api_exposure: (versionContract?.api_exposure ?? (entityRow.runtime_enabled ? "API" : "CATALOG_ONLY")) as "NONE" | "CATALOG_ONLY" | "API",
+        backing_type: (versionContract?.backing_type ?? entityRow.backing_type) as "table" | "view" | "materialized_view" | "external" | "virtual",
+        table_schema: versionContract?.table_schema ?? entityRow.table_schema,
+        table_name: versionContract?.table_name ?? entityRow.table_name,
+        primary_key: versionContract?.primary_key ?? entityRow.primary_key ?? "id",
+        tenant_column: versionContract?.tenant_column ?? entityRow.tenant_column,
+        read_capability: (versionContract?.read_capability ?? entityRow.read_capability) as "none" | "generic" | "facade" | "projection",
+        write_capability: (versionContract?.write_capability ?? entityRow.write_capability) as "none" | "generic" | "facade" | "append_only",
+        create_mode: (versionContract?.create_mode ?? entityRow.create_mode ?? "FORM_ONLY") as "FORM_ONLY" | "EARLY_DRAFT" | "DIRECT_CREATE" | "SOURCE_DOCUMENT_CREATE",
+        draft_ttl_hours: versionContract?.draft_ttl_hours ?? entityRow.draft_ttl_hours ?? null,
+        governance_level: versionContract?.governance_level ?? entityRow.governance_level,
+        security_tier: versionContract?.security_tier ?? entityRow.security_tier,
+        mutability: versionContract?.mutability ?? entityRow.mutability,
+        read_handler: versionContract?.read_handler ?? null,
+        write_handler: versionContract?.write_handler ?? null,
+        source_kind: (versionContract?.source_kind ?? "derived") as "explicit" | "derived" | "overlay",
+        contract_hash: versionContract?.contract_hash ?? null,
+        identity_config: canonicalIdentityConfig(identityConfig, fields, relations),
+        search_config: canonicalSearchConfig(searchConfig, fields),
+        data_policy: canonicalDataPolicy(dataPolicy, fields),
+        concurrency_config: canonicalConcurrencyConfig(
+          coerceRecord(versionContract?.concurrency_config) ?? coerceRecord(entityRow.concurrency_policy) ?? {},
+          fields,
+        ),
+        storage_config: canonicalStorageConfig(
+          coerceRecord(versionContract?.storage_config) ?? {
+            discriminator: null,
+            partition: null,
+            external_source: null,
+            indexes: [],
+          },
+        ),
+      },
+      fields: fields as unknown as ReadonlyArray<Record<string, unknown>>,
+      relations,
+      surfaces,
+      operations: contractOperations,
+      lifecycle: contractLifecycle,
+      numbering,
+      policy: {
+        access_mode: "default_deny",
+        company_scope_mode: "none",
+        audit_mode: "enabled",
+        retention_policy: {},
+        default_filters: {},
+        cache_flags: {},
+        cache_policy: cachePolicy,
+      },
+      flows: contractFlows,
+    });
+
     const payloadWithoutHash = {
       entity_id: entityRow.id,
       entity_code: entityRow.entity_code ?? entityRow.name,
@@ -1265,11 +1613,13 @@ export class EntityCompilerService {
       fields,
       field_groups: fieldGroups,
       relations,
+      cache_policy: cachePolicy,
       display_config: displayConfig,
       identity_config: identityConfig,
       search_config: searchConfig,
       data_policy: dataPolicy,
       feature_flags: featureFlags,
+      contract_v2: contractV2,
       governance_level: entityRow.governance_level,
       security_tier: entityRow.security_tier,
       mutability: entityRow.mutability,
@@ -1295,11 +1645,330 @@ export class EntityCompilerService {
     };
   }
 
+  private async loadVersionContractV2(versionId: string): Promise<EntityVersionContractV2Row | null> {
+    const row = await this.db
+      .selectFrom("control.entity_version_contract as evc" as never)
+      .select([
+        "evc.id", "evc.tenant_id", "evc.entity_version_id", "evc.runtime_enabled",
+        "evc.api_exposure", "evc.backing_type", "evc.table_schema", "evc.table_name",
+        "evc.primary_key", "evc.tenant_column", "evc.read_capability", "evc.write_capability",
+        "evc.create_mode", "evc.draft_ttl_hours", "evc.governance_level", "evc.security_tier",
+        "evc.mutability", "evc.read_handler", "evc.write_handler", "evc.source_kind",
+        "evc.contract_hash", "evc.identity_config", "evc.search_config", "evc.data_policy",
+        "evc.concurrency_config", "evc.storage_config",
+      ] as never[])
+      .where("evc.entity_version_id" as never, "=" as never, versionId as never)
+      .where("evc.tenant_id" as never, "is" as never, null as never)
+      .executeTakeFirst() as EntityVersionContractV2Row | undefined;
+    return row ?? null;
+  }
+
+  private async loadContractSurfaces(versionId: string, entityId: string): Promise<MetaEntityContractV2["surfaces"]> {
+    const surfaceRows = await (this.db as any)
+      .selectFrom("control.entity_surface as es")
+      .select([
+        sql<string>`es.id::text`.as("id"), sql<string>`es.tenant_id::text`.as("tenant_id"),
+        sql<string>`COALESCE(es.entity_version_id, ${versionId}::uuid)::text`.as("entity_version_id"),
+        "es.surface_key", "es.mode", "es.v2_mode", "es.kind", "es.v2_kind", "es.renderer_key",
+        "es.label", "es.is_enabled", "es.config",
+      ] as never[])
+      .where("es.entity_id", "=", entityId)
+      .where("es.tenant_id", "is", null)
+      .where((eb: any) => eb.or([
+        eb("es.entity_version_id", "=", versionId),
+        eb("es.entity_version_id", "is", null),
+      ]))
+      .orderBy("es.sort_order", "asc")
+      .execute() as Array<Record<string, unknown>>;
+    if (surfaceRows.length === 0) return [];
+
+    const surfaceIds = surfaceRows.map((row) => row["id"] as string);
+    const fieldRows = await (this.db as any)
+      .selectFrom("control.entity_field_surface as efs")
+      .select([
+        sql<string>`efs.id::text`.as("id"), sql<string>`efs.tenant_id::text`.as("tenant_id"),
+        sql<string>`efs.entity_surface_id::text`.as("entity_surface_id"), sql<string>`efs.entity_field_id::text`.as("entity_field_id"),
+        "efs.visible_override", "efs.required_override", "efs.readonly_override", "efs.sort_order",
+        "efs.column_span", "efs.density", "efs.renderer_key", "efs.editor_key", "efs.visibility_expr",
+        "efs.editability_expr", "efs.renderer_config",
+      ] as never[])
+      .where("efs.entity_surface_id", "in", surfaceIds)
+      .where("efs.tenant_id", "is", null)
+      .execute() as Array<Record<string, unknown>>;
+
+    // Legacy surface rows may still point at canonical fields from another
+    // version.  The v2 graph is version-scoped, so resolve those bindings by
+    // stable field name before strict contract validation.
+    const currentFieldRows = await (this.db as any)
+      .selectFrom("control.entity_field as ef")
+      .select([
+        sql<string>`ef.id::text`.as("id"),
+        "ef.name",
+      ] as never[])
+      .where("ef.entity_version_id", "=", versionId)
+      .where("ef.tenant_id", "is", null)
+      .where("ef.is_active", "=", true)
+      .where("ef.runtime_enabled", "=", true)
+      .execute() as Array<{ id: string; name: string }>;
+    const currentFieldIdByName = new Map(currentFieldRows.map((field) => [field.name, field.id]));
+    const boundFieldIds = [...new Set(fieldRows.map((field) => String(field["entity_field_id"])))];
+    const boundFieldRows = boundFieldIds.length === 0 ? [] : await (this.db as any)
+      .selectFrom("control.entity_field as ef")
+      .select([
+        sql<string>`ef.id::text`.as("id"),
+        "ef.name",
+      ] as never[])
+      .where("ef.id", "in", boundFieldIds)
+      .where("ef.tenant_id", "is", null)
+      .execute() as Array<{ id: string; name: string }>;
+    const boundFieldNameById = new Map(boundFieldRows.map((field) => [field.id, field.name]));
+
+    return surfaceRows.map((row) => {
+      const rawMode = textConfig(row["v2_mode"] ?? row["mode"]);
+      const mode = ["list", "compact_card", "spreadsheet", "detail", "create", "edit", "picker", "print", "line_editor", "child_collection", "header"].includes(rawMode ?? "")
+        ? rawMode as MetaEntityContractV2["surfaces"][number]["surface"]["mode"]
+        : "list";
+      const rawKind = textConfig(row["v2_kind"] ?? row["kind"]);
+      const kind = ["TABLE", "CARDS", "FORM", "DETAIL", "PICKER", "PRINT", "COLLECTION", "HEADER", "CUSTOM"].includes(rawKind ?? "")
+        ? rawKind as MetaEntityContractV2["surfaces"][number]["surface"]["kind"]
+        : mode === "list" ? "TABLE" : "CUSTOM";
+      const rawConfig = coerceRecord(row["config"]) ?? {};
+      const rawFeatures = coerceRecord(rawConfig["features"]) ?? {};
+      const features: Record<string, unknown> = {};
+      for (const key of ["saved_views", "column_customization", "grouping", "multi_sort", "max_sort_levels", "max_page_size"]) {
+        if (rawFeatures[key] !== undefined) features[key] = rawFeatures[key];
+      }
+      const availableSurfaces = Array.isArray(rawConfig["available_surfaces"])
+        ? rawConfig["available_surfaces"].filter((value): value is string => typeof value === "string")
+        : undefined;
+      const boundFieldIds = new Set<string>();
+      return {
+        surface: {
+          id: String(row["id"]), tenant_id: row["tenant_id"] == null ? null : String(row["tenant_id"]),
+          entity_version_id: String(row["entity_version_id"]), surface_key: canonicalCode(row["surface_key"], "default_list"),
+          mode, kind, renderer_key: canonicalCode(row["renderer_key"], "runtime_default"),
+          label: textConfig(row["label"]) ?? null, is_enabled: row["is_enabled"] !== false,
+          config: {
+            ...(textConfig(rawConfig["default_surface"]) ? { default_surface: textConfig(rawConfig["default_surface"]) } : {}),
+            ...(availableSurfaces ? { available_surfaces: availableSurfaces.map((value) => canonicalCode(value, "surface")) } : {}),
+            ...(Object.keys(features).length > 0 ? { features } : {}),
+            renderer_config: coerceRecord(rawConfig["renderer_config"]) ?? rawConfig,
+          },
+        },
+        fields: fieldRows.filter((field) => field["entity_surface_id"] === row["id"]).map((field) => {
+          const rawFieldId = String(field["entity_field_id"]);
+          const fieldName = boundFieldNameById.get(rawFieldId);
+          const resolvedFieldId = fieldName ? currentFieldIdByName.get(fieldName) : undefined;
+          if (!resolvedFieldId || boundFieldIds.has(resolvedFieldId)) return null;
+          boundFieldIds.add(resolvedFieldId);
+          return {
+          id: String(field["id"]), tenant_id: field["tenant_id"] == null ? null : String(field["tenant_id"]),
+          entity_surface_id: String(field["entity_surface_id"]), entity_field_id: resolvedFieldId,
+          visible: field["visible_override"] !== false,
+          required_override: field["required_override"] == null ? null : field["required_override"] === true,
+          readonly_override: field["readonly_override"] == null ? null : field["readonly_override"] === true,
+          sort_order: field["sort_order"] == null ? null : Number(field["sort_order"]),
+          column_span: field["column_span"] == null ? null : Number(field["column_span"]),
+          density: ["compact", "comfortable", "document"].includes(String(field["density"])) ? field["density"] as "compact" | "comfortable" | "document" : null,
+          renderer_key: textConfig(field["renderer_key"]) ?? null, editor_key: textConfig(field["editor_key"]) ?? null,
+          visibility_expr: coerceRecord(field["visibility_expr"]), editability_expr: coerceRecord(field["editability_expr"]),
+          renderer_config: coerceRecord(field["renderer_config"]) ?? {},
+          };
+        }).filter((field): field is NonNullable<typeof field> => field !== null),
+      };
+    });
+  }
+
+  private async loadContractOperations(versionId: string, entityCode: string): Promise<MetaEntityContractV2["operations"]> {
+    const rows = await (this.db as any)
+      .selectFrom("control.entity_operation as eo")
+      .select([
+        sql<string>`eo.id::text`.as("id"), sql<string>`eo.tenant_id::text`.as("tenant_id"),
+        sql<string>`COALESCE(eo.entity_version_id, ${versionId}::uuid)::text`.as("entity_version_id"),
+        "eo.operation_code", "eo.permission_code", "eo.surface", "eo.placement", "eo.handler_type",
+        "eo.handler_target", "eo.execution_target", "eo.record_required", "eo.is_record_required", "eo.label",
+        "eo.label_override", "eo.icon", "eo.icon_override", "eo.intent", "eo.confirmation", "eo.reason_required",
+        "eo.selection_config", "eo.sort_order", "eo.is_enabled",
+      ] as never[])
+      .where((eb: any) => eb.or([eb("eo.entity_version_id", "=", versionId), eb("eo.entity_name", "=", entityCode)]))
+      .where("eo.tenant_id", "is", null)
+      .orderBy("eo.sort_order", "asc")
+      .execute() as Array<Record<string, unknown>>;
+    return rows.map((row) => ({
+      id: String(row["id"]), tenant_id: row["tenant_id"] == null ? null : String(row["tenant_id"]),
+      entity_version_id: String(row["entity_version_id"]), operation_code: canonicalCode(row["operation_code"] ?? row["permission_code"], "operation"),
+      permission_code: canonicalCode(row["permission_code"], "permission"),
+      surface: ["list", "detail", "both", "picker", "hidden"].includes(String(row["surface"]).toLowerCase())
+        ? String(row["surface"]).toLowerCase() as "list" | "detail" | "both" | "picker" | "hidden" : "both",
+      placement: ["primary", "toolbar", "overflow", "context", "command"].includes(String(row["placement"]).toLowerCase())
+        ? String(row["placement"]).toLowerCase() as "primary" | "toolbar" | "overflow" | "context" | "command" : "toolbar",
+      handler_type: ["navigate", "api", "modal", "inline"].includes(String(row["handler_type"]).toLowerCase())
+        ? String(row["handler_type"]).toLowerCase() as "navigate" | "api" | "modal" | "inline" : "api",
+      handler_target: textConfig(row["handler_target"]), execution_target: textConfig(row["execution_target"]),
+      record_required: row["record_required"] === true || row["is_record_required"] === true,
+      label: textConfig(row["label"] ?? row["label_override"] ?? row["permission_code"]) ?? "Operation",
+      icon: textConfig(row["icon"] ?? row["icon_override"]),
+      intent: ["success", "warning", "danger"].includes(String(row["intent"])) ? row["intent"] as "success" | "warning" | "danger" : "neutral",
+      confirmation: { required: coerceRecord(row["confirmation"])?.["required"] === true, code: textConfig(coerceRecord(row["confirmation"])?.["code"]) ?? null },
+      reason_required: row["reason_required"] === true,
+      selection_config: coerceRecord(row["selection_config"]), sort_order: Number(row["sort_order"] ?? 0), enabled: row["is_enabled"] !== false,
+    }));
+  }
+
+  private async loadContractNumbering(entityId: string, fields: ReadonlyArray<CompiledField>): Promise<MetaEntityContractV2["numbering"]> {
+    const row = await (this.db as any)
+      .selectFrom("control.entity_numbering_config as n")
+      .selectAll("n")
+      .where("n.entity_id", "=", entityId)
+      .where("n.tenant_id", "is", null)
+      .where("n.is_active", "=", true)
+      .orderBy("n.company_code_id", "asc")
+      .executeTakeFirst() as Record<string, unknown> | undefined;
+    if (!row) return null;
+    const allowedKinds = new Set(["tenant_code", "company_code", "branch_code", "year", "fiscal_year", "period", "quarter", "sequence", "static"]);
+    const segments = Array.isArray(row["segments"]) ? row["segments"].map((segment) => {
+      const item = coerceRecord(segment) ?? {};
+      const rawKind = textConfig(item["kind"] ?? item["type"]);
+      return {
+        kind: allowedKinds.has(rawKind ?? "") ? rawKind as "tenant_code" | "company_code" | "branch_code" | "year" | "fiscal_year" | "period" | "quarter" | "sequence" | "static" : "static",
+        value: textConfig(item["value"] ?? item["text"]), width: item["width"] == null ? undefined : Number(item["width"]),
+      };
+    }) : [];
+    const configuredNumberField = canonicalCode(row["number_field"], "code");
+    const numberField = fields.find((field) => field.name === configuredNumberField)
+      ?? fields.find((field) => field.column_name === configuredNumberField)
+      ?? fields.find((field) => field.projection_alias_of === configuredNumberField);
+    if (!numberField) return null;
+    return {
+      id: String(row["id"]), entity_id: String(row["entity_id"]), number_field: numberField.name,
+      company_code_id: row["company_code_id"] == null ? null : String(row["company_code_id"]), prefix: String(row["prefix"] ?? ""),
+      prefix_configurable: row["prefix_configurable"] !== false,
+      separator: String(row["separator"] ?? "-"), segments,
+      reset_strategy: ["never", "yearly", "fiscal_yearly", "monthly", "quarterly"].includes(String(row["reset_strategy"]))
+        ? String(row["reset_strategy"]) as "never" | "yearly" | "fiscal_yearly" | "monthly" | "quarterly"
+        : "never",
+      uniqueness_scope: row["uniqueness_scope"] as "tenant" | "company" | "global", max_length: row["max_length"] == null ? null : Number(row["max_length"]),
+      allowed_chars: String(row["allowed_chars"] ?? "any"), metadata: coerceRecord(row["metadata"]) ?? {},
+      status: row["status"] === "inactive" ? "inactive" : "active",
+    } as MetaEntityContractV2["numbering"];
+  }
+
+  private async loadContractLifecycle(entityCodes: string[], fields: ReadonlyArray<CompiledField>): Promise<MetaEntityContractV2["lifecycle"]> {
+    const codes = [...new Set(entityCodes.filter(Boolean))];
+    if (codes.length === 0) return null;
+    const rows = await (this.db as any)
+      .selectFrom("control.entity_lifecycle as el")
+      .innerJoin("control.lifecycle as lc", "lc.id", "el.lifecycle_id")
+      .innerJoin("control.lifecycle_state as ls", "ls.lifecycle_id", "lc.id")
+      .select([
+        "lc.id as lifecycle_id", "lc.config as lifecycle_config", "ls.code as state_code", "ls.name as state_name",
+        "ls.is_initial", "ls.is_terminal", "ls.config as state_config", "ls.state_flags", "ls.sort_order",
+      ])
+      .where("el.entity_name", "in", codes)
+      .where("el.tenant_id", "is", null)
+      .where("lc.tenant_id", "is", null)
+      .where("lc.is_active", "=", true)
+      .orderBy("el.priority", "asc")
+      .orderBy("ls.sort_order", "asc")
+      .execute() as Array<Record<string, unknown>>;
+    const first = rows[0];
+    if (!first) return null;
+    const lifecycleId = String(first["lifecycle_id"]);
+    const transitions = await (this.db as any)
+      .selectFrom("control.lifecycle_transition as lt")
+      .innerJoin("control.lifecycle_state as fs", "fs.id", "lt.from_state_id")
+      .innerJoin("control.lifecycle_state as ts", "ts.id", "lt.to_state_id")
+      .select(["fs.code as from_state", "ts.code as to_state"])
+      .where("lt.lifecycle_id", "=", lifecycleId)
+      .where("lt.tenant_id", "is", null)
+      .where("lt.is_active", "=", true)
+      .execute() as Array<{ from_state: string; to_state: string }>;
+    const lifecycleConfig = coerceRecord(first["lifecycle_config"]) ?? {};
+    const configuredStatusField = canonicalCode(lifecycleConfig["status_field"], "status");
+    const statusField = fields.find((field) => field.name === configuredStatusField)
+      ?? fields.find((field) => field.column_name === configuredStatusField);
+    if (!statusField) return null;
+    const allowedTransitions: Record<string, string[]> = {};
+    type CanonicalLifecycle = NonNullable<MetaEntityContractV2["lifecycle"]>;
+    const states: CanonicalLifecycle["states"] = {};
+    for (const row of rows) {
+      const stateCode = canonicalCode(row["state_code"], "state");
+      const stateConfig = coerceRecord(row["state_config"]) ?? {};
+      const flags = coerceRecord(row["state_flags"]) ?? {};
+      const terminal = row["is_terminal"] === true;
+      allowedTransitions[stateCode] ??= [];
+      states[stateCode] = {
+        label: textConfig(row["state_name"]) ?? stateCode,
+        badge: textConfig(stateConfig["badge"]), icon: textConfig(stateConfig["icon"]), color: textConfig(stateConfig["color"]),
+        is_initial: row["is_initial"] === true, is_terminal: terminal,
+        is_editable: typeof flags["is_mutable"] === "boolean" ? flags["is_mutable"] : !terminal,
+        is_deletable: typeof flags["is_deletable"] === "boolean" ? flags["is_deletable"] : !terminal,
+        is_reversible: flags["is_reversible"] === true,
+      };
+    }
+    for (const transition of transitions) {
+      const from = canonicalCode(transition.from_state, "state");
+      const to = canonicalCode(transition.to_state, "state");
+      allowedTransitions[from] ??= [];
+      if (!allowedTransitions[from].includes(to)) allowedTransitions[from].push(to);
+    }
+    return {
+      status_field: statusField.name,
+      states,
+      allowed_transitions: allowedTransitions,
+      command_handler: textConfig(lifecycleConfig["command_handler"]),
+    };
+  }
+
+  /**
+   * Flow identity belongs in the canonical contract.  Detailed step/field
+   * presentation remains an outer flow response adapter until the flow tables
+   * are versioned into the v2 schema; the compiler still publishes the active
+   * flow codes and operation graph so consumers no longer infer them from
+   * display_config/reference_config.
+   */
+  private async loadContractFlows(
+    versionId: string,
+    operationCodes: ReadonlyArray<string>,
+  ): Promise<MetaEntityContractV2["flows"]> {
+    const rows = await (this.db as any)
+      .selectFrom("control.entity_flow as ef")
+      .select(["ef.flow_code", "ef.config", "ef.status", "ef.is_default"])
+      .where("ef.entity_version_id", "=", versionId)
+      .where("ef.tenant_id", "is", null)
+      .where("ef.status", "=", "active")
+      .orderBy("ef.flow_code", "asc")
+      .execute() as Array<Record<string, unknown>>;
+    const knownOperations = new Set(operationCodes);
+    return rows.map((row) => {
+      const config = coerceRecord(row["config"]) ?? {};
+      const configuredEntry = textConfig(config["entry_operation"] ?? config["entryOperation"]);
+      const graphSource = Array.isArray(config["create_graph"])
+        ? config["create_graph"]
+        : Array.isArray(config["createGraph"])
+          ? config["createGraph"]
+          : [];
+      const createGraph = graphSource
+        .filter((value): value is string => typeof value === "string")
+        .map((value) => canonicalCode(value, "operation"))
+        .filter((value, index, values) => knownOperations.has(value) && values.indexOf(value) === index);
+      const entryOperation = configuredEntry && knownOperations.has(canonicalCode(configuredEntry, "operation"))
+        ? canonicalCode(configuredEntry, "operation")
+        : null;
+      return {
+        flow_code: canonicalCode(row["flow_code"], "default_flow"),
+        entry_operation: entryOperation,
+        create_graph: createGraph,
+      };
+    });
+  }
+
   private async loadRelations(versionId: string): Promise<Array<Record<string, unknown>>> {
     return this.db
       .selectFrom("control.entity_relation as er" as never)
       .select([
         sql<string>`er.id::text`.as("id"),
+        sql<string>`er.entity_version_id::text`.as("entity_version_id"),
         "er.name",
         "er.relation_kind",
         "er.target_entity",
@@ -1314,6 +1983,15 @@ export class EntityCompilerService {
         "er.on_delete",
         "er.record_filter",
         "er.ui_behavior",
+        sql<string>`COALESCE(er.relation_code, er.name)`.as("relation_code"),
+        sql<string>`COALESCE(er.target_entity_code, er.target_entity)`.as("target_entity_code"),
+        sql<string>`COALESCE(er.source_field, er.fk_field)`.as("source_field"),
+        sql<string>`COALESCE(er.target_field, er.target_key, 'id')`.as("target_field"),
+        "er.polymorphic_type_field",
+        "er.polymorphic_type_value",
+        "er.polymorphic_id_field",
+        "er.mutation_owner",
+        "er.mutation_permissions",
       ] as never[])
       .where("er.entity_version_id" as never, "=" as never, versionId as never)
       .where("er.tenant_id" as never, "is" as never, null as never)
@@ -1356,6 +2034,7 @@ export class EntityCompilerService {
         "ecp.field_flag_rules",
         "ecp.security_tiers",
         "ecp.compliance_profile",
+        "ecp.cache_policy",
       ] as never[])
       .where("ecp.class_key" as never, "=" as never, entityClass as never)
       .executeTakeFirst() as ClassProfileRow | undefined;
@@ -1375,6 +2054,7 @@ export class EntityCompilerService {
       field_flag_rules: coerceJson(row.field_flag_rules),
       security_tiers: coerceJson(row.security_tiers),
       compliance_profile: coerceJson(row.compliance_profile),
+      cache_policy: coerceJson(row.cache_policy),
     };
   }
 

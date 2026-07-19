@@ -8,7 +8,8 @@
     "./server": "./src/server/index.ts",
     "./islands": "./src/islands/index.ts",
     "./adapter": "./src/adapter/index.ts",
-    "./core": "./src/core/index.ts"
+    "./core": "./src/core/index.ts",
+    "./browser-cache": "./src/browser-cache/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -23,7 +24,8 @@
     "react": "^19.2.5"
   },
   "dependencies": {
-    "@athyper/query": "workspace:*"
+    "@athyper/query": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",

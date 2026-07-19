@@ -95,7 +95,7 @@ export function AuditSummaryStrip({
           aria-expanded={open}
           aria-label={open ? "Collapse audit summary" : "Expand audit summary"}
           onClick={() => setOpen((value) => !value)}
-          className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
+          className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
         >
           {createdSummary ? (
             <HeaderAuditFact icon="created" value={createdSummary} />
@@ -218,13 +218,13 @@ interface DetailLayout {
 function DetailField({ row }: { row: DetailRow }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs font-medium leading-4 text-muted-foreground">
+      <dt className="text-sm font-medium leading-5 text-muted-foreground">
         {row.label}
       </dt>
       <dd
         title={row.title ?? row.value}
         className={cn(
-          "mt-0.5 min-w-0 truncate text-sm font-semibold leading-5 text-foreground",
+          "mt-0.5 min-w-0 truncate text-sm leading-5 text-foreground",
           row.mono && "font-mono text-xs font-medium",
           row.intent === "success" && "text-success",
           row.intent === "warning" && "text-warning",
@@ -249,7 +249,7 @@ function IdentifierField({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs font-medium leading-4 text-muted-foreground">
+      <dt className="text-sm font-medium leading-5 text-muted-foreground">
         UUID
       </dt>
       <dd className="mt-1 min-w-0">
@@ -336,9 +336,6 @@ function formatWhenWho(
 function formatActor(name: string | undefined, id: string | undefined): string {
   const displayName = toNonBlankString(name);
   const displayId = toNonBlankString(id);
-  if (displayName && displayId && displayName !== displayId) {
-    return `${displayName} - ${shortIdentifier(displayId)}`;
-  }
   if (displayName) return displayName;
   if (displayId) return shortIdentifier(displayId);
   return "-";

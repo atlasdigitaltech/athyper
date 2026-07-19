@@ -45,6 +45,7 @@ import {
   type NotificationChannelHandler,
   type BackupObjectStorage,
 } from "@athyper/svc-jobs";
+import { createFinanceOutboxHandler } from "@athyper/svc-finance";
 
 import {
   CircuitBreaker,
@@ -592,6 +593,7 @@ export async function bootstrap(
   const topicHandlers = new Map([
     ["wf",           createWfOutboxHandler(_db)],
     ["notification", createP2pNotificationOutboxHandler(_db)],
+    ["fin",          createFinanceOutboxHandler(_db, logger)],
   ] as Array<[string, import("@athyper/svc-jobs").OutboxTopicHandler]>);
   let searchOutboxHandler: import("@athyper/svc-jobs").OutboxTopicHandler | undefined;
   if (searchService) {

@@ -12,7 +12,7 @@ INSERT INTO shared.permission
 SELECT v.code, v.name, c.id, v.st, v.rl, v.pr,
        CASE
          WHEN v.code LIKE 'MESH.%' THEN ARRAY['mesh']::text[]
-         WHEN v.code IN ('IAM.PARAMETER.MANAGE', 'PLATFORM.REFERENCE.VIEW', 'PLATFORM.REFERENCE.IMPORT',
+         WHEN v.code IN ('IAM.PARAMETER.MANAGE', 'IAM.IDP.READ', 'IAM.IDP.MANAGE', 'PLATFORM.REFERENCE.VIEW', 'PLATFORM.REFERENCE.IMPORT',
                          'PLATFORM.TAXONOMY.VIEW', 'PLATFORM.TAXONOMY.IMPORT',
                          'PLATFORM.CATALOG.VIEW', 'PLATFORM.CATALOG.MANAGE',
                          'PLATFORM.SUBSCRIPTIONS.VIEW', 'PLATFORM.SUBSCRIPTIONS.MANAGE',
@@ -105,6 +105,8 @@ JOIN  (VALUES
     ('JOBS.BOARD.VIEW',             'View Job Queues (BullBoard)',        'special',       'tenant',  'medium',   false, 110),
     ('JOBS.QUEUE.MANAGE',           'Manage Job Queues',                 'special',       'tenant',  'critical', true,  120),
     ('IAM.PARAMETER.MANAGE',        'Manage Tenant Parameter Overrides', 'special',       'tenant',  'high',     true,  130),
+    ('IAM.IDP.READ',                'View Tenant Identity Providers',   'special',       'tenant',  'low',     false,  131),
+    ('IAM.IDP.MANAGE',              'Manage Tenant Identity Providers', 'special',       'tenant',  'critical', false,  132),
     ('supplier.governance.write',   'Write Governance Record',           'special',       'record',  'high',     false, 140),
     ('supplier.qualification.admin','Administer Qualification',          'special',       'record',  'critical', false, 150),
     -- Finance Setup Workbench (Phase 2) — tenant-scoped configure gate.

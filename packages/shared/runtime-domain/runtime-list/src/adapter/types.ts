@@ -393,6 +393,7 @@ export interface RuntimeListServerAdapter {
     rawSearchParams: RawSearchParams,
     descriptor:      RuntimeDescriptor,
     accessScope:     RuntimeAccessScope,
+    options?:         RuntimeListRecordFetchOptions,
   ): Promise<EntityListResponse>;
 
   // Optional saved-view support
@@ -409,6 +410,11 @@ export interface RuntimeListServerAdapter {
 
   // Optional app override. The shared runtime-list frame is the default.
   PageFrame?: React.ComponentType<RuntimeListPageFrameProps>;
+}
+
+export interface RuntimeListRecordFetchOptions {
+  /** Restricts expensive display-value hydration to the active presentation. */
+  visibleFieldNames?: readonly string[];
 }
 
 // ─── Full presenter props — resolved server-side ──────────────────────────────

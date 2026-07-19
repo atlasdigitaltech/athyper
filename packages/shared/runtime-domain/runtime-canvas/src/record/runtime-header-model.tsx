@@ -613,13 +613,6 @@ function resolveProcessTabs(
   const hasLifecycle = hasWorkflow
     || hasVersions
     || contract.surfaces.some((surface) => surface.enabled && surface.kind === "lifecycle");
-  // Audit tab reads log.audit_log (column-level mutation history with
-  // reason_code from Phase 3). Show wherever Lifecycle or Versions show —
-  // any record that has either of those will accrue audit_log rows. An
-  // explicit `audit_trail` surface declaration opts in standalone.
-  const hasAudit = hasLifecycle
-    || contract.surfaces.some((surface) => surface.enabled && surface.kind === "audit_trail");
-
   if (hasWorkflow) {
     tabs.push({
       id: "approvals",
@@ -640,13 +633,6 @@ function resolveProcessTabs(
       id: "versions",
       label: "Versions",
       count: versionCount && versionCount > 0 ? versionCount : undefined,
-    });
-  }
-
-  if (hasAudit) {
-    tabs.push({
-      id: "audit",
-      label: "Audit",
     });
   }
 

@@ -24,28 +24,28 @@ const APP_TARGETS = {
 } as const;
 
 const PUBLIC_OUTPUT_FILES = {
-  wordmarkBlack: "wordmark-black.svg",
-  wordmarkWhite: "wordmark-white.svg",
-  wordmarkOnBlack: "wordmark-on-black.svg",
-  wordmarkOnWhite: "wordmark-on-white.svg",
-  icon: "icon.svg",
-  appIcon: "appicon.svg",
-  favicon: "favicon.svg",
+  wordmarkBlack: "wordmark-black.png",
+  wordmarkWhite: "wordmark-white.png",
+  wordmarkOnBlack: "wordmark-on-black.png",
+  wordmarkOnWhite: "wordmark-on-white.png",
+  icon: "icon.png",
+  appIcon: "appicon.png",
+  favicon: "favicon.png",
 } as const;
 
 const LEGACY_PUBLIC_FILES = {
-  neon: ["athyper-icon-white-on-black.jpg", "neon-black.svg", "neon-white.svg"],
-  mesh: ["athyper-icon-white-on-black.jpg", "mesh-black.svg", "mesh-white.svg"],
-  admin: ["athyper-icon-white-on-black.jpg", "athyper-black.svg", "athyper-white.svg"],
+  neon: ["athyper-icon-white-on-black.jpg", "neon-black.svg", "neon-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
+  mesh: ["athyper-icon-white-on-black.jpg", "mesh-black.svg", "mesh-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
+  admin: ["athyper-icon-white-on-black.jpg", "athyper-black.svg", "athyper-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
 } as const satisfies Record<keyof typeof APP_TARGETS, readonly string[]>;
 
 type ProductCode = keyof typeof APP_TARGETS;
 type PublicAssetKey = keyof typeof PUBLIC_OUTPUT_FILES;
 
 const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  neon:  "packages/apps/neon/brand/src/products/neon",
-  mesh:  "packages/apps/mesh/brand/src/products/mesh",
-  admin: "packages/apps/admin/brand/src/products/admin",
+  neon:  "packages/apps/neon/brand/src",
+  mesh:  "packages/apps/mesh/brand/src",
+  admin: "packages/apps/admin/brand/src",
 };
 
 interface BrandManifest {

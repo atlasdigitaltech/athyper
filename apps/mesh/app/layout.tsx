@@ -16,15 +16,15 @@ export const metadata: Metadata = {
   description: plane.productName,
   applicationName: plane.appName,
   icons: {
-    icon: [{ url: brandAssets.favicon, type: "image/svg+xml" }],
-    shortcut: [{ url: brandAssets.favicon, type: "image/svg+xml" }],
-    apple: [{ url: brandAssets.appIcon, type: "image/svg+xml" }],
+    icon: [{ url: brandAssets.favicon, type: "image/png" }],
+    shortcut: [{ url: brandAssets.favicon, type: "image/png" }],
+    apple: [{ url: brandAssets.appIcon, type: "image/png" }],
   },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" dir="ltr" data-theme-preset={plane.themePreset} suppressHydrationWarning>
+  <html lang="en" dir="ltr" data-theme-preset={plane.themePreset} suppressHydrationWarning>
       <body
         className={`${GeistSans.variable} ${GeistMono.variable} min-h-screen font-sans antialiased`}
         suppressHydrationWarning

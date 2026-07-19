@@ -15,11 +15,12 @@ RETURNS trigger AS $$
 BEGIN
     SELECT fp.fiscal_year, fp.period_number
       INTO NEW.fiscal_year, NEW.period_number
-      FROM master.fiscal_period fp
-     WHERE fp.tenant_id       = NEW.tenant_id
-       AND fp.company_code_id = NEW.company_code_id
-       AND NEW.document_date BETWEEN fp.start_date AND fp.end_date
-     LIMIT 1;
+      FROM master.resolve_fiscal_period(
+          NEW.tenant_id,
+          NEW.company_code_id,
+          NEW.document_date,
+          false
+      ) fp;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

@@ -41,3 +41,24 @@
 :where(.divide-x > :not([hidden]) ~ :not([hidden]), .divide-y > :not([hidden]) ~ :not([hidden])) {
   border-color: var(--border);
 }
+
+@keyframes neon-loading-progress {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(360%);
+  }
+}
+
+.neon-loading-progress {
+  animation: neon-loading-progress 1.35s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neon-loading-progress {
+    animation: none;
+    transform: none;
+  }
+}

@@ -16,6 +16,22 @@ export interface EntityQuerySort {
   readonly nulls: "first" | "last";
 }
 
+/**
+ * Trusted row-scope values derived inside the Records service. These values
+ * must never be populated directly from request query parameters.
+ */
+export interface EntityQueryScopeExpansion {
+  readonly companyCodeIds?: readonly string[];
+  readonly legalEntityIds?: readonly string[];
+}
+
+export interface EntityQueryScopeResolver {
+  resolve(input: {
+    readonly context: VerifiedRequestContext;
+    readonly descriptor: ExecutionDescriptorV1;
+  }): Promise<EntityQueryScopeExpansion>;
+}
+
 interface EntityQueryCommandBase {
   readonly context: VerifiedRequestContext;
   readonly descriptor: ExecutionDescriptorV1;
@@ -31,6 +47,11 @@ export interface ListEntitiesCommand extends EntityQueryCommandBase {
   readonly search?: string;
   readonly countMode?: EntityCountMode;
   readonly hydrateReferences?: boolean;
+  /**
+   * Effective result-cache TTL after applying service policy and any trusted
+   * descriptor ceiling. Zero disables result-cache reads and writes.
+   */
+  readonly resultCacheTtlSeconds?: number;
   /** Offset is accepted only when the descriptor explicitly declares a bounded admin collection. */
   readonly offset?: number;
 }
@@ -77,7 +98,7 @@ export interface EntityCountCache {
 
 export interface EntityListResultCache {
   get(key: string): Promise<EntityListResult | undefined>;
-  set(key: string, value: EntityListResult): Promise<void>;
+  set(key: string, value: EntityListResult, ttlSeconds?: number): Promise<void>;
 }
 
 export interface EntityListResult {
@@ -89,6 +110,13 @@ export interface EntityListResult {
     readonly total?: number;
     readonly count_mode: EntityCountMode;
   };
+}
+
+export type EntityQueryResultCacheState = "hit" | "miss" | "bypass";
+
+export interface EntityListExecutionResult {
+  readonly result: EntityListResult;
+  readonly cacheState: EntityQueryResultCacheState;
 }
 
 export interface EntityDetailResult {

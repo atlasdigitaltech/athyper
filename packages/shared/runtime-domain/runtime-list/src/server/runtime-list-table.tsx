@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import Link from "next/link";
 import type { ActiveFilterEntry, ResolvedColumn, RuntimeRecordRow, SortEntry, ViewDensity } from "../core/types";
 import { formatRuntimeColumnValue, humanizeToken, resolveRecordId } from "../core/formatters";
 import { buildGroupedRuntimeRows } from "../core/grouping";
@@ -59,13 +60,13 @@ export function RuntimeListTable({
                 >
                   <div className={runtimeTableChrome.headerContent}>
                     {col.isSortable ? (
-                      <a
+                      <Link
                         href={sortHref(listBaseHref, rawSearchParams, col.name)}
                         className={runtimeTableChrome.headerButton}
                       >
                         {col.label}
                         <RuntimeSortIcon dir={sortEntry?.dir} />
-                      </a>
+                      </Link>
                     ) : (
                       <span>{col.label}</span>
                     )}
@@ -154,9 +155,9 @@ function renderRuntimeCell(
 
   if (colIndex === 0 && href) {
     return (
-      <a href={href} title={title} className={runtimeTableChrome.identityCell}>
+      <Link href={href} title={title} className={runtimeTableChrome.identityCell}>
         {display}
-      </a>
+      </Link>
     );
   }
 
@@ -168,8 +169,7 @@ function renderRuntimeCell(
 }
 
 function isStatusColumn(col: ResolvedColumn): boolean {
-  const name = col.name.toLowerCase();
-  return col.uiType === "status" || name === "status" || name.endsWith("_status");
+  return col.uiType === "status";
 }
 
 function currentSort(raw: Record<string, string | string[] | undefined>): { key: string; dir: "asc" | "desc" } | null {

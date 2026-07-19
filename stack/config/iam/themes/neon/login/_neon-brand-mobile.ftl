@@ -1,11 +1,9 @@
-<#-- Generated from packages/apps/neon/brand/src/products/neon/ -->
+<#-- Generated from the canonical plane brand packages. -->
 <#-- DO NOT EDIT DIRECTLY - run: pnpm brand:refresh -->
 <div class="kc-mobile-logo">
-<svg width="24" height="24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 278 257"
-     fill="currentColor" role="img" aria-label="neon">
-  <polygon points="96,11 19,234 173,234"/>
-  <polygon points="188,74 220,74 229,234 198,234"/>
-  <polygon points="259,140 235,234 265,234"/>
-</svg>
-  <span>Neon</span>
+  <#assign iamBrandPlane = (iamPlane!"athyper")>
+  <#if iamBrandPlane != "neon" && iamBrandPlane != "mesh" && iamBrandPlane != "admin">
+    <#assign iamBrandPlane = "admin">
+  </#if>
+  <img src="${url.resourcesPath}/img/${iamBrandPlane}-wordmark-black.png" alt="${iamProductName!"Athyper"}" />
 </div>

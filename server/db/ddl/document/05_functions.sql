@@ -2670,7 +2670,7 @@ BEGIN
      AND fp.id              = NEW.fiscal_period_id
    LIMIT 1;
 
-  IF v_fp_status IN ('hard_close', 'future') THEN
+  IF v_fp_status IS NULL OR v_fp_status IN ('hard_close', 'future') THEN
     RAISE EXCEPTION
       'PERIOD_NOT_OPEN: Fiscal period %/% for company % has status "%".',
       COALESCE(v_gate_year, NEW.fiscal_year), COALESCE(v_gate_period, NEW.period_number), NEW.company_code_id, v_fp_status
@@ -2904,3 +2904,130 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+-- Release-gated company readiness check. Trigger-level enforcement covers all
+-- posting producers while remaining disabled until a tenant is enrolled.
+CREATE OR REPLACE FUNCTION document.trg_je_finance_readiness_gate_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, governance, master, control, pg_catalog
+AS $$
+DECLARE
+  v_enabled boolean := false;
+  v_company_code text;
+BEGIN
+  IF NEW.status <> 'posted' OR OLD.status = 'posted' OR NEW.is_reversal
+     OR NEW.source_doc_type IN ('opening_balance', 'finance_setup_test', 'reversal') THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT CASE
+           WHEN ff.tenant_overrides ? NEW.tenant_id::text
+             THEN (ff.tenant_overrides ->> NEW.tenant_id::text)::boolean
+           ELSE ff.is_enabled
+         END
+    INTO v_enabled
+    FROM control.feature_flag ff
+   WHERE ff.code = 'finance.posting_readiness_gate'
+     AND (ff.expires_at IS NULL OR ff.expires_at > now());
+
+  IF NOT coalesce(v_enabled, false) THEN RETURN NEW; END IF;
+
+  SELECT code INTO v_company_code
+    FROM master.company_code
+   WHERE tenant_id = NEW.tenant_id AND id = NEW.company_code_id;
+
+  IF NOT EXISTS (
+    WITH latest_run AS (
+      SELECT run.id
+        FROM governance.cycle_run run
+        JOIN governance.cycle_type typ
+          ON typ.tenant_id = run.tenant_id AND typ.id = run.cycle_type_id
+       WHERE run.tenant_id = NEW.tenant_id
+         AND run.entity_code = v_company_code
+         AND typ.type_code = 'FIN_SETUP_READINESS'
+         AND run.status <> 'CANCELLED'
+       ORDER BY run.run_number DESC, run.created_at DESC
+       LIMIT 1
+    )
+    SELECT 1
+      FROM latest_run lr
+      JOIN governance.cycle_certification cert
+        ON cert.tenant_id = NEW.tenant_id AND cert.cycle_run_id = lr.id
+     WHERE cert.cert_code = 'FINANCE_POSTING_READY'
+       AND cert.status = 'ATTESTED'
+       AND NOT EXISTS (
+         SELECT 1 FROM governance.cycle_task task
+          WHERE task.tenant_id = cert.tenant_id AND task.cycle_run_id = cert.cycle_run_id
+            AND task.is_mandatory AND task.status <> 'COMPLETED'
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM governance.cycle_deviation dev
+          WHERE dev.tenant_id = cert.tenant_id AND dev.cycle_run_id = cert.cycle_run_id
+            AND dev.severity = 'CRITICAL'
+            AND dev.status NOT IN ('RESOLVED','REJECTED','EXPIRED','REVOKED')
+       )
+  ) THEN
+    RAISE EXCEPTION
+      'FINANCE_POSTING_READINESS_REQUIRED: company % has no active FINANCE_POSTING_READY certification',
+      coalesce(v_company_code, NEW.company_code_id::text)
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION document.trg_je_finance_readiness_gate_fn IS
+  'Release-gated production posting control, resolved from control.feature_flag finance.posting_readiness_gate.';
+
+-- Publish one durable execution request when a root journal posts into a book
+-- that has active cross-book rules. Derived journals never publish another
+-- request: Stage 6 deliberately supports one-hop fan-out to make loops
+-- impossible even when administrators configure A->B and B->A rules.
+CREATE OR REPLACE FUNCTION document.trg_je_enqueue_cross_book_fn()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = document, control, event, pg_catalog
+AS $$
+BEGIN
+  IF NEW.status <> 'posted' OR OLD.status = 'posted'
+     OR NEW.derived_from_je_id IS NOT NULL
+     OR NEW.posting_rule_id IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM control.book_posting_rule rule
+     WHERE rule.tenant_id = NEW.tenant_id
+       AND rule.company_code_id = NEW.company_code_id
+       AND rule.source_book_id = NEW.book_id
+       AND rule.status = 'active'
+  ) THEN
+    INSERT INTO event.outbox (
+      tenant_id, topic, event_type, event_key,
+      entity_type, entity_id, aggregate_type, aggregate_id,
+      actor_id, source, payload, created_by
+    ) VALUES (
+      NEW.tenant_id, 'fin', 'finance.journal.cross_book_requested',
+      'cross-book:' || NEW.id::text,
+      'journal_entry', NEW.id, 'journal_entry', NEW.id,
+      NEW.posted_by, 'document.journal_entry',
+      jsonb_build_object(
+        'sourceJournalId', NEW.id,
+        'companyCodeId', NEW.company_code_id,
+        'sourceBookId', NEW.book_id,
+        'fiscalYear', NEW.fiscal_year,
+        'periodNumber', NEW.period_number
+      ),
+      NEW.posted_by
+    )
+    ON CONFLICT (tenant_id, event_key) WHERE event_key IS NOT NULL DO NOTHING;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION document.trg_je_enqueue_cross_book_fn IS
+  'Enqueues idempotent fin-topic execution for posted root journals with active book_posting_rule rows; derived journals are excluded for loop prevention.';

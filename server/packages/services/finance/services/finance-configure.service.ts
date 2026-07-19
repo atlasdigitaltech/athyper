@@ -232,7 +232,8 @@ export async function loadBookAssignments(
     purpose:          string | null;
   }>`
     SELECT lb.id, lb.code, lb.name, lb.status, lb.is_primary,
-           lb.currency_code, lb.purpose
+           coalesce(ba.override_currency_code, lb.base_currency_code) AS currency_code,
+           lb.category AS purpose
       FROM master.ledger_book lb
       JOIN master.company_code_book_assignment ba
         ON ba.book_id = lb.id

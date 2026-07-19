@@ -20,6 +20,7 @@
 
 import { sql, type Kysely } from "kysely";
 import { summarizeCompanyPostableAccounts } from "./is-company-postable-account.js";
+import { loadPostingRoleCoverage, type PostingRoleCoveragePayload } from "./posting-role.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<any>;
@@ -36,7 +37,7 @@ export type JourneyStepKey =
   | "chart" | "books" | "gl_controls" | "house_banks" | "fiscal_period";
 
 export type ConflictCategory =
-  | "chart" | "book" | "gl_control" | "house_bank" | "period" | "assignment";
+  | "chart" | "book" | "gl_control" | "posting_role" | "house_bank" | "period" | "assignment";
 
 interface ScopeRef {
   type:  FinanceSetupScopeType;
@@ -78,6 +79,28 @@ export interface FinanceSetupConflict {
   detectedAt:      string;
 }
 
+function buildPostingRoleCoverageConflicts(
+  companyCode: string,
+  coverage: PostingRoleCoveragePayload,
+): FinanceSetupConflict[] {
+  const unresolved = coverage.summary.missingCells + coverage.summary.invalidCells;
+  if (unresolved === 0) return [];
+  return [{
+    id: `posting-role-coverage:${companyCode}`,
+    category: "posting_role",
+    severity: "blocker",
+    scope: { type: "company", code: companyCode },
+    visibleAtScopes: [{ type: "company", code: companyCode }],
+    title: `${unresolved} required posting-role mapping${unresolved === 1 ? "" : "s"} unresolved`,
+    message: `${coverage.summary.resolvedCells} of ${coverage.summary.requiredCells} required company/book role assignments resolve to postable GL accounts.`,
+    reasonCode: coverage.summary.invalidCells > 0
+      ? "posting_role_account_not_postable" : "posting_role_mapping_missing",
+    actionHref: `/finance/setup/company/${companyCode}/configure?tab=posting_roles`,
+    actionLabel: "Complete role coverage",
+    detectedAt: new Date().toISOString(),
+  }];
+}
+
 export interface JourneyStep {
   key:           JourneyStepKey;
   label:         string;
@@ -96,6 +119,17 @@ export interface WorkspaceCardCounts {
   operate:   { openBlockers: number; reconciliationSignals: number };
 }
 
+export interface FinanceSetupGovernanceReadiness {
+  source: "governance";
+  cycleRunId: string | null;
+  cycleStatus: string | null;
+  mandatoryTaskCount: number;
+  completedMandatoryTaskCount: number;
+  criticalDeviationCount: number;
+  certificationStatus: string | null;
+  certified: boolean;
+}
+
 export interface CompanyHubPayload {
   companyCode:         string;
   companyName:         string;
@@ -111,7 +145,70 @@ export interface CompanyHubPayload {
   journey:             JourneyStep[];
   inbox:               FinanceSetupConflict[];
   workspaceCounts:     WorkspaceCardCounts;
+  governanceReadiness: FinanceSetupGovernanceReadiness;
   computedAt:          string;
+}
+
+async function loadFinanceSetupGovernanceReadiness(
+  db: AnyDb,
+  tenantId: string,
+  companyCode: string,
+): Promise<FinanceSetupGovernanceReadiness> {
+  const { rows } = await sql<{
+    cycle_run_id: string | null;
+    cycle_status: string | null;
+    mandatory_task_count: number;
+    completed_mandatory_task_count: number;
+    critical_deviation_count: number;
+    certification_status: string | null;
+  }>`
+    WITH latest_run AS (
+      SELECT cr.id, cr.status
+        FROM governance.cycle_run cr
+        JOIN governance.cycle_type ct
+          ON ct.tenant_id = cr.tenant_id
+         AND ct.id = cr.cycle_type_id
+       WHERE cr.tenant_id = ${tenantId}::uuid
+         AND cr.entity_code = ${companyCode}
+         AND ct.type_code = 'FIN_SETUP_READINESS'
+         AND cr.status <> 'CANCELLED'
+       ORDER BY cr.created_at DESC
+       LIMIT 1
+    )
+    SELECT lr.id AS cycle_run_id,
+           lr.status AS cycle_status,
+           count(DISTINCT ct.id) FILTER (WHERE ct.is_mandatory)::int AS mandatory_task_count,
+           count(DISTINCT ct.id) FILTER (WHERE ct.is_mandatory AND ct.status = 'COMPLETED')::int AS completed_mandatory_task_count,
+           count(DISTINCT cd.id) FILTER (
+             WHERE cd.severity = 'CRITICAL'
+               AND cd.status NOT IN ('RESOLVED', 'REJECTED', 'EXPIRED', 'REVOKED')
+           )::int AS critical_deviation_count,
+           max(cc.status) FILTER (WHERE cc.cert_code = 'FINANCE_POSTING_READY') AS certification_status
+      FROM latest_run lr
+      LEFT JOIN governance.cycle_task ct ON ct.cycle_run_id = lr.id
+      LEFT JOIN governance.cycle_deviation cd ON cd.cycle_run_id = lr.id
+      LEFT JOIN governance.cycle_certification cc ON cc.cycle_run_id = lr.id
+     GROUP BY lr.id, lr.status
+  `.execute(db);
+
+  const row = rows[0];
+  const mandatoryTaskCount = row?.mandatory_task_count ?? 0;
+  const completedMandatoryTaskCount = row?.completed_mandatory_task_count ?? 0;
+  const criticalDeviationCount = row?.critical_deviation_count ?? 0;
+  const certificationStatus = row?.certification_status ?? null;
+  return {
+    source: "governance",
+    cycleRunId: row?.cycle_run_id ?? null,
+    cycleStatus: row?.cycle_status ?? null,
+    mandatoryTaskCount,
+    completedMandatoryTaskCount,
+    criticalDeviationCount,
+    certificationStatus,
+    certified: mandatoryTaskCount > 0
+      && mandatoryTaskCount === completedMandatoryTaskCount
+      && criticalDeviationCount === 0
+      && ["CERTIFIED", "ATTESTED"].includes(certificationStatus ?? ""),
+  };
 }
 
 
@@ -170,7 +267,7 @@ async function loadCompanyHeader(
 
 // ─── Effective book + period ────────────────────────────────────────────────
 
-interface EffectiveContext {
+export interface EffectiveContext {
   bookId:       string;
   bookLabel:    string;
   fiscalYear:   number;
@@ -214,7 +311,7 @@ async function resolveEffectiveContext(
                  (${overrides.fiscalYear ?? null}::int IS NOT NULL AND fp.fiscal_year = ${overrides.fiscalYear ?? null}::int
                   AND (${overrides.period ?? null}::int IS NULL OR fp.period_number = ${overrides.period ?? null}::int))
               OR (${overrides.fiscalYear ?? null}::int IS NULL
-                  AND fp.period_start <= CURRENT_DATE AND fp.period_end >= CURRENT_DATE)
+                  AND fp.start_date <= CURRENT_DATE AND fp.end_date >= CURRENT_DATE)
                )
          ORDER BY fp.fiscal_year DESC, fp.period_number DESC
          LIMIT 1
@@ -234,7 +331,7 @@ async function resolveEffectiveContext(
 
 // ─── Period postability ─────────────────────────────────────────────────────
 
-async function evaluatePeriodPostability(
+export async function evaluatePeriodPostability(
   db: AnyDb,
   tenantId: string,
   companyCodeId: string,
@@ -248,12 +345,12 @@ async function evaluatePeriodPostability(
   }>`
     SELECT fp.status AS fp_status, bps.status AS bps_status
       FROM master.fiscal_period fp
-      LEFT JOIN master.book_period_status bps
+      LEFT JOIN governance.book_period_status bps
         ON bps.tenant_id       = fp.tenant_id
        AND bps.company_code_id = fp.company_code_id
        AND bps.fiscal_year     = fp.fiscal_year
        AND bps.period_number   = fp.period_number
-       AND bps.ledger_book_id  = ${ctx.bookId}::uuid
+       AND bps.book_id         = ${ctx.bookId}::uuid
      WHERE fp.tenant_id       = ${tenantId}::uuid
        AND fp.company_code_id = ${companyCodeId}::uuid
        AND fp.fiscal_year     = ${ctx.fiscalYear}
@@ -264,15 +361,34 @@ async function evaluatePeriodPostability(
   if (!row) return { chip: "locked", reasonCode: "period_not_opened" };
   if (!row.bps_status) return { chip: "locked", reasonCode: "book_period_missing" };
 
-  const status = row.bps_status || row.fp_status;
-  switch (status) {
-    case "open":            return { chip: "postable",         reasonCode: "period_open" };
-    case "soft_closed":     return { chip: "adjustment_only",  reasonCode: "period_adjustment_only" };
-    case "hard_closed":     return { chip: "locked",           reasonCode: "period_hard_closed" };
-    case "future":
-    case "not_opened":      return { chip: "locked",           reasonCode: "period_not_opened" };
-    default:                return { chip: "locked",           reasonCode: "period_not_opened" };
+  return resolvePeriodPostability(row.fp_status, row.bps_status);
+}
+
+/**
+ * Combines the company-period and book-period gates. Posting is permitted only
+ * when both gates permit it, so the most restrictive effective state wins.
+ */
+export function resolvePeriodPostability(
+  fiscalPeriodStatus: string | null,
+  bookPeriodStatus: string | null,
+): { chip: PostabilityChip; reasonCode: string } {
+  if (!fiscalPeriodStatus) return { chip: "locked", reasonCode: "period_not_opened" };
+  if (!bookPeriodStatus) return { chip: "locked", reasonCode: "book_period_missing" };
+
+  const statuses = [fiscalPeriodStatus, bookPeriodStatus];
+  if (statuses.includes("hard_close")) {
+    return { chip: "locked", reasonCode: "period_hard_closed" };
   }
+  if (statuses.includes("future")) {
+    return { chip: "locked", reasonCode: "period_not_opened" };
+  }
+  if (statuses.includes("soft_close")) {
+    return { chip: "adjustment_only", reasonCode: "period_adjustment_only" };
+  }
+  if (statuses.every(status => status === "open")) {
+    return { chip: "postable", reasonCode: "period_open" };
+  }
+  return { chip: "locked", reasonCode: "period_not_opened" };
 }
 
 
@@ -697,6 +813,11 @@ export async function buildCompanyHubPayload(
         configure: { pendingRows: 0, coveragePct: 0 },
         operate:   { openBlockers: 0, reconciliationSignals: 0 },
       },
+      governanceReadiness: {
+        source: "governance", cycleRunId: null, cycleStatus: null,
+        mandatoryTaskCount: 0, completedMandatoryTaskCount: 0,
+        criticalDeviationCount: 0, certificationStatus: null, certified: false,
+      },
       computedAt: now.toISOString(),
     };
   }
@@ -707,13 +828,27 @@ export async function buildCompanyHubPayload(
     glControlsResult,
     houseBanksResult,
     periodPostabilityResult,
+    postingRoleCoverage,
+    governanceReadiness,
   ] = await Promise.all([
     evaluateChartStep(db, opts.tenantId, header.companyCode, header.companyCodeId),
     evaluateBooksStep(db, opts.tenantId, header.companyCode, header.companyCodeId),
     evaluateGlControlsStep(db, opts.tenantId, header.companyCode),
     evaluateHouseBanksStep(db, opts.tenantId, header.companyCode, header.companyCodeId),
     evaluatePeriodPostability(db, opts.tenantId, header.companyCodeId, ctx),
+    loadPostingRoleCoverage(db, opts.tenantId, header.companyCode),
+    loadFinanceSetupGovernanceReadiness(db, opts.tenantId, header.companyCode),
   ]);
+
+  glControlsResult.conflicts.push(
+    ...buildPostingRoleCoverageConflicts(header.companyCode, postingRoleCoverage),
+  );
+  glControlsResult.step.coveragePct = Math.min(
+    glControlsResult.step.coveragePct ?? 100,
+    postingRoleCoverage.summary.coveragePct,
+  );
+  glControlsResult.step.conflictCount = glControlsResult.conflicts.length;
+  if (!postingRoleCoverage.summary.ready) glControlsResult.step.state = "blocked";
 
   const periodStep = buildFiscalPeriodStep(header.companyCode, ctx, periodPostabilityResult);
   if (periodStep.state === "blocked") {
@@ -788,6 +923,7 @@ export async function buildCompanyHubPayload(
         reconciliationSignals: houseBanksResult.step.conflictCount,
       },
     },
+    governanceReadiness,
     computedAt: new Date().toISOString(),
   };
 }
@@ -802,12 +938,14 @@ export async function buildCompanyConflicts(
   const header = await loadCompanyHeader(db, opts.tenantId, opts.companyCode);
   if (!header) return [];
 
-  const [chart, books, gl, banks] = await Promise.all([
+  const [chart, books, gl, banks, postingRoles] = await Promise.all([
     evaluateChartStep(db, opts.tenantId, header.companyCode, header.companyCodeId),
     evaluateBooksStep(db, opts.tenantId, header.companyCode, header.companyCodeId),
     evaluateGlControlsStep(db, opts.tenantId, header.companyCode),
     evaluateHouseBanksStep(db, opts.tenantId, header.companyCode, header.companyCodeId),
+    loadPostingRoleCoverage(db, opts.tenantId, header.companyCode),
   ]);
+  gl.conflicts.push(...buildPostingRoleCoverageConflicts(header.companyCode, postingRoles));
   return [
     ...chart.conflicts,
     ...books.conflicts,

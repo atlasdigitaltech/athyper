@@ -232,7 +232,7 @@ Each app is an independent Next.js 15+ application with:
 - Its own Keycloak client configuration
 - Its own BFF routes (no shared mutation surfaces between planes)
 
-See [local-dev.md](./local-dev.md) and [staging.md](./staging.md) for setup differences.
+See [local-dev-setup.md](./local-dev-setup.md) and [staging-setup.md](./staging-setup.md) for setup differences.
 
 ---
 

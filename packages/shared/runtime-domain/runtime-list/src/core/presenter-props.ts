@@ -56,6 +56,7 @@ import {
   resolveRuntimeViewModes,
 } from "./list-presentation";
 import { runtimeListText } from "./resources";
+import { DEFAULT_RUNTIME_LIST_CACHE_POLICY } from "../browser-cache/runtime-list-browser-cache";
 
 export async function resolvePresenterProps(
   adapter:        RuntimeListServerAdapter,
@@ -70,13 +71,21 @@ export async function resolvePresenterProps(
   // 2. Parse URL state
   const urlState = parseListSearchParams(rawSearchParams);
 
-  // 3. Resolve entity features, saved views, and access scope in parallel.
+  // 3. Start every descriptor-dependent operation immediately. Search/list
+  // configuration still receives the resolved access scope, but it no longer
+  // waits for saved-view I/O before it can begin.
+  const accessScopePromise = adapter.resolveAccessScope?.(entityCode, descriptor) ??
+    Promise.resolve(createDelegatedAccessScope(adapter.plane, descriptor));
+  const searchControlsPromise = accessScopePromise.then((accessScope) =>
+    adapter.resolveSearchControls?.(entityCode, descriptor, accessScope) ?? Promise.resolve(null));
+  const lazyListControlsPromise = accessScopePromise.then((accessScope) =>
+    adapter.resolveLazyListControls?.(entityCode, descriptor, accessScope) ?? Promise.resolve(null));
+
   // The descriptor's explicit list feature metadata wins over adapter defaults.
   const [entityFeatureOverrides, savedViews, accessScope] = await Promise.all([
     adapter.resolveListFeatures?.(entityCode, descriptor) ?? Promise.resolve(null),
     adapter.fetchSavedViews?.(entityCode) ?? Promise.resolve([] as SavedView[]),
-    adapter.resolveAccessScope?.(entityCode, descriptor) ??
-      Promise.resolve(createDelegatedAccessScope(adapter.plane, descriptor)),
+    accessScopePromise,
   ]);
   const featureResolution = resolveRuntimeListFeaturesWithDiagnostics({
     descriptor,
@@ -89,9 +98,12 @@ export async function resolvePresenterProps(
     : null;
   const requestedSavedViewId = urlState.savedViewId === SYSTEM_VIEW_ID ? undefined : urlState.savedViewId;
   const effectiveSavedViewId = requestedSavedViewId ?? implicitDefaultView?.id;
-  const savedState = effectiveSavedViewId
+  const materializedSavedView = effectiveSavedViewId
+    ? savedViews.find((view) => view.id === effectiveSavedViewId)
+    : undefined;
+  const savedState = materializedSavedView?.state ?? (effectiveSavedViewId
     ? await adapter.fetchSavedView?.(effectiveSavedViewId, entityCode) ?? null
-    : null;
+    : null);
   const activeSavedViewId = savedState ? effectiveSavedViewId ?? null : null;
 
   // 4. Merge saved view state if vid param present
@@ -100,15 +112,9 @@ export async function resolvePresenterProps(
     return buildAccessDeniedProps(adapter, entityCode, rawSearchParams, accessScope);
   }
   const scopedState = removeProtectedScopeFilters(effectiveState, accessScope.protectedFields);
-  const [rawSearchControls, rawLazyListControls] = await Promise.all([
-    adapter.resolveSearchControls?.(entityCode, descriptor, accessScope) ?? Promise.resolve(null),
-    adapter.resolveLazyListControls?.(entityCode, descriptor, accessScope) ?? Promise.resolve(null),
-  ]);
-  const baseSearchControls = normalizeSearchControls(rawSearchControls);
-  const searchControls = normalizeSearchControls({
-    ...baseSearchControls,
-    minQueryLength: resolveSearchMinLength(descriptor, baseSearchControls.minQueryLength),
-  });
+  // Lazy-list controls determine the page size and are therefore the only UI
+  // configuration that must resolve before the records request can start.
+  const rawLazyListControls = await lazyListControlsPromise;
   const lazyListControls = normalizeLazyListControls(rawLazyListControls);
   const searchFields = resolveSearchFields(descriptor);
 
@@ -177,9 +183,25 @@ export async function resolvePresenterProps(
   // Runtime-list currently consumes legacy page/totalPages pagination. Keep
   // the initial server render on the same contract as its lazy page requests.
   recordFetchParams["query_v1"] = "0";
-  const response = await adapter.fetchRecords(entityCode, recordFetchParams, descriptor, accessScope);
+  const responsePromise = adapter.fetchRecords(
+    entityCode,
+    recordFetchParams,
+    descriptor,
+    accessScope,
+    { visibleFieldNames: columns.map((column) => column.name) },
+  );
+  const [response, rawSearchControls] = await Promise.all([
+    responsePromise,
+    searchControlsPromise,
+  ]);
+  const baseSearchControls = normalizeSearchControls(rawSearchControls);
+  const searchControls = normalizeSearchControls({
+    ...baseSearchControls,
+    minQueryLength: resolveSearchMinLength(descriptor, baseSearchControls.minQueryLength),
+  });
   const isFullyLoaded = response.isFullyLoaded ?? inferFullyLoaded(response.records.length, response.pagination, page);
   const scopeFingerprint = buildRuntimeListScopeFingerprint(accessScope);
+  const cachePolicy = descriptor.cachePolicy ?? DEFAULT_RUNTIME_LIST_CACHE_POLICY;
 
   // 10. Resolve toolbar actions from operations
   const createHref     = resolveCreateHref(adapter, descriptor);
@@ -235,8 +257,15 @@ export async function resolvePresenterProps(
       page,
       pageSize,
       rawSearchParams:   presenterParams,
-      cacheKey:          buildRuntimeListBrowserCacheKey(entityCode, presenterParams, pageSize, scopeFingerprint),
-      controls:          { ...lazyListControls, lazyLoadPageSize: pageSize },
+      cacheKey:          buildRuntimeListBrowserCacheKey(entityCode, presenterParams, pageSize),
+      descriptorHash:    descriptor.descriptorHash ?? `unversioned:${descriptor.entityCode}`,
+      scopeFingerprint,
+      cachePolicy,
+      controls: {
+        ...lazyListControls,
+        lazyLoadPageSize: pageSize,
+        maxLoadedRows: Math.min(lazyListControls.maxLoadedRows, cachePolicy.maxRowsPerQuery),
+      },
     },
 
     searchValue:  sanitizedState.search ?? "",
@@ -650,6 +679,9 @@ function buildEmptyLazyListState(
     pageSize:          20,
     rawSearchParams,
     cacheKey:          buildRuntimeListBrowserCacheKey(entityCode, rawSearchParams, 20),
+    descriptorHash:    `unavailable:${entityCode}`,
+    scopeFingerprint:  "scope:none",
+    cachePolicy:       DEFAULT_RUNTIME_LIST_CACHE_POLICY,
     controls,
   };
 }

@@ -13,6 +13,7 @@ import { headerPrimaryActionClass, headerSecondaryActionClass } from "../header/
 import { useRuntimeEditFormActionState } from "../edit/runtime-edit-form-actions";
 import { PRINT_ACTION_ID, type RuntimeRecordChromeModel } from "./runtime-header-model";
 import type { RuntimeCanvasFlags } from "../surfaces/types";
+import { useRecordWorkspaceSnapshotIntentPrefetch } from "../record-query";
 
 interface RuntimeRecordChromeProps {
   chrome: RuntimeRecordChromeModel;
@@ -70,6 +71,7 @@ export function RuntimeRecordChrome({
   const { guardNavigate } = useEntityEdit();
   const typeHref = chrome.header.identity.typeHref;
   const activeTabValue = activeTab ?? uncontrolledActiveTab;
+  const prefetchSnapshotIndex = useRecordWorkspaceSnapshotIntentPrefetch();
 
   useEffect(() => {
     if (!activeTab && firstTab && !chrome.header.tabs?.some((tab) => tab.id === uncontrolledActiveTab)) {
@@ -123,6 +125,10 @@ export function RuntimeRecordChrome({
     setActiveTab(tabId);
   }
 
+  function handleTabIntent(tabId: string) {
+    if (tabId === "versions") prefetchSnapshotIndex();
+  }
+
   function setActiveTab(tabId: string) {
     if (!activeTab) setUncontrolledActiveTab(tabId);
     onActiveTabChange?.(tabId);
@@ -152,6 +158,7 @@ export function RuntimeRecordChrome({
     onAction: handleAction,
     activeTab: activeTabValue,
     onTabChange: handleTabChange,
+    onTabIntent: handleTabIntent,
     platformIcons: chrome.platformIcons,
     onPlatformIconClick: handlePlatformIconClick,
     activePlatformIcon,
@@ -211,4 +218,3 @@ function RuntimeEditHeaderActions({ state }: { state: ReturnType<typeof useRunti
     </div>
   );
 }
-

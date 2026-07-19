@@ -93,7 +93,7 @@ function RailIcon({
   onClick,
 }: RailIconProps) {
   const className = cn(
-    "relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+    "relative flex h-10 w-10 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
     isPlatform
       ? active
         ? "bg-accent/10 text-accent-foreground"
@@ -117,7 +117,7 @@ function RailIcon({
         />
       )}
 
-      <Icon className="size-[18px] shrink-0" />
+      <Icon className="h-6 w-6 shrink-0" />
 
       <NavBadge count={badge ?? 0} variant="overlay" />
     </>
@@ -232,4 +232,3 @@ export function NavRail({
     </div>
   );
 }
-

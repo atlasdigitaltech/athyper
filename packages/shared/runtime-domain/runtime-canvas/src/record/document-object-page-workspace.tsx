@@ -27,11 +27,13 @@ import {
 } from "@athyper/api-contracts/document-edit-draft";
 import type { DocumentEditSubmitResponseV1 } from "@athyper/api-contracts/document-edit-submit";
 import type {
+  EffectiveRecordWorkspaceManifest,
   MetaEntityRuntimeDescriptor,
   ProcessRuntimeState,
 } from "@athyper/runtime-contracts";
 import { flattenRuntimeRecord, type RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { adaptOperation } from "@athyper/runtime-shared/meta-entity";
+import { invalidateRuntimeListEntity } from "@athyper/runtime-shared/client";
 import { useOperationDispatch } from "../actions";
 import { EnteringEditSkeleton } from "../edit/entering-edit-skeleton";
 import { FlowModal } from "../flow";
@@ -47,16 +49,18 @@ import {
   usePrintPreview,
 } from "../panels";
 import type { RuntimeCanvasFlags } from "../surfaces/types";
+import { useRecordWorkspaceObservability } from "./use-record-workspace-observability";
 import type { SnapshotChildContracts } from "../process/snapshot-field-rules";
 import {
   DocumentEditRequestError,
-  useDocumentEditCoordinator,
+  useOptionalDocumentEditCoordinator,
   useOptionalDocumentEditSection,
 } from "../document-runtime/document-edit-coordinator";
 import { useOptionalDocumentRuntimeContext } from "../document-runtime/document-runtime-context";
 import { markDocumentEditPerformanceOnce } from "../document-runtime/document-edit-performance-marks";
 import {
   RuntimeProcessSurface,
+  isRecordWorkspaceProcessSurfaceSupported,
   resolveProcessSurfaceId,
   type RuntimeProcessSurfaceId,
 } from "../process/runtime-process-surface";
@@ -96,6 +100,7 @@ export interface DocumentObjectPageWorkspaceProps {
   recordId: string;
   recordUuid: string;
   processState?: ProcessRuntimeState;
+  workspaceManifest?: EffectiveRecordWorkspaceManifest;
   chrome: RuntimeRecordChromeModel;
 
   /** Ordered list of sections to render, identical to the EntityHeader tab strip. */
@@ -184,6 +189,7 @@ export function DocumentObjectPageWorkspace({
   recordUuid,
   record,
   processState,
+  workspaceManifest,
   chrome,
   sections,
   renderSection,
@@ -197,8 +203,24 @@ export function DocumentObjectPageWorkspace({
   flags,
   snapshotChildContracts,
 }: DocumentObjectPageWorkspaceProps) {
-  const editCoordinator = useDocumentEditCoordinator();
+  const editCoordinator = useOptionalDocumentEditCoordinator();
   const { scopeRef, scrollRoot } = useContainingScrollRoot<HTMLDivElement>();
+  const handleSaveSuccess = useCallback((response: DocumentEditSubmitResponseV1) => {
+    invalidateRuntimeListEntity(contract.entityCode, "edit");
+    onSaveSuccess?.(response);
+  }, [contract.entityCode, onSaveSuccess]);
+  const handleDeleteDraft = useCallback(async () => {
+    if (!onDeleteDraft) return { ok: false as const, message: "Draft deletion is unavailable." };
+    const result = await onDeleteDraft();
+    if (result.ok) invalidateRuntimeListEntity(contract.entityCode, "delete");
+    return result;
+  }, [contract.entityCode, onDeleteDraft]);
+  const handleRevertToBaseline = useCallback(async (workspaceId: string, sourceTabId: string) => {
+    if (!onRevertToBaseline) return { ok: false as const, message: "Reversal is unavailable." };
+    const result = await onRevertToBaseline(workspaceId, sourceTabId);
+    if (result.ok) invalidateRuntimeListEntity(contract.entityCode, "reversal");
+    return result;
+  }, [contract.entityCode, onRevertToBaseline]);
 
   // ── Process-tab mount (Versions / Compare / Lifecycle / Audit) ───────────
   // `activeSectionId` is driven by IntersectionObserver scroll detection —
@@ -247,10 +269,20 @@ export function DocumentObjectPageWorkspace({
     recordId,
     recordUuid,
     statusFieldName,
+    ...(workspaceManifest ? {
+      workspaceKeyInput: {
+        entityCode: workspaceManifest.entityCode,
+        recordId: workspaceManifest.recordId,
+        cacheScopeKey: workspaceManifest.cacheScope.key,
+      },
+    } : {}),
   });
 
   // ── Edit session ──────────────────────────────────────────────────────────
   const submitWorkspaceChanges = useCallback<DocumentEditDraftSaveCallback>(async (changes, etag) => {
+    if (!editCoordinator) {
+      return { type: "error", message: "The document edit runtime is not available for this record." };
+    }
     try {
       const response = await editCoordinator.submitWorkspaceChanges({ etag, changes });
       return {
@@ -281,16 +313,19 @@ export function DocumentObjectPageWorkspace({
   }, [editCoordinator]);
 
   const loadWorkspaceContext = useCallback(async () => {
+    if (!editCoordinator) {
+      throw new Error("The document edit runtime is not available for this record.");
+    }
     const opened = await editCoordinator.openWorkspace();
     const core = isRecord(opened.core) ? opened.core : {};
     return DocumentWorkspaceDraftContextSchema.parse(core["draftContext"]);
   }, [editCoordinator]);
 
   const editSession = useDocumentEditDraft({
-    enabled: true,
+    enabled: Boolean(editCoordinator),
     loadWorkspaceContext,
     submitWorkspaceChanges,
-    onSaveSuccess,
+    onSaveSuccess: handleSaveSuccess,
     autosave,
   });
 
@@ -360,6 +395,14 @@ export function DocumentObjectPageWorkspace({
     scrollToSection,
   } = pageController;
 
+  useRecordWorkspaceObservability({
+    entityCode: contract.entityCode,
+    recordId,
+    recordUuid,
+    renderer: contract.renderer,
+    activeSurface: drawer.activePanel ?? activeProcessTab ?? activeSectionId,
+  });
+
   const lazy = useLazyDocumentSections({
     sections,
     enabled: true,
@@ -404,6 +447,16 @@ export function DocumentObjectPageWorkspace({
     if (editSession.isEditing) setActiveProcessTab(null);
   }, [editSession.isEditing]);
 
+  useEffect(() => {
+    if (
+      activeProcessTab
+      && workspaceManifest
+      && !isRecordWorkspaceProcessSurfaceSupported(workspaceManifest, activeProcessTab)
+    ) {
+      setActiveProcessTab(null);
+    }
+  }, [activeProcessTab, workspaceManifest]);
+
   const registerSectionRef = useCallback(
     (id: string, el: HTMLElement | null) => {
       registerPageSectionRef(id, el);
@@ -439,9 +492,13 @@ export function DocumentObjectPageWorkspace({
   // editing — they're meta surfaces, meaningless mid-edit, and a footgun
   // for accidentally navigating away from in-flight draft work.
   const chromeWithBadges = useMemo(() => {
-    const filtered = editSession.isEditing
-      ? chrome.header.tabs?.filter((tab) => !resolveProcessSurfaceId(tab.id))
-      : chrome.header.tabs;
+    const filtered = chrome.header.tabs?.filter((tab) => {
+      const processSurface = resolveProcessSurfaceId(tab.id);
+      if (!processSurface) return true;
+      if (editSession.isEditing) return false;
+      return !workspaceManifest
+        || isRecordWorkspaceProcessSurfaceSupported(workspaceManifest, processSurface);
+    });
     const badged = filtered?.map((tab) => {
       const errorCount = dirtyMap.errorCountBySection[tab.id] ?? 0;
       if (errorCount > 0) {
@@ -454,7 +511,7 @@ export function DocumentObjectPageWorkspace({
     });
     if (!badged) return chrome;
     return { ...chrome, header: { ...chrome.header, tabs: badged } };
-  }, [chrome, dirtyMap.dirtySectionIds, dirtyMap.errorCountBySection, editSession.isEditing]);
+  }, [chrome, dirtyMap.dirtySectionIds, dirtyMap.errorCountBySection, editSession.isEditing, workspaceManifest]);
 
   // Save / Discard are now owned by DocumentChromeActionBar (mounted via
   // RuntimeRecordChrome's actionLeadingSlot). The workspace's only chrome
@@ -522,6 +579,10 @@ export function DocumentObjectPageWorkspace({
       // separate body slot — don't scroll, just flip the mount.
       const processId = resolveProcessSurfaceId(id);
       if (processId) {
+        if (
+          workspaceManifest
+          && !isRecordWorkspaceProcessSurfaceSupported(workspaceManifest, processId)
+        ) return;
         setActiveProcessTab(processId);
         return;
       }
@@ -530,12 +591,16 @@ export function DocumentObjectPageWorkspace({
       markSectionsThrough(id);
       scrollToSection(id, "tabClick");
     },
-    [markSectionsThrough, scrollToSection],
+    [markSectionsThrough, scrollToSection, workspaceManifest],
   );
 
   return (
     <EditDraftProvider value={editSession}>
-      <div ref={scopeRef} className="flex flex-col gap-2.5">
+      <div
+        ref={scopeRef}
+        data-athyper-record-workspace={contract.entityCode}
+        className="flex min-h-full flex-col gap-2.5 bg-muted/20"
+      >
         {/* While auto-enter-edit is loading the server's edit context, show
             a small "Entering edit mode…" skeleton above the chrome so the
             user gets immediate intent feedback rather than a view-mode
@@ -572,8 +637,8 @@ export function DocumentObjectPageWorkspace({
               editDisabledReason={chromeWithBadges.header.actions.find(
                 (a) => a.id === "__edit",
               )?.disabledReason}
-              onRevertToBaseline={onRevertToBaseline}
-              onDeleteDraft={onDeleteDraft}
+              onRevertToBaseline={onRevertToBaseline ? handleRevertToBaseline : undefined}
+              onDeleteDraft={onDeleteDraft ? handleDeleteDraft : undefined}
               onRefreshRecord={onRefreshRecord}
             />
           }
@@ -594,11 +659,13 @@ export function DocumentObjectPageWorkspace({
             registerSectionRef={registerSectionRef}
             renderSection={renderSectionGated}
             resolveTitle={resolveSectionTitle}
+            resolveSectionClassName={resolveSectionClassName}
           />
         )}
       </div>
 
       <ContextDrawerHost
+        contract={contract}
         entity={drawerEntity}
         entityCode={contract.entityCode}
         recordId={recordId}
@@ -611,6 +678,7 @@ export function DocumentObjectPageWorkspace({
         commentsCount={drawer.commentsCount}
         attachmentsSummary={drawer.attachmentsSummary}
         onCommentsCountChange={drawer.onCommentsCountChange}
+        onAttachmentsSummaryChange={drawer.onAttachmentsSummaryChange}
       />
 
       <PrintPreviewHost
@@ -707,5 +775,19 @@ function normalizeSubmitFieldErrors(value: unknown): Record<string, string> {
 }
 
 function resolveSectionTitle(descriptor: DocumentSectionDescriptor<string>): string | undefined {
-  return CHILD_TABLE_SECTION_KINDS.has(descriptor.kind) ? undefined : descriptor.label;
+  // Tables and header fields render their own bordered card header. Keeping a
+  // second object-page heading above those cards duplicates the label and
+  // visually separates it from the content it describes.
+  return CHILD_TABLE_SECTION_KINDS.has(descriptor.kind) || descriptor.kind === "fields"
+    ? undefined
+    : descriptor.label;
+}
+
+function resolveSectionClassName(
+  descriptor: DocumentSectionDescriptor<string>,
+): string | undefined {
+  // The fields surface now owns a complete card header, so it only needs a
+  // compact breathing space below the record chrome. Other section types keep
+  // the standard object-page rhythm.
+  return descriptor.kind === "fields" ? "pt-2" : undefined;
 }

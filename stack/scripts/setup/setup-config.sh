@@ -171,6 +171,11 @@ declare -a DIR_COPIES=(
   "telemetry/provisioning"
 )
 
+# Repo-managed runtime bundles refreshed on every config deployment.
+declare -a ALWAYS_SYNC_DIRS=(
+  "gateway/fallback"
+)
+
 # ── Helper functions ──────────────────────────────────────────────────────────
 copy_if_absent() {
   local src="$1" dst="$2"
@@ -292,6 +297,35 @@ for src_rel in "${!FILE_MAP[@]}"; do
 done
 
 # ── Directory copies ──────────────────────────────────────────────────────────
+for dir_rel in "${ALWAYS_SYNC_DIRS[@]}"; do
+  src_dir="$REPO_CFG/$dir_rel"
+  dst_dir="$LIVE_CFG/$dir_rel"
+  if [[ ! -d "$src_dir" ]]; then
+    echo "  WARN: dir not found: $dir_rel"
+    continue
+  fi
+  if [[ "$src_dir" == "$dst_dir" ]]; then
+    echo "  OK       $dir_rel  (local=repo)"
+    continue
+  fi
+  if [[ "$MODE" == "--diff" ]]; then
+    if [[ ! -d "$dst_dir" ]]; then
+      echo "  MISSING  $dir_rel"
+    elif diff -rq "$src_dir" "$dst_dir" &>/dev/null; then
+      echo "  OK       $dir_rel"
+    else
+      echo "  DRIFTED  $dir_rel"
+    fi
+    continue
+  fi
+  mkdir -p "$dst_dir"
+  if [[ "$dir_rel" == "gateway/fallback" ]]; then
+    rm -f "$dst_dir/index.html" "$dst_dir/maintenance.html"
+  fi
+  cp -r "$src_dir/." "$dst_dir/"
+  echo "  SYNCED   $dir_rel"
+done
+
 for dir_rel in "${DIR_COPIES[@]}"; do
   src_dir="$REPO_CFG/$dir_rel"
   dst_dir="$LIVE_CFG/$dir_rel"

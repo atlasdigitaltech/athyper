@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { BulkPreflightResult } from "@athyper/api-contracts/entity-list";
+import { invalidateRuntimeListEntity } from "@athyper/runtime-shared/client";
 import { useBulkActionsConfig } from "./provider";
 import { fromBulkActionResult } from "./normalize";
 import type { NormalizedBulkResult } from "./types";
@@ -112,6 +113,7 @@ export function useBulkActionRunner({
         result:       fromBulkActionResult(data),
         error:        null,
       });
+      invalidateRuntimeListEntity(entityCode, "bulk_operation");
       onComplete?.();
     } catch (err) {
       setState((s) => ({

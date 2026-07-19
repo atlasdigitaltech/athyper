@@ -23,7 +23,7 @@ export function RuntimeListPageFrame({
   const hasHeader = commandBar || eyebrow || title || description || actions || toolbar;
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-auto [scrollbar-gutter:stable] md:overflow-hidden md:[scrollbar-gutter:auto]">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-auto bg-muted/20 [scrollbar-gutter:stable] md:overflow-hidden md:[scrollbar-gutter:auto]">
       <div className="flex min-h-full min-w-0 w-full flex-col gap-2.5 md:h-full md:min-h-0">
         {hasHeader && (
           <div className="w-full min-w-0 shrink-0 overflow-hidden rounded-xl border bg-card px-3 py-3 shadow-sm sm:px-4">

@@ -5,7 +5,16 @@ import type { RuntimeListClientAdapter } from "../../adapter/types";
 import { DEFAULT_LAZY_LIST_CONTROLS } from "../../core/lazy-list";
 import { DEFAULT_SEARCH_CONTROLS } from "../../core/search";
 import type { RuntimeListLazyPresenterState, RuntimeListSearchPresenterState } from "../../core/types";
-import { RuntimeListClientProvider, useRuntimeListSearch } from "../runtime-list-context";
+import {
+  DEFAULT_RUNTIME_LIST_CACHE_POLICY,
+  RuntimeListBrowserCache,
+  RuntimeListBrowserCacheProvider,
+} from "../../browser-cache";
+import {
+  RUNTIME_LIST_CACHE_DIAGNOSTIC_EVENT,
+  RuntimeListClientProvider,
+  useRuntimeListSearch,
+} from "../runtime-list-context";
 
 const adapter: RuntimeListClientAdapter = {
   entityCode: "journal_entry",
@@ -44,6 +53,9 @@ function lazyState(cacheKey: string): RuntimeListLazyPresenterState {
     pageSize: 20,
     rawSearchParams: { sort: "posted_at:desc" },
     cacheKey,
+    descriptorHash: "descriptor-v1",
+    scopeFingerprint: "scope-v1",
+    cachePolicy: DEFAULT_RUNTIME_LIST_CACHE_POLICY,
     controls: { ...DEFAULT_LAZY_LIST_CONTROLS, maxLoadedRows: 200 },
   };
 }
@@ -63,29 +75,49 @@ function Probe() {
   return (
     <>
       <button type="button" onClick={lazyList.loadNextPage}>Load next page</button>
+      <button type="button" onClick={lazyList.refreshCurrentPage}>Refresh current page</button>
       <span data-testid="state">{lazyList.state}</span>
       <span data-testid="row-count">{lazyList.activeRows.length}</span>
       <span data-testid="loaded-pages">{lazyList.loadedPageNumbers.join(",")}</span>
       <span data-testid="error-message">{lazyList.errorMessage ?? ""}</span>
+      <span data-testid="cache-state">{lazyList.cacheState}</span>
+      <span data-testid="revalidating">{String(lazyList.isRevalidating)}</span>
+      <span data-testid="refresh-error">{lazyList.refreshErrorMessage ?? ""}</span>
     </>
   );
 }
 
-function renderProvider({ timeoutMs = 10_000, cacheKey = "runtime-list-context-test" } = {}) {
+function cacheIdentity(cacheKey: string) {
+  return {
+    entityCode: adapter.entityCode,
+    queryKey: cacheKey,
+    descriptorHash: "descriptor-v1",
+    scopeFingerprint: "scope-v1",
+    policy: DEFAULT_RUNTIME_LIST_CACHE_POLICY,
+  } as const;
+}
+
+function renderProvider({
+  timeoutMs = 10_000,
+  cacheKey = "runtime-list-context-test",
+  cache = new RuntimeListBrowserCache(),
+} = {}) {
   return render(
-    <RuntimeListClientProvider
-      adapter={adapter}
-      search={searchState(timeoutMs)}
-      lazyList={lazyState(cacheKey)}
-    >
-      <Probe />
-    </RuntimeListClientProvider>,
+    <RuntimeListBrowserCacheProvider scopeIdentity="test-scope" instance={cache}>
+      <RuntimeListClientProvider
+        adapter={adapter}
+        search={searchState(timeoutMs)}
+        lazyList={lazyState(cacheKey)}
+      >
+        <Probe />
+      </RuntimeListClientProvider>
+    </RuntimeListBrowserCacheProvider>,
   );
 }
 
 describe("RuntimeListClientProvider lazy pagination", () => {
   beforeEach(() => {
-    window.sessionStorage.clear();
+    vi.useRealTimers();
   });
 
   afterEach(() => {
@@ -142,5 +174,114 @@ describe("RuntimeListClientProvider lazy pagination", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId("state")).toHaveTextContent("idle");
     expect(screen.getByTestId("row-count")).toHaveTextContent("40");
+  });
+
+  it("reports a browser cache miss without changing the cold rows", async () => {
+    const diagnostic = vi.fn();
+    window.addEventListener(RUNTIME_LIST_CACHE_DIAGNOSTIC_EVENT, diagnostic);
+
+    renderProvider({ cacheKey: "runtime-list-cache-miss" });
+
+    await waitFor(() => expect(diagnostic).toHaveBeenCalled());
+    const event = diagnostic.mock.calls[0]?.[0] as CustomEvent;
+    expect(event.detail).toMatchObject({
+      cache: "miss",
+      entityCode: "journal_entry",
+      pageCount: 0,
+    });
+    expect(event.detail).toHaveProperty("cacheKeyHash");
+    expect(event.detail).not.toHaveProperty("cacheKey");
+    expect(screen.getByTestId("row-count")).toHaveTextContent("20");
+    window.removeEventListener(RUNTIME_LIST_CACHE_DIAGNOSTIC_EVENT, diagnostic);
+  });
+
+  it("reports and restores a fresh browser cache hit", async () => {
+    const cacheKey = "runtime-list-cache-hit";
+    const now = Date.now();
+    const cache = new RuntimeListBrowserCache();
+    cache.write(cacheIdentity(cacheKey), {
+      pages: [[2, {
+        rows: rows(21, 25),
+        pagination: { page: 2, pageSize: 5, total: 324, totalPages: 65 },
+        savedAt: now,
+        lastAccessed: now,
+      }]],
+    }, { savedAt: now, now });
+    const diagnostic = vi.fn();
+    window.addEventListener(RUNTIME_LIST_CACHE_DIAGNOSTIC_EVENT, diagnostic);
+
+    renderProvider({ cacheKey, cache });
+
+    expect(screen.getByTestId("row-count")).toHaveTextContent("5");
+    expect(screen.getByTestId("cache-state")).toHaveTextContent("fresh");
+    expect(screen.getByTestId("revalidating")).toHaveTextContent("true");
+    await waitFor(() => expect(screen.getByTestId("row-count")).toHaveTextContent("20"));
+    expect(screen.getByTestId("revalidating")).toHaveTextContent("false");
+    const event = diagnostic.mock.calls[0]?.[0] as CustomEvent;
+    expect(event.detail).toMatchObject({ cache: "hit", freshness: "fresh", pageCount: 1 });
+    window.removeEventListener(RUNTIME_LIST_CACHE_DIAGNOSTIC_EVENT, diagnostic);
+  });
+
+  it("reports an expired browser cache entry as stale", async () => {
+    const cacheKey = "runtime-list-cache-stale";
+    const cache = new RuntimeListBrowserCache();
+    cache.write(cacheIdentity(cacheKey), {
+      pages: [[2, {
+        rows: rows(21, 40),
+        savedAt: 1,
+        lastAccessed: 1,
+      }]],
+    }, { savedAt: 1, now: 1 });
+    const diagnostic = vi.fn();
+    window.addEventListener(RUNTIME_LIST_CACHE_DIAGNOSTIC_EVENT, diagnostic);
+
+    renderProvider({ cacheKey, cache });
+
+    await waitFor(() => expect(diagnostic).toHaveBeenCalled());
+    const event = diagnostic.mock.calls[0]?.[0] as CustomEvent;
+    expect(event.detail).toMatchObject({ cache: "stale", freshness: "expired", pageCount: 0 });
+    expect(screen.getByTestId("row-count")).toHaveTextContent("20");
+    window.removeEventListener(RUNTIME_LIST_CACHE_DIAGNOSTIC_EVENT, diagnostic);
+  });
+
+  it("hydrates stale rows first and marks background revalidation", async () => {
+    const cacheKey = "runtime-list-cache-warm-stale";
+    const now = Date.now();
+    const cache = new RuntimeListBrowserCache();
+    const savedAt = now - 30_000;
+    cache.write(cacheIdentity(cacheKey), {
+      pages: [[3, {
+        rows: rows(41, 45),
+        pagination: { page: 3, pageSize: 5, total: 324, totalPages: 65 },
+        savedAt,
+        lastAccessed: savedAt,
+      }]],
+    }, { savedAt, now });
+
+    renderProvider({ cacheKey, cache });
+
+    expect(screen.getByTestId("row-count")).toHaveTextContent("5");
+    expect(screen.getByTestId("cache-state")).toHaveTextContent("stale");
+    expect(screen.getByTestId("revalidating")).toHaveTextContent("true");
+    await waitFor(() => expect(screen.getByTestId("row-count")).toHaveTextContent("20"));
+    expect(screen.getByTestId("revalidating")).toHaveTextContent("false");
+  });
+
+  it("keeps usable rows and reports a non-blocking current-page refresh error", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({
+      message: "Refresh unavailable",
+    }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderProvider({ cacheKey: "runtime-list-refresh-error" });
+    fireEvent.click(screen.getByRole("button", { name: "Refresh current page" }));
+
+    await waitFor(() => expect(screen.getByTestId("refresh-error")).toHaveTextContent("Refresh unavailable"));
+    expect(screen.getByTestId("row-count")).toHaveTextContent("20");
+    expect(screen.getByTestId("state")).toHaveTextContent("idle");
+    expect(screen.getByTestId("revalidating")).toHaveTextContent("false");
   });
 });

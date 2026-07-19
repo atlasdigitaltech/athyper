@@ -90,7 +90,7 @@ export function RichCommentRenderer({
     return (
       <div
         className={cn(
-          "mt-0.5 text-sm leading-relaxed text-foreground",
+          "mt-0.5 text-base leading-relaxed text-foreground",
           // Prose baseline
           "[&_strong]:font-medium",
           "[&_em]:italic",
@@ -105,7 +105,7 @@ export function RichCommentRenderer({
           "[&_p]:mb-1 [&_p:last-child]:mb-0",
           "[&_h1]:text-base [&_h1]:font-medium [&_h1]:text-foreground [&_h2]:text-sm [&_h2]:font-medium [&_h2]:text-foreground [&_h3]:text-sm [&_h3]:font-medium [&_h3]:text-foreground",
           // Table — wrap in scroll container via CSS
-          "[&_table]:min-w-full [&_table]:border-collapse [&_table]:text-xs",
+          "[&_table]:min-w-full [&_table]:border-collapse [&_table]:text-sm",
           "[&_th]:border [&_th]:border-border [&_th]:bg-muted [&_th]:px-2 [&_th]:py-1 [&_th]:font-medium [&_th]:text-left [&_th]:text-foreground",
           "[&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1 [&_td]:text-foreground",
           // Table wrapper for horizontal scroll
@@ -121,7 +121,7 @@ export function RichCommentRenderer({
 
   // Plain text fallback
   return (
-    <p className={cn("mt-0.5 whitespace-pre-wrap text-sm text-foreground", className)}>
+    <p className={cn("mt-0.5 whitespace-pre-wrap text-base text-foreground", className)}>
       {commentText}
     </p>
   );

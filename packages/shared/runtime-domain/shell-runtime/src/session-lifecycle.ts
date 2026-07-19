@@ -320,6 +320,7 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastActivityAtRef = useRef(Date.now());
   const lastHeartbeatAtRef = useRef(0);
+  const touchInFlightRef = useRef<Promise<boolean> | null>(null);
   const warningActiveRef = useRef(false);
   const logoutStartedRef = useRef(false);
   const channelRef = useRef<BroadcastChannel | null>(null);
@@ -392,14 +393,28 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
       return true;
     }
 
+    // Activity, focus and visibility events can arrive in the same browser
+    // turn. Share one request so those signals cannot create parallel touches.
+    // Explicit continuation still receives the result of the active touch;
+    // both operations extend the same authenticated server session.
+    if (touchInFlightRef.current) return touchInFlightRef.current;
+
     lastHeartbeatAtRef.current = now;
     writeStoredActivity(heartbeatStorageKey, now);
+    const request = (async () => {
+      try {
+        const headers = force ? { "X-Session-Continue": "1" } : undefined;
+        const response = await csrfFetch(plane, "/api/auth/touch", { method: "POST", headers });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    })();
+    touchInFlightRef.current = request;
     try {
-      const headers = force ? { "X-Session-Continue": "1" } : undefined;
-      const response = await csrfFetch(plane, "/api/auth/touch", { method: "POST", headers });
-      return response.ok;
-    } catch {
-      return false;
+      return await request;
+    } finally {
+      if (touchInFlightRef.current === request) touchInFlightRef.current = null;
     }
   }, [heartbeatStorageKey, plane, sessionPolicy.heartbeatIntervalMs]);
 

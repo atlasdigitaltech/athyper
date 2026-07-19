@@ -21,6 +21,7 @@ import {
   parseRuntimeWriteError,
 } from "@athyper/runtime-shared/meta-entity";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
+import { invalidateRuntimeListEntity } from "@athyper/runtime-shared/client";
 import { RuntimeRecordWorkspace } from "../record/runtime-record-workspace";
 import {
   buildInitialValues,
@@ -153,6 +154,7 @@ export function RuntimeDescriptorEditWorkspace({
         ...current,
         ...buildSavedFormValues(contract, built.formValues, result),
       }));
+      invalidateRuntimeListEntity(contract.entityCode, "edit");
       onSaveSuccess?.();
       return { ok: true };
     },
@@ -566,4 +568,3 @@ function readStatusValue(values: FormValues): string | undefined {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
-

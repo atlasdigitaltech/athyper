@@ -22,6 +22,7 @@
     "@athyper/me-ui": "workspace:*",
     "@athyper/mesh-exchange-contracts": "workspace:*",
     "@athyper/app-mesh-route-manifest": "workspace:*",
+    "@athyper/runtime-list": "workspace:*",
     "@athyper/runtime-shared": "workspace:*",
     "@athyper/session-plane": "workspace:*",
     "@athyper/shell": "workspace:*",

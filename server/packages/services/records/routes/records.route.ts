@@ -103,6 +103,7 @@ import type { RedisClient } from "@athyper/adapter-memory-cache";
 import {
   buildEntityListCountCacheKey,
   buildEntityListPageCacheKey,
+  capEntityListCacheTtlSeconds,
   invalidateEntityListCache,
   resolveEntityListVersion,
   stableEntityListCacheHash,
@@ -143,6 +144,7 @@ import {
 } from "../mutation/field-validation.js";
 import { EntityQueryService } from "../query/entity-query.service.js";
 import { KyselyEntityQueryExecutor } from "../query/entity-query.kysely.js";
+import { KyselyEntityQueryScopeResolver } from "../query/entity-query-scope.kysely.js";
 import { DescriptorReferenceLabelResolver } from "../query/descriptor-reference-resolver.js";
 import {
   resolveMutationKernelRollout,
@@ -2606,26 +2608,65 @@ function parseEntityCountMode(raw: unknown): EntityCountMode | undefined {
 
 export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Router {
   const { db, auth, logger, cache, redis } = deps;
-  const entityQueryService = deps.executionDescriptorProvider && deps.entityQueryCursorSecret
+  const entityQueryCursorSecret = deps.entityQueryCursorSecret?.trim();
+  if (deps.executionDescriptorProvider && !entityQueryCursorSecret) {
+    logger?.error("entity_query_service_disabled", {
+      reason: "cursor_secret_missing_or_blank",
+      remediation: "Configure ENTITY_QUERY_CURSOR_SECRET and restart the API runtime.",
+    });
+  }
+  const entityQueryService = deps.executionDescriptorProvider && entityQueryCursorSecret
     ? new EntityQueryService({
         executor: new KyselyEntityQueryExecutor(db),
-        cursorSecret: deps.entityQueryCursorSecret,
+        scopeResolver: new KyselyEntityQueryScopeResolver(db),
+        cursorSecret: entityQueryCursorSecret,
         references: new DescriptorReferenceLabelResolver(db, deps.executionDescriptorProvider),
         countCache: cache ? {
           get: async (key) => {
-            const value = await cache.get(key).catch(() => null);
+            const value = await cache.get(key).catch((error) => {
+              logger?.warn("entity_query_cache_unavailable", {
+                operation: "count_get",
+                keyspace: key.split(":", 1)[0],
+                err: String(error),
+              });
+              return null;
+            });
             const count = value === null ? Number.NaN : Number(value);
             return Number.isSafeInteger(count) && count >= 0 ? count : undefined;
           },
-          set: async (key, value) => { await cache.set(key, String(value), "EX", 120); },
+          set: async (key, value) => {
+            await cache.set(key, String(value), "EX", 120).catch((error) => {
+              logger?.warn("entity_query_cache_unavailable", {
+                operation: "count_set",
+                keyspace: key.split(":", 1)[0],
+                err: String(error),
+              });
+            });
+          },
         } : undefined,
         resultCache: cache ? {
           get: async (key) => {
-            const value = await cache.get(key).catch(() => null);
+            const value = await cache.get(key).catch((error) => {
+              logger?.warn("entity_query_cache_unavailable", {
+                operation: "result_get",
+                keyspace: key.split(":", 1)[0],
+                err: String(error),
+              });
+              return null;
+            });
             if (!value) return undefined;
             try { return JSON.parse(value) as Awaited<ReturnType<EntityQueryService["list"]>>; } catch { return undefined; }
           },
-          set: async (key, value) => { await cache.set(key, JSON.stringify(value), "EX", 45); },
+          set: async (key, value, ttlSeconds = 45) => {
+            const effectiveTtl = Math.max(1, Math.min(45, Math.floor(ttlSeconds)));
+            await cache.set(key, JSON.stringify(value), "EX", effectiveTtl).catch((error) => {
+              logger?.warn("entity_query_cache_unavailable", {
+                operation: "result_set",
+                keyspace: key.split(":", 1)[0],
+                err: String(error),
+              });
+            });
+          },
         } : undefined,
       })
     : undefined;
@@ -2824,7 +2865,12 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       if (shouldUseEntityQuery(req, entityCode)) {
         const resolved = await resolveExecutionDescriptor(req, res, entityCode);
         const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Number(req.query["page_size"] ?? DEFAULT_PAGE_SIZE) || DEFAULT_PAGE_SIZE));
-        const result = await entityQueryService!.list({
+        const resultCacheTtlSeconds = capEntityListCacheTtlSeconds(
+          45,
+          req.header("X-Athyper-List-Cache-Mode"),
+          req.header("X-Athyper-List-Cache-Fresh-Seconds"),
+        );
+        const execution = await entityQueryService!.listWithDiagnostics({
           context: verifiedContext,
           descriptor: resolved.descriptor,
           generation: resolved.generation,
@@ -2834,10 +2880,13 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           sort: parseEntityQuerySort(req.query["sort"]),
           search: typeof req.query["q"] === "string" ? req.query["q"] : undefined,
           countMode: parseEntityCountMode(req.query["count_mode"]),
+          resultCacheTtlSeconds,
         });
+        const { result } = execution;
         res.setHeader("X-Entity-Query", "v1");
         res.setHeader("X-Descriptor-Hash", resolved.descriptor.identity.compiledHash);
         res.setHeader("X-Descriptor-Cache", resolved.cacheState);
+        res.setHeader("X-List-Cache", execution.cacheState);
         res.json(result);
         return;
       }
@@ -2936,8 +2985,18 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         : [null, null, null] as const;
       const defaultPageSize = getIntParam(paginationSnap, "api.pagination.default_page_size", DEFAULT_PAGE_SIZE);
       const defaultSearchMinQueryLength = getIntParam(searchSnap, "api.search.min_query_length", 2);
-      const listPageCacheTtlSeconds = getIntParam(listSnap, "api.list.redis_page_cache_ttl_seconds", 45);
-      const listCountCacheTtlSeconds = getIntParam(listSnap, "api.list.redis_count_cache_ttl_seconds", 120);
+      const descriptorCacheMode = req.header("X-Athyper-List-Cache-Mode");
+      const descriptorFreshForSeconds = req.header("X-Athyper-List-Cache-Fresh-Seconds");
+      const listPageCacheTtlSeconds = capEntityListCacheTtlSeconds(
+        getIntParam(listSnap, "api.list.redis_page_cache_ttl_seconds", 45),
+        descriptorCacheMode,
+        descriptorFreshForSeconds,
+      );
+      const listCountCacheTtlSeconds = capEntityListCacheTtlSeconds(
+        getIntParam(listSnap, "api.list.redis_count_cache_ttl_seconds", 120),
+        descriptorCacheMode,
+        descriptorFreshForSeconds,
+      );
       const maxPageSize = Math.min(
         MAX_PAGE_SIZE,
         getIntParam(paginationSnap, "api.pagination.max_page_size", MAX_PAGE_SIZE),
@@ -4363,22 +4422,25 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           // so all three must be set in app code for the gate to see correct values.
           const jePd = mappedData["posting_date"] as string | undefined;
           if (!mappedData["fiscal_period_id"] && jePd && jeCompanyId) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const fp = await (db as any)
-              .selectFrom("master.fiscal_period as fp")
-              .select(["fp.id", "fp.fiscal_year", "fp.period_number"])
-              .where("fp.tenant_id",       "=", tenantId)
-              .where("fp.company_code_id", "=", jeCompanyId)
-              .where("fp.period_number",   ">=", 1)
-              .where("fp.period_number",   "<=", 12)
-              .where("fp.start_date",      "<=", jePd)
-              .where("fp.end_date",        ">=", jePd)
-              .orderBy("fp.period_number", "asc")
-              .executeTakeFirst() as { id: string; fiscal_year: number; period_number: number } | undefined;
+            const resolved = await sql<{ id: string; fiscal_year: number; period_number: number }>`
+              SELECT fiscal_period_id AS id, fiscal_year, period_number
+                FROM master.resolve_fiscal_period(
+                  ${tenantId}::uuid,
+                  ${jeCompanyId}::uuid,
+                  ${jePd}::date,
+                  false
+                )
+            `.execute(db);
+            const fp = resolved.rows[0];
             if (fp) {
               mappedData["fiscal_period_id"] = fp.id;
               mappedData["fiscal_year"]      = fp.fiscal_year;
               mappedData["period_number"]    = fp.period_number;
+            } else {
+              throw Object.assign(
+                new Error(`No generated normal fiscal period covers posting date ${jePd}.`),
+                { code: "FISCAL_PERIOD_NOT_GENERATED", status: 422 },
+              );
             }
           }
 
@@ -4517,28 +4579,28 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           if (!mappedData["fiscal_year"] && postingDate) {
             const peCompanyId = mappedData["company_code_id"] as string | undefined;
             if (peCompanyId) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const fp = await (db as any)
-                .selectFrom("master.fiscal_period as fp")
-                .select(["fp.fiscal_year", "fp.period_number"])
-                .where("fp.tenant_id",       "=", tenantId)
-                .where("fp.company_code_id", "=", peCompanyId)
-                .where("fp.period_number",   ">=", 1)
-                .where("fp.period_number",   "<=", 12)
-                .where("fp.start_date",      "<=", postingDate)
-                .where("fp.end_date",        ">=", postingDate)
-                .orderBy("fp.period_number", "asc")
-                .executeTakeFirst() as { fiscal_year: number; period_number: number } | undefined;
+              const resolved = await sql<{ fiscal_year: number; period_number: number }>`
+                SELECT fiscal_year, period_number
+                  FROM master.resolve_fiscal_period(
+                    ${tenantId}::uuid,
+                    ${peCompanyId}::uuid,
+                    ${postingDate}::date,
+                    false
+                  )
+              `.execute(db);
+              const fp = resolved.rows[0];
               if (fp) {
                 mappedData["fiscal_year"]   = fp.fiscal_year;
                 mappedData["period_number"] = fp.period_number;
               }
             }
-            // Fallback: extract from date directly
+            // Do not synthesize month-based periods. That would silently post
+            // into the wrong period for 4-4-5, 13-period, and irregular years.
             if (!mappedData["fiscal_year"]) {
-              const d = new Date(postingDate);
-              mappedData["fiscal_year"]   = d.getFullYear();
-              mappedData["period_number"] = d.getMonth() + 1;
+              throw Object.assign(
+                new Error(`No generated normal fiscal period covers posting date ${postingDate}.`),
+                { code: "FISCAL_PERIOD_NOT_GENERATED", status: 422 },
+              );
             }
           }
 
@@ -4999,6 +5061,23 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   // can observe its status events.
   const KEEPALIVE_MS = 15_000;
 
+  /** Resolve an optional stream column from the active field projection. */
+  function resolveStreamColumn(
+    fieldMap: ReadonlyMap<string, string>,
+    logicalName: string,
+    configuredName?: string,
+  ): string | undefined {
+    for (const candidate of [configuredName, logicalName]) {
+      if (!candidate) continue;
+      const mapped = fieldMap.get(candidate);
+      if (mapped && !mapped.includes(".")) return mapped;
+      for (const physical of fieldMap.values()) {
+        if (physical === candidate && !physical.includes(".")) return physical;
+      }
+    }
+    return undefined;
+  }
+
   const recordStreamHandler: RequestHandler = async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -5032,13 +5111,28 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // events against the version it saw at connection time. Also serves
       // as the first event so reconnect logic gets a known-good baseline.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const initialRow = await (db.selectFrom(fullTable) as any)
-        .select(["status", "row_version"])
-        .where(table.primary_key as never, "=", physicalId as never)
-        .$if(Boolean(table.tenant_column), (query: any) => query.where(table.tenant_column as never, "=", tenantId as never))
-        .executeTakeFirst() as { status?: string; row_version?: number } | undefined;
-      const initialEtag = String(initialRow?.row_version ?? 0);
-      const initialStatus = typeof initialRow?.status === "string" ? initialRow.status : "unknown";
+      const concurrencyPolicy = table.concurrency_policy;
+      const configuredVersionColumn = typeof concurrencyPolicy["version_column"] === "string"
+        ? concurrencyPolicy["version_column"]
+        : typeof concurrencyPolicy["row_version_field"] === "string"
+          ? concurrencyPolicy["row_version_field"]
+          : undefined;
+      const statusColumn = resolveStreamColumn(fieldMap, "status");
+      const versionColumn = resolveStreamColumn(fieldMap, "row_version", configuredVersionColumn);
+      const initialColumns = [statusColumn, versionColumn]
+        .filter((column): column is string => Boolean(column));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const initialRow = initialColumns.length > 0
+        ? await (db.selectFrom(fullTable) as any)
+          .select(initialColumns)
+          .where(table.primary_key as never, "=", physicalId as never)
+          .$if(Boolean(table.tenant_column), (query: any) => query.where(table.tenant_column as never, "=", tenantId as never))
+          .executeTakeFirst() as Record<string, unknown> | undefined
+        : undefined;
+      const initialEtag = versionColumn ? String(initialRow?.[versionColumn] ?? 0) : "0";
+      const initialStatus = statusColumn && typeof initialRow?.[statusColumn] === "string"
+        ? initialRow[statusColumn] as string
+        : "unknown";
       const rawCursor = req.header("Last-Event-ID") ?? String(req.query["lastEventId"] ?? "");
       let durableCursor = /^\d+$/.test(rawCursor) ? Number(rawCursor) : 0;
       if (rawCursor) observeFrameworkInfrastructure("sse_reconnect", 1, { entity: entityCode });
@@ -8848,7 +8942,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       if (!claims) return;
 
       const entityCode = (req.params["entity"] as string).replace(/-/g, "_");
-      const id = req.params["id"] as string;
+      const id = String(req.params["id"] ?? "").trim().replace(/^\{(.+)\}$/, "$1");
 
       const table = await resolveEntityTable(db, entityCode);
       if (!table) {

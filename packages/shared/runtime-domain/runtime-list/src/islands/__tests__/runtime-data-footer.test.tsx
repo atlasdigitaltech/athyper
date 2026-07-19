@@ -2,7 +2,11 @@ import { createRef } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RuntimeListPagination } from "../../server/runtime-list-pagination";
-import { RuntimeLazyLoadFooter } from "../runtime-lazy-load-footer";
+import {
+  RuntimeLazyLoadFooter,
+  runtimeListPagePrefetchDelay,
+} from "../runtime-lazy-load-footer";
+import { DEFAULT_RUNTIME_LIST_CACHE_POLICY } from "../../browser-cache";
 
 const { useRuntimeListSearchMock } = vi.hoisted(() => ({
   useRuntimeListSearchMock: vi.fn(),
@@ -54,6 +58,7 @@ function runtimeListSearchState({
       hasNextPage,
       state,
       errorDirection,
+      cachePolicy: DEFAULT_RUNTIME_LIST_CACHE_POLICY,
       controls: {
         lazyPrefetchDistancePx: 320,
         maxLoadedRows,
@@ -106,6 +111,12 @@ describe("runtime data footer", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("keeps intent prefetch behind user interaction and gives viewport prefetch a quiet window", () => {
+    expect(runtimeListPagePrefetchDelay("intent")).toBe(750);
+    expect(runtimeListPagePrefetchDelay("viewport")).toBe(5_000);
+    expect(runtimeListPagePrefetchDelay("eager")).toBe(1_500);
   });
 
   it("attaches incomplete loaded-search status and actions to the table", () => {

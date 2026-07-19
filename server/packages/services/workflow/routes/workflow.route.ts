@@ -24,6 +24,8 @@ import {
 } from "@athyper/svc-shared";
 import { createWorkflowEngine } from "../engine-factory.js";
 import type { WorkflowSourceEntityAdapter } from "../source-entity-adapter.js";
+import { createStepUpBinding, requireStepUp } from "../../iam/mfa/step-up.service.js";
+import type { CacheClient } from "../../iam/session/session.service.js";
 
 // ── Deps ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +38,7 @@ export interface WorkflowRouteDeps {
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
   };
+  cache: CacheClient;
   sourceEntityAdapter?: WorkflowSourceEntityAdapter;
 }
 
@@ -52,7 +55,7 @@ function engineError(err: unknown): { status: number; body: { error: string; mes
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): void {
-  const { db, auth, logger } = deps;
+  const { db, auth, logger, cache } = deps;
   const engine = createWorkflowEngine({ db, logger, sourceEntityAdapter: deps.sourceEntityAdapter });
 
   // ── GET /workflow/inbox/count ─────────────────────────────────────────────
@@ -167,6 +170,23 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "no principal bound to this session" });
         return;
+      }
+
+      // Payment approval is a financial elevation class. The workflow engine
+      // remains responsible for authorization and state transitions; this
+      // route guard is the separate, session-bound Keycloak step-up control.
+      const workItem = await sql<{ entity_type: string }>`
+        SELECT wr.entity_type
+        FROM event.work_item wi
+        INNER JOIN document.workflow_request wr ON wr.id = wi.workflow_request_id
+        WHERE wi.id = ${workItemId}::uuid
+          AND wi.tenant_id = ${tenantId}::uuid
+        LIMIT 1
+      `.execute(db);
+      const entityType = workItem.rows[0]?.entity_type?.replace(/^document\./, "");
+      if (action === "approve" && entityType === "payment_entry") {
+        const binding = createStepUpBinding(claims, sub, tenantId, "payment_release");
+        if (!await requireStepUp(cache, binding, res)) return;
       }
 
       await withDomainSpan("workflow.request.action", {
@@ -448,6 +468,20 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
       if (!principalId) {
         res.status(403).json({ error: "PRINCIPAL_NOT_FOUND", message: "no principal bound to this session" });
         return;
+      }
+
+      const workItem = await sql<{ entity_type: string }>`
+        SELECT wr.entity_type
+        FROM event.work_item wi
+        INNER JOIN document.workflow_request wr ON wr.id = wi.workflow_request_id
+        WHERE wi.id = ${workItemId}::uuid
+          AND wi.tenant_id = ${tenantId}::uuid
+        LIMIT 1
+      `.execute(db);
+      const entityType = workItem.rows[0]?.entity_type?.replace(/^document\./, "");
+      if (action === "approve" && entityType === "payment_entry") {
+        const binding = createStepUpBinding(claims, sub, tenantId, "payment_release");
+        if (!await requireStepUp(cache, binding, res)) return;
       }
 
       await withDomainSpan("workflow.work_item.action", {

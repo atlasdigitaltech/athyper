@@ -146,7 +146,7 @@ function SurfaceBody({
 
 function SurfaceLoadingFallback() {
   return (
-    <div className="flex min-h-40 items-center justify-center rounded-md border bg-background p-6">
+    <div className="flex min-h-40 items-center justify-center rounded-md border bg-card p-6">
       <p className="text-sm text-muted-foreground">Loading…</p>
     </div>
   );

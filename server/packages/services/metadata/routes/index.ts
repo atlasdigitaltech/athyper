@@ -37,9 +37,11 @@ import { createLifecycleMaskRoute } from "./lifecycle-mask.route.js";
 import { createPermissionAliasRoute } from "./permission-alias.route.js";
 import { createDocumentRuntimeRegistryRoute } from "./document-runtime-registry.route.js";
 import { createStudioVersionRoutes } from "./studio-version.route.js";
+import { createStudioContractV2Routes } from "./studio-contract-v2.route.js";
 import { createMeshInboxRoutes } from "./mesh-inbox.route.js";
 import { createAdminPartnerBindingsRoutes } from "./admin-partner-bindings.route.js";
 import { createRuntimeBootstrapRoute, type RuntimeBootstrapProvider } from "./runtime-bootstrap.route.js";
+import type { CompiledEntityProjectionProvider } from "../src/compiled-entity-projection.js";
 
 export interface MetadataRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,6 +62,8 @@ export interface MetadataRoutesDeps {
   };
   cache?: DescriptorCache;
   executionDescriptorProvider?: ExecutionDescriptorProvider;
+  /** Authoritative Phase B compiler projection. */
+  compiledEntityProvider?: CompiledEntityProjectionProvider;
   loadEffectiveCompiledEntity?: (entityCode: string, tenantId: string) => Promise<Record<string, unknown> | null>;
   readAuthenticatedContext?: (req: Parameters<import("express").RequestHandler>[0]) => { tenantId?: string } | undefined;
   runtimeBootstrapProvider?: RuntimeBootstrapProvider;
@@ -94,6 +98,7 @@ export function registerMetadataRoutes(router: Router, deps: MetadataRoutesDeps)
   // don't depend on auto-coverage seeds for those control-plane tables.
   createDocumentRuntimeRegistryRoute(router, deps);
   createStudioVersionRoutes(router, deps);
+  createStudioContractV2Routes(router, deps);
   // Phase 5.5 — three-plane permission stack: mesh inbox + admin binding CRUD
   createMeshInboxRoutes(router, { db: deps.db, meshDb: deps.meshDb, auth: deps.auth, logger: deps.logger });
   createAdminPartnerBindingsRoutes(router, { db: deps.db, meshDb: deps.meshDb, auth: deps.auth, logger: deps.logger });

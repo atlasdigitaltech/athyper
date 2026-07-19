@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Sync canonical Neon brand assets into the Keycloak login theme.
+ * Sync canonical plane brand assets into the Keycloak login theme.
  *
  * Run:
  *   pnpm brand:sync:keycloak
@@ -12,17 +12,17 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
-
-const brandSrc = path.join(repoRoot, "packages/apps/neon/brand/src/products/neon");
 const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
 const kcImg = path.join(kcLogin, "resources/img");
 
+const brandSources = {
+  neon: path.join(repoRoot, "packages/apps/neon/brand/src"),
+  mesh: path.join(repoRoot, "packages/apps/mesh/brand/src"),
+  admin: path.join(repoRoot, "packages/apps/admin/brand/src"),
+} as const;
+
 interface BrandManifest {
-  logoFiles: {
-    primary: string;
-    icon: string;
-    [key: string]: string;
-  };
+  logoFiles: Record<string, string>;
 }
 
 async function ensureDir(p: string): Promise<void> {
@@ -31,68 +31,70 @@ async function ensureDir(p: string): Promise<void> {
 
 function generatedHeader(): string[] {
   return [
-    `<#-- Generated from packages/apps/neon/brand/src/products/neon/ -->`,
+    `<#-- Generated from the canonical plane brand packages. -->`,
     `<#-- DO NOT EDIT DIRECTLY - run: pnpm brand:refresh -->`,
   ];
 }
 
-async function generateBrandLogoFtl(svgPath: string): Promise<string> {
-  const svg = await fs.readFile(svgPath, "utf8");
+function planeSelection(): string[] {
+  return [
+    `  <#assign iamBrandPlane = (iamPlane!"athyper")>`,
+    `  <#if iamBrandPlane != "neon" && iamBrandPlane != "mesh" && iamBrandPlane != "admin">`,
+    `    <#assign iamBrandPlane = "admin">`,
+    `  </#if>`,
+  ];
+}
+
+async function generateBrandLogoFtl(): Promise<string> {
   return [
     ...generatedHeader(),
     `<div class="kc-brand-logo">`,
-    svg.trimEnd(),
+    ...planeSelection(),
+    `  <img src="\${url.resourcesPath}/img/\${iamBrandPlane}-wordmark-black.png" alt="\${iamProductName!"Athyper"}" />`,
     `</div>`,
     "",
   ].join("\n");
 }
 
-async function generateMobileLogoFtl(iconPath: string): Promise<string> {
-  const icon = await fs.readFile(iconPath, "utf8");
-  const iconWithAttrs = icon.replace(
-    /<svg /,
-    `<svg width="24" height="24" aria-hidden="true" `,
-  );
-
+async function generateMobileLogoFtl(): Promise<string> {
   return [
     ...generatedHeader(),
     `<div class="kc-mobile-logo">`,
-    iconWithAttrs.trimEnd(),
-    `  <span>Neon</span>`,
+    ...planeSelection(),
+    `  <img src="\${url.resourcesPath}/img/\${iamBrandPlane}-wordmark-black.png" alt="\${iamProductName!"Athyper"}" />`,
     `</div>`,
     "",
   ].join("\n");
 }
 
 async function main(): Promise<void> {
-  const manifest = JSON.parse(
-    await fs.readFile(path.join(brandSrc, "manifest.json"), "utf8"),
-  ) as BrandManifest;
-
   await ensureDir(kcImg);
 
-  for (const file of Object.values(manifest.logoFiles)) {
-    const src = path.join(brandSrc, file);
-    const dest = path.join(kcImg, `neon-${file}`);
-    await fs.copyFile(src, dest);
-    console.log(`  ok  img/${`neon-${file}`}`);
+  for (const [plane, brandSrc] of Object.entries(brandSources)) {
+    const manifest = JSON.parse(
+      await fs.readFile(path.join(brandSrc, "manifest.json"), "utf8"),
+    ) as BrandManifest;
+
+    for (const file of new Set(Object.values(manifest.logoFiles))) {
+      const src = path.join(brandSrc, file);
+      const dest = path.join(kcImg, `${plane}-${file}`);
+      await fs.copyFile(src, dest);
+      console.log(`  ok  img/${plane}-${file}`);
+    }
   }
 
   await fs.writeFile(
     path.join(kcLogin, "_neon-brand-logo.ftl"),
-    await generateBrandLogoFtl(path.join(brandSrc, manifest.logoFiles.primary)),
+    await generateBrandLogoFtl(),
     "utf8",
   );
-  console.log("  ok  _neon-brand-logo.ftl");
-
   await fs.writeFile(
     path.join(kcLogin, "_neon-brand-mobile.ftl"),
-    await generateMobileLogoFtl(path.join(brandSrc, manifest.logoFiles.icon)),
+    await generateMobileLogoFtl(),
     "utf8",
   );
-  console.log("  ok  _neon-brand-mobile.ftl");
 
-  console.log("\nKeycloak brand sync complete.");
+  console.log("\nKeycloak plane brand sync complete.");
 }
 
 main().catch((err) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import Link from "next/link";
 import type {
   RawSearchParams,
   ResolvedColumn,
@@ -199,14 +200,14 @@ export function RuntimeCompactList({
           ].join(" ");
 
           return href ? (
-            <a
+            <Link
               key={id ?? `row-${rowIndex}`}
               href={href}
               onClick={lazyList.enabled ? lazyList.saveScrollPosition : undefined}
               className={className}
             >
               {content}
-            </a>
+            </Link>
           ) : (
             <div key={id ?? `row-${rowIndex}`} className={className}>
               {content}
@@ -278,6 +279,5 @@ function renderCompactValue(column: ResolvedColumn, display: string) {
 }
 
 function isStatusColumn(column: ResolvedColumn): boolean {
-  const name = column.name.toLowerCase();
-  return column.uiType === "status" || name === "status" || name.endsWith("_status");
+  return column.uiType === "status";
 }

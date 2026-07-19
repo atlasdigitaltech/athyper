@@ -106,9 +106,9 @@ export function createLogoutRoutes(router: Router, deps: LogoutRoutesDeps): Rout
       ]);
 
       // ── Revoke all step-up elevations for this sub ────────────────────────
-      // Pattern: mfa_elevation:{sub}:* — SCAN and delete all action classes.
+      // Pattern: mfa_elevation:v2:{sub}:* — SCAN and delete all action classes.
       if (typeof cache.scan === "function") {
-        const pattern = `mfa_elevation:${sub}:*`;
+        const pattern = `mfa_elevation:v2:${sub}:*`;
         const keysToDelete: string[] = [];
         let cursor = "0";
         do {

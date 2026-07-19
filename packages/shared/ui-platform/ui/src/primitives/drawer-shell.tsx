@@ -220,7 +220,7 @@ export function DrawerShell({
           )}
 
           {/* Header */}
-          <div className="shrink-0 flex min-h-14 items-center gap-3 border-b border-border px-4 py-2">
+          <div className="shrink-0 flex min-h-14 items-center gap-3 border-b border-border bg-background px-4 py-2">
             {(badge || badgeDetail) && (
               <div className="shrink-0 flex flex-col items-center gap-1">
                 {badge && (
@@ -258,13 +258,13 @@ export function DrawerShell({
 
           {/* Optional sub-header (e.g. tab bar) â€” outside the scroll container */}
           {headerBottom && (
-            <div className="shrink-0 border-b border-border">
+            <div className="shrink-0 border-b border-border bg-background">
               {headerBottom}
             </div>
           )}
 
           {/* Body */}
-          <div className={cn("flex-1 min-h-0 overflow-y-auto", bodyClassName)}>
+          <div className={cn("flex-1 min-h-0 overflow-y-auto bg-muted/20", bodyClassName)}>
             {children}
           </div>
 

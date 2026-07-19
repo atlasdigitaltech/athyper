@@ -3,7 +3,7 @@ export { CoaWorkbench } from "./views/CoaWorkbench";
 export type { FinanceScope, ScopeType } from "./lib/scope";
 
 // ── Finance Setup Workbench (Phase 1) ──────────────────────────────────────
-export { CompanyHubView } from "./views/company-hub/CompanyHubView";
+export { CompanyHubView, FinanceSetupCompanyEntry } from "./views/company-hub/CompanyHubView";
 export { ReadinessJourney } from "./views/company-hub/ReadinessJourney";
 export { NeedsAttentionInbox } from "./views/company-hub/NeedsAttentionInbox";
 export { WorkspaceCards } from "./views/company-hub/WorkspaceCards";
@@ -24,6 +24,29 @@ export { GlAccountsListPanel } from "./views/explore/GlAccountsListPanel";
 export { BooksListPanel, HouseBanksExplorePanel } from "./views/explore/BooksAndBanksPanels";
 export { GlControlsGrid } from "./views/configure/GlControlsGrid";
 export { ChartAssignmentPanel, BookAssignmentPanel } from "./views/configure/ChartAndBookAssignmentPanels";
+export { FiscalCalendarDesigner } from "./views/configure/FiscalCalendarDesigner";
+export { PostingRoleCoverageMatrix } from "./views/configure/PostingRoleCoverageMatrix";
+export { OpeningBalanceWorkbench, type OpeningBalanceWorkbenchProps } from "./views/OpeningBalanceWorkbench";
+export { FinanceReadinessWorkbench, type FinanceReadinessWorkbenchProps } from "./views/FinanceReadinessWorkbench";
+export { CloseCycleWorkbench, type CloseCycleWorkbenchProps } from "./views/CloseCycleWorkbench";
+export { CrossBookPostingMonitor, type CrossBookPostingMonitorProps } from "./views/CrossBookPostingMonitor";
+export { useCrossBookPostingMonitor } from "./hooks/useCrossBookPostingMonitor";
+export { FinanceWorkbenchHub } from "./views/FinanceWorkbenchHub";
+export { FinanceAggregateEditor, type FinanceAggregateKind } from "./views/configure/FinanceAggregateEditor";
+export {
+  useFiscalCalendarDesigner,
+  useFiscalCalendarPreview,
+  useSaveFiscalCalendar,
+  useAssignFiscalCalendar,
+  useGenerateFiscalPeriods,
+  useRetireFiscalCalendar,
+} from "./hooks/useFiscalCalendarDesigner";
+export {
+  usePostingRoleCoverage,
+  usePostingRoleResolutionTrace,
+  useSavePostingRoleAccountMap,
+  useRetirePostingRoleAccountMap,
+} from "./hooks/usePostingRoleCoverage";
 export {
   useExploreChartTree,
   useExploreGlAccounts,

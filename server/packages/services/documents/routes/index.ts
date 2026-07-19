@@ -12,7 +12,7 @@
  *   GET    /api/documents/:docType/:id/attachments/:attachmentId/download — stream file download
  */
 
-import type { Router } from "express";
+import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import type { Queue } from "bullmq";
 import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
@@ -25,6 +25,10 @@ export interface DocumentsRoutesDeps {
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
+  /** Reads the tenant identity established by the authenticated host boundary. */
+  readAuthenticatedContext?: (req: Parameters<RequestHandler>[0]) => {
+    tenantId?: string;
+  } | undefined;
   objectStorage?: {
     adapter:     ObjectStorageAdapter;
     bucket:      string;
@@ -42,4 +46,3 @@ export function registerDocumentsRoutes(router: Router, deps: DocumentsRoutesDep
   createDocumentsRoute(router, deps);
   return router;
 }
-

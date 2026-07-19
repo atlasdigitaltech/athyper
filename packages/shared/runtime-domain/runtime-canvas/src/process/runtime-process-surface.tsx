@@ -7,7 +7,13 @@ import { Button } from "@athyper/ui/primitives";
 import { WorkPanel } from "@athyper/surface-kit";
 import { cn } from "@athyper/theme/utils";
 import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
-import type { LifecycleStep, MetaEntityRuntimeDescriptor, ProcessRuntimeLifecycleState, ProcessRuntimeState } from "@athyper/runtime-contracts";
+import type {
+  EffectiveRecordWorkspaceManifest,
+  LifecycleStep,
+  MetaEntityRuntimeDescriptor,
+  ProcessRuntimeLifecycleState,
+  ProcessRuntimeState,
+} from "@athyper/runtime-contracts";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import type {
@@ -23,6 +29,15 @@ import type {
 import { SnapshotDetailDrawer } from "./snapshot-detail-drawer";
 import { SnapshotCompareDrawer } from "./snapshot-compare-drawer";
 import type { SnapshotChildContracts } from "./snapshot-field-rules";
+import {
+  useOptionalRecordWorkspaceQueryContext,
+  useOptionalRecordWorkspaceSnapshots,
+  useRecordWorkspaceApprovals,
+  useRecordWorkspaceLifecycleTimeline,
+  useRecordWorkspaceProcessState,
+  useRecordWorkspaceSnapshotChildContracts,
+  useRecordWorkspaceSnapshotEventInvalidation,
+} from "../record-query";
 
 export type RuntimeProcessSurfaceId = "approvals" | "versions" | "lifecycle" | "audit";
 
@@ -47,6 +62,27 @@ export function resolveProcessSurfaceId(
 /** Cheap predicate for tab-list filtering. */
 export function isProcessTabId(value: string | undefined): boolean {
   return resolveProcessSurfaceId(value) !== null;
+}
+
+/**
+ * Effective-manifest gate shared by chrome filtering, click handling and the
+ * surface itself. Resource-backed tabs require their authorized resource;
+ * Audit is surface-backed because it has no RecordWorkspace resource yet.
+ */
+export function isRecordWorkspaceProcessSurfaceSupported(
+  manifest: EffectiveRecordWorkspaceManifest,
+  surface: RuntimeProcessSurfaceId,
+): boolean {
+  if (surface === "approvals") {
+    return manifest.resources.some((resource) => resource.key === "approvals");
+  }
+  if (surface === "lifecycle") {
+    return manifest.resources.some((resource) => resource.key === "lifecycleTimeline");
+  }
+  if (surface === "versions") {
+    return manifest.resources.some((resource) => resource.key === "snapshots");
+  }
+  return manifest.surfaces.some((candidate) => candidate.kind === "audit_trail");
 }
 
 interface RuntimeProcessSurfaceProps {
@@ -134,6 +170,20 @@ type ProcessStateExtras = ProcessRuntimeState & {
   };
 };
 
+function readCanonicalProcessState(value: unknown): ProcessRuntimeState | undefined {
+  if (!isRecord(value)) return undefined;
+  const nested = value["processState"];
+  if (isRecord(nested)) return nested as ProcessRuntimeState;
+  if ("lifecycle" in value || "workflow" in value) return value as ProcessRuntimeState;
+  return undefined;
+}
+
+function readCanonicalCollection<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (!isRecord(value)) return [];
+  return Array.isArray(value["data"]) ? value["data"] as T[] : [];
+}
+
 export function RuntimeProcessSurface({
   activeSurface,
   contract,
@@ -142,6 +192,108 @@ export function RuntimeProcessSurface({
   processState,
   snapshotChildContracts,
 }: RuntimeProcessSurfaceProps) {
+  const workspace = useOptionalRecordWorkspaceQueryContext();
+  if (
+    workspace
+    && !isRecordWorkspaceProcessSurfaceSupported(workspace.manifest, activeSurface)
+  ) return null;
+
+  if (workspace) {
+    return (
+      <CanonicalRuntimeProcessSurface
+        activeSurface={activeSurface}
+        contract={contract}
+        record={record}
+        recordId={recordId}
+        processState={processState}
+        snapshotChildContracts={snapshotChildContracts}
+      />
+    );
+  }
+
+  return (
+    <RuntimeProcessSurfaceContent
+      activeSurface={activeSurface}
+      contract={contract}
+      record={record}
+      recordId={recordId}
+      processState={processState}
+      snapshotChildContracts={snapshotChildContracts}
+    />
+  );
+}
+
+const PROCESS_SUMMARY_STALE_TIME = Number.POSITIVE_INFINITY;
+
+function CanonicalRuntimeProcessSurface(props: RuntimeProcessSurfaceProps) {
+  const needsProcessSummary = props.activeSurface === "approvals" || props.activeSurface === "lifecycle";
+  const processQuery = useRecordWorkspaceProcessState<unknown>({
+    enabled: needsProcessSummary,
+    staleTime: PROCESS_SUMMARY_STALE_TIME,
+  });
+  const approvalsQuery = useRecordWorkspaceApprovals<unknown>({
+    enabled: props.activeSurface === "approvals",
+  });
+  const lifecycleQuery = useRecordWorkspaceLifecycleTimeline<unknown>({
+    enabled: props.activeSurface === "lifecycle",
+  });
+  const snapshotChildContractsQuery = useRecordWorkspaceSnapshotChildContracts<unknown>({
+    enabled: props.activeSurface === "versions",
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  const canonicalProcessState = readCanonicalProcessState(processQuery.data) ?? props.processState;
+  const canonicalApprovalItems = approvalsQuery.data === undefined
+    ? undefined
+    : readCanonicalCollection<ApprovalItem>(approvalsQuery.data);
+  const canonicalLifecycleEntries = lifecycleQuery.data === undefined
+    ? []
+    : readCanonicalCollection<LifecycleEntry>(lifecycleQuery.data);
+
+  return (
+    <RuntimeProcessSurfaceContent
+      {...props}
+      processState={canonicalProcessState ?? undefined}
+      approvalItems={canonicalApprovalItems}
+      approvalsLoading={approvalsQuery.isPending}
+      approvalsError={approvalsQuery.error?.message ?? null}
+      lifecycleTimeline={{
+        loading: lifecycleQuery.isPending,
+        error: lifecycleQuery.error?.message ?? null,
+        entries: canonicalLifecycleEntries,
+      }}
+      snapshotChildContracts={
+        readSnapshotChildContracts(snapshotChildContractsQuery.data)
+        ?? props.snapshotChildContracts
+      }
+    />
+  );
+}
+
+function readSnapshotChildContracts(value: unknown): SnapshotChildContracts | undefined {
+  if (!isRecord(value)) return undefined;
+  const data = value["data"];
+  return isRecord(data) ? data as SnapshotChildContracts : undefined;
+}
+
+interface RuntimeProcessSurfaceContentProps extends RuntimeProcessSurfaceProps {
+  approvalItems?: ApprovalItem[];
+  approvalsLoading?: boolean;
+  approvalsError?: string | null;
+  lifecycleTimeline?: LifecycleTimelineState;
+}
+
+function RuntimeProcessSurfaceContent({
+  activeSurface,
+  contract,
+  record,
+  recordId,
+  processState,
+  snapshotChildContracts,
+  approvalItems,
+  approvalsLoading = false,
+  approvalsError = null,
+  lifecycleTimeline,
+}: RuntimeProcessSurfaceContentProps) {
   const metadata = readRuntimePresentation(record);
   const extras = processState as ProcessStateExtras | undefined;
 
@@ -153,6 +305,9 @@ export function RuntimeProcessSurface({
         recordId={recordId}
         processState={extras}
         metadata={metadata}
+        approvalItems={approvalItems}
+        approvalsLoading={approvalsLoading}
+        approvalsError={approvalsError}
       />
     );
   }
@@ -164,6 +319,7 @@ export function RuntimeProcessSurface({
         record={record}
         recordId={recordId}
         processState={extras}
+        timeline={lifecycleTimeline}
       />
     );
   }
@@ -191,12 +347,18 @@ function ApprovalPanel({
   record,
   processState,
   metadata,
+  approvalItems: canonicalApprovalItems,
+  approvalsLoading,
+  approvalsError,
 }: {
   contract: MetaEntityRuntimeDescriptor;
   record?: RuntimeRecordRow;
   recordId: string;
   processState?: ProcessStateExtras;
   metadata: RuntimePresentation;
+  approvalItems?: ApprovalItem[];
+  approvalsLoading: boolean;
+  approvalsError: string | null;
 }) {
   const workflow = processState?.workflow;
   const request = selectWorkflowRequest(processState?.workflowRequests);
@@ -228,7 +390,7 @@ function ApprovalPanel({
     || (!!lifecycleState && terminalCodes.has(normalizeCode(lifecycleState)));
   const activeExitState = isTerminal ? lifecycleState : null;
   // Approval items (merged from former Approvals tab)
-  const approvalItems = processState?.approvals?.items ?? [];
+  const approvalItems = canonicalApprovalItems ?? processState?.approvals?.items ?? [];
   const myPendingCount = processState?.approvals?.myPendingCount ?? processState?.workflow?.pendingTasks ?? 0;
   const headline = textAt(metadata.approvals, "headline")
     ?? (myPendingCount > 0 ? "Your approval is requested" : null);
@@ -241,7 +403,12 @@ function ApprovalPanel({
   // Lifecycle content is owned by the Lifecycle tab. Keep this flag false so
   // legacy `process`/`workflow` URLs cannot duplicate the journey in Approvals.
   const hasLifecycle = false;
-  const hasWorkflow = contract.workflow?.enabled === true || approvalItems.length > 0 || stageNames.length > 0;
+  const hasWorkflow = contract.workflow?.enabled === true
+    || canonicalApprovalItems !== undefined
+    || approvalsLoading
+    || approvalsError !== null
+    || approvalItems.length > 0
+    || stageNames.length > 0;
 
   // Workflow gate notice:
   //  • non-terminal: "Pending Approval → Approved — requires workflow approval" (forward gate)
@@ -340,6 +507,16 @@ function ApprovalPanel({
                     />
                   ))}
                 </div>
+              ) : approvalsLoading ? (
+                <EmptyProcessState
+                  title="Loading approvals…"
+                  detail="Reading the approval tasks for this record."
+                />
+              ) : approvalsError ? (
+                <EmptyProcessState
+                  title="Couldn't load approvals"
+                  detail={approvalsError}
+                />
               ) : !stageNames.length ? (
                 <EmptyProcessState
                   title="No approval tasks"
@@ -585,12 +762,12 @@ function VersionsPanel({
   recordId:        string;
   childContracts?: SnapshotChildContracts;
 }) {
-  // Bumping refreshKey forces useSnapshotIndex to refetch — used after a
-  // successful restore so the panel reflects any newly-captured snapshot
-  // (none today, but the contract is in place for when restore fires the
-  // snapshot.capture hook post-commit).
-  const [refreshKey, setRefreshKey] = useState(0);
-  const { loading, error, snapshots } = useSnapshotIndex(contract.entityCode, recordId, refreshKey);
+  // Restore and record-event invalidation refresh this canonical cache entry.
+  const snapshotQuery = useOptionalRecordWorkspaceSnapshots<unknown>();
+  useRecordWorkspaceSnapshotEventInvalidation();
+  const snapshots = readCanonicalCollection<SnapshotIndexEntry>(snapshotQuery.data);
+  const loading = snapshotQuery.fetchStatus === "fetching" && snapshotQuery.data === undefined;
+  const error = snapshotQuery.error?.message ?? null;
 
   // Most recent snapshot is row 0 (server orders by chain_seq DESC).
   const current = snapshots[0] ?? null;
@@ -619,9 +796,8 @@ function VersionsPanel({
       counts.schedules.inserted > 0     && `${counts.schedules.inserted} schedule row${counts.schedules.inserted === 1 ? "" : "s"}`,
     ].filter((s): s is string => Boolean(s)).join(", ");
     setRestoreNotice(
-      `Restored snapshot #${result.snapshot_chain_seq}. ${counts.header_fields_updated} header fields, ${summary || "no child rows"} replayed. Reload to see live changes.`,
+      `Restored snapshot #${result.snapshot_chain_seq}. ${counts.header_fields_updated} header fields, ${summary || "no child rows"} replayed. Live record data has been refreshed.`,
     );
-    setRefreshKey((k) => k + 1);
     if (typeof window !== "undefined") {
       window.setTimeout(() => setRestoreNotice(null), 12_000);
     }
@@ -801,50 +977,6 @@ function VersionsPanel({
  * Abort-safe: cancels in-flight fetch when entityCode/recordId change or the
  * panel unmounts.
  */
-function useSnapshotIndex(entityCode: string, recordId: string, refreshKey: number = 0): {
-  loading:   boolean;
-  error:     string | null;
-  snapshots: SnapshotIndexEntry[];
-} {
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState<string | null>(null);
-  const [snapshots, setSnapshots] = useState<SnapshotIndexEntry[]>([]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    setSnapshots([]);
-
-    fetch(runtimePath.entitySnapshots(entityCode, recordId), {
-      signal: controller.signal,
-      cache:  "no-store",
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(`Snapshots API returned ${res.status}`);
-        }
-        const body = await res.json() as { data?: SnapshotIndexEntry[] };
-        if (!controller.signal.aborted) {
-          setSnapshots(Array.isArray(body.data) ? body.data : []);
-        }
-      })
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!controller.signal.aborted) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [entityCode, recordId, refreshKey]);
-
-  return { loading, error, snapshots };
-}
-
 // ─── Snapshot row + chip ────────────────────────────────────────────────────
 
 /**
@@ -959,18 +1091,29 @@ function SnapshotRow({
  * like at this gate?" (Versions) and "how did it move through the lifecycle?"
  * (Lifecycle). Auditor's recommended Phase-3 UI split.
  */
+interface LifecycleTimelineState {
+  loading: boolean;
+  error: string | null;
+  entries: LifecycleEntry[];
+}
+
 function LifecyclePanel({
   contract,
   record,
-  recordId,
   processState,
+  timeline,
 }: {
   contract: MetaEntityRuntimeDescriptor;
   record?: RuntimeRecordRow;
   recordId: string;
   processState?: ProcessStateExtras;
+  timeline?: LifecycleTimelineState;
 }) {
-  const { loading, error, entries } = useLifecycleTimeline(contract.entityCode, recordId);
+  const { loading, error, entries } = timeline ?? {
+    loading: false,
+    error: null,
+    entries: [],
+  };
 
   // The endpoint returns rows oldest-first (ORDER BY created_at ASC). We
   // reverse here for top-down "newest first" display, matching the
@@ -1053,54 +1196,6 @@ function LifecyclePanel({
       </div>
     </WorkPanel>
   );
-}
-
-/**
- * Fetches the lifecycle (state-transition) timeline for a record. Same
- * abort-safe shape as useSnapshotIndex.
- */
-function useLifecycleTimeline(entityCode: string, recordId: string): {
-  loading: boolean;
-  error:   string | null;
-  entries: LifecycleEntry[];
-} {
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
-  const [entries, setEntries] = useState<LifecycleEntry[]>([]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-    setEntries([]);
-
-    fetch(runtimePath.versions(entityCode, recordId), {
-      signal: controller.signal,
-      cache:  "no-store",
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(`Lifecycle API returned ${res.status}`);
-        }
-        const body = await res.json() as { data?: LifecycleEntry[] };
-        if (!controller.signal.aborted) {
-          setEntries(Array.isArray(body.data) ? body.data : []);
-        }
-      })
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!controller.signal.aborted) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [entityCode, recordId]);
-
-  return { loading, error, entries };
 }
 
 /**
@@ -1248,8 +1343,8 @@ function AuditPanel({
 }
 
 /**
- * Abort-safe fetch for the audit log. Same pattern as useSnapshotIndex /
- * useLifecycleTimeline; cancels in-flight requests when args change.
+ * Abort-safe fetch for the audit log;
+ * cancels in-flight requests when args change.
  */
 function useAuditLog(entityCode: string, recordId: string): {
   loading: boolean;

@@ -110,6 +110,7 @@ export type ConflictCategory =
   | "chart"
   | "book"
   | "gl_control"
+  | "posting_role"
   | "house_bank"
   | "period"
   | "assignment";
@@ -172,6 +173,17 @@ export interface WorkspaceCardCounts {
   };
 }
 
+export interface FinanceSetupGovernanceReadiness {
+  source: "governance";
+  cycleRunId: string | null;
+  cycleStatus: string | null;
+  mandatoryTaskCount: number;
+  completedMandatoryTaskCount: number;
+  criticalDeviationCount: number;
+  certificationStatus: string | null;
+  certified: boolean;
+}
+
 
 // ─── Hub payload (Phase 1 primary) ──────────────────────────────────────────
 
@@ -197,6 +209,8 @@ export interface CompanyHubPayload {
   inbox:               FinanceSetupConflict[];
 
   workspaceCounts:     WorkspaceCardCounts;
+  /** Governed source of truth for whether this company may be certified posting-ready. */
+  governanceReadiness: FinanceSetupGovernanceReadiness;
 
   /** ISO — used by the "last checked" surface. */
   computedAt:          string;

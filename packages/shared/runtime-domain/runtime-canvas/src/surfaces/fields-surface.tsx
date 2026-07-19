@@ -1,7 +1,6 @@
 "use client";
 
 import { cloneElement, useEffect, useMemo, useRef, useState } from "react";
-import { WorkPanel } from "@athyper/surface-kit";
 import type { EntityFieldDefaults } from "@athyper/cascade";
 import {
   buildMetaEntityFieldGroups,
@@ -49,6 +48,7 @@ function fieldColSpanClass(
 
 export function FieldsSurfaceRenderer({
   contract,
+  surface,
   record,
   recordId,
   detailState,
@@ -76,6 +76,7 @@ export function FieldsSurfaceRenderer({
         contract={contract}
         record={record}
         recordId={recordId}
+        title={surface.label ?? "Header Details"}
         session={session}
       />
     );
@@ -86,6 +87,7 @@ export function FieldsSurfaceRenderer({
       contract={contract}
       record={record}
       recordId={recordId}
+      title={surface.label ?? "Header Details"}
       useSharedRenderers={flags?.sharedFieldRenderers ?? false}
     />
   );
@@ -97,11 +99,13 @@ function FieldsReadView({
   contract,
   record,
   recordId,
+  title,
   useSharedRenderers,
 }: {
   contract: RuntimeSurfaceRendererProps["contract"];
   record: RuntimeSurfaceRendererProps["record"];
   recordId: string;
+  title: string;
   useSharedRenderers: boolean;
 }) {
   const fieldGroups = useMemo(
@@ -118,7 +122,14 @@ function FieldsReadView({
   }
 
   return (
-    <div id={`record-${recordId}-fields`} className="flex flex-col gap-2.5">
+    <section
+      id={`record-${recordId}-fields`}
+      aria-label={title}
+      className="overflow-hidden rounded-lg border border-border bg-card"
+    >
+      <header className="flex min-h-12 items-center border-b border-border px-5 py-2">
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      </header>
       {fieldGroups.map((group) => {
         const visibleFields = group.fields.filter((field) => {
           const result = evaluateMetaEntityFieldVisibility(field, {
@@ -132,8 +143,11 @@ function FieldsReadView({
         if (visibleFields.length === 0) return null;
 
         return (
-          <WorkPanel key={group.key} title={group.label}>
-            <dl className={COLUMNS_CLASS[group.columns]}>
+          <section key={group.key} className="border-t border-border first:border-t-0">
+            <header className="border-b border-border bg-muted px-5 py-2.5">
+              <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
+            </header>
+            <dl className={`${COLUMNS_CLASS[group.columns]} p-4`}>
               {visibleFields.map((field) => {
                 const title = formatFieldTitle(recordData, field);
                 const spanClass = fieldColSpanClass(field, group.columns);
@@ -145,7 +159,7 @@ function FieldsReadView({
                     </dt>
                     <dd
                       title={title}
-                      className="mt-0.5 truncate text-sm font-medium text-foreground"
+                      className="mt-0.5 truncate text-sm font-normal text-foreground"
                     >
                       {useSharedRenderers ? (
                         <RuntimeFieldValueView
@@ -161,10 +175,10 @@ function FieldsReadView({
                 );
               })}
             </dl>
-          </WorkPanel>
+          </section>
         );
       })}
-    </div>
+    </section>
   );
 }
 
@@ -174,11 +188,13 @@ function FieldsEditView({
   contract,
   record,
   recordId,
+  title,
   session,
 }: {
   contract: RuntimeSurfaceRendererProps["contract"];
   record: RuntimeSurfaceRendererProps["record"];
   recordId: string;
+  title: string;
   session: NonNullable<ReturnType<typeof useEditDraftContext>>;
 }) {
   const documentEditCoordinator = useOptionalDocumentEditCoordinator();
@@ -304,7 +320,14 @@ function FieldsEditView({
   }
 
   return (
-    <div id={`record-${recordId}-fields`} className="flex flex-col gap-2.5">
+    <section
+      id={`record-${recordId}-fields`}
+      aria-label={title}
+      className="overflow-hidden rounded-lg border border-border bg-card"
+    >
+      <header className="flex min-h-12 items-center border-b border-border px-5 py-2">
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      </header>
       {fieldGroups.map((group) => {
         const visibleFields = group.fields.filter((field) => {
           const result = evaluateMetaEntityFieldVisibility(field, {
@@ -318,8 +341,11 @@ function FieldsEditView({
         if (visibleFields.length === 0) return null;
 
         return (
-          <WorkPanel key={group.key} title={group.label}>
-            <div className={COLUMNS_CLASS[group.columns]}>
+          <section key={group.key} className="border-t border-border first:border-t-0">
+            <header className="border-b border-border bg-muted px-5 py-2.5">
+              <h3 className="text-sm font-semibold text-foreground">{group.label}</h3>
+            </header>
+            <div className={`${COLUMNS_CLASS[group.columns]} p-4`}>
               {visibleFields.map((field) => {
                 // Per-field editability — descriptor flags first, then the
                 // server-truthed FieldMask. Mask explicitly false wins; a
@@ -424,10 +450,10 @@ function FieldsEditView({
                 );
               })}
             </div>
-          </WorkPanel>
+          </section>
         );
       })}
-    </div>
+    </section>
   );
 }
 
@@ -443,7 +469,7 @@ function FieldReadCell({
   return (
     <div className="grid gap-1 text-sm">
       <span className="font-medium text-muted-foreground">{label}</span>
-      <span className="truncate text-sm font-medium text-foreground" title={reason}>
+      <span className="truncate text-sm font-normal text-foreground" title={reason}>
         {value || "—"}
       </span>
       {reason ? (
@@ -460,4 +486,3 @@ function FieldsUnavailableState({ message }: { message: string }) {
     </div>
   );
 }
-

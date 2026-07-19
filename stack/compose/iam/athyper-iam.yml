@@ -11,7 +11,12 @@
 
 services:
   iam:
-    image: quay.io/keycloak/keycloak:${KEYCLOAK_IMAGE_TAG}
+    image: athyper/keycloak:${KEYCLOAK_IMAGE_TAG}
+    build:
+      context: ../config/iam
+      dockerfile: Dockerfile
+      args:
+        KEYCLOAK_VERSION: ${KEYCLOAK_IMAGE_TAG}
     profiles: ["core", "iam"]
     deploy:
       resources:
@@ -41,6 +46,12 @@ services:
       KC_SMTP_USERNAME: ${KC_SMTP_USERNAME:-}
       KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD:-}
       KC_WEBAUTHN_RP_ID: ${KC_WEBAUTHN_RP_ID:-athyper.local}
+      # One-time, presentation-only login context shared with the application
+      # BFFs. The provider consumes records atomically and fails open to a
+      # generic greeting when Redis is unavailable.
+      IAM_PRESENTATION_REDIS_URL: ${REDIS_URL}
+      IAM_PRESENTATION_REDIS_CONNECT_TIMEOUT_MS: ${IAM_PRESENTATION_REDIS_CONNECT_TIMEOUT_MS:-1000}
+      IAM_PRESENTATION_REDIS_READ_TIMEOUT_MS: ${IAM_PRESENTATION_REDIS_READ_TIMEOUT_MS:-1000}
       NEON_PUBLIC_WEB_URL: https://${APPS_ATHYPER_NEON_HOST}
       MESH_PUBLIC_WEB_URL: https://${APPS_ATHYPER_MESH_HOST}
       ADMIN_PUBLIC_WEB_URL: https://${APPS_ATHYPER_ADMIN_HOST}

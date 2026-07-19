@@ -1,3 +1,4 @@
+<#include "_iam-head.ftl">
 <script>
 (function () {
   var fallbackTheme = "neon-base";
@@ -14,22 +15,37 @@
 
   var params = new URLSearchParams(window.location.search);
   var plane = params.get("athyper_plane") || params.get("plane");
+  var themeApplied = false;
   if (plane === "neon" || plane === "mesh" || plane === "admin" || plane === "platform-control") {
-    applyTheme(fallbackTheme);
-    return;
+    themeApplied = applyTheme(fallbackTheme);
   }
 
-  var cookie = document.cookie
-    .split("; ")
-    .find(function (row) {
-      return row.indexOf("theme_preset=") === 0;
+  if (!themeApplied) {
+    var cookie = document.cookie
+      .split("; ")
+      .find(function (row) {
+        return row.indexOf("theme_preset=") === 0;
+      });
+    if (cookie) themeApplied = applyTheme(decodeURIComponent(cookie.split("=")[1] || ""));
+  }
+
+  if (!themeApplied) {
+    try {
+      themeApplied = applyTheme(localStorage.getItem("theme_preset") || "");
+    } catch (error) {}
+  }
+
+  if (!themeApplied) applyTheme(fallbackTheme);
+
+  document.documentElement.setAttribute("data-plane", "${iamPlane}");
+  document.documentElement.setAttribute("data-athyper-product", "${iamProductName}");
+
+  document.title = "${iamBrowserTitle}";
+
+  document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".kc-panel-left, .kc-carousel, .kc-dots").forEach(function (node) {
+      node.remove();
     });
-  if (cookie && applyTheme(decodeURIComponent(cookie.split("=")[1] || ""))) return;
-
-  try {
-    if (applyTheme(localStorage.getItem("theme_preset") || "")) return;
-  } catch (error) {}
-
-  applyTheme(fallbackTheme);
+  }, { once: true });
 })();
 </script>

@@ -21,7 +21,14 @@ export type FinanceSetupActivityType =
   | "finance_setup.control_deactivated"
   | "finance_setup.chart_assignment_changed"
   | "finance_setup.book_assignment_changed"
-  | "finance_setup.house_bank_toggled";
+  | "finance_setup.house_bank_toggled"
+  | "finance_setup.fiscal_calendar_created"
+  | "finance_setup.fiscal_calendar_updated"
+  | "finance_setup.fiscal_calendar_assigned"
+  | "finance_setup.fiscal_periods_generated"
+  | "finance_setup.posting_role_map_assigned"
+  | "finance_setup.posting_role_map_updated"
+  | "finance_setup.posting_role_map_retired";
 
 export interface FinanceSetupAuditEntry {
   tenantId:       string;

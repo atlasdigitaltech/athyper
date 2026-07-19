@@ -154,7 +154,6 @@ describe("tenant admin login, context select, and dashboard handoff", () => {
       KEYCLOAK_BASE_URL: "https://iam.test",
       AUTH_CONTEXT_RESOLVER_URL: "http://runtime.test/api/session/contexts",
       AUTH_AUDIT_ENDPOINT: "",
-      APP_MFA_ENFORCED: "false",
     };
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -433,6 +432,193 @@ describe("tenant admin login, context select, and dashboard handoff", () => {
     });
   });
 
+  it("hands Keycloak a one-time trusted display name only after exact identity discovery", async () => {
+    process.env.AUTH_DISCOVERY_RESOLVER_URL = "http://runtime.test/api/auth/discovery";
+    process.env.AUTH_DISCOVERY_STAGE1_VERIFICATION_MODE = "disabled";
+
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = fetchUrl(input);
+      if (url === "http://runtime.test/api/auth/discovery") {
+        return Response.json({
+          policy: { stage1VerificationMode: "disabled" },
+          candidates: [{
+            id: "exact-athq-admin",
+            tenantId: NEON_SELECTED.tenantId,
+            tenantCode: NEON_SELECTED.tenantCode,
+            tenantName: "Athyper",
+            workspaceId: NEON_SELECTED.workspaceId,
+            workspaceCode: NEON_SELECTED.orgCode,
+            workspaceName: NEON_SELECTED.orgName,
+            workspaceType: NEON_SELECTED.workspaceType,
+            workspaceSubtitle: "Neon organization",
+            realmKey: "athyper",
+            providerHint: null,
+            authMethodLabel: "Password",
+            hostname: null,
+            deliveryEmail: ATHQ_ADMIN_IDENTITY.email,
+            principalDisplayName: ATHQ_ADMIN_IDENTITY.displayName,
+            resolutionKind: "identity",
+          }],
+        });
+      }
+      throw new Error(`Unexpected discovery fetch: ${url}`);
+    }));
+
+    const start = await handleDiscoveryPost("neon", nextRequest("neon.athyper.local", "/api/auth/discovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identifier: ATHQ_ADMIN_IDENTITY.username, returnUrl: "/dashboard" }),
+    }));
+    expect(start.status).toBe(200);
+    const started = await start.json() as {
+      token: string;
+      candidates: Array<Record<string, unknown>>;
+    };
+    expect(started.candidates[0]).not.toHaveProperty("principalDisplayName");
+
+    const selected = await handleDiscoveryPost("neon", nextRequest("neon.athyper.local", "/api/auth/discovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "select", token: started.token, optionId: "exact-athq-admin" }),
+    }));
+    const selectedBody = await selected.json() as { loginUrl: string };
+    const internalLogin = new URL(selectedBody.loginUrl, "https://neon.athyper.local");
+    const loginResponse = await handleLogin(
+      "neon",
+      nextRequest("neon.athyper.local", `${internalLogin.pathname}${internalLogin.search}`),
+    );
+    const authRedirect = new URL(requiredHeader(loginResponse, "location"));
+    const state = authRedirect.searchParams.get("state");
+    expect(state).toBeTruthy();
+    expect(authRedirect.searchParams.get("login_hint")).toBe(ATHQ_ADMIN_IDENTITY.username);
+    expect(authRedirect.searchParams.has("display_name")).toBe(false);
+    expect(authRedirect.searchParams.has("athyper_context")).toBe(false);
+
+    const rawPresentation = await requireRedis().get(`iam:presentation:v1:${state}`);
+    expect(rawPresentation).toBeTruthy();
+    expect(JSON.parse(rawPresentation!)).toMatchObject({
+      version: 1,
+      planeKey: "neon",
+      realm: "athyper",
+      clientId: "neon-web",
+      loginHint: ATHQ_ADMIN_IDENTITY.username,
+      accountDisplayName: ATHQ_ADMIN_IDENTITY.displayName,
+      organizationName: NEON_SELECTED.orgName,
+    });
+    expect(requireRedis().ttls.get(`iam:presentation:v1:${state}`)).toBe(60);
+  });
+
+  it("keeps an ambiguous verified-domain route as routing evidence and preserves the original continuation", async () => {
+    process.env.AUTH_DISCOVERY_RESOLVER_URL = "http://runtime.test/api/auth/discovery";
+    process.env.AUTH_DISCOVERY_STAGE1_VERIFICATION_MODE = "disabled";
+
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+      if (url === "http://runtime.test/api/auth/discovery") {
+        return Response.json({
+          policy: { stage1VerificationMode: "disabled" },
+          candidates: [
+            {
+              id: "domain-tenant-a",
+              tenantId: "tenant-a",
+              tenantCode: "tenant-a",
+              tenantName: "Tenant A",
+              workspaceId: "tenant-a",
+              workspaceCode: "tenant-a",
+              workspaceName: "Tenant A",
+              workspaceType: "tenant",
+              workspaceSubtitle: "Neon organization",
+              realmKey: "athyper",
+              providerHint: "tenant-a-entra",
+              authMethodLabel: "Continue with Microsoft",
+              hostname: null,
+              deliveryEmail: null,
+              resolutionKind: "verified-domain",
+            },
+            {
+              id: "domain-tenant-b",
+              tenantId: "tenant-b",
+              tenantCode: "tenant-b",
+              tenantName: "Tenant B",
+              workspaceId: "tenant-b",
+              workspaceCode: "tenant-b",
+              workspaceName: "Tenant B",
+              workspaceType: "tenant",
+              workspaceSubtitle: "Neon organization",
+              realmKey: "athyper",
+              providerHint: "tenant-b-entra",
+              authMethodLabel: "Continue with Microsoft",
+              hostname: null,
+              deliveryEmail: null,
+              resolutionKind: "verified-domain",
+            },
+          ],
+        });
+      }
+      throw new Error(`Unexpected discovery fetch: ${url}`);
+    }));
+
+    const start = await handleDiscoveryPost("neon", nextRequest("neon.athyper.local", "/api/auth/discovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        identifier: "alex@example.com",
+        returnUrl: "/dashboard",
+      }),
+    }));
+    expect(start.status).toBe(200);
+    const started = await start.json() as {
+      token: string;
+      routed: boolean;
+      verified: boolean;
+      candidates: Array<{ id: string; authMethodLabel: string }>;
+    };
+    expect(started.routed).toBe(true);
+    expect(started.verified).toBe(false);
+    expect(started.candidates).toHaveLength(2);
+    expect(started.candidates.map((candidate) => candidate.authMethodLabel)).toEqual([
+      "Continue with Microsoft",
+      "Continue with Microsoft",
+    ]);
+
+    const selected = await handleDiscoveryPost("neon", nextRequest("neon.athyper.local", "/api/auth/discovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "select",
+        token: started.token,
+        optionId: "domain-tenant-a",
+        returnUrl: "/evil",
+      }),
+    }));
+    expect(selected.status).toBe(200);
+    const selectedBody = await selected.json() as { loginUrl: string };
+    const loginUrl = new URL(selectedBody.loginUrl, "https://neon.athyper.local");
+    expect(loginUrl.searchParams.get("returnUrl")).toBe("/auth/select?returnUrl=%2Fdashboard&filter=user");
+
+    const authStart = await handleLogin(
+      "neon",
+      nextRequest("neon.athyper.local", `${loginUrl.pathname}${loginUrl.search}&returnUrl=%2Fevil`),
+    );
+    const state = authStateFromRedirect(authStart.headers.get("location"));
+    const pkce = JSON.parse((await requireRedis().get(pkceStateKey(state)))!) as { returnUrl: string };
+    expect(pkce.returnUrl).toBe("/auth/select?returnUrl=%2Fdashboard&filter=user");
+
+    const contextEntry = [...requireRedis().values.entries()]
+      .find(([key]) => key.startsWith("session:auth_login_context:"));
+    expect(contextEntry).toBeTruthy();
+    expect(JSON.parse(contextEntry![1]).expectedContext).toMatchObject({
+      tenantId: "tenant-a",
+      tenantCode: "tenant-a",
+      organizationCode: "",
+      workspaceId: "",
+    });
+  });
+
   it("redacts auth audit console payloads in local runtimes", async () => {
     vi.mocked(console.info).mockClear();
     await handleLogin(
@@ -477,7 +663,6 @@ describe("cross-plane browser scenarios", () => {
       KEYCLOAK_BASE_URL: "https://iam.test",
       AUTH_CONTEXT_RESOLVER_URL: "http://runtime.test/api/session/contexts",
       AUTH_AUDIT_ENDPOINT: "",
-      APP_MFA_ENFORCED: "false",
     };
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -719,7 +904,6 @@ describe("account matrix across Neon, Admin, and Mesh", () => {
       KEYCLOAK_BASE_URL: "https://iam.test",
       AUTH_CONTEXT_RESOLVER_URL: "http://runtime.test/api/session/contexts",
       AUTH_AUDIT_ENDPOINT: "",
-      APP_MFA_ENFORCED: "false",
     };
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -764,7 +948,6 @@ describe("admin Keycloak MFA ownership", () => {
       KEYCLOAK_BASE_URL: "https://iam.test",
       AUTH_CONTEXT_RESOLVER_URL: "http://runtime.test/api/session/contexts",
       AUTH_AUDIT_ENDPOINT: "",
-      APP_MFA_ENFORCED: "false",
     };
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -777,7 +960,7 @@ describe("admin Keycloak MFA ownership", () => {
     testState.redis = null;
   });
 
-  it("trusts the forced admin Keycloak login when the id_token omits the mfa amr claim", async () => {
+  it("trusts the admin Keycloak login when the token carries MFA amr evidence", async () => {
     vi.mocked(console.info).mockClear();
     vi.mocked(console.warn).mockClear();
     mockFetch({
@@ -785,7 +968,7 @@ describe("admin Keycloak MFA ownership", () => {
       identity: ATHQ_ADMIN_IDENTITY,
       realmRoles: ["ADMIN_USER", "NEON_USER"],
       organizations: ADMIN_ORGANIZATIONS,
-      idTokenAmr: [],
+      idTokenAmr: ["otp"],
     });
 
     const loginResponse = await handleLogin(

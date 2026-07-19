@@ -119,8 +119,6 @@ function readReferenceLabel(
     `${column.name}_name`,
     column.columnName ? `${column.columnName}_label` : "",
     column.columnName ? `${column.columnName}_name` : "",
-    `${referenceBaseName(column.name)}_label`,
-    `${referenceBaseName(column.name)}_name`,
   ]);
 }
 
@@ -137,7 +135,6 @@ function readReferenceCode(
   return readCompanionValue(row, column, [
     `${column.name}_code`,
     column.columnName ? `${column.columnName}_code` : "",
-    `${referenceBaseName(column.name)}_code`,
   ]);
 }
 
@@ -164,17 +161,13 @@ function toNonBlankString(value: unknown): string | null {
   return text ? text : null;
 }
 
-function referenceBaseName(fieldName: string): string {
-  if (fieldName.endsWith("_id")) return fieldName.slice(0, -"_id".length);
-  if (fieldName.endsWith("_code")) return fieldName.slice(0, -"_code".length);
-  return fieldName;
-}
-
 function formatReferenceDisplay(label: string, code: string | null, format: string | undefined): string {
   if (!code || code === label) return label;
+  if (format === "label") return label;
   if (format === "code") return code;
   if (format === "code_label") return `${code} - ${label}`;
-  return `${label} (${code})`;
+  if (format === "label_code") return `${label} (${code})`;
+  return label;
 }
 
 function valueFromData(row: RuntimeRecordRow, key: string): unknown {

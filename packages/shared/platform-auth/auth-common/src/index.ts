@@ -14,3 +14,4 @@
 export * from "./required-actions";
 export * from "./roles";
 export * from "./env-gates";
+export * from "./federated-assurance";

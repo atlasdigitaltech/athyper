@@ -1,30 +1,21 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@athyper/ui/primitives";
 import { ActivityFeed } from "@athyper/collaboration-ui";
 import type { ActivityEntry } from "@athyper/api-contracts/workflow";
+import type { MetaEntityField } from "@athyper/runtime-contracts";
+import { useRecordWorkspaceActivity } from "../record-query";
 
 export interface EventsPanelProps {
   entityCode: string;
   recordId: string;
   recordUuid?: string;
+  fields?: MetaEntityField[];
+  recordData?: Record<string, unknown>;
 }
 
-export function EventsPanel({ entityCode, recordId, recordUuid }: EventsPanelProps) {
-  const apiId = recordUuid ?? recordId;
-  const { data, error, isLoading } = useQuery<{ data: ActivityEntry[] }>({
-    queryKey: ["activity", entityCode, apiId],
-    queryFn: async ({ signal }) => {
-      const response = await fetch(`/api/relay/api/activity/${entityCode}/${apiId}`, { signal });
-      if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new Error(text || `Activity request failed with ${response.status}`);
-      }
-      return response.json() as Promise<{ data: ActivityEntry[] }>;
-    },
-    staleTime: 30_000,
-  });
+export function EventsPanel({ entityCode, fields, recordData }: EventsPanelProps) {
+  const { data, error, isLoading } = useRecordWorkspaceActivity<{ data: ActivityEntry[] }>();
 
   if (isLoading) {
     return (
@@ -45,6 +36,8 @@ export function EventsPanel({ entityCode, recordId, recordUuid }: EventsPanelPro
   return (
     <ActivityFeed
       entries={data?.data ?? []}
+      fields={fields}
+      recordData={recordData}
       onOpenAuditLog={(eventId: string) => {
         window.open(`/audit/events?entityType=${encodeURIComponent(entityCode)}&eventId=${encodeURIComponent(eventId)}`, "_blank");
       }}

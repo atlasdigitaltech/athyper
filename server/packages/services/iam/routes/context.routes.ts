@@ -1,4 +1,5 @@
 import type { RequestHandler, Router } from "express";
+import { normalizeFederatedAssurance } from "@athyper/auth-common";
 
 import {
   createPlaneContextResolver,
@@ -129,6 +130,9 @@ export function createContextRoutes(router: Router, deps: ContextRoutesDeps): Ro
         sub,
         username: normalizeIdentityUsername(claims.preferred_username ?? claims.username ?? claims.email),
         workbenches,
+        // This value comes only from the verified Keycloak token. Do not use
+        // the untrusted X-Identity-Provider header as a policy selector.
+        providerAlias: normalizeFederatedAssurance(claims).identityProvider ?? undefined,
       });
       res.json(result);
     } catch (err) {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { hydrateExecutionDescriptor } from "@athyper/svc-metadata";
 import type { VerifiedRequestContext } from "@athyper/svc-iam";
 import { EntityQueryService } from "../entity-query.service.js";
-import type { CompiledEntityQueryPlan, EntityQueryExecutor } from "../entity-query.types.js";
+import type { CompiledEntityQueryPlan, EntityQueryExecutor, EntityQueryScopeResolver } from "../entity-query.types.js";
 
 const HASH = "a".repeat(64);
 const descriptor = hydrateExecutionDescriptor({
@@ -64,6 +64,46 @@ describe("EntityQueryService", () => {
     expect(result.pagination).toMatchObject({ has_more: true, page_size: 2, count_mode: "none" });
     expect(result.pagination.next_cursor).toBeTypeOf("string");
     expect(executor.executeExactCount).not.toHaveBeenCalled();
+  });
+
+  it("enforces a trusted legal-entity to company-code scope expansion", async () => {
+    const legalEntityContext = {
+      ...context,
+      companyCodeId: undefined,
+      legalEntityId: "legal-entity-1",
+    } as VerifiedRequestContext;
+    const scopeResolver: EntityQueryScopeResolver = {
+      resolve: vi.fn(async () => ({ companyCodeIds: ["company-1", "company-2"] })),
+    };
+    const executor = fakeExecutor([]);
+    const service = new EntityQueryService({ executor, cursorSecret: "test-secret", scopeResolver });
+
+    await service.list({ context: legalEntityContext, descriptor, generation: "9", countMode: "none" });
+
+    expect(scopeResolver.resolve).toHaveBeenCalledWith({
+      context: legalEntityContext,
+      descriptor,
+    });
+    const plan = vi.mocked(executor.executeData).mock.calls[0]![0];
+    expect(plan.predicates).toContainEqual({
+      column: "company_code_id",
+      operator: "in",
+      value: ["company-1", "company-2"],
+    });
+  });
+
+  it("fails closed when a cross-axis verified scope has no trusted resolver", async () => {
+    const legalEntityContext = {
+      ...context,
+      companyCodeId: undefined,
+      legalEntityId: "legal-entity-1",
+    } as VerifiedRequestContext;
+    const executor = fakeExecutor([]);
+    const service = new EntityQueryService({ executor, cursorSecret: "test-secret" });
+
+    await expect(service.list({ context: legalEntityContext, descriptor, generation: "9", countMode: "none" }))
+      .rejects.toMatchObject({ code: "SCOPE_PLAN_UNSUPPORTED" });
+    expect(executor.executeData).not.toHaveBeenCalled();
   });
 
   it("does not invent a tenant predicate for a compiled global entity", async () => {
@@ -177,11 +217,57 @@ describe("EntityQueryService", () => {
     const service = new EntityQueryService({ executor, cursorSecret: "test-secret", resultCache: cache });
     const command = { context, descriptor, generation: "3", limit: 20, countMode: "none" as const };
     const uncached = await service.list(command);
-    const cached = await service.list(command);
+    const cachedExecution = await service.listWithDiagnostics(command);
+    const cached = cachedExecution.result;
     expect(JSON.stringify(cached)).toBe(JSON.stringify(uncached));
+    expect(cachedExecution.cacheState).toBe("hit");
     expect(executor.executeData).toHaveBeenCalledOnce();
     expect([...values.keys()][0]).toContain("listpage:v2");
     expect([...values.keys()][0]).not.toContain(":p:");
+  });
+
+  it("disables keyset result-cache reads and writes when the effective TTL is zero", async () => {
+    const cache = {
+      get: vi.fn(async () => undefined),
+      set: vi.fn(async () => undefined),
+    };
+    const executor = fakeExecutor([{ id: "1", name: "Acme" }]);
+    const service = new EntityQueryService({ executor, cursorSecret: "test-secret", resultCache: cache });
+
+    await service.list({
+      context,
+      descriptor,
+      generation: "3",
+      countMode: "none",
+      resultCacheTtlSeconds: 0,
+    });
+
+    expect(cache.get).not.toHaveBeenCalled();
+    expect(cache.set).not.toHaveBeenCalled();
+    expect(executor.executeData).toHaveBeenCalledOnce();
+  });
+
+  it("forwards the effective TTL to keyset result-cache writes", async () => {
+    const cache = {
+      get: vi.fn(async () => undefined),
+      set: vi.fn(async () => undefined),
+    };
+    const service = new EntityQueryService({
+      executor: fakeExecutor([{ id: "1", name: "Acme" }]),
+      cursorSecret: "test-secret",
+      resultCache: cache,
+    });
+
+    await service.list({
+      context,
+      descriptor,
+      generation: "3",
+      countMode: "none",
+      resultCacheTtlSeconds: 12,
+    });
+
+    expect(cache.set).toHaveBeenCalledOnce();
+    expect(cache.set.mock.calls[0]?.[2]).toBe(12);
   });
 });
 

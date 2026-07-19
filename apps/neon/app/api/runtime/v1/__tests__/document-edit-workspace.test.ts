@@ -449,6 +449,23 @@ describe("workspace lifecycle route guard wiring", () => {
     expect(lineGrid).toContain('accountingLine ? "accounting_distribution" : null');
   });
 
+  it("keeps v2 identity, document-line projection, and line-row normalization wired", () => {
+    const runtimeProjection = readFileSync(resolve(
+      process.cwd(),
+      "../../apps/neon/lib/server/meta-entity-runtime.ts",
+    ), "utf8");
+    const lineSurface = readFileSync(resolve(
+      process.cwd(),
+      "../../packages/shared/runtime-domain/runtime-line-item/src/surface/line-items-surface.tsx",
+    ), "utf8");
+
+    expect(runtimeProjection).toContain("projectContractIdentityConfig");
+    expect(runtimeProjection).toContain("projectContractDocumentRuntimeSurfaces");
+    expect(runtimeProjection).toContain("relations: { lines: relation.relation_code }");
+    expect(lineSurface).toContain("normalizeLineResponseRow");
+    expect(lineSurface).toContain("line_no: lineNumber");
+  });
+
   it("secures and consolidates document field-option batches", () => {
     const formSource = readFileSync(resolve(
       process.cwd(),

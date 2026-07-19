@@ -154,7 +154,6 @@ describe("tenant admin login, context select, and dashboard handoff", () => {
       KEYCLOAK_BASE_URL: "https://iam.test",
       AUTH_CONTEXT_RESOLVER_URL: "http://runtime.test/api/session/contexts",
       AUTH_AUDIT_ENDPOINT: "",
-      APP_MFA_ENFORCED: "false",
     };
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -477,7 +476,6 @@ describe("cross-plane browser scenarios", () => {
       KEYCLOAK_BASE_URL: "https://iam.test",
       AUTH_CONTEXT_RESOLVER_URL: "http://runtime.test/api/session/contexts",
       AUTH_AUDIT_ENDPOINT: "",
-      APP_MFA_ENFORCED: "false",
     };
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -719,7 +717,6 @@ describe("account matrix across Neon, Admin, and Mesh", () => {
       KEYCLOAK_BASE_URL: "https://iam.test",
       AUTH_CONTEXT_RESOLVER_URL: "http://runtime.test/api/session/contexts",
       AUTH_AUDIT_ENDPOINT: "",
-      APP_MFA_ENFORCED: "false",
     };
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -764,7 +761,6 @@ describe("admin Keycloak MFA ownership", () => {
       KEYCLOAK_BASE_URL: "https://iam.test",
       AUTH_CONTEXT_RESOLVER_URL: "http://runtime.test/api/session/contexts",
       AUTH_AUDIT_ENDPOINT: "",
-      APP_MFA_ENFORCED: "false",
     };
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);

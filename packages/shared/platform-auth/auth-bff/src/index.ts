@@ -23,6 +23,12 @@ import {
   userSessionsKey,
 } from "@athyper/session-plane";
 import { createSessionRedisClient as getSessionRedis } from "@athyper/session-store";
+import {
+  evaluateFederatedMfaPolicy,
+  normalizeFederatedAssurance,
+  type NormalizedFederatedAssurance,
+  type TenantMfaTrustPolicy,
+} from "@athyper/auth-common";
 
 type RedisClient = Awaited<ReturnType<typeof getSessionRedis>>;
 
@@ -54,6 +60,8 @@ export interface OrgMembership {
   workContextDomain?: "procurement" | "sales";
   scopeVersion?: number;
   authEpoch?: number;
+  /** Policy attached by the IAM context resolver for this tenant/provider. */
+  mfaTrustPolicy?: TenantMfaTrustPolicy;
 }
 
 export interface NeonWorkContext {
@@ -121,6 +129,10 @@ export interface V4Session {
    * traffic is gated symmetrically with bearer-API traffic.
    */
   requiredActions?: readonly string[];
+  /** Normalized evidence only; raw provider claims are never stored here. */
+  authenticationAssurance?: NormalizedFederatedAssurance;
+  /** Privileged realms prefer a phishing-resistant credential at enrollment. */
+  phishingResistantPreferred?: boolean;
   mfaRequired: boolean;
   mfaVerified: boolean;
   mfaVerifiedAt?: number;
@@ -156,6 +168,11 @@ export interface PublicSession {
   absoluteExpiresAt: number;
   mfaRequired: boolean;
   mfaVerified: boolean;
+  authenticationAssurance?: Pick<
+    NormalizedFederatedAssurance,
+    "source" | "protocol" | "assuranceLevel" | "mfaSatisfied" | "phishingResistant"
+  >;
+  phishingResistantPreferred?: boolean;
   sessionPolicy: SessionPolicyDefaults;
 }
 
@@ -291,7 +308,23 @@ interface PkceState {
   expectedContext?: LoginExpectedContext;
   silent?: boolean;
   forceAuthn?: boolean;
+  stepUpAction?: StepUpActionClass;
 }
+
+type StepUpActionClass =
+  | "iam_admin"
+  | "tenant_settings"
+  | "delegation_accept"
+  | "payment_release"
+  | "security_change";
+
+const STEP_UP_ACTION_CLASSES: readonly StepUpActionClass[] = [
+  "iam_admin",
+  "tenant_settings",
+  "delegation_accept",
+  "payment_release",
+  "security_change",
+];
 
 interface LoginExpectedContext {
   tenantId: string;
@@ -303,12 +336,21 @@ interface LoginExpectedContext {
   networkRole: string;
 }
 
+interface LoginPresentationContext {
+  /** Server-resolved label for an exact principal match. Never derive from loginHint. */
+  accountDisplayName: string;
+  organizationName?: string;
+}
+
 interface LoginContextTokenPayload {
   version: 1;
   planeKey: PlaneKey;
   loginHint: string | null;
   provider: string | null;
   expectedContext?: LoginExpectedContext;
+  presentationContext?: LoginPresentationContext;
+  /** Server-owned application continuation carried by the opaque token. */
+  returnUrl?: string;
   createdAt: number;
   expiresAt: number;
 }
@@ -329,11 +371,16 @@ interface DiscoveryCandidate {
   authMethodLabel: string;
   hostname: string | null;
   deliveryEmail: string | null;
+  /** Internal-only exact-principal label; omitted from public discovery responses. */
+  principalDisplayName?: string | null;
   networkAccountId?: string | null;
   networkAccountCode?: string | null;
   networkAccountName?: string | null;
   networkAccountRole?: string | null;
   networkRelationshipType?: string | null;
+  resolutionKind: "identity" | "verified-domain";
+  providerType: string;
+  featureGate: "core" | "windows-kerberos";
 }
 
 interface DiscoveryTokenPayload {
@@ -366,6 +413,9 @@ interface DiscoveryPublicCandidate {
   networkAccountName?: string | null;
   networkAccountRole?: string | null;
   networkRelationshipType?: string | null;
+  resolutionKind: "identity" | "verified-domain";
+  providerType: string;
+  featureGate: "core" | "windows-kerberos";
 }
 
 type DiscoveryStage1VerificationMode = "required" | "disabled";
@@ -419,6 +469,7 @@ const DEFAULT_DISCOVERY_RESEND_COOLDOWN_SECONDS = readIntegerEnv(
 );
 const DEFAULT_DISCOVERY_TRUST_TTL_DAYS = readIntegerEnv("AUTH_DISCOVERY_VERIFIED_TRUST_TTL_DAYS", 30, 0, 90);
 const LOGIN_CONTEXT_TOKEN_TTL_SECONDS = readIntegerEnv("AUTH_LOGIN_CONTEXT_TOKEN_TTL_SECONDS", 300, 60, 900);
+const IAM_PRESENTATION_CONTEXT_TTL_SECONDS = readIntegerEnv("IAM_PRESENTATION_CONTEXT_TTL_SECONDS", 60, 30, 120);
 const DEFAULT_DISCOVERY_POLICY: DiscoveryPolicy = defaultDiscoveryPolicy();
 const DISCOVERY_RATE_LIMIT_WINDOW_SECONDS = 60;
 const DISCOVERY_RATE_LIMIT_MAX = 5;
@@ -710,7 +761,6 @@ type AuthErrorCode =
   | "INVALID_REALM"
   | "LOGIN_EXPIRED"
   | "MFA_REQUIRED"
-  | "MFA_VERIFIER_UNAVAILABLE"
   | "MISSING_CONTEXT"
   | "NO_ACCESS_CONTEXT"
   | "NO_PLATFORM_ACCESS"
@@ -738,7 +788,6 @@ const AUTH_ERROR_MESSAGES: Record<AuthErrorCode, string> = {
   INVALID_REALM: "The sign-in realm is not valid for this app.",
   LOGIN_EXPIRED: "The sign-in session expired. Please start again.",
   MFA_REQUIRED: "Step-up verification is required before continuing.",
-  MFA_VERIFIER_UNAVAILABLE: "Verification is temporarily unavailable. Please try again shortly.",
   MISSING_CONTEXT: "Choose a valid access context before continuing.",
   NO_ACCESS_CONTEXT: "No active access context was found for this app.",
   NO_PLATFORM_ACCESS: "Your account is not authorized for this app.",
@@ -853,7 +902,19 @@ export function createSessionDeleteHandler(plane: PlaneKey) {
 }
 
 export function createRefreshPostHandler(plane: PlaneKey) {
-  return (request: NextRequest) => handleRefresh(plane, request);
+  return async (request: NextRequest) => {
+    const startedAt = performance.now();
+    const response = await handleRefresh(plane, request);
+    const durationMs = Math.round(Math.max(0, performance.now() - startedAt) * 100) / 100;
+    const existing = response.headers.get("Server-Timing");
+    response.headers.set(
+      "Server-Timing",
+      [existing, `auth_refresh_total;dur=${durationMs}`].filter(Boolean).join(", "),
+    );
+    response.headers.set("X-Athyper-Auth-Operation", "refresh");
+    response.headers.set("X-Athyper-Auth-Duration-Ms", String(durationMs));
+    return response;
+  };
 }
 
 export function createTouchPostHandler(plane: PlaneKey) {
@@ -874,6 +935,10 @@ export function createMfaVerifyPostHandler(plane: PlaneKey) {
 
 export function createMfaVerifyGetHandler(plane: PlaneKey) {
   return () => NextResponse.json({ error: "METHOD_NOT_ALLOWED" }, { status: 405 });
+}
+
+export function createStepUpStartPostHandler(plane: PlaneKey) {
+  return (request: NextRequest) => handleStepUpStart(plane, request);
 }
 
 export function createBackchannelLogoutPostHandler(plane: PlaneKey) {
@@ -1041,6 +1106,19 @@ async function validatePlaneServerSessionUncached(
       reasonCode: "SESSION_IDLE_EXPIRED",
     });
     return { ok: false, reason: "SESSION_IDLE_EXPIRED", requestId, status: 401 };
+  }
+
+  const currentAssurance = session.authenticationAssurance ?? normalizeFederatedAssurance({});
+  if (sessionRequiresAthyperMfa(plane, session.realmKey, currentAssurance, session.organizations)
+    && (!session.mfaRequired || session.mfaVerified)) {
+    session = {
+      ...session,
+      authenticationAssurance: currentAssurance,
+      mfaRequired: true,
+      mfaVerified: false,
+      mfaVerifiedAt: undefined,
+    };
+    await saveSessionPreservingTtl(redis, session, effectiveSid);
   }
 
   if (session.mfaRequired && !session.mfaVerified && !input.allowMfaPending) {
@@ -1290,6 +1368,20 @@ async function refreshServerSessionForValidation(args: {
     // exchange and never re-inspected claims. Use the new claims to decide
     // whether the session should continue.
     const refreshedClaims = decodeJwtPayload(tokens.access_token);
+    const refreshedIdClaims = plane === "admin" && tokens.id_token
+      ? decodeJwtPayload(tokens.id_token)
+      : null;
+    const refreshedAssurance = normalizeFederatedAssurance(
+      refreshedClaims,
+      refreshedIdClaims,
+      { providerAlias: session.authenticationAssurance?.identityProvider },
+    );
+    const refreshedMfaRequired = sessionRequiresAthyperMfa(
+      plane,
+      session.realmKey,
+      refreshedAssurance,
+      session.organizations,
+    );
     if (!hasAccessRole(refreshedClaims.resource_access, refreshedClaims.groups, runtime.clientId)) {
       await destroySession(redis, session.sessionNamespace, sid, session);
       await recordAuthAudit({
@@ -1323,6 +1415,10 @@ async function refreshServerSessionForValidation(args: {
       // claims are authoritative; any actions added or cleared in KC since
       // the previous token must propagate through immediately.
       requiredActions: extractRequiredActions(refreshedClaims),
+      authenticationAssurance: refreshedAssurance,
+      mfaRequired: refreshedMfaRequired,
+      mfaVerified: !refreshedMfaRequired,
+      mfaVerifiedAt: !refreshedMfaRequired ? now : undefined,
     };
     await saveSessionPreservingTtl(redis, updated, sid);
     await recordAuthAudit({
@@ -1570,8 +1666,17 @@ export async function handleDiscoveryPost(plane: PlaneKey, request: NextRequest)
   }
 
   const deliveryEmail = resolveDiscoveryDeliveryEmail(candidates, identifier);
+  // A verified tenant domain is safe routing evidence for broker selection.
+  // It is deliberately distinct from identity verification: the selected
+  // external provider must still authenticate the user and the callback must
+  // prove membership in the selected tenant.
+  const verifiedDomainRoute = identifier.kind === "email"
+    && candidates.length > 0
+    && candidates.every((candidate) => candidate.resolutionKind === "verified-domain");
 
   if (
+    verifiedDomainRoute
+    ||
     policy.stage1VerificationMode === "disabled"
     || await hasValidDiscoveryTrust(redis, plane, request, identifierValue)
   ) {
@@ -1599,7 +1704,7 @@ export async function handleDiscoveryPost(plane: PlaneKey, request: NextRequest)
     }
 
     await recordAuthAudit({
-      eventType: "discovery_stage1_verified",
+      eventType: verifiedDomainRoute ? "discovery_domain_routed" : "discovery_stage1_verified",
       outcome: "success",
       planeKey: plane,
       requestId,
@@ -1608,13 +1713,15 @@ export async function handleDiscoveryPost(plane: PlaneKey, request: NextRequest)
         identifierKind: identifier.kind,
         candidateCount: candidates.length,
         policyMode: policy.stage1VerificationMode,
+        routingOnly: verifiedDomainRoute,
       },
     });
 
     await minimumDiscoveryResponseDelay(startedAt);
     return NextResponse.json({
-      status: "verified",
-      verified: true,
+      status: verifiedDomainRoute ? "routed" : "verified",
+      verified: !verifiedDomainRoute,
+      routed: verifiedDomainRoute,
       token,
       identifier: identifierValue,
       email: identifier.kind === "email" ? identifierValue : deliveryEmail ?? null,
@@ -1747,10 +1854,9 @@ async function handleDiscoverySelect(
   if (!realmKey) {
     return NextResponse.json({ error: "INVALID_REALM", requestId }, { status: 400 });
   }
-  const returnUrl = sanitizeReturnUrl(
-    typeof body["returnUrl"] === "string" ? body["returnUrl"] : payload.returnUrl,
-    config.defaultPath,
-  );
+  // The discovery token is the server-owned continuation. Do not let a later
+  // browser request replace it after the user has chosen a tenant.
+  const returnUrl = sanitizeReturnUrl(payload.returnUrl, config.defaultPath);
   let loginUrl: string;
   try {
     loginUrl = await buildInternalLoginUrl({
@@ -1762,12 +1868,23 @@ async function handleDiscoverySelect(
       expectedContext: {
         tenantId: candidate.tenantId,
         tenantCode: candidate.tenantCode,
-        organizationCode: candidate.workspaceCode,
-        organizationName: candidate.workspaceName,
-        workspaceId: candidate.workspaceId,
-        workspaceType: candidate.workspaceType,
-        networkRole: candidate.networkRelationshipType ?? candidate.networkAccountRole ?? "",
+        // A verified domain selects the tenant route but is not a workspace
+        // membership. Leave the workspace fields empty so the callback must
+        // prove membership in the selected tenant before creating a session.
+        organizationCode: candidate.resolutionKind === "identity" ? candidate.workspaceCode : "",
+        organizationName: candidate.resolutionKind === "identity" ? candidate.workspaceName : "",
+        workspaceId: candidate.resolutionKind === "identity" ? candidate.workspaceId : "",
+        workspaceType: candidate.resolutionKind === "identity" ? candidate.workspaceType : "",
+        networkRole: candidate.resolutionKind === "identity"
+          ? candidate.networkRelationshipType ?? candidate.networkAccountRole ?? ""
+          : "",
       },
+      presentationContext: candidate.resolutionKind === "identity" && candidate.principalDisplayName
+        ? {
+            accountDisplayName: candidate.principalDisplayName,
+            organizationName: candidate.workspaceName,
+          }
+        : undefined,
     });
   } catch (err) {
     console.warn(`[auth-bff/${plane}/discovery/${requestId}] login context token store unavailable`, err);
@@ -1889,13 +2006,17 @@ async function handleRememberedLogin(
 export async function handleLogin(plane: PlaneKey, request: NextRequest): Promise<NextResponse> {
   const requestId = requestIdFrom(request);
   const config = getPlaneConfig(plane);
-  const returnUrl = sanitizeReturnUrl(
+  const requestedReturnUrl = sanitizeReturnUrl(
     request.nextUrl.searchParams.get("returnUrl") ?? request.nextUrl.searchParams.get("redirect"),
     config.defaultPath,
   );
   const contextToken = request.nextUrl.searchParams.get("context_token")?.trim() ?? "";
   const legacyProvider = normalizeProviderHint(request.nextUrl.searchParams.get("provider"));
   const legacyLoginHint = normalizeLoginHint(request.nextUrl.searchParams.get("login_hint") ?? request.nextUrl.searchParams.get("email"));
+  const requestedStepUpAction = request.nextUrl.searchParams.get("step_up_action")?.trim();
+  const stepUpAction = requestedStepUpAction && STEP_UP_ACTION_CLASSES.includes(requestedStepUpAction as StepUpActionClass)
+    ? requestedStepUpAction as StepUpActionClass
+    : undefined;
   const legacyExpectedContext = normalizeLoginExpectedContext({
     tenantId: request.nextUrl.searchParams.get("selected_tenant_id"),
     tenantCode: request.nextUrl.searchParams.get("selected_tenant"),
@@ -1955,6 +2076,9 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
   const provider = loginContext?.provider ?? legacyProvider;
   const loginHint = loginContext?.loginHint ?? legacyLoginHint;
   const expectedContext = loginContext?.expectedContext ?? legacyExpectedContext;
+  const returnUrl = loginContext?.returnUrl
+    ? sanitizeReturnUrl(loginContext.returnUrl, config.defaultPath)
+    : requestedReturnUrl;
 
   const adminNativeMfaRequired = plane === "admin" && realmKey === "athyper";
   const requestedSilent = request.nextUrl.searchParams.get("silent") === "true";
@@ -1977,8 +2101,27 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
     expectedContext: expectedContext ?? undefined,
     silent: isSilent || undefined,
     forceAuthn: forceAuthn || undefined,
+    stepUpAction,
   };
   await redis.set(pkceStateKey(state), JSON.stringify(pkce), { EX: PKCE_STATE_TTL_SECONDS });
+
+  if (loginContext?.presentationContext && loginHint) {
+    try {
+      await storeIamPresentationContext(redis, {
+        state,
+        plane,
+        realm: runtime.realm,
+        clientId: runtime.clientId,
+        loginHint,
+        presentationContext: loginContext.presentationContext,
+      });
+    } catch (err) {
+      // Presentation enrichment must never prevent authentication. Keycloak
+      // falls back to the generic time-based greeting when this short-lived
+      // record cannot be written.
+      console.warn(`[auth-bff/${plane}/login/${requestId}] IAM presentation context unavailable`, err);
+    }
+  }
 
   const authUrl = buildAuthorizationUrl({
     baseUrl,
@@ -2002,6 +2145,11 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
   // mapped in the realm LoA table, which causes KC to loop after OTP.
   if (plane === "admin" && realmKey === "athyper") {
     finalUrl.searchParams.set("max_age", "3600");
+  }
+  if (stepUpAction) {
+    // A step-up is a fresh Keycloak authentication transaction. The normal
+    // browser SSO cookie must not silently satisfy it.
+    finalUrl.searchParams.set("max_age", "0");
   }
 
   await recordAuthAudit({
@@ -2148,7 +2296,17 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
     const idClaims = plane === "admin" && realmKey === "athyper" && tokens.id_token
       ? decodeJwtPayload(tokens.id_token)
       : null;
-    const keycloakMfaSatisfied = keycloakAdminMfaSatisfied(plane, realmKey, pkce, idClaims);
+    const authenticationAssurance = normalizeFederatedAssurance(
+      claims,
+      idClaims,
+      { providerAlias: pkce.provider },
+    );
+    const keycloakMfaSatisfied = keycloakAdminMfaSatisfied(
+      plane,
+      realmKey,
+      pkce,
+      authenticationAssurance,
+    );
 
     if (!hasAccessRole(claims.resource_access, claims.groups, runtime.clientId)) {
       await recordAuthAudit({
@@ -2223,10 +2381,15 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
     const sid = generateSid();
     const csrfToken = randomUUID();
     const realmPolicy = assertRealmAllowed(plane, realmKey);
-    const appMfaEnforced = process.env.APP_MFA_ENFORCED === "true";
-    // Admin plane always requires MFA regardless of APP_MFA_ENFORCED; other
-    // planes respect the global flag (tenant-configurable in the future).
-    const mfaRequired = realmPolicy.mandatoryMfa && (appMfaEnforced || plane === "admin") && !keycloakMfaSatisfied;
+    // Keycloak owns the challenge. The BFF only decides whether the current
+    // token carries enough normalized assurance for the resolved tenant(s).
+    // Missing provider policy is treated as `never` for federated evidence.
+    const mfaRequired = sessionRequiresAthyperMfa(
+      plane,
+      realmKey,
+      authenticationAssurance,
+      organizations,
+    );
     const session: V4Session = {
       version: 2,
       sid,
@@ -2255,9 +2418,11 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
       lastSeenAt: now,
       lastRoleCheckAt: now,
       requiredActions: extractRequiredActions(claims),
+      authenticationAssurance,
+      phishingResistantPreferred: realmPolicy.hardwareKeyPreferred,
       mfaRequired,
       mfaVerified: !mfaRequired,
-      mfaVerifiedAt: keycloakMfaSatisfied ? now : undefined,
+      mfaVerifiedAt: !mfaRequired ? now : undefined,
     };
 
     const sessionPolicy = await resolveAuthSessionPolicy(plane, session);
@@ -2472,6 +2637,33 @@ export async function handleSessionPatch(plane: PlaneKey, request: NextRequest):
       detail: { requestedOrg, requestedWorkbench, allowedWorkbenches: org.roles },
     });
     return jsonAuthError("CONTEXT_NOT_ALLOWED", requestId, 403);
+  }
+
+  const targetAssurance = loaded.session.authenticationAssurance ?? normalizeFederatedAssurance({});
+  if (sessionRequiresAthyperMfa(plane, loaded.session.realmKey, targetAssurance, { [requestedOrg]: org })) {
+    const pending = {
+      ...loaded.session,
+      organizations,
+      mfaRequired: true,
+      mfaVerified: false,
+      mfaVerifiedAt: undefined,
+      authenticationAssurance: targetAssurance,
+    } satisfies V4Session;
+    await saveSessionPreservingTtl(loaded.redis, pending, loaded.sid);
+    await recordAuthAudit({
+      eventType: "context_activation_denied",
+      outcome: "blocked",
+      planeKey: plane,
+      realmKey: loaded.session.realmKey,
+      sessionNamespace: loaded.session.sessionNamespace,
+      requestId,
+      userId: loaded.session.userId,
+      username: loaded.session.username,
+      sidHash: hashValue(loaded.sid),
+      reasonCode: "MFA_REQUIRED",
+      detail: { requestedOrg, mfaTrustPolicy: org.mfaTrustPolicy ?? "never" },
+    });
+    return jsonAuthError("MFA_REQUIRED", requestId, 403);
   }
 
   const updated = {
@@ -3033,85 +3225,119 @@ export async function handleMfaVerify(plane: PlaneKey, request: NextRequest): Pr
   if (csrfError) return csrfError;
   const inactiveError = await rejectInactiveSession(plane, request, loaded, requestId, "mfa_verify_denied");
   if (inactiveError) return inactiveError;
-  const body = await request.json().catch(() => ({})) as { code?: string };
+  const body = await request.json().catch(() => ({})) as { returnUrl?: string };
   if (!loaded.session.mfaRequired) {
     const response = NextResponse.json({ ok: true });
     clearMfaPendingCookie(response, plane);
     return response;
   }
-  const code = body.code?.trim();
-  if (!code || !/^\d{6}$/.test(code)) {
-    await recordAuthAudit({
-      eventType: "mfa_verify_failed",
-      outcome: "failure",
-      planeKey: plane,
-      realmKey: loaded.session.realmKey,
-      sessionNamespace: loaded.session.sessionNamespace,
-      requestId,
-      userId: loaded.session.userId,
-      username: loaded.session.username,
-      sidHash: hashValue(loaded.sid),
-      reasonCode: "INVALID_CODE",
-    });
-    return jsonAuthError("INVALID_CODE", requestId, 400);
-  }
-  const orgAlias = loaded.session.activeOrg ?? Object.keys(loaded.session.organizations)[0] ?? "";
-  const runtimeUrl = process.env.RUNTIME_API_URL;
-  if (!runtimeUrl || !orgAlias) {
-    await recordAuthAudit({
-      eventType: "mfa_verify_failed",
-      outcome: "failure",
-      planeKey: plane,
-      realmKey: loaded.session.realmKey,
-      sessionNamespace: loaded.session.sessionNamespace,
-      requestId,
-      userId: loaded.session.userId,
-      username: loaded.session.username,
-      sidHash: hashValue(loaded.sid),
-      reasonCode: "MFA_VERIFIER_UNAVAILABLE",
-      detail: { hasRuntimeUrl: Boolean(runtimeUrl), hasOrg: Boolean(orgAlias) },
-    });
-    return jsonAuthError("MFA_VERIFIER_UNAVAILABLE", requestId, 503);
-  }
-  const upstream = await fetch(`${runtimeUrl}/api/iam/mfa/elevate`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${loaded.session.accessToken}`,
-      "X-Org": orgAlias,
-      "X-Realm": loaded.session.realmKey,
-    },
-    body: JSON.stringify({ action_class: "security_change", code, method_type: "totp" }),
-  });
-  if (!upstream.ok) {
-    const err = await upstream.json().catch(() => ({})) as { message?: string };
-    await recordAuthAudit({
-      eventType: "mfa_verify_failed",
-      outcome: "failure",
-      planeKey: plane,
-      realmKey: loaded.session.realmKey,
-      sessionNamespace: loaded.session.sessionNamespace,
-      requestId,
-      userId: loaded.session.userId,
-      username: loaded.session.username,
-      sidHash: hashValue(loaded.sid),
-      reasonCode: "INVALID_CODE",
-      detail: { upstreamStatus: upstream.status, upstreamMessage: err.message ?? null },
-    });
-    return jsonAuthError("INVALID_CODE", requestId, 422);
-  }
-  const updated = {
-    ...loaded.session,
-    mfaRequired: false,
-    mfaVerified: true,
-    mfaVerifiedAt: Math.floor(Date.now() / 1000),
-  } satisfies V4Session;
-  await saveSessionPreservingTtl(loaded.redis, updated, loaded.sid);
-  const response = NextResponse.json({ ok: true });
-  await syncRotatedPlaneCookies(response, plane, { ...loaded, session: updated });
-  clearMfaPendingCookie(response, plane);
+  const config = getPlaneConfig(plane);
+  const continuation = sanitizeReturnUrl(body.returnUrl ?? null, config.defaultPath);
+  const publicBaseUrl = resolvePublicBaseUrl(plane, request);
+  const reauthenticateUrl = new URL("/api/auth/login", publicBaseUrl);
+  reauthenticateUrl.searchParams.set("returnUrl", continuation);
+  reauthenticateUrl.searchParams.set("force", "1");
+  reauthenticateUrl.searchParams.set("realm", loaded.session.realmKey);
+
   await recordAuthAudit({
-    eventType: "mfa_verified",
+    eventType: "mfa_keycloak_step_up_redirected",
+    outcome: "partial",
+    planeKey: plane,
+    realmKey: loaded.session.realmKey,
+    sessionNamespace: loaded.session.sessionNamespace,
+    requestId,
+    userId: loaded.session.userId,
+    username: loaded.session.username,
+    sidHash: hashValue(loaded.sid),
+    detail: { continuation },
+  });
+  return NextResponse.json({
+    error: "KEYCLOAK_STEP_UP_REQUIRED",
+    message: "Complete MFA in Keycloak to continue.",
+    reauthenticate_url: reauthenticateUrl.toString(),
+  }, { status: 409 });
+}
+
+/**
+ * Start a signed, action-specific Keycloak step-up flow for the current BFF
+ * session. The browser never supplies the tenant as authority: the active
+ * organization and tenant membership are read from the server session and
+ * carried into the one-time login context token.
+ */
+async function handleStepUpStart(plane: PlaneKey, request: NextRequest): Promise<NextResponse> {
+  const requestId = requestIdFrom(request);
+  const loaded = await loadSession(plane, request);
+  if (!loaded.ok) return loaded.response;
+
+  const csrfError = await requireCsrf(plane, request, loaded.session, loaded.sid, requestId);
+  if (csrfError) return csrfError;
+  const inactiveError = await rejectInactiveSession(plane, request, loaded, requestId, "step_up_start_denied");
+  if (inactiveError) return inactiveError;
+
+  const body = await request.json().catch(() => ({})) as {
+    action_class?: unknown;
+    returnUrl?: unknown;
+  };
+  const actionClass = typeof body.action_class === "string"
+    ? body.action_class.trim() as StepUpActionClass
+    : null;
+  if (!actionClass || !STEP_UP_ACTION_CLASSES.includes(actionClass)) {
+    return NextResponse.json({
+      error: "INVALID_ACTION_CLASS",
+      message: `action_class must be one of: ${STEP_UP_ACTION_CLASSES.join(", ")}`,
+      requestId,
+    }, { status: 400 });
+  }
+
+  const activeOrgAlias = resolveCanonicalActiveOrgAlias(loaded.session);
+  const activeMembership = activeOrgAlias ? loaded.session.organizations[activeOrgAlias] : undefined;
+  if (!activeOrgAlias || !activeMembership?.tenantId) {
+    return NextResponse.json({
+      error: "TENANT_CONTEXT_REQUIRED",
+      message: "Select an organization before starting step-up authentication.",
+      requestId,
+    }, { status: 409 });
+  }
+
+  const returnUrl = sanitizeReturnUrl(
+    typeof body.returnUrl === "string" ? body.returnUrl : null,
+    getPlaneConfig(plane).defaultPath,
+  );
+  const expectedContext = normalizeLoginExpectedContext({
+    tenantId: activeMembership.tenantId,
+    tenantCode: activeMembership.tenantCode,
+    organizationCode: activeMembership.organizationCode ?? activeMembership.workspaceCode ?? "",
+    organizationName: activeMembership.organizationName ?? "",
+    workspaceId: activeMembership.workspaceId ?? activeMembership.organizationId ?? "",
+    workspaceType: activeMembership.workspaceType ?? activeMembership.contextType ?? "",
+    networkRole: activeMembership.networkAccountRole ?? activeMembership.networkRelationshipType ?? "",
+  }) ?? undefined;
+
+  const contextToken = await storeLoginContextToken({
+    plane,
+    loginHint: loaded.session.username,
+    provider: null,
+    expectedContext,
+    returnUrl,
+  }).catch(() => null);
+  if (!contextToken) {
+    return NextResponse.json({
+      error: "STEP_UP_UNAVAILABLE",
+      message: "Step-up authentication is temporarily unavailable.",
+      requestId,
+    }, { status: 503 });
+  }
+
+  const publicBaseUrl = resolvePublicBaseUrl(plane, request);
+  const loginUrl = new URL("/api/auth/login", publicBaseUrl);
+  loginUrl.searchParams.set("returnUrl", returnUrl);
+  loginUrl.searchParams.set("realm", loaded.session.realmKey);
+  loginUrl.searchParams.set("context_token", contextToken);
+  loginUrl.searchParams.set("step_up_action", actionClass);
+  loginUrl.searchParams.set("force", "1");
+
+  await recordAuthAudit({
+    eventType: "mfa_keycloak_step_up_started",
     outcome: "success",
     planeKey: plane,
     realmKey: loaded.session.realmKey,
@@ -3120,8 +3346,16 @@ export async function handleMfaVerify(plane: PlaneKey, request: NextRequest): Pr
     userId: loaded.session.userId,
     username: loaded.session.username,
     sidHash: hashValue(loaded.sid),
+    activeOrg: activeOrgAlias,
+    detail: { actionClass, tenantId: activeMembership.tenantId },
   });
-  return response;
+
+  return NextResponse.json({
+    ok: true,
+    action_class: actionClass,
+    tenant_id: activeMembership.tenantId,
+    reauthenticate_url: loginUrl.toString(),
+  });
 }
 
 type LoadedSession = {
@@ -3516,6 +3750,16 @@ function toPublicSession(plane: PlaneKey, session: V4Session, sessionPolicy: Ses
     absoluteExpiresAt: session.createdAt + sessionPolicy.absoluteTtlSeconds,
     mfaRequired: session.mfaRequired,
     mfaVerified: session.mfaVerified,
+    authenticationAssurance: session.authenticationAssurance
+      ? {
+          source: session.authenticationAssurance.source,
+          protocol: session.authenticationAssurance.protocol,
+          assuranceLevel: session.authenticationAssurance.assuranceLevel,
+          mfaSatisfied: session.authenticationAssurance.mfaSatisfied,
+          phishingResistant: session.authenticationAssurance.phishingResistant,
+        }
+      : undefined,
+    phishingResistantPreferred: session.phishingResistantPreferred,
     sessionPolicy,
   };
 }
@@ -3976,24 +4220,33 @@ function keycloakAdminMfaSatisfied(
   plane: PlaneKey,
   realmKey: RealmKey,
   pkce: PkceState,
-  idClaims: Record<string, unknown> | null,
+  assurance: NormalizedFederatedAssurance,
 ): boolean {
   if (plane !== "admin" || realmKey !== "athyper" || pkce.clientId !== "admin-web") return false;
-
-  const amr = Array.isArray(idClaims?.amr) ? idClaims.amr : [];
-  if (amr.some(isMfaAmrValue)) return true;
-
-  // Admin MFA is owned by Keycloak. Some realms enforce OTP but do not emit an
-  // amr mapper on the id_token, so a missing amr must not trigger a second
-  // application-side TOTP challenge after Keycloak already stepped the user up.
-  return pkce.forceAuthn === true && pkce.silent !== true;
+  // A forced login proves freshness, not MFA. Only normalized AAL2/AAL3
+  // evidence from Keycloak can satisfy the Admin boundary.
+  return assurance.keycloakAssuranceLevel === "aal2" || assurance.keycloakAssuranceLevel === "aal3";
 }
 
-function isMfaAmrValue(value: unknown): boolean {
-  return (
-    typeof value === "string" &&
-    ["otp", "totp", "mfa", "sms", "webauthn", "hwk"].includes(value.toLowerCase())
-  );
+function sessionRequiresAthyperMfa(
+  plane: PlaneKey,
+  realmKey: RealmKey,
+  assurance: NormalizedFederatedAssurance,
+  organizations: Record<string, OrgMembership>,
+): boolean {
+  const realmPolicy = assertRealmAllowed(plane, realmKey);
+  const memberships = Object.values(organizations);
+  // No resolved tenant policy is a deliberate fail-closed default for an
+  // external identity. Local credentials are evaluated against the plane
+  // requirement and do not need a tenant IdP row.
+  const policies: TenantMfaTrustPolicy[] = memberships.length > 0
+    ? memberships.map((membership) => membership.mfaTrustPolicy ?? "never")
+    : ["never"];
+  return policies.some((policy) => evaluateFederatedMfaPolicy(assurance, policy, {
+    plane,
+    requiredAssurance: realmPolicy.requiredAssuranceLevel,
+    privileged: realmPolicy.hardwareKeyPreferred,
+  }).athyperMfaRequired);
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
@@ -4180,6 +4433,25 @@ function normalizeStoredLoginExpectedContext(value: unknown): LoginExpectedConte
   }) ?? undefined;
 }
 
+function normalizeLoginPresentationContext(value: unknown): LoginPresentationContext | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const accountDisplayName = normalizePresentationLabel(record["accountDisplayName"], 120);
+  if (!accountDisplayName) return undefined;
+  const organizationName = normalizePresentationLabel(record["organizationName"], 160);
+  return {
+    accountDisplayName,
+    ...(organizationName ? { organizationName } : {}),
+  };
+}
+
+function normalizePresentationLabel(value: unknown, maxLength: number): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.replace(/[\u0000-\u001f\u007f]/g, " ").trim().replace(/\s+/g, " ");
+  if (!normalized || normalized.length > maxLength) return null;
+  return normalized;
+}
+
 function filterOrganizationsByExpectedContext(
   plane: PlaneKey,
   expected: LoginExpectedContext,
@@ -4289,6 +4561,11 @@ function optionalOrgMembershipMetadata(value: Record<string, unknown>): Partial<
   if ((v = m(["networkRelationshipType", "network_relationship_type"]))) result.networkRelationshipType = v;
   if ((v = m(["keycloakOrganizationId", "keycloak_organization_id"]))) result.keycloakOrganizationId = v;
   if ((v = m(["keycloakOrganizationAlias", "keycloak_organization_alias"]))) result.keycloakOrganizationAlias = v;
+  if ((v = m(["mfaTrustPolicy", "mfa_trust_policy"]))) {
+    if (v === "never" || v === "conditional" || v === "trusted-assurance") {
+      result.mfaTrustPolicy = v;
+    }
+  }
   if ((v = m(["workContextDomain", "work_context_domain", "domain"]))) {
     if (v === "procurement" || v === "sales") result.workContextDomain = v;
   }
@@ -4416,6 +4693,10 @@ function loginContextTokenKey(token: string): string {
   return `session:auth_login_context:${hashValue(token)}`;
 }
 
+function iamPresentationContextKey(state: string): string {
+  return `iam:presentation:v1:${state}`;
+}
+
 function discoveryTrustKey(token: string): string {
   return `session:auth_discovery_trust:${hashValue(token)}`;
 }
@@ -4499,6 +4780,8 @@ async function storeLoginContextToken(opts: {
   loginHint: string | null;
   provider: string | null;
   expectedContext?: LoginExpectedContext;
+  presentationContext?: LoginPresentationContext;
+  returnUrl: string;
 }): Promise<string> {
   const redis = await getSessionRedis();
   const token = generateDiscoveryToken();
@@ -4509,6 +4792,8 @@ async function storeLoginContextToken(opts: {
     loginHint: normalizeLoginHint(opts.loginHint),
     provider: normalizeProviderHint(opts.provider),
     ...(opts.expectedContext ? { expectedContext: opts.expectedContext } : {}),
+    ...(opts.presentationContext ? { presentationContext: opts.presentationContext } : {}),
+    returnUrl: sanitizeReturnUrl(opts.returnUrl, getPlaneConfig(opts.plane).defaultPath),
     createdAt: now,
     expiresAt: now + LOGIN_CONTEXT_TOKEN_TTL_SECONDS,
   };
@@ -4536,15 +4821,51 @@ async function loadLoginContextToken(
   }
 
   const expectedContext = normalizeStoredLoginExpectedContext(parsed.expectedContext);
+  const presentationContext = normalizeLoginPresentationContext(parsed.presentationContext);
   return {
     version: 1,
     planeKey: parsed.planeKey,
     loginHint: normalizeLoginHint(parsed.loginHint),
     provider: normalizeProviderHint(parsed.provider),
     ...(expectedContext ? { expectedContext } : {}),
+    ...(presentationContext ? { presentationContext } : {}),
+    ...(typeof parsed.returnUrl === "string"
+      ? { returnUrl: sanitizeReturnUrl(parsed.returnUrl, getPlaneConfig(plane).defaultPath) }
+      : {}),
     createdAt: typeof parsed.createdAt === "number" ? parsed.createdAt : 0,
     expiresAt: parsed.expiresAt,
   };
+}
+
+async function storeIamPresentationContext(
+  redis: RedisClient,
+  opts: {
+    state: string;
+    plane: PlaneKey;
+    realm: string;
+    clientId: string;
+    loginHint: string;
+    presentationContext: LoginPresentationContext;
+  },
+): Promise<void> {
+  const presentationContext = normalizeLoginPresentationContext(opts.presentationContext);
+  const loginHint = normalizeLoginHint(opts.loginHint);
+  if (!presentationContext || !loginHint || !/^[a-zA-Z0-9_-]{32,256}$/.test(opts.state)) return;
+
+  const now = Math.floor(Date.now() / 1000);
+  await redis.set(iamPresentationContextKey(opts.state), JSON.stringify({
+    version: 1,
+    planeKey: opts.plane,
+    realm: opts.realm,
+    clientId: opts.clientId,
+    loginHint,
+    accountDisplayName: presentationContext.accountDisplayName,
+    ...(presentationContext.organizationName
+      ? { organizationName: presentationContext.organizationName }
+      : {}),
+    createdAt: now,
+    expiresAt: now + IAM_PRESENTATION_CONTEXT_TTL_SECONDS,
+  }), { EX: IAM_PRESENTATION_CONTEXT_TTL_SECONDS });
 }
 
 async function hasValidDiscoveryTrust(
@@ -4696,6 +5017,9 @@ function publicDiscoveryCandidate(candidate: DiscoveryCandidate): DiscoveryPubli
     networkAccountName: candidate.networkAccountName ?? null,
     networkAccountRole: candidate.networkAccountRole ?? null,
     networkRelationshipType: candidate.networkRelationshipType ?? null,
+    resolutionKind: candidate.resolutionKind,
+    providerType: candidate.providerType,
+    featureGate: candidate.featureGate,
   };
 }
 
@@ -4809,6 +5133,9 @@ function normalizeDiscoveryCandidates(raw: unknown, plane: PlaneKey): DiscoveryC
         : "Organization sign-in",
       hostname: typeof value.hostname === "string" && value.hostname ? value.hostname : null,
       deliveryEmail: normalizeEmail(value.deliveryEmail) ?? null,
+      principalDisplayName: value.resolutionKind === "verified-domain"
+        ? null
+        : normalizePresentationLabel(value.principalDisplayName, 120),
       networkAccountId: typeof value.networkAccountId === "string" && value.networkAccountId
         ? value.networkAccountId
         : null,
@@ -4824,6 +5151,9 @@ function normalizeDiscoveryCandidates(raw: unknown, plane: PlaneKey): DiscoveryC
       networkRelationshipType: typeof value.networkRelationshipType === "string" && value.networkRelationshipType
         ? value.networkRelationshipType
         : null,
+      resolutionKind: value.resolutionKind === "verified-domain" ? "verified-domain" : "identity",
+      providerType: typeof value.providerType === "string" && value.providerType ? value.providerType : "generic",
+      featureGate: value.featureGate === "windows-kerberos" ? "windows-kerberos" : "core",
     });
   }
   return result.slice(0, 10);
@@ -4966,19 +5296,23 @@ async function buildInternalLoginUrl(opts: {
   loginHint: string;
   returnUrl: string;
   expectedContext?: LoginExpectedContext;
+  presentationContext?: LoginPresentationContext;
 }): Promise<string> {
+  const continuation = buildAuthSelectReturnUrl(
+    opts.returnUrl,
+    defaultWorkbenchForPlane(opts.config.key, opts.expectedContext),
+  );
   const contextToken = await storeLoginContextToken({
     plane: opts.config.key,
     loginHint: opts.loginHint,
     provider: opts.provider,
     expectedContext: opts.expectedContext,
+    presentationContext: opts.presentationContext,
+    returnUrl: continuation,
   });
   const params = new URLSearchParams();
   params.set("realm", opts.realmKey);
-  params.set("returnUrl", buildAuthSelectReturnUrl(
-    opts.returnUrl,
-    defaultWorkbenchForPlane(opts.config.key, opts.expectedContext),
-  ));
+  params.set("returnUrl", continuation);
   params.set("context_token", contextToken);
   params.set("force", "1");
   return `/api/auth/login?${params.toString()}`;

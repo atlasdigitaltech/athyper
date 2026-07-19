@@ -18,6 +18,7 @@
 export { registerRecordsRoutes, type RecordsRoutesDeps } from "./routes/index.js";
 export { EntityQueryService, type EntityQueryServiceDeps } from "./query/entity-query.service.js";
 export { KyselyEntityQueryExecutor } from "./query/entity-query.kysely.js";
+export { KyselyEntityQueryScopeResolver } from "./query/entity-query-scope.kysely.js";
 export { DescriptorReferenceLabelResolver } from "./query/descriptor-reference-resolver.js";
 export { encodeKeysetCursor, decodeKeysetCursor, InvalidKeysetCursorError } from "./query/keyset-cursor.js";
 export { hydrateEntityReferences, type ReferenceLabelResolver, type ReferenceLabelBatch } from "./query/reference-hydrator.js";

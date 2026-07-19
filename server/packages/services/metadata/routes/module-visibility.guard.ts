@@ -66,7 +66,8 @@ export async function hasModuleAccess(
         ) AS is_shared_infrastructure
         FROM shared.module m
         JOIN shared.workspace w ON w.id = m.workspace_id
-        WHERE m.id = ${moduleId}::uuid
+        WHERE m.id::text = ${moduleId}
+           OR lower(m.code) = lower(${moduleId})
         LIMIT 1
       `.execute(db);
       if (row.rows[0]?.is_shared_infrastructure === true) return true;
@@ -83,7 +84,14 @@ export async function hasModuleAccess(
 
   try {
     const access = await resolver(db, tenantId, principalId, options);
-    return access.moduleIds.includes(moduleId);
+    // v2 catalog contracts carry the stable module code (for example `acc`),
+    // while legacy entity rows and IAM projections may carry the UUID. Accept
+    // both representations at this boundary so the contract does not leak
+    // storage identity requirements into runtime consumers.
+    const normalizedModuleId = moduleId.toLowerCase();
+    return access.moduleIds.includes(moduleId)
+      || access.moduleIds.some((id) => id.toLowerCase() === normalizedModuleId)
+      || access.moduleCodes.some((code) => code.toLowerCase() === normalizedModuleId);
   } catch (err) {
     logger?.warn("metadata_module_access_check_failed", {
       tenantId,
@@ -96,4 +104,3 @@ export async function hasModuleAccess(
     return true;
   }
 }
-

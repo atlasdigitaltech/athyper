@@ -214,7 +214,9 @@ export async function loadBooksList(
     created_at:         string;
   }>`
     SELECT lb.id, lb.code, lb.name, lb.status, lb.is_primary,
-           lb.currency_code, lb.fiscal_year_start::text, lb.purpose,
+           coalesce(ba.override_currency_code, lb.base_currency_code) AS currency_code,
+           cc.fiscal_year_start_month::text AS fiscal_year_start,
+           lb.category AS purpose,
            lb.created_at::text
       FROM master.ledger_book lb
       JOIN master.company_code_book_assignment ba

@@ -5,6 +5,7 @@ import type { MetaEntityField } from "@athyper/runtime-contracts";
 import {
   adaptField,
   formatFieldValue,
+  hasResolvedFieldLabel,
   readRecordValue,
   type FieldRecord,
 } from "@athyper/runtime-shared/meta-entity";
@@ -20,6 +21,18 @@ export function RuntimeFieldValueView({ field, record, sourceEntityCode }: Runti
   const adaptedField = useMemo(() => adaptField(field), [field]);
   const value = readRecordValue(record, field);
   const fallback = formatFieldValue(record, field);
+  const displayRenderer = field.display?.renderer;
+
+  // Lookup/reference labels are hydrated by the BFF as companion values on
+  // the record. Resolve them with the original MetaEntityField before the
+  // legacy EntityField adapter drops display and option-source metadata.
+  if (
+    displayRenderer === "lookup_label"
+    || displayRenderer === "reference_label"
+    || hasResolvedFieldLabel(record, field)
+  ) {
+    return <span>{fallback}</span>;
+  }
 
   return (
     <FieldRendererErrorBoundary fallback={fallback}>

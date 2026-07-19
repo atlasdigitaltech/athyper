@@ -77,8 +77,8 @@ function buildNotification(pushData, latest) {
     title,
     options: {
       body,
-      icon: "/brand/appicon.svg",
-      badge: "/brand/icon.svg",
+      icon: "/brand/appicon.png",
+      badge: "/brand/icon.png",
       data: { url },
       tag: asText(latest?.id) ?? "athyper-notification",
     },

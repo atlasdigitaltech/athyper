@@ -60,6 +60,21 @@ export function createPool(config: PoolConfig): pg.Pool {
     application_name: undefined,
   });
 
+  // pg-pool removes its idle-client error listener while a client is checked
+  // out. If PgBouncer expires that client between protocol messages (for
+  // example with client_idle_timeout), pg emits a second socket error before
+  // Kysely can release the failed query. Without a client-level listener that
+  // event becomes an uncaught exception and terminates the process.
+  const checkedOutClients = new WeakSet<pg.PoolClient>();
+
+  pool.on("acquire", (client) => {
+    checkedOutClients.add(client);
+  });
+
+  pool.on("release", (_err, client) => {
+    checkedOutClients.delete(client);
+  });
+
   // Error handling
   pool.on("error", (err: Error) => {
     console.error(
@@ -72,11 +87,34 @@ export function createPool(config: PoolConfig): pg.Pool {
   });
 
   pool.on("connect", (client) => {
+    // Keep a listener installed while pg-pool temporarily removes its own.
+    // Query promises still reject normally; this only handles the subsequent
+    // connection-level event that otherwise has no listener.
+    client.on("error", (err: Error) => {
+      if (!checkedOutClients.has(client)) return;
+      console.error(
+        JSON.stringify({
+          msg: "postgres_checked_out_client_error",
+          err: err.message,
+          stack: err.stack,
+        }),
+      );
+    });
+
     // Force UTC on every new connection so PgBouncer tracks 'UTC' rather than
     // whatever PGTZ / system timezone the process inherits (e.g. 'gmt+0800' on
     // Windows is not a valid PostgreSQL timezone name and causes ERRORs when
     // PgBouncer replays it to a backend in transaction-pool mode).
-    void client.query("SET TIME ZONE 'UTC'");
+    void client.query("SET TIME ZONE 'UTC'").catch((err: unknown) => {
+      // The connect event cannot await this guard query. Never allow a failed
+      // session-initialization promise to escape as an unhandled rejection.
+      console.error(
+        JSON.stringify({
+          msg: "postgres_session_initialization_failed",
+          err: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    });
     console.log(
       JSON.stringify({
         msg: "postgres_pool_connected",

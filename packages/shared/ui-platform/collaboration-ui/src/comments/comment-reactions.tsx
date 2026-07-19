@@ -13,7 +13,7 @@ import { SmilePlus } from "lucide-react";
 
 import { Button } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
-import { useReactions } from "../hooks/collab";
+import { useReactions, type ReactionSummary } from "../hooks/collab";
 
 // Canonical picker list — must match the 8 codes seeded in master.reaction_type.
 const REACTIONS = [
@@ -29,10 +29,12 @@ const REACTIONS = [
 
 interface CommentReactionsProps {
   commentId: string;
+  initialReactions: ReactionSummary[];
+  onMutated?: () => void | Promise<unknown>;
 }
 
-export function CommentReactions({ commentId }: CommentReactionsProps) {
-  const { reactions, toggleReaction } = useReactions(commentId);
+export function CommentReactions({ commentId, initialReactions, onMutated }: CommentReactionsProps) {
+  const { reactions, toggleReaction } = useReactions(commentId, initialReactions, onMutated);
   const [showPicker, setShowPicker] = useState(false);
 
   return (

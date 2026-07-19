@@ -251,12 +251,14 @@ export function createAnalyticsRoutes(router: Router, deps: FinanceRouteDeps): R
       const entryCountMap = new Map(entryCounts.map((r) => [r.period_number, Number(r.entry_count)]));
       const pf = parseFloat;
 
+      let adjustmentOrdinal = 0;
       const periods = periodRows.map((r) => {
         const opening = pf(r.opening_balance ?? "0");
         const debits  = pf(r.total_debits    ?? "0");
         const credits = pf(r.total_credits   ?? "0");
         const closing = pf(r.closing_balance ?? "0");
         const isAdj   = r.period_type === "adjustment";
+        if (isAdj) adjustmentOrdinal += 1;
 
         let periodLabel: string;
         if (r.period_name) {
@@ -264,11 +266,11 @@ export function createAnalyticsRoutes(router: Router, deps: FinanceRouteDeps): R
         } else if (r.start_date) {
           periodLabel = new Date(r.start_date).toLocaleString("en", { month: "short" });
         } else {
-          periodLabel = isAdj ? `Adj ${r.period_number - 12}` : `P${r.period_number}`;
+          periodLabel = isAdj ? `Adj ${adjustmentOrdinal}` : `P${r.period_number}`;
         }
 
         return {
-          period:         isAdj ? `adj${r.period_number - 12}` : r.period_number,
+          period:         isAdj ? `adj${adjustmentOrdinal}` : r.period_number,
           periodLabel,
           openingBalance: opening,
           totalDebits:    debits,

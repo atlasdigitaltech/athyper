@@ -2,16 +2,24 @@
 import { NextResponse } from "next/server";
 import { runtimeServerPath } from "@athyper/api-contracts/runtime-server-paths";
 import { getMetaEntityRecordList } from "@/lib/server/meta-entity-records";
-import { getMetaEntityRuntimeDescriptor } from "@/lib/server/meta-entity-runtime";
+import {
+  getMetaEntityRuntimeDescriptor,
+  getMetaEntityRuntimeDescriptorCacheState,
+} from "@/lib/server/meta-entity-runtime";
 import { rejectPublicLedgerMutation } from "@/lib/server/meta-entity-mutation-gates";
 import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";
 import { getNeonServerSession } from "@/lib/server/session";
 import { buildRuntimeWriteActor, validateRuntimeWrite } from "@/lib/server/meta-entity-write-validation";
+import {
+  RuntimeListDiagnosticCollector,
+  runtimeDescriptorCacheState,
+} from "@/lib/server/runtime-list-observability";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ entity: string }> },
 ) {
+  const routeStartedAt = performance.now();
   const session = await getNeonServerSession();
   if (!session) {
     return NextResponse.json(
@@ -22,11 +30,23 @@ export async function GET(
 
   const { entity } = await params;
   const entityCode = entity.trim().replace(/-/g, "_");
+  const diagnostics = new RuntimeListDiagnosticCollector({ entityCode, routeKind: "api" });
+  const descriptorStartedAt = performance.now();
   const descriptor = await getMetaEntityRuntimeDescriptor(entityCode);
+  diagnostics.record(
+    "descriptor",
+    performance.now() - descriptorStartedAt,
+    descriptor
+      ? runtimeDescriptorCacheState(getMetaEntityRuntimeDescriptorCacheState(descriptor))
+      : "bypass",
+  );
   if (!descriptor) {
     return NextResponse.json(
       { error: "ENTITY_NOT_FOUND", message: "This Neon route is not registered for the tenant control plane." },
-      { status: 404 },
+      {
+        status: 404,
+        headers: diagnostics.responseHeaders(performance.now() - routeStartedAt, "bypass"),
+      },
     );
   }
 
@@ -35,11 +55,20 @@ export async function GET(
   // A duplicate gate broke lazy pagination (page 2 failed after page 1 rendered).
   const url = new URL(request.url);
   const searchParams = Object.fromEntries(url.searchParams.entries());
-  const list = await getMetaEntityRecordList(entityCode, normalizeListSearchParams(searchParams), descriptor);
+  const list = await getMetaEntityRecordList(
+    entityCode,
+    normalizeListSearchParams(searchParams),
+    descriptor,
+    diagnostics,
+    { session, scopeStrategy: "verified_upstream" },
+  );
   if (list.state.status === "unavailable") {
     return NextResponse.json(
       { error: "RECORDS_UNAVAILABLE", message: list.state.message ?? "Records are unavailable." },
-      { status: 503 },
+      {
+        status: 503,
+        headers: diagnostics.responseHeaders(performance.now() - routeStartedAt, "bypass"),
+      },
     );
   }
 
@@ -52,7 +81,7 @@ export async function GET(
       isFullyLoaded: list.isFullyLoaded,
       reasons: list.reasons,
     },
-    { headers: { "Cache-Control": "no-store" } },
+    { headers: diagnostics.responseHeaders(performance.now() - routeStartedAt, "bypass") },
   );
 }
 

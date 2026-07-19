@@ -26,6 +26,7 @@ import { PageFrame } from "@athyper/ui/layout";
 import {
   usePeriodCloseRuns,
   usePeriodCloseTasks,
+  useGovernanceEvidence,
   type CycleRun,
   type CycleTask,
   type CyclePhase,
@@ -34,6 +35,9 @@ import {
   useCompleteTask,
   useSignOffPhase,
   useStartCloseRun,
+  useCertificationCommand,
+  usePeriodCommand,
+  useGenerateEvidencePack,
 } from "../hooks/usePeriodCloseMutations";
 import { scopeToParams, type FinanceScope } from "../lib/scope";
 import { fmtDate } from "../components/format";
@@ -44,6 +48,11 @@ export interface CloseCycleWorkbenchProps {
   scope:      FinanceScope;
   runId?:     string;
   phaseCode?: string;
+  cycleTypeCode?: string;
+  title?: string;
+  description?: string;
+  periodNumber?: number;
+  runData?: Record<string, unknown>;
 }
 
 // ── Blocker logic ─────────────────────────────────────────────────────────────
@@ -107,10 +116,13 @@ function TaskRow({
   const mutation = useCompleteTask(runId);
 
   const Icon = TASK_ICON[task.status] ?? Clock;
-  const canComplete = isActivePhase && (task.status === "PENDING" || task.status === "IN_PROGRESS" || task.status === "FAILED");
+  const canComplete = isActivePhase && task.completionMode !== "SYSTEM"
+    && (task.status === "PENDING" || task.status === "IN_PROGRESS" || task.status === "FAILED");
+  const canEvaluate = isActivePhase && task.completionMode !== "MANUAL"
+    && ["PENDING", "IN_PROGRESS", "FAILED", "COMPLETED"].includes(task.status);
   const canReopen   = isActivePhase && task.status === "COMPLETED";
 
-  async function handleAction(action: "complete" | "reopen") {
+  async function handleAction(action: "complete" | "reopen" | "evaluate") {
     await mutation.mutateAsync({ taskId: task.id, action, remarks: remarks || undefined });
     setRemarks("");
     setShowRemarks(false);
@@ -150,6 +162,18 @@ function TaskRow({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          {canEvaluate && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 px-2 text-xs gap-1"
+              onClick={() => void handleAction("evaluate")}
+              disabled={mutation.isPending}
+            >
+              {mutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Shield className="h-3 w-3" />}
+              Run check
+            </Button>
+          )}
           {canComplete && (
             <Button
               variant="outline"
@@ -346,13 +370,19 @@ function RunSidebar({
   selectedId,
   onSelect,
   scope,
+  cycleTypeCode,
+  periodNumber,
+  runData,
 }: {
   runs:       CycleRun[];
   selectedId: string | null;
   onSelect:   (id: string) => void;
   scope:      FinanceScope;
+  cycleTypeCode?: string;
+  periodNumber?: number;
+  runData?: Record<string, unknown>;
 }) {
-  const startRun = useStartCloseRun(scope);
+  const startRun = useStartCloseRun(scope, { cycleTypeCode, periodNumber, runData });
 
   return (
     <div className="flex flex-col gap-2">
@@ -421,16 +451,54 @@ function RunSidebar({
 
 // ── Task detail panel ─────────────────────────────────────────────────────────
 
+function GovernanceCommandPanel({ runId, cycleTypeCode }: { runId: string; cycleTypeCode: string }) {
+  const evidence = useGovernanceEvidence(runId);
+  const certification = useCertificationCommand(runId);
+  const periodCommand = usePeriodCommand(runId);
+  const evidencePack = useGenerateEvidencePack(runId);
+  const certCode = cycleTypeCode === "FIN_SETUP_READINESS" ? "FINANCE_POSTING_READY"
+    : ["OPENING_BALANCE", "OPENING_BALANCE_MIGRATION"].includes(cycleTypeCode) ? "OPEN_BAL_FINAL"
+      : cycleTypeCode === "YEAR_END_CLOSE" ? "YEAR_END_FINAL" : "MONTHLY_CLOSE_FINAL";
+  const cert = evidence.data?.certifications.find((item) => item.cert_code === certCode);
+  const commandError = certification.error ?? periodCommand.error ?? evidencePack.error;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 p-2">
+      <span className="mr-auto text-xs text-muted-foreground">
+        {certCode}: <strong className="text-foreground">{cert?.status ?? "Not certified"}</strong>
+        {evidence.data ? ` · ${evidence.data.reportPacks.length} pack(s) · ${evidence.data.deviations.length} deviation(s)` : ""}
+      </span>
+      <Button size="sm" variant="outline" className="h-7 text-xs" disabled={certification.isPending || cert?.status === "ATTESTED"}
+        onClick={() => void certification.mutateAsync({ certCode, action: cert?.status === "CERTIFIED" ? "attest" : "certify" })}>
+        {cert?.status === "CERTIFIED" ? "Attest" : "Certify"}
+      </Button>
+      <Button size="sm" variant="outline" className="h-7 text-xs" disabled={evidencePack.isPending}
+        onClick={() => void evidencePack.mutateAsync()}>{evidencePack.isPending ? "Generating…" : "Evidence pack"}</Button>
+      <Button size="sm" variant="outline" className="h-7 text-xs" disabled={periodCommand.isPending}
+        onClick={() => void periodCommand.mutateAsync({ targetStatus: "open", reason: "Governance workbench command" })}>Open</Button>
+      <Button size="sm" variant="outline" className="h-7 text-xs" disabled={periodCommand.isPending}
+        onClick={() => void periodCommand.mutateAsync({ targetStatus: "soft_close" })}>Soft close</Button>
+      <Button size="sm" variant="outline" className="h-7 text-xs" disabled={periodCommand.isPending}
+        onClick={() => void periodCommand.mutateAsync({ targetStatus: "hard_close" })}>Hard close</Button>
+      {commandError && <span className="w-full text-xs text-destructive">{commandError instanceof Error ? commandError.message : "Governance command failed"}</span>}
+    </div>
+  );
+}
+
 function TaskDetailPanel({
   runId,
   activePhaseCode,
   runStatus,
   onPhaseSelect,
+  currentPhaseCode,
+  cycleTypeCode,
 }: {
   runId:           string;
   activePhaseCode: string | null;
   runStatus:       string;
   onPhaseSelect:   (code: string) => void;
+  currentPhaseCode: string | null;
+  cycleTypeCode: string;
 }) {
   const { data, isLoading, isError } = usePeriodCloseTasks(runId);
 
@@ -450,6 +518,7 @@ function TaskDetailPanel({
 
   return (
     <div className="flex flex-col gap-4 h-full min-h-0">
+      <GovernanceCommandPanel runId={runId} cycleTypeCode={cycleTypeCode} />
       {/* Phase tabs */}
       <div className="flex gap-1 border-b pb-0 flex-wrap shrink-0">
         {data.phases.map((phase) => {
@@ -480,7 +549,7 @@ function TaskDetailPanel({
           <PhasePanel
             phase={currentPhase}
             runId={runId}
-            isActive={currentPhase.phaseCode === data.run.status || runStatus === "IN_PROGRESS"}
+            isActive={currentPhase.phaseCode === currentPhaseCode}
             runStatus={runStatus}
           />
         </div>
@@ -491,13 +560,22 @@ function TaskDetailPanel({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function CloseCycleWorkbench({ scope, runId: initialRunId, phaseCode: initialPhaseCode }: CloseCycleWorkbenchProps) {
+export function CloseCycleWorkbench({
+  scope,
+  runId: initialRunId,
+  phaseCode: initialPhaseCode,
+  cycleTypeCode,
+  title = "Period Close",
+  description,
+  periodNumber,
+  runData,
+}: CloseCycleWorkbenchProps) {
   const router      = useRouter();
   const pathname    = usePathname();
   const searchParams = useSearchParams();
 
-  const { data: runs = [], isLoading, isError } = usePeriodCloseRuns(scope);
-  const startRun = useStartCloseRun(scope);
+  const { data: runs = [], isLoading, isError } = usePeriodCloseRuns(scope, cycleTypeCode);
+  const startRun = useStartCloseRun(scope, { cycleTypeCode, periodNumber, runData });
 
   // Derive selectedRunId from URL; default to most recent run
   const selectedRunId = initialRunId ?? runs[0]?.id ?? null;
@@ -533,15 +611,15 @@ export function CloseCycleWorkbench({ scope, runId: initialRunId, phaseCode: ini
     }
   };
 
-  const canStartRun = !!scope.scopeId && scope.period !== null && scope.period !== undefined;
+  const canStartRun = !!scope.scopeId && (periodNumber !== undefined || (scope.period !== null && scope.period !== undefined));
 
   return (
     <PageFrame
-      title="Period Close"
+      title={title}
       description={
-        scope.scopeId
+        description ?? (scope.scopeId
           ? `${scope.scopeId} · FY${scope.fiscalYear}${scope.period != null ? ` P${String(scope.period).padStart(2, "0")}` : ""}`
-          : "Select a scope from the context bar"
+          : "Select a scope from the context bar")
       }
     >
       {isLoading ? (
@@ -585,6 +663,9 @@ export function CloseCycleWorkbench({ scope, runId: initialRunId, phaseCode: ini
               selectedId={selectedRunId}
               onSelect={handleRunSelect}
               scope={scope}
+              cycleTypeCode={cycleTypeCode}
+              periodNumber={periodNumber}
+              runData={runData}
             />
           </div>
 
@@ -596,6 +677,8 @@ export function CloseCycleWorkbench({ scope, runId: initialRunId, phaseCode: ini
                 activePhaseCode={activePhaseCode}
                 runStatus={selectedRun.status}
                 onPhaseSelect={handlePhaseSelect}
+                currentPhaseCode={selectedRun.currentPhaseCode}
+                cycleTypeCode={selectedRun.cycleTypeCode}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-xs text-muted-foreground">

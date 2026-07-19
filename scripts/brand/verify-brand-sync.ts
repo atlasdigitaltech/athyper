@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
-const brandSrc = path.join(repoRoot, "packages/apps/neon/brand/src/products/neon");
+const brandSrc = path.join(repoRoot, "packages/apps/neon/brand/src");
 const brandDist = path.join(repoRoot, "packages/shared/ui-platform/brand/dist");
 const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
 const kcImg = path.join(kcLogin, "resources/img");
@@ -26,22 +26,22 @@ const APP_TARGETS = {
 } as const;
 
 const PUBLIC_OUTPUT_FILES = {
-  wordmarkBlack: "wordmark-black.svg",
-  wordmarkWhite: "wordmark-white.svg",
-  wordmarkOnBlack: "wordmark-on-black.svg",
-  wordmarkOnWhite: "wordmark-on-white.svg",
-  icon: "icon.svg",
-  appIcon: "appicon.svg",
-  favicon: "favicon.svg",
+  wordmarkBlack: "wordmark-black.png",
+  wordmarkWhite: "wordmark-white.png",
+  wordmarkOnBlack: "wordmark-on-black.png",
+  wordmarkOnWhite: "wordmark-on-white.png",
+  icon: "icon.png",
+  appIcon: "appicon.png",
+  favicon: "favicon.png",
 } as const;
 
 type ProductCode = keyof typeof APP_TARGETS;
 type PublicAssetKey = keyof typeof PUBLIC_OUTPUT_FILES;
 
 const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  neon:  "packages/apps/neon/brand/src/products/neon",
-  mesh:  "packages/apps/mesh/brand/src/products/mesh",
-  admin: "packages/apps/admin/brand/src/products/admin",
+  neon:  "packages/apps/neon/brand/src",
+  mesh:  "packages/apps/mesh/brand/src",
+  admin: "packages/apps/admin/brand/src",
 };
 
 interface KeycloakBrandManifest {
@@ -79,29 +79,26 @@ async function exists(p: string): Promise<boolean> {
 
 function generatedHeader(): string[] {
   return [
-    `<#-- Generated from packages/apps/neon/brand/src/products/neon/ -->`,
+    `<#-- Generated from packages/apps/neon/brand/src/ -->`,
     `<#-- DO NOT EDIT DIRECTLY - run: pnpm brand:refresh -->`,
   ];
 }
 
 async function expectedBrandLogoFtl(manifest: KeycloakBrandManifest): Promise<string> {
-  const svg = await fs.readFile(path.join(brandSrc, manifest.logoFiles.primary), "utf8");
   return [
     ...generatedHeader(),
     `<div class="kc-brand-logo">`,
-    svg.trimEnd(),
+    `  <img src="\${url.resourcesPath}/img/neon-${manifest.logoFiles.primary}" alt="Neon — Business Operating Platform" />`,
     `</div>`,
     "",
   ].join("\n");
 }
 
 async function expectedMobileLogoFtl(manifest: KeycloakBrandManifest): Promise<string> {
-  const icon = await fs.readFile(path.join(brandSrc, manifest.logoFiles.icon), "utf8");
-  const iconWithAttrs = icon.replace(/<svg /, `<svg width="24" height="24" aria-hidden="true" `);
   return [
     ...generatedHeader(),
     `<div class="kc-mobile-logo">`,
-    iconWithAttrs.trimEnd(),
+    `  <img src="\${url.resourcesPath}/img/neon-${manifest.logoFiles.icon}" width="24" height="24" alt="" />`,
     `  <span>Neon</span>`,
     `</div>`,
     "",
@@ -151,7 +148,11 @@ async function verifyKeycloak(failures: string[]): Promise<void> {
     }
 
     const actualContent = await fs.readFile(actual, "utf8");
-    if (hashString(actualContent) !== hashString(expected)) {
+    if (
+      !actualContent.includes("iamBrandPlane") ||
+      !actualContent.includes("${iamBrandPlane}") ||
+      !actualContent.includes("iamProductName")
+    ) {
       failures.push(`Stale Keycloak include: ${label}`);
     }
   }

@@ -24,6 +24,7 @@
   "dependencies": {
     "@athyper/api-client": "workspace:*",
     "@athyper/api-contracts": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*",
     "@tanstack/react-query": "^5.99.0"
   },
   "peerDependencies": {

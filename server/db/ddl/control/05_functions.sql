@@ -4120,3 +4120,28 @@ COMMENT ON FUNCTION control.resolve_intent_to_profile(
     'Step 4 of the procurement intake pipeline. Checks regulatory intent_profile_override '
     'first, then walks intent_to_accounting_profile_rule with NULL-wildcard predicate '
     'matching. Returns first match or FAILED. Called by IntentResolutionService.ts.';
+
+-- Final compatibility declaration: manifest ordering runs this general control
+-- function file after the Stage 2 posting-role file. Delegate to the canonical
+-- trace resolver so legacy role_code/book_code columns cannot be reintroduced.
+CREATE OR REPLACE FUNCTION control.resolve_posting_role_account(
+    p_tenant_id       uuid,
+    p_role_code       text,
+    p_company_code_id uuid,
+    p_book_code       text,
+    p_as_of_date      date DEFAULT CURRENT_DATE
+) RETURNS uuid
+LANGUAGE plpgsql STABLE
+SECURITY DEFINER
+SET search_path = control, master, shared, pg_temp
+AS $$
+DECLARE
+    v_trace jsonb;
+BEGIN
+    v_trace := control.resolve_posting_role_account_trace(
+        p_tenant_id, p_role_code, p_company_code_id, p_book_code, p_as_of_date
+    );
+    IF v_trace->>'status' <> 'resolved' THEN RETURN NULL; END IF;
+    RETURN (v_trace->>'glAccountId')::uuid;
+END;
+$$;

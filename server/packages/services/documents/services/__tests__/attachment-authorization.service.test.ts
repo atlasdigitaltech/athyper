@@ -25,8 +25,43 @@ describe("authorizeAttachmentAccess", () => {
     mocks.checkPermission.mockResolvedValue({ decision: "allow" });
   });
 
-  it("denies when no matching entity operation token policy exists", async () => {
+  it("uses the canonical read permission without requiring a read entity operation", async () => {
     const db = dbWith({ value: undefined });
+    const result = await authorizeAttachmentAccess({
+      db: db as never,
+      context: {
+        tenantId: "tenant-b-id",
+        tenantCode: "tenant-b",
+        realmKey: "athyper",
+        principalId: "principal-1",
+        subject: "subject-1",
+      },
+      entityCode: "journal_entry",
+      entityId: "record-1",
+      action: "read_attachment",
+    });
+    expect(result).toMatchObject({ allowed: true, tenantId: "tenant-b-id", principalId: "principal-1" });
+    expect(db.selectFrom).not.toHaveBeenCalled();
+    expect(mocks.checkPermission).toHaveBeenNthCalledWith(
+      1,
+      db,
+      "tenant-b-id",
+      "principal-1",
+      "read",
+      expect.any(Object),
+    );
+    expect(mocks.checkPermission).toHaveBeenNthCalledWith(
+      2,
+      db,
+      "tenant-b-id",
+      "principal-1",
+      "attachment.read",
+      expect.any(Object),
+    );
+  });
+
+  it("denies a write action when no matching entity operation exists", async () => {
+    const db = dbWith({ value: [], many: true });
     const result = await authorizeAttachmentAccess({
       db: db as never,
       context: {
@@ -38,14 +73,14 @@ describe("authorizeAttachmentAccess", () => {
       },
       entityCode: "purchase_invoice",
       entityId: "record-1",
-      action: "read",
+      action: "create_attachment",
     });
     expect(result).toMatchObject({ allowed: false, error: "ENTITY_OPERATION_REQUIRED" });
     expect(mocks.checkPermission).not.toHaveBeenCalled();
   });
 
   it("allows context principal reuse without DB lookup", async () => {
-    const db = dbWith({ value: [{ permission_code: "read", is_enabled: true, tenant_id: null }], many: true });
+    const db = dbWith();
     const result = await authorizeAttachmentAccess({
       db: db as never,
       context: {
@@ -63,8 +98,6 @@ describe("authorizeAttachmentAccess", () => {
 
   it("requires both the parent entity operation and attachment permission", async () => {
     const db = dbWith(
-      { value: { id: "tenant-a-id", code: "tenant-a" } },
-      { value: { principal_id: "principal-1" } },
       { value: [{ permission_code: "update", is_enabled: true, tenant_id: null }], many: true },
     );
     const result = await authorizeAttachmentAccess({

@@ -170,7 +170,7 @@ export const TAXONOMY_WORKBENCHES: Record<TaxonomyWorkbenchId, TaxonomyWorkbench
     title: "Accounting Profile Workbench",
     workspace: "finance",
     homeHref: "/finance",
-    href: "/finance/accounting-profiles",
+    href: "/workbench/finance/accounting-profiles",
     entityCode: "accounting_profile",
     activeMode: "overview",
     modes: [

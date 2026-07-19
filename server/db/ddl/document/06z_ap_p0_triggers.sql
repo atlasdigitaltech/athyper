@@ -341,8 +341,8 @@ CREATE TRIGGER trg_sshl_derive_ship_jurisdictions
 --   due_date                 <- baseline_date + payment_term.due_days
 --                               (only when due_rule_type='NET_DAYS'; other rules
 --                                left for service layer / future enhancement)
---   fiscal_year              <- f(posting_date, company.fiscal_year_start_month)
---   period_number            <- f(posting_date, company.fiscal_year_start_month)
+--   fiscal_year              <- generated period covering posting_date
+--   period_number            <- generated period covering posting_date
 --
 -- NOTE: document.purchase_invoice has no `invoice_date` column. The UI/API
 -- field "invoice_date" is an alias mapping to the `document_date` column
@@ -366,9 +366,8 @@ DECLARE
     v_due_rule    text;
     v_due_days    integer;
     v_grace_days  integer;
-    v_fy_start    smallint;
-    v_doc_month   integer;
-    v_doc_year    integer;
+    v_resolved_fiscal_year smallint;
+    v_resolved_period_number smallint;
 BEGIN
     -- ─── 1. received_date defaults to today ──────────────────────────────
     IF NEW.received_date IS NULL THEN
@@ -415,42 +414,24 @@ BEGIN
         -- EOM / FIXED_DAY left unset — service-layer/UI must compute these
     END IF;
 
-    -- ─── 6. fiscal_year + period_number from posting_date + company FY ───
-    --     Simple month-based fiscal calendar (most companies). Companies
-    --     with custom retail (4-4-5) calendars need a fiscal_calendar
-    --     lookup table — out of scope for this trigger.
+    -- ─── 6. fiscal scope from generated company periods ─────────────────
+    -- Special periods are excluded because adjustment/closing periods can
+    -- share a date with the final normal period and require explicit choice.
     IF NEW.posting_date IS NOT NULL
        AND NEW.company_code_id IS NOT NULL
        AND (NEW.fiscal_year IS NULL OR NEW.period_number IS NULL)
     THEN
-        SELECT cc.fiscal_year_start_month INTO v_fy_start
-          FROM master.company_code cc
-         WHERE cc.id = NEW.company_code_id
-           AND cc.tenant_id = NEW.tenant_id
-         LIMIT 1;
+        SELECT p.fiscal_year, p.period_number
+          INTO v_resolved_fiscal_year, v_resolved_period_number
+          FROM master.resolve_fiscal_period(
+              NEW.tenant_id,
+              NEW.company_code_id,
+              NEW.posting_date,
+              false
+          ) p;
 
-        IF v_fy_start IS NULL THEN
-            v_fy_start := 1;   -- default to calendar year
-        END IF;
-
-        v_doc_month := EXTRACT(MONTH FROM NEW.posting_date)::int;
-        v_doc_year  := EXTRACT(YEAR  FROM NEW.posting_date)::int;
-
-        -- Fiscal year:
-        --   If posting month >= FY start month, FY = calendar year
-        --   Else (we are in the tail months of the previous FY), FY = calendar year - 1
-        IF NEW.fiscal_year IS NULL THEN
-            NEW.fiscal_year := CASE
-                WHEN v_doc_month >= v_fy_start THEN v_doc_year
-                ELSE v_doc_year - 1
-            END;
-        END IF;
-
-        -- Period number: months since FY start (1-12). Modulo 12 handles
-        -- companies whose FY starts mid-year (e.g. start=4 → April is P01).
-        IF NEW.period_number IS NULL THEN
-            NEW.period_number := ((v_doc_month - v_fy_start + 12) % 12) + 1;
-        END IF;
+        NEW.fiscal_year := COALESCE(NEW.fiscal_year, v_resolved_fiscal_year);
+        NEW.period_number := COALESCE(NEW.period_number, v_resolved_period_number);
     END IF;
 
     RETURN NEW;
@@ -460,7 +441,7 @@ COMMENT ON FUNCTION document.trg_pi_derive_dates() IS
     'Phase 4 P1c: BEFORE INSERT/UPDATE on document.purchase_invoice. Fills NULL '
     'derived dates (document_date, baseline_date, posting_date, due_date, '
     'received_date) and fiscal scope (fiscal_year, period_number) from '
-    'supplier_invoice_date + payment_term + company.fiscal_year_start_month. '
+    'supplier_invoice_date + payment_term + generated company fiscal periods. '
     'document_date is the canonical "invoice date" column (UI alias "invoice_date" '
     'maps to it). Only fills NULLs; explicit user values are preserved.';
 

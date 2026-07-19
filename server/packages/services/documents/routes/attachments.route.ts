@@ -64,6 +64,10 @@ export interface AttachmentsRouteDeps {
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
+  /** Reads the tenant identity established by the authenticated host boundary. */
+  readAuthenticatedContext?: (req: Parameters<RequestHandler>[0]) => {
+    tenantId?: string;
+  } | undefined;
   objectStorage?: {
     adapter:      ObjectStorageAdapter;
     bucket:       string;
@@ -141,6 +145,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       });
     };
     router.get(    "/documents/:docType/:id/attachments/:attachmentId/download", unavailable);
+    router.get(    "/documents/:docType/:id/attachment-workspace",               unavailable);
     router.get(    "/documents/:docType/:id/attachments",                        unavailable);
     router.post(   "/documents/:docType/:id/attachments",                        unavailable);
     router.post(   "/documents/:docType/:id/attachments/upload/initiate",        unavailable);
@@ -271,10 +276,14 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       claimRealm: typeof (claims["realm_key"] ?? claims["realm"]) === "string" ? "present" : "absent",
       claimIssuerRealm: typeof claims["iss"] === "string" ? "present" : "absent",
     });
+    const authenticated = deps.readAuthenticatedContext?.(req);
     const resolved = await resolveVerifiedRequestContext(
       db,
       claims,
-      extractVerifiedRequestContextHints(req),
+      {
+        ...extractVerifiedRequestContextHints(req),
+        trustedTenantId: authenticated?.tenantId,
+      },
     );
     if (!resolved.ok) {
       logger?.warn?.("attachments_authorization_denied", {
@@ -486,6 +495,91 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       );
     } catch (err) {
       logger?.error("attachments_list_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // One authoritative read model for the Attachments drawer. Keeping files,
+  // folders and the header summary in a single response prevents the drawer
+  // chrome and panel from independently requesting the same resources.
+  const attachmentWorkspaceHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+
+      const { docType, id } = req.params as { docType: string; id: string };
+      if (!isUuid(id)) {
+        res.status(404).json({ error: "DOCUMENT_NOT_FOUND", message: `Document '${id}' not found` });
+        return;
+      }
+      const entity = await resolveDocumentEntity(db, docType);
+      if (!entity) {
+        res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Document type '${docType}' not found` });
+        return;
+      }
+      const authorized = await authorize(req, res, claims, entity.name as string, id, "read");
+      if (!authorized) return;
+
+      const { tenantId } = authorized;
+      const [items, links, folders] = await Promise.all([
+        svc.list({ tenantId, entityType: entity.name as string, entityId: id }),
+        db
+          .selectFrom("master.entity_document_link as edl")
+          .select(["edl.attachment_id", "edl.folder_id"])
+          .where("edl.tenant_id", "=", tenantId)
+          .where("edl.entity_type", "=", entity.name as string)
+          .where("edl.entity_id", "=", id)
+          .execute() as Promise<Array<{ attachment_id: string; folder_id: string | null }>>,
+        db
+          .selectFrom("master.attachment_folder as f")
+          .select(["f.id", "f.name", "f.parent_id", "f.display_order", "f.created_at"])
+          .where("f.tenant_id", "=", tenantId)
+          .where("f.entity_type", "=", entity.name as string)
+          .where("f.entity_id", "=", id)
+          .orderBy("f.display_order", "asc")
+          .orderBy("f.name", "asc")
+          .execute(),
+      ]);
+
+      const folderByAttachment = new Map(
+        links.map((link) => [link.attachment_id, link.folder_id ?? null]),
+      );
+      const attachments = items.map((item) => ({
+        id: item.id,
+        filename: item.fileName,
+        content_type: item.contentType,
+        size_bytes: item.sizeBytes,
+        created_at: item.createdAt,
+        status: item.status,
+        created_by_name: item.uploadedByName,
+        link_kind: item.linkKind,
+        version_no: item.versionNo,
+        folder_id: folderByAttachment.get(item.id) ?? null,
+        download_url: `/api/relay/api/documents/${encodeURIComponent(docType)}/${encodeURIComponent(id)}/attachments/${encodeURIComponent(item.id)}/download`,
+      }));
+      const summary = attachments.reduce((result, item) => {
+        result.count += 1;
+        result.totalBytes += Number(item.size_bytes ?? 0);
+        if ((item as { visibility?: string }).visibility === "shared_with_supplier") result.sharedCount += 1;
+        else result.internalCount += 1;
+        if (item.status === "quarantined") result.quarantinedCount += 1;
+        return result;
+      }, { count: 0, totalBytes: 0, internalCount: 0, sharedCount: 0, quarantinedCount: 0 });
+
+      res.json({
+        ok: true,
+        attachments,
+        folders: (folders as Record<string, unknown>[]).map((folder) => ({
+          id: folder["id"] as string,
+          name: folder["name"] as string,
+          parent_id: (folder["parent_id"] as string | null) ?? null,
+          display_order: Number(folder["display_order"] ?? 0),
+          created_at: folder["created_at"],
+        })),
+        summary,
+      });
+    } catch (err) {
+      logger?.error("attachment_workspace_error", { err: String(err) });
       next(err);
     }
   };
@@ -1159,6 +1253,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
   router.post(   "/documents/:docType/:id/attachments/upload/initiate",        initiatePresignedUploadHandler);
   router.post(   "/documents/:docType/:id/attachments/upload/complete",        completePresignedUploadHandler);
   router.patch(  "/documents/:docType/:id/attachments/:attachmentId",          renameHandler);
+  router.get(    "/documents/:docType/:id/attachment-workspace",               attachmentWorkspaceHandler);
   router.get(    "/documents/:docType/:id/attachments",                        listHandler);
   router.post(   "/documents/:docType/:id/attachments",                        uploadHandler);
   router.delete( "/documents/:docType/:id/attachments/:attachmentId",          deleteHandler);

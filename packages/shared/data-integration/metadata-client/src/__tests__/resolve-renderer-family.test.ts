@@ -60,4 +60,15 @@ describe("resolveRendererFamily", () => {
       display_config: { detail_renderer: "document_shell" } as unknown as CompiledEntity["display_config"],
     }))).toBe("master");
   });
+
+  it("uses the canonical v2 catalog before legacy renderer flags", () => {
+    expect(resolveRendererFamily(makeEntity({
+      entity_class: "MASTER",
+      display_config: { detail_renderer: "document" } as unknown as CompiledEntity["display_config"],
+      contract_v2: {
+        catalog: { entity_class: "LEDGER" },
+        surfaces: [],
+      } as unknown as CompiledEntity["contract_v2"],
+    }))).toBe("ledger");
+  });
 });

@@ -43,21 +43,21 @@
  *  Entities catalogue (read-only — for picker dropdowns)
  *   GET    /metadata/admin/entities
  *
- *  Entity contract writes
+ *  Legacy entity contract writes (retired; return 410)
  *   PATCH  /metadata/admin/entities/:id/contracts
  *   PATCH  /metadata/admin/entity-fields/:id/contracts
+ *  Use the strict version-scoped Contract v2 Studio route instead.
  */
 
 import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
-import { normalizeEntityFeatureFlags, normalizeEntityListFeatures } from "@athyper/api-contracts/metadata-normalizers";
 import { extractOrgHeaders, resolveTenantId, verifyBearer } from "@athyper/svc-shared";
 import {
-  validateEntityContractWrite,
-  validateEntityFieldContractWrite,
-  type ContractWriteIssue,
-} from "./contract-write-validation.js";
+  projectCompiledEntityResponse,
+  readCompiledEntityContract,
+  type CompiledEntityProjectionProvider,
+} from "../src/compiled-entity-projection.js";
 
 // ─── Deps ─────────────────────────────────────────────────────────────────────
 
@@ -71,6 +71,8 @@ export interface MetadataAdminRoutesDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     warn?(event: string, fields?: Record<string, unknown>): void;
   };
+  /** Authoritative Phase B compiler projection for runtime entity reads. */
+  compiledEntityProvider?: CompiledEntityProjectionProvider;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -91,17 +93,6 @@ function notFound(res: { status: (c: number) => { json: (b: unknown) => void } }
 
 function badRequest(res: { status: (c: number) => { json: (b: unknown) => void } }, msg: string) {
   res.status(400).json({ error: "BAD_REQUEST", message: msg });
-}
-
-function contractValidationFailed(
-  res: { status: (c: number) => { json: (b: unknown) => void } },
-  errors: ContractWriteIssue[],
-) {
-  res.status(400).json({
-    error: "CONTRACT_VALIDATION_FAILED",
-    message: "Metadata contract input failed registry validation.",
-    errors,
-  });
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -342,46 +333,10 @@ function emptyAdminOperationPermissionInfo(): AdminOperationPermissionInfo {
   };
 }
 
-function mergeJsonPatch(current: unknown, patch: unknown): unknown {
-  const currentRecord = asRecord(current);
-  const patchRecord = asRecord(patch);
-  if (!currentRecord || !patchRecord) return patch;
-  return { ...currentRecord, ...patchRecord };
-}
-
-const ENTITY_CONTRACT_COLUMNS = [
-  "display_config",
-  "feature_flags",
-  "data_policy",
-  "identity_config",
-  "search_config",
-] as const;
-const ENTITY_RUNTIME_COLUMNS = [
-  "runtime_enabled",
-  "primary_key",
-  "tenant_column",
-  "read_capability",
-  "write_capability",
-] as const;
-
-const ENTITY_FIELD_CONTRACT_COLUMNS: Record<string, string> = {
-  reference_config: "reference_config",
-  money_config: "money_config",
-  filter_config: "filter_config",
-  ui_hint: "ui_hint",
-  editability: "editability",
-  lookup_config: "lookup_config",
-  validation_rules: "validation",
-  default_value: "default_value",
-  enum_config: "enum_config",
-  enum_domain_code: "enum_domain_code",
-  group_key: "group_key",
-};
-
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRoutesDeps): Router {
-  const { db, auth, logger } = deps;
+  const { db, auth, logger, compiledEntityProvider } = deps;
 
   // ── Auth guard ─────────────────────────────────────────────────────────────
   async function guard(
@@ -432,66 +387,13 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
       const ctx = await guardPlatformAdmin(req, res);
       if (!ctx) return;
 
-      const id = req.params["id"] as string;
-      const validation = validateEntityContractWrite(req.body);
-      if (validation.errors.length > 0) {
-        return contractValidationFailed(res as never, validation.errors);
-      }
-
-      const current = await db
-        .selectFrom("control.entity")
-        .select(["id", "tenant_id", ...ENTITY_CONTRACT_COLUMNS, ...ENTITY_RUNTIME_COLUMNS])
-        .where("id", "=", id)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
-      if (!current) return notFound(res as never, `Entity '${id}' not found`);
+      res.status(410).json({
+        error: "META_ENTITY_CONTRACT_V2_REQUIRED",
+        message: "Legacy entity contract writes are retired. Edit the complete DRAFT graph at /metadata/studio/entity-versions/:id/contract-v2.",
+      });
+      return;
 
       // Admin plane is a platform editor — reject writes against tenant-owned entities.
-      if (current["tenant_id"] !== null && current["tenant_id"] !== undefined) {
-        res.status(403).json({
-          error: "PLATFORM_ROW_ONLY",
-          message: "Admin plane can only edit platform-owned entity metadata (tenant_id IS NULL).",
-        });
-        return;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updates: Record<string, any> = { updated_by: ctx.pId, updated_at: new Date() };
-      for (const column of ENTITY_CONTRACT_COLUMNS) {
-        if (!(column in validation.values)) continue;
-        let value = validation.values[column];
-        if (column === "display_config") {
-          const displayConfig = asRecord(value);
-          const listFeatures = normalizeEntityListFeatures(
-            displayConfig?.["list_features"] ?? displayConfig?.["listFeatures"],
-          );
-          if (displayConfig && listFeatures) {
-            value = { ...displayConfig, list_features: listFeatures };
-            delete (value as Record<string, unknown>)["listFeatures"];
-          }
-        } else if (column === "feature_flags") {
-          const featureFlags = asRecord(value);
-          if (featureFlags) value = normalizeEntityFeatureFlags(featureFlags);
-        }
-        updates[column] = value === null || column === "data_policy"
-          ? (value ?? {})
-          : mergeJsonPatch(current[column], value);
-      }
-      for (const column of ENTITY_RUNTIME_COLUMNS) {
-        if (column in validation.values) updates[column] = validation.values[column];
-      }
-
-      if (Object.keys(updates).length <= 2) {
-        return badRequest(res as never, "No entity contract properties were supplied.");
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updated = await (db.updateTable("control.entity" as never) as any)
-        .set(updates)
-        .where("id" as never, "=", id as never)
-        .returningAll()
-        .executeTakeFirst() as Record<string, unknown> | undefined;
-
-      res.json({ item: updated, warnings: validation.warnings });
     } catch (err) {
       logger?.error("meta_admin_update_entity_contracts", { err: String(err) });
       next(err);
@@ -504,52 +406,13 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
       const ctx = await guardPlatformAdmin(req, res);
       if (!ctx) return;
 
-      const id = req.params["id"] as string;
-      const validation = validateEntityFieldContractWrite(req.body);
-      if (validation.errors.length > 0) {
-        return contractValidationFailed(res as never, validation.errors);
-      }
-
-      const current = await db
-        .selectFrom("control.entity_field")
-        .select(["id", "origin", ...Object.values(ENTITY_FIELD_CONTRACT_COLUMNS)])
-        .where("id", "=", id)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
-      if (!current) return notFound(res as never, `Entity field '${id}' not found`);
+      res.status(410).json({
+        error: "META_ENTITY_CONTRACT_V2_REQUIRED",
+        message: "Legacy field contract writes are retired. Edit the complete DRAFT graph at /metadata/studio/entity-versions/:id/contract-v2.",
+      });
+      return;
 
       // Admin plane only edits platform field definitions. Business/custom fields belong to tenants.
-      if (current["origin"] === "business") {
-        res.status(403).json({
-          error: "PLATFORM_ROW_ONLY",
-          message: "Admin plane cannot edit tenant-created fields (origin='business').",
-        });
-        return;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updates: Record<string, any> = { updated_by: ctx.pId, updated_at: new Date() };
-      for (const [property, value] of Object.entries(validation.values)) {
-        const column = ENTITY_FIELD_CONTRACT_COLUMNS[property];
-        if (!column) continue;
-        const shouldMerge =
-          value !== null &&
-          value !== undefined &&
-          !["default_value", "enum_domain_code", "group_key"].includes(property);
-        updates[column] = shouldMerge ? mergeJsonPatch(current[column], value) : value;
-      }
-
-      if (Object.keys(updates).length <= 2) {
-        return badRequest(res as never, "No entity_field contract properties were supplied.");
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updated = await (db.updateTable("control.entity_field" as never) as any)
-        .set(updates)
-        .where("id" as never, "=", id as never)
-        .returningAll()
-        .executeTakeFirst() as Record<string, unknown> | undefined;
-
-      res.json({ item: updated, warnings: validation.warnings });
     } catch (err) {
       logger?.error("meta_admin_update_entity_field_contracts", { err: String(err) });
       next(err);
@@ -1392,30 +1255,47 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
 
       if (!entity) return notFound(res as never, `Entity '${id}' not found`);
 
+      const code = typeof entity["entity_code"] === "string"
+        ? entity["entity_code"]
+        : typeof entity["name"] === "string" ? entity["name"] : null;
+      const tId = tenantId(claims);
+      if (compiledEntityProvider && code && tId) {
+        const compiled = await compiledEntityProvider.loadRuntimeCompiledEntity(code, tId);
+        if (compiled) {
+          const contract = readCompiledEntityContract(compiled);
+          if (contract.catalog.id === id) {
+            res.json({
+              ...entity,
+              ...projectCompiledEntityResponse(compiled),
+              version_id: contract.version_contract.entity_version_id,
+              version_status: "EFFECTIVE",
+              fields: compiled.fields,
+            });
+            return;
+          }
+        }
+      }
+
       // Fields live on the EFFECTIVE entity version. Canonical fields
       // (entity_version_id IS NULL in entity_field) are the global dictionary
       // and are not entity-specific — we want the version-bound fields instead.
       const effectiveVersion = await db
         .selectFrom("control.entity_version as ev")
-        .select("ev.id")
+        .select(["ev.id", "ev.status"])
         .where("ev.entity_id", "=", id)
         .where("ev.status", "=", "EFFECTIVE")
         .orderBy("ev.version_no", "desc")
-        .executeTakeFirst() as { id: string } | undefined;
+        .executeTakeFirst() as { id: string; status: string } | undefined;
 
       const fields = effectiveVersion
         ? await db
             .selectFrom("control.entity_field as ef")
             .select([
               "ef.id", "ef.name", "ef.column_name", "ef.label",
-              "ef.data_type", "ef.ui_type", "ef.cardinality", "ef.origin",
-              "ef.is_required", "ef.is_searchable", "ef.is_filterable",
-              "ef.is_sortable", "ef.is_read_only", "ef.sort_order",
-              sql<boolean>`ef.is_read_only`.as("is_readonly"),
-              "ef.group_key", "ef.ui_hint", "ef.editability",
-              "ef.enum_config", "ef.enum_domain_code", "ef.enum_kind",
-              "ef.reference_config", "ef.money_config", "ef.lookup_config",
-              sql<Record<string, unknown> | null>`ef.validation`.as("validation_rules"), "ef.default_value", "ef.filter_config",
+              "ef.data_type", "ef.cardinality", "ef.origin", "ef.is_required",
+              "ef.is_unique", "ef.is_filterable", "ef.is_sortable", "ef.is_groupable", "ef.is_aggregatable",
+              "ef.semantic_roles", "ef.type_config", "ef.defaults",
+              "ef.default_value", "ef.sort_order",
             ])
             .where("ef.entity_version_id", "=", effectiveVersion.id)
             .orderBy("ef.sort_order", "asc")
@@ -1423,7 +1303,7 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
             .execute()
         : [];
 
-      res.json({ ...entity, fields });
+      res.json({ ...entity, version_id: effectiveVersion?.id ?? null, version_status: effectiveVersion?.status ?? null, fields });
     } catch (err) {
       logger?.error("meta_admin_get_entity_detail", { err: String(err) });
       next(err);

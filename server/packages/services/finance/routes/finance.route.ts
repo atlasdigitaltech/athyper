@@ -21,18 +21,14 @@ import type { RequestHandler, Router } from "express";
 import { sql, type Kysely } from "kysely";
 import { verifyBearer, resolveTenantId } from "@athyper/svc-shared";
 import { incrementRateLimit } from "@athyper/svc-shared";
+import type { CacheClient } from "@athyper/svc-iam";
 import type { CheckPermissionBatchFn } from "@athyper/svc-shared";
 import { decidePeriodGate, type FiscalPeriodStatus } from "@athyper/finance-rules";
 
 export interface FinanceRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: Kysely<any>;
-  cache?: {
-    eval?(script: string, numKeys: number, ...args: Array<string | number>): Promise<unknown>;
-    incr?(key: string): Promise<number>;
-    expire?(key: string, ttlSeconds: number): Promise<unknown>;
-    del?(key: string | string[]): Promise<unknown>;
-  };
+  cache?: CacheClient;
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
@@ -1216,6 +1212,91 @@ async function resolveUserCompanyAccess(
 
 export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger } = deps;
+
+  // Compact context projection for Finance selectors. Canonical Entity APIs
+  // remain authoritative for CRUD; this endpoint joins the records needed to
+  // resolve legal-entity/company scope in one tenant-isolated request.
+  router.get("/finance/master/scope-options", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const xOrg = (req.headers["x-org"] as string) ?? "";
+      const xRealm = (req.headers["x-realm"] as string) ?? "athyper";
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) {
+        res.json({ tenantId: null, tenantCode: null, tenantName: null, activeLegalEntityId: null, activeLegalEntityCode: null, activeLegalEntityName: null, legalEntities: [], companies: [], defaultCompanyCode: null });
+        return;
+      }
+
+      const headerLegalEntityId = ((req.headers["x-legal-entity-id"] as string | undefined) ?? "").trim();
+      const requestedLegalEntityId = ((req.query["legalEntityId"] as string | undefined) ?? "").trim();
+      if (headerLegalEntityId && requestedLegalEntityId && headerLegalEntityId !== requestedLegalEntityId) {
+        res.status(403).json({ error: "LEGAL_ENTITY_SCOPE_MISMATCH", message: "Requested legal entity differs from the active session scope." });
+        return;
+      }
+      const activeLegalEntityId = requestedLegalEntityId || headerLegalEntityId || null;
+      const userSub = (claims["sub"] as string | undefined) ?? null;
+      const access = await resolveUserCompanyAccess(db, tenantId, userSub, xRealm);
+
+      let query = db
+        .selectFrom("master.company_code as cc")
+        .innerJoin("master.legal_entity as le", (join) => join
+          .onRef("le.id", "=", "cc.legal_entity_id")
+          .onRef("le.tenant_id", "=", "cc.tenant_id"))
+        .select([
+          "cc.id", "cc.code", "cc.name",
+          "cc.functional_currency as functionalCurrency",
+          "cc.fiscal_year_start_month as fiscalYearStartMonth",
+          "le.id as legalEntityId", "le.code as legalEntityCode", "le.name as legalEntityName",
+        ])
+        .where("cc.tenant_id", "=", tenantId)
+        .where("cc.status", "=", "active")
+        .where("le.status", "=", "active");
+
+      if (activeLegalEntityId) query = query.where("le.id", "=", activeLegalEntityId) as typeof query;
+      if (!access.allCompanies && access.allowedIds.length > 0) {
+        query = query.where("cc.id", "in", access.allowedIds) as typeof query;
+      }
+
+      const companies = await query.orderBy("cc.code", "asc").execute();
+      const legalEntities = [...new Map(companies.map((company) => [company.legalEntityId, {
+        id: company.legalEntityId,
+        code: company.legalEntityCode,
+        name: company.legalEntityName,
+      }])).values()];
+      const [tenant, scopedLegalEntity] = await Promise.all([
+        db.selectFrom("master.tenant as t")
+          .select(["t.code", "t.display_name as name"])
+          .where("t.id", "=", tenantId)
+          .executeTakeFirst(),
+        activeLegalEntityId
+          ? db.selectFrom("master.legal_entity as le")
+              .select(["le.id", "le.code", "le.name"])
+              .where("le.tenant_id", "=", tenantId)
+              .where("le.id", "=", activeLegalEntityId)
+              .where("le.status", "=", "active")
+              .executeTakeFirst()
+          : Promise.resolve(undefined),
+      ]);
+      const activeLegalEntity = scopedLegalEntity
+        ?? (legalEntities.length === 1 ? legalEntities[0]! : null);
+
+      res.json({
+        tenantId,
+        tenantCode: tenant?.code ?? null,
+        tenantName: tenant?.name ?? null,
+        activeLegalEntityId: activeLegalEntity?.id ?? activeLegalEntityId,
+        activeLegalEntityCode: activeLegalEntity?.code ?? null,
+        activeLegalEntityName: activeLegalEntity?.name ?? null,
+        legalEntities,
+        companies,
+        defaultCompanyCode: companies.length === 1 ? companies[0]!.code : null,
+      });
+    } catch (err) {
+      logger?.error("finance_scope_options_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
 
   // ── GET /api/finance/master/companies ─────────────────────────────────────
   // Returns companies the calling user is allowed to see.

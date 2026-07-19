@@ -111,6 +111,15 @@ export const MetaEntityOptionSourceSchema = z.discriminatedUnion("kind", [
     options: z.array(MetaEntityOptionSchema).default([]),
   }).catchall(z.unknown()),
   z.object({
+    kind: z.literal("lifecycle"),
+    entityLifecycle: z.literal("current"),
+    // Resolved at descriptor compilation from the tenant-preferred lifecycle
+    // binding. fallbackOptions are legacy static values only and never win
+    // over an authoritative lifecycle-state label.
+    options: z.array(MetaEntityOptionSchema).default([]),
+    fallbackOptions: z.array(MetaEntityOptionSchema).default([]),
+  }).catchall(z.unknown()),
+  z.object({
     kind: z.literal("lookup"),
     domainCode: z.string().min(1),
     valueField: z.enum(["code", "id"]).optional(),
@@ -632,6 +641,283 @@ export const MetaEntityCapabilitiesSchema = z.object({
 });
 export type MetaEntityCapabilities = z.infer<typeof MetaEntityCapabilitiesSchema>;
 
+export const RECORD_WORKSPACE_DEFINITION_VERSION = "record-workspace/v1" as const;
+
+export const RecordWorkspaceSurfaceReferenceSchema = z.object({
+  key: z.string().min(1),
+  kind: MetaEntitySurfaceKindSchema,
+  placement: MetaEntitySurfacePlacementSchema,
+  order: z.number().int(),
+  enabled: z.boolean(),
+}).strict();
+export type RecordWorkspaceSurfaceReference = z.infer<typeof RecordWorkspaceSurfaceReferenceSchema>;
+
+export const RecordWorkspaceResourceBindingSchema = z.object({
+  enabled: z.boolean(),
+  source: z.enum([
+    "none",
+    "capability",
+    "surface",
+    "capability_and_surface",
+    "compatibility_fallback",
+  ]),
+  surfaceKey: z.string().min(1).optional(),
+  fallbackReason: z.string().min(1).optional(),
+}).strict().superRefine((binding, ctx) => {
+  if (!binding.enabled && binding.source !== "none") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["source"],
+      message: "disabled workspace resources must use source=none",
+    });
+  }
+  if (binding.enabled && binding.source === "none") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["source"],
+      message: "enabled workspace resources require an authoritative source",
+    });
+  }
+  if (
+    (binding.source === "surface" || binding.source === "capability_and_surface")
+    && !binding.surfaceKey
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["surfaceKey"],
+      message: `${binding.source} workspace resources require a surfaceKey`,
+    });
+  }
+  if (binding.source === "compatibility_fallback" && !binding.fallbackReason) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["fallbackReason"],
+      message: "compatibility workspace resources require a fallbackReason",
+    });
+  }
+});
+export type RecordWorkspaceResourceBinding = z.infer<typeof RecordWorkspaceResourceBindingSchema>;
+
+export const RecordWorkspaceSnapshotsBindingSchema = RecordWorkspaceResourceBindingSchema.safeExtend({
+  compareSurfaceKey: z.string().min(1).optional(),
+});
+export type RecordWorkspaceSnapshotsBinding = z.infer<typeof RecordWorkspaceSnapshotsBindingSchema>;
+
+export const RecordWorkspaceResourcesSchema = z.object({
+  approvals: RecordWorkspaceResourceBindingSchema,
+  lifecycleTimeline: RecordWorkspaceResourceBindingSchema,
+  snapshots: RecordWorkspaceSnapshotsBindingSchema,
+  comments: RecordWorkspaceResourceBindingSchema,
+  attachments: RecordWorkspaceResourceBindingSchema,
+  activity: RecordWorkspaceResourceBindingSchema,
+}).strict();
+export type RecordWorkspaceResources = z.infer<typeof RecordWorkspaceResourcesSchema>;
+
+export const RecordWorkspaceDefinitionSchema = z.object({
+  schemaVersion: z.literal(RECORD_WORKSPACE_DEFINITION_VERSION),
+  renderer: MetaEntityRendererSchema,
+  initialSurfaceKey: z.string().min(1).nullable(),
+  surfaces: z.array(RecordWorkspaceSurfaceReferenceSchema),
+  resources: RecordWorkspaceResourcesSchema,
+}).strict().superRefine((definition, ctx) => {
+  const surfaceByKey = new Map<string, RecordWorkspaceSurfaceReference>();
+  definition.surfaces.forEach((surface, index) => {
+    if (surfaceByKey.has(surface.key)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["surfaces", index, "key"],
+        message: `workspace surface key "${surface.key}" is duplicated`,
+      });
+    }
+    surfaceByKey.set(surface.key, surface);
+  });
+
+  if (definition.initialSurfaceKey) {
+    const initial = surfaceByKey.get(definition.initialSurfaceKey);
+    if (!initial || !initial.enabled) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["initialSurfaceKey"],
+        message: "initialSurfaceKey must reference an enabled workspace surface",
+      });
+    }
+  }
+
+  const expectedKinds: Record<keyof RecordWorkspaceResources, MetaEntitySurfaceKind[]> = {
+    approvals: ["workflow"],
+    lifecycleTimeline: ["lifecycle"],
+    snapshots: ["versions"],
+    comments: ["comments"],
+    attachments: ["attachments"],
+    activity: ["activity_log"],
+  };
+  for (const [resource, binding] of Object.entries(definition.resources) as Array<
+    [keyof RecordWorkspaceResources, RecordWorkspaceResourceBinding]
+  >) {
+    if (!binding.surfaceKey) continue;
+    const surface = surfaceByKey.get(binding.surfaceKey);
+    if (!surface || !surface.enabled || !expectedKinds[resource].includes(surface.kind)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resources", resource, "surfaceKey"],
+        message: `${resource} must reference an enabled ${expectedKinds[resource].join(" or ")} surface`,
+      });
+    }
+  }
+
+  const compareSurfaceKey = definition.resources.snapshots.compareSurfaceKey;
+  if (compareSurfaceKey) {
+    if (!definition.resources.snapshots.enabled) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resources", "snapshots", "compareSurfaceKey"],
+        message: "compareSurfaceKey requires snapshots to be enabled",
+      });
+    }
+    const compareSurface = surfaceByKey.get(compareSurfaceKey);
+    if (!compareSurface || !compareSurface.enabled || compareSurface.kind !== "compare") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resources", "snapshots", "compareSurfaceKey"],
+        message: "compareSurfaceKey must reference an enabled compare surface",
+      });
+    }
+  }
+});
+export type RecordWorkspaceDefinition = z.infer<typeof RecordWorkspaceDefinitionSchema>;
+
+export const RECORD_WORKSPACE_MANIFEST_VERSION = "record-workspace-manifest/v1" as const;
+
+export const RecordWorkspaceResourceKeySchema = z.enum([
+  "approvals",
+  "lifecycleTimeline",
+  "snapshots",
+  "comments",
+  "attachments",
+  "activity",
+]);
+export type RecordWorkspaceResourceKey = z.infer<typeof RecordWorkspaceResourceKeySchema>;
+
+export const RecordWorkspaceCacheScopeSchema = z.object({
+  kind: z.literal("principal_record"),
+  key: z.string().min(1),
+  variesBy: z.array(z.enum([
+    "tenant",
+    "principal",
+    "permission_stamp",
+    "descriptor",
+    "entity",
+    "record",
+    "record_state",
+  ])).min(1),
+}).strict();
+export type RecordWorkspaceCacheScope = z.infer<typeof RecordWorkspaceCacheScopeSchema>;
+
+export const EffectiveRecordWorkspaceSurfaceSchema = RecordWorkspaceSurfaceReferenceSchema.safeExtend({
+  permissionCode: z.string().min(1).optional(),
+});
+export type EffectiveRecordWorkspaceSurface = z.infer<typeof EffectiveRecordWorkspaceSurfaceSchema>;
+
+export const EffectiveRecordWorkspaceResourceSchema = z.object({
+  key: RecordWorkspaceResourceKeySchema,
+  surfaceKey: z.string().min(1).optional(),
+  compareSurfaceKey: z.string().min(1).optional(),
+}).strict();
+export type EffectiveRecordWorkspaceResource = z.infer<typeof EffectiveRecordWorkspaceResourceSchema>;
+
+export const EffectiveRecordWorkspaceOperationSchema = z.object({
+  key: z.string().min(1),
+  permissionCode: z.string().min(1),
+  source: z.enum(["entity_operation", "lifecycle_transition", "workflow_task"]).optional(),
+}).strict();
+export type EffectiveRecordWorkspaceOperation = z.infer<typeof EffectiveRecordWorkspaceOperationSchema>;
+
+export const EffectiveRecordWorkspaceStateSchema = z.object({
+  lifecycleState: z.string().nullable(),
+  terminal: z.boolean(),
+  allowedTransitions: z.array(z.string()),
+  workflowStatus: z.string().nullable(),
+  pendingWorkflowTasks: z.number().int().nonnegative(),
+}).strict();
+export type EffectiveRecordWorkspaceState = z.infer<typeof EffectiveRecordWorkspaceStateSchema>;
+
+export const EffectiveRecordWorkspaceManifestSchema = z.object({
+  schemaVersion: z.literal(RECORD_WORKSPACE_MANIFEST_VERSION),
+  definitionVersion: z.literal(RECORD_WORKSPACE_DEFINITION_VERSION),
+  entityCode: z.string().min(1),
+  recordId: z.string().min(1),
+  renderer: MetaEntityRendererSchema,
+  initialSurfaceKey: z.string().min(1).nullable(),
+  cacheScope: RecordWorkspaceCacheScopeSchema,
+  recordState: EffectiveRecordWorkspaceStateSchema,
+  surfaces: z.array(EffectiveRecordWorkspaceSurfaceSchema),
+  resources: z.array(EffectiveRecordWorkspaceResourceSchema),
+  operations: z.array(EffectiveRecordWorkspaceOperationSchema),
+}).strict().superRefine((manifest, ctx) => {
+  const surfaceKeys = new Set(manifest.surfaces.map((surface) => surface.key));
+  if (manifest.initialSurfaceKey && !surfaceKeys.has(manifest.initialSurfaceKey)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["initialSurfaceKey"],
+      message: "initialSurfaceKey must reference an effective surface",
+    });
+  }
+  manifest.resources.forEach((resource, index) => {
+    if (resource.surfaceKey && !surfaceKeys.has(resource.surfaceKey)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resources", index, "surfaceKey"],
+        message: `${resource.key} must reference an effective surface`,
+      });
+    }
+    if (resource.compareSurfaceKey && !surfaceKeys.has(resource.compareSurfaceKey)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["resources", index, "compareSurfaceKey"],
+        message: `${resource.key} compare surface must be effective`,
+      });
+    }
+  });
+});
+export type EffectiveRecordWorkspaceManifest = z.infer<typeof EffectiveRecordWorkspaceManifestSchema>;
+
+export const RecordWorkspaceSurfaceDecisionReasonSchema = z.enum([
+  "included",
+  "unsupported",
+  "permission_denied",
+  "permission_unresolved",
+]);
+export type RecordWorkspaceSurfaceDecisionReason = z.infer<typeof RecordWorkspaceSurfaceDecisionReasonSchema>;
+
+export const RecordWorkspaceResourceDecisionReasonSchema = z.enum([
+  "included",
+  "unsupported",
+  "surface_unavailable",
+]);
+export type RecordWorkspaceResourceDecisionReason = z.infer<typeof RecordWorkspaceResourceDecisionReasonSchema>;
+
+export const RecordWorkspaceManifestDiagnosticsSchema = z.object({
+  permissionSource: z.enum(["authoritative", "descriptor_operations"]),
+  surfaceDecisions: z.array(z.object({
+    surfaceKey: z.string().min(1),
+    permissionCode: z.string().min(1).optional(),
+    included: z.boolean(),
+    reason: RecordWorkspaceSurfaceDecisionReasonSchema,
+  }).strict()),
+  resourceDecisions: z.array(z.object({
+    resource: RecordWorkspaceResourceKeySchema,
+    surfaceKey: z.string().min(1).optional(),
+    included: z.boolean(),
+    reason: RecordWorkspaceResourceDecisionReasonSchema,
+  }).strict()),
+  invalidPermissionCodes: z.array(z.object({
+    surfaceKey: z.string().min(1),
+    permissionCode: z.string().min(1),
+    message: z.string().min(1),
+  }).strict()),
+}).strict();
+export type RecordWorkspaceManifestDiagnostics = z.infer<typeof RecordWorkspaceManifestDiagnosticsSchema>;
+
 // Lifecycle state mask carried per (entity, record_status). Populated from
 // control.entity_lifecycle_state_mask. UI uses this to disable edit/delete
 // actions when the current record's status is gated.
@@ -1145,6 +1431,41 @@ export const MetaEntityContractAuditSchema = z.object({
 });
 export type MetaEntityContractAudit = z.infer<typeof MetaEntityContractAuditSchema>;
 
+export const MetaEntityListCachePolicySchema = z.object({
+  mode: z.enum(["disabled", "memory", "stale_while_revalidate"]),
+  freshForSeconds: z.number().int().min(0).max(3_600),
+  retainForSeconds: z.number().int().min(0).max(86_400),
+  prefetch: z.enum(["none", "intent", "viewport", "eager"]),
+  restoreScroll: z.boolean(),
+  invalidateOnMutation: z.boolean(),
+  maxQueriesPerEntity: z.number().int().min(1).max(20),
+  maxRowsPerQuery: z.number().int().min(1).max(500),
+  storage: z.enum(["memory", "session", "persistent"]),
+  source: z.enum(["platform", "entity_class", "entity", "tenant"]),
+}).strict().superRefine((policy, ctx) => {
+  if (policy.retainForSeconds < policy.freshForSeconds) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["retainForSeconds"],
+      message: "retainForSeconds must be greater than or equal to freshForSeconds",
+    });
+  }
+});
+export type MetaEntityListCachePolicy = z.infer<typeof MetaEntityListCachePolicySchema>;
+
+export const DEFAULT_META_ENTITY_LIST_CACHE_POLICY: MetaEntityListCachePolicy = Object.freeze({
+  mode: "stale_while_revalidate",
+  freshForSeconds: 20,
+  retainForSeconds: 300,
+  prefetch: "intent",
+  restoreScroll: true,
+  invalidateOnMutation: true,
+  maxQueriesPerEntity: 5,
+  maxRowsPerQuery: 200,
+  storage: "memory",
+  source: "platform",
+});
+
 export const MetaEntityFieldGroupSchema = z.object({
   key: z.string().min(1),
   label: z.string().min(1),
@@ -1173,12 +1494,14 @@ export const MetaEntityRuntimeDescriptorSchema = z.object({
   renderer: MetaEntityRendererSchema,
   capabilities: MetaEntityCapabilitiesSchema,
   surfaces: z.array(MetaEntitySurfaceSchema),
+  recordWorkspace: RecordWorkspaceDefinitionSchema.optional(),
   fields: z.array(MetaEntityFieldSchema),
   fieldGroups: z.array(MetaEntityFieldGroupSchema).default([]),
   operations: z.array(MetaEntityOperationSchema),
   relations: z.array(MetaEntityRelationSchema),
   source: MetaEntitySourceSchema,
   policy: MetaEntityPolicySummarySchema,
+  cachePolicy: MetaEntityListCachePolicySchema.default(DEFAULT_META_ENTITY_LIST_CACHE_POLICY),
   lifecycle: MetaEntityLifecycleSummarySchema.optional(),
   /**
    * Per-status capability masks resolved from control.entity_lifecycle_state_mask.
@@ -1196,6 +1519,73 @@ export const MetaEntityRuntimeDescriptorSchema = z.object({
   extensions: MetaEntityExtensionsSchema.optional(),
   audit: MetaEntityContractAuditSchema,
 }).superRefine((desc, ctx) => {
+  if (desc.recordWorkspace) {
+    if (desc.recordWorkspace.renderer !== desc.renderer) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["recordWorkspace", "renderer"],
+        message: "record workspace renderer must match the descriptor renderer",
+      });
+    }
+
+    const descriptorSurfaceByKey = new Map(desc.surfaces.map((surface) => [surface.key, surface] as const));
+    if (desc.recordWorkspace.surfaces.length !== desc.surfaces.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["recordWorkspace", "surfaces"],
+        message: "record workspace must reference every descriptor surface exactly once",
+      });
+    }
+    desc.recordWorkspace.surfaces.forEach((reference, index) => {
+      const surface = descriptorSurfaceByKey.get(reference.key);
+      if (
+        !surface
+        || surface.kind !== reference.kind
+        || surface.placement !== reference.placement
+        || surface.order !== reference.order
+        || surface.enabled !== reference.enabled
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["recordWorkspace", "surfaces", index],
+          message: `workspace surface reference "${reference.key}" does not match descriptor surfaces`,
+        });
+      }
+    });
+
+    const capabilityBindings: Array<[
+      keyof RecordWorkspaceResources,
+      boolean,
+    ]> = [
+      ["approvals", desc.capabilities.hasWorkflow],
+      ["lifecycleTimeline", desc.capabilities.hasLifecycle],
+      ["snapshots", desc.capabilities.hasVersions],
+      ["comments", desc.capabilities.hasComments],
+      ["attachments", desc.capabilities.hasAttachments],
+      ["activity", desc.capabilities.hasActivityLog],
+    ];
+    for (const [resource, capabilityEnabled] of capabilityBindings) {
+      const binding = desc.recordWorkspace.resources[resource];
+      if (capabilityEnabled && !binding.enabled) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["recordWorkspace", "resources", resource, "enabled"],
+          message: `${resource} must be enabled when its descriptor capability is enabled`,
+        });
+      }
+      if (
+        !capabilityEnabled
+        && (binding.source === "capability" || binding.source === "capability_and_surface")
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["recordWorkspace", "resources", resource, "source"],
+          message: `${resource} cannot cite a disabled descriptor capability`,
+        });
+      }
+    }
+  }
+
   // Descriptor-level guard: addContract.targetRelation must be a declared
   // has_many or m2m relation. belongs_to is rejected — add ops append into
   // a collection, not into a scalar parent reference.

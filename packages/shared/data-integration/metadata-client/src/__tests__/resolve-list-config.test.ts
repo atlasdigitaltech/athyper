@@ -57,7 +57,7 @@ function field(name: string, sortOrder: number, over: Partial<EntityField> = {})
   };
 }
 
-function entity(over: { fields: EntityField[]; list_columns?: string[] }): CompiledEntity {
+function entity(over: { fields: EntityField[]; list_columns?: string[]; contract_v2?: unknown }): CompiledEntity {
   return {
     entity_id: "00000000-0000-0000-0000-000000000001",
     entity_code: "test_entity",
@@ -73,6 +73,7 @@ function entity(over: { fields: EntityField[]; list_columns?: string[] }): Compi
     display_config: over.list_columns === undefined
       ? {}
       : { list_columns: over.list_columns },
+    ...(over.contract_v2 ? { contract_v2: over.contract_v2 } : {}),
     feature_flags: {},
     governance_level: "standard",
     security_tier: "standard",
@@ -183,4 +184,25 @@ describe("resolveListConfig — authoritative path bypasses filterable/sortable 
 
     expect(result.columns.map((f) => f.name)).toEqual(["b", "a"]);
   });
+});
+
+it("uses v2 surface bindings and identity before legacy display_config", () => {
+  const result = resolveListConfig(entity({
+    fields: [field("a", 10), field("b", 20)],
+    list_columns: ["a"],
+    contract_v2: {
+      version_contract: {
+        identity_config: { display_identity: { title_field: "b", subtitle_field: null } },
+        search_config: { enabled: false, fields: [] },
+      },
+      fields: [{ id: "field-a", name: "a" }, { id: "field-b", name: "b" }],
+      surfaces: [{
+        surface: { surface_key: "list", mode: "list", is_enabled: true },
+        fields: [{ entity_field_id: "field-b", visible: true, sort_order: 0 }],
+      }],
+    },
+  }));
+
+  expect(result.columns.map((f) => f.name)).toEqual(["b"]);
+  expect(result.titleField).toBe("b");
 });

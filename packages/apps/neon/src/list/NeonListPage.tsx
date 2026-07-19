@@ -2,12 +2,15 @@ import { RuntimeListPage } from "@athyper/runtime-list/server";
 import { createNeonAdapter } from "./createNeonAdapter";
 import type { NeonAdapterConfig } from "./createNeonAdapter";
 import type { RuntimeListSlots, RawSearchParams } from "@athyper/runtime-list/adapter";
+import type React from "react";
 
 interface NeonListPageProps {
   entityCode:   string;
   searchParams: RawSearchParams;
   adapterConfig:NeonAdapterConfig;
   slots?:       RuntimeListSlots;
+  afterResolve?:() => React.ReactNode;
+  onResolved?:(durationMs: number) => void;
 }
 
 // Thin server-component wrapper. The app route supplies fetchDescriptor +
@@ -17,6 +20,8 @@ export function NeonListPage({
   searchParams,
   adapterConfig,
   slots,
+  afterResolve,
+  onResolved,
 }: NeonListPageProps) {
   const adapter = createNeonAdapter(adapterConfig);
   return (
@@ -25,6 +30,8 @@ export function NeonListPage({
       entityCode={entityCode}
       searchParams={searchParams}
       slots={slots}
+      afterResolve={afterResolve}
+      onResolved={onResolved}
     />
   );
 }

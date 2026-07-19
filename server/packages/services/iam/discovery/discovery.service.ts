@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
 import { sql, type Kysely, type RawBuilder } from "kysely";
+import {
+  defaultProviderLabel,
+  isTenantIdentityProviderEligibleForPlane,
+  isWindowsKerberosEnabled,
+  type TenantIdpFeatureGate,
+  type TenantIdpProviderType,
+} from "../providers/tenant-identity-provider.js";
 
 type AnyDb = Record<string, any>;
 
@@ -27,11 +34,20 @@ export interface DiscoveryCandidate {
   authMethodLabel: string;
   hostname: string | null;
   deliveryEmail: string | null;
+  /**
+   * Safe pre-authentication label returned only for an exact principal match.
+   * The BFF keeps this server-side and never exposes it in discovery responses.
+   */
+  principalDisplayName?: string | null;
   networkAccountId?: string | null;
   networkAccountCode?: string | null;
   networkAccountName?: string | null;
   networkAccountRole?: string | null;
   networkRelationshipType?: string | null;
+  /** Routing evidence is never an authorization grant. */
+  resolutionKind: "identity" | "verified-domain";
+  providerType: TenantIdpProviderType;
+  featureGate: TenantIdpFeatureGate;
 }
 
 export interface DiscoveryResponse {
@@ -70,7 +86,11 @@ const TOKEN_TTL_PARAM = "auth.discovery.token_ttl_seconds";
 const RESEND_COOLDOWN_PARAM = "auth.discovery.resend_cooldown_seconds";
 const VERIFIED_TRUST_TTL_PARAM = "auth.discovery.verified_trust_ttl_days";
 
-export function createTenantDiscoveryService(db: Kysely<AnyDb>, meshDb?: Kysely<AnyDb>): TenantDiscoveryService {
+export function createTenantDiscoveryService(
+  db: Kysely<AnyDb>,
+  meshDb?: Kysely<AnyDb>,
+  options: { windowsKerberosEnabled?: boolean } = {},
+): TenantDiscoveryService {
   async function discover(query: DiscoveryQuery): Promise<DiscoveryResponse> {
     const identifier = normalizeDiscoveryIdentifier(query.identifier ?? query.email);
     if (!identifier) return { candidates: [], policy: defaultDiscoveryPolicy(query.planeKey) };
@@ -81,6 +101,8 @@ export function createTenantDiscoveryService(db: Kysely<AnyDb>, meshDb?: Kysely<
     ]);
     const candidates = rows.map((row) => {
       const realmKey = row.identity_realm_key || NATIVE_IAM_REALM_KEY;
+      const providerType = normalizeProviderType(row.provider_type);
+      const featureGate = normalizeFeatureGate(row.feature_gate);
       return {
         id: stableCandidateId(query.planeKey, row.tenant_id, row.workspace_id, realmKey, row.provider_hint),
         planeKey: query.planeKey,
@@ -94,16 +116,25 @@ export function createTenantDiscoveryService(db: Kysely<AnyDb>, meshDb?: Kysely<
         workspaceSubtitle: row.workspace_subtitle,
         realmKey,
         providerHint: row.provider_hint,
-        authMethodLabel: row.auth_method_label || DEFAULT_AUTH_LABEL[query.planeKey],
+        authMethodLabel: row.auth_method_label || defaultProviderLabel(providerType) || DEFAULT_AUTH_LABEL[query.planeKey],
         hostname: row.hostname,
         deliveryEmail: row.delivery_email,
+        principalDisplayName: row.principal_display_name,
         networkAccountId: row.network_account_id,
         networkAccountCode: row.network_account_code,
         networkAccountName: row.network_account_name,
         networkAccountRole: row.network_account_role,
         networkRelationshipType: row.network_relationship_type,
+        resolutionKind: row.resolution_kind,
+        providerType,
+        featureGate,
       };
-    });
+    }).filter((candidate) => isTenantIdentityProviderEligibleForPlane(
+      candidate.providerType,
+      query.planeKey,
+      candidate.featureGate,
+      options.windowsKerberosEnabled ?? isWindowsKerberosEnabled(),
+    ));
     const deduped = new Map<string, DiscoveryCandidate>();
     for (const candidate of candidates) {
       if (!deduped.has(candidate.id)) deduped.set(candidate.id, candidate);
@@ -192,6 +223,21 @@ function normalizeJsonValue(value: unknown): unknown {
   } catch {
     return value;
   }
+}
+
+function normalizeProviderType(value: unknown): TenantIdpProviderType {
+  if (typeof value !== "string") return "generic";
+  const normalized = value.trim().toLowerCase();
+  return [
+    "generic", "entra-id", "google-workspace", "linkedin", "okta", "adfs",
+    "ping", "sap-identity", "windows-kerberos",
+  ].includes(normalized)
+    ? normalized as TenantIdpProviderType
+    : "generic";
+}
+
+function normalizeFeatureGate(value: unknown): TenantIdpFeatureGate {
+  return value === "windows-kerberos" ? "windows-kerberos" : "core";
 }
 
 function stableCandidateId(
@@ -312,13 +358,21 @@ async function resolveCandidates(
   auth_method_label: string | null;
   hostname: string | null;
   delivery_email: string | null;
+  principal_display_name: string | null;
   network_account_id?: string | null;
   network_account_code?: string | null;
   network_account_name?: string | null;
   network_account_role?: string | null;
   network_relationship_type?: string | null;
+  resolution_kind: "identity" | "verified-domain";
+  provider_type: string | null;
+  feature_gate: string | null;
 }>> {
-  if (planeKey === "mesh") return resolveMeshCandidates(meshDb ?? db, identifier);
+  if (planeKey === "mesh") {
+    const meshCandidates = await resolveMeshCandidates(meshDb ?? db, identifier);
+    if (meshCandidates.length > 0 || identifier.kind !== "email") return meshCandidates;
+    return resolveVerifiedDomainCandidates(db, "mesh", identifier.domain ?? "");
+  }
   if (planeKey === "admin") return resolveAdminCandidates(db, identifier);
   return resolveNeonCandidates(db, identifier);
 }
@@ -341,6 +395,10 @@ async function resolveNeonCandidates(
     auth_method_label: string | null;
     hostname: string | null;
     delivery_email: string | null;
+    principal_display_name: string | null;
+    resolution_kind: "identity";
+    provider_type: string | null;
+    feature_gate: string | null;
   }>`
     WITH principal_bindings AS (
       SELECT
@@ -348,6 +406,11 @@ async function resolveNeonCandidates(
         t.code                                           AS tenant_code,
         COALESCE(t.display_name, t.name)                 AS tenant_name,
         p.id                                             AS principal_id,
+        COALESCE(
+          NULLIF(btrim(pp.preferred_name), ''),
+          NULLIF(btrim(pp.display_name), ''),
+          NULLIF(btrim(p.name), '')
+        )                                                AS principal_display_name,
         p.login_email,
         pib.realm_key                                    AS identity_realm_key,
         pib.idp_snapshot,
@@ -359,6 +422,9 @@ async function resolveNeonCandidates(
         AND pib.principal_id = p.id
       JOIN master.tenant t
         ON t.id = p.tenant_id
+      LEFT JOIN master.principal_profile pp
+        ON pp.tenant_id = p.tenant_id
+        AND pp.principal_id = p.id
       WHERE ${identityPredicate(identifier)}
         AND p.is_active = true
         AND p.is_locked = false
@@ -436,7 +502,11 @@ async function resolveNeonCandidates(
         lower(NULLIF(rcm.idp_snapshot #>> '{email}', '')),
         lower(NULLIF(rcm.provider_attributes #>> '{email}', '')),
         lower(NULLIF(rcm.metadata #>> '{email}', ''))
-      )                                                AS delivery_email
+      )                                                AS delivery_email,
+      rcm.principal_display_name                       AS principal_display_name,
+      'identity'                                       AS resolution_kind,
+      NULLIF(rcm.metadata #>> '{auth,providerType}', '') AS provider_type,
+      NULLIF(rcm.metadata #>> '{auth,featureGate}', '') AS feature_gate
     FROM role_cc_map rcm
     JOIN master.company_code cc
       ON  cc.id = rcm.company_code_id
@@ -450,12 +520,92 @@ async function resolveNeonCandidates(
       le.id, le.code, le.display_name, le.name,
       cc.id, cc.code, cc.name,
       rcm.identity_realm_key,
+      rcm.principal_display_name,
       rcm.login_email, rcm.idp_snapshot, rcm.provider_attributes, rcm.metadata
     ORDER BY workspace_name, tenant_name, tenant_code
     LIMIT 50
   `.execute(db);
 
+  if (result.rows.length > 0 || identifier.kind !== "email") return result.rows;
+  return resolveVerifiedDomainCandidates(db, "neon", identifier.domain ?? "");
+}
+
+/**
+ * Resolve a verified organization domain only when no exact principal match
+ * exists. This is routing evidence for an enabled tenant provider, not proof
+ * of membership. The callback still resolves the authenticated subject and
+ * applies the normal tenant/plane authorization boundary.
+ */
+async function resolveVerifiedDomainCandidates(
+  db: Kysely<AnyDb>,
+  planeKey: PlaneKey,
+  domain: string,
+) {
+  if (!domain || !(await discoveryRegistryTablesExist(db))) return [];
+
+  const result = await sql<{
+    tenant_id: string;
+    tenant_code: string;
+    tenant_name: string;
+    workspace_id: string;
+    workspace_code: string;
+    workspace_name: string;
+    workspace_type: string;
+    workspace_subtitle: string;
+    identity_realm_key: string;
+    provider_hint: string | null;
+    auth_method_label: string | null;
+    hostname: string | null;
+    delivery_email: string | null;
+    principal_display_name: string | null;
+    resolution_kind: "verified-domain";
+    provider_type: string;
+    feature_gate: string;
+  }>`
+    SELECT
+      t.id::text                                      AS tenant_id,
+      t.code                                          AS tenant_code,
+      COALESCE(t.display_name, t.name)                AS tenant_name,
+      t.id::text                                      AS workspace_id,
+      t.code                                          AS workspace_code,
+      COALESCE(t.display_name, t.name)                AS workspace_name,
+      'tenant'                                        AS workspace_type,
+      ${ORGANIZATION_SUBTITLE[planeKey]}              AS workspace_subtitle,
+      COALESCE(NULLIF(ip.realm_key, ''), ${NATIVE_IAM_REALM_KEY}) AS identity_realm_key,
+      NULLIF(ip.keycloak_alias, '')                   AS provider_hint,
+      NULLIF(ip.display_name, '')                     AS auth_method_label,
+      NULLIF(ip.metadata #>> '{hostname}', '')        AS hostname,
+      NULL::text                                      AS delivery_email,
+      NULL::text                                      AS principal_display_name,
+      'verified-domain'                               AS resolution_kind,
+      ip.provider_type                                AS provider_type,
+      ip.feature_gate                                 AS feature_gate
+    FROM master.tenant_identity_domain tid
+    JOIN master.tenant_identity_provider ip
+      ON ip.id = tid.provider_id
+      AND ip.tenant_id = tid.tenant_id
+    JOIN master.tenant t
+      ON t.id = tid.tenant_id
+    WHERE lower(tid.domain) = ${domain}
+      AND tid.verification_status = 'verified'
+      AND tid.enabled = true
+      AND ip.enabled = true
+      AND ip.activated_at IS NOT NULL
+      AND ${planeKey} = ANY(ip.allowed_planes)
+      AND t.status = 'active'
+    ORDER BY tenant_name, tenant_code, ip.display_name
+    LIMIT 10
+  `.execute(db);
+
   return result.rows;
+}
+
+async function discoveryRegistryTablesExist(db: Kysely<AnyDb>): Promise<boolean> {
+  const result = await sql<{ exists: boolean }>`
+    SELECT to_regclass('master.tenant_identity_domain') IS NOT NULL
+      AND to_regclass('master.tenant_identity_provider') IS NOT NULL AS exists
+  `.execute(db);
+  return result.rows[0]?.exists === true;
 }
 
 async function resolveMeshCandidates(
@@ -494,11 +644,15 @@ async function resolveMeshCandidatesFromNetworkRole(
       NULLIF(pib.metadata #>> '{auth,label}', '')    AS auth_method_label,
       NULLIF(pib.metadata #>> '{auth,hostname}', '') AS hostname,
       NULL::text                                     AS delivery_email,
+      NULLIF(btrim(p.display_name), '')              AS principal_display_name,
       na.id::text                                    AS network_account_id,
       na.account_code                                AS network_account_code,
       na.display_name                                AS network_account_name,
       na.network_role                                AS network_account_role,
-      na.network_role                                AS network_relationship_type
+      na.network_role                                AS network_relationship_type,
+      'identity'                                     AS resolution_kind,
+      NULLIF(pib.metadata #>> '{auth,providerType}', '') AS provider_type,
+      NULLIF(pib.metadata #>> '{auth,featureGate}', '') AS feature_gate
     FROM mesh.principal p
     JOIN mesh.principal_identity_binding pib
       ON  pib.principal_id = p.id
@@ -515,7 +669,7 @@ async function resolveMeshCandidatesFromNetworkRole(
       AND pib.sync_status = 'synced'
     GROUP BY
       na.id, na.account_code, na.display_name, na.network_role,
-      pib.realm_key, pib.metadata
+      pib.realm_key, pib.metadata, p.display_name
     ORDER BY na.display_name
     LIMIT 10
   `.execute(db);
@@ -537,11 +691,15 @@ type MeshCandidateRow = {
     auth_method_label: string | null;
     hostname: string | null;
     delivery_email: string | null;
+    principal_display_name: string | null;
     network_account_id: string | null;
     network_account_code: string | null;
     network_account_name: string | null;
     network_account_role: string | null;
     network_relationship_type: string | null;
+    resolution_kind: "identity";
+    provider_type: string | null;
+    feature_gate: string | null;
 };
 
 async function meshTableExists(db: Kysely<AnyDb>, tableName: string): Promise<boolean> {
@@ -582,6 +740,10 @@ async function resolveAdminCandidates(
     auth_method_label: string | null;
     hostname: string | null;
     delivery_email: string | null;
+    principal_display_name: string | null;
+    resolution_kind: "identity";
+    provider_type: string | null;
+    feature_gate: string | null;
   }>`
     SELECT DISTINCT
       t.id::text                                      AS tenant_id,
@@ -601,13 +763,24 @@ async function resolveAdminCandidates(
         lower(NULLIF(pib.idp_snapshot #>> '{email}', '')),
         lower(NULLIF(pib.provider_attributes #>> '{email}', '')),
         lower(NULLIF(pib.metadata #>> '{email}', ''))
-      )                                              AS delivery_email
+      )                                              AS delivery_email,
+      COALESCE(
+        NULLIF(btrim(pp.preferred_name), ''),
+        NULLIF(btrim(pp.display_name), ''),
+        NULLIF(btrim(p.name), '')
+      )                                              AS principal_display_name,
+      'identity'                                     AS resolution_kind,
+      NULLIF(pib.metadata #>> '{auth,providerType}', '') AS provider_type,
+      NULLIF(pib.metadata #>> '{auth,featureGate}', '') AS feature_gate
     FROM master.principal p
     JOIN master.principal_identity_binding pib
       ON  pib.tenant_id = p.tenant_id
       AND pib.principal_id = p.id
     JOIN master.tenant t
       ON t.id = p.tenant_id
+    LEFT JOIN master.principal_profile pp
+      ON pp.tenant_id = p.tenant_id
+      AND pp.principal_id = p.id
     WHERE ${identityPredicate(identifier)}
       AND p.is_active = true
       AND p.is_locked = false
@@ -627,5 +800,6 @@ async function resolveAdminCandidates(
     LIMIT 50
   `.execute(db);
 
-  return result.rows;
+  if (result.rows.length > 0 || identifier.kind !== "email") return result.rows;
+  return resolveVerifiedDomainCandidates(db, "admin", identifier.domain ?? "");
 }

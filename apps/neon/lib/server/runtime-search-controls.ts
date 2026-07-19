@@ -1,7 +1,7 @@
 import "server-only";
 
-import { getNeonServerSession } from "@/lib/server/session";
-import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";
+import { getRuntimeConfigurationSnapshot } from "@/lib/server/runtime-configuration-snapshots";
+import type { RuntimeListDiagnosticRecorder } from "@/lib/server/runtime-list-observability";
 
 type SearchControls = {
   defaultScope?: "auto" | "loaded" | "all";
@@ -27,66 +27,44 @@ type LazyListControls = {
   maxLoadedRows?: number;
 };
 
-type ParameterSnapshotPayload = {
-  values?: Record<string, unknown>;
-};
+export async function resolveNeonRuntimeSearchControls(
+  diagnostics?: RuntimeListDiagnosticRecorder,
+): Promise<SearchControls | null> {
+  const snapshot = await getRuntimeConfigurationSnapshot("api.search", diagnostics);
+  if (!snapshot) return null;
+  const values = snapshot.values;
 
-export async function resolveNeonRuntimeSearchControls(): Promise<SearchControls | null> {
-  const session = await getNeonServerSession();
-  if (!session) return null;
-
-  try {
-    const response = await fetch(buildRuntimeUrl("/api/iam/parameters/effective?namespace=api.search"), {
-      headers: buildRuntimeHeaders(session),
-      cache:   "no-store",
-    });
-    if (!response.ok) return null;
-    const snapshot = await response.json() as ParameterSnapshotPayload;
-    const values = snapshot.values ?? {};
-
-    return {
-      defaultScope:                enumValue(values["api.search.default_scope"], ["auto", "loaded", "all"]),
-      minQueryLength:              intValue(values["api.search.min_query_length"]),
-      loadedSearchThreshold:       intValue(values["api.search.loaded_search_threshold"]),
-      autoSearchAllOnEmpty:        boolValue(values["api.search.auto_search_all_on_empty"]),
-      autoSearchAllDebounceMs:     intValue(values["api.search.auto_search_all_debounce_ms"]),
-      manualSearchAllDebounceMs:   intValue(values["api.search.manual_search_all_debounce_ms"]),
-      queryStabilityMs:            intValue(values["api.search.query_stability_ms"]),
-      serverSearchTimeoutMs:       intValue(values["api.search.server_timeout_ms"]),
-      fuzzySearch:                 boolValue(values["api.search.fuzzy_enabled"]),
-      visitedPageCache:            boolValue(values["api.search.visited_page_cache_enabled"]),
-      serverResultCacheTtlSeconds: intValue(values["api.search.server_result_cache_ttl_seconds"]),
-    };
-  } catch {
-    return null;
-  }
+  return {
+    defaultScope:                enumValue(values["api.search.default_scope"], ["auto", "loaded", "all"]),
+    minQueryLength:              intValue(values["api.search.min_query_length"]),
+    loadedSearchThreshold:       intValue(values["api.search.loaded_search_threshold"]),
+    autoSearchAllOnEmpty:        boolValue(values["api.search.auto_search_all_on_empty"]),
+    autoSearchAllDebounceMs:     intValue(values["api.search.auto_search_all_debounce_ms"]),
+    manualSearchAllDebounceMs:   intValue(values["api.search.manual_search_all_debounce_ms"]),
+    queryStabilityMs:            intValue(values["api.search.query_stability_ms"]),
+    serverSearchTimeoutMs:       intValue(values["api.search.server_timeout_ms"]),
+    fuzzySearch:                 boolValue(values["api.search.fuzzy_enabled"]),
+    visitedPageCache:            boolValue(values["api.search.visited_page_cache_enabled"]),
+    serverResultCacheTtlSeconds: intValue(values["api.search.server_result_cache_ttl_seconds"]),
+  };
 }
 
-export async function resolveNeonRuntimeLazyListControls(): Promise<LazyListControls | null> {
-  const session = await getNeonServerSession();
-  if (!session) return null;
+export async function resolveNeonRuntimeLazyListControls(
+  diagnostics?: RuntimeListDiagnosticRecorder,
+): Promise<LazyListControls | null> {
+  const snapshot = await getRuntimeConfigurationSnapshot("api.list", diagnostics);
+  if (!snapshot) return null;
+  const values = snapshot.values;
 
-  try {
-    const response = await fetch(buildRuntimeUrl("/api/iam/parameters/effective?namespace=api.list"), {
-      headers: buildRuntimeHeaders(session),
-      cache:   "no-store",
-    });
-    if (!response.ok) return null;
-    const snapshot = await response.json() as ParameterSnapshotPayload;
-    const values = snapshot.values ?? {};
-
-    return {
-      lazyLoadEnabled:           boolValue(values["api.list.lazy_load_enabled"]),
-      lazyLoadPageSize:          intValue(values["api.list.lazy_load_page_size"]) ?? intValue(values["api.list.default_page_size"]),
-      pageSizeSelectorEnabled:   boolValue(values["api.list.page_size_selector_enabled"]),
-      defaultPageSize:           intValue(values["api.list.default_page_size"]),
-      lazyPrefetchDistancePx:    intValue(values["api.list.lazy_prefetch_distance_px"]),
-      loadedPageCacheTtlSeconds: intValue(values["api.list.loaded_page_cache_ttl_seconds"]),
-      maxLoadedRows:             intValue(values["api.list.max_loaded_rows"]),
-    };
-  } catch {
-    return null;
-  }
+  return {
+    lazyLoadEnabled:           boolValue(values["api.list.lazy_load_enabled"]),
+    lazyLoadPageSize:          intValue(values["api.list.lazy_load_page_size"]) ?? intValue(values["api.list.default_page_size"]),
+    pageSizeSelectorEnabled:   boolValue(values["api.list.page_size_selector_enabled"]),
+    defaultPageSize:           intValue(values["api.list.default_page_size"]),
+    lazyPrefetchDistancePx:    intValue(values["api.list.lazy_prefetch_distance_px"]),
+    loadedPageCacheTtlSeconds: intValue(values["api.list.loaded_page_cache_ttl_seconds"]),
+    maxLoadedRows:             intValue(values["api.list.max_loaded_rows"]),
+  };
 }
 
 function intValue(value: unknown): number | undefined {

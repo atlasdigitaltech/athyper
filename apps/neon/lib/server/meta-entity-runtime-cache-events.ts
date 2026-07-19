@@ -16,12 +16,22 @@ export interface MetaEntityRuntimeInvalidationEvent extends RuntimeCacheInvalida
 }
 
 let subscriberPromise: Promise<DocumentEditRedisClient | null> | null = null;
+const invalidationListeners = new Set<(event: MetaEntityRuntimeInvalidationEvent) => void>();
 
 export function ensureMetaEntityRuntimeInvalidationSubscriber(
   invalidate: (event: MetaEntityRuntimeInvalidationEvent) => void,
 ): void {
+  invalidationListeners.add(invalidate);
   if (subscriberPromise) return;
-  subscriberPromise = createSubscriber(invalidate).catch(() => {
+  subscriberPromise = createSubscriber((event) => {
+    for (const listener of invalidationListeners) {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error("[meta-entity/cache-events] invalidation listener failed", error);
+      }
+    }
+  }).catch(() => {
     subscriberPromise = null;
     return null;
   });

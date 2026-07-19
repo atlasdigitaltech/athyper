@@ -15,6 +15,11 @@ import {
   verifyBearer,
 } from "@athyper/svc-shared";
 import { isActiveApproverFor } from "@athyper/svc-workflow";
+import {
+  readCompiledEntityContract,
+  type CompiledEntityProjectionProvider,
+} from "../src/compiled-entity-projection.js";
+import type { MetaEntityContractV2 } from "@athyper/api-contracts/meta-entity-contract-v2";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -28,6 +33,8 @@ export interface EntityOperationsRoutesDeps {
     error(event: string, fields?: Record<string, unknown>): void;
     warn?(event: string, fields?: Record<string, unknown>): void;
   };
+  /** Authoritative Phase B compiler projection. */
+  compiledEntityProvider?: CompiledEntityProjectionProvider;
   checkPermissionBatch?: (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     db: Kysely<any>,
@@ -98,7 +105,7 @@ function decisionsFromContext(
 }
 
 export function createEntityOperationsRoute(router: Router, deps: EntityOperationsRoutesDeps): Router {
-  const { db, auth, logger, checkPermissionBatch } = deps;
+  const { db, auth, logger, checkPermissionBatch, compiledEntityProvider } = deps;
 
   const handler: RequestHandler = async (req, res, next) => {
     try {
@@ -114,22 +121,27 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
         return;
       }
 
-      const executableEntity = await db
-        .selectFrom("control.entity as e")
-        .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
-        .select("e.id")
-        .where((eb) => eb.or([
-          eb("e.entity_code", "=", entityCode),
-          eb("e.name", "=", entityCode),
-          eb("e.slug", "=", entityCode.replace(/_/g, "-")),
-        ]))
-        .where("e.tenant_id", "is", null)
-        .where("e.runtime_enabled", "=", true)
-        .where("e.status", "=", "ACTIVE")
-        .where("e.is_active", "=", true)
-        .where("e.read_capability", "<>", "none")
-        .where("ev.status", "=", "EFFECTIVE")
-        .executeTakeFirst();
+      const compiledProjection = compiledEntityProvider
+        ? await compiledEntityProvider.loadRuntimeCompiledEntity(entityCode, tenantId)
+        : null;
+      const executableEntity = compiledEntityProvider
+        ? (compiledProjection ? { id: compiledProjection.entity_id } : undefined)
+        : await db
+          .selectFrom("control.entity as e")
+          .innerJoin("control.entity_version as ev", "ev.entity_id", "e.id")
+          .select("e.id")
+          .where((eb) => eb.or([
+            eb("e.entity_code", "=", entityCode),
+            eb("e.name", "=", entityCode),
+            eb("e.slug", "=", entityCode.replace(/_/g, "-")),
+          ]))
+          .where("e.tenant_id", "is", null)
+          .where("e.runtime_enabled", "=", true)
+          .where("e.status", "=", "ACTIVE")
+          .where("e.is_active", "=", true)
+          .where("e.read_capability", "<>", "none")
+          .where("ev.status", "=", "EFFECTIVE")
+          .executeTakeFirst();
       if (!executableEntity) {
         res.json([]);
         return;
@@ -211,7 +223,10 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
         ? await isActiveApproverFor({ db, tenantId, principalId, entityCode, recordId })
         : false;
 
-      const rows = await loadOperationRows(db, entityCode, tenantId);
+      const contract = compiledProjection ? readCompiledEntityContract(compiledProjection) : null;
+      const rows = contract
+        ? projectContractOperationRows(contract)
+        : await loadOperationRows(db, entityCode, tenantId);
       const lifecycleTransitions = await loadLifecycleTransitions(db, entityCode, tenantId);
       const seen = dedupeTenantOperations(rows);
 
@@ -275,6 +290,36 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
   router.get("/metadata/entities/:entity/operations", handler);
   router.get("/metadata/entities/:entity/record-operations", handler);
   return router;
+}
+
+/** Compatibility-shaped operation rows derived from the canonical v2 list. */
+function projectContractOperationRows(contract: MetaEntityContractV2): EntityOperationRow[] {
+  return contract.operations
+    .filter((operation) => operation.enabled && operation.surface !== "hidden")
+    .map((operation) => ({
+      id: operation.id,
+      entity_name: contract.catalog.entity_code,
+      permission_code: operation.permission_code,
+      surface: operation.surface,
+      placement: operation.placement,
+      handler_type: operation.handler_type,
+      handler_target: operation.handler_target ?? null,
+      execution_target: operation.execution_target ?? null,
+      is_record_required: operation.record_required,
+      sort_order: operation.sort_order,
+      label_override: operation.label,
+      icon_override: operation.icon ?? null,
+      is_enabled: operation.enabled,
+      selection_config: operation.selection_config ?? null,
+      tenant_id: operation.tenant_id,
+      permission_risk_level: "normal",
+      permission_metadata: {
+        intent: operation.intent,
+        requires_confirmation: operation.confirmation.required,
+        requires_reason: operation.reason_required,
+      },
+      permission_category_code: "entity",
+    }));
 }
 
 /** Principal-agnostic operation declarations for the cached runtime bootstrap. */

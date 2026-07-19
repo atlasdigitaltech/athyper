@@ -143,17 +143,44 @@ export interface DocumentRuntimeContextProviderProps {
   children:    ReactNode;
 }
 
+/**
+ * The view route may provide the edit identity so the same object-page
+ * bootstrap can render both modes. That identity is not, by itself, an
+ * instruction to mount the edit coordinator: lifecycle masks are part of the
+ * active runtime contract and can make an individual record read-only.
+ */
+export function canUseDocumentEditCoordinator(
+  descriptor: MetaEntityRuntimeDescriptor,
+  record: Record<string, unknown>,
+): boolean {
+  if (!descriptor.editRuntime || !descriptor.capabilities.canEdit || descriptor.capabilities.isReadOnly) {
+    return false;
+  }
+
+  const statusField = descriptor.identity?.status?.field ?? "status";
+  const rawStatus = record[statusField] ?? record["status"];
+  const status = typeof rawStatus === "string" ? rawStatus.trim() : "";
+  if (!status) return true;
+
+  const mask = descriptor.lifecycleStateMasks?.find((candidate) =>
+    candidate.recordStatus === status
+      || candidate.recordStatus.toLowerCase() === status.toLowerCase(),
+  );
+  return mask?.canEdit !== false;
+}
+
 export function DocumentRuntimeContextProvider(props: DocumentRuntimeContextProviderProps) {
+  const editRuntime = props.descriptor.editRuntime;
   const content = (
     <CompiledEntityCacheScopeProvider scope={props.editCoordinatorIdentity}>
       <DocumentRuntimeContextBody {...props} />
     </CompiledEntityCacheScopeProvider>
   );
 
-  if (props.descriptor.editRuntime && props.editCoordinatorIdentity) {
+  if (editRuntime && props.editCoordinatorIdentity && canUseDocumentEditCoordinator(props.descriptor, props.record)) {
     return (
       <DocumentEditCoordinatorProvider
-        contract={props.descriptor.editRuntime}
+        contract={editRuntime}
         entityCode={props.descriptor.entityCode}
         recordId={props.recordId}
         identity={props.editCoordinatorIdentity}

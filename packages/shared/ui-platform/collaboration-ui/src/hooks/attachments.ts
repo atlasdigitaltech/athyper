@@ -50,6 +50,23 @@ interface ParameterSnapshotResponse {
   values?: Record<string, unknown>;
 }
 
+const ATTACHMENT_CONFIG_SESSION_KEY = "athyper:session:config:collab.attachments:v1";
+
+function readAttachmentConfig(): ParameterSnapshotResponse | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const value = JSON.parse(sessionStorage.getItem(ATTACHMENT_CONFIG_SESSION_KEY) ?? "null") as unknown;
+    return value && typeof value === "object" ? value as ParameterSnapshotResponse : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function storeAttachmentConfig(value: ParameterSnapshotResponse): void {
+  if (typeof window === "undefined") return;
+  try { sessionStorage.setItem(ATTACHMENT_CONFIG_SESSION_KEY, JSON.stringify(value)); } catch { /* optional cache */ }
+}
+
 function numberParam(value: unknown, fallback: number): number {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -67,9 +84,13 @@ export function useCommentAttachments(): UseCommentAttachmentsResult {
         cache: "no-store",
       });
       if (!res.ok) return { values: {} };
-      return res.json() as Promise<ParameterSnapshotResponse>;
+      const value = await res.json() as ParameterSnapshotResponse;
+      storeAttachmentConfig(value);
+      return value;
     },
-    staleTime: 300_000,
+    initialData: readAttachmentConfig,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: Number.POSITIVE_INFINITY,
     retry: false,
   });
   const maxFiles = numberParam(
@@ -176,36 +197,10 @@ export function useCommentAttachments(): UseCommentAttachmentsResult {
   return { staged, attachmentIds, isUploading, addFiles, remove, retry, reset };
 }
 
-// ── useCommentAttachmentList (render-side: fetch attachments for a comment) ──
-
 export interface CommentAttachmentItem {
   attachmentId: string;
   fileName:     string;
   contentType:  string;
   sizeBytes:    number;
   downloadUrl:  string;
-}
-
-export function useCommentAttachmentList(commentId: string): {
-  items:     CommentAttachmentItem[];
-  isLoading: boolean;
-} {
-  const [items,     setItems]     = useState<CommentAttachmentItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [fetched,   setFetched]   = useState(false);
-
-  // Lazy fetch on first render
-  if (!fetched && commentId) {
-    setFetched(true);
-    setIsLoading(true);
-    fetch(`/api/collab/comments/${commentId}/attachments`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : { data: [] }))
-      .then((body: { data?: CommentAttachmentItem[] }) => {
-        setItems(body.data ?? []);
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  }
-
-  return { items, isLoading };
 }

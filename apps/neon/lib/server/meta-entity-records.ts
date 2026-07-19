@@ -2,20 +2,28 @@ import "server-only";
 
 import { cache } from "react";
 import type { V4Session } from "@athyper/auth-bff";
-import type { MetaEntityField, MetaEntityOptionSource, MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
+import {
+  type MetaEntityField,
+  type MetaEntityOptionSource,
+  type MetaEntityRuntimeDescriptor,
+} from "@athyper/runtime-contracts";
 import type { RuntimeListPagination, RuntimeListState, RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { getNeonServerSession } from "@/lib/server/session";
 import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";
 import { maskFieldSecurityResponse } from "@/lib/server/meta-entity-write-validation";
+import type { RuntimeListDiagnosticRecorder } from "@/lib/server/runtime-list-observability";
+import type { AthyperCacheState } from "@/lib/server/runtime-list-observability";
+import {
+  buildSessionConfigurationIdentity,
+  getSessionConfiguration,
+} from "@/lib/server/session-configuration-cache";
 
 const DEFAULT_PAGE_SIZE = 20;
 const SYSTEM_UUID = "00000000-0000-0000-0000-000000000000";
-const PRINCIPAL_AUDIT_FIELDS = new Set([
-  "created_by",
-  "updated_by",
-  "deleted_by",
-  "status_changed_by",
-]);
+const LOOKUP_DOMAIN_CACHE_POLICY = {
+  freshForMs: 5 * 60_000,
+  staleForMs: 30 * 60_000,
+} as const;
 const ENTITY_CODE_ALIASES: Record<string, string> = {
   unit_of_measure: "uom",
 };
@@ -34,24 +42,46 @@ export interface MetaEntityRecordDetail {
   state: RuntimeListState;
 }
 
+export interface MetaEntityRecordReadOptions {
+  /** Reuses the route's already validated request-local session. */
+  session?: V4Session;
+  /** Limits display hydration to fields that can be rendered in this list. */
+  visibleFieldNames?: readonly string[];
+  /**
+   * The Records service enforces the verified tenant/organization context.
+   * Keep the compatibility resolver available for non-standard callers only.
+   */
+  scopeStrategy?: "verified_upstream" | "bff_compatibility";
+}
+
 export const getMetaEntityRecordList = cache(
   async (
     routeEntity: string,
     searchParams: Record<string, string | string[] | undefined> = {},
     descriptor?: MetaEntityRuntimeDescriptor,
+    diagnostics?: RuntimeListDiagnosticRecorder,
+    options?: MetaEntityRecordReadOptions,
   ): Promise<MetaEntityRecordList> => {
     const entityCode = normalizeEntityCode(routeEntity);
     if (!entityCode) {
       return unavailable("Entity route is empty.");
     }
 
-    const session = await getNeonServerSession();
+    const session = options?.session ?? await getNeonServerSession();
     if (!session) {
       return unavailable("Sign in again to load records.");
     }
 
     const headers = buildRuntimeHeaders(session);
-    const scope = await resolveScopeFilters(entityCode, descriptor, session, headers);
+    const scopeStartedAt = performance.now();
+    const scopeStrategy = options?.scopeStrategy ?? "bff_compatibility";
+    const scope = scopeStrategy === "verified_upstream"
+      ? { status: "ready" as const, filters: {} }
+      : await resolveScopeFilters(entityCode, descriptor, session, headers);
+    diagnostics?.record("record_scope", performance.now() - scopeStartedAt, "bypass", {
+      parent: "records",
+      attributes: { entityCode, strategy: scopeStrategy },
+    });
     if (scope.status === "unavailable") {
       return unavailable(scope.message);
     }
@@ -65,12 +95,49 @@ export const getMetaEntityRecordList = cache(
       query_v1: "1",
       count_mode: searchParams["count_mode"] ?? "none",
     }, scope.filters);
+    const recordQueryStartedAt = performance.now();
     const result = await fetchRecordRows(entityCode, useEntityQueryV1 ? v1Query : legacyQuery, headers, descriptor);
+    const recordsDurationMs = performance.now() - recordQueryStartedAt;
+    const recordsCacheState = result.telemetry?.cacheState ?? "bypass";
+    diagnostics?.record("records", recordsDurationMs, recordsCacheState, {
+      parent: "presenter_build",
+      attributes: {
+        entityCode,
+        queryMode: useEntityQueryV1 ? "v1" : "legacy",
+        rowCount: result.status === "ready" ? result.records.length : 0,
+      },
+    });
+    if (result.telemetry) {
+      diagnostics?.record("records_http", result.telemetry.httpDurationMs, recordsCacheState, {
+        parent: "records",
+        attributes: { entityCode },
+      });
+      diagnostics?.record("records_decode", result.telemetry.decodeDurationMs, recordsCacheState, {
+        parent: "records",
+        attributes: { entityCode },
+      });
+    }
     if (result.status === "unavailable") {
       return unavailable(result.message);
     }
 
-    const records = (await hydrateDisplayValues(result.records, descriptor, headers, session))
+    const hydrationStartedAt = performance.now();
+    const hydratedRecords = await hydrateDisplayValues(
+      result.records,
+      descriptor,
+      headers,
+      session,
+      options?.visibleFieldNames,
+      diagnostics,
+    );
+    diagnostics?.record("references", performance.now() - hydrationStartedAt, "bypass", {
+      parent: "presenter_build",
+      attributes: {
+        visibleFieldCount: options?.visibleFieldNames?.length,
+        rowCount: result.records.length,
+      },
+    });
+    const records = hydratedRecords
       .map((record) => maskRuntimeRecord(record, descriptor));
 
     return {
@@ -89,6 +156,7 @@ export const getMetaEntityRecordDetail = cache(
     routeEntity: string,
     recordId: string,
     descriptor?: MetaEntityRuntimeDescriptor,
+    options?: Pick<MetaEntityRecordReadOptions, "session" | "scopeStrategy">,
   ): Promise<MetaEntityRecordDetail> => {
     const entityCode = normalizeEntityCode(routeEntity);
     const lookupId = normalizeRouteRecordId(recordId);
@@ -96,13 +164,15 @@ export const getMetaEntityRecordDetail = cache(
       return unavailableDetail("Record route is empty.");
     }
 
-    const session = await getNeonServerSession();
+    const session = options?.session ?? await getNeonServerSession();
     if (!session) {
       return unavailableDetail("Sign in again to load this record.");
     }
 
     const headers = buildRuntimeHeaders(session);
-    const scope = await resolveScopeFilters(entityCode, descriptor, session, headers);
+    const scope = options?.scopeStrategy === "verified_upstream"
+      ? { status: "ready" as const, filters: {} }
+      : await resolveScopeFilters(entityCode, descriptor, session, headers);
     if (scope.status === "unavailable") {
       return unavailableDetail(scope.message);
     }
@@ -263,7 +333,10 @@ function buildDetailLookupPlans(
   if (scopedIds.length === 0 || scopedRecordMatches) {
     plans.push({
       status: "ready",
-      searchParams: { ...searchParams, page_size: "1" },
+      searchParams: {
+        ...detailQuerySearchParams(searchParams, descriptor, primaryKeyField),
+        page_size: "1",
+      },
       filters: {
         ...filters,
         [`filter.${primaryKeyField}`]: recordId,
@@ -278,7 +351,10 @@ function buildDetailLookupPlans(
   for (const fieldName of detailLookupFieldNames(descriptor)) {
     plans.push({
       status: "ready",
-      searchParams: { ...searchParams, page_size: "2" },
+      searchParams: {
+        ...detailQuerySearchParams(searchParams, descriptor, fieldName),
+        page_size: "2",
+      },
       filters: {
         ...filters,
         [`filter.${fieldName}`]: recordId,
@@ -299,6 +375,26 @@ function buildDetailLookupPlans(
   });
 
   return plans;
+}
+
+function detailQuerySearchParams(
+  base: Record<string, string>,
+  descriptor: MetaEntityRuntimeDescriptor | undefined,
+  fieldName: string,
+): Record<string, string> {
+  const field = descriptor?.fields.find((candidate) =>
+    candidate.name === fieldName || candidate.columnName === fieldName,
+  );
+  if (!field || !field.isFilterable || field.isComputed) return base;
+  return {
+    ...base,
+    // Explicit filter metadata is the authority for entering the compiled
+    // path. count_mode=none prevents a by-id lookup from issuing a redundant
+    // aggregate query. Missing contracts stay on the instrumented legacy
+    // compatibility path until metadata repair completes.
+    query_v1: "1",
+    count_mode: "none",
+  };
 }
 
 function detailLookupFieldNames(descriptor: MetaEntityRuntimeDescriptor | undefined): string[] {
@@ -484,9 +580,69 @@ async function hydrateDisplayValues(
   descriptor: MetaEntityRuntimeDescriptor | undefined,
   headers: Record<string, string>,
   session: V4Session,
+  visibleFieldNames?: readonly string[],
+  diagnostics?: RuntimeListDiagnosticRecorder,
 ): Promise<RuntimeRecordRow[]> {
-  const referenceHydratedRecords = await hydrateReferenceDisplayValues(records, descriptor, headers, session);
-  return hydrateLookupDisplayValues(referenceHydratedRecords, descriptor, headers);
+  const referencePromise = measureHydration(
+    diagnostics,
+    "reference_hydration",
+    records.length,
+    () => hydrateReferenceDisplayValues(records, descriptor, headers, session, visibleFieldNames),
+  );
+  const lookupPromise = measureHydration(
+    diagnostics,
+    "lookup_hydration",
+    records.length,
+    () => hydrateLookupDisplayValues(records, descriptor, headers, session, visibleFieldNames, diagnostics),
+  );
+  const [referenceHydratedRecords, lookupHydratedRecords] = await Promise.all([
+    referencePromise,
+    lookupPromise,
+  ]);
+  return mergeHydratedRecords(records, referenceHydratedRecords, lookupHydratedRecords);
+}
+
+async function measureHydration(
+  diagnostics: RuntimeListDiagnosticRecorder | undefined,
+  operation: "reference_hydration" | "lookup_hydration",
+  rowCount: number,
+  loader: () => Promise<RuntimeRecordRow[]>,
+): Promise<RuntimeRecordRow[]> {
+  const startedAt = performance.now();
+  try {
+    return await loader();
+  } finally {
+    diagnostics?.record(operation, performance.now() - startedAt, "bypass", {
+      parent: "references",
+      attributes: { rowCount },
+    });
+  }
+}
+
+function mergeHydratedRecords(
+  baseRecords: RuntimeRecordRow[],
+  referenceRecords: RuntimeRecordRow[],
+  lookupRecords: RuntimeRecordRow[],
+): RuntimeRecordRow[] {
+  return baseRecords.map((baseRecord, index) => {
+    const referenceRecord = referenceRecords[index] ?? baseRecord;
+    const lookupRecord = lookupRecords[index] ?? baseRecord;
+    return {
+      ...baseRecord,
+      ...referenceRecord,
+      ...lookupRecord,
+      data: {
+        ...(isRecord(baseRecord.data) ? baseRecord.data : {}),
+        ...(isRecord(referenceRecord.data) ? referenceRecord.data : {}),
+        ...(isRecord(lookupRecord.data) ? lookupRecord.data : {}),
+      },
+    };
+  });
+}
+
+function visibleFieldSet(visibleFieldNames: readonly string[] | undefined): Set<string> | null {
+  if (!visibleFieldNames) return null;
+  return new Set(visibleFieldNames.filter((fieldName) => fieldName.trim().length > 0));
 }
 
 /**
@@ -500,19 +656,30 @@ export async function hydrateMetaEntityRecordRows(
   descriptor: MetaEntityRuntimeDescriptor | undefined,
   session: V4Session,
   headers: Record<string, string> = buildRuntimeHeaders(session),
+  options?: Pick<MetaEntityRecordReadOptions, "visibleFieldNames"> & {
+    diagnostics?: RuntimeListDiagnosticRecorder;
+  },
 ): Promise<RuntimeRecordRow[]> {
-  return hydrateDisplayValues(records, descriptor, headers, session);
+  return hydrateDisplayValues(
+    records,
+    descriptor,
+    headers,
+    session,
+    options?.visibleFieldNames,
+    options?.diagnostics,
+  );
 }
 
 async function hydrateReferenceDisplayValues(
   records: RuntimeRecordRow[],
   descriptor: MetaEntityRuntimeDescriptor | undefined,
   headers: Record<string, string>,
-  session: V4Session,
+  _session: V4Session,
+  visibleFieldNames?: readonly string[],
 ): Promise<RuntimeRecordRow[]> {
   if (!descriptor || records.length === 0) return records;
 
-  const referenceFields = resolveReferenceDisplayFields(descriptor);
+  const referenceFields = resolveReferenceDisplayFields(descriptor, visibleFieldNames);
   if (referenceFields.length === 0) return records;
 
   const hydratedRecords = records.map(cloneRuntimeRecord);
@@ -522,8 +689,9 @@ async function hydrateReferenceDisplayValues(
     for (const field of referenceFields) {
       const value = readRecordString(record, field.field.name) ?? readRecordString(record, field.field.columnName);
       if (!value) continue;
+      if (readRecordString(record, `${field.field.name}_label`)) continue;
 
-      const synthetic = resolveSyntheticDisplayValue(field.field.name, value, session);
+      const synthetic = resolveSyntheticDisplayValue(field, value);
       if (synthetic) {
         writeReferenceDisplayValue(hydratedRecords[recordIndex]!, field.field.name, synthetic);
         continue;
@@ -554,10 +722,15 @@ async function hydrateReferenceDisplayValues(
   return hydratedRecords;
 }
 
-function resolveReferenceDisplayFields(descriptor: MetaEntityRuntimeDescriptor): ReferenceDisplayField[] {
+function resolveReferenceDisplayFields(
+  descriptor: MetaEntityRuntimeDescriptor,
+  visibleFieldNames?: readonly string[],
+): ReferenceDisplayField[] {
+  const visible = visibleFieldSet(visibleFieldNames);
   return descriptor.fields
+    .filter((field) => !visible || visible.has(field.name))
     .map((field): ReferenceDisplayField | null => {
-      const source = resolveReferenceOptionSource(field) ?? syntheticReferenceOptionSource(field);
+      const source = resolveReferenceOptionSource(field);
       if (!source) return null;
 
       return {
@@ -576,48 +749,13 @@ function resolveReferenceOptionSource(field: MetaEntityField): Extract<MetaEntit
   return source?.kind === "reference" ? source : null;
 }
 
-function syntheticReferenceOptionSource(field: MetaEntityField): Extract<MetaEntityOptionSource, { kind: "reference" }> | null {
-  if (field.name === "tenant_id") {
-    return {
-      kind: "reference",
-      entity: "tenant",
-      valueField: "id",
-      labelField: "name",
-      codeField: "code",
-      scopeMode: "tenant",
-    };
-  }
-
-  if (PRINCIPAL_AUDIT_FIELDS.has(field.name)) {
-    return {
-      kind: "reference",
-      entity: "principal",
-      valueField: "id",
-      labelField: "name",
-      codeField: "login_email",
-      scopeMode: "tenant",
-    };
-  }
-
-  return null;
-}
-
 function resolveSyntheticDisplayValue(
-  fieldName: string,
+  field: ReferenceDisplayField,
   value: string,
-  session: V4Session,
 ): ReferenceDisplayValue | null {
-  if (PRINCIPAL_AUDIT_FIELDS.has(fieldName) && value === SYSTEM_UUID) {
+  if (field.targetEntity === "principal" && value === SYSTEM_UUID) {
     return { label: "System", code: "SYSTEM" };
   }
-
-  if (fieldName === "tenant_id") {
-    const membership = session.activeOrg ? session.organizations[session.activeOrg] : undefined;
-    if (membership?.tenantId === value && membership.tenantCode) {
-      return { label: toTitleLabel(membership.tenantCode), code: membership.tenantCode };
-    }
-  }
-
   return null;
 }
 
@@ -704,20 +842,30 @@ async function hydrateLookupDisplayValues(
   records: RuntimeRecordRow[],
   descriptor: MetaEntityRuntimeDescriptor | undefined,
   headers: Record<string, string>,
+  session: V4Session,
+  visibleFieldNames?: readonly string[],
+  diagnostics?: RuntimeListDiagnosticRecorder,
 ): Promise<RuntimeRecordRow[]> {
   if (!descriptor || records.length === 0) return records;
 
-  const lookupFields = resolveLookupDisplayFields(descriptor);
+  const lookupFields = resolveLookupDisplayFields(descriptor, visibleFieldNames)
+    .filter((lookupField) => records.some((record) => {
+      const fieldName = lookupField.field.name;
+      const value = readRecordString(record, fieldName)
+        ?? readRecordString(record, lookupField.field.columnName);
+      return Boolean(value) && !readRecordString(record, `${fieldName}_label`);
+    }));
   if (lookupFields.length === 0) return records;
 
   const hydratedRecords = records.map(cloneRuntimeRecord);
-  const lookupMaps = await resolveLookupDisplayMaps(lookupFields, headers);
+  const lookupMaps = await resolveLookupDisplayMaps(lookupFields, headers, session, diagnostics);
 
   for (const record of hydratedRecords) {
     for (const lookupField of lookupFields) {
       const fieldName = lookupField.field.name;
       const value = readRecordString(record, fieldName) ?? readRecordString(record, lookupField.field.columnName);
       if (!value) continue;
+      if (readRecordString(record, `${fieldName}_label`)) continue;
 
       const label = lookupMaps.get(fieldName)?.get(value)
         ?? lookupField.staticOptions.get(value)
@@ -729,8 +877,13 @@ async function hydrateLookupDisplayValues(
   return hydratedRecords;
 }
 
-function resolveLookupDisplayFields(descriptor: MetaEntityRuntimeDescriptor): LookupDisplayField[] {
+function resolveLookupDisplayFields(
+  descriptor: MetaEntityRuntimeDescriptor,
+  visibleFieldNames?: readonly string[],
+): LookupDisplayField[] {
+  const visible = visibleFieldSet(visibleFieldNames);
   return descriptor.fields
+    .filter((field) => !visible || visible.has(field.name))
     .map((field): LookupDisplayField | null => {
       if (!isLookupDisplayField(descriptor, field)) return null;
 
@@ -745,18 +898,14 @@ function resolveLookupDisplayFields(descriptor: MetaEntityRuntimeDescriptor): Lo
 
 function isLookupDisplayField(descriptor: MetaEntityRuntimeDescriptor, field: MetaEntityField): boolean {
   const source = field.editor?.optionSource ?? field.optionSource;
-  if (source?.kind === "lookup" || source?.kind === "static") return true;
+  if (source?.kind === "lookup" || source?.kind === "static" || source?.kind === "lifecycle") return true;
   if (field.display?.renderer === "lookup_label") return true;
   if (field.enumDomainCode) return true;
 
-  const dataType = field.dataType.toLowerCase();
-  return field.name.endsWith("_type")
-    || field.name === "status"
-    || field.name.endsWith("_status")
-    || dataType === "enum"
-    || dataType === "lifecycle_state"
-    || resolveLookupDomains(descriptor, field).length > 0
-    || staticLookupOptions(field).size > 0;
+  if (resolveLookupDomains(descriptor, field).length > 0
+    || staticLookupOptions(field).size > 0) return true;
+
+  return false;
 }
 
 function resolveLookupDomains(
@@ -780,24 +929,6 @@ function resolveLookupDomains(
     candidates.push({ code: explicit, inferred: false });
   }
 
-  const dataType = field.dataType.toLowerCase();
-  if (!explicit && (field.name.endsWith("_type") || field.name === "status" || field.name.endsWith("_status") || dataType === "enum" || dataType === "lifecycle_state")) {
-    const schema = descriptor.source.tableSchema;
-    if (field.name === "status" || field.name.endsWith("_status")) {
-      candidates.push(
-        { code: `${schema}.${descriptor.entityCode}_${field.name}`, inferred: true },
-        { code: `${schema}.${field.name}`, inferred: true },
-        { code: field.name, inferred: true },
-      );
-    } else {
-      candidates.push(
-        { code: `${schema}.${field.name}`, inferred: true },
-        { code: `${schema}.${descriptor.entityCode}_${field.name}`, inferred: true },
-        { code: field.name, inferred: true },
-      );
-    }
-  }
-
   const seen = new Set<string>();
   return candidates.filter((candidate) => {
     if (seen.has(candidate.code)) return false;
@@ -809,11 +940,13 @@ function resolveLookupDomains(
 async function resolveLookupDisplayMaps(
   fields: LookupDisplayField[],
   headers: Record<string, string>,
+  session: V4Session,
+  diagnostics?: RuntimeListDiagnosticRecorder,
 ): Promise<Map<string, Map<string, string>>> {
   const maps = new Map<string, Map<string, string>>();
 
   await Promise.all(fields.map(async (field) => {
-    const domainMap = await fetchLookupDisplayMap(field, headers);
+    const domainMap = await fetchLookupDisplayMap(field, headers, session, diagnostics);
     maps.set(field.field.name, domainMap);
   }));
 
@@ -823,30 +956,21 @@ async function resolveLookupDisplayMaps(
 async function fetchLookupDisplayMap(
   field: LookupDisplayField,
   headers: Record<string, string>,
+  session: V4Session,
+  diagnostics?: RuntimeListDiagnosticRecorder,
 ): Promise<Map<string, string>> {
   const labels = new Map(field.staticOptions);
   if (field.domainCandidates.length === 0) return labels;
 
   for (const candidate of field.domainCandidates) {
-    const response = await fetch(
-      buildRuntimeUrl(`/api/metadata/lookups/${encodeURIComponent(candidate.code)}?limit=100`),
-      {
-        headers,
-        cache: "no-store",
-      },
-    );
-    if (!response.ok) continue;
-
-    const body = await readJson(response);
-    const rawValues = isRecord(body) && Array.isArray(body["values"]) ? body["values"] : [];
-    for (const item of rawValues) {
-      if (!isRecord(item)) continue;
-
+    const values = await loadLookupDomainValues(candidate.code, headers, session, diagnostics);
+    if (values.length === 0) continue;
+    for (const item of values) {
       const source = field.field.editor?.optionSource ?? field.field.optionSource;
       const sourceValueField = source?.kind === "lookup" ? source.valueField : undefined;
-      const code = readJsonString(item, "code");
-      const id = readJsonString(item, "id");
-      const label = readJsonString(item, "name") ?? code ?? id;
+      const code = item.code;
+      const id = item.id;
+      const label = item.label ?? code ?? id;
       if (!label) continue;
 
       const value = sourceValueField === "id"
@@ -863,17 +987,89 @@ async function fetchLookupDisplayMap(
   return labels;
 }
 
+interface LookupDomainValue {
+  code?: string;
+  id?: string;
+  label?: string;
+}
+
+async function loadLookupDomainValues(
+  domainCode: string,
+  headers: Record<string, string>,
+  session: V4Session,
+  diagnostics?: RuntimeListDiagnosticRecorder,
+): Promise<LookupDomainValue[]> {
+  const loader = async (): Promise<LookupDomainValue[]> => {
+    const response = await fetch(
+      buildRuntimeUrl(`/api/metadata/lookups/${encodeURIComponent(domainCode)}?limit=100`),
+      { headers, cache: "no-store" },
+    );
+    if (!response.ok) throw new Error(`Lookup domain ${domainCode} returned ${response.status}.`);
+    const body = await readJson(response);
+    if (!isRecord(body) || !Array.isArray(body["values"])) {
+      throw new Error(`Lookup domain ${domainCode} returned a malformed response.`);
+    }
+    const rawValues = body["values"];
+    return rawValues.flatMap((item): LookupDomainValue[] => {
+      if (!isRecord(item)) return [];
+      const code = readJsonString(item, "code");
+      const id = readJsonString(item, "id");
+      const label = readJsonString(item, "name") ?? code ?? id;
+      return code || id || label ? [{ code, id, label }] : [];
+    });
+  };
+
+  const sessionIdentity = buildSessionConfigurationIdentity(session);
+  if (!sessionIdentity) {
+    const startedAt = performance.now();
+    try {
+      return await loader();
+    } catch {
+      return [];
+    } finally {
+      diagnostics?.record("lookup_domain", performance.now() - startedAt, "bypass", {
+        parent: "lookup_hydration",
+        attributes: { domainCode },
+      });
+    }
+  }
+
+  try {
+    return await getSessionConfiguration({
+      namespace: "lookup_domain",
+      sessionIdentity,
+      keyParts: { domainCode },
+      policy: LOOKUP_DOMAIN_CACHE_POLICY,
+      loader,
+      onDiagnostic: diagnostics
+        ? (event) => diagnostics.record("lookup_domain", event.durationMs, event.cacheState, {
+            parent: "lookup_hydration",
+            attributes: { domainCode, coalesced: event.coalesced },
+          })
+        : undefined,
+    });
+  } catch {
+    return [];
+  }
+}
+
 function staticLookupOptions(field: MetaEntityField): Map<string, string> {
   const source = field.editor?.optionSource ?? field.optionSource;
   if (source?.kind === "static") {
     return new Map(source.options.map((option) => [option.value, option.label]));
+  }
+  if (source?.kind === "lifecycle") {
+    return new Map(
+      [...source.fallbackOptions, ...source.options]
+        .map((option) => [option.value, option.label]),
+    );
   }
 
   const values = readJsonStringArray(field.constraints, "options")
     ?? readJsonStringArray(field.constraints, "values")
     ?? readJsonStringArray(field.validation, "options")
     ?? readJsonStringArray(field.validation, "values")
-    ?? (field.name === "status" || field.name.endsWith("_status") ? ["active", "inactive", "draft", "archived"] : []);
+    ?? [];
 
   return new Map(values.map((value) => [value, toTitleLabel(value)]));
 }
@@ -960,8 +1156,14 @@ async function resolveSiteIdsForCompanyCodes(
 }
 
 type RecordRowsResult =
-  | { status: "ready"; records: RuntimeRecordRow[]; pagination?: RuntimeListPagination; reasons?: Record<string, boolean>; navigation?: { hasMore: boolean; nextCursor?: string; countMode?: string; total?: number } }
-  | { status: "unavailable"; message: string };
+  | { status: "ready"; records: RuntimeRecordRow[]; pagination?: RuntimeListPagination; reasons?: Record<string, boolean>; navigation?: { hasMore: boolean; nextCursor?: string; countMode?: string; total?: number }; telemetry?: RecordRowsTelemetry }
+  | { status: "unavailable"; message: string; telemetry?: RecordRowsTelemetry };
+
+interface RecordRowsTelemetry {
+  cacheState: AthyperCacheState;
+  httpDurationMs: number;
+  decodeDurationMs: number;
+}
 
 type IdResolutionResult =
   | { status: "ready"; ids: string[] }
@@ -976,9 +1178,15 @@ async function fetchRecordRows(
   const pathname = `/api/records/${encodeURIComponent(entityCode)}${query}`;
 
   let response: Response;
+  const httpStartedAt = performance.now();
   try {
+    const requestHeaders: Record<string, string> = { ...headers };
+    if (descriptor?.cachePolicy) {
+      requestHeaders["X-Athyper-List-Cache-Mode"] = descriptor.cachePolicy.mode;
+      requestHeaders["X-Athyper-List-Cache-Fresh-Seconds"] = String(descriptor.cachePolicy.freshForSeconds);
+    }
     response = await fetch(buildRuntimeUrl(pathname), {
-      headers,
+      headers: requestHeaders,
       cache: "no-store",
     });
   } catch (err) {
@@ -996,15 +1204,26 @@ async function fetchRecordRows(
     return { status: "unavailable", message: "Records service is unavailable." };
   }
 
+  const httpDurationMs = performance.now() - httpStartedAt;
+  const cacheState = recordListCacheState(response.headers.get("X-List-Cache"));
+
   if (!response.ok) {
+    const decodeStartedAt = performance.now();
     const errorBody = await readJson(response);
     return {
       status: "unavailable",
       message: formatRecordsServiceError(response.status, errorBody),
+      telemetry: {
+        cacheState,
+        httpDurationMs,
+        decodeDurationMs: performance.now() - decodeStartedAt,
+      },
     };
   }
 
+  const decodeStartedAt = performance.now();
   const json = await readJson(response);
+  const decodeDurationMs = performance.now() - decodeStartedAt;
   const data = isRecord(json) && Array.isArray(json["data"]) ? json["data"] : [];
   return {
     status: "ready",
@@ -1012,7 +1231,16 @@ async function fetchRecordRows(
     pagination: readRuntimePagination(json),
     reasons: readReasons(json),
     navigation: readKeysetNavigation(json),
+    telemetry: { cacheState, httpDurationMs, decodeDurationMs },
   };
+}
+
+function recordListCacheState(value: string | null): AthyperCacheState {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === "hit") return "hit";
+  if (normalized === "miss") return "miss";
+  if (normalized === "stale") return "stale";
+  return "bypass";
 }
 
 function entityQueryMode(descriptor?: MetaEntityRuntimeDescriptor): "off" | "serve" {

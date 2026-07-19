@@ -168,8 +168,11 @@ function readString(value: unknown): string | undefined {
 
 function readStaticOptions(field: MetaEntityField): RuntimeFilterOption[] | undefined {
   const optionSource = field.editor?.optionSource ?? field.optionSource;
-  if (optionSource?.kind !== "static") return undefined;
-  const options = optionSource.options
+  if (optionSource?.kind !== "static" && optionSource?.kind !== "lifecycle") return undefined;
+  const sourceOptions = optionSource.kind === "lifecycle"
+    ? [...optionSource.fallbackOptions, ...optionSource.options]
+    : optionSource.options;
+  const options = sourceOptions
     .map((option) => ({
       value: readString(option.value) ?? "",
       label: readString(option.label) ?? readString(option.value) ?? "",
@@ -251,6 +254,12 @@ function readRuntimeFilterOptionSource(field: MetaEntityField): RuntimeFilterOpt
   const source = field.editor?.optionSource ?? field.optionSource;
   if (!source || source.kind === "none") return undefined;
   if (source.kind === "static") {
+    return {
+      kind: "static",
+      options: readStaticOptions(field) ?? [],
+    };
+  }
+  if (source.kind === "lifecycle") {
     return {
       kind: "static",
       options: readStaticOptions(field) ?? [],
@@ -514,6 +523,8 @@ export function toRuntimeDescriptor(meta: MetaEntityRuntimeDescriptor): RuntimeD
     capabilities: {
       canCreate: meta.capabilities?.canCreate ?? false,
     },
+    descriptorHash: meta.audit.descriptorHash ?? meta.audit.compiledHash,
+    cachePolicy: meta.cachePolicy,
     listPresentation: readListPresentation(meta),
     fields: meta.fields.map((f) => ({
       name:          f.name,

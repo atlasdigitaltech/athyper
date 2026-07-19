@@ -17,6 +17,8 @@
  */
 import {
   META_ENTITY_RUNTIME_CONTRACT_VERSION,
+  DEFAULT_META_ENTITY_LIST_CACHE_POLICY,
+  MetaEntityListCachePolicySchema,
   MetaEntityRuntimeDescriptorSchema,
   MetaEntitySurfaceSchema,
   type DisabledReason,
@@ -30,6 +32,7 @@ import {
   type MetaEntityFieldGroup,
   type MetaEntityHeaderPresentation,
   type MetaEntityLifecycleStateMask,
+  type MetaEntityListCachePolicy,
   type MetaEntityLineItemsExtras,
   type MetaEntityLifecycleSummary,
   type MetaEntityNumberingSummary,
@@ -50,6 +53,7 @@ import {
   compileDocumentEditRuntimeContract,
   type CompiledDocumentRuntimePlanInput,
 } from "./document-edit-runtime-compiler";
+import { compileRecordWorkspaceDefinition } from "./record-workspace";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -85,6 +89,7 @@ export interface CompiledMetaEntityInput {
   security_tier?: string;
   mutability?: string;
   class_profile?: unknown;
+  cache_policy?: unknown;
   compiled_at?: string;
   compiled_hash?: string;
   concurrency_policy?: unknown;
@@ -368,6 +373,7 @@ export function compileMetaEntityRuntimeDescriptor(
   const identityConfig = asRecord(entity.identity_config);
   const featureFlags = asRecord(entity.feature_flags);
   const classProfile = asRecord(entity.class_profile);
+  const cachePolicy = normalizeListCachePolicy(entity.cache_policy);
   // Resolve entity code once — used in normalizeFields and the descriptor root.
   const entityCode = resolveEntityCode(entity);
   const operations = enrichOperationsWithLifecycleTransitions(
@@ -431,6 +437,30 @@ export function compileMetaEntityRuntimeDescriptor(
     });
   }
 
+  const lifecycleOptions: MetaEntityOption[] = [...maskByStatus.values()]
+    .map((mask): MetaEntityOption | null => {
+      const label = mask.presentation?.label?.trim();
+      if (!label) return null;
+      return {
+        value: mask.recordStatus,
+        code: mask.recordStatus,
+        label,
+        metadata: {
+          badgeVariant: mask.presentation?.badgeVariant ?? null,
+          color: mask.presentation?.color ?? null,
+          icon: mask.presentation?.icon ?? null,
+        },
+      };
+    })
+    .filter((option): option is MetaEntityOption => option !== null);
+  for (const field of fields) {
+    const source = field.editor?.optionSource ?? field.optionSource;
+    if (source?.kind !== "lifecycle") continue;
+    const resolved = { ...source, options: lifecycleOptions };
+    field.optionSource = resolved;
+    if (field.editor) field.editor = { ...field.editor, optionSource: resolved };
+  }
+
   const context: ResolutionContext = {
     entity,
     fields,
@@ -455,6 +485,12 @@ export function compileMetaEntityRuntimeDescriptor(
 
   const capabilities = resolveCapabilities(context);
   const surfaces = resolveAuthoritativeSurfaces(context, capabilities, fields);
+  const recordWorkspace = compileRecordWorkspaceDefinition({
+    entityCode,
+    renderer,
+    capabilities,
+    surfaces,
+  });
   const descriptorRelations = relations.map((relation) => ({
     ...relation,
     surfaceKind: lineRelations.includes(relation)
@@ -495,12 +531,14 @@ export function compileMetaEntityRuntimeDescriptor(
     renderer,
     capabilities,
     surfaces,
+    recordWorkspace,
     fields,
     fieldGroups,
     operations,
     relations: descriptorRelations,
     source: resolveSource(entity),
     policy,
+    cachePolicy,
     lifecycle,
     lifecycleStateMasks: context.lifecycleStateMasks,
     workflow,
@@ -967,15 +1005,17 @@ function normalizeFields(fields: CompiledMetaEntityFieldInput[], entityCode: str
       const referenceConfig = asRecordOrUndefined(field.reference_config ?? field.referenceConfig)
         ?? referenceConfigFromValidation(validation);
       const constraints = asRecordOrUndefined(field.constraints);
-      const explicitEditor = asRecordOrUndefined(field.editor);
-      const explicitDisplay = asRecordOrUndefined(field.display);
+      const uiHint = asRecordOrUndefined(field.ui_hint ?? field.uiHint);
+      const explicitEditor = asRecordOrUndefined(field.editor)
+        ?? asRecordOrUndefined(uiHint?.["editor"]);
+      const explicitDisplay = asRecordOrUndefined(field.display)
+        ?? asRecordOrUndefined(uiHint?.["display"]);
       const name = field.name;
       const dataType = field.data_type ?? field.dataType ?? "text";
       const enumDomainCode = nullToUndefined(field.enum_domain_code ?? field.enumDomainCode);
       const referenceEntity = resolveReferenceEntity(referenceConfig);
       const optionSource = resolveFieldOptionSource({
         field,
-        name,
         dataType,
         enumDomainCode,
         referenceEntity,
@@ -984,7 +1024,6 @@ function normalizeFields(fields: CompiledMetaEntityFieldInput[], entityCode: str
         validation,
         constraints,
         explicitEditor,
-        entityCode,
       });
       const editor = resolveFieldEditor({
         field,
@@ -1111,7 +1150,6 @@ function copyIfMissing(target: JsonRecord, key: string, value: unknown): void {
 
 function resolveFieldOptionSource({
   field,
-  name,
   dataType,
   enumDomainCode,
   referenceEntity,
@@ -1120,10 +1158,8 @@ function resolveFieldOptionSource({
   validation,
   constraints,
   explicitEditor,
-  entityCode,
 }: {
   field: CompiledMetaEntityFieldInput;
-  name: string;
   dataType: string;
   enumDomainCode?: string;
   referenceEntity?: string;
@@ -1132,7 +1168,6 @@ function resolveFieldOptionSource({
   validation?: JsonRecord;
   constraints?: JsonRecord;
   explicitEditor?: JsonRecord;
-  entityCode: string;
 }): MetaEntityOptionSource | undefined {
   const explicit = normalizeExplicitOptionSource(
     field.option_source
@@ -1140,7 +1175,18 @@ function resolveFieldOptionSource({
       ?? explicitEditor?.["optionSource"]
       ?? explicitEditor?.["option_source"],
   );
-  if (explicit) return explicit.kind === "none" ? undefined : explicit;
+  if (explicit) {
+    if (explicit.kind === "none") return undefined;
+    if (explicit.kind === "lifecycle") {
+      return {
+        ...explicit,
+        fallbackOptions: resolveStaticOptions(constraints)
+          ?? resolveStaticOptions(validation)
+          ?? explicit.fallbackOptions,
+      };
+    }
+    return explicit;
+  }
 
   const staticOptions = resolveStaticOptions(constraints) ?? resolveStaticOptions(validation);
   if (staticOptions && staticOptions.length > 0) {
@@ -1169,20 +1215,12 @@ function resolveFieldOptionSource({
   }
 
   const normalizedDataType = dataType.toLowerCase();
-  if (name.endsWith("_type") || isStatusField(name) || normalizedDataType === "enum" || normalizedDataType === "lifecycle_state") {
-    return {
-      kind: "lookup",
-      domainCode: name,
-      valueField: "code",
-    };
-  }
-
-  const targetEntity = referenceEntity ?? inferReferenceEntity(name, normalizedDataType, entityCode);
-  if (targetEntity || normalizedDataType === "reference") {
+  const targetEntity = referenceEntity;
+  if (targetEntity) {
     const picker = asRecord(referenceConfig?.["picker"]);
     return {
       kind: "reference",
-      entity: normalizeReferenceEntityCode(targetEntity ?? name),
+      entity: normalizeReferenceEntityCode(targetEntity),
       valueField: readString(referenceConfig, "value_field")
         ?? readString(referenceConfig, "valueField")
         ?? readString(referenceConfig, "target_field")
@@ -1275,6 +1313,19 @@ function normalizeExplicitOptionSource(value: unknown): MetaEntityOptionSource |
     return {
       kind,
       options: resolveStaticOptions(source) ?? [],
+    };
+  }
+  if (kind === "lifecycle") {
+    const entityLifecycle = readString(source, "entityLifecycle")
+      ?? readString(source, "entity_lifecycle");
+    if (entityLifecycle !== "current") return undefined;
+    return {
+      kind,
+      entityLifecycle,
+      options: resolveStaticOptions(source) ?? [],
+      fallbackOptions: resolveStaticOptions({
+        options: source["fallbackOptions"] ?? source["fallback_options"],
+      }) ?? [],
     };
   }
   if (kind === "lookup") {
@@ -1387,7 +1438,7 @@ function defaultEditorControl(
   const uiType = normalizeToken(field.ui_type ?? field.uiType);
   if (optionSource?.kind === "reference") return "reference_picker";
   if (optionSource?.kind === "lookup") return "combobox";
-  if (optionSource?.kind === "static") return "select";
+  if (optionSource?.kind === "static" || optionSource?.kind === "lifecycle") return "select";
   if (uiType === "TEXTAREA" || uiType === "LONG_TEXT") return "textarea";
   if (uiType === "CHECKBOX") return "checkbox";
 
@@ -1406,7 +1457,7 @@ function defaultDisplayRenderer(
   optionSource?: MetaEntityOptionSource,
 ): MetaEntityFieldDisplay["renderer"] {
   if (optionSource?.kind === "reference") return "reference_label";
-  if (optionSource?.kind === "lookup" || optionSource?.kind === "static") return "lookup_label";
+  if (optionSource?.kind === "lookup" || optionSource?.kind === "static" || optionSource?.kind === "lifecycle") return "lookup_label";
 
   const normalized = dataType.toLowerCase();
   if (normalized === "boolean" || normalized === "bool" || normalizeToken(field.ui_type ?? field.uiType) === "CHECKBOX") return "boolean";
@@ -1416,15 +1467,6 @@ function defaultDisplayRenderer(
   if (normalized === "money") return "money";
   if (normalized === "json" || normalized === "jsonb") return "json";
   return "text";
-}
-
-function inferReferenceEntity(name: string, dataType: string, entityCode: string): string | undefined {
-  if (dataType !== "uuid") return undefined;
-  if (name === "id" || name === "tenant_id") return undefined;
-  if (name === "parent_id") return entityCode;
-  if (name.startsWith("parent_") && name.endsWith("_id")) return name.slice("parent_".length, -"_id".length);
-  if (name.endsWith("_id")) return name.slice(0, -"_id".length);
-  return undefined;
 }
 
 function normalizeReferenceEntityCode(value: string): string {
@@ -1497,12 +1539,8 @@ function normalizeScopeMode(value: string | undefined): "tenant" | "legal_entity
 }
 
 function normalizeOptionSourceKind(value: string | undefined): MetaEntityOptionSource["kind"] | undefined {
-  if (value === "none" || value === "static" || value === "lookup" || value === "reference") return value;
+  if (value === "none" || value === "static" || value === "lifecycle" || value === "lookup" || value === "reference") return value;
   return undefined;
-}
-
-function isStatusField(fieldName: string): boolean {
-  return fieldName === "status" || fieldName.endsWith("_status");
 }
 
 function normalizeOperations(operations: EntityOperationInput[]): MetaEntityOperation[] {
@@ -2595,6 +2633,28 @@ function readSurfaceKind(
 function readBoolean(value: unknown, key?: string): boolean {
   if (key) return asRecord(value)[key] === true;
   return value === true;
+}
+
+function normalizeListCachePolicy(value: unknown): MetaEntityListCachePolicy {
+  const raw = asRecord(value);
+  return MetaEntityListCachePolicySchema.parse({
+    mode: readStringAlias(raw, "mode") ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.mode,
+    freshForSeconds: readNumberAlias(raw, "freshForSeconds", "fresh_for_seconds")
+      ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.freshForSeconds,
+    retainForSeconds: readNumberAlias(raw, "retainForSeconds", "retain_for_seconds")
+      ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.retainForSeconds,
+    prefetch: readStringAlias(raw, "prefetch") ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.prefetch,
+    restoreScroll: readOptionalBooleanAlias(raw, "restoreScroll", "restore_scroll")
+      ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.restoreScroll,
+    invalidateOnMutation: readOptionalBooleanAlias(raw, "invalidateOnMutation", "invalidate_on_mutation")
+      ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.invalidateOnMutation,
+    maxQueriesPerEntity: readNumberAlias(raw, "maxQueriesPerEntity", "max_queries_per_entity")
+      ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.maxQueriesPerEntity,
+    maxRowsPerQuery: readNumberAlias(raw, "maxRowsPerQuery", "max_rows_per_query")
+      ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.maxRowsPerQuery,
+    storage: readStringAlias(raw, "storage") ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.storage,
+    source: readStringAlias(raw, "source") ?? DEFAULT_META_ENTITY_LIST_CACHE_POLICY.source,
+  });
 }
 
 function readOptionalBoolean(value: unknown, key: string): boolean | undefined {

@@ -46,7 +46,10 @@ function applyPredicates(query: any, predicates: readonly QueryPredicate[]): any
       switch (predicate.operator) {
         case "eq": return eb(ref, "=", predicate.value);
         case "ne": return eb(ref, "!=", predicate.value);
-        case "in": return eb(ref, "in", predicate.value as readonly unknown[]);
+        case "in": {
+          const values = predicate.value as readonly unknown[];
+          return values.length === 0 ? eb.val(false) : eb(ref, "in", values);
+        }
         case "gt": return eb(ref, ">", predicate.value);
         case "gte": return eb(ref, ">=", predicate.value);
         case "lt": return eb(ref, "<", predicate.value);

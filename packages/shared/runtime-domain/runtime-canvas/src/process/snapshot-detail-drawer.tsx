@@ -25,12 +25,11 @@
  * panel) so the user sees what they're about to restore before clicking.
  */
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
 import { DrawerPeekShell, DialogConfirmShell } from "@athyper/ui/surfaces/shells";
-import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import type {
   SnapshotDetail,
@@ -44,6 +43,10 @@ import {
   type SnapshotChildContracts,
 } from "./snapshot-field-rules";
 import type { MetaEntityField } from "@athyper/runtime-contracts";
+import {
+  useOptionalRecordWorkspaceSnapshotDetail,
+  useOptionalRecordWorkspaceSnapshotRestore,
+} from "../record-query";
 
 export interface SnapshotDetailDrawerProps {
   open: boolean;
@@ -78,14 +81,18 @@ export interface SnapshotDetailDrawerProps {
 export function SnapshotDetailDrawer({
   open,
   onOpenChange,
-  entityCode,
-  recordId,
   snapshotId,
   onRestoreSuccess,
   contract,
   childContracts,
 }: SnapshotDetailDrawerProps) {
-  const { loading, error, detail } = useSnapshotDetail(entityCode, recordId, open ? snapshotId : null);
+  const detailQuery = useOptionalRecordWorkspaceSnapshotDetail<SnapshotDetail>(
+    open ? snapshotId : null,
+  );
+  const detail = detailQuery.data ?? null;
+  const loading = detailQuery.fetchStatus === "fetching" && detailQuery.data === undefined;
+  const error = detailQuery.error?.message ?? null;
+  const restoreMutation = useOptionalRecordWorkspaceSnapshotRestore<SnapshotRestoreResponse>();
 
   const title = detail
     ? `Snapshot #${detail.chain_seq}`
@@ -99,40 +106,20 @@ export function SnapshotDetailDrawer({
   // Restore flow state — kept here so the dialog mounts within the drawer's
   // stack frame, which keeps the SurfaceStackController happy.
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [restoring,   setRestoring]   = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  const restoring = restoreMutation.isPending;
 
   async function handleRestore() {
     if (!detail || restoring) return;
-    setRestoring(true);
     setRestoreError(null);
     try {
-      const res = await fetch(
-        runtimePath.entitySnapshotRestore(entityCode, recordId, detail.id),
-        {
-          method:  "POST",
-          headers: { "Content-Type": "application/json" },
-          cache:   "no-store",
-        },
-      );
-      const body = await res.json().catch(() => null) as
-        | (SnapshotRestoreResponse & { error?: never })
-        | { error: string; message: string }
-        | null;
-      if (!res.ok || !body || "error" in body) {
-        const msg = body && "message" in body
-          ? body.message
-          : `Restore failed (${res.status})`;
-        throw new Error(msg);
-      }
+      const body = await restoreMutation.mutateAsync(detail.id);
       // Success — close the confirm + the drawer, signal upstream.
       setConfirmOpen(false);
       onOpenChange(false);
       onRestoreSuccess?.(body);
     } catch (err) {
       setRestoreError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setRestoring(false);
     }
   }
 
@@ -231,54 +218,6 @@ function buildRestoreConsequence(detail: SnapshotDetail, errorMessage: string | 
 }
 
 // ─── Fetch hook ─────────────────────────────────────────────────────────────
-
-function useSnapshotDetail(entityCode: string, recordId: string, snapshotId: string | null): {
-  loading: boolean;
-  error:   string | null;
-  detail:  SnapshotDetail | null;
-} {
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState<string | null>(null);
-  const [detail,  setDetail]  = useState<SnapshotDetail | null>(null);
-
-  useEffect(() => {
-    if (!snapshotId) {
-      setLoading(false);
-      setError(null);
-      setDetail(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-
-    fetch(runtimePath.entitySnapshot(entityCode, recordId, snapshotId), {
-      signal: controller.signal,
-      cache:  "no-store",
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error(`Snapshot detail API returned ${res.status}`);
-        }
-        const body = await res.json() as SnapshotDetail;
-        if (!controller.signal.aborted) setDetail(body);
-      })
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        if (!controller.signal.aborted) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [entityCode, recordId, snapshotId]);
-
-  return { loading, error, detail };
-}
 
 // ─── Body ───────────────────────────────────────────────────────────────────
 

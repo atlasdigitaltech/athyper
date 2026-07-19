@@ -35,3 +35,16 @@ export const HEADING_LG = "text-xl font-semibold text-foreground"   as const;
 // ── Inline code / mono text ───────────────────────────────────────────────────
 export const MONO_XS = "font-mono text-xs text-foreground" as const;
 export const MONO_SM = "font-mono text-sm text-foreground" as const;
+
+// Drawer content — shared by Comments, Attachments, and Activity.
+// Normal drawer content follows the Entity Record Details scale; compact
+// badges and machine-readable identifiers remain deliberately smaller.
+export const DRAWER_SECTION_HEADING = SECTION_LABEL_SM;
+export const DRAWER_ITEM_TITLE      = BODY_SM_MEDIUM;
+export const DRAWER_LABEL           = LABEL_SM;
+export const DRAWER_VALUE           = BODY_SM;
+export const DRAWER_META            = META_SM;
+export const DRAWER_CONTROL         = "text-sm font-medium text-muted-foreground" as const;
+export const DRAWER_TECHNICAL       = MONO_XS;
+export const DRAWER_CARD            = "rounded-lg border border-border bg-card" as const;
+export const DRAWER_DETAIL_SURFACE  = "rounded-md border border-border bg-muted/40" as const;

@@ -13,6 +13,18 @@ const externalSession = {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("resolveDocumentOpenRollout", () => {
+  it("uses descriptor V2 as the production default", () => {
+    expect(resolveDocumentOpenRollout({ session: externalSession, entityCode: "purchase_order" }))
+      .toMatchObject({
+        stage: "full",
+        cohort: "full",
+        openRulesBootstrap: true,
+        openChildMetadataBootstrap: true,
+        openDescriptorCacheV2: true,
+        shadowRuntimeBootstrap: false,
+      });
+  });
+
   it("enables rules only for internal tenants at the initial stage", () => {
     vi.stubEnv("DOCUMENT_OPEN_ROLLOUT_STAGE", "rules_internal");
     vi.stubEnv("DOCUMENT_OPEN_INTERNAL_TENANTS", "athyper");

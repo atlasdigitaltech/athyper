@@ -7,6 +7,7 @@ import {
   useEffect,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -192,7 +193,7 @@ function MentionDropdown({
   onClose: () => void;
   selectedIndexRef: React.MutableRefObject<number>;
 }) {
-  const { data } = useQuery<{ data: MentionUser[] }>({
+  const { data, isLoading, isError } = useQuery<{ data: MentionUser[] }>({
     queryKey: ["collab", "mentions", query],
     queryFn: async ({ signal }) => {
       if (!query) return { data: [] };
@@ -200,7 +201,7 @@ function MentionDropdown({
         signal,
         cache: "no-store",
       });
-      if (!res.ok) return { data: [] };
+      if (!res.ok) throw new Error("Mention search failed");
       return res.json() as Promise<{ data: MentionUser[] }>;
     },
     enabled: query.length > 0,
@@ -213,13 +214,22 @@ function MentionDropdown({
     selectedIndexRef.current = 0;
   }, [query, selectedIndexRef]);
 
-  if (users.length === 0) return null;
+  if (typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed z-50 max-h-48 w-56 overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
+      className="fixed z-command max-h-48 w-64 overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
       style={{ left: screenX, top: screenBottom + 4 }}
     >
+      {isLoading && (
+        <p className="px-3 py-2 text-sm text-muted-foreground">Searching people…</p>
+      )}
+      {isError && (
+        <p className="px-3 py-2 text-sm text-destructive">Couldn’t load people. Try again.</p>
+      )}
+      {!isLoading && !isError && users.length === 0 && (
+        <p className="px-3 py-2 text-sm text-muted-foreground">No matching people.</p>
+      )}
       {users.map((user, i) => (
         <button
           key={user.id}
@@ -237,7 +247,8 @@ function MentionDropdown({
           <span className="truncate text-xs text-muted-foreground">{user.displayName}</span>
         </button>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -301,7 +312,11 @@ export function RichCommentComposer({
     useCommentAttachments();
   addFilesRef.current = addFiles;
 
-  const { draft, saveDraft, deleteDraft } = useDraft(entityType, entityId, parentCommentId);
+  // Editing an existing comment must not load the record-level draft. New
+  // comment/reply composers are mounted only after explicit user intent.
+  const { draft, saveDraft, deleteDraft } = useDraft(entityType, entityId, parentCommentId, {
+    enabled: initialContent == null,
+  });
 
   // ── Editor setup ───────────────────────────────────────────────────────────
 
@@ -533,7 +548,7 @@ export function RichCommentComposer({
       <div
         role="button"
         tabIndex={0}
-        className="cursor-text rounded-lg border border-input bg-background px-3 py-2 text-sm text-muted-foreground transition-colors hover:border-ring focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="flex min-h-14 cursor-text items-center rounded-lg border border-input bg-background px-4 text-base text-muted-foreground transition-colors hover:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
         onClick={() => {
           setIsExpanded(true);
           requestAnimationFrame(() => editor?.commands.focus());
@@ -553,7 +568,7 @@ export function RichCommentComposer({
   // ── Expanded state ─────────────────────────────────────────────────────────
 
   return (
-    <div className="rounded-lg border border-ring bg-background text-foreground shadow-sm focus-within:border-ring">
+    <div className="rounded-lg border border-input bg-background text-foreground shadow-sm transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
       {/* Editor area */}
       <div
         className="px-3 pt-3"
@@ -562,14 +577,14 @@ export function RichCommentComposer({
         <EditorContent
           editor={editor}
           className={cn(
-            "[&_.ProseMirror]:min-h-[80px] [&_.ProseMirror]:outline-none",
+            "[&_.ProseMirror]:min-h-30 [&_.ProseMirror]:outline-none",
             "[&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none",
             "[&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left",
             "[&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0",
             "[&_.ProseMirror_p.is-editor-empty:first-child::before]:text-muted-foreground",
             "[&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
             // Prose styles
-            "[&_.ProseMirror]:text-sm [&_.ProseMirror]:leading-relaxed [&_.ProseMirror]:text-foreground",
+            "[&_.ProseMirror]:text-base [&_.ProseMirror]:leading-relaxed [&_.ProseMirror]:text-foreground",
             "[&_.ProseMirror_strong]:font-medium",
             "[&_.ProseMirror_em]:italic",
             "[&_.ProseMirror_code]:rounded [&_.ProseMirror_code]:bg-muted [&_.ProseMirror_code]:px-1 [&_.ProseMirror_code]:text-xs [&_.ProseMirror_code]:font-mono",
@@ -681,7 +696,7 @@ export function RichCommentComposer({
                   onMouseDown={(e) => { e.preventDefault(); setVisMenuOpen((x) => !x); }}
                   title="Set comment visibility"
                   className={cn(
-                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium leading-none transition-colors",
+                    "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-sm font-medium leading-none transition-colors",
                     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                     cur.pillCls,
                   )}
@@ -709,8 +724,8 @@ export function RichCommentComposer({
                               : <OptIcon className="size-3.5 text-muted-foreground" />}
                           </span>
                           <span>
-                            <span className="block text-xs font-medium text-foreground">{opt.label}</span>
-                            <span className="block text-xs text-muted-foreground">{opt.description}</span>
+                            <span className="block text-base font-medium text-foreground">{opt.label}</span>
+                            <span className="block text-sm text-muted-foreground">{opt.description}</span>
                           </span>
                         </button>
                       );
@@ -722,16 +737,13 @@ export function RichCommentComposer({
           })()}
         </div>
 
-        {/* Right side: shortcut hint + cancel + send */}
+        {/* Right side: cancel + send */}
         <div className="flex items-center gap-2">
           {isUploading && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Loader2 className="size-3 animate-spin" />Uploading…
             </span>
           )}
-          <span className="hidden select-none rounded border border-border bg-muted px-1 py-0.5 text-xs text-muted-foreground sm:inline">
-            ⌘↵
-          </span>
           {onCancel && (
             <Button type="button" variant="ghost" size="sm"
               onClick={() => { onCancel(); setIsExpanded(false); }}

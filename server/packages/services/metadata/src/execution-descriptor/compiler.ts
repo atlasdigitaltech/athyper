@@ -54,6 +54,8 @@ export function compileExecutionDescriptor(input: CompileExecutionDescriptorInpu
   const entity = input.compiledEntity;
   const capability = entity.capability_manifest;
   const overlay = input.tenantOverlay;
+  const v2 = entity.contract_v2;
+  const v2SearchFields = new Set(v2?.version_contract.search_config.fields.map((field) => field.field));
   const writeByName = new Map(capability.write.fields.map((field) => [field.name, field]));
   const fields: CompiledExecutionField[] = entity.fields.map((field) => {
     const write = writeByName.get(field.name);
@@ -65,7 +67,9 @@ export function compileExecutionDescriptor(input: CompileExecutionDescriptorInpu
       dataType: field.data_type,
       coercion: fieldCoercion(field),
       required: field.is_required,
-      searchable: override?.searchable ?? field.is_searchable,
+      // Search membership is authored only in version_contract.search_config.
+      // The legacy field flag is a derived fallback for pre-v2 snapshots.
+      searchable: override?.searchable ?? (v2 ? v2SearchFields.has(field.name) : field.is_searchable),
       filterable: override?.filterable ?? field.is_filterable,
       sortable: override?.sortable ?? field.is_sortable,
       computed: write?.computed ?? field.is_computed,
@@ -82,33 +86,37 @@ export function compileExecutionDescriptor(input: CompileExecutionDescriptorInpu
     };
   }).sort((a, b) => a.name.localeCompare(b.name));
 
-  const primaryKey = text(entity.identity_config["primary_key"]);
+  const primaryKey = v2?.version_contract.primary_key
+    ?? text(entity.identity_config["primary_key_field"])
+    ?? text(entity.identity_config["primary_key"]);
   if (!primaryKey) {
     throw new Error(`Runtime entity '${entity.entity_code}' is missing an explicit primary_key contract.`);
   }
-  const tenantColumn = text(entity.identity_config["tenant_column"]) ?? null;
-  const readCapability = normalizeReadCapability(entity.read_capability);
-  const writeCapability = normalizeWriteCapability(entity.write_capability);
+  const tenantColumn = v2?.version_contract.tenant_column
+    ?? text(entity.identity_config["tenant_column"]) ?? null;
+  const readCapability = normalizeReadCapability(v2?.version_contract.read_capability ?? entity.read_capability);
+  const writeCapability = normalizeWriteCapability(v2?.version_contract.write_capability ?? entity.write_capability);
   const concurrency = compileConcurrency(entity);
-  const naturalKeyFields = strings(entity.identity_config["natural_key_fields"]);
+  const naturalKeyFields = v2?.version_contract.identity_config.natural_key_fields
+    ?? strings(entity.identity_config["natural_key_fields"]);
   const defaultSort = compileDefaultSort(entity, overlay, fields, primaryKey);
   const collections = new Map(capability.collections.map((collection) => [collection.name, collection]));
   const relations = entity.relations.map((relation): CompiledRelationPlan => {
-    const name = text(relation["name"]) ?? "relation";
+    const name = text(relation["relation_code"] ?? relation["name"]) ?? "relation";
     const collection = collections.get(name);
     const handler = collection?.handler ?? text(record(relation["ui_behavior"])["mutation_handler"]);
-    const foreignKey = collection?.foreignKey ?? text(relation["fk_field"]);
-    const sourceTypeField = text(relation["source_type_field"]);
-    const sourceIdField = text(relation["source_id_field"]);
+    const foreignKey = collection?.foreignKey ?? text(relation["source_field"] ?? relation["fk_field"]);
+    const sourceTypeField = text(relation["polymorphic_type_field"] ?? relation["source_type_field"]);
+    const sourceIdField = text(relation["polymorphic_id_field"] ?? relation["source_id_field"]);
     const ownership = collection?.ownership
       ?? (foreignKey ? "foreign_key" : sourceTypeField && sourceIdField ? "polymorphic" : handler ? "handler" : "read_only");
     return {
       name,
-      targetEntity: text(relation["target_entity"]) ?? "unknown",
+      targetEntity: text(relation["target_entity_code"] ?? relation["target_entity"]) ?? "unknown",
       kind: text(relation["relation_kind"]) ?? "reference",
       ownership,
       ...(foreignKey ? { foreignKey: storageColumn(foreignKey) } : {}),
-      ...(text(relation["target_key"]) ? { targetKey: storageColumn(text(relation["target_key"])!) } : {}),
+      ...((text(relation["target_field"] ?? relation["target_key"])) ? { targetKey: storageColumn(text(relation["target_field"] ?? relation["target_key"])!) } : {}),
       ...(sourceTypeField ? { sourceTypeField: storageColumn(sourceTypeField) } : {}),
       ...(sourceIdField ? { sourceIdField: storageColumn(sourceIdField) } : {}),
       ...(handler ? { handler } : {}),
@@ -140,14 +148,14 @@ export function compileExecutionDescriptor(input: CompileExecutionDescriptorInpu
       entityClass: entity.entity_class,
     },
     storage: {
-      schema: entity.table_schema,
-      table: entity.table_name,
+      schema: v2?.version_contract.table_schema ?? entity.table_schema,
+      table: v2?.version_contract.table_name ?? entity.table_name,
       primaryKey,
       tenantColumn,
       readCapability,
       writeCapability,
       ...(concurrency.rowVersionField ? { rowVersionColumn: storageColumn(concurrency.rowVersionField) } : {}),
-      backingType: normalizeBackingType(entity.backing_type),
+      backingType: normalizeBackingType(v2?.version_contract.backing_type ?? entity.backing_type),
     },
     fields,
     read: {
@@ -160,8 +168,8 @@ export function compileExecutionDescriptor(input: CompileExecutionDescriptorInpu
     },
     write: {
       create: {
-        mode: normalizeCreateMode(entity.create_mode),
-        idempotencyRequired: entity.create_mode === "DIRECT_CREATE" || capability.renderer === "document",
+        mode: normalizeCreateMode(v2?.version_contract.create_mode ?? entity.create_mode),
+        idempotencyRequired: (v2?.version_contract.create_mode ?? entity.create_mode) === "DIRECT_CREATE" || capability.renderer === "document",
         numberingStrategy: entity.numbering_strategy ?? "none",
       },
       mutations: capability.mutation,
@@ -180,13 +188,13 @@ export function compileExecutionDescriptor(input: CompileExecutionDescriptorInpu
       },
     } : {}),
     policy: {
-      governanceLevel: entity.governance_level,
-      securityTier: entity.security_tier,
-      mutability: entity.mutability,
+      governanceLevel: v2?.version_contract.governance_level ?? entity.governance_level,
+      securityTier: v2?.version_contract.security_tier ?? entity.security_tier,
+      mutability: v2?.version_contract.mutability ?? entity.mutability,
       ...(text(overlay?.policy?.accessMode) ? { accessMode: text(overlay?.policy?.accessMode)! } : {}),
       ...(text(overlay?.policy?.companyScopeMode) ? { companyScopeMode: text(overlay?.policy?.companyScopeMode)! } : {}),
       ...(text(overlay?.policy?.auditMode) ? { auditMode: text(overlay?.policy?.auditMode)! } : {}),
-      dataPolicy: { ...entity.data_policy, ...(overlay?.policy?.dataPolicy ?? {}) },
+      dataPolicy: { ...(v2?.version_contract.data_policy ?? entity.data_policy), ...(overlay?.policy?.dataPolicy ?? {}) },
       ...(overlay ? { tenantOverlayHash: overlay.compiledHash } : {}),
       degradedFeatures: [],
     },
@@ -258,7 +266,7 @@ function compileDefaultSort(
 }
 
 function compileConcurrency(entity: ExecutionCompiledEntitySource): SerializedExecutionDescriptorV1["write"]["concurrency"] {
-  const policy = record(entity.concurrency_policy);
+  const policy = record(entity.contract_v2?.version_contract.concurrency_config ?? entity.concurrency_policy);
   const rawStrategy = text(policy["strategy"]);
   const rowVersion = text(policy["row_version_field"] ?? policy["rowVersionField"])
     ?? (entity.fields.some((field) => storageColumn(field.column_name) === "row_version") ? "row_version" : undefined);

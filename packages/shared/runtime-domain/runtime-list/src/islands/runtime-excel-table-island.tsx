@@ -646,8 +646,7 @@ function renderExcelCell(
 }
 
 function isStatusColumn(column: ResolvedColumn): boolean {
-  const name = column.name.toLowerCase();
-  return column.uiType === "status" || name === "status" || name.endsWith("_status");
+  return column.uiType === "status";
 }
 
 function currentSort(raw: Record<string, string | string[] | undefined>): { key: string; dir: "asc" | "desc" } | null {

@@ -15,7 +15,7 @@ export const DEFAULT_LAZY_LIST_CONTROLS: RuntimeListLazyControls = {
   maxLoadedRows:             200,
 };
 
-const RUNTIME_LIST_PAGE_CACHE_VERSION = "v2";
+const RUNTIME_LIST_PAGE_CACHE_VERSION = "v3";
 
 export function normalizeLazyListControls(
   input: Partial<RuntimeListLazyControls> | null | undefined,
@@ -68,22 +68,20 @@ export function buildRuntimeListBrowserCacheKey(
   entityCode:      string,
   rawSearchParams: RawSearchParams,
   pageSize:        number,
-  scopeFingerprint = "scope:none",
 ): string {
+  const params = normalizeRuntimeListQuery(rawSearchParams);
+  return `runtime-list:${RUNTIME_LIST_PAGE_CACHE_VERSION}:${normalizeEntityCode(entityCode)}:${Math.max(1, Math.floor(pageSize))}:${params}`;
+}
+
+export function normalizeRuntimeListQuery(rawSearchParams: RawSearchParams): string {
   const stableParams = Object.entries(rawSearchParams)
     .filter(([key]) => isDataAffectingListParam(key))
-    .flatMap(([key, value]) => {
-      const item = Array.isArray(value) ? value[0] : value;
-      return item ? [[key, item] as [string, string]] : [];
-    })
-    .sort(([a], [b]) => a.localeCompare(b));
+    .flatMap(([key, value]) => normalizeParamValues(key, value).map((item) => [key, item] as const))
+    .sort(([keyA, valueA], [keyB, valueB]) => keyA.localeCompare(keyB) || valueA.localeCompare(valueB));
 
-  const params = stableParams
+  return stableParams
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join("&");
-  // Version the persisted page map so clients do not restore pages cached
-  // under an incompatible pagination contract.
-  return `runtime-list:${RUNTIME_LIST_PAGE_CACHE_VERSION}:${entityCode}:${pageSize}:${hashStableString(scopeFingerprint)}:${params}`;
 }
 
 export function buildRuntimeListScopeFingerprint(accessScope: RuntimeAccessScope | null | undefined): string {
@@ -105,7 +103,21 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
 }
 
 function isDataAffectingListParam(key: string): boolean {
-  return key === "sort" || key === "group" || key === "cols" || key.startsWith("filter.");
+  return key === "q" || key === "search_scope" || key === "sort" || key === "group"
+    || key === "cols" || key === "facets" || key === "pinned" || key === "vid"
+    || key === "bvid" || key.startsWith("filter.");
+}
+
+function normalizeParamValues(key: string, value: string | string[] | undefined): string[] {
+  const values = (Array.isArray(value) ? value : [value])
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => key === "q" ? item.trim().replace(/\s+/g, " ") : item.trim())
+    .filter(Boolean);
+  return [...new Set(values)].sort();
+}
+
+function normalizeEntityCode(value: string): string {
+  return value.trim().toLowerCase().replace(/-/g, "_");
 }
 
 function stableStringify(value: unknown): string {
@@ -117,13 +129,4 @@ function stableStringify(value: unknown): string {
       .join(",")}}`;
   }
   return JSON.stringify(value);
-}
-
-function hashStableString(value: string): string {
-  let hash = 2166136261;
-  for (let i = 0; i < value.length; i += 1) {
-    hash ^= value.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(16);
 }

@@ -116,6 +116,17 @@ require_var() {
   fi
 }
 
+require_min_length() {
+  local var="$1"
+  local minimum="$2"
+  local val="${ENV_MAP[$var]:-}"
+  [[ -z "$val" ]] && return
+  if (( ${#val} < minimum )); then
+    echo "  FAIL  $var must contain at least $minimum characters"
+    ERRORS=$((ERRORS + 1))
+  fi
+}
+
 require_file_path() {
   local path="$1"
   local label="$2"
@@ -192,6 +203,8 @@ require_var COMPOSE_PROJECT_NAME
 echo "[2/6] Required variables..."
 require_var DATABASE_URL
 require_var REDIS_URL
+require_var ENTITY_QUERY_CURSOR_SECRET
+require_min_length ENTITY_QUERY_CURSOR_SECRET 32
 require_var ATTACHMENT_AUTH_STRICT
 require_var ATTACHMENT_MULTIPART_CLEANUP_STRICT
 require_var PUBLIC_BASE_URL
@@ -374,7 +387,8 @@ if [[ -f "$KERNEL_FILE" ]]; then
     _kc_json=$(node -e '
       try {
         const f = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
-        process.stdout.write([f.publicBaseUrl||"", f.publicWebUrl||"", f.issuerUrl||""].join("\n"));
+        const r = Object.values((f.iam||{}).realms||{})[0]||{};
+        process.stdout.write([f.publicBaseUrl||"", f.publicWebUrl||"", (r.iam||{}).issuerUrl||""].join("\n"));
       } catch (e) { process.exit(2); }
     ' "$KERNEL_FILE" 2>/dev/null || true)
     KC_BASE_URL="$(printf '%s' "$_kc_json" | sed -n '1p')"

@@ -38,13 +38,13 @@ export interface ProductBrandEntry {
 }
 
 const PUBLIC_BRAND_ASSETS: PublicBrandAssets = {
-  wordmarkBlack: "/brand/wordmark-black.svg",
-  wordmarkWhite: "/brand/wordmark-white.svg",
-  wordmarkOnBlack: "/brand/wordmark-on-black.svg",
-  wordmarkOnWhite: "/brand/wordmark-on-white.svg",
-  icon: "/brand/icon.svg",
-  appIcon: "/brand/appicon.svg",
-  favicon: "/brand/favicon.svg",
+  wordmarkBlack: "/brand/wordmark-black.png",
+  wordmarkWhite: "/brand/wordmark-white.png",
+  wordmarkOnBlack: "/brand/wordmark-on-black.png",
+  wordmarkOnWhite: "/brand/wordmark-on-white.png",
+  icon: "/brand/icon.png",
+  appIcon: "/brand/appicon.png",
+  favicon: "/brand/favicon.png",
 };
 
 /**

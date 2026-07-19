@@ -1,15 +1,14 @@
 /**
- * MfaSyncService — Phase 1.1 (IAM Completion)
+ * MfaSyncService — Phase 5 (Keycloak MFA authority)
  *
- * Bridges Keycloak-hosted MFA enrollment (WebAuthn) with the app's local
- * control.mfa_config mirror.
+ * Bridges Keycloak-hosted MFA enrollment (TOTP and WebAuthn) with the app's
+ * local control.mfa_config metadata mirror.
  *
  * Responsibility boundary:
- *   - TOTP:    App owns the secret → outbox pushes App→KC
- *              (keycloak_sync_status: 'pending' → 'synced').
- *              This service does NOT touch TOTP rows.
- *   - WebAuthn: KC owns the credential (via KC AIA / hosted UI).
- *              This service pulls KC→App after enrollment completes.
+ *   - Keycloak owns every MFA credential and every verification decision.
+ *   - This service only pulls safe credential metadata into the app mirror.
+ *   - Credential secrets, public keys, counters and local verifiers never
+ *     enter the application database.
  *
  * Keycloak AIA flow:
  *   1. POST /api/iam/mfa/webauthn/start  → returns { redirectUrl }
@@ -47,8 +46,6 @@ export interface KcCredential {
   userLabel?: string;
   createdDate?: number; // epoch ms
   priority?: number;
-  credentialData?: string; // JSON string: { credentialId, credentialPublicKey, aaguid, counter, ... }
-  secretData?: string;
 }
 
 export interface SyncResult {
@@ -224,8 +221,8 @@ export class MfaSyncService {
    * Rules:
    *   - KC credential present  + app row missing  → INSERT row (synced)
    *   - KC credential present  + app row present  → UPDATE labels/status (synced)
-   *   - KC credential absent   + app row present  + type=webauthn → mark drift (never delete — admin must confirm)
-   *   - TOTP rows are skipped (app is source of truth for TOTP)
+   *   - KC credential absent   + app row present  + type in (totp,webauthn)
+   *     → mark drift (never delete — audit/admin workflows may inspect it)
    *
    * @param tenantId    App tenant UUID
    * @param principalId App principal UUID
@@ -283,25 +280,16 @@ export class MfaSyncService {
       const methodType = mapKcType(kcCred.type);
       if (!methodType) continue; // skip passwords and other non-MFA credentials
 
-      // Skip TOTP — app is source of truth for TOTP (outbox pushes App→KC)
-      if (methodType === "totp") continue;
-
       const existing = appRowByKcId.get(kcCred.id);
       const enrolledAt = kcCred.createdDate ? new Date(kcCred.createdDate) : new Date();
 
-      // Extract public key from KC credentialData for assertion verification later
-      let credMeta: Record<string, unknown> = {};
-      if (kcCred.credentialData) {
-        try {
-          const parsed = JSON.parse(kcCred.credentialData) as Record<string, unknown>;
-          credMeta = {
-            credentialPublicKey: parsed.credentialPublicKey ?? null,
-            aaguid:              parsed.aaguid ?? null,
-            counter:             parsed.counter ?? 0,
-            credentialId:        parsed.credentialId ?? kcCred.id,
-          };
-        } catch { /* ignore malformed credentialData */ }
-      }
+      // Deliberately safe metadata only. Keycloak remains the sole owner of
+      // the OTP secret and WebAuthn public-key material.
+      const credMeta = {
+        authority: "keycloak",
+        credential_type: kcCred.type,
+        keycloak_credential_id: kcCred.id,
+      };
       const metaJson = JSON.stringify(credMeta);
 
       if (existing) {
@@ -310,6 +298,8 @@ export class MfaSyncService {
           .set({
             keycloak_credential_id: kcCred.id,
             keycloak_sync_status:   "synced",
+            keycloak_synced_at:     sql`now()`,
+            authority:               "keycloak",
             user_label:             kcCred.userLabel ?? null,
             is_enabled:             true,
             is_verified:            true,
@@ -324,11 +314,12 @@ export class MfaSyncService {
         await sql`
           INSERT INTO control.mfa_config
             (tenant_id, principal_id, method_type, is_primary, is_enabled, is_verified,
-             keycloak_credential_id, keycloak_sync_status, user_label, metadata,
+             authority, keycloak_credential_id, keycloak_sync_status, keycloak_synced_at, user_label, metadata,
              enrolled_at, verified_at, created_by)
           VALUES (
             ${tenantId}::uuid, ${principalId}::uuid, ${methodType}, false, true, true,
-            ${kcCred.id}, 'synced', ${kcCred.userLabel ?? null}, ${metaJson}::jsonb,
+            'keycloak',
+            ${kcCred.id}, 'synced', now(), ${kcCred.userLabel ?? null}, ${metaJson}::jsonb,
             ${enrolledAt.toISOString()}::timestamptz, ${enrolledAt.toISOString()}::timestamptz,
             ${principalId}::uuid
           )
@@ -336,6 +327,8 @@ export class MfaSyncService {
           DO UPDATE SET
             keycloak_credential_id = EXCLUDED.keycloak_credential_id,
             keycloak_sync_status   = 'synced',
+            keycloak_synced_at     = now(),
+            authority              = 'keycloak',
             user_label             = EXCLUDED.user_label,
             metadata               = EXCLUDED.metadata,
             is_enabled             = true,
@@ -348,9 +341,9 @@ export class MfaSyncService {
       synced++;
     }
 
-    // ── Pass 2: detect drift for webauthn rows whose KC credential is gone ──
+    // ── Pass 2: detect drift for KC-owned rows whose credential is gone ──
     for (const row of existingRows) {
-      if (row.method_type !== "webauthn") continue;
+      if (row.method_type !== "totp" && row.method_type !== "webauthn") continue;
       if (!row.keycloak_credential_id) continue;
       if (kcCredMap.has(row.keycloak_credential_id)) continue;
 
@@ -383,7 +376,7 @@ export class MfaSyncService {
   }
 
   /**
-   * Revoke a WebAuthn credential: delete from KC then remove the mfa_config row.
+   * Revoke a Keycloak MFA credential: delete from KC then remove the mirror row.
    *
    * Ownership is verified — the mfa_config row must belong to the given
    * principal + tenant before any KC call is made.
@@ -410,14 +403,6 @@ export class MfaSyncService {
 
     if (!row) {
       throw Object.assign(new Error(`MFA method '${mfaConfigId}' not found`), { status: 404 });
-    }
-
-    if (row.method_type === "totp") {
-      // TOTP is managed by totp-enrollment.service — use DELETE /api/iam/mfa/:methodId instead
-      throw Object.assign(
-        new Error("TOTP methods must be removed via the TOTP deletion endpoint"),
-        { status: 400, code: "USE_TOTP_DELETE" },
-      );
     }
 
     // Delete from KC if we have a KC credential ID
@@ -467,7 +452,7 @@ export class MfaSyncService {
       .select(["mc.id", "mc.method_type", "mc.keycloak_credential_id"])
       .where("mc.principal_id", "=", principalId)
       .where("mc.tenant_id",   "=", tenantId)
-      .where("mc.method_type", "=", "webauthn") // only KC-owned types
+      .where("mc.method_type", "in", ["totp", "webauthn"]) // only KC-owned types
       .execute() as Array<{ id: string; method_type: string; keycloak_credential_id: string | null }>;
 
     const kcIds    = new Set(kcCreds.map(c => c.id));
@@ -481,111 +466,10 @@ export class MfaSyncService {
 
     const missingInApp = kcCreds.filter(c => {
       const t = mapKcType(c.type);
-      return t === "webauthn" && !appKcIds.has(c.id);
+      return (t === "totp" || t === "webauthn") && !appKcIds.has(c.id);
     });
 
     return { missingInKc, missingInApp };
-  }
-
-  /**
-   * Push all pending TOTP credentials to Keycloak via the Admin REST API.
-   * Called by the IAM outbox worker. Updates keycloak_sync_status to 'synced'
-   * on success or 'error' on failure.
-   *
-   * KC credential format (26.x):
-   *   POST /admin/realms/{realm}/users/{userId}/credentials
-   *   Body: CredentialRepresentation with type="otp", secretData, credentialData
-   */
-  async syncPendingTotp(
-    tenantId: string,
-    principalId: string,
-    realm: string,
-  ): Promise<{ synced: number; failed: number }> {
-    const kcUserId = await this.resolveKcUserId(principalId, tenantId, realm);
-    if (!kcUserId) {
-      this.logger?.warn("mfa_totp_sync_no_binding", { principal_id: principalId });
-      return { synced: 0, failed: 0 };
-    }
-
-    // Fetch all pending TOTP rows for this principal
-    const pendingRows = await this.db
-      .selectFrom("control.mfa_config as mc")
-      .select(["mc.id", "mc.credential_hash"] as never[])
-      .where("mc.principal_id",         "=", principalId)
-      .where("mc.tenant_id",            "=", tenantId)
-      .where("mc.method_type",          "=", "totp")
-      .where("mc.keycloak_sync_status", "=", "pending")
-      .where("mc.is_verified",          "=", true)
-      .execute() as Array<{ id: string; credential_hash: string }>;
-
-    let synced = 0;
-    let failed = 0;
-
-    for (const row of pendingRows) {
-      try {
-        let kcPushOk = false;
-        try {
-          const token = await this.getAdminToken(realm);
-          const url   = `${this.kcBaseUrl}/admin/realms/${realm}/users/${kcUserId}/credentials`;
-
-          const body = JSON.stringify({
-            type:           "otp",
-            secretData:     JSON.stringify({ value: row.credential_hash, salt: "" }),
-            credentialData: JSON.stringify({
-              subType:   "totp",
-              digits:    6,
-              counter:   0,
-              period:    30,
-              algorithm: "HmacSHA1",
-            }),
-          });
-
-          const resp = await fetch(url, {
-            method:  "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body,
-          });
-
-          if (resp.ok || resp.status === 409) {
-            kcPushOk = true;
-          } else {
-            const detail = await resp.text().catch(() => "");
-            this.logger?.warn("mfa_totp_kc_push_failed", { mfa_config_id: row.id, status: resp.status, detail });
-          }
-        } catch (kcErr) {
-          // KC unavailable or rejects credential format — not fatal, app enforces MFA
-          this.logger?.warn("mfa_totp_kc_push_error", { mfa_config_id: row.id, err: String(kcErr) });
-        }
-
-        // Fetch KC credential only when the push succeeded (confirms KC accepted it)
-        const kcCred = kcPushOk
-          ? (await this.fetchKcCredentials(realm, kcUserId).catch(() => [])).find(c => c.type === "otp")
-          : undefined;
-
-        await this.db
-          .updateTable("control.mfa_config")
-          .set({
-            keycloak_sync_status:   kcPushOk ? "synced" : "error",
-            keycloak_credential_id: kcCred?.id ?? null,
-            keycloak_synced_at:     new Date(),
-          } as never)
-          .where("id", "=", row.id)
-          .execute();
-
-        if (kcPushOk) {
-          synced++;
-          this.logger?.info("mfa_totp_synced_to_kc", { mfa_config_id: row.id, kc_user_id: kcUserId });
-        } else {
-          failed++;
-          this.logger?.warn("mfa_totp_sync_status_error", { mfa_config_id: row.id, reason: "kc_push_failed" });
-        }
-      } catch (err) {
-        failed++;
-        this.logger?.error("mfa_totp_sync_failed", { mfa_config_id: row.id, err: String(err) });
-      }
-    }
-
-    return { synced, failed };
   }
 }
 

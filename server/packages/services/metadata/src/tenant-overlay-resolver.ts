@@ -1,5 +1,11 @@
 import { createHash } from "node:crypto";
 
+import {
+  EntityListCachePolicyOverrideSchema,
+  resolveEntityListCachePolicy,
+  type EntityListCachePolicyOverride,
+} from "@athyper/api-contracts/entity-cache-policy";
+
 import type { CompiledEntity, CompiledField } from "./entity-compiler.service.js";
 import type { EffectiveTenantExecutionOverlay } from "./execution-descriptor/compiler.js";
 
@@ -16,6 +22,7 @@ export interface TenantOverlayResolution {
   readonly overlayHash: string;
   readonly executionOverlay: EffectiveTenantExecutionOverlay;
   readonly catalogFieldOverrides: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+  readonly cachePolicyOverride?: EntityListCachePolicyOverride;
 }
 
 export class TenantOverlayValidationError extends Error {
@@ -54,7 +61,7 @@ const EXECUTION_FIELD_KEYS = new Set([
 const CATALOG_FIELD_KEYS = new Set([
   "label", "description", "uiType", "format", "isVisible", "isReadOnly", "sortOrder",
 ]);
-const POLICY_KEYS = new Set(["accessMode", "companyScopeMode", "auditMode", "dataPolicy"]);
+const POLICY_KEYS = new Set(["accessMode", "companyScopeMode", "auditMode", "dataPolicy", "cachePolicy"]);
 const PROHIBITED_POLICY_KEYS = new Set([
   "principalId", "principal_id", "personaId", "persona_id", "accountGrantId", "account_grant_id",
   "permissionDecision", "permission_decision", "allowedPermissions", "deniedPermissions",
@@ -109,6 +116,7 @@ export async function resolveTenantOverlay(
   const fieldOverrides: Record<string, Record<string, unknown>> = {};
   const catalogFieldOverrides: Record<string, Record<string, unknown>> = {};
   const policy: Record<string, unknown> = {};
+  let cachePolicyOverride: EntityListCachePolicyOverride | undefined;
   let defaultSort: EffectiveTenantExecutionOverlay["defaultSort"];
   const diagnostics: TenantOverlayDiagnostic[] = [];
 
@@ -170,7 +178,14 @@ export async function resolveTenantOverlay(
               : `Invalid value type for policy override(s): ${invalidValues.join(", ")}.` });
           continue;
         }
-        Object.assign(policy, value);
+        const parsedCachePolicy = value["cachePolicy"] === undefined
+          ? undefined
+          : EntityListCachePolicyOverrideSchema.parse(value["cachePolicy"]);
+        if (parsedCachePolicy && Object.keys(parsedCachePolicy).length > 0) {
+          cachePolicyOverride = { ...cachePolicyOverride, ...parsedCachePolicy };
+        }
+        const { cachePolicy: _cachePolicy, ...executionPolicy } = value;
+        Object.assign(policy, executionPolicy);
         continue;
       }
 
@@ -214,6 +229,7 @@ export async function resolveTenantOverlay(
     overlayHash,
     executionOverlay,
     catalogFieldOverrides,
+    ...(cachePolicyOverride ? { cachePolicyOverride } : {}),
   };
 }
 
@@ -238,12 +254,69 @@ export function applyTenantCatalogOverlay(
   const effectiveHash = createHash("sha256")
     .update(`${compiled.compiled_hash}:${resolution.overlayHash}`)
     .digest("hex");
+  const contract = compiled.contract_v2;
+  const contractFields = contract?.fields.map((field) => {
+    const override = resolution.catalogFieldOverrides[field.name];
+    if (!override) return field;
+    return {
+      ...field,
+      ...(typeof override.label === "string" ? { label: override.label } : {}),
+      ...(typeof override.description === "string" ? { description: override.description } : {}),
+    };
+  });
+  const overlayPolicy = resolution.executionOverlay.policy;
+  const effectiveDataPolicy = overlayPolicy?.dataPolicy
+    ? { ...compiled.data_policy, ...overlayPolicy.dataPolicy }
+    : compiled.data_policy;
+  const classCachePolicy = asRecord(compiled.class_profile?.["cache_policy"]);
+  const { source: basePolicySource, ...baseCachePolicy } = compiled.cache_policy;
+  const effectiveMutability = compiled.contract_v2?.version_contract.mutability ?? compiled.mutability;
+  const resolvedCachePolicy = resolution.cachePolicyOverride || overlayPolicy?.dataPolicy
+    ? resolveEntityListCachePolicy({
+      platformPolicy: baseCachePolicy,
+      entityClassPolicy: {
+        eager_prefetch_allowed: classCachePolicy?.["eager_prefetch_allowed"] === true,
+      },
+      tenantPolicy: resolution.cachePolicyOverride ?? {},
+      dataClassification: typeof effectiveDataPolicy["classification"] === "string"
+        ? effectiveDataPolicy["classification"]
+        : null,
+      mutable: !["locked", "immutable"].includes(effectiveMutability.trim().toLowerCase()),
+    })
+    : compiled.cache_policy;
+  const effectiveCachePolicy = resolution.cachePolicyOverride
+    ? resolvedCachePolicy
+    : { ...resolvedCachePolicy, source: basePolicySource };
+  const effectiveContract = contract
+    ? {
+      ...contract,
+      ...(contractFields ? { fields: contractFields } : {}),
+      policy: {
+        ...contract.policy,
+        ...(overlayPolicy?.accessMode === "default_deny" || overlayPolicy?.accessMode === "default_allow" || overlayPolicy?.accessMode === "explicit"
+          ? { access_mode: overlayPolicy.accessMode } : {}),
+        ...(overlayPolicy?.companyScopeMode === "none" || overlayPolicy?.companyScopeMode === "single" || overlayPolicy?.companyScopeMode === "subtree" || overlayPolicy?.companyScopeMode === "full"
+          ? { company_scope_mode: overlayPolicy.companyScopeMode } : {}),
+        ...(overlayPolicy?.auditMode === "enabled" || overlayPolicy?.auditMode === "disabled" || overlayPolicy?.auditMode === "sampling"
+          ? { audit_mode: overlayPolicy.auditMode } : {}),
+        cache_policy: effectiveCachePolicy,
+      },
+      ...(overlayPolicy?.dataPolicy ? {
+        version_contract: {
+          ...contract.version_contract,
+          data_policy: { ...contract.version_contract.data_policy, ...overlayPolicy.dataPolicy },
+        },
+      } : {}),
+    } as NonNullable<CompiledEntity["contract_v2"]>
+    : undefined;
   return {
     ...compiled,
     fields,
+    cache_policy: effectiveCachePolicy,
     ...(resolution.executionOverlay.policy?.dataPolicy ? {
-      data_policy: { ...compiled.data_policy, ...resolution.executionOverlay.policy.dataPolicy },
+      data_policy: effectiveDataPolicy,
     } : {}),
+    ...(effectiveContract ? { contract_v2: effectiveContract } : {}),
     compiled_hash: effectiveHash,
   };
 }
@@ -276,6 +349,7 @@ function validFieldOverrideValue(key: string, value: unknown): boolean {
 
 function validPolicyOverrideValue(key: string, value: unknown): boolean {
   if (key === "dataPolicy") return asRecord(value) !== null;
+  if (key === "cachePolicy") return EntityListCachePolicyOverrideSchema.safeParse(value).success;
   return typeof value === "string" && value.trim().length > 0;
 }
 

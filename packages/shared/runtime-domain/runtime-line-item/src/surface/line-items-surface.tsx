@@ -13,6 +13,25 @@ import { LinesGrid } from "./lines-grid";
 type LinesResponse = { data?: DocumentLine[] };
 type DistributionsResponse = { data?: AccountingDistribution[] };
 
+function normalizeLineResponseRow(row: DocumentLine): LineRecord {
+  const source = row as unknown as Record<string, unknown>;
+  const nested = source["data"] !== null
+    && typeof source["data"] === "object"
+    && !Array.isArray(source["data"])
+    ? source["data"] as Record<string, unknown>
+    : {};
+  const lineNumber = source["line_no"]
+    ?? source["line_number"]
+    ?? nested["line_no"]
+    ?? nested["line_number"];
+
+  return {
+    ...source,
+    ...nested,
+    ...(lineNumber !== undefined ? { line_no: lineNumber, line_number: lineNumber } : {}),
+  } as unknown as LineRecord;
+}
+
 /**
  * Plan v5 amendment 2 — when `controlledData` is supplied, the hook
  * skips its internal fetches and surfaces the parent-owned bundle.
@@ -49,7 +68,9 @@ function useLineItemsData(
     const fetches: Promise<void>[] = [
       fetch(linesUrl)
         .then((r) => r.ok ? r.json() as Promise<LinesResponse> : null)
-        .then((body) => { if (!cancelled) setLines((body?.data ?? []) as LineRecord[]); })
+        .then((body) => {
+          if (!cancelled) setLines((body?.data ?? []).map(normalizeLineResponseRow));
+        })
         .catch(() => { if (!cancelled) setLines([]); }),
     ];
 

@@ -35,6 +35,12 @@ import {
 } from "../src/execution-descriptor/index.js";
 import { TenantOverlayValidationError } from "../src/tenant-overlay-resolver.js";
 import { normalizeEntityFeatureFlags, normalizeEntityListFeatures } from "@athyper/api-contracts/metadata-normalizers";
+import {
+  compiledEntityContractHash,
+  projectCompiledEntityResponse,
+  readCompiledEntityContract,
+  type CompiledEntityProjectionProvider,
+} from "../src/compiled-entity-projection.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,6 +70,7 @@ export interface CompiledEntityRoutesDeps {
    */
   cache?: DescriptorCache;
   executionDescriptorProvider?: ExecutionDescriptorProvider;
+  compiledEntityProvider?: CompiledEntityProjectionProvider;
   /** Resolves the tenant-effective catalog payload after overlay restrictions. */
   loadEffectiveCompiledEntity?: (entityCode: string, tenantId: string) => Promise<Record<string, unknown> | null>;
   /** Tenant context already verified by the host gateway when available. */
@@ -571,7 +578,7 @@ async function loadReferencePickerProfiles(
 }
 
 export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRoutesDeps): Router {
-  const { db, auth, logger, cache, executionDescriptorProvider, loadEffectiveCompiledEntity, getEffectiveModuleAccess } = deps;
+  const { db, auth, logger, cache, executionDescriptorProvider, compiledEntityProvider, loadEffectiveCompiledEntity, getEffectiveModuleAccess } = deps;
   const moduleAccessCache = cache
     ? {
       get: cache.get,
@@ -617,9 +624,79 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       (res.locals as Record<string, unknown>)["requestContextMs"] =
         Number(process.hrtime.bigint() - requestContextStartedAt) / 1_000_000;
 
-      // Plane + schemaHash scoping for the v4 cache key.
+      // Plane + schemaHash scoping for the descriptor cache key.
       const plane = resolvePlaneSegment(req.headers["x-plane"]);
       const schemaHash = computeDescriptorSchemaHash();
+
+      // Phase B cutover: the compiler projection is the authoritative runtime
+      // source.  The legacy SQL compiler below remains only as a compatibility
+      // path for isolated callers/tests that have not supplied the provider.
+      // Production registration always supplies deps.entityCompiler.
+      if (compiledEntityProvider && tenantId) {
+        const compiled = await compiledEntityProvider.loadRuntimeCompiledEntity(entityCode, tenantId);
+        if (!compiled) {
+          res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+          return;
+        }
+        const contract = readCompiledEntityContract(compiled);
+        const compiledHash = compiledEntityContractHash(compiled);
+        const executionHash = (compiled.execution_descriptor as { identity?: { compiledHash?: string } } | undefined)
+          ?.identity?.compiledHash;
+        if (executionHash) {
+          res.setHeader("X-Descriptor-Hash", executionHash);
+          (res.locals as Record<string, unknown>)["descriptorHash"] = executionHash;
+        }
+
+        if (tenantId && contract.catalog.module_id) {
+          try {
+            const principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
+            const authEpochRow = await db
+              .selectFrom("master.principal as p")
+              .select("p.auth_epoch")
+              .where("p.id", "=", principalId)
+              .where("p.tenant_id", "=", tenantId)
+              .executeTakeFirst();
+            const hasAccess = await hasModuleAccess(
+              db,
+              tenantId,
+              principalId,
+              contract.catalog.module_id,
+              moduleResolver,
+              logger,
+              { authEpoch: (authEpochRow?.auth_epoch as number | undefined), mode: "read_metadata" },
+            );
+            if (!hasAccess) {
+              res.status(404).json({ error: "ENTITY_NOT_FOUND", message: `Entity '${entityCode}' not found` });
+              return;
+            }
+          } catch (err) {
+            logger?.warn("compiled_entity_projection_module_access_failed", { entityCode, tenantId, err: String(err) });
+            // Preserve the existing fail-open behavior when the optional
+            // module-access service is unavailable.
+          }
+        }
+
+        const payload = projectCompiledEntityResponse(compiled);
+        const etagValue = `"ced-${compiledHash}"`;
+        res.setHeader("ETag", etagValue);
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("X-Cache", "MISS");
+        res.setHeader("X-Contract-Version", "2");
+        if (req.headers["if-none-match"] === etagValue) {
+          res.status(304).end();
+          return;
+        }
+        if (cache) {
+          const payloadJson = JSON.stringify(payload);
+          const pointerFingerprint = JSON.stringify({ compiledHash });
+          Promise.all([
+            cache.set(descriptorCacheKey(plane, tenantId, entityCode, schemaHash, compiledHash), payloadJson, DESCRIPTOR_CACHE_TTL_S),
+            cache.set(descriptorCachePointerKey(plane, tenantId, entityCode, schemaHash), pointerFingerprint, DESCRIPTOR_CACHE_TTL_S),
+          ]).catch((err) => logger?.warn("compiled_entity_projection_cache_write_failed", { entityCode, tenantId, err: String(err) }));
+        }
+        res.json(payload);
+        return;
+      }
 
       let executionResolution: ExecutionDescriptorProviderResult | undefined;
       if (executionDescriptorProvider && tenantId) {
@@ -1116,6 +1193,19 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
       const entityCode = String(req.params["entity"] ?? "").replace(/-/g, "_");
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const catalogTenantId = deps.readAuthenticatedContext?.(req)?.tenantId
+        ?? (xOrg ? await resolveTenantId(db, xOrg, xRealm) : null);
+      if (compiledEntityProvider && catalogTenantId) {
+        const compiled = await compiledEntityProvider.loadRuntimeCompiledEntity(entityCode, catalogTenantId);
+        if (compiled) {
+          const payload = projectCompiledEntityResponse(compiled);
+          res.setHeader("ETag", `\"catalog-${compiled.compiled_hash}\"`);
+          res.setHeader("X-Contract-Version", "2");
+          res.json(payload);
+          return;
+        }
+      }
       const row = await db
         .selectFrom("snapshot.entity_compiled as ec")
         .innerJoin("control.entity_version as ev", "ev.id", "ec.entity_version_id")

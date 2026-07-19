@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft, MoreVertical, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@athyper/ui";
 import type { RuntimeListPresenterProps } from "../adapter/types";
@@ -16,6 +17,7 @@ import { SavedViewsControl } from "./organize/saved-views-control";
 import { OrganizeSettingsControl } from "./organize/organize-settings-control";
 import { PalettePanel } from "./organize/palette-panel";
 import { runtimeListText } from "../core/resources";
+import { useRuntimeListSearch } from "./runtime-list-context";
 
 type RuntimeListCommandBarProps = Pick<
   RuntimeListPresenterProps,
@@ -145,10 +147,10 @@ export function RuntimeListCommandBar(props: RuntimeListCommandBarProps) {
               size="lg"
               className="w-10 shrink-0 px-0 md:w-auto md:px-4"
             >
-              <a href={createHref}>
+              <Link href={createHref}>
                 <Plus aria-hidden="true" className="size-4" />
                 <span className="hidden md:inline">{runtimeListText.actions.createNew}</span>
-              </a>
+              </Link>
             </Button>
           )}
 
@@ -179,12 +181,13 @@ function ListNavigationSegment({
   title:    string;
   listHref: string;
 }) {
+  const router = useRouter();
   const goBack = () => {
     if (window.history.length > 1) {
       window.history.back();
       return;
     }
-    window.location.assign(listHref);
+    router.push(listHref);
   };
 
   return (
@@ -198,13 +201,13 @@ function ListNavigationSegment({
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
       </button>
-      <a
+      <Link
         href={listHref}
         title={`Go to ${title} list`}
         className="min-w-0 max-w-[16rem] truncate px-3 text-base font-semibold leading-5 text-foreground transition-colors hover:text-primary hover:underline sm:max-w-[20rem] lg:max-w-[24rem]"
       >
         {title}
-      </a>
+      </Link>
     </div>
   );
 }
@@ -268,14 +271,14 @@ function HiddenArrangeDrawers({
 }
 
 function RuntimeListMoreMenu({ actions }: { actions: ResolvedToolbarAction[] }) {
-  const router = useRouter();
+  const { lazyList } = useRuntimeListSearch();
   const [open, setOpen] = useState(false);
-  const [isRefreshing, startRefreshTransition] = useTransition();
+  const isRefreshing = lazyList.isRevalidating;
   const visibleActions = actions.filter((action) => !action.disabled);
   const reloadList = () => {
     if (isRefreshing) return;
     setOpen(false);
-    startRefreshTransition(() => router.refresh());
+    lazyList.refreshCurrentPage();
   };
 
   return (
@@ -315,7 +318,7 @@ function RuntimeListMoreMenu({ actions }: { actions: ResolvedToolbarAction[] }) 
                       size="md"
                       className="w-full justify-start rounded-none border-t px-3 py-2.5 text-left text-foreground first:border-t-0"
                     >
-                      <a href={action.href} onClick={() => setOpen(false)}>{action.label}</a>
+                      <Link href={action.href} onClick={() => setOpen(false)}>{action.label}</Link>
                     </Button>
                   ))}
                 </div>

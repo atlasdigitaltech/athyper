@@ -109,7 +109,7 @@ COMMENT ON TABLE control.lookup_value IS
   'ARCHETYPE=B;SCOPE=G. Lookup code+label pairs keyed by domain_code. Global rows: tenant_id IS NULL, is_system=true. Tenant extensions: tenant_id IS NOT NULL, is_system=false.';
 
 
--- §1 mfa_config — local mirror of Keycloak MFA enrollment state
+-- §1 mfa_config — metadata-only mirror of Keycloak MFA enrollment state
 -- One row per (tenant, principal, method_type).
 -- Replaces: email_otp_instance, sms_otp_instance, totp_instance, mfa_challenge.
 CREATE TABLE IF NOT EXISTS control.mfa_config (
@@ -132,8 +132,9 @@ CREATE TABLE IF NOT EXISTS control.mfa_config (
     -- Table-specific (delivery address — required for email/sms, NULL for totp/webauthn/backup)
     contact_link_id    uuid,
 
-    -- Table-specific (credential storage — base32 TOTP secret; bcrypt hash of backup codes; NULL for webauthn)
-    credential_hash    text,
+    -- Keycloak is the credential and verification authority. No OTP secret,
+    -- WebAuthn key material, recovery code or verifier is stored here.
+    authority           text            NOT NULL DEFAULT 'keycloak',
 
     -- Table-specific (display label set by user in KC account console, e.g. "My YubiKey")
     user_label         text,
@@ -155,6 +156,7 @@ CREATE TABLE IF NOT EXISTS control.mfa_config (
     CONSTRAINT mfa_config_pkey                     PRIMARY KEY (id),
     CONSTRAINT mfa_config_principal_method_uq      UNIQUE (tenant_id, principal_id, method_type),
     CONSTRAINT mfa_config_keycloak_credential_uq   UNIQUE NULLS NOT DISTINCT (keycloak_credential_id),
+    CONSTRAINT mfa_config_authority_chk            CHECK (authority = 'keycloak'),
     -- mfa_config_method_type_chk: deferred to 06_constraints via control.fn_valid_lookup
     -- Sealed inline CHECK — Keycloak sync status is protocol-defined, not extensible.
     CONSTRAINT mfa_config_sync_status_chk          CHECK (keycloak_sync_status IN ('pending', 'synced', 'drift', 'error')),
@@ -174,7 +176,7 @@ CREATE TABLE IF NOT EXISTS control.mfa_config (
 );
 
 COMMENT ON TABLE  control.mfa_config IS
-  'ARCHETYPE=C;SCOPE=T. Local mirror of Keycloak MFA enrollment. One row per (tenant, principal, method_type). Replaces OTP instance tables.';
+  'ARCHETYPE=C;SCOPE=T. Metadata-only mirror of Keycloak MFA enrollment. Keycloak owns credentials and verification. One row per (tenant, principal, method_type). Replaces OTP instance tables.';
 
 
 -- ============================================================================
@@ -1663,6 +1665,10 @@ CREATE TABLE IF NOT EXISTS control.entity_class_profile (
     --                  data_export:  {disposition: 'required', sample_rate: 1.0}}}}
     compliance_profile          jsonb       NOT NULL DEFAULT '{}',
 
+    -- Browser list-cache defaults for this entity class. The metadata
+    -- compiler resolves entity overrides over this object, then platform defaults.
+    cache_policy                jsonb       NOT NULL DEFAULT '{}',
+
     -- Display
     sort_order                  smallint    NOT NULL DEFAULT 0,
 
@@ -1681,7 +1687,8 @@ CREATE TABLE IF NOT EXISTS control.entity_class_profile (
     ),
     CONSTRAINT ecp_field_flag_rules_chk CHECK (jsonb_typeof(field_flag_rules) = 'array'),
     CONSTRAINT ecp_security_tiers_chk   CHECK (jsonb_typeof(security_tiers) = 'object'),
-    CONSTRAINT ecp_compliance_chk       CHECK (jsonb_typeof(compliance_profile) = 'object')
+    CONSTRAINT ecp_compliance_chk       CHECK (jsonb_typeof(compliance_profile) = 'object'),
+    CONSTRAINT ecp_cache_policy_chk     CHECK (jsonb_typeof(cache_policy) = 'object')
 );
 
 COMMENT ON TABLE  control.entity_class_profile IS
@@ -1710,6 +1717,9 @@ COMMENT ON COLUMN control.entity_class_profile.compliance_profile IS
     'audit_rules: {default_disposition: required|sampled|disabled, '
     'by_category: {event_category: {disposition, sample_rate}}}}. '
     'Tenant entity-level overrides via entity_policy.audit_mode.';
+COMMENT ON COLUMN control.entity_class_profile.cache_policy IS
+    'Typed entity-list cache defaults and prefetch constraints for this class. '
+    'Resolution precedence is entity display_config.list_cache, class cache_policy, platform default.';
 
 
 -- =============================================================================
@@ -3327,6 +3337,9 @@ CREATE TABLE IF NOT EXISTS control.book_posting_rule (
     CONSTRAINT book_posting_rule_company_code_uq
         UNIQUE (tenant_id, company_code_id, rule_code),
     CONSTRAINT bpr_diff_books_chk CHECK (source_book_id != target_book_id),
+    CONSTRAINT bpr_account_strategy_chk CHECK (account_strategy IN ('same', 'map', 'profile')),
+    CONSTRAINT bpr_amount_strategy_chk CHECK (amount_strategy IN ('mirror', 'multiply', 'formula', 'suppress')),
+    CONSTRAINT bpr_recognition_timing_chk CHECK (recognition_timing IN ('simultaneous', 'deferred', 'on_close')),
     CONSTRAINT bpr_formula_chk CHECK (amount_strategy != 'formula' OR amount_formula IS NOT NULL),
     CONSTRAINT bpr_multiplier_chk CHECK (amount_strategy != 'multiply' OR amount_multiplier IS NOT NULL),
     CONSTRAINT bpr_map_chk CHECK (account_strategy != 'map' OR account_mapping IS NOT NULL),

@@ -89,6 +89,9 @@ export interface ChildCollectionGridProps {
   pinnedColumns?: string[];
   paginationMode?: "none" | "server";
   initialPageSize?: number;
+  currentPage?: number;
+  totalCount?: number;
+  onPageChange?: (page: number) => void;
   virtualized?: boolean;
   virtualRowEstimate?: number;
   virtualOverscan?: number;
@@ -137,6 +140,9 @@ export function ChildCollectionGrid({
   pinnedColumns,
   paginationMode,
   initialPageSize,
+  currentPage,
+  totalCount,
+  onPageChange,
   virtualized,
   virtualRowEstimate,
   virtualOverscan,
@@ -263,9 +269,12 @@ export function ChildCollectionGrid({
       getIsRowExpanded={getIsRowExpanded}
       paginationMode={effectivePaginationMode}
       initialPageSize={effectiveInitialPageSize}
+      currentPage={currentPage}
+      totalCount={totalCount}
+      onPageChange={onPageChange}
       mobileRows={mobileRows}
-      className={cn("rounded-lg border border-border overflow-hidden", className)}
-      toolbarClassName={cn("min-h-10 bg-muted/40 px-5 py-1", toolbarClassName)}
+      className={cn("overflow-hidden rounded-lg border border-border bg-card", className)}
+      toolbarClassName={cn("min-h-12 bg-card px-5 py-1", toolbarClassName)}
       tableContainerClassName={cn(
         "border-0 rounded-none overflow-x-auto overflow-y-auto max-h-[min(70dvh,42rem)]",
         tableContainerClassName,

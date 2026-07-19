@@ -10,6 +10,8 @@
     "./src": "./src/index.ts",
     "./src/*": "./src/*",
     "./base.css": "./src/base.css",
+    "./tokens.css": "./src/tokens/athyper.tokens.css",
+    "./iam-components.css": "./src/iam-components.css",
     "./presets/base.css": "./src/presets/base.css",
     "./presets/neon-base.css": "./src/presets/neon-base.css",
     "./presets/neon-modern.css": "./src/presets/neon-modern.css",
@@ -36,6 +38,7 @@
   "scripts": {
     "typography:generate": "tsx src/typography.generate.ts",
     "check:typography": "pnpm run typography:generate && git diff --exit-code -- src/typography.generated.css",
+    "iam:build": "tsx scripts/build-iam-css.ts",
     "typecheck": "tsc --noEmit",
     "validate-presets": "tsx src/preset-validator.cli.ts --check-shipped"
   },
@@ -50,6 +53,7 @@
   "devDependencies": {
     "@athyper/config": "workspace:*",
     "@types/node": "^25.6.0",
+    "geist": "^1.7.0",
     "tsx": "^4.19.2",
     "typescript": "^6.0.3"
   }

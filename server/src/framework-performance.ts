@@ -125,6 +125,13 @@ export function createFrameworkPerformanceMiddleware(): RequestHandler {
     runWithFrameworkPerformance(identity, () => {
       const originalJson = res.json.bind(res);
       res.json = ((body: unknown) => {
+        const snapshot = snapshotFrameworkPerformance();
+        if (snapshot && !res.headersSent) {
+          appendServerTiming(res, buildFrameworkServerTiming(snapshot));
+          res.setHeader("X-Athyper-Framework-Cache", snapshot.cacheState);
+          res.setHeader("X-Athyper-SQL-Count", String(snapshot.sqlCount));
+          res.setHeader("X-Athyper-DB-Pool-Wait-Ms", formatDuration(snapshot.poolWaitMs));
+        }
         const endSerialization = startFrameworkPhase("serialization");
         try {
           return originalJson(body);
@@ -142,6 +149,46 @@ export function createFrameworkPerformanceMiddleware(): RequestHandler {
       next();
     });
   };
+}
+
+/**
+ * Low-cardinality request diagnostics for HAR traces. The detailed histogram
+ * remains the production source of truth; this header makes it possible to
+ * distinguish descriptor/query time from database pool contention without
+ * enabling SQL logging or exposing statement text.
+ */
+export function buildFrameworkServerTiming(snapshot: FrameworkPerformanceSnapshot): string {
+  const timings: string[] = [];
+  for (const [phase, durationMs] of Object.entries(snapshot.phases)) {
+    if (durationMs === undefined) continue;
+    timings.push(`framework_${phase};dur=${formatDuration(durationMs)}`);
+  }
+  timings.push(
+    `framework_db_pool;dur=${formatDuration(snapshot.poolWaitMs)};desc=\"${snapshot.poolAcquireCount} acquisitions\"`,
+    `framework_db_sql;dur=${formatDuration(snapshot.sqlDurationMs)};desc=\"${snapshot.sqlCount} statements\"`,
+    `framework_redis;dur=${formatDuration(snapshot.redisDurationMs)};desc=\"${snapshot.redisCount} operations\"`,
+    `framework_total;dur=${formatDuration(snapshot.totalDurationMs)}`,
+  );
+  return timings.join(", ");
+}
+
+function appendServerTiming(res: Response, value: string): void {
+  if (!value) return;
+  const existing = res.getHeader("Server-Timing");
+  if (typeof existing === "string" && existing.trim()) {
+    res.setHeader("Server-Timing", `${existing}, ${value}`);
+    return;
+  }
+  if (Array.isArray(existing) && existing.length > 0) {
+    res.setHeader("Server-Timing", `${existing.join(", ")}, ${value}`);
+    return;
+  }
+  res.setHeader("Server-Timing", value);
+}
+
+function formatDuration(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return "0";
+  return String(Math.round(value * 100) / 100);
 }
 
 export function classifyFrameworkRequest(req: Pick<Request, "method" | "originalUrl" | "url" | "headers">): FrameworkRequestIdentity | null {

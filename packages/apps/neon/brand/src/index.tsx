@@ -2,7 +2,7 @@
  * @athyper/app-neon-brand
  *
  * Neon plane brand assets — SVG lockups and product registry entry.
- * Static source assets live in src/products/neon/ (built by pnpm brand:refresh).
+ * Static source assets live in src/ (built by pnpm brand:refresh).
  */
 
 import type { LogoProps, ProductBrandEntry, PublicBrandAssets } from "@athyper/brand";

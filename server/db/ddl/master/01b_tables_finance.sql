@@ -835,8 +835,16 @@ CREATE TABLE IF NOT EXISTS master.fiscal_period (
     start_date       date         NOT NULL,
     end_date         date         NOT NULL,
 
-    -- Computed
-    is_adjustment    boolean      GENERATED ALWAYS AS (period_number > 12) STORED,
+    -- Calendar provenance. The assignment is resolved at generation time so
+    -- historic periods remain tied to the exact calendar version used.
+    fiscal_calendar_config_id uuid,
+    calendar_version_no integer,
+    generation_key   text,
+    generated_at     timestamptz,
+
+    -- Computed from semantic period type. A 13-period retail calendar can
+    -- legitimately use period 13 as a normal period.
+    is_adjustment    boolean      GENERATED ALWAYS AS (period_type = 'adjustment') STORED,
 
     -- Close timestamps
     opened_at        timestamptz,

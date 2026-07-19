@@ -144,7 +144,9 @@ function readOpenRolloutStage(): DocumentOpenRolloutStage {
   const value = process.env.DOCUMENT_OPEN_ROLLOUT_STAGE?.trim().toLowerCase();
   const parsed = parseDocumentOpenRolloutStage(value);
   if (parsed) return parsed;
-  return "rules_internal";
+  // Descriptor V2 is the production default. Operators retain the explicit
+  // stage and individual flag kill switches for controlled rollback.
+  return "full";
 }
 
 export function stableRolloutBucket(value: string): number {

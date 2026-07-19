@@ -12,7 +12,7 @@ import { useState, useMemo, useRef, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUpdateEntity } from "@athyper/query";
-import { MessageSquare, Paperclip, Clock, Plus, AlertCircle, Search, SlidersHorizontal } from "lucide-react";
+import { MessageSquare, Paperclip, Clock, Plus, AlertCircle, Search } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
   Button, Card, CardContent, CardHeader, CardTitle, Label, Skeleton,
@@ -1353,7 +1353,6 @@ export function MasterDetailPage({
   const [activePanel, setActivePanel]             = useState<string | null>(null);
   const [panelCount,  setPanelCount]              = useState<number | null>(null);
   const [commentSearchOpen, setCommentSearchOpen] = useState(false);
-  const [commentFiltersOn,  setCommentFiltersOn]  = useState(true);
   // Lifted form state for composite-tab edits (InlineEditSection does not own its own state).
   const [editFormData, setEditFormData] = useState<Record<string, unknown>>(data);
 
@@ -1849,26 +1848,6 @@ export function MasterDetailPage({
               </TooltipTrigger>
               <TooltipContent side="bottom">Search comments</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Toggle comment filters"
-                  onClick={() => setCommentFiltersOn((prev) => !prev)}
-                  className={cn(
-                    "inline-flex size-7 items-center justify-center rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                    !commentFiltersOn
-                      ? "bg-primary/15 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <SlidersHorizontal className="size-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {commentFiltersOn ? "Hide filters" : "Show filters"}
-              </TooltipContent>
-            </Tooltip>
           </TooltipProvider>
         ) : undefined}
       >
@@ -1880,7 +1859,6 @@ export function MasterDetailPage({
               recordUuid={record.id}
               onCountChange={setPanelCount}
               searchOpen={commentSearchOpen}
-              showFilters={commentFiltersOn}
             />
           )}
           {activePanel === "attachments" && (

@@ -95,6 +95,25 @@ export function stableEntityListCacheHash(value: unknown): string {
   return (hash >>> 0).toString(36);
 }
 
+/**
+ * Applies a trusted BFF descriptor policy as a cache ceiling. Request headers
+ * can only reduce or disable caching; they can never widen the service policy.
+ */
+export function capEntityListCacheTtlSeconds(
+  configuredTtlSeconds: number,
+  requestedMode: string | undefined,
+  requestedFreshForSeconds: string | undefined,
+): number {
+  const configured = Number.isFinite(configuredTtlSeconds)
+    ? Math.max(0, Math.floor(configuredTtlSeconds))
+    : 0;
+  if (requestedMode?.trim().toLowerCase() === "disabled") return 0;
+  if (requestedFreshForSeconds === undefined) return configured;
+  const requested = Number(requestedFreshForSeconds);
+  if (!Number.isSafeInteger(requested) || requested < 0) return configured;
+  return Math.min(configured, requested);
+}
+
 function stableStringify(value: unknown): string {
   if (value === null || value === undefined) return String(value);
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {

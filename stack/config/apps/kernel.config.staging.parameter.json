@@ -83,8 +83,7 @@
   },
 
   "telemetry": {
-    "$comment": "LOCKED — otlpEndpoint and enabled are stripped at load time. Set via staging .env or SUPERSTAR env vars.",
-    "enabled": true,
+    "$comment": "LOCKED — otlpEndpoint is stripped at load time. Set via staging .env or SUPERSTAR env vars. Telemetry enablement is controlled by OTEL env vars, not this file.",
     "otlpEndpoint": "LOCKED_USE_ENV_VAR",
     "serviceName": "athyper-runtime",
     "serviceVersion": "1.0.0"

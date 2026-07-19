@@ -48,9 +48,9 @@ BEGIN
             'blueprints/modules/governance/010_finance_close_governance_templates.sql',
             'blueprints/modules/governance/099_apply.sql'
         ],
-        'Finance close governance templates for monthly soft close and year-end hard close.',
+        'Finance governance templates for posting readiness, opening balances, monthly soft close, and year-end hard close.',
         jsonb_build_object(
-            'cycle_types', ARRAY['MONTHLY_CLOSE','YEAR_END_CLOSE'],
+            'cycle_types', ARRAY['FIN_SETUP_READINESS','OPENING_BALANCE','MONTHLY_CLOSE','YEAR_END_CLOSE'],
             'period_policy', 'Open current month, soft-close prior months, hard-close at year-end'
         ),
         v_sys
@@ -76,7 +76,7 @@ BEGIN
     SELECT count(*) INTO v_type_count
       FROM governance.cycle_type
      WHERE tenant_id = v_tid
-       AND type_code IN ('MONTHLY_CLOSE','YEAR_END_CLOSE')
+       AND type_code IN ('FIN_SETUP_READINESS','OPENING_BALANCE','MONTHLY_CLOSE','YEAR_END_CLOSE')
        AND domain = 'FINANCE'
        AND is_active;
 
@@ -86,7 +86,7 @@ BEGIN
         ON ct.tenant_id = cp.tenant_id
        AND ct.id = cp.cycle_type_id
      WHERE cp.tenant_id = v_tid
-       AND ct.type_code IN ('MONTHLY_CLOSE','YEAR_END_CLOSE')
+       AND ct.type_code IN ('FIN_SETUP_READINESS','OPENING_BALANCE','MONTHLY_CLOSE','YEAR_END_CLOSE')
        AND cp.is_active;
 
     SELECT count(*) INTO v_category_count
@@ -95,7 +95,7 @@ BEGIN
         ON ct.tenant_id = ctc.tenant_id
        AND ct.id = ctc.cycle_type_id
      WHERE ctc.tenant_id = v_tid
-       AND ct.type_code IN ('MONTHLY_CLOSE','YEAR_END_CLOSE')
+       AND ct.type_code IN ('FIN_SETUP_READINESS','OPENING_BALANCE','MONTHLY_CLOSE','YEAR_END_CLOSE')
        AND ctc.is_active;
 
     SELECT count(*) INTO v_template_count
@@ -104,7 +104,7 @@ BEGIN
         ON ct.tenant_id = ctt.tenant_id
        AND ct.id = ctt.cycle_type_id
      WHERE ctt.tenant_id = v_tid
-       AND ct.type_code IN ('MONTHLY_CLOSE','YEAR_END_CLOSE')
+       AND ct.type_code IN ('FIN_SETUP_READINESS','OPENING_BALANCE','MONTHLY_CLOSE','YEAR_END_CLOSE')
        AND ctt.is_active;
 
     SELECT count(*) INTO v_dependency_count
@@ -113,7 +113,7 @@ BEGIN
         ON ct.tenant_id = ctd.tenant_id
        AND ct.id = ctd.cycle_type_id
      WHERE ctd.tenant_id = v_tid
-       AND ct.type_code IN ('MONTHLY_CLOSE','YEAR_END_CLOSE')
+       AND ct.type_code IN ('FIN_SETUP_READINESS','OPENING_BALANCE','MONTHLY_CLOSE','YEAR_END_CLOSE')
        AND ctd.is_active;
 
     SELECT count(*) INTO v_rule_count
@@ -122,32 +122,32 @@ BEGIN
         ON ct.tenant_id = cfr.tenant_id
        AND ct.id = cfr.cycle_type_id
      WHERE cfr.tenant_id = v_tid
-       AND ct.type_code IN ('MONTHLY_CLOSE','YEAR_END_CLOSE')
+       AND ct.type_code IN ('FIN_SETUP_READINESS','OPENING_BALANCE','MONTHLY_CLOSE','YEAR_END_CLOSE')
        AND cfr.is_active;
 
-    IF v_type_count < 2 THEN
-        v_warnings := v_warnings || format('Expected 2 finance close cycle types, got %s', v_type_count);
+    IF v_type_count < 4 THEN
+        v_warnings := v_warnings || format('Expected 4 finance governance cycle types, got %s', v_type_count);
     END IF;
-    IF v_phase_count < 17 THEN
-        v_warnings := v_warnings || format('Expected at least 17 phases, got %s', v_phase_count);
+    IF v_phase_count < 32 THEN
+        v_warnings := v_warnings || format('Expected at least 32 phases, got %s', v_phase_count);
     END IF;
-    IF v_category_count < 24 THEN
-        v_warnings := v_warnings || format('Expected at least 24 categories, got %s', v_category_count);
+    IF v_category_count < 56 THEN
+        v_warnings := v_warnings || format('Expected at least 56 categories, got %s', v_category_count);
     END IF;
-    IF v_company_count > 0 AND v_template_count < (v_company_count * 41) THEN
+    IF v_company_count > 0 AND v_template_count < (v_company_count * 84) THEN
         v_warnings := v_warnings || format(
             'Expected at least %s task templates for %s companies, got %s',
-            v_company_count * 41, v_company_count, v_template_count
+            v_company_count * 84, v_company_count, v_template_count
         );
     END IF;
-    IF v_company_count > 0 AND v_dependency_count < (v_company_count * 43) THEN
+    IF v_company_count > 0 AND v_dependency_count < (v_company_count * 88) THEN
         v_warnings := v_warnings || format(
             'Expected at least %s task dependencies for %s companies, got %s',
-            v_company_count * 43, v_company_count, v_dependency_count
+            v_company_count * 88, v_company_count, v_dependency_count
         );
     END IF;
-    IF v_rule_count < 6 THEN
-        v_warnings := v_warnings || format('Expected 6 carryforward rules, got %s', v_rule_count);
+    IF v_rule_count < 12 THEN
+        v_warnings := v_warnings || format('Expected 12 carryforward rules, got %s', v_rule_count);
     END IF;
     IF v_company_count = 0 THEN
         v_warnings := v_warnings || 'No active company codes found; task templates were not expanded.';
@@ -195,5 +195,3 @@ BEGIN
             v_tenant_code, v_company_count, v_template_count, v_dependency_count;
     END IF;
 END $apply_finance_close_governance$;
-
-

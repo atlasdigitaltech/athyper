@@ -6,7 +6,11 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { documentRuntimeFeatureFlags } from "@/lib/server/document-runtime-feature-flags";
-import type { MetaEntityField, MetaEntityOptionSource, MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
+import {
+  type MetaEntityField,
+  type MetaEntityOptionSource,
+  type MetaEntityRuntimeDescriptor,
+} from "@athyper/runtime-contracts";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { getMetaEntityRecordDetail, getMetaEntityRecordList } from "@/lib/server/meta-entity-records";
 import { getMetaEntityRuntimeDescriptor } from "@/lib/server/meta-entity-runtime";
@@ -61,7 +65,7 @@ export async function resolveRuntimeFieldOptions(input: RuntimeFieldOptionsInput
   }
   const field = input.descriptor.fields.find((item) => item.name === input.fieldName || item.columnName === input.fieldName);
   const source = field ? resolveDeclaredOptionSource(field) : undefined;
-  const sourceKind = source?.kind === "static"
+  const sourceKind = source?.kind === "static" || source?.kind === "lifecycle"
     ? "static"
     : source?.kind === "lookup" || (field && isLookupField(input.descriptor, field))
       ? "lookup"
@@ -111,6 +115,15 @@ async function resolveRuntimeFieldOptionsUncached({
     return NextResponse.json({
       options: filterOptions(includeCurrentValue(optionSource.options, currentValue), query),
       source: { kind: "static" },
+    });
+  }
+  if (optionSource?.kind === "lifecycle") {
+    return NextResponse.json({
+      options: filterOptions(
+        includeCurrentValue(lifecycleOptions(optionSource), currentValue),
+        query,
+      ),
+      source: { kind: "lifecycle", entityLifecycle: optionSource.entityLifecycle },
     });
   }
 
@@ -233,26 +246,6 @@ function resolveLookupDomains(
     candidates.push({ code: explicit, inferred: false });
   }
 
-  const dataType = field.dataType.toLowerCase();
-  if (!explicit && (field.name.endsWith("_type") || isStatusField(field.name) || dataType === "enum" || dataType === "lifecycle_state")) {
-    const schema = descriptor.source.tableSchema;
-    // Status fields often have entity-specific domains (`tenant.purchase_invoice_status`)
-    // before falling back to a shared one (`tenant.status`). Order matters.
-    if (isStatusField(field.name)) {
-      candidates.push(
-        { code: `${schema}.${descriptor.entityCode}_${field.name}`, inferred: true },
-        { code: `${schema}.${field.name}`, inferred: true },
-        { code: field.name, inferred: true },
-      );
-    } else {
-      candidates.push(
-        { code: `${schema}.${field.name}`, inferred: true },
-        { code: `${schema}.${descriptor.entityCode}_${field.name}`, inferred: true },
-        { code: field.name, inferred: true },
-      );
-    }
-  }
-
   const seen = new Set<string>();
   return candidates.filter((candidate) => {
     if (seen.has(candidate.code)) return false;
@@ -356,12 +349,18 @@ function staticOptionsFromField(
   if (optionSource?.kind === "static") {
     return filterOptions(includeCurrentValue(optionSource.options, currentValue), query);
   }
+  if (optionSource?.kind === "lifecycle") {
+    return filterOptions(
+      includeCurrentValue(lifecycleOptions(optionSource), currentValue),
+      query,
+    );
+  }
 
   const values = readStringArray(field.constraints, "options")
     ?? readStringArray(field.constraints, "values")
     ?? readStringArray(field.validation, "options")
     ?? readStringArray(field.validation, "values")
-    ?? fallbackLookupValues(field);
+    ?? [];
 
   const options = values.map((value) => ({
     value,
@@ -371,9 +370,14 @@ function staticOptionsFromField(
   return filterOptions(includeCurrentValue(options, currentValue), query);
 }
 
-function fallbackLookupValues(field: MetaEntityField): string[] {
-  if (isStatusField(field.name)) return ["active", "inactive", "draft", "archived"];
-  return [];
+function lifecycleOptions(
+  source: Extract<MetaEntityOptionSource, { kind: "lifecycle" }>,
+): RuntimeOption[] {
+  const byValue = new Map<string, RuntimeOption>();
+  for (const option of [...source.fallbackOptions, ...source.options]) {
+    byValue.set(option.value, option);
+  }
+  return [...byValue.values()];
 }
 
 function storedLookupValue(code: string, field: MetaEntityField): string {
@@ -714,7 +718,7 @@ function formatReferenceLabel(
 }
 
 function resolveReferenceEntity(
-  descriptor: MetaEntityRuntimeDescriptor,
+  _descriptor: MetaEntityRuntimeDescriptor,
   field: MetaEntityField,
   optionSource?: MetaEntityOptionSource,
 ): string | null {
@@ -727,12 +731,6 @@ function resolveReferenceEntity(
     ?? readString(field.referenceConfig, "entity");
   if (explicit) return explicit;
 
-  // Convention-over-config inference: `<name>_id` columns point at `<name>` entity.
-  const name = field.name;
-  if (name === "parent_id") return descriptor.entityCode;
-  if (name.startsWith("parent_") && name.endsWith("_id")) return name.slice("parent_".length, -"_id".length);
-  if (name.endsWith("_id")) return name.slice(0, -"_id".length);
-  if (field.dataType.toLowerCase() === "reference") return descriptor.entityCode;
   return null;
 }
 
@@ -749,10 +747,6 @@ function isSelfParentOption(
   if (fieldName !== "parent_id" && !fieldName.startsWith("parent_")) return false;
   const primaryKey = targetDescriptor?.storage?.primaryKey ?? "id";
   return recordValue(record, primaryKey) === currentRecordId;
-}
-
-function isStatusField(fieldName: string): boolean {
-  return fieldName === "status" || fieldName.endsWith("_status");
 }
 
 function includeCurrentValue(options: RuntimeOption[], value: string): RuntimeOption[] {

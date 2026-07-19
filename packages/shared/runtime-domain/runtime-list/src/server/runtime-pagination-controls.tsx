@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { runtimeListText } from "../core/resources";
 import { runtimeTableChrome } from "../core/table-chrome";
 
@@ -69,9 +70,9 @@ function RuntimePaginationActionControl({
 
   if (action.kind === "link") {
     return (
-      <a className={`${runtimeTableChrome.footerButton} ${placementClassName}`} href={action.href}>
+      <Link className={`${runtimeTableChrome.footerButton} ${placementClassName}`} href={action.href}>
         {content}
-      </a>
+      </Link>
     );
   }
 

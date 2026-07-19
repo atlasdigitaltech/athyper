@@ -12,6 +12,8 @@ export interface RealmPolicy {
   role: RealmRole;
   mandatoryMfa: boolean;
   hardwareKeyPreferred: boolean;
+  /** Minimum normalized assurance accepted by this realm/plane boundary. */
+  requiredAssuranceLevel: "aal1" | "aal2" | "aal3";
 }
 
 export interface PlaneConfig {
@@ -229,6 +231,7 @@ const SUPPORT_REALM_POLICY: RealmPolicy = {
   role: "support",
   mandatoryMfa: true,
   hardwareKeyPreferred: true,
+  requiredAssuranceLevel: "aal2",
 };
 
 export const PLANE_CONFIGS = {
@@ -261,6 +264,7 @@ export const PLANE_CONFIGS = {
         role: "native",
         mandatoryMfa: false,
         hardwareKeyPreferred: false,
+        requiredAssuranceLevel: "aal1",
       },
       SUPPORT_REALM_POLICY,
     ],
@@ -297,6 +301,7 @@ export const PLANE_CONFIGS = {
         role: "native",
         mandatoryMfa: false,
         hardwareKeyPreferred: false,
+        requiredAssuranceLevel: "aal1",
       },
       SUPPORT_REALM_POLICY,
     ],
@@ -333,6 +338,7 @@ export const PLANE_CONFIGS = {
         role: "native",
         mandatoryMfa: true,
         hardwareKeyPreferred: true,
+        requiredAssuranceLevel: "aal2",
       },
       SUPPORT_REALM_POLICY,
     ],

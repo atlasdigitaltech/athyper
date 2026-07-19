@@ -1,24 +1,27 @@
-﻿<#-- =======================================================================
+<#-- =======================================================================
      Neon Keycloak Login Theme — login-password.ftl
      Password step (KC 26.x username-first browser flow step 2).
      Left panel mirrors login.ftl exactly (neon logo + carousel).
      ======================================================================= -->
+<#include "_iam-context.ftl">
+<#include "_identity-field.ftl">
+<#include "_greeting.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Sign in — Neon</title>
-  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <title>${iamTitle("Sign in")}</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
 </head>
 <body>
-<div class="kc-page">
+<div class="iam-shell kc-page" data-plane="${iamPlane}">
 
-  <!-- ── Left branding panel ── -->
+  <!-- -- Left branding panel -- -->
   <div class="kc-panel-left">
 
     <#include "_neon-brand-logo.ftl">
@@ -72,7 +75,7 @@
     </div>
   </div><!-- /.kc-panel-left -->
 
-  <!-- ── Right form panel ── -->
+  <!-- -- Right form panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
       <div class="kc-form-card">
@@ -80,26 +83,9 @@
 
         <#include "_neon-brand-mobile.ftl">
 
-        <!-- Username chip -->
-        <#if auth?? && auth.attemptedUsername?has_content>
-        <div class="kc-username-chip">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-          <span>${auth.attemptedUsername}</span>
-          <a href="${url.loginRestartFlowUrl}" class="kc-chip-restart" data-kc-change-user title="Use another user ID">Change</a>
-        </div>
-        </#if>
-
         <!-- Header -->
-        <#assign _fn = (user.firstName)!"">
-        <#assign _ln = (user.lastName)!"">
         <div class="kc-header">
-          <#if _fn?has_content>
-          <h2>Welcome ${_fn?trim}<#if _ln?has_content> ${_ln?trim}</#if></h2>
-          <#elseif auth?? && auth.attemptedUsername?has_content>
-          <h2>Welcome ${auth.attemptedUsername}</h2>
-          <#else>
-          <h2>Welcome back</h2>
-          </#if>
+          <@iamGreeting verifiedName=(iamPresentationDisplayName!'') />
           <p>Sign in to your account</p>
         </div>
 
@@ -112,6 +98,9 @@
 
         <!-- Password form -->
         <form class="kc-form" action="${url.loginAction}" method="post">
+          <#if auth?? && auth.attemptedUsername?has_content>
+            <@iamLockedIdentity username=auth.attemptedUsername />
+          </#if>
           <div class="kc-field">
             <label for="password">${msg("password")}</label>
             <div class="kc-field-password">

@@ -4,6 +4,7 @@ import type { RequestHandler, Router } from "express";
 import busboy from "busboy";
 import { registerAttachmentRoutes } from "../attachments.route.js";
 import { ContentAttachmentService } from "../../services/attachment.service.js";
+import { resolveVerifiedRequestContext } from "@athyper/svc-shared";
 
 const mockedAuthResolve = {
   context: {
@@ -131,6 +132,48 @@ beforeEach(() => {
 });
 
 describe("upload multipart lifecycle", () => {
+  it("registers the combined attachment workspace read model", () => {
+    const get = vi.fn();
+    registerAttachmentRoutes(
+      {
+        get,
+        post: vi.fn(),
+        delete: vi.fn(),
+        patch: vi.fn(),
+        put: vi.fn(),
+      } as unknown as Router,
+      buildDeps() as never,
+    );
+
+    expect(get).toHaveBeenCalledWith(
+      "/documents/:docType/:id/attachment-workspace",
+      expect.any(Function),
+    );
+  });
+
+  it("passes the host-resolved tenant to the verified authorization resolver", async () => {
+    const parser = new EventEmitter() as MockBusboyParser;
+    // @ts-expect-error mocking helper
+    vi.mocked(busboy).mockReturnValueOnce(parser);
+    const readAuthenticatedContext = vi.fn(() => ({ tenantId: "tenant-a-id" }));
+    const handler = captureUploadHandler({
+      ...buildDeps(),
+      readAuthenticatedContext,
+    });
+    const req = buildFakeRequest();
+    const res = buildFakeResponse();
+
+    handler(req as never, res as never, vi.fn());
+    await vi.waitFor(() => {
+      expect(resolveVerifiedRequestContext).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        expect.objectContaining({ trustedTenantId: "tenant-a-id" }),
+      );
+    });
+    expect(readAuthenticatedContext).toHaveBeenCalledWith(req);
+  });
+
   it("returns NO_FILE when multipart body has no file part", async () => {
     const parser = new EventEmitter() as MockBusboyParser;
     // @ts-expect-error mocking helper

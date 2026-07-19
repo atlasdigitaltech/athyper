@@ -33,7 +33,9 @@ covers how the platform runs.
 
 | Doc | Scope |
 |---|---|
-| [env-file-contract.md](./env-file-contract.md) | Three-context env file model: bootstrap vs secrets, two-file merge order, host-dev translation |
+| [env-reference.md](./env-reference.md) | Complete per-variable reference — all env vars, local/staging/production values, secret flags, two-file model, config-layer architecture |
+| [kernel-config-reference.md](./kernel-config-reference.md) | Kernel config JSON per-field reference — IAM realm topology, feature flags, LOCKED sentinel, SUPERSTAR pattern, parity invariants |
+| [feature-parameter-reference.md](./feature-parameter-reference.md) | Runtime-reloadable feature parameter catalog — 109 parameters, resolution chain, tenant override how-to |
 | [scripts-reference.md](./scripts-reference.md) | Full reference for every script under `stack/scripts/` — parameters, exit codes, destructive flags |
 | [docker-services.md](./docker-services.md) | Complete reference for all Docker Compose services (images, ports, volumes, networks) |
 | [mesh-seed-db.md](./mesh-seed-db.md) | Mesh-specific DB provisioning — bounded DDL + tenant seed for the `athyper_mesh` database |

@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
-import { withFrameworkPhase } from "@athyper/adapter-telemetry";
+import {
+  setFrameworkCacheState,
+  withFrameworkPhase,
+} from "@athyper/adapter-telemetry";
 import type { ExecutionDescriptorV1 } from "@athyper/svc-metadata";
 import { buildEntityKeysetListCacheKey, stableEntityListCacheHash } from "../cache/list-cache.js";
 import { decodeKeysetCursor, encodeKeysetCursor } from "./keyset-cursor.js";
@@ -9,10 +12,13 @@ import type {
   EntityCountCache,
   EntityCountMode,
   EntityDetailResult,
+  EntityListExecutionResult,
   EntityListResult,
   EntityListResultCache,
   EntityQueryExecutor,
   EntityQueryFilter,
+  EntityQueryScopeExpansion,
+  EntityQueryScopeResolver,
   EntityQuerySort,
   GetEntityDetailCommand,
   ListEntitiesCommand,
@@ -29,6 +35,7 @@ export interface EntityQueryServiceDeps {
   readonly countCache?: EntityCountCache;
   readonly references?: ReferenceLabelResolver;
   readonly resultCache?: EntityListResultCache;
+  readonly scopeResolver?: EntityQueryScopeResolver;
 }
 
 export class EntityQueryService {
@@ -37,13 +44,21 @@ export class EntityQueryService {
   }
 
   async list(command: ListEntitiesCommand): Promise<EntityListResult> {
+    return (await this.listWithDiagnostics(command)).result;
+  }
+
+  async listWithDiagnostics(command: ListEntitiesCommand): Promise<EntityListExecutionResult> {
     return withFrameworkPhase("query", () => this.listMeasured(command));
   }
 
-  private async listMeasured(command: ListEntitiesCommand): Promise<EntityListResult> {
+  private async listMeasured(command: ListEntitiesCommand): Promise<EntityListExecutionResult> {
     assertContext(command);
     const limit = normalizeLimit(command.limit);
     const sort = compileSort(command.descriptor, command.sort);
+    const scopeExpansion = await this.deps.scopeResolver?.resolve({
+      context: command.context,
+      descriptor: command.descriptor,
+    });
     const cursor = command.cursor ? decodeKeysetCursor(command.cursor, this.deps.cursorSecret) : undefined;
     if (cursor && (cursor.entity !== command.descriptor.identity.entityCode
       || cursor.descriptorHash !== command.descriptor.identity.compiledHash
@@ -51,10 +66,16 @@ export class EntityQueryService {
       || cursor.values.length !== sort.length)) {
       throw new EntityQueryValidationError("CURSOR_DESCRIPTOR_MISMATCH", "Cursor does not match the active entity query contract.");
     }
-    const plan = compilePlan(command, sort, limit + 1, cursor?.values);
+    const plan = compilePlan(command, sort, limit + 1, cursor?.values, scopeExpansion);
     const resultCacheKey = buildResultKey(command, plan, limit, sort);
-    const cachedResult = await this.deps.resultCache?.get(resultCacheKey);
-    if (cachedResult) return cachedResult;
+    const cacheEnabled = command.resultCacheTtlSeconds !== 0;
+    const cachedResult = cacheEnabled
+      ? await this.deps.resultCache?.get(resultCacheKey)
+      : undefined;
+    if (cachedResult) {
+      setFrameworkCacheState("l2_hit");
+      return { result: cachedResult, cacheState: "hit" };
+    }
     const raw = await this.deps.executor.executeData(plan);
     const hasMore = raw.length > limit;
     const page = raw.slice(0, limit).map((row) => applyDescriptorMask(command.descriptor, row));
@@ -83,8 +104,12 @@ export class EntityQueryService {
         count_mode: countMode,
       },
     };
-    await this.deps.resultCache?.set(resultCacheKey, result);
-    return result;
+    if (cacheEnabled) {
+      await this.deps.resultCache?.set(resultCacheKey, result, command.resultCacheTtlSeconds);
+    }
+    const cacheState = cacheEnabled && this.deps.resultCache ? "miss" : "bypass";
+    setFrameworkCacheState(cacheState === "miss" ? "miss" : "bypass");
+    return { result, cacheState };
   }
 
   async detail(command: GetEntityDetailCommand): Promise<EntityDetailResult> {
@@ -94,7 +119,17 @@ export class EntityQueryService {
   private async detailMeasured(command: GetEntityDetailCommand): Promise<EntityDetailResult> {
     assertContext(command);
     const field = fieldByColumn(command.descriptor, command.descriptor.storage.primaryKey);
-    const plan = compilePlan({ ...command, filters: [{ field, operator: "eq", value: command.id }] }, compileSort(command.descriptor), 1);
+    const scopeExpansion = await this.deps.scopeResolver?.resolve({
+      context: command.context,
+      descriptor: command.descriptor,
+    });
+    const plan = compilePlan(
+      { ...command, filters: [{ field, operator: "eq", value: command.id }] },
+      compileSort(command.descriptor),
+      1,
+      undefined,
+      scopeExpansion,
+    );
     const [row] = await this.deps.executor.executeData(plan);
     if (!row) return { data: null };
     const masked = applyDescriptorMask(command.descriptor, row);
@@ -126,6 +161,7 @@ function compilePlan(
   sort: readonly (EntityQuerySort & { column: string })[],
   limit: number,
   boundary?: readonly unknown[],
+  scopeExpansion?: EntityQueryScopeExpansion,
 ): CompiledEntityQueryPlan {
   const { descriptor, context } = command;
   if (command.offset !== undefined && (!Number.isSafeInteger(command.offset) || command.offset < 0)) {
@@ -143,7 +179,7 @@ function compilePlan(
     ? [{ column: tenantColumn, operator: "eq", value: context.tenantId }]
     : [];
   for (const filter of command.filters ?? []) predicates.push(compileFilter(descriptor, filter));
-  addVerifiedScopePredicates(predicates, descriptor, context);
+  addVerifiedScopePredicates(predicates, descriptor, context, scopeExpansion);
   addScopePredicate(predicates, descriptor, "organization_id", context.organizationId);
   const search = command.search?.trim();
   return Object.freeze({
@@ -226,6 +262,7 @@ function addVerifiedScopePredicates(
   target: QueryPredicate[],
   descriptor: ExecutionDescriptorV1,
   context: ListEntitiesCommand["context"],
+  expansion?: EntityQueryScopeExpansion,
 ): void {
   const mode = descriptor.policy.companyScopeMode ?? "none";
   const hasCompany = [...descriptor.fields.values()].some((field) => field.column === "company_code_id");
@@ -238,8 +275,19 @@ function addVerifiedScopePredicates(
     target.push({ column: "legal_entity_id", operator: "eq", value: context.legalEntityId });
     return;
   }
-  if ((context.legalEntityId && hasCompany) || (context.companyCodeId && hasLegalEntity)) {
-    throw new EntityQueryValidationError("SCOPE_PLAN_UNSUPPORTED", "Verified organization scope requires a compiled company/legal-entity expansion for this entity.");
+  if (context.legalEntityId && hasCompany) {
+    if (!expansion?.companyCodeIds) {
+      throw new EntityQueryValidationError("SCOPE_PLAN_UNSUPPORTED", "Verified organization scope requires a compiled legal-entity to company-code expansion for this entity.");
+    }
+    target.push({ column: "company_code_id", operator: "in", value: expansion.companyCodeIds });
+    return;
+  }
+  if (context.companyCodeId && hasLegalEntity) {
+    if (!expansion?.legalEntityIds) {
+      throw new EntityQueryValidationError("SCOPE_PLAN_UNSUPPORTED", "Verified organization scope requires a compiled company-code to legal-entity expansion for this entity.");
+    }
+    target.push({ column: "legal_entity_id", operator: "in", value: expansion.legalEntityIds });
+    return;
   }
   if (mode === "none" || mode === "full") return;
   if (mode === "subtree") {

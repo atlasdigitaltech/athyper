@@ -6,6 +6,7 @@ vi.mock("@/lib/server/session", () => ({
 }));
 vi.mock("@/lib/server/meta-entity-runtime", () => ({
   getMetaEntityRuntimeDescriptor: vi.fn(),
+  getMetaEntityRuntimeDescriptorCacheState: vi.fn(() => "cold"),
 }));
 vi.mock("@/lib/server/meta-entity-records", () => ({
   getMetaEntityRecordList: vi.fn(),
@@ -99,6 +100,9 @@ describe("GET /api/runtime/v1/entities/[entity]", () => {
     expect(body.records).toHaveLength(2);
     expect(body.pagination).toMatchObject({ total: 2 });
     expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("X-Athyper-Cache")).toBe("bypass");
+    expect(res.headers.get("Server-Timing")).toContain("descriptor;dur=");
+    expect(res.headers.get("Server-Timing")).toContain("total;dur=");
   });
 
   it("preserves offset page and query-mode controls on the record-list fetch", async () => {

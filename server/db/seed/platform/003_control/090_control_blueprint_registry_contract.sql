@@ -354,9 +354,9 @@ VALUES (
         'blueprints/modules/governance/010_finance_close_governance_templates.sql',
         'blueprints/modules/governance/099_apply.sql'
     ],
-    'Finance close governance templates for monthly soft close and year-end hard close. Seeds MONTHLY_CLOSE and YEAR_END_CLOSE cycle types, phases, categories, task templates, dependencies, and carryforward policy.',
+    'Finance governance templates for posting readiness, opening balances, monthly soft close, and year-end hard close. Seeds FIN_SETUP_READINESS, OPENING_BALANCE, MONTHLY_CLOSE, and YEAR_END_CLOSE cycle types.',
     jsonb_build_object(
-        'cycle_types', ARRAY['MONTHLY_CLOSE','YEAR_END_CLOSE'],
+        'cycle_types', ARRAY['FIN_SETUP_READINESS','OPENING_BALANCE','MONTHLY_CLOSE','YEAR_END_CLOSE'],
         'period_policy', 'Open current month, soft-close prior months, hard-close at year-end',
         'finance_model', jsonb_build_object(
             'current_month', 'open',
@@ -435,4 +435,3 @@ ON CONFLICT (code) DO UPDATE SET
     -- created_by excluded so DO UPDATE preserves the original creator id.
 
 END $$;
-

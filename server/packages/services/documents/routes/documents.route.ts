@@ -39,6 +39,10 @@ export interface DocumentsRouteDeps {
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
+  /** Reads the tenant identity established by the authenticated host boundary. */
+  readAuthenticatedContext?: (req: Parameters<RequestHandler>[0]) => {
+    tenantId?: string;
+  } | undefined;
   objectStorage?: {
     adapter: ObjectStorageAdapter;
     bucket:  string;

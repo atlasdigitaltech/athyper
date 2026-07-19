@@ -56,10 +56,10 @@ export const headerTabBarClass =
   "flex min-h-11 items-center gap-5 overflow-hidden border-t border-border bg-card px-4 sm:px-5 lg:px-6";
 
 export const headerTabButtonClass =
-  "relative h-11 shrink-0 whitespace-nowrap text-sm font-medium transition-colors";
+  "relative h-11 shrink-0 whitespace-nowrap text-base font-medium transition-colors";
 
 export const headerTabMoreButtonClass =
-  "relative flex h-11 shrink-0 items-center gap-1 whitespace-nowrap text-sm font-medium transition-colors";
+  "relative flex h-11 shrink-0 items-center gap-1 whitespace-nowrap text-base font-medium transition-colors";
 
 export const headerTabCountBadgeClass =
   "ml-1.5 rounded bg-muted px-1 py-0.5 text-sm font-medium tabular-nums text-muted-foreground";

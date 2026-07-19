@@ -17,7 +17,7 @@
 //   middleware adds the route-aware checks.
 
 import type { Request, Response, NextFunction } from "express";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 
 import { tryGetContext } from "../kernel/request-context.js";
 import {
@@ -25,7 +25,12 @@ import {
   loadRequiredActionMatrix,
   type CrossCheckReporter,
 } from "../auth/auth-pipeline.js";
-import { resolveRequiredActionsEnforcement } from "@athyper/auth-common";
+import {
+  evaluateFederatedMfaPolicy,
+  normalizeFederatedAssurance,
+  resolveRequiredActionsEnforcement,
+  type TenantMfaTrustPolicy,
+} from "@athyper/auth-common";
 
 // ─── Middleware factory ──────────────────────────────────────────────────────
 
@@ -159,6 +164,42 @@ export function createRequirePlatformContext(
         return;
       }
 
+      const assurance = normalizeFederatedAssurance(claims);
+      const mfaTrustPolicy = await resolveRuntimeMfaTrustPolicy(
+        deps.db,
+        ctx?.tenantId,
+        ctx?.planeKey,
+        ctx?.realmKey ?? ctx?.realm,
+        assurance.identityProvider,
+      );
+      const assuranceDecision = evaluateFederatedMfaPolicy(assurance, mfaTrustPolicy, {
+        plane: ctx?.planeKey ?? "neon",
+        requiredAssurance: ctx?.planeKey === "admin" ? "aal2" : "aal1",
+        privileged: ctx?.planeKey === "admin",
+      });
+      if (assuranceDecision.athyperMfaRequired) {
+        deps.logger.warn("require_platform_context_assurance_rejected", {
+          requestId: ctx?.requestId,
+          plane: ctx?.planeKey,
+          tenantId: ctx?.tenantId,
+          providerAlias: assurance.identityProvider,
+          mfaTrustPolicy,
+          assuranceLevel: assurance.assuranceLevel,
+          externalAssuranceLevel: assurance.externalAssuranceLevel,
+          keycloakAssuranceLevel: assurance.keycloakAssuranceLevel,
+          reason: assuranceDecision.reason,
+        });
+        res.status(403).json({
+          error: "AUTH_ASSURANCE_REQUIRED",
+          message: ctx?.planeKey === "admin"
+            ? "AAL2 authentication is required for Admin access."
+            : "Additional Athyper verification is required.",
+          requestId: ctx?.requestId,
+          requiredAssurance: assuranceDecision.requiredAssurance,
+        });
+        return;
+      }
+
       // Pipeline — verifyToken already ran the cross-check step (mode "off"
       // here means: don't re-run it). We still need the AUTHORIZED + required-
       // actions checks, which are route-aware and therefore live here.
@@ -226,4 +267,32 @@ export function createRequirePlatformContext(
       next();
     })();
   };
+}
+
+async function resolveRuntimeMfaTrustPolicy(
+  db: Kysely<any>,
+  tenantId: string | undefined,
+  plane: "neon" | "mesh" | "admin" | undefined,
+  realmKey: string | undefined,
+  providerAlias: string | null,
+): Promise<TenantMfaTrustPolicy> {
+  if (!providerAlias || !tenantId || !plane) return "never";
+  try {
+    const result = await sql<{ mfa_trust_policy: TenantMfaTrustPolicy }>`
+      SELECT mfa_trust_policy
+      FROM master.tenant_identity_provider
+      WHERE tenant_id = ${tenantId}::uuid
+        AND keycloak_alias = ${providerAlias}
+        AND realm_key = ${realmKey ?? "athyper"}
+        AND enabled = true
+        AND ${plane} = ANY(allowed_planes)
+      LIMIT 1
+    `.execute(db);
+    const policy = result.rows[0]?.mfa_trust_policy;
+    return policy === "conditional" || policy === "trusted-assurance" ? policy : "never";
+  } catch {
+    // A missing/unavailable registry must not turn external identity evidence
+    // into authorization or trusted MFA.
+    return "never";
+  }
 }

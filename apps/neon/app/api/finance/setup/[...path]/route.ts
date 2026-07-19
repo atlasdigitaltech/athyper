@@ -2,7 +2,7 @@
  * BFF relay for Finance Setup Workbench endpoints.
  *
  * Forwards /api/finance/setup/... to the RUNTIME_API_URL with the neon session.
- * Read-only in Phase 1 — only GET is exposed here.
+ * Relays read and mutation methods while preserving tenant/session headers.
  */
 
 import "server-only";
@@ -21,11 +21,17 @@ async function forward(request: Request, path: string[]): Promise<NextResponse> 
 
   const suffix = path.map((p) => encodeURIComponent(p)).join("/");
   const search = new URL(request.url).search; // includes leading '?'
+  const method = request.method.toUpperCase();
+  const headers = new Headers(buildRuntimeHeaders(session));
+  const contentType = request.headers.get("content-type");
+  if (contentType) headers.set("content-type", contentType);
+  const requestBody = method === "GET" || method === "HEAD" ? undefined : await request.text();
   const upstream = await fetch(
     buildRuntimeUrl(`/api/finance/setup/${suffix}${search}`),
     {
-      method:  "GET",
-      headers: buildRuntimeHeaders(session),
+      method,
+      headers,
+      body: requestBody || undefined,
       cache:   "no-store",
     },
   );
@@ -41,6 +47,26 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ path: string[] }> },
 ) {
+  const { path } = await context.params;
+  return forward(request, path);
+}
+
+export async function POST(request: Request, context: { params: Promise<{ path: string[] }> }) {
+  const { path } = await context.params;
+  return forward(request, path);
+}
+
+export async function PUT(request: Request, context: { params: Promise<{ path: string[] }> }) {
+  const { path } = await context.params;
+  return forward(request, path);
+}
+
+export async function PATCH(request: Request, context: { params: Promise<{ path: string[] }> }) {
+  const { path } = await context.params;
+  return forward(request, path);
+}
+
+export async function DELETE(request: Request, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
   return forward(request, path);
 }

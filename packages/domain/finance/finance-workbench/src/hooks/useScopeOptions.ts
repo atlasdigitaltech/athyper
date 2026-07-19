@@ -68,6 +68,8 @@ export interface CompanyOption {
   name: string;
   functionalCurrency: string;
   legalEntityId: string;
+  legalEntityCode?: string;
+  legalEntityName?: string;
   /** 1–12. Defines how period numbers map to calendar months. */
   fiscalYearStartMonth: number;
 }
@@ -89,6 +91,13 @@ export interface EntityOption {
 export interface ScopeOptionsData {
   companies: CompanyOption[];
   entities: EntityOption[];
+  tenantId: string | null;
+  tenantCode: string | null;
+  tenantName: string | null;
+  activeLegalEntityId: string | null;
+  activeLegalEntityCode: string | null;
+  activeLegalEntityName: string | null;
+  defaultCompanyCode: string | null;
 }
 
 export interface LedgerBookOption {
@@ -102,18 +111,50 @@ export interface LedgerBookOption {
 }
 
 async function fetchScopeOptions(): Promise<ScopeOptionsData> {
-  const [companiesRes, entitiesRes] = await Promise.all([
-    fetch("/api/finance/master/companies"),
-    fetch("/api/finance/master/entities"),
-  ]);
-  if (!companiesRes.ok || !entitiesRes.ok) {
+  const response = await fetch("/api/finance/master/scope-options", { cache: "no-store" });
+  if (!response.ok) {
     throw new Error("Failed to load scope options");
   }
-  const [companies, entities] = await Promise.all([
-    companiesRes.json() as Promise<CompanyOption[]>,
-    entitiesRes.json() as Promise<EntityOption[]>,
-  ]);
-  return { companies, entities };
+  const payload = await response.json() as {
+    tenantId: string | null;
+    tenantCode: string | null;
+    tenantName: string | null;
+    activeLegalEntityId: string | null;
+    activeLegalEntityCode: string | null;
+    activeLegalEntityName: string | null;
+    defaultCompanyCode: string | null;
+    legalEntities: Array<{ id: string; code: string; name: string }>;
+    companies: CompanyOption[];
+  };
+  const companyCodesByEntity = new Map<string, string[]>();
+  for (const company of payload.companies) {
+    const codes = companyCodesByEntity.get(company.legalEntityId) ?? [];
+    codes.push(company.code);
+    companyCodesByEntity.set(company.legalEntityId, codes);
+  }
+  const entities: EntityOption[] = payload.legalEntities.map((entity) => ({
+    id: entity.id,
+    code: entity.code,
+    name: entity.name,
+    entityType: "legal_entity",
+    consolidationMethod: null,
+    parentEntityId: null,
+    countryCode: "",
+    functionalCurrency: "",
+    reportingCurrency: "",
+    companyCodes: companyCodesByEntity.get(entity.id) ?? [],
+  }));
+  return {
+    companies: payload.companies,
+    entities,
+    tenantId: payload.tenantId,
+    tenantCode: payload.tenantCode,
+    tenantName: payload.tenantName,
+    activeLegalEntityId: payload.activeLegalEntityId,
+    activeLegalEntityCode: payload.activeLegalEntityCode,
+    activeLegalEntityName: payload.activeLegalEntityName,
+    defaultCompanyCode: payload.defaultCompanyCode,
+  };
 }
 
 export function useScopeOptions() {

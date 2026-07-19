@@ -11,7 +11,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_REALM: "The sign-in realm is not valid for this app.",
   LOGIN_EXPIRED: "The sign-in session expired. Please start again.",
   MFA_REQUIRED: "Step-up verification is required before continuing.",
-  MFA_VERIFIER_UNAVAILABLE: "Verification is temporarily unavailable. Please try again shortly.",
   MISSING_CONTEXT: "Choose a valid access context before continuing.",
   NO_ACCESS_CONTEXT: "No active access context was found for this app.",
   NO_PLATFORM_ACCESS: "Your account is not authorized for this app.",

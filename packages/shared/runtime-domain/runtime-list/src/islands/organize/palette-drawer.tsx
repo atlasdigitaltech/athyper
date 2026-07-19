@@ -6,6 +6,7 @@ import type { ComponentType, SVGProps } from "react";
 import { X } from "lucide-react";
 import {
   DrawerShell,
+  DrawerHeaderTitle,
   Sheet,
   SheetClose,
   SheetContent,
@@ -47,12 +48,7 @@ export function PaletteDrawer({
 }: PaletteDrawerProps) {
   const isDesktop = useDesktopMediaQuery();
   const overlayClassName = backdrop === "transparent" ? "bg-transparent backdrop-blur-0" : undefined;
-  const titleNode = (
-    <span className="flex min-w-0 items-center gap-2">
-      {Icon && <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />}
-      <span className="truncate">{title}</span>
-    </span>
-  );
+  const titleNode = <DrawerHeaderTitle title={title} icon={Icon} />;
   const restoreFocus = (event: Event) => {
     event.preventDefault();
     anchorRef.current?.focus();
@@ -95,8 +91,8 @@ export function PaletteDrawer({
           ? "h-full w-full gap-0 p-0"
           : "h-[75dvh] max-h-[75dvh] gap-0 rounded-t-xl p-0"}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b px-4">
-          <SheetTitle className="flex min-w-0 items-center gap-2 text-base font-medium">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b bg-background px-4">
+          <SheetTitle className="min-w-0">
             {titleNode}
           </SheetTitle>
           <SheetClose asChild>
@@ -109,10 +105,10 @@ export function PaletteDrawer({
             </button>
           </SheetClose>
         </div>
-        <div className={workspace ? "min-h-0 flex-1 overflow-hidden" : "min-h-0 flex-1 overflow-y-auto p-4"}>
+        <div className={workspace ? "min-h-0 flex-1 overflow-hidden bg-muted/20" : "min-h-0 flex-1 overflow-y-auto bg-muted/20 p-4"}>
           {children}
         </div>
-        {footer && <div className="shrink-0 border-t bg-popover p-4">{footer}</div>}
+        {footer && <div className="shrink-0 border-t bg-background p-4">{footer}</div>}
       </SheetContent>
     </Sheet>
   );

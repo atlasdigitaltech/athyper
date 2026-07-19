@@ -5,9 +5,14 @@ import { Reply, Pencil, Trash2, Flag, Check, Loader2, MoreHorizontal, Link2, Glo
 import type { JSONContent } from "@tiptap/core";
 
 import { Button } from "@athyper/ui/primitives";
+import { DRAWER_CONTROL, DRAWER_ITEM_TITLE, DRAWER_META } from "@athyper/ui/typography";
 import { cn } from "@athyper/theme/utils";
 import { getCsrfToken } from "@athyper/runtime-shared/client";
-import { useCommentActions, type EntityComment } from "../hooks/collab";
+import {
+  useCommentActions,
+  type CommentAttachmentSummary,
+  type EntityComment,
+} from "../hooks/collab";
 
 import { CommentForm } from "./comment-form";
 import { CommentReactions } from "./comment-reactions";
@@ -15,7 +20,6 @@ import { CommentThread, MAX_DEPTH, type CommentCardProps } from "./comment-threa
 import { IntentBadge } from "./intent-badge";
 import { RichCommentComposer } from "./rich-comment-composer";
 import { RichCommentRenderer } from "./rich-comment-renderer";
-import { useCommentAttachmentList } from "../hooks/attachments";
 import { RenderedAttachmentChip, RenderedImageChip } from "../attachments/attachment-chip";
 
 export type { CommentCardProps };
@@ -80,9 +84,8 @@ function VisibilityChip({ visibility }: { visibility: string }) {
 
 // ── Attachments strip ─────────────────────────────────────────────────────────
 
-function CommentAttachments({ commentId }: { commentId: string }) {
-  const { items, isLoading } = useCommentAttachmentList(commentId);
-  if (isLoading || items.length === 0) return null;
+function CommentAttachments({ items }: { items: CommentAttachmentSummary[] }) {
+  if (items.length === 0) return null;
 
   const images = items.filter((i) => i.contentType.startsWith("image/"));
   const files  = items.filter((i) => !i.contentType.startsWith("image/"));
@@ -162,23 +165,23 @@ function OverflowMenu({
           <button
             type="button"
             onClick={() => { onEdit(); setOpen(false); }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted"
+            className="flex w-full items-center gap-2 px-3 py-2 text-base text-foreground hover:bg-muted"
           >
-            <Pencil className="size-3.5" />Edit
+            <Pencil className="size-4" />Edit
           </button>
           <button
             type="button"
             onClick={() => { void handleCopyLink(); }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted"
+            className="flex w-full items-center gap-2 px-3 py-2 text-base text-foreground hover:bg-muted"
           >
-            <Link2 className="size-3.5" />Copy link
+            <Link2 className="size-4" />Copy link
           </button>
           <button
             type="button"
             onClick={() => { onFlag(); setOpen(false); }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-foreground hover:bg-muted"
+            className="flex w-full items-center gap-2 px-3 py-2 text-base text-foreground hover:bg-muted"
           >
-            <Flag className="size-3.5" />Flag
+            <Flag className="size-4" />Flag
           </button>
 
           {/* Divider before destructive action */}
@@ -187,9 +190,9 @@ function OverflowMenu({
           <button
             type="button"
             onClick={() => { onDelete(); setOpen(false); }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-destructive hover:bg-destructive/10"
+            className="flex w-full items-center gap-2 px-3 py-2 text-base text-destructive hover:bg-destructive/10"
           >
-            <Trash2 className="size-3.5" />Delete
+            <Trash2 className="size-4" />Delete
           </button>
         </div>
       )}
@@ -204,6 +207,7 @@ export function CommentCard({
   depth,
   entityType,
   entityId,
+  onMutated,
   renderCard,
 }: CommentCardProps) {
   const [showReply, setShowReply]   = useState(false);
@@ -235,21 +239,24 @@ export function CommentCard({
       await replyToComment({ parentId: comment.id, commentText: text, attachmentIds, contentJson, contentHtml, visibility });
       setHasReplied(true);
       setShowReply(false);
+      await onMutated?.();
     },
-    [comment.id, replyToComment],
+    [comment.id, onMutated, replyToComment],
   );
 
   const handleEditSave = useCallback(
     async (text: string, _attachmentIds: string[], contentJson?: JSONContent, contentHtml?: string) => {
       await updateComment({ id: comment.id, commentText: text, contentJson, contentHtml });
       setIsEditing(false);
+      await onMutated?.();
     },
-    [comment.id, updateComment],
+    [comment.id, onMutated, updateComment],
   );
 
   const handleDelete = useCallback(async () => {
     await deleteComment({ id: comment.id });
-  }, [comment.id, deleteComment]);
+    await onMutated?.();
+  }, [comment.id, deleteComment, onMutated]);
 
   const richComment = comment as EntityComment & { contentFormat?: string; contentHtml?: string | null };
 
@@ -275,15 +282,15 @@ export function CommentCard({
           {/* Header row: name · role chip · time · edited + ⋯ menu */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-sm font-medium text-foreground leading-snug">
+              <span className={cn(DRAWER_ITEM_TITLE, "leading-snug")}>
                 {comment.commenterName ?? "Unknown"}
               </span>
               {comment.commenterRole && <RoleChip role={comment.commenterRole} />}
               <IntentBadge intent={comment.commentIntent} />
               <VisibilityChip visibility={comment.visibility} />
-              <span className="text-xs text-muted-foreground">{timeAgo(comment.createdAt)}</span>
+              <span className={DRAWER_META}>{timeAgo(comment.createdAt)}</span>
               {comment.updatedAt && (
-                <span className="text-xs text-muted-foreground">· edited</span>
+                <span className={DRAWER_META}>· edited</span>
               )}
             </div>
 
@@ -322,23 +329,27 @@ export function CommentCard({
           )}
 
           {/* Attachments */}
-          {!isEditing && <CommentAttachments commentId={comment.id} />}
+          {!isEditing && <CommentAttachments items={comment.attachments ?? []} />}
 
           {/* Reactions + Reply */}
           {!isEditing && (
             <div className="mt-2 flex items-center gap-3">
-              <CommentReactions commentId={comment.id} />
+              <CommentReactions
+                commentId={comment.id}
+                initialReactions={comment.reactions ?? []}
+                onMutated={onMutated}
+              />
               {depth < MAX_DEPTH && (
                 <button
                   type="button"
                   onClick={() => setShowReply((v) => !v)}
-                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  className={cn("flex items-center gap-1 hover:text-foreground transition-colors", DRAWER_CONTROL)}
                 >
                   <Reply className="size-3" />Reply
                 </button>
               )}
               {flagDone && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <span className={cn("flex items-center gap-1", DRAWER_META)}>
                   <Flag className="size-3 text-warning" />Flagged
                 </span>
               )}
@@ -409,6 +420,8 @@ export function CommentCard({
               entityType={entityType}
               entityId={entityId}
               replyCount={hasReplied ? Math.max(1, comment.replyCount ?? 0) : comment.replyCount}
+              replies={comment.replies ?? []}
+              onMutated={onMutated}
               renderCard={renderCard}
             />
           )}

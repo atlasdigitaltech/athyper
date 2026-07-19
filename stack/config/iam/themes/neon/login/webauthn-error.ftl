@@ -1,24 +1,25 @@
-﻿<#-- Neon Theme — webauthn-error.ftl -->
+<#-- Neon Theme � webauthn-error.ftl -->
+<#include "_iam-context.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Security Key Error — Neon</title>
-  <link rel="icon" type="image/svg+xml" href="${url.resourcesPath}/img/neon-icon.svg" />
-  <link rel="shortcut icon" href="${url.resourcesPath}/img/favicon.ico" />
+  <title>${iamTitle("Security Key Error")}</title>
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css"/>
 </head>
 <body>
-<div class="kc-page">
+<div class="iam-shell kc-page" data-plane="${iamPlane}">
   <div class="kc-panel-left">
     <#include "_neon-brand-logo.ftl">
     <div class="kc-carousel">
       <div class="kc-slide active">
         <p class="kc-slide-ws">Security</p>
         <h3>Protect Every<br>Access Point.</h3>
-        <p class="kc-slide-desc">Hardware security keys and passkeys provide phishing-resistant authentication — the strongest second factor available.</p>
+        <p class="kc-slide-desc">Hardware security keys and passkeys provide phishing-resistant authentication � the strongest second factor available.</p>
       </div>
     </div>
     <div class="kc-dots"><button class="kc-dot active"></button></div>

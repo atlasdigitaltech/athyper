@@ -37,7 +37,7 @@ import {
   setCachePrivate,
 } from "@athyper/svc-shared";
 import { checkPermission, requireAllow } from "../permission/permission.service.js";
-import { requireStepUp } from "../mfa/step-up.service.js";
+import { createStepUpBinding, requireStepUp } from "../mfa/step-up.service.js";
 import type { CacheClient } from "../session/session.service.js";
 import { incrementRateLimit } from "@athyper/svc-shared";
 
@@ -61,7 +61,7 @@ async function resolveAuth(
   res: Parameters<RequestHandler>[1],
   db: Kysely<AnyDb>,
   auth: CcaRoutesDeps["auth"],
-): Promise<{ sub: string; tenantId: string; principalId: string } | null> {
+): Promise<{ claims: Record<string, unknown>; sub: string; tenantId: string; principalId: string } | null> {
   const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
   if (!claims) return null;
 
@@ -84,7 +84,7 @@ async function resolveAuth(
     return null;
   }
 
-  return { sub, tenantId, principalId };
+  return { claims, sub, tenantId, principalId };
 }
 
 async function enforceCcaWriteRateLimit(
@@ -237,7 +237,7 @@ export function createCcaRoutes(router: Router, deps: CcaRoutesDeps): Router {
       if (!await enforceCcaWriteRateLimit(cache, res, a.tenantId, a.sub, "company_code_access_grant")) return;
 
       // Require step-up
-      const stepUpOk = await requireStepUp(cache, a.sub, a.tenantId, "iam_admin", res);
+      const stepUpOk = await requireStepUp(cache, createStepUpBinding(a.claims, a.sub, a.tenantId, "iam_admin"), res);
       if (!stepUpOk) return;
 
       // Permission check
@@ -316,7 +316,7 @@ export function createCcaRoutes(router: Router, deps: CcaRoutesDeps): Router {
       if (!await enforceCcaWriteRateLimit(cache, res, a.tenantId, a.sub, "company_code_access_revoke")) return;
 
       // Require step-up
-      const stepUpOk = await requireStepUp(cache, a.sub, a.tenantId, "iam_admin", res);
+      const stepUpOk = await requireStepUp(cache, createStepUpBinding(a.claims, a.sub, a.tenantId, "iam_admin"), res);
       if (!stepUpOk) return;
 
       // Permission check
