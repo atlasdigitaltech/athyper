@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { AlertTriangle, Building2, BookOpen, CalendarDays, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { AlertTriangle, ArrowRight, Building2, BookOpen, CalendarDays, CircleDollarSign, Coins, Landmark, ReceiptText, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button, Skeleton } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
+import { SurfaceHeader } from "@athyper/surface-kit";
+import { setupDomainPath, setupScopePath } from "@athyper/runtime-contracts";
 import { cn } from "@athyper/theme/utils";
 import { useCompanyHub } from "../../hooks/useCompanyHub";
 import { useFinanceSetupConflicts } from "../../hooks/useFinanceSetupConflicts";
@@ -12,6 +15,9 @@ import { PostabilityChip } from "./PostabilityChip";
 import { ReadinessJourney } from "./ReadinessJourney";
 import { NeedsAttentionInbox } from "./NeedsAttentionInbox";
 import { WorkspaceCards } from "./WorkspaceCards";
+import { resolveAccessibleCompany, resolveCompanyEntryMode } from "../../lib/company-selection";
+import { CertificationReadinessPanel } from "./CertificationReadinessPanel";
+import { FINANCE_SETUP_WORKSPACE } from "../../lib/finance-setup.workspace";
 
 export interface CompanyHubViewProps {
   companyCode: string;
@@ -32,9 +38,7 @@ export interface CompanyHubViewProps {
 export function CompanyHubView({ companyCode }: CompanyHubViewProps) {
   const scopeOptions = useScopeOptions();
 
-  const requestedCompany = scopeOptions.data?.companies.find(
-    (company) => company.code.toLowerCase() === companyCode.toLowerCase(),
-  );
+  const requestedCompany = resolveAccessibleCompany(scopeOptions.data?.companies ?? [], companyCode);
   if (scopeOptions.isLoading && !scopeOptions.data) {
     return <PageFrame><HubSkeleton /></PageFrame>;
   }
@@ -86,31 +90,27 @@ function CompanyHubContent({ companyCode }: CompanyHubViewProps) {
   return (
     <PageFrame>
       <div className="flex flex-col gap-6 pb-10">
-        {/* Header */}
-        <header className="flex flex-col gap-3 rounded-lg border bg-card p-5 md:flex-row md:items-start md:justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">Finance Setup</span>
-            <div className="flex flex-wrap items-center gap-3">
-              <Building2 className="h-5 w-5 text-muted-foreground" aria-hidden />
-              <h1 className="text-xl font-semibold">{hub.companyName} ({hub.companyCode})</h1>
-              <Button asChild variant="outline" size="sm">
-                <a href="/finance/setup">Change company</a>
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-start gap-2 md:items-end">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <BookOpen className="h-3 w-3" aria-hidden />
-                Book: <span className="font-medium text-foreground">{hub.currentBookLabel}</span>
-              </span>
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <CalendarDays className="h-3 w-3" aria-hidden />
-                FY{hub.currentFiscalYear} · P{String(hub.currentPeriodNumber).padStart(2, "0")}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
+        <SurfaceHeader
+          kind="workspace"
+          back={{ label: "Finance", href: "/finance" }}
+          eyebrow="Finance Setup"
+          leading={<Building2 className="h-5 w-5" aria-hidden />}
+          title={`${hub.companyName} (${hub.companyCode})`}
+          facts={[
+            {
+              key: "book",
+              label: "Book:",
+              value: hub.currentBookLabel,
+              icon: <BookOpen className="h-3.5 w-3.5" />,
+            },
+            {
+              key: "period",
+              value: `FY${hub.currentFiscalYear} · P${String(hub.currentPeriodNumber).padStart(2, "0")}`,
+              icon: <CalendarDays className="h-3.5 w-3.5" />,
+            },
+          ]}
+          actions={(
+            <>
               <PostabilityChip
                 chip={hub.periodPostability.chip}
                 reasonCode={hub.periodPostability.reasonCode}
@@ -134,9 +134,32 @@ function CompanyHubContent({ companyCode }: CompanyHubViewProps) {
               >
                 <RefreshCw className={cn("h-3.5 w-3.5", hubQuery.isFetching && "animate-spin")} aria-hidden />
               </Button>
-            </div>
-          </div>
-        </header>
+              <Button asChild variant="outline" size="sm">
+                <a href="/finance/setup">Change company</a>
+              </Button>
+            </>
+          )}
+          navigation={[
+            {
+              key: "overview",
+              label: "Overview",
+              href: companySetupOverviewHref(companyCode),
+              active: true,
+            },
+            ...FINANCE_SETUP_WORKSPACE.domains.map((domain) => ({
+              key: domain.code,
+              label: domain.label,
+              href: setupDomainPath(
+                FINANCE_SETUP_WORKSPACE,
+                { type: "company_code" as const, code: companyCode },
+                domain,
+              ),
+            })),
+          ]}
+          navigationLabel="Finance setup domains"
+        />
+
+        <SetupDomainChooser companyCode={companyCode} />
 
         {/* Readiness Journey */}
         {hub.journey.length > 0 ? (
@@ -144,6 +167,10 @@ function CompanyHubContent({ companyCode }: CompanyHubViewProps) {
         ) : (
           <EmptyJourneyBanner />
         )}
+
+        <div id="certification-readiness" className="scroll-mt-6">
+          <CertificationReadinessPanel companyCode={companyCode} />
+        </div>
 
         {/* Needs Attention Inbox */}
         <NeedsAttentionInbox
@@ -164,6 +191,18 @@ function CompanyHubContent({ companyCode }: CompanyHubViewProps) {
             <p className="text-xs text-muted-foreground">Period-0 migration, setup certification, and recurring close cycles.</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button asChild variant="secondary" size="sm">
+              <a href={`/finance/setup/company/${encodeURIComponent(companyCode)}/currency-fx`}>Currency &amp; FX</a>
+            </Button>
+            <Button asChild variant="secondary" size="sm">
+              <a href={`/finance/setup/company/${encodeURIComponent(companyCode)}/tax`}>Tax</a>
+            </Button>
+            <Button asChild variant="secondary" size="sm">
+              <a href={`/finance/setup/company/${encodeURIComponent(companyCode)}/payments`}>Payments &amp; Settlement</a>
+            </Button>
+            <Button asChild variant="secondary" size="sm">
+              <a href={`/finance/setup/company/${encodeURIComponent(companyCode)}/banking`}>Banking &amp; Treasury</a>
+            </Button>
             {[
               ["Opening balances", "opening-balances", 0],
               ["Setup readiness", "readiness", hub.currentPeriodNumber],
@@ -217,7 +256,19 @@ export function FinanceSetupCompanyEntry() {
     );
   }
 
+  const entryMode = resolveCompanyEntryMode(companies, scopeOptions.data?.defaultCompanyCode);
+  if (entryMode.kind === "redirect") {
+    return <SingleCompanyRedirect companyCode={entryMode.companyCode} />;
+  }
+
   return <CompanyScopeSelectionScreen scopeOptions={scopeOptions.data} />;
+}
+
+function SingleCompanyRedirect({ companyCode }: { companyCode: string }) {
+  useEffect(() => {
+    window.location.replace(companySetupOverviewHref(companyCode));
+  }, [companyCode]);
+  return <PageFrame><HubSkeleton /></PageFrame>;
 }
 
 function CompanyScopeSelectionScreen({ scopeOptions, message }: {
@@ -225,8 +276,9 @@ function CompanyScopeSelectionScreen({ scopeOptions, message }: {
   message?: string;
 }) {
   const companies = scopeOptions?.companies ?? [];
+  const entryMode = resolveCompanyEntryMode(companies, scopeOptions?.defaultCompanyCode);
   const [companyCode, setCompanyCode] = useState(
-    scopeOptions?.defaultCompanyCode ?? companies[0]?.code ?? "",
+    entryMode.kind === "select" ? entryMode.initialCompanyCode : companies[0]?.code ?? "",
   );
   return (
     <PageFrame>
@@ -240,7 +292,7 @@ function CompanyScopeSelectionScreen({ scopeOptions, message }: {
           className="rounded-xl border bg-card p-6 shadow-sm"
           onSubmit={(event) => {
             event.preventDefault();
-            if (companyCode) window.location.assign(`/finance/setup/company/${encodeURIComponent(companyCode)}`);
+            if (companyCode) window.location.assign(companySetupOverviewHref(companyCode));
           }}
         >
           {message && (
@@ -266,11 +318,55 @@ function CompanyScopeSelectionScreen({ scopeOptions, message }: {
             </label>
           </div>
           <div className="mt-7 flex items-center justify-end border-t pt-5">
-            <Button type="submit" disabled={!companyCode}>Next</Button>
+            <Button type="submit" disabled={!companyCode}>Open setup overview</Button>
           </div>
         </form>
       </main>
     </PageFrame>
+  );
+}
+
+function companySetupOverviewHref(companyCode: string): string {
+  return setupScopePath(FINANCE_SETUP_WORKSPACE, { type: "company_code", code: companyCode });
+}
+
+const setupDomainIcons = {
+  building: Building2,
+  coins: Coins,
+  "receipt-text": ReceiptText,
+  "circle-dollar": CircleDollarSign,
+  landmark: Landmark,
+  "shield-check": ShieldCheck,
+} as const;
+
+function SetupDomainChooser({ companyCode }: { companyCode: string }) {
+  const scope = { type: "company_code" as const, code: companyCode };
+  return (
+    <section aria-labelledby="setup-domain-heading">
+      <div className="mb-3">
+        <h2 id="setup-domain-heading" className="text-sm font-semibold">Choose a setup domain</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Start with Foundation or continue directly to the area you need.</p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {FINANCE_SETUP_WORKSPACE.domains.map((domain) => {
+          const Icon = setupDomainIcons[domain.iconKey];
+          return (
+            <Link
+              key={domain.code}
+              href={setupDomainPath(FINANCE_SETUP_WORKSPACE, scope, domain)}
+              className="group flex items-center gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/30"
+            >
+              <span className="rounded-lg bg-muted p-2.5 text-muted-foreground"><Icon className="h-4 w-4" aria-hidden /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold">{domain.label}</span>
+                <span className="mt-0.5 block truncate text-xs text-muted-foreground">{domain.description}</span>
+              </span>
+              <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden />
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

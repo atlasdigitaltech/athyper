@@ -16,7 +16,8 @@
     "./document-edit-runtime": "./src/document-edit-runtime.ts",
     "./document-edit-runtime-compiler": "./src/document-edit-runtime-compiler.ts",
     "./runtime-bootstrap": "./src/runtime-bootstrap.ts",
-    "./record-workspace": "./src/record-workspace.ts"
+    "./record-workspace": "./src/record-workspace.ts",
+    "./setup-workspace": "./src/setup-workspace.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

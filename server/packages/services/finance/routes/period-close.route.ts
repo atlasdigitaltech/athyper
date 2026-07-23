@@ -17,6 +17,7 @@ import {
   evaluateFinanceGovernanceTask,
   hashCertificationSnapshot,
 } from "../services/finance-governance.service.js";
+import { loadCompanyCertificationReadiness } from "../services/finance-certification-readiness.service.js";
 
 export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps): Router {
   const { db, auth, logger } = deps;
@@ -878,6 +879,18 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
         res.status(422).json({ error: "CERTIFICATION_BLOCKED", incompleteMandatoryTasks: blockingIncomplete, criticalDeviations: run.critical });
         return;
       }
+      const fourDomainReadiness = certCode === "FINANCE_POSTING_READY"
+        ? await loadCompanyCertificationReadiness(db,tenantId,run.entity_code)
+        : null;
+      if (certCode === "FINANCE_POSTING_READY" && !fourDomainReadiness?.summary.readyForCertification) {
+        res.status(422).json({
+          error:"FOUR_DOMAIN_READINESS_BLOCKED",
+          message:"Currency/FX, Tax, Payments/Settlement, and Banking/Treasury must all be ready before certification.",
+          domains:fourDomainReadiness?.domains??[],
+          blockerCount:fourDomainReadiness?.summary.blockerCount??0,
+        });
+        return;
+      }
       const { rows: existingRows } = await sql<{
         id: string; cert_version: number; status: string; snapshot_payload: Record<string, unknown> | null;
       }>`
@@ -894,6 +907,12 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
       const fullSnapshot = {
         ...(existing?.snapshot_payload ?? {}), ...snapshot,
         cycleRunId: runId, cycleTypeCode: run.type_code, entityCode: run.entity_code,
+        ...(fourDomainReadiness ? { fourDomainReadiness: {
+          asOfDate:fourDomainReadiness.asOfDate,
+          domains:fourDomainReadiness.domains,
+          summary:fourDomainReadiness.summary,
+          computedAt:fourDomainReadiness.computedAt,
+        }} : {}),
         certCode, certifiedAt: action === "certify" ? now.toISOString() : undefined,
         attestedAt: action === "attest" ? now.toISOString() : undefined,
       };

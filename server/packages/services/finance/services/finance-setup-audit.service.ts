@@ -19,6 +19,7 @@ export type FinanceSetupActivityType =
   | "finance_setup.control_assigned"
   | "finance_setup.control_updated"
   | "finance_setup.control_deactivated"
+  | "finance_setup.controls_bulk_updated"
   | "finance_setup.chart_assignment_changed"
   | "finance_setup.book_assignment_changed"
   | "finance_setup.house_bank_toggled"
@@ -28,7 +29,20 @@ export type FinanceSetupActivityType =
   | "finance_setup.fiscal_periods_generated"
   | "finance_setup.posting_role_map_assigned"
   | "finance_setup.posting_role_map_updated"
-  | "finance_setup.posting_role_map_retired";
+  | "finance_setup.posting_role_map_retired"
+  | "finance_setup.fx_policy_saved"
+  | "finance_setup.fx_rates_imported"
+  | "finance_setup.tax_group_version_saved"
+  | "finance_setup.tax_registration_saved"
+  | "finance_setup.wht_threshold_saved"
+  | "finance_setup.payment_term_saved"
+  | "finance_setup.payment_policy_saved"
+  | "finance_setup.interface_binding_saved"
+  | "finance_setup.settlement_rule_saved"
+  | "finance_setup.house_bank_saved"
+  | "finance_setup.bank_link_ended"
+  | "finance_setup.bank_account_verified"
+  | "finance_setup.bank_interface_tested";
 
 export interface FinanceSetupAuditEntry {
   tenantId:       string;

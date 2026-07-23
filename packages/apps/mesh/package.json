@@ -17,7 +17,8 @@
     "@athyper/mesh-exchange-contracts": "workspace:*",
     "@athyper/query": "workspace:*",
     "@athyper/runtime-list": "workspace:*",
-    "@athyper/session-plane": "workspace:*"
+    "@athyper/session-plane": "workspace:*",
+    "@athyper/surface-kit": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

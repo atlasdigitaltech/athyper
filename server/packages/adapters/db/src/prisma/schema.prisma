@@ -692,11 +692,22 @@ model bank_interface_profile {
   created_by                       String                             @db.Uuid
   updated_at                       DateTime?                          @db.Timestamptz(6)
   updated_by                       String?                            @db.Uuid
+  credential_provider              String?
+  credential_reference             String?
+  credential_version               String?
+  credential_status                String                             @default("not_configured")
+  credential_last_validated_at     DateTime?                          @db.Timestamptz(6)
+  credential_rotated_at            DateTime?                          @db.Timestamptz(6)
+  last_connection_test_at          DateTime?                          @db.Timestamptz(6)
+  last_connection_test_status      String                             @default("not_tested")
+  last_connection_test_code        String?
+  last_connection_test_latency_ms  Int?
   tenant                           tenant                             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bip_tenant_fk")
   payment_method_interface_binding payment_method_interface_binding[]
 
   @@unique([tenant_id, code], map: "bip_tenant_code_uq")
   @@unique([tenant_id, id], map: "bip_tenant_id_uq")
+  @@index([tenant_id, credential_status, last_connection_test_status, status], map: "ix_bip_connection_readiness")
   @@schema("control")
 }
 
@@ -761,42 +772,44 @@ model blueprint_tenant_application {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model book_posting_rule {
-  id                                                                  String       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                           String       @db.Uuid
-  company_code_id                                                     String       @db.Uuid
+  id                                                                  String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                           String                    @db.Uuid
+  company_code_id                                                     String                    @db.Uuid
   rule_code                                                           String
   rule_name                                                           String
   description                                                         String?
-  source_book_id                                                      String       @db.Uuid
-  target_book_id                                                      String       @db.Uuid
+  source_book_id                                                      String                    @db.Uuid
+  target_book_id                                                      String                    @db.Uuid
   scope_doc_type                                                      String?
   scope_intent_code                                                   String?
   scope_account_class                                                 String?
   scope_subledger_type                                                String?
-  account_strategy                                                    String       @default("same")
+  account_strategy                                                    String                    @default("same")
   account_mapping                                                     Json?
-  target_profile_id                                                   String?      @db.Uuid
-  amount_strategy                                                     String       @default("mirror")
-  amount_multiplier                                                   Decimal?     @default(1.0) @db.Decimal(10, 6)
+  target_profile_id                                                   String?                   @db.Uuid
+  amount_strategy                                                     String                    @default("mirror")
+  amount_multiplier                                                   Decimal?                  @default(1.0) @db.Decimal(10, 6)
   amount_formula                                                      Json?
-  recognition_timing                                                  String       @default("simultaneous")
-  recognition_lag_periods                                             Int?         @default(0) @db.SmallInt
-  priority                                                            Int          @default(0) @db.SmallInt
-  version                                                             Int          @default(1) @db.SmallInt
-  metadata                                                            Json         @default("{}")
-  status                                                              String       @default("active")
-  is_active                                                           Boolean?     @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                                   DateTime?    @db.Timestamptz(6)
-  status_changed_by                                                   String?      @db.Uuid
-  created_at                                                          DateTime     @default(now()) @db.Timestamptz(6)
-  created_by                                                          String       @db.Uuid
-  updated_at                                                          DateTime?    @db.Timestamptz(6)
-  updated_by                                                          String?      @db.Uuid
-  company_code                                                        company_code @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "bpr_company_fk")
-  principal                                                           principal    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bpr_created_by_fk")
-  ledger_book_book_posting_rule_tenant_id_source_book_idToledger_book ledger_book  @relation("book_posting_rule_tenant_id_source_book_idToledger_book", fields: [tenant_id, source_book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "bpr_source_book_fk")
-  ledger_book_book_posting_rule_tenant_id_target_book_idToledger_book ledger_book  @relation("book_posting_rule_tenant_id_target_book_idToledger_book", fields: [tenant_id, target_book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "bpr_target_book_fk")
-  tenant                                                              tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bpr_tenant_fk")
+  recognition_timing                                                  String                    @default("simultaneous")
+  recognition_lag_periods                                             Int?                      @default(0) @db.SmallInt
+  priority                                                            Int                       @default(0) @db.SmallInt
+  version                                                             Int                       @default(1) @db.SmallInt
+  metadata                                                            Json                      @default("{}")
+  status                                                              String                    @default("active")
+  is_active                                                           Boolean?                  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                                   DateTime?                 @db.Timestamptz(6)
+  status_changed_by                                                   String?                   @db.Uuid
+  created_at                                                          DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                                                          String                    @db.Uuid
+  updated_at                                                          DateTime?                 @db.Timestamptz(6)
+  updated_by                                                          String?                   @db.Uuid
+  company_code                                                        company_code              @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "bpr_company_fk")
+  principal                                                           principal                 @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "bpr_created_by_fk")
+  ledger_book_book_posting_rule_tenant_id_source_book_idToledger_book ledger_book               @relation("book_posting_rule_tenant_id_source_book_idToledger_book", fields: [tenant_id, source_book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "bpr_source_book_fk")
+  ledger_book_book_posting_rule_tenant_id_target_book_idToledger_book ledger_book               @relation("book_posting_rule_tenant_id_target_book_idToledger_book", fields: [tenant_id, target_book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "bpr_target_book_fk")
+  tenant                                                              tenant                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bpr_tenant_fk")
+  book_posting_derivation                                             book_posting_derivation[]
+  journal_entry                                                       journal_entry[]
 
   @@unique([tenant_id, company_code_id, rule_code], map: "book_posting_rule_company_code_uq")
   @@unique([tenant_id, id], map: "book_posting_rule_tenant_id_uq")
@@ -3081,6 +3094,7 @@ model payment_method_company_policy {
 
   @@unique([tenant_id, id], map: "pmcp_tenant_id_uq")
   @@index([tenant_id, company_code_id, direction], map: "pmcp_default_pidx", where: raw("((is_default = true) AND (status = 'active'::text))"))
+  @@index([tenant_id, company_code_id, direction, effective_from(sort: Desc), priority(sort: Desc)], map: "ix_pmcp_company_readiness", where: raw("(status = 'active'::text)"))
   @@schema("control")
 }
 
@@ -3121,6 +3135,7 @@ model payment_method_interface_binding {
   @@unique([tenant_id, id], map: "pmib_tenant_id_uq")
   @@index([tenant_id, company_code_id], map: "pmib_company_idx", where: raw("(company_code_id IS NOT NULL)"))
   @@index([tenant_id, payment_method_id, direction, priority(sort: Desc)], map: "pmib_resolve_idx", where: raw("(status = 'active'::text)"))
+  @@index([tenant_id, payment_method_id, direction, effective_from(sort: Desc), priority(sort: Desc), id], map: "ix_pmib_deterministic_resolution", where: raw("(status = 'active'::text)"))
   @@schema("control")
 }
 
@@ -3159,6 +3174,7 @@ model payment_settlement_rule {
   tenant                       tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "psr_tenant_fk")
 
   @@unique([tenant_id, id], map: "psr_tenant_id_uq")
+  @@index([tenant_id, company_code_id, payment_method_id, direction, book_code, effective_from(sort: Desc)], map: "ix_psr_company_readiness", where: raw("(status = 'active'::text)"))
   @@schema("control")
 }
 
@@ -3545,25 +3561,27 @@ model record_edit_lock {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model rounding_rule {
-  id                            String    @id(map: "rr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                     String    @db.Uuid
+  id                            String              @id(map: "rr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                     String              @db.Uuid
   code                          String
   name                          String
-  method                        String    @default("ROUND_HALF_UP")
-  precision_digits              Int?      @db.SmallInt
-  minimum_unit                  Decimal?  @db.Decimal(18, 6)
-  gl_variance_approval_required Boolean   @default(false)
-  metadata                      Json      @default("{}")
-  status                        String    @default("active")
-  is_active                     Boolean?  @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at             DateTime? @db.Timestamptz(6)
-  status_changed_by             String?   @db.Uuid
-  created_at                    DateTime  @default(now()) @db.Timestamptz(6)
-  created_by                    String    @db.Uuid
-  updated_at                    DateTime? @db.Timestamptz(6)
-  updated_by                    String?   @db.Uuid
-  principal                     principal @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "rr_created_by_fk")
-  tenant                        tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rr_tenant_fk")
+  method                        String              @default("ROUND_HALF_UP")
+  precision_digits              Int?                @db.SmallInt
+  minimum_unit                  Decimal?            @db.Decimal(18, 6)
+  gl_variance_approval_required Boolean             @default(false)
+  metadata                      Json                @default("{}")
+  status                        String              @default("active")
+  is_active                     Boolean?            @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at             DateTime?           @db.Timestamptz(6)
+  status_changed_by             String?             @db.Uuid
+  created_at                    DateTime            @default(now()) @db.Timestamptz(6)
+  created_by                    String              @db.Uuid
+  updated_at                    DateTime?           @db.Timestamptz(6)
+  updated_by                    String?             @db.Uuid
+  principal                     principal           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "rr_created_by_fk")
+  tenant                        tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "rr_tenant_fk")
+  tax_group                     tax_group[]
+  tax_group_version             tax_group_version[]
 
   @@unique([tenant_id, code], map: "rr_code_uq")
   @@unique([tenant_id, id], map: "rr_tenant_id_uq")
@@ -3624,13 +3642,16 @@ model tax_group {
   created_by                                                                                                String                           @db.Uuid
   updated_at                                                                                                DateTime?                        @db.Timestamptz(6)
   updated_by                                                                                                String?                          @db.Uuid
+  rounding_rule_id                                                                                          String?                          @db.Uuid
   acct_profile_config                                                                                       acct_profile_config[]
   commodity_category_buy_policy                                                                             commodity_category_buy_policy[]
   commodity_category_sell_policy                                                                            commodity_category_sell_policy[]
   principal                                                                                                 principal                        @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tg_created_by_fk")
   tax_jurisdiction                                                                                          tax_jurisdiction?                @relation(fields: [tenant_id, jurisdiction_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "tg_jurisdiction_fk")
+  rounding_rule                                                                                             rounding_rule?                   @relation(fields: [tenant_id, rounding_rule_id], references: [tenant_id, id], onUpdate: NoAction, map: "tg_rounding_rule_fk")
   tenant                                                                                                    tenant                           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tg_tenant_fk")
   tax_group_component                                                                                       tax_group_component[]
+  tax_group_version                                                                                         tax_group_version[]
   tax_resolution_rule                                                                                       tax_resolution_rule[]
   purchase_invoice_line                                                                                     purchase_invoice_line[]
   tax_calculation                                                                                           tax_calculation[]
@@ -3642,33 +3663,36 @@ model tax_group {
   @@unique([tenant_id, code], map: "tg_code_uq")
   @@unique([tenant_id, id], map: "tg_tenant_id_uq")
   @@index([tenant_id, jurisdiction_id], map: "tg_jurisdiction_pidx", where: raw("((is_active = true) AND (jurisdiction_id IS NOT NULL))"))
+  @@index([tenant_id, rounding_rule_id], map: "ix_tax_group_rounding_rule", where: raw("(rounding_rule_id IS NOT NULL)"))
   @@schema("control")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model tax_group_component {
-  id                   String            @id(map: "tgc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id            String            @db.Uuid
-  tax_group_id         String            @db.Uuid
-  tax_rate_schedule_id String            @db.Uuid
-  calculation_seq      Int               @db.SmallInt
-  rate_override        Decimal?          @db.Decimal(18, 6)
-  metadata             Json              @default("{}")
-  status               String            @default("active")
-  is_active            Boolean?          @default(dbgenerated("((status)::text = 'active'::text)"))
-  created_at           DateTime          @default(now()) @db.Timestamptz(6)
-  created_by           String            @db.Uuid
-  updated_at           DateTime?         @db.Timestamptz(6)
-  updated_by           String?           @db.Uuid
-  principal            principal         @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tgc_created_by_fk")
-  tax_group            tax_group         @relation(fields: [tenant_id, tax_group_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "tgc_group_fk")
-  tax_rate_schedule    tax_rate_schedule @relation(fields: [tenant_id, tax_rate_schedule_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "tgc_schedule_fk")
-  tenant               tenant            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tgc_tenant_fk")
+  id                   String             @id(map: "tgc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id            String             @db.Uuid
+  tax_group_id         String             @db.Uuid
+  tax_rate_schedule_id String             @db.Uuid
+  calculation_seq      Int                @db.SmallInt
+  rate_override        Decimal?           @db.Decimal(18, 6)
+  metadata             Json               @default("{}")
+  status               String             @default("active")
+  is_active            Boolean?           @default(dbgenerated("((status)::text = 'active'::text)"))
+  created_at           DateTime           @default(now()) @db.Timestamptz(6)
+  created_by           String             @db.Uuid
+  updated_at           DateTime?          @db.Timestamptz(6)
+  updated_by           String?            @db.Uuid
+  tax_group_version_id String?            @db.Uuid
+  principal            principal          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tgc_created_by_fk")
+  tax_group            tax_group          @relation(fields: [tenant_id, tax_group_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "tgc_group_fk")
+  tax_rate_schedule    tax_rate_schedule  @relation(fields: [tenant_id, tax_rate_schedule_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "tgc_schedule_fk")
+  tenant               tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tgc_tenant_fk")
+  tax_group_version    tax_group_version? @relation(fields: [tenant_id, tax_group_version_id], references: [tenant_id, id], onUpdate: NoAction, map: "tgc_version_fk")
 
-  @@unique([tax_group_id, tax_rate_schedule_id], map: "tgc_group_rate_uq")
-  @@unique([tax_group_id, calculation_seq], map: "tgc_group_seq_uq")
   @@unique([tenant_id, id], map: "tgc_tenant_id_uq")
+  @@index([tenant_id, tax_group_version_id, calculation_seq], map: "ix_tgc_version_order", where: raw("((status)::text = 'active'::text)"))
   @@schema("control")
 }
 
@@ -3847,8 +3871,8 @@ model wht_threshold_config {
   tenant                                               tenant           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "wtc_tenant_fk")
   principal_wht_threshold_config_updated_byToprincipal principal?       @relation("wht_threshold_config_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "wtc_updated_by_fk")
 
-  @@unique([tenant_id, jurisdiction_id, tax_type_id, section_code], map: "wtc_natural_uq")
   @@index([tenant_id, jurisdiction_id, tax_type_id], map: "wtc_jurisdiction_active_pidx", where: raw("(is_active = true)"))
+  @@index([tenant_id, jurisdiction_id, tax_type_id, effective_from(sort: Desc)], map: "ix_wtc_resolution", where: raw("(is_active = true)"))
   @@schema("control")
 }
 
@@ -5305,61 +5329,66 @@ model invoice_tax_snapshot {
 /// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model journal_entry {
-  id                                                                        String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                 String                      @db.Uuid
-  code                                                                      String                      @default("")
-  name                                                                      String                      @default("")
-  company_code_id                                                           String                      @db.Uuid
-  book_id                                                                   String                      @db.Uuid
-  fiscal_period_id                                                          String                      @db.Uuid
-  fiscal_year                                                               Int                         @db.SmallInt
-  period_number                                                             Int                         @db.SmallInt
-  je_number                                                                 String
-  document_date                                                             DateTime                    @db.Date
-  posting_date                                                              DateTime                    @db.Date
-  source_doc_type                                                           String
-  source_doc_id                                                             String?                     @db.Uuid
-  transaction_currency                                                      String                      @db.Char(3)
-  base_currency                                                             String                      @db.Char(3)
-  total_debit                                                               Decimal                     @default(0) @db.Decimal(18, 4)
-  total_credit                                                              Decimal                     @default(0) @db.Decimal(18, 4)
-  line_count                                                                Int                         @default(0) @db.SmallInt
-  description                                                               String?
-  is_reversal                                                               Boolean                     @default(false)
-  reversal_of_id                                                            String?                     @db.Uuid
-  reversed_by_id                                                            String?                     @db.Uuid
-  is_auto_reverse                                                           Boolean                     @default(false)
-  auto_reverse_date                                                         DateTime?                   @db.Date
-  derived_from_je_id                                                        String?                     @db.Uuid
-  posting_rule_id                                                           String?                     @db.Uuid
-  book_idempotency_key                                                      String?
-  prior_period_flag                                                         Boolean                     @default(false)
-  original_period_year                                                      Int?                        @db.SmallInt
-  original_period_number                                                    Int?                        @db.SmallInt
-  close_override_id                                                         String?                     @db.Uuid
-  posted_at                                                                 DateTime?                   @db.Timestamptz(6)
-  posted_by                                                                 String?                     @db.Uuid
-  tags                                                                      Json                        @default("[]")
-  metadata                                                                  Json                        @default("{}")
-  status                                                                    String                      @default("draft")
-  is_active                                                                 Boolean?                    @default(dbgenerated("(status = ANY (ARRAY['draft'::text, 'created'::text, 'pending_approval'::text, 'approved'::text, 'posted'::text]))"))
-  status_changed_at                                                         DateTime?                   @db.Timestamptz(6)
-  status_changed_by                                                         String?                     @db.Uuid
-  created_at                                                                DateTime                    @default(now()) @db.Timestamptz(6)
-  created_by                                                                String                      @db.Uuid
-  updated_at                                                                DateTime?                   @db.Timestamptz(6)
-  updated_by                                                                String?                     @db.Uuid
-  bank_recon_case                                                           bank_recon_case[]
-  bank_statement                                                            bank_statement[]
-  journal_entry_journal_entry_tenant_id_reversal_of_idTojournal_entry       journal_entry?              @relation("journal_entry_tenant_id_reversal_of_idTojournal_entry", fields: [tenant_id, reversal_of_id], references: [tenant_id, id], onUpdate: NoAction, map: "je_reversal_of_fk")
-  other_journal_entry_journal_entry_tenant_id_reversal_of_idTojournal_entry journal_entry[]             @relation("journal_entry_tenant_id_reversal_of_idTojournal_entry")
-  journal_entry_journal_entry_tenant_id_reversed_by_idTojournal_entry       journal_entry?              @relation("journal_entry_tenant_id_reversed_by_idTojournal_entry", fields: [tenant_id, reversed_by_id], references: [tenant_id, id], onUpdate: NoAction, map: "je_reversed_by_fk")
-  other_journal_entry_journal_entry_tenant_id_reversed_by_idTojournal_entry journal_entry[]             @relation("journal_entry_tenant_id_reversed_by_idTojournal_entry")
-  journal_line                                                              journal_line[]
-  payroll_run                                                               payroll_run?
-  asset_revaluation_reserve                                                 asset_revaluation_reserve[]
-  consolidation_elimination                                                 consolidation_elimination[]
-  inventory_movement                                                        inventory_movement[]
+  id                                                                                         String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                  String                      @db.Uuid
+  code                                                                                       String                      @default("")
+  name                                                                                       String                      @default("")
+  company_code_id                                                                            String                      @db.Uuid
+  book_id                                                                                    String                      @db.Uuid
+  fiscal_period_id                                                                           String                      @db.Uuid
+  fiscal_year                                                                                Int                         @db.SmallInt
+  period_number                                                                              Int                         @db.SmallInt
+  je_number                                                                                  String
+  document_date                                                                              DateTime                    @db.Date
+  posting_date                                                                               DateTime                    @db.Date
+  source_doc_type                                                                            String
+  source_doc_id                                                                              String?                     @db.Uuid
+  transaction_currency                                                                       String                      @db.Char(3)
+  base_currency                                                                              String                      @db.Char(3)
+  total_debit                                                                                Decimal                     @default(0) @db.Decimal(18, 4)
+  total_credit                                                                               Decimal                     @default(0) @db.Decimal(18, 4)
+  line_count                                                                                 Int                         @default(0) @db.SmallInt
+  description                                                                                String?
+  is_reversal                                                                                Boolean                     @default(false)
+  reversal_of_id                                                                             String?                     @db.Uuid
+  reversed_by_id                                                                             String?                     @db.Uuid
+  is_auto_reverse                                                                            Boolean                     @default(false)
+  auto_reverse_date                                                                          DateTime?                   @db.Date
+  derived_from_je_id                                                                         String?                     @db.Uuid
+  posting_rule_id                                                                            String?                     @db.Uuid
+  book_idempotency_key                                                                       String?
+  prior_period_flag                                                                          Boolean                     @default(false)
+  original_period_year                                                                       Int?                        @db.SmallInt
+  original_period_number                                                                     Int?                        @db.SmallInt
+  close_override_id                                                                          String?                     @db.Uuid
+  posted_at                                                                                  DateTime?                   @db.Timestamptz(6)
+  posted_by                                                                                  String?                     @db.Uuid
+  tags                                                                                       Json                        @default("[]")
+  metadata                                                                                   Json                        @default("{}")
+  status                                                                                     String                      @default("draft")
+  is_active                                                                                  Boolean?                    @default(dbgenerated("(status = ANY (ARRAY['draft'::text, 'created'::text, 'pending_approval'::text, 'approved'::text, 'posted'::text]))"))
+  status_changed_at                                                                          DateTime?                   @db.Timestamptz(6)
+  status_changed_by                                                                          String?                     @db.Uuid
+  created_at                                                                                 DateTime                    @default(now()) @db.Timestamptz(6)
+  created_by                                                                                 String                      @db.Uuid
+  updated_at                                                                                 DateTime?                   @db.Timestamptz(6)
+  updated_by                                                                                 String?                     @db.Uuid
+  bank_recon_case                                                                            bank_recon_case[]
+  bank_statement                                                                             bank_statement[]
+  book_posting_derivation_book_posting_derivation_tenant_id_source_journal_idTojournal_entry book_posting_derivation[]   @relation("book_posting_derivation_tenant_id_source_journal_idTojournal_entry")
+  book_posting_derivation_book_posting_derivation_tenant_id_target_journal_idTojournal_entry book_posting_derivation[]   @relation("book_posting_derivation_tenant_id_target_journal_idTojournal_entry")
+  journal_entry_journal_entry_tenant_id_derived_from_je_idTojournal_entry                    journal_entry?              @relation("journal_entry_tenant_id_derived_from_je_idTojournal_entry", fields: [tenant_id, derived_from_je_id], references: [tenant_id, id], onUpdate: NoAction, map: "je_derived_from_fk")
+  other_journal_entry_journal_entry_tenant_id_derived_from_je_idTojournal_entry              journal_entry[]             @relation("journal_entry_tenant_id_derived_from_je_idTojournal_entry")
+  book_posting_rule                                                                          book_posting_rule?          @relation(fields: [tenant_id, posting_rule_id], references: [tenant_id, id], onUpdate: NoAction, map: "je_posting_rule_fk")
+  journal_entry_journal_entry_tenant_id_reversal_of_idTojournal_entry                        journal_entry?              @relation("journal_entry_tenant_id_reversal_of_idTojournal_entry", fields: [tenant_id, reversal_of_id], references: [tenant_id, id], onUpdate: NoAction, map: "je_reversal_of_fk")
+  other_journal_entry_journal_entry_tenant_id_reversal_of_idTojournal_entry                  journal_entry[]             @relation("journal_entry_tenant_id_reversal_of_idTojournal_entry")
+  journal_entry_journal_entry_tenant_id_reversed_by_idTojournal_entry                        journal_entry?              @relation("journal_entry_tenant_id_reversed_by_idTojournal_entry", fields: [tenant_id, reversed_by_id], references: [tenant_id, id], onUpdate: NoAction, map: "je_reversed_by_fk")
+  other_journal_entry_journal_entry_tenant_id_reversed_by_idTojournal_entry                  journal_entry[]             @relation("journal_entry_tenant_id_reversed_by_idTojournal_entry")
+  journal_line                                                                               journal_line[]
+  payroll_run                                                                                payroll_run?
+  asset_revaluation_reserve                                                                  asset_revaluation_reserve[]
+  consolidation_elimination                                                                  consolidation_elimination[]
+  inventory_movement                                                                         inventory_movement[]
 
   @@unique([tenant_id, book_idempotency_key], map: "je_idempotency_uq", where: raw("(book_idempotency_key IS NOT NULL)"))
   @@unique([tenant_id, id], map: "journal_entry_tenant_id_uq")
@@ -11213,56 +11242,57 @@ model asset_component {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model attachment {
-  id                                          String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                   String                      @db.Uuid
+  id                                          String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                   String                          @db.Uuid
   file_name                                   String
   original_filename                           String?
   content_type                                String?
   size_bytes                                  BigInt?
   sha256                                      String?
-  kind                                        String                      @default("attachment")
+  kind                                        String                          @default("attachment")
   storage_bucket                              String
   storage_key                                 String
-  shard                                       Int?                        @db.SmallInt
+  shard                                       Int?                            @db.SmallInt
   thumbnail_key                               String?
   preview_key                                 String?
-  preview_generated_at                        DateTime?                   @db.Timestamptz(6)
-  is_preview_generation_failed                Boolean                     @default(false)
-  is_virus_scanned                            Boolean                     @default(false)
-  version_no                                  Int                         @default(1) @db.SmallInt
-  parent_attachment_id                        String?                     @db.Uuid
-  reference_count                             Int                         @default(1)
-  is_current                                  Boolean                     @default(true)
-  is_active                                   Boolean                     @default(true)
-  is_auto_delete_on_expiry                    Boolean                     @default(false)
-  expires_at                                  DateTime?                   @db.Timestamptz(6)
-  retention_until                             DateTime?                   @db.Timestamptz(6)
-  uploaded_by                                 String?                     @db.Uuid
-  metadata                                    Json                        @default("{}")
-  status                                      String                      @default("active")
-  status_changed_at                           DateTime?                   @db.Timestamptz(6)
-  status_changed_by                           String?                     @db.Uuid
-  created_at                                  DateTime                    @default(now()) @db.Timestamptz(6)
-  created_by                                  String                      @db.Uuid
-  updated_at                                  DateTime?                   @db.Timestamptz(6)
-  updated_by                                  String?                     @db.Uuid
+  preview_generated_at                        DateTime?                       @db.Timestamptz(6)
+  is_preview_generation_failed                Boolean                         @default(false)
+  is_virus_scanned                            Boolean                         @default(false)
+  version_no                                  Int                             @default(1) @db.SmallInt
+  parent_attachment_id                        String?                         @db.Uuid
+  reference_count                             Int                             @default(1)
+  is_current                                  Boolean                         @default(true)
+  is_active                                   Boolean                         @default(true)
+  is_auto_delete_on_expiry                    Boolean                         @default(false)
+  expires_at                                  DateTime?                       @db.Timestamptz(6)
+  retention_until                             DateTime?                       @db.Timestamptz(6)
+  uploaded_by                                 String?                         @db.Uuid
+  metadata                                    Json                            @default("{}")
+  status                                      String                          @default("active")
+  status_changed_at                           DateTime?                       @db.Timestamptz(6)
+  status_changed_by                           String?                         @db.Uuid
+  created_at                                  DateTime                        @default(now()) @db.Timestamptz(6)
+  created_by                                  String                          @db.Uuid
+  updated_at                                  DateTime?                       @db.Timestamptz(6)
+  updated_by                                  String?                         @db.Uuid
   extracted_text                              String?
   extracted_text_chars                        Int?
-  text_extracted_at                           DateTime?                   @db.Timestamptz(6)
+  text_extracted_at                           DateTime?                       @db.Timestamptz(6)
   text_extraction_status                      String?
   text_extraction_error                       String?
-  pii_detected                                Boolean                     @default(false)
-  pii_types                                   Json                        @default("[]")
-  pii_scanned_at                              DateTime?                   @db.Timestamptz(6)
-  principal_attachment_created_byToprincipal  principal                   @relation("attachment_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "attachment_created_by_fk")
-  attachment                                  attachment?                 @relation("attachmentToattachment", fields: [parent_attachment_id], references: [id], onUpdate: NoAction, map: "attachment_parent_fk")
-  other_attachment                            attachment[]                @relation("attachmentToattachment")
-  tenant                                      tenant                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attachment_tenant_fk")
-  principal_attachment_uploaded_byToprincipal principal?                  @relation("attachment_uploaded_byToprincipal", fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "attachment_uploaded_by_fk")
+  pii_detected                                Boolean                         @default(false)
+  pii_types                                   Json                            @default("[]")
+  pii_scanned_at                              DateTime?                       @db.Timestamptz(6)
+  principal_attachment_created_byToprincipal  principal                       @relation("attachment_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "attachment_created_by_fk")
+  attachment                                  attachment?                     @relation("attachmentToattachment", fields: [parent_attachment_id], references: [id], onUpdate: NoAction, map: "attachment_parent_fk")
+  other_attachment                            attachment[]                    @relation("attachmentToattachment")
+  tenant                                      tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "attachment_tenant_fk")
+  principal_attachment_uploaded_byToprincipal principal?                      @relation("attachment_uploaded_byToprincipal", fields: [uploaded_by], references: [id], onUpdate: NoAction, map: "attachment_uploaded_by_fk")
   attachment_acl                              attachment_acl[]
   attachment_comment                          attachment_comment[]
   entity_document_link                        entity_document_link[]
   multipart_upload                            multipart_upload[]
+  organization_tax_registration               organization_tax_registration[]
   party_governance_relation                   party_governance_relation[]
 
   @@unique([tenant_id, id], map: "attachment_tenant_id_uq")
@@ -11497,6 +11527,7 @@ model bank_account {
   @@index([tenant_id, provider_account_ref], map: "bank_account_provider_ref_idx", where: raw("(provider_account_ref IS NOT NULL)"))
   @@index([tenant_id], map: "bank_account_tenant_idx")
   @@index([tenant_id], map: "bank_account_unverified_pidx", where: raw("((is_verified = false) AND (status = 'active'::text))"))
+  @@index([tenant_id, currency_code, status], map: "ix_ba_treasury_currency")
   @@schema("master")
 }
 
@@ -11529,12 +11560,13 @@ model bank_account_house_config {
   updated_at                DateTime?         @db.Timestamptz(6)
   updated_by                String?           @db.Uuid
   gl_account                gl_account        @relation(fields: [tenant_id, gl_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "bahc_gl_account_fk")
-  bank_account_link         bank_account_link @relation(fields: [tenant_id, bank_account_link_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "bahc_link_fk")
+  bank_account_link         bank_account_link @relation(fields: [tenant_id, bank_account_link_id], references: [tenant_id, id], onUpdate: NoAction, map: "bahc_link_fk")
   tenant                    tenant            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bahc_tenant_fk")
 
   @@unique([tenant_id, bank_account_link_id], map: "bahc_link_uq")
   @@unique([tenant_id, id], map: "bahc_tenant_id_uq")
   @@index([tenant_id, gl_account_id], map: "bahc_gl_account_idx")
+  @@index([tenant_id, bank_account_link_id, priority(sort: Desc)], map: "ix_house_bank_payment_eligibility", where: raw("(status = 'active'::text)"))
   @@schema("master")
 }
 
@@ -11562,7 +11594,7 @@ model bank_account_link {
   payment_method_company_policy    payment_method_company_policy[]
   payment_method_interface_binding payment_method_interface_binding[]
   bank_account_house_config        bank_account_house_config?
-  bank_account                     bank_account                       @relation(fields: [tenant_id, bank_account_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "bal_bank_account_fk")
+  bank_account                     bank_account                       @relation(fields: [tenant_id, bank_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "bal_bank_account_fk")
   company_code                     company_code?                      @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "bal_company_code_fk")
   tenant                           tenant                             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bal_tenant_fk")
   company_code_supplier_profile    company_code_supplier_profile[]
@@ -11574,6 +11606,7 @@ model bank_account_link {
   @@index([tenant_id, owner_type, owner_id], map: "bal_owner_idx")
   @@index([tenant_id, owner_type, owner_id, purpose], map: "bal_owner_purpose_idx")
   @@index([tenant_id, owner_type, owner_id, purpose], map: "bal_primary_pidx", where: raw("((is_primary = true) AND (effective_until IS NULL))"))
+  @@index([tenant_id, owner_id, effective_from, effective_until], map: "ix_bal_company_effective_stage_e", where: raw("(owner_type = 'company_code'::text)"))
   @@schema("master")
 }
 
@@ -12578,10 +12611,13 @@ model company_code {
   commodity_category_buy_policy                                                                                                     commodity_category_buy_policy[]
   commodity_category_inventory_policy                                                                                               commodity_category_inventory_policy[]
   commodity_category_sell_policy                                                                                                    commodity_category_sell_policy[]
+  company_fiscal_calendar_assignment                                                                                                company_fiscal_calendar_assignment[]
   dimension_policy                                                                                                                  dimension_policy[]
   entity_numbering_config                                                                                                           entity_numbering_config[]
   entity_numbering_counter                                                                                                          entity_numbering_counter[]
+  finance_posting_rollout_policy                                                                                                    finance_posting_rollout_policy?
   forecast_line                                                                                                                     forecast_line[]
+  fx_policy                                                                                                                         fx_policy[]
   intent_profile_override                                                                                                           intent_profile_override[]
   intent_to_accounting_profile_rule                                                                                                 intent_to_accounting_profile_rule[]
   match_tolerance_config                                                                                                            match_tolerance_config[]
@@ -12589,8 +12625,10 @@ model company_code {
   payment_method_interface_binding                                                                                                  payment_method_interface_binding[]
   payment_settlement_rule                                                                                                           payment_settlement_rule[]
   planning_driver_assumption                                                                                                        planning_driver_assumption[]
+  posting_role_account_map                                                                                                          posting_role_account_map[]
   bank_recon_case                                                                                                                   bank_recon_case[]
   bank_statement                                                                                                                    bank_statement[]
+  book_posting_derivation                                                                                                           book_posting_derivation[]
   operating_organization_resource_company                                                                                           operating_organization_resource_company[]
   operating_organization_resource_owner_operating_organization_resource_owner_tenant_id_central_company_code_idTocompany_code       operating_organization_resource_owner[]   @relation("operating_organization_resource_owner_tenant_id_central_company_code_idTocompany_code")
   operating_organization_resource_owner_operating_organization_resource_owner_tenant_id_principal_seller_company_idTocompany_code   operating_organization_resource_owner[]   @relation("operating_organization_resource_owner_tenant_id_principal_seller_company_idTocompany_code")
@@ -12663,6 +12701,7 @@ model company_code {
   leave_plan                                                                                                                        leave_plan[]
   letterhead                                                                                                                        letterhead[]
   operating_organization_company                                                                                                    operating_organization_company[]
+  organization_tax_registration                                                                                                     organization_tax_registration[]
   pay_group                                                                                                                         pay_group[]
   position                                                                                                                          position[]
   principal_profile_principal_profile_tenant_id_default_company_code_idTocompany_code                                               principal_profile[]                       @relation("principal_profile_tenant_id_default_company_code_idTocompany_code")
@@ -14065,48 +14104,51 @@ model filter_preset {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model fiscal_period {
-  id                String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String            @db.Uuid
-  code              String
-  name              String
-  company_code_id   String            @db.Uuid
-  fiscal_year       Int               @db.SmallInt
-  period_number     Int               @db.SmallInt
-  period_type       String            @default("normal")
-  start_date        DateTime          @db.Date
-  end_date          DateTime          @db.Date
-  fiscal_calendar_config_id String?   @db.Uuid
-  calendar_version_no Int?
-  generation_key    String?
-  generated_at      DateTime?         @db.Timestamptz(6)
-  is_adjustment     Boolean?          @default(dbgenerated("(period_type = 'adjustment'::text)"))
-  opened_at         DateTime?         @db.Timestamptz(6)
-  opened_by         String?           @db.Uuid
-  soft_closed_at    DateTime?         @db.Timestamptz(6)
-  soft_closed_by    String?           @db.Uuid
-  hard_closed_at    DateTime?         @db.Timestamptz(6)
-  hard_closed_by    String?           @db.Uuid
-  sort_order        Int               @default(0) @db.SmallInt
-  metadata          Json              @default("{}")
-  status            String            @default("future")
-  is_active         Boolean?          @default(dbgenerated("(status = ANY (ARRAY['open'::text, 'soft_close'::text]))"))
-  status_changed_at DateTime?         @db.Timestamptz(6)
-  status_changed_by String?           @db.Uuid
-  created_at        DateTime          @default(now()) @db.Timestamptz(6)
-  created_by        String            @db.Uuid
-  updated_at        DateTime?         @db.Timestamptz(6)
-  updated_by        String?           @db.Uuid
-  tax_calculation   tax_calculation[]
-  company_code      company_code      @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fp_company_fk")
-  principal         principal         @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fp_created_by_fk")
-  tenant            tenant            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fp_tenant_fk")
+  id                        String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                 String                  @db.Uuid
+  code                      String
+  name                      String
+  company_code_id           String                  @db.Uuid
+  fiscal_year               Int                     @db.SmallInt
+  period_number             Int                     @db.SmallInt
+  period_type               String                  @default("normal")
+  start_date                DateTime                @db.Date
+  end_date                  DateTime                @db.Date
+  fiscal_calendar_config_id String?                 @db.Uuid
+  calendar_version_no       Int?
+  generation_key            String?
+  generated_at              DateTime?               @db.Timestamptz(6)
+  is_adjustment             Boolean?                @default(dbgenerated("(period_type = 'adjustment'::text)"))
+  opened_at                 DateTime?               @db.Timestamptz(6)
+  opened_by                 String?                 @db.Uuid
+  soft_closed_at            DateTime?               @db.Timestamptz(6)
+  soft_closed_by            String?                 @db.Uuid
+  hard_closed_at            DateTime?               @db.Timestamptz(6)
+  hard_closed_by            String?                 @db.Uuid
+  sort_order                Int                     @default(0) @db.SmallInt
+  metadata                  Json                    @default("{}")
+  status                    String                  @default("future")
+  is_active                 Boolean?                @default(dbgenerated("(status = ANY (ARRAY['open'::text, 'soft_close'::text]))"))
+  status_changed_at         DateTime?               @db.Timestamptz(6)
+  status_changed_by         String?                 @db.Uuid
+  created_at                DateTime                @default(now()) @db.Timestamptz(6)
+  created_by                String                  @db.Uuid
+  updated_at                DateTime?               @db.Timestamptz(6)
+  updated_by                String?                 @db.Uuid
+  tax_calculation           tax_calculation[]
+  fiscal_calendar_config    fiscal_calendar_config? @relation(fields: [tenant_id, fiscal_calendar_config_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fp_calendar_config_fk")
+  company_code              company_code            @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fp_company_fk")
+  principal                 principal               @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fp_created_by_fk")
+  tenant                    tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fp_tenant_fk")
 
   @@unique([tenant_id, company_code_id, fiscal_year, period_number], map: "fiscal_period_company_year_period_uq")
   @@unique([tenant_id, id], map: "fiscal_period_tenant_id_uq")
+  @@unique([tenant_id, generation_key], map: "fp_generation_key_uq", where: raw("(generation_key IS NOT NULL)"))
   @@index([tenant_id, start_date, end_date], map: "fp_dates_idx")
   @@index([tenant_id, company_code_id], map: "fp_open_pidx", where: raw("(status = ANY (ARRAY['open'::text, 'soft_close'::text]))"))
   @@index([tenant_id, company_code_id, status], map: "fp_status_idx")
   @@index([tenant_id, company_code_id], map: "fp_tenant_company_idx")
+  @@index([tenant_id, company_code_id, fiscal_calendar_config_id, fiscal_year], map: "fp_calendar_generation_idx")
   @@schema("master")
 }
 
@@ -14185,6 +14227,7 @@ model gl_account {
   commodity_category_sell_policy_commodity_category_sell_policy_tenant_id_default_deferred_revenue_gl_account_idTogl_account         commodity_category_sell_policy[]      @relation("commodity_category_sell_policy_tenant_id_default_deferred_revenue_gl_account_idTogl_account")
   commodity_category_sell_policy_commodity_category_sell_policy_tenant_id_default_revenue_gl_account_idTogl_account                  commodity_category_sell_policy[]      @relation("commodity_category_sell_policy_tenant_id_default_revenue_gl_account_idTogl_account")
   commodity_category_sell_policy_commodity_category_sell_policy_tenant_id_default_unbilled_ar_gl_account_idTogl_account              commodity_category_sell_policy[]      @relation("commodity_category_sell_policy_tenant_id_default_unbilled_ar_gl_account_idTogl_account")
+  posting_role_account_map                                                                                                           posting_role_account_map[]
   supplier_posting_override                                                                                                          supplier_posting_override[]
   fx_revaluation_line                                                                                                                fx_revaluation_line[]
   gl_balance                                                                                                                         gl_balance[]
@@ -14629,6 +14672,8 @@ model ledger_book {
   book_posting_rule_book_posting_rule_tenant_id_source_book_idToledger_book book_posting_rule[]            @relation("book_posting_rule_tenant_id_source_book_idToledger_book")
   book_posting_rule_book_posting_rule_tenant_id_target_book_idToledger_book book_posting_rule[]            @relation("book_posting_rule_tenant_id_target_book_idToledger_book")
   budget_check_config                                                       budget_check_config[]
+  fx_policy                                                                 fx_policy[]
+  posting_role_account_map                                                  posting_role_account_map[]
   book_period_status                                                        book_period_status[]
   consolidation_elimination                                                 consolidation_elimination[]
   gl_balance                                                                gl_balance[]
@@ -14710,6 +14755,7 @@ model legal_entity {
   legal_entity_business_partner_link                  legal_entity_business_partner_link?
   legal_entity_identity_binding                       legal_entity_identity_binding[]
   legal_entity_network_account                        legal_entity_network_account[]
+  organization_tax_registration                       organization_tax_registration[]
   pay_group                                           pay_group[]
   position                                            position[]
 
@@ -15784,6 +15830,7 @@ model payment_term {
   @@unique([tenant_id, code, version], map: "pt_tenant_code_ver_uq")
   @@unique([tenant_id, id], map: "pt_tenant_id_uq")
   @@index([tenant_id], map: "pt_tenant_active_pidx", where: raw("(status = 'active'::text)"))
+  @@index([tenant_id, code, effective_from(sort: Desc), version(sort: Desc)], map: "ix_payment_term_current_catalog", where: raw("(is_current_version = true)"))
   @@schema("master")
 }
 
@@ -16083,15 +16130,20 @@ model principal {
   commodity_category_buy_policy                                                                         commodity_category_buy_policy[]
   commodity_category_inventory_policy                                                                   commodity_category_inventory_policy[]
   commodity_category_sell_policy                                                                        commodity_category_sell_policy[]
+  company_fiscal_calendar_assignment                                                                    company_fiscal_calendar_assignment[]
   entity                                                                                                entity[]
   entity_field_surface                                                                                  entity_field_surface[]
   entity_surface                                                                                        entity_surface[]
   entity_version_contract_entity_version_contract_created_byToprincipal                                 entity_version_contract[]             @relation("entity_version_contract_created_byToprincipal")
   entity_version_contract_entity_version_contract_updated_byToprincipal                                 entity_version_contract[]             @relation("entity_version_contract_updated_byToprincipal")
+  fiscal_calendar_config_fiscal_calendar_config_created_byToprincipal                                   fiscal_calendar_config[]              @relation("fiscal_calendar_config_created_byToprincipal")
+  fiscal_calendar_config_fiscal_calendar_config_updated_byToprincipal                                   fiscal_calendar_config[]              @relation("fiscal_calendar_config_updated_byToprincipal")
+  fiscal_calendar_period_rule                                                                           fiscal_calendar_period_rule[]
   forecast_budget_bridge_forecast_budget_bridge_approved_byToprincipal                                  forecast_budget_bridge[]              @relation("forecast_budget_bridge_approved_byToprincipal")
   forecast_budget_bridge_forecast_budget_bridge_created_byToprincipal                                   forecast_budget_bridge[]              @relation("forecast_budget_bridge_created_byToprincipal")
   forecast_budget_bridge_forecast_budget_bridge_locked_byToprincipal                                    forecast_budget_bridge[]              @relation("forecast_budget_bridge_locked_byToprincipal")
   forecast_budget_bridge_forecast_budget_bridge_updated_byToprincipal                                   forecast_budget_bridge[]              @relation("forecast_budget_bridge_updated_byToprincipal")
+  fx_policy                                                                                             fx_policy[]
   hook_action_registry                                                                                  hook_action_registry[]
   lifecycle                                                                                             lifecycle[]
   lifecycle_hook_override                                                                               lifecycle_hook_override[]
@@ -16112,6 +16164,7 @@ model principal {
   outbox_routing_rule_outbox_routing_rule_updated_byToprincipal                                         outbox_routing_rule[]                 @relation("outbox_routing_rule_updated_byToprincipal")
   policy_definition                                                                                     policy_definition[]
   policy_rule                                                                                           policy_rule[]
+  posting_role_account_map                                                                              posting_role_account_map[]
   rounding_rule                                                                                         rounding_rule[]
   supplier_posting_override                                                                             supplier_posting_override[]
   tax_group                                                                                             tax_group[]
@@ -16134,6 +16187,8 @@ model principal {
   bank_statement_bank_statement_created_byToprincipal                                                   bank_statement[]                      @relation("bank_statement_created_byToprincipal")
   bank_statement_bank_statement_signed_off_byToprincipal                                                bank_statement[]                      @relation("bank_statement_signed_off_byToprincipal")
   bank_statement_bank_statement_updated_byToprincipal                                                   bank_statement[]                      @relation("bank_statement_updated_byToprincipal")
+  book_posting_derivation_book_posting_derivation_created_byToprincipal                                 book_posting_derivation[]             @relation("book_posting_derivation_created_byToprincipal")
+  book_posting_derivation_book_posting_derivation_updated_byToprincipal                                 book_posting_derivation[]             @relation("book_posting_derivation_updated_byToprincipal")
   doc_attachment_doc_attachment_created_byToprincipal                                                   doc_attachment[]                      @relation("doc_attachment_created_byToprincipal")
   doc_attachment_doc_attachment_updated_byToprincipal                                                   doc_attachment[]                      @relation("doc_attachment_updated_byToprincipal")
   doc_attachment_doc_attachment_uploaded_byToprincipal                                                  doc_attachment[]                      @relation("doc_attachment_uploaded_byToprincipal")
@@ -17470,53 +17525,54 @@ model supplier_qualification {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
 model tax_jurisdiction {
-  id                                                                                                 String                     @id(map: "tj_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                                          String                     @db.Uuid
+  id                                                                                                 String                          @id(map: "tj_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                          String                          @db.Uuid
   code                                                                                               String
   name                                                                                               String
   description                                                                                        String?
-  country_code                                                                                       String                     @db.Char(2)
+  country_code                                                                                       String                          @db.Char(2)
   state_region_code                                                                                  String?
   city_code                                                                                          String?
   jurisdiction_type                                                                                  String
   authority_name                                                                                     String?
-  registration_required                                                                              Boolean                    @default(false)
-  wht_section_required                                                                               Boolean                    @default(false)
+  registration_required                                                                              Boolean                         @default(false)
+  wht_section_required                                                                               Boolean                         @default(false)
   filing_frequency                                                                                   String?
-  sort_order                                                                                         Int                        @default(0) @db.SmallInt
-  metadata                                                                                           Json                       @default("{}")
-  status                                                                                             String                     @default("active")
-  is_active                                                                                          Boolean?                   @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                                                                  DateTime?                  @db.Timestamptz(6)
-  status_changed_by                                                                                  String?                    @db.Uuid
-  created_at                                                                                         DateTime                   @default(now()) @db.Timestamptz(6)
-  created_by                                                                                         String                     @db.Uuid
-  updated_at                                                                                         DateTime?                  @db.Timestamptz(6)
-  updated_by                                                                                         String?                    @db.Uuid
+  sort_order                                                                                         Int                             @default(0) @db.SmallInt
+  metadata                                                                                           Json                            @default("{}")
+  status                                                                                             String                          @default("active")
+  is_active                                                                                          Boolean?                        @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                                                                  DateTime?                       @db.Timestamptz(6)
+  status_changed_by                                                                                  String?                         @db.Uuid
+  created_at                                                                                         DateTime                        @default(now()) @db.Timestamptz(6)
+  created_by                                                                                         String                          @db.Uuid
+  updated_at                                                                                         DateTime?                       @db.Timestamptz(6)
+  updated_by                                                                                         String?                         @db.Uuid
   tax_credit_summary                                                                                 tax_credit_summary[]
   wht_supplier_accumulator                                                                           wht_supplier_accumulator[]
   tax_group                                                                                          tax_group[]
   tax_rate_schedule                                                                                  tax_rate_schedule[]
-  tax_resolution_rule_tax_resolution_rule_tenant_id_scope_billfrom_jurisdiction_idTotax_jurisdiction tax_resolution_rule[]      @relation("tax_resolution_rule_tenant_id_scope_billfrom_jurisdiction_idTotax_jurisdiction")
-  tax_resolution_rule_tax_resolution_rule_tenant_id_scope_billto_jurisdiction_idTotax_jurisdiction   tax_resolution_rule[]      @relation("tax_resolution_rule_tenant_id_scope_billto_jurisdiction_idTotax_jurisdiction")
-  tax_resolution_rule_tax_resolution_rule_tenant_id_scope_shipfrom_jurisdiction_idTotax_jurisdiction tax_resolution_rule[]      @relation("tax_resolution_rule_tenant_id_scope_shipfrom_jurisdiction_idTotax_jurisdiction")
-  tax_resolution_rule_tax_resolution_rule_tenant_id_scope_shipto_jurisdiction_idTotax_jurisdiction   tax_resolution_rule[]      @relation("tax_resolution_rule_tenant_id_scope_shipto_jurisdiction_idTotax_jurisdiction")
+  tax_resolution_rule_tax_resolution_rule_tenant_id_scope_billfrom_jurisdiction_idTotax_jurisdiction tax_resolution_rule[]           @relation("tax_resolution_rule_tenant_id_scope_billfrom_jurisdiction_idTotax_jurisdiction")
+  tax_resolution_rule_tax_resolution_rule_tenant_id_scope_billto_jurisdiction_idTotax_jurisdiction   tax_resolution_rule[]           @relation("tax_resolution_rule_tenant_id_scope_billto_jurisdiction_idTotax_jurisdiction")
+  tax_resolution_rule_tax_resolution_rule_tenant_id_scope_shipfrom_jurisdiction_idTotax_jurisdiction tax_resolution_rule[]           @relation("tax_resolution_rule_tenant_id_scope_shipfrom_jurisdiction_idTotax_jurisdiction")
+  tax_resolution_rule_tax_resolution_rule_tenant_id_scope_shipto_jurisdiction_idTotax_jurisdiction   tax_resolution_rule[]           @relation("tax_resolution_rule_tenant_id_scope_shipto_jurisdiction_idTotax_jurisdiction")
   wht_threshold_config                                                                               wht_threshold_config[]
-  commitment_line_commitment_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction               commitment_line[]          @relation("commitment_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction")
-  commitment_line_commitment_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction                 commitment_line[]          @relation("commitment_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction")
-  purchase_invoice_line_purchase_invoice_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction   purchase_invoice_line[]    @relation("purchase_invoice_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction")
-  purchase_invoice_line_purchase_invoice_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction     purchase_invoice_line[]    @relation("purchase_invoice_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction")
-  service_sheet_line_service_sheet_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction         service_sheet_line[]       @relation("service_sheet_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction")
-  service_sheet_line_service_sheet_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction           service_sheet_line[]       @relation("service_sheet_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction")
+  commitment_line_commitment_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction               commitment_line[]               @relation("commitment_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction")
+  commitment_line_commitment_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction                 commitment_line[]               @relation("commitment_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction")
+  purchase_invoice_line_purchase_invoice_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction   purchase_invoice_line[]         @relation("purchase_invoice_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction")
+  purchase_invoice_line_purchase_invoice_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction     purchase_invoice_line[]         @relation("purchase_invoice_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction")
+  service_sheet_line_service_sheet_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction         service_sheet_line[]            @relation("service_sheet_line_tenant_id_from_tax_jurisdiction_idTotax_jurisdiction")
+  service_sheet_line_service_sheet_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction           service_sheet_line[]            @relation("service_sheet_line_tenant_id_to_tax_jurisdiction_idTotax_jurisdiction")
   tax_calculation                                                                                    tax_calculation[]
   tax_credit_movement                                                                                tax_credit_movement[]
   address                                                                                            address[]
   business_partner                                                                                   business_partner[]
   company_code                                                                                       company_code[]
-  country                                                                                            country                    @relation(fields: [country_code], references: [code], onUpdate: Restrict, map: "tj_country_fk")
-  principal                                                                                          principal                  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tj_created_by_fk")
-  state_region                                                                                       state_region?              @relation(fields: [country_code, state_region_code], references: [country_code, code], onUpdate: Restrict, map: "tj_state_region_fk")
-  tenant                                                                                             tenant                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tj_tenant_fk")
+  organization_tax_registration                                                                      organization_tax_registration[]
+  country                                                                                            country                         @relation(fields: [country_code], references: [code], onUpdate: Restrict, map: "tj_country_fk")
+  principal                                                                                          principal                       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "tj_created_by_fk")
+  state_region                                                                                       state_region?                   @relation(fields: [country_code, state_region_code], references: [country_code, code], onUpdate: Restrict, map: "tj_state_region_fk")
+  tenant                                                                                             tenant                          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tj_tenant_fk")
 
   @@unique([tenant_id, code], map: "tj_code_uq")
   @@unique([tenant_id, id], map: "tj_tenant_id_uq")
@@ -17724,6 +17780,7 @@ model tenant {
   commodity_classification_config                                commodity_classification_config?
   commodity_classification_to_intent_rule                        commodity_classification_to_intent_rule[]
   commodity_code_to_category_rule                                commodity_code_to_category_rule[]
+  company_fiscal_calendar_assignment                             company_fiscal_calendar_assignment[]
   content_quota                                                  content_quota[]
   dimension_policy                                               dimension_policy[]
   entity                                                         entity[]
@@ -17736,7 +17793,11 @@ model tenant {
   entity_version                                                 entity_version[]
   entity_version_contract                                        entity_version_contract[]
   field_security_policy                                          field_security_policy[]
+  finance_posting_rollout_policy                                 finance_posting_rollout_policy[]
+  fiscal_calendar_config                                         fiscal_calendar_config[]
+  fiscal_calendar_period_rule                                    fiscal_calendar_period_rule[]
   forecast_budget_bridge                                         forecast_budget_bridge[]
+  fx_policy                                                      fx_policy[]
   hook_action_registry                                           hook_action_registry[]
   intent_profile_override                                        intent_profile_override[]
   intent_to_accounting_profile_rule                              intent_to_accounting_profile_rule[]
@@ -17756,10 +17817,13 @@ model tenant {
   payment_method_interface_binding                               payment_method_interface_binding[]
   payment_settlement_rule                                        payment_settlement_rule[]
   policy_definition                                              policy_definition[]
+  posting_role_account_map                                       posting_role_account_map[]
+  posting_role_alias                                             posting_role_alias[]
   rounding_rule                                                  rounding_rule[]
   supplier_posting_override                                      supplier_posting_override[]
   tax_group                                                      tax_group[]
   tax_group_component                                            tax_group_component[]
+  tax_group_version                                              tax_group_version[]
   tax_rate_schedule                                              tax_rate_schedule[]
   tax_resolution_rule                                            tax_resolution_rule[]
   transaction_flow_template                                      transaction_flow_template[]
@@ -17770,6 +17834,7 @@ model tenant {
   bank_recon_case_line                                           bank_recon_case_line[]
   bank_statement                                                 bank_statement[]
   bank_statement_line                                            bank_statement_line[]
+  book_posting_derivation                                        book_posting_derivation[]
   command_log                                                    command_log[]
   doc_attachment                                                 doc_attachment[]
   party_advance_balance                                          party_advance_balance[]
@@ -17930,6 +17995,7 @@ model tenant {
   notification                                                   notification[]
   operating_organization                                         operating_organization[]
   operating_organization_company                                 operating_organization_company[]
+  organization_tax_registration                                  organization_tax_registration[]
   owner_type                                                     owner_type[]
   party_governance_relation                                      party_governance_relation[]
   party_risk_assessment                                          party_risk_assessment[]
@@ -17964,6 +18030,8 @@ model tenant {
   template_binding                                               template_binding[]
   tenant_admin_grant                                             tenant_admin_grant[]
   tenant_feature_entitlement                                     tenant_feature_entitlement[]
+  tenant_identity_domain                                         tenant_identity_domain[]
+  tenant_identity_provider                                       tenant_identity_provider[]
   tenant_module_subscription                                     tenant_module_subscription[]
   tenant_parameter_definition                                    tenant_parameter_definition[]
   tenant_parameter_value                                         tenant_parameter_value[]
@@ -18562,6 +18630,7 @@ model currency {
   tax_credit_summary                                              tax_credit_summary[]
   bank_format_rule                                                bank_format_rule[]
   commodity_category_buy_policy                                   commodity_category_buy_policy[]
+  fx_policy                                                       fx_policy[]
   payment_method_company_policy                                   payment_method_company_policy[]
   payment_method_interface_binding                                payment_method_interface_binding[]
   wht_threshold_config                                            wht_threshold_config[]
@@ -19369,4 +19438,433 @@ model template_version {
   @@unique([tenant_id, template_id, checksum], map: "template_version_checksum_uq")
   @@unique([tenant_id, id], map: "template_version_tenant_id_uq")
   @@schema("snapshot")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model company_fiscal_calendar_assignment {
+  id                         String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                  String                 @db.Uuid
+  company_code_id            String                 @db.Uuid
+  fiscal_calendar_config_id  String                 @db.Uuid
+  effective_fiscal_year_from Int                    @db.SmallInt
+  effective_fiscal_year_to   Int?                   @db.SmallInt
+  priority                   Int                    @default(0) @db.SmallInt
+  metadata                   Json                   @default("{}")
+  status                     String                 @default("active")
+  is_active                  Boolean?               @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at          DateTime?              @db.Timestamptz(6)
+  status_changed_by          String?                @db.Uuid
+  created_at                 DateTime               @default(now()) @db.Timestamptz(6)
+  created_by                 String                 @db.Uuid
+  updated_at                 DateTime?              @db.Timestamptz(6)
+  updated_by                 String?                @db.Uuid
+  company_code               company_code           @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "cfca_company_fk")
+  fiscal_calendar_config     fiscal_calendar_config @relation(fields: [tenant_id, fiscal_calendar_config_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cfca_config_fk")
+  principal                  principal              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cfca_created_by_fk")
+  tenant                     tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cfca_tenant_fk")
+
+  @@unique([tenant_id, id], map: "company_fiscal_calendar_assignment_tenant_id_uq")
+  @@index([tenant_id, company_code_id, effective_fiscal_year_from, effective_fiscal_year_to], map: "cfca_company_year_idx", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model finance_posting_rollout_policy {
+  id                String        @id(map: "fprp_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String        @db.Uuid
+  company_code_id   String?       @db.Uuid
+  rollout_mode      String        @default("observe")
+  effective_from    DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  reason            String?
+  metadata          Json          @default("{}")
+  status            String        @default("active")
+  status_changed_at DateTime?     @db.Timestamptz(6)
+  status_changed_by String?       @db.Uuid
+  created_at        DateTime      @default(now()) @db.Timestamptz(6)
+  created_by        String        @db.Uuid
+  updated_at        DateTime?     @db.Timestamptz(6)
+  updated_by        String?       @db.Uuid
+  company_code      company_code? @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fprp_company_fk")
+  tenant            tenant        @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fprp_tenant_fk")
+
+  @@unique([tenant_id, company_code_id], map: "fprp_scope_uq")
+  @@unique([tenant_id, id], map: "fprp_tenant_id_uq")
+  @@index([tenant_id, company_code_id, effective_from(sort: Desc)], map: "ix_fprp_resolve", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model fiscal_calendar_config {
+  id                                                     String                               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                              String                               @db.Uuid
+  code                                                   String
+  name                                                   String
+  description                                            String?
+  calendar_type                                          String                               @default("monthly")
+  version_no                                             Int                                  @default(1)
+  fiscal_year_label_rule                                 String                               @default("start_year")
+  year_start_rule                                        String                               @default("fixed_date")
+  anchor_month                                           Int                                  @default(1) @db.SmallInt
+  anchor_day                                             Int                                  @default(1) @db.SmallInt
+  week_start_day                                         Int                                  @default(1) @db.SmallInt
+  periods_per_year                                       Int                                  @default(12) @db.SmallInt
+  leap_week_rule                                         String                               @default("none")
+  effective_from                                         DateTime?                            @db.Date
+  effective_to                                           DateTime?                            @db.Date
+  supersedes_id                                          String?                              @db.Uuid
+  metadata                                               Json                                 @default("{}")
+  status                                                 String                               @default("draft")
+  is_active                                              Boolean?                             @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                      DateTime?                            @db.Timestamptz(6)
+  status_changed_by                                      String?                              @db.Uuid
+  created_at                                             DateTime                             @default(now()) @db.Timestamptz(6)
+  created_by                                             String                               @db.Uuid
+  updated_at                                             DateTime?                            @db.Timestamptz(6)
+  updated_by                                             String?                              @db.Uuid
+  company_fiscal_calendar_assignment                     company_fiscal_calendar_assignment[]
+  principal_fiscal_calendar_config_created_byToprincipal principal                            @relation("fiscal_calendar_config_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fcc_created_by_fk")
+  fiscal_calendar_config                                 fiscal_calendar_config?              @relation("fiscal_calendar_configTofiscal_calendar_config", fields: [tenant_id, supersedes_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "fcc_supersedes_fk")
+  other_fiscal_calendar_config                           fiscal_calendar_config[]             @relation("fiscal_calendar_configTofiscal_calendar_config")
+  tenant                                                 tenant                               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fcc_tenant_fk")
+  principal_fiscal_calendar_config_updated_byToprincipal principal?                           @relation("fiscal_calendar_config_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fcc_updated_by_fk")
+  fiscal_calendar_period_rule                            fiscal_calendar_period_rule[]
+  fiscal_period                                          fiscal_period[]
+
+  @@unique([tenant_id, code, version_no], map: "fiscal_calendar_config_code_version_uq")
+  @@unique([tenant_id, id], map: "fiscal_calendar_config_tenant_id_uq")
+  @@index([tenant_id, status, code, version_no(sort: Desc)], map: "fcc_tenant_status_idx")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model fiscal_calendar_period_rule {
+  id                        String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                 String                 @db.Uuid
+  fiscal_calendar_config_id String                 @db.Uuid
+  sequence_no               Int                    @db.SmallInt
+  period_number             Int                    @db.SmallInt
+  period_type               String                 @default("normal")
+  name_template             String                 @default("Period {period}")
+  duration_unit             String                 @default("month")
+  duration_value            Int                    @default(1) @db.SmallInt
+  anchor                    String                 @default("sequence")
+  quarter_number            Int?                   @db.SmallInt
+  absorbs_leap_week         Boolean                @default(false)
+  sort_order                Int                    @default(0) @db.SmallInt
+  metadata                  Json                   @default("{}")
+  status                    String                 @default("active")
+  is_active                 Boolean?               @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at         DateTime?              @db.Timestamptz(6)
+  status_changed_by         String?                @db.Uuid
+  created_at                DateTime               @default(now()) @db.Timestamptz(6)
+  created_by                String                 @db.Uuid
+  updated_at                DateTime?              @db.Timestamptz(6)
+  updated_by                String?                @db.Uuid
+  fiscal_calendar_config    fiscal_calendar_config @relation(fields: [tenant_id, fiscal_calendar_config_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fcpr_config_fk")
+  principal                 principal              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fcpr_created_by_fk")
+  tenant                    tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fcpr_tenant_fk")
+
+  @@unique([tenant_id, fiscal_calendar_config_id, period_number], map: "fiscal_calendar_period_rule_number_uq")
+  @@unique([tenant_id, fiscal_calendar_config_id, sequence_no], map: "fiscal_calendar_period_rule_sequence_uq")
+  @@unique([tenant_id, id], map: "fiscal_calendar_period_rule_tenant_id_uq")
+  @@index([tenant_id, fiscal_calendar_config_id, sequence_no], map: "fcpr_config_order_idx", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model fx_policy {
+  id                                String        @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                         String        @db.Uuid
+  company_code_id                   String?       @db.Uuid
+  ledger_book_id                    String?       @db.Uuid
+  transaction_context               String        @default("general")
+  effective_from                    DateTime      @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to                      DateTime?     @db.Date
+  priority                          Int           @default(100) @db.SmallInt
+  default_rate_type                 String        @default("SPOT")
+  revaluation_rate_type             String        @default("PERIOD_END")
+  pivot_currency_code               String?       @db.Char(3)
+  allow_inverse                     Boolean       @default(true)
+  allow_triangulation               Boolean       @default(false)
+  preferred_sources                 Json          @default("[]")
+  maximum_rate_age_days             Int?
+  missing_rate_behavior             String        @default("block")
+  manual_override_allowed           Boolean       @default(false)
+  manual_override_approval_required Boolean       @default(false)
+  auto_reverse_revaluation          Boolean       @default(true)
+  metadata                          Json          @default("{}")
+  status                            String        @default("draft")
+  is_active                         Boolean?      @default(dbgenerated("(status = 'active'::text)"))
+  version_no                        Int           @default(1)
+  supersedes_id                     String?       @db.Uuid
+  status_changed_at                 DateTime?     @db.Timestamptz(6)
+  status_changed_by                 String?       @db.Uuid
+  created_at                        DateTime      @default(now()) @db.Timestamptz(6)
+  created_by                        String        @db.Uuid
+  updated_at                        DateTime?     @db.Timestamptz(6)
+  updated_by                        String?       @db.Uuid
+  ledger_book                       ledger_book?  @relation(fields: [tenant_id, ledger_book_id], references: [tenant_id, id], onUpdate: NoAction, map: "fx_policy_book_fk")
+  company_code                      company_code? @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "fx_policy_company_fk")
+  principal                         principal     @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "fx_policy_created_by_fk")
+  currency                          currency?     @relation(fields: [pivot_currency_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "fx_policy_pivot_currency_fk")
+  fx_policy                         fx_policy?    @relation("fx_policyTofx_policy", fields: [tenant_id, supersedes_id], references: [tenant_id, id], onUpdate: NoAction, map: "fx_policy_supersedes_fk")
+  other_fx_policy                   fx_policy[]   @relation("fx_policyTofx_policy")
+  tenant                            tenant        @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fx_policy_tenant_fk")
+
+  @@unique([tenant_id, id], map: "fx_policy_tenant_id_uq")
+  @@index([tenant_id, transaction_context, company_code_id, ledger_book_id, effective_from, priority(sort: Desc)], map: "ix_fx_policy_resolution", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model posting_role_account_map {
+  id                             String                     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                      String                     @db.Uuid
+  company_code_id                String                     @db.Uuid
+  ledger_book_id                 String                     @db.Uuid
+  posting_role_code              String
+  gl_account_id                  String                     @db.Uuid
+  effective_from                 DateTime                   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to                   DateTime?                  @db.Date
+  priority                       Int                        @default(100) @db.SmallInt
+  version_no                     Int                        @default(1)
+  supersedes_id                  String?                    @db.Uuid
+  description                    String?
+  metadata                       Json                       @default("{}")
+  status                         String                     @default("active")
+  is_active                      Boolean?                   @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at              DateTime?                  @db.Timestamptz(6)
+  status_changed_by              String?                    @db.Uuid
+  created_at                     DateTime                   @default(now()) @db.Timestamptz(6)
+  created_by                     String                     @db.Uuid
+  updated_at                     DateTime?                  @db.Timestamptz(6)
+  updated_by                     String?                    @db.Uuid
+  gl_account                     gl_account                 @relation(fields: [tenant_id, gl_account_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pram_account_fk")
+  ledger_book                    ledger_book                @relation(fields: [tenant_id, ledger_book_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pram_book_fk")
+  company_code                   company_code               @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pram_company_fk")
+  principal                      principal                  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pram_created_by_fk")
+  posting_role_account_map       posting_role_account_map?  @relation("posting_role_account_mapToposting_role_account_map", fields: [tenant_id, supersedes_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "pram_supersedes_fk")
+  other_posting_role_account_map posting_role_account_map[] @relation("posting_role_account_mapToposting_role_account_map")
+  tenant                         tenant                     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pram_tenant_fk")
+
+  @@unique([tenant_id, id], map: "posting_role_account_map_tenant_id_uq")
+  @@index([tenant_id, gl_account_id], map: "pram_account_idx")
+  @@index([tenant_id, company_code_id, ledger_book_id], map: "pram_book_idx")
+  @@index([tenant_id, company_code_id, ledger_book_id, posting_role_code, priority(sort: Desc), effective_from(sort: Desc)], map: "pram_resolution_idx", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model posting_role_alias {
+  id                  String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id           String?   @db.Uuid
+  alias_code          String
+  canonical_role_code String
+  source_domain_code  String?
+  description         String?
+  metadata            Json      @default("{}")
+  status              String    @default("active")
+  is_active           Boolean?  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at   DateTime? @db.Timestamptz(6)
+  status_changed_by   String?   @db.Uuid
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+  created_by          String    @db.Uuid
+  updated_at          DateTime? @db.Timestamptz(6)
+  updated_by          String?   @db.Uuid
+  tenant              tenant?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "posting_role_alias_tenant_fk")
+
+  @@unique([tenant_id, id], map: "posting_role_alias_tenant_id_uq")
+  @@index([alias_code, tenant_id], map: "posting_role_alias_resolution_idx", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tax_group_version {
+  id                      String                @id(map: "tgv_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id               String                @db.Uuid
+  tax_group_id            String                @db.Uuid
+  version_no              Int
+  effective_from          DateTime              @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to            DateTime?             @db.Date
+  is_compound             Boolean               @default(false)
+  rounding_rule_id        String                @db.Uuid
+  description             String?
+  metadata                Json                  @default("{}")
+  status                  String                @default("draft")
+  is_active               Boolean?              @default(dbgenerated("(status = 'active'::text)"))
+  supersedes_id           String?               @db.Uuid
+  status_changed_at       DateTime?             @db.Timestamptz(6)
+  status_changed_by       String?               @db.Uuid
+  created_at              DateTime              @default(now()) @db.Timestamptz(6)
+  created_by              String                @db.Uuid
+  updated_at              DateTime?             @db.Timestamptz(6)
+  updated_by              String?               @db.Uuid
+  tax_group_component     tax_group_component[]
+  tax_group               tax_group             @relation(fields: [tenant_id, tax_group_id], references: [tenant_id, id], onUpdate: NoAction, map: "tgv_group_fk")
+  rounding_rule           rounding_rule         @relation(fields: [tenant_id, rounding_rule_id], references: [tenant_id, id], onUpdate: NoAction, map: "tgv_rounding_fk")
+  tax_group_version       tax_group_version?    @relation("tax_group_versionTotax_group_version", fields: [tenant_id, supersedes_id], references: [tenant_id, id], onUpdate: NoAction, map: "tgv_supersedes_fk")
+  other_tax_group_version tax_group_version[]   @relation("tax_group_versionTotax_group_version")
+  tenant                  tenant                @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "tgv_tenant_fk")
+
+  @@unique([tenant_id, tax_group_id, version_no], map: "tgv_group_version_uq")
+  @@unique([tenant_id, id], map: "tgv_tenant_id_uq")
+  @@index([tenant_id, tax_group_id, effective_from(sort: Desc)], map: "ix_tgv_effective", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model book_posting_derivation {
+  id                                                                               String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                        String            @db.Uuid
+  company_code_id                                                                  String            @db.Uuid
+  source_journal_id                                                                String            @db.Uuid
+  posting_rule_id                                                                  String            @db.Uuid
+  posting_rule_version                                                             Int               @db.SmallInt
+  target_journal_id                                                                String?           @db.Uuid
+  idempotency_key                                                                  String
+  status                                                                           String            @default("pending")
+  attempt_count                                                                    Int               @default(0)
+  last_attempt_at                                                                  DateTime?         @db.Timestamptz(6)
+  completed_at                                                                     DateTime?         @db.Timestamptz(6)
+  error_code                                                                       String?
+  error_message                                                                    String?
+  evidence_payload                                                                 Json              @default("{}")
+  created_at                                                                       DateTime          @default(now()) @db.Timestamptz(6)
+  created_by                                                                       String            @db.Uuid
+  updated_at                                                                       DateTime?         @db.Timestamptz(6)
+  updated_by                                                                       String?           @db.Uuid
+  company_code                                                                     company_code      @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "bpd_company_fk")
+  principal_book_posting_derivation_created_byToprincipal                          principal         @relation("book_posting_derivation_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "bpd_created_by_fk")
+  book_posting_rule                                                                book_posting_rule @relation(fields: [tenant_id, posting_rule_id], references: [tenant_id, id], onUpdate: NoAction, map: "bpd_posting_rule_fk")
+  journal_entry_book_posting_derivation_tenant_id_source_journal_idTojournal_entry journal_entry     @relation("book_posting_derivation_tenant_id_source_journal_idTojournal_entry", fields: [tenant_id, source_journal_id], references: [tenant_id, id], onUpdate: NoAction, map: "bpd_source_journal_fk")
+  journal_entry_book_posting_derivation_tenant_id_target_journal_idTojournal_entry journal_entry?    @relation("book_posting_derivation_tenant_id_target_journal_idTojournal_entry", fields: [tenant_id, target_journal_id], references: [tenant_id, id], onUpdate: NoAction, map: "bpd_target_journal_fk")
+  tenant                                                                           tenant            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bpd_tenant_fk")
+  principal_book_posting_derivation_updated_byToprincipal                          principal?        @relation("book_posting_derivation_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "bpd_updated_by_fk")
+
+  @@unique([tenant_id, id], map: "book_posting_derivation_tenant_id_uq")
+  @@unique([tenant_id, idempotency_key], map: "bpd_idempotency_uq")
+  @@unique([tenant_id, source_journal_id, posting_rule_id, posting_rule_version], map: "bpd_source_rule_version_uq")
+  @@index([tenant_id, company_code_id, last_attempt_at(sort: Desc)], map: "bpd_failure_idx", where: raw("(status = 'failed'::text)"))
+  @@index([tenant_id, posting_rule_id, status], map: "bpd_rule_status_idx")
+  @@index([tenant_id, source_journal_id, created_at(sort: Desc)], map: "bpd_source_idx")
+  @@index([tenant_id, target_journal_id], map: "bpd_target_idx", where: raw("(target_journal_id IS NOT NULL)"))
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model organization_tax_registration {
+  id                        String           @id(map: "otr_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                 String           @db.Uuid
+  legal_entity_id           String           @db.Uuid
+  company_code_id           String?          @db.Uuid
+  jurisdiction_id           String           @db.Uuid
+  registration_type         String
+  registration_number       String
+  filing_frequency          String?
+  effective_from            DateTime         @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_to              DateTime?        @db.Date
+  is_primary                Boolean          @default(false)
+  certificate_attachment_id String?          @db.Uuid
+  metadata                  Json             @default("{}")
+  status                    String           @default("active")
+  is_active                 Boolean?         @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at         DateTime?        @db.Timestamptz(6)
+  status_changed_by         String?          @db.Uuid
+  created_at                DateTime         @default(now()) @db.Timestamptz(6)
+  created_by                String           @db.Uuid
+  updated_at                DateTime?        @db.Timestamptz(6)
+  updated_by                String?          @db.Uuid
+  attachment                attachment?      @relation(fields: [tenant_id, certificate_attachment_id], references: [tenant_id, id], onUpdate: NoAction, map: "otr_attachment_fk")
+  company_code              company_code?    @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "otr_company_fk")
+  tax_jurisdiction          tax_jurisdiction @relation(fields: [tenant_id, jurisdiction_id], references: [tenant_id, id], onUpdate: NoAction, map: "otr_jurisdiction_fk")
+  legal_entity              legal_entity     @relation(fields: [tenant_id, legal_entity_id], references: [tenant_id, id], onUpdate: NoAction, map: "otr_legal_entity_fk")
+  tenant                    tenant           @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "otr_tenant_fk")
+
+  @@unique([tenant_id, id], map: "otr_tenant_id_uq")
+  @@index([tenant_id, company_code_id, effective_from(sort: Desc)], map: "ix_otr_company_effective", where: raw("(status = 'active'::text)"))
+  @@index([tenant_id, legal_entity_id, effective_from(sort: Desc)], map: "ix_otr_legal_entity_effective", where: raw("(status = 'active'::text)"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tenant_identity_domain {
+  id                       String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                String                   @db.Uuid
+  provider_id              String                   @db.Uuid
+  domain                   String
+  verification_status      String                   @default("pending")
+  verification_method      String?
+  verified_at              DateTime?                @db.Timestamptz(6)
+  enabled                  Boolean                  @default(false)
+  created_at               DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by               String                   @db.Uuid
+  updated_at               DateTime?                @db.Timestamptz(6)
+  updated_by               String?                  @db.Uuid
+  tenant_identity_provider tenant_identity_provider @relation(fields: [tenant_id, provider_id], references: [tenant_id, id], onUpdate: NoAction, map: "tenant_identity_domain_provider_fk")
+  tenant                   tenant                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tenant_identity_domain_tenant_fk")
+
+  @@unique([tenant_id, domain], map: "tenant_identity_domain_tenant_domain_uq")
+  @@index([domain], map: "tenant_identity_domain_lookup_idx", where: raw("((verification_status = 'verified'::text) AND (enabled = true))"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tenant_identity_provider {
+  id                     String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id              String                   @db.Uuid
+  keycloak_alias         String
+  realm_key              String                   @default("athyper")
+  protocol               String
+  provider_type          String
+  display_name           String
+  configuration_ref      String
+  feature_gate           String                   @default("core")
+  login_mode             String                   @default("optional")
+  first_login_policy     String                   @default("existing-users-only")
+  mfa_trust_policy       String                   @default("never")
+  allowed_planes         String[]                 @default(["neon"])
+  enabled                Boolean                  @default(false)
+  configuration_version  Int                      @default(1)
+  activated_at           DateTime?                @db.Timestamptz(6)
+  metadata               Json                     @default("{}")
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by             String                   @db.Uuid
+  updated_at             DateTime?                @db.Timestamptz(6)
+  updated_by             String?                  @db.Uuid
+  tenant_identity_domain tenant_identity_domain[]
+  tenant                 tenant                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tenant_identity_provider_tenant_fk")
+
+  @@unique([tenant_id, keycloak_alias], map: "tenant_identity_provider_tenant_alias_uq")
+  @@unique([tenant_id, id], map: "tenant_identity_provider_tenant_id_uq")
+  @@index([allowed_planes], map: "tenant_identity_provider_plane_idx", type: Gin, where: raw("(enabled = true)"))
+  @@schema("master")
 }

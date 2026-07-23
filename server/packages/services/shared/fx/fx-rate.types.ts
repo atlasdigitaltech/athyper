@@ -36,7 +36,7 @@ export type FxRateLookupResult = {
   toCurrency: string;
   rateType: string;
   asOf: string;
-  pivotCurrency: string;
+  pivotCurrency: string | null;
 };
 
 export interface FxRateSnapshot {

@@ -1,5 +1,14 @@
 import type { ReactNode } from "react";
 
+export {
+  SurfaceHeader,
+  type SurfaceHeaderBack,
+  type SurfaceHeaderFact,
+  type SurfaceHeaderKind,
+  type SurfaceHeaderNavigationItem,
+  type SurfaceHeaderProps,
+} from "./surface-header";
+
 // â”€â”€â”€ PageFrame â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface PageFrameProps {

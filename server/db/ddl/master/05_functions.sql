@@ -205,14 +205,14 @@ COMMENT ON FUNCTION master.trg_normalize_contact_link_value() IS
     'Must fire BEFORE lookup-validation and uniqueness triggers.';
 
 
--- Root/master owners keep one default contact bucket. Purposeful routing roles
--- stay on role owners (supplier/customer/etc.) or document contact snapshots.
+-- Organizational owners default blank purposes to the universal fallback.
+-- Explicit correspondence/notification purposes and role qualifiers are retained.
 CREATE OR REPLACE FUNCTION master.trg_contact_link_root_owner_default_purpose()
 RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
 BEGIN
-    IF NEW.owner_type IN ('tenant', 'legal_entity', 'company_code', 'site', 'business_partner') THEN
+    IF NEW.owner_type IN ('tenant', 'legal_entity', 'company_code', 'site', 'business_partner')
+       AND NEW.purpose IS NULL THEN
         NEW.purpose := 'default';
-        NEW.role_qualifier := NULL;
     END IF;
 
     RETURN NEW;
@@ -220,9 +220,8 @@ END;
 $$;
 
 COMMENT ON FUNCTION master.trg_contact_link_root_owner_default_purpose() IS
-    'Normalizes contact_link purpose to default for tenant, legal_entity, '
-    'company_code, site, and business_partner owners. Role-specific contact '
-    'routing belongs on role owners or document contact snapshots.';
+    'Defaults a blank contact_link purpose for organizational owners while retaining '
+    'explicit correspondence/notification purposes and role qualifiers.';
 
 
 -- Sync login_email cache on principal when contact_link changes.
@@ -997,6 +996,51 @@ COMMENT ON FUNCTION master.trg_validate_owner_ref() IS
     'Tenant custom types (schema_name IS NULL): blocked with EXCEPTION — '
     'must register a backing table before creating contact/address references.';
 
+-- Validate the polymorphic parent of a named contact person through the same
+-- owner registry used by address_link/contact_link.
+CREATE OR REPLACE FUNCTION master.trg_validate_party_contact_parent()
+RETURNS trigger LANGUAGE plpgsql SET search_path = master AS $$
+DECLARE
+    v_schema text;
+    v_table text;
+    v_pk_col text;
+    v_is_tenant_scoped boolean;
+    v_tenant_column text;
+    v_exists boolean;
+BEGIN
+    SELECT schema_name, table_name, pk_column, is_tenant_scoped, tenant_column
+      INTO v_schema, v_table, v_pk_col, v_is_tenant_scoped, v_tenant_column
+      FROM master.owner_type
+     WHERE code = NEW.party_type AND tenant_id IS NULL AND status = 'active'
+     LIMIT 1;
+
+    IF NOT FOUND OR v_schema IS NULL THEN
+        RAISE EXCEPTION 'party_contact_person: unsupported party_type "%"', NEW.party_type
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF v_is_tenant_scoped THEN
+        EXECUTE format(
+            'SELECT EXISTS(SELECT 1 FROM %I.%I WHERE %I = $1 AND %I = $2)',
+            v_schema, v_table, v_pk_col, v_tenant_column
+        ) INTO v_exists USING NEW.party_id, NEW.tenant_id;
+    ELSE
+        EXECUTE format(
+            'SELECT EXISTS(SELECT 1 FROM %I.%I WHERE %I = $1)',
+            v_schema, v_table, v_pk_col
+        ) INTO v_exists USING NEW.party_id;
+        v_exists := v_exists AND NEW.party_id = NEW.tenant_id;
+    END IF;
+
+    IF NOT v_exists THEN
+        RAISE EXCEPTION 'party_contact_person: parent %/% does not exist in tenant %',
+            NEW.party_type, NEW.party_id, NEW.tenant_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 
 -- master.fn_valid_owner_type() — defined in 05_pre_constraint_functions/003_master_fn_valid_owner_type.sql.
 
@@ -1076,7 +1120,7 @@ COMMENT ON FUNCTION master.fn_resolve_address(uuid, text, uuid, text) IS
 
 
 -- fn_set_primary_address_link — promotes one address_link to is_primary = true
--- and demotes all others in the same (tenant, owner, purpose) bucket.
+-- and demotes all others in the same (tenant, owner, purpose, qualifier) bucket.
 -- Uses SELECT ... FOR UPDATE to lock the bucket, then two-step demote+promote
 -- to avoid transient violations of address_link_one_primary_excl.
 CREATE OR REPLACE FUNCTION master.fn_set_primary_address_link(
@@ -1093,13 +1137,14 @@ DECLARE
     v_owner_type  text;
     v_owner_id    uuid;
     v_purpose     text;
+    v_qualifier   text;
     v_actor       uuid := COALESCE(p_actor_id, '00000000-0000-0000-0000-000000000000');
 BEGIN
     PERFORM master.fn_require_tenant_session(p_tenant_id);
 
     -- Lock the target row and fetch its bucket context
-    SELECT owner_type, owner_id, purpose
-      INTO v_owner_type, v_owner_id, v_purpose
+    SELECT owner_type, owner_id, purpose, role_qualifier
+      INTO v_owner_type, v_owner_id, v_purpose, v_qualifier
       FROM master.address_link
      WHERE id = p_address_link_id AND tenant_id = p_tenant_id
        FOR UPDATE;
@@ -1116,6 +1161,7 @@ BEGIN
        AND owner_type = v_owner_type
        AND owner_id   = v_owner_id
        AND purpose    = v_purpose
+       AND role_qualifier IS NOT DISTINCT FROM v_qualifier
        FOR UPDATE;
 
     -- Step 1: demote existing primaries
@@ -1126,6 +1172,7 @@ BEGIN
        AND owner_type = v_owner_type
        AND owner_id   = v_owner_id
        AND purpose    = v_purpose
+       AND role_qualifier IS NOT DISTINCT FROM v_qualifier
        AND is_primary = true
        AND id        <> p_address_link_id;
 
@@ -1139,7 +1186,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION master.fn_set_primary_address_link IS
-    'Promotes address_link to is_primary via locked two-step: demote others, then '
+    'Promotes address_link to is_primary via locked two-step within the same purpose/qualifier bucket: demote others, then '
     'promote target. FOR UPDATE locking prevents concurrent collisions. SECURITY DEFINER.';
 
 
@@ -3887,7 +3934,7 @@ COMMENT ON FUNCTION master.validate_dimension_company_scope IS
 -- ============================================================================
 -- §  master.get_fx_rate
 -- FX rate lookup: direct → inverse (with effective_time ordering) →
--- triangulation via configurable pivot currency (default MYR).
+-- triangulation via an explicitly supplied pivot currency.
 -- Returns JSONB with: rate, method, source, effective_date, from, to.
 -- Returns rate=NULL with method='NOT_FOUND' when no rate is available.
 -- ============================================================================
@@ -3897,7 +3944,7 @@ CREATE OR REPLACE FUNCTION master.get_fx_rate(
     p_to            character(3),
     p_rate_type     text          DEFAULT 'SPOT',
     p_as_of         date          DEFAULT CURRENT_DATE,
-    p_pivot_currency character(3) DEFAULT 'MYR'
+    p_pivot_currency character(3) DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -3950,6 +3997,16 @@ BEGIN
             'rate', ROUND(1.0 / v.rate, 10), 'method', 'INVERSE',
             'source', v.source, 'effective_date', v.effective_date,
             'from', p_from, 'to', p_to);
+    END IF;
+
+    -- Triangulation is never implicit. Direct and inverse lookup remain safe
+    -- without policy, but a pivot must be supplied by the effective FX policy.
+    IF p_pivot_currency IS NULL THEN
+        RETURN jsonb_build_object(
+            'rate', NULL, 'method', 'NOT_FOUND', 'from', p_from, 'to', p_to,
+            'error', format(
+                'No direct or inverse rate for %s to %s (%s) as of %s; triangulation requires an explicit FX policy pivot',
+                p_from, p_to, p_rate_type, p_as_of));
     END IF;
 
     -- Triangulation via configurable pivot. Each leg may be stored directly
@@ -4046,7 +4103,7 @@ $$;
 
 COMMENT ON FUNCTION master.get_fx_rate IS
     'FX rate lookup: direct → inverse (effective_time-ordered) → '
-    'triangulation via configurable pivot currency (default MYR). '
+    'triangulation only via an explicitly supplied policy pivot currency. '
     'Returns JSONB: {rate, method, source, effective_date, from, to}. '
     'rate=NULL + method=NOT_FOUND when no rate exists.';
 

@@ -107,6 +107,7 @@ export interface AccountPostability extends PostabilityDescriptorMulti {
 // ─── Conflict (F8 audit: parent-scope visibility) ───────────────────────────
 
 export type ConflictCategory =
+  | "foundation"
   | "chart"
   | "book"
   | "gl_control"
@@ -134,6 +135,7 @@ export interface FinanceSetupConflict {
 // ─── Journey ────────────────────────────────────────────────────────────────
 
 export type JourneyStepKey =
+  | "foundation"
   | "chart"
   | "books"
   | "gl_controls"
@@ -214,6 +216,63 @@ export interface CompanyHubPayload {
 
   /** ISO — used by the "last checked" surface. */
   computedAt:          string;
+}
+
+export type FoundationDomainKey = "organization" | "accounts" | "books" | "calendar";
+export type FoundationDomainStatus = "not_started" | "in_progress" | "complete";
+export type FoundationReadinessStatus = "not_ready" | "ready_for_certification" | "certified" | "stale";
+
+export interface FoundationCheck {
+  key: string;
+  label: string;
+  passed: boolean;
+}
+
+export interface FoundationDomainCompletion {
+  key: FoundationDomainKey;
+  label: string;
+  href: string;
+  status: FoundationDomainStatus;
+  checks: FoundationCheck[];
+}
+
+export interface FoundationDeterministicCheck {
+  domain: FoundationDomainKey;
+  passed: boolean;
+  failedCheckKeys: string[];
+}
+
+export interface FoundationReadiness {
+  status: FoundationReadinessStatus;
+  deterministicComplete: boolean;
+  checks: FoundationDeterministicCheck[];
+  certificationId: string | null;
+  certificationStatus: string | null;
+}
+
+export interface CompanyFoundationPayload {
+  context: {
+    tenant: { id: string; code: string | null; name: string | null };
+    legalEntity: {
+      id: string; code: string; name: string; status: string;
+      countryCode: string | null; countryName: string | null;
+      functionalCurrency: string | null; functionalCurrencyName: string | null;
+      reportingCurrency: string | null; reportingCurrencyName: string | null;
+      regulatoryFramework: string | null;
+    };
+    company: {
+      id: string; code: string; name: string; status: string;
+      countryCode: string | null; countryName: string | null;
+      functionalCurrency: string | null; functionalCurrencyName: string | null;
+      regulatoryFramework: string | null; timezoneCode: string | null;
+      localeCode: string | null; dateFormat: string | null; weekStart: number | null;
+    };
+  };
+  domains: FoundationDomainCompletion[];
+  readiness: FoundationReadiness;
+  completedDomainCount: number;
+  totalDomainCount: 4;
+  computedAt: string;
 }
 
 

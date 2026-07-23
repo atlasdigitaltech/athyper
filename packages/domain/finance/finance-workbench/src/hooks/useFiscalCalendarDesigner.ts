@@ -76,12 +76,27 @@ export interface FiscalCalendarPreview {
   }>;
 }
 
+export interface FiscalPeriodMatrixPayload {
+  company: { id: string; code: string; name: string; fiscalYearStartMonth: number; fiscalYearVariant: string | null };
+  fiscalYear: number;
+  assignment: null | { id: string; calendarId: string; calendarCode: string; calendarName: string; calendarVersion: number; calendarType: FiscalCalendarType; anchorMonth: number; fiscalYearFrom: number; fiscalYearTo: number | null };
+  legacyConsistency: { consistent: boolean; expectedStartMonth: number | null; actualStartMonth: number; expectedVariant: string | null; actualVariant: string | null; checks: Array<{ key: string; passed: boolean; message: string }> };
+  books: Array<{ bookId: string; bookCode: string; bookName: string; isCompanyDefault: boolean }>;
+  rows: Array<{ periodId: string; periodNumber: number; periodType: string; name: string; startDate: string; endDate: string; companyStatus: string;
+    calendarId: string | null; calendarVersion: number | null; generationKey: string | null; generatedAt: string | null;
+    bookStatuses: Record<string, { status: string; gateId: string; metadata: Record<string, unknown> }> }>;
+  conflicts: Array<{ code: string; severity: "blocking" | "warning" | "info"; message: string; periodNumber?: number; bookId?: string }>;
+  evidence: { generatedPeriodCount: number; bookGateCount: number; lastGeneratedAt: string | null; generationKeys: string[]; sourceCalendar: string | null };
+  canGenerate: boolean;
+}
+
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, { credentials: "include", cache: "no-store", ...init });
   if (!response.ok) {
-    const body = await response.json().catch(() => null) as { message?: string; error?: string } | null;
-    const error = new Error(body?.message ?? `${path} returned ${response.status}`) as Error & { code?: string };
+    const body = await response.json().catch(() => null) as { message?: string; error?: string; details?: Record<string, unknown> } | null;
+    const error = new Error(body?.message ?? `${path} returned ${response.status}`) as Error & { code?: string; details?: Record<string, unknown> };
     error.code = body?.error;
+    error.details = body?.details;
     throw error;
   }
   return response.json() as Promise<T>;
@@ -95,8 +110,10 @@ function scopedUrl(companyCode: string) {
 function invalidate(qc: ReturnType<typeof useQueryClient>, companyCode: string) {
   qc.invalidateQueries({ queryKey: ["finance", "setup", "configure", "fiscal-calendar", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "configure", "fiscal-calendar-preview", companyCode] });
+  qc.invalidateQueries({ queryKey: ["finance", "setup", "configure", "fiscal-period-matrix", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "fiscal-periods"] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "company-hub", companyCode] });
+  qc.invalidateQueries({ queryKey: ["finance", "setup", "foundation", companyCode] });
 }
 
 export function useFiscalCalendarDesigner(companyCode: string) {
@@ -122,6 +139,16 @@ export function useFiscalCalendarPreview(companyCode: string, calendarId: string
   });
 }
 
+export function useFiscalPeriodMatrix(companyCode: string, fiscalYear: number) {
+  const params = new URLSearchParams({ scopeType: "company", scopeCode: companyCode, fiscalYear: String(fiscalYear) });
+  return useQuery({
+    queryKey: ["finance", "setup", "configure", "fiscal-period-matrix", companyCode, fiscalYear],
+    queryFn: () => requestJson<FiscalPeriodMatrixPayload>(`/api/finance/setup/configure/fiscal-calendar/period-matrix?${params}`),
+    enabled: Boolean(companyCode && Number.isInteger(fiscalYear)),
+    staleTime: 30_000,
+  });
+}
+
 export function useSaveFiscalCalendar(companyCode: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -143,10 +170,10 @@ export function useAssignFiscalCalendar(companyCode: string) {
   return useMutation({
     mutationFn: ({ calendarId, fiscalYearFrom }: { calendarId: string; fiscalYearFrom: number }) =>
       requestJson<{ assignmentId: string }>(
-        `/api/finance/setup/mutations/fiscal-calendar/${encodeURIComponent(calendarId)}/assign`,
+        `/api/finance/setup/company/${encodeURIComponent(companyCode)}/fiscal-calendar-assignments/${encodeURIComponent(calendarId)}`,
         {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ companyCode, fiscalYearFrom }),
+          body: JSON.stringify({ fiscalYearFrom }),
         },
       ),
     onSuccess: () => invalidate(qc, companyCode),
@@ -169,12 +196,12 @@ export function useGenerateFiscalPeriods(companyCode: string) {
   return useMutation({
     mutationFn: ({ calendarId, fiscalYear }: { calendarId: string; fiscalYear: number }) =>
       requestJson<Record<string, unknown>>(
-        `/api/finance/setup/mutations/fiscal-calendar/${encodeURIComponent(calendarId)}/generate`,
+        `/api/finance/setup/company/${encodeURIComponent(companyCode)}/fiscal-periods/${encodeURIComponent(String(fiscalYear))}/generate`,
         {
           method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ companyCode, fiscalYear }),
+          body: JSON.stringify({ calendarId }),
         },
       ),
-    onSuccess: () => invalidate(qc, companyCode),
+    onSettled: () => invalidate(qc, companyCode),
   });
 }

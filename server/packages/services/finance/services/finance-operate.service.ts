@@ -29,6 +29,7 @@ export interface BlockerGroup {
 }
 
 const CATEGORY_LABEL: Record<ConflictCategory, string> = {
+  foundation: "Addresses & contacts",
   chart:      "Chart",
   book:       "Books",
   gl_control: "GL controls",

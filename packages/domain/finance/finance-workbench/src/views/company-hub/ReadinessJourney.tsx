@@ -9,6 +9,7 @@ import {
   CircleAlert,
   ClipboardCheck,
   ListTree,
+  MapPin,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -22,6 +23,7 @@ import { DefinitionStateChip } from "./DefinitionStateChip";
 import { PostabilityChip } from "./PostabilityChip";
 
 const STEP_ICON: Record<JourneyStepKey, LucideIcon> = {
+  foundation:    MapPin,
   chart:         ListTree,
   books:         BookOpenCheck,
   gl_controls:   ClipboardCheck,

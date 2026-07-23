@@ -11,6 +11,9 @@ export interface ConfigureGlControlRow {
   accountCode:          string;
   accountName:          string;
   accountClass:         string;
+  nodeType:             string;
+  currencyCode:         string | null;
+  chartCode:            string;
   normalBalance:        string;
   isPosting:            boolean;
   hasCompanyControl:    boolean;
@@ -25,6 +28,7 @@ export interface ConfigureGlControlRow {
   defaultCostCenterId:  string | null;
   defaultSiteId:        string | null;
   createdAt:            string | null;
+  updatedAt:            string | null;
 }
 
 export interface ConfigureGlControlsGrid {
@@ -46,17 +50,55 @@ export interface ConfigureChartAssignment {
   isPrimary:      boolean;
   effectiveFrom:  string | null;
   effectiveTo:    string | null;
+  impactedAccountCount: number;
+  updatedAt:      string | null;
+}
+
+export interface ConfigureChartOption {
+  chartId: string;
+  code: string;
+  name: string;
+  framework: string | null;
+  countryCode: string | null;
+  version: number;
+  status: string;
+  postingAccountCount: number;
 }
 
 export interface ConfigureBookAssignment {
+  assignmentId:     string;
   bookId:           string;
   bookCode:         string;
   bookName:         string;
-  status:           string;
-  isPrimary:        boolean;
+  bookStatus:       string;
+  assignmentStatus: string;
+  isTenantDefault:  boolean;
+  isCompanyDefault: boolean;
+  baseCurrencyCode: string;
+  overrideCurrencyCode: string | null;
   currencyCode:     string | null;
+  currencySource:   "assignment_override" | "book_base";
+  companyFunctionalCurrency: string | null;
+  alternateCoaPrefix: string | null;
+  effectiveFrom:    string;
+  effectiveTo:      string | null;
+  priority:         number;
+  conflictStrategy: string;
   purpose:          string | null;
   isPostingEnabled: boolean;
+  updatedAt:        string | null;
+}
+
+export interface ConfigureBookOption {
+  bookId: string;
+  code: string;
+  name: string;
+  category: string;
+  reportingStandard: string | null;
+  baseCurrencyCode: string;
+  isTenantDefault: boolean;
+  status: string;
+  assignedCompanyCount: number;
 }
 
 
@@ -94,11 +136,29 @@ export function useConfigureChartAssignments(companyCode: string) {
   });
 }
 
+export function useConfigureChartOptions(companyCode: string) {
+  return useQuery({
+    queryKey: ["finance", "setup", "configure", "chart-options", companyCode],
+    queryFn: () => fetchJson<ConfigureChartOption[]>(url("chart-options", companyCode)),
+    enabled: !!companyCode,
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useConfigureBookAssignments(companyCode: string) {
   return useQuery({
     queryKey: ["finance", "setup", "configure", "book-assignments", companyCode],
     queryFn:  () => fetchJson<ConfigureBookAssignment[]>(url("book-assignments", companyCode)),
     enabled:  !!companyCode,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useConfigureBookOptions(companyCode: string) {
+  return useQuery({
+    queryKey: ["finance", "setup", "configure", "book-options", companyCode],
+    queryFn: () => fetchJson<ConfigureBookOption[]>(url("book-options", companyCode)),
+    enabled: !!companyCode,
     staleTime: 60 * 1000,
   });
 }

@@ -514,7 +514,7 @@ BEGIN
         true, '2012-05-15'::date,
         '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
     )
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Supplier SUP-ATHQ-PSM-001 seeded (id=%)', v_psm_id;
 
@@ -854,7 +854,7 @@ BEGIN
         true, '2006-03-20'::date,
         '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
     )
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Supplier SUP-ATHQ-GFL-001 seeded (id=%)', v_gfl_id;
 
@@ -1177,7 +1177,7 @@ BEGIN
         true, '2015-09-01'::date,
         '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
     )
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Supplier SUP-ATHQ-NIC-001 seeded (id=%)', v_nic_id;
 
@@ -1472,7 +1472,7 @@ BEGIN
         true, '2010-07-01'::date,
         '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
     )
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Customer CUS-ATHQ-AEH-001 seeded (id=%)', v_aeh_id;
 
@@ -1732,7 +1732,7 @@ BEGIN
         true, '2002-01-15'::date,
         '{"_seed":{"pack":"002_athq_ext_parties"}}'::jsonb, v_sys
     )
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     RAISE NOTICE '[002_athq_ext_parties] Customer CUS-ATHQ-QNP-001 seeded (id=%)', v_qnp_id;
     RAISE NOTICE '[002_athq_ext_parties] Done — 3 suppliers + 2 customers seeded for ATHQ.';

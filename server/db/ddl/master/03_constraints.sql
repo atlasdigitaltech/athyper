@@ -632,6 +632,26 @@ ALTER TABLE master.address_link DROP CONSTRAINT IF EXISTS address_link_owner_typ
 -- address_link.purpose — CHECK removed, trigger-based validation in 09_triggers.
 ALTER TABLE master.address_link DROP CONSTRAINT IF EXISTS address_link_purpose_chk;
 
+-- Named contact integrity and tenant-aware relationships.
+ALTER TABLE master.party_contact_person DROP CONSTRAINT IF EXISTS pcp_party_type_chk;
+ALTER TABLE master.party_contact_person
+    ADD CONSTRAINT pcp_party_type_chk CHECK (party_type IN (
+        'tenant', 'legal_entity', 'company_code',
+        'business_partner', 'supplier', 'customer'
+    ));
+
+ALTER TABLE master.party_contact_person DROP CONSTRAINT IF EXISTS pcp_company_code_fk;
+ALTER TABLE master.party_contact_person
+    ADD CONSTRAINT pcp_company_code_fk
+    FOREIGN KEY (tenant_id, company_code_id)
+    REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE master.party_contact_role DROP CONSTRAINT IF EXISTS pcr_contact_fk;
+ALTER TABLE master.party_contact_role
+    ADD CONSTRAINT pcr_contact_fk
+    FOREIGN KEY (tenant_id, party_contact_person_id)
+    REFERENCES master.party_contact_person (tenant_id, id) ON DELETE CASCADE;
+
 -- ── contact_link — backfill owner_type validation to existing table ──────────
 
 -- contact_link.owner_type — CHECK removed, trigger-based validation in 09_triggers.
@@ -2486,7 +2506,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
     ALTER TABLE master.bank_account_link ADD CONSTRAINT bal_bank_account_fk
         FOREIGN KEY (tenant_id, bank_account_id)
-        REFERENCES master.bank_account (tenant_id, id) ON DELETE CASCADE;
+        REFERENCES master.bank_account (tenant_id, id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN
@@ -2505,7 +2525,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN
     ALTER TABLE master.bank_account_house_config ADD CONSTRAINT bahc_link_fk
         FOREIGN KEY (tenant_id, bank_account_link_id)
-        REFERENCES master.bank_account_link (tenant_id, id) ON DELETE CASCADE;
+        REFERENCES master.bank_account_link (tenant_id, id) ON DELETE RESTRICT;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 DO $$ BEGIN

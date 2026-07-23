@@ -89,6 +89,11 @@ BEGIN
         ('gl_account', 'tenant',             'belongs_to', 'tenant',           'tenant_id',           'restrict'),
         ('gl_account', 'parent',             'belongs_to', 'gl_account',       'parent_id',           'set_null'),
 
+        ('ledger_book', 'tenant',             'belongs_to', 'tenant',                       'tenant_id',        'restrict'),
+        ('ledger_book', 'company_assignments','has_many',  'company_code_book_assignment', 'book_id',          'restrict'),
+        ('company_code_book_assignment','company_code','belongs_to','company_code',         'company_code_id',  'restrict'),
+        ('company_code_book_assignment','ledger_book','belongs_to','ledger_book',            'book_id',          'restrict'),
+
         -- â”€â”€ Business partners: customer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('customer', 'tenant',               'belongs_to', 'tenant',                'tenant_id',   'restrict'),
         ('customer', 'company_profiles',     'has_many',   'company_code_customer_profile','customer_id','cascade'),

@@ -19,6 +19,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   registerIamRoutes,
+  checkPermission,
   checkPermissionBatch,
   getEffectiveModuleAccess,
   createPermissionResolverRegistry,
@@ -37,7 +38,7 @@ import { registerSearchRoutes } from "@athyper/svc-search";
 import { registerDocumentsRoutes } from "@athyper/svc-documents";
 import { registerCollabRoutes } from "@athyper/svc-collab";
 import { registerCollabAttachmentRoutes } from "../../packages/services/collab/routes/collab-attachments.route.js";
-import { registerMasterContactsRoutes, registerMasterAddressRoutes } from "@athyper/svc-master";
+import { registerMasterContactsRoutes, registerMasterAddressRoutes, registerMasterOwnerAddressContactRoutes } from "@athyper/svc-master";
 import { registerFinanceRoutes } from "@athyper/svc-finance";
 import {
   registerPlatformRoutes,
@@ -1143,6 +1144,47 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     db:     db.kysely,
     auth:   routeAuth,
     logger,
+    authorizeMutation: async (input) => {
+      const ownerType = input.ownerType as "tenant" | "legal_entity" | "company_code";
+      if (!(["tenant", "legal_entity", "company_code"] as string[]).includes(ownerType)) return false;
+      const permissionCode = ownerType === "tenant"
+        ? "ADDRESS_CONTACT.TENANT.MANAGE"
+        : ownerType === "legal_entity"
+          ? "ADDRESS_CONTACT.LEGAL_ENTITY.MANAGE"
+          : "ADDRESS_CONTACT.COMPANY_CODE.MANAGE";
+      const decision = await checkPermission(db.kysely as any, input.tenantId, input.principalId, permissionCode, {
+        entity_type: ownerType,
+        entity_id: input.ownerId,
+        ...(ownerType === "company_code" ? { company_code_id: input.ownerId } : {}),
+      }, logger);
+      if (decision.decision !== "allow") return false;
+      return ownerType !== "company_code"
+        || decision.scope.company_code_ids.length === 0
+        || decision.scope.company_code_ids.includes(input.ownerId);
+    },
+  });
+
+  registerMasterOwnerAddressContactRoutes(apiRouter, {
+    db: db.kysely,
+    auth: routeAuth,
+    logger,
+    authorize: async (input) => {
+      const decision = await checkPermission(
+        db.kysely as any,
+        input.tenantId,
+        input.principalId,
+        input.permissionCode,
+        {
+          entity_type: input.ownerType,
+          entity_id: input.ownerId,
+          ...(input.companyCodeId ? { company_code_id: input.companyCodeId } : {}),
+        },
+        logger,
+      );
+      if (decision.decision !== "allow") return false;
+      if (!input.companyCodeId || decision.scope.company_code_ids.length === 0) return true;
+      return decision.scope.company_code_ids.includes(input.companyCodeId);
+    },
   });
 
   // Track B2 — cross-entity search. `search` is null when Meilisearch is

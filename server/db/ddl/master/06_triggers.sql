@@ -314,6 +314,12 @@ CREATE TRIGGER trg_z_address_link_owner_ref
     BEFORE INSERT OR UPDATE OF owner_type, owner_id ON master.address_link
     FOR EACH ROW EXECUTE FUNCTION master.trg_validate_owner_ref();
 
+DROP TRIGGER IF EXISTS trg_party_contact_person_parent_ref ON master.party_contact_person;
+CREATE TRIGGER trg_party_contact_person_parent_ref
+    BEFORE INSERT OR UPDATE OF tenant_id, party_type, party_id
+    ON master.party_contact_person
+    FOR EACH ROW EXECUTE FUNCTION master.trg_validate_party_contact_parent();
+
 
 -- ============================================================================
 -- RBAC Phase 2 triggers

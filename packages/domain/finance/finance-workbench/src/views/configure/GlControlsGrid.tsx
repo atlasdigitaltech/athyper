@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Plus, Search } from "lucide-react";
+import { CheckSquare, Pencil, Plus, Search } from "lucide-react";
 import {
   Badge,
   Button,
@@ -12,6 +12,7 @@ import {
 import { cn } from "@athyper/theme/utils";
 import { useConfigureGlControls, type ConfigureGlControlRow } from "../../hooks/useFinanceConfigure";
 import { GlControlAssignDialog, GlControlEditDialog } from "./GlControlDialogs";
+import { useBulkGlControls } from "../../hooks/useFinanceSetupMutations";
 
 type FilterMode = "all" | "controlled" | "missing";
 
@@ -32,8 +33,11 @@ export function GlControlsGrid({
   const q = useConfigureGlControls(companyCode);
   const [search, setSearch] = useState("");
   const [mode, setMode]     = useState<FilterMode>("all");
+  const [accountClass, setAccountClass] = useState("all");
   const [assignTarget, setAssignTarget] = useState<ConfigureGlControlRow | null>(null);
   const [editTarget,   setEditTarget]   = useState<ConfigureGlControlRow | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const bulk = useBulkGlControls();
 
   const filtered = useMemo(() => {
     const rows = q.data?.rows ?? [];
@@ -41,10 +45,15 @@ export function GlControlsGrid({
     return rows.filter((r) => {
       if (mode === "controlled" && !r.hasCompanyControl) return false;
       if (mode === "missing" && r.hasCompanyControl) return false;
+      if (accountClass !== "all" && r.accountClass !== accountClass) return false;
       if (!term) return true;
       return r.accountCode.toLowerCase().includes(term) || r.accountName.toLowerCase().includes(term);
     });
-  }, [q.data?.rows, search, mode]);
+  }, [q.data?.rows, search, mode, accountClass]);
+  const accountClasses = useMemo(
+    () => [...new Set((q.data?.rows ?? []).map((row) => row.accountClass))].sort(),
+    [q.data?.rows],
+  );
 
   return (
     <section className={cn("rounded-lg border bg-card", className)}>
@@ -60,13 +69,9 @@ export function GlControlsGrid({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled
-              title="Bulk assign lands in a follow-up sprint. Use per-row assign for now."
-            >
-              Bulk assign
+            <Button variant="secondary" size="sm" disabled={filtered.length === 0}
+              onClick={() => setSelected(new Set(filtered.filter((row) => !row.hasCompanyControl).map((row) => row.glAccountId)))}>
+              Select unconfigured
             </Button>
           </div>
         </div>
@@ -76,6 +81,25 @@ export function GlControlsGrid({
           pct={q.data?.coveragePct ?? 0}
         />
       </div>
+
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 border-b bg-primary/5 px-3 py-2">
+          <CheckSquare className="h-4 w-4 text-primary" aria-hidden />
+          <span className="mr-auto text-sm font-medium">{selected.size} selected</span>
+          <Button size="sm" variant="secondary" disabled={bulk.isPending}
+            onClick={() => bulk.mutate({ companyCode, glAccountIds: [...selected], postingAllowed: true }, { onSuccess: () => setSelected(new Set()) })}>
+            Activate
+          </Button>
+          {(["requiresCostCenter", "requiresProfitCenter", "requiresProject"] as const).map((field) => (
+            <Button key={field} size="sm" variant="outline" disabled={bulk.isPending}
+              onClick={() => bulk.mutate({ companyCode, glAccountIds: [...selected], [field]: true }, { onSuccess: () => setSelected(new Set()) })}>
+              Require {field === "requiresCostCenter" ? "Cost Center" : field === "requiresProfitCenter" ? "Profit Center" : "Project"}
+            </Button>
+          ))}
+          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button>
+          {bulk.isError && <span className="w-full text-xs text-destructive">{(bulk.error as Error).message}</span>}
+        </div>
+      )}
 
       {/* Filter row */}
       <div className="flex flex-wrap items-center gap-2 border-b bg-muted/30 px-3 py-2">
@@ -99,6 +123,10 @@ export function GlControlsGrid({
             <SelectItem value="missing">Missing control</SelectItem>
           </SelectContent>
         </Select>
+        <Select value={accountClass} onValueChange={setAccountClass}>
+          <SelectTrigger className="h-7 w-40"><SelectValue placeholder="Account class" /></SelectTrigger>
+          <SelectContent><SelectItem value="all">All classes</SelectItem>{accountClasses.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent>
+        </Select>
         <Badge variant="muted" size="sm">{filtered.length}</Badge>
       </div>
 
@@ -116,12 +144,19 @@ export function GlControlsGrid({
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-card">
               <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <th className="w-10 p-2">
+                  <input type="checkbox" aria-label="Select visible accounts"
+                    checked={filtered.length > 0 && filtered.every((row) => selected.has(row.glAccountId))}
+                    onChange={(event) => setSelected(event.target.checked ? new Set(filtered.map((row) => row.glAccountId)) : new Set())} />
+                </th>
                 <th className="p-2">Code</th>
                 <th className="p-2">Name</th>
                 <th className="p-2">Class</th>
                 <th className="p-2">Control</th>
                 <th className="p-2">Posting</th>
                 <th className="p-2">Requires</th>
+                <th className="p-2">Reconciliation / Tax</th>
+                <th className="p-2">Defaults</th>
                 <th className="p-2 text-right">Actions</th>
               </tr>
             </thead>
@@ -138,9 +173,11 @@ export function GlControlsGrid({
                 ].filter(Boolean).join(", ");
                 return (
                   <tr key={row.glAccountId} className="border-b last:border-0 hover:bg-muted/40">
+                    <td className="p-2"><input type="checkbox" checked={selected.has(row.glAccountId)} aria-label={`Select ${row.accountCode}`}
+                      onChange={(event) => setSelected((current) => { const next = new Set(current); if (event.target.checked) next.add(row.glAccountId); else next.delete(row.glAccountId); return next; })} /></td>
                     <td className="p-2 font-mono text-xs tabular-nums text-muted-foreground">{row.accountCode}</td>
-                    <td className="p-2">{row.accountName}</td>
-                    <td className="p-2 text-xs text-muted-foreground">{row.accountClass}</td>
+                    <td className="p-2"><div>{row.accountName}</div><div className="text-xs text-muted-foreground">{row.chartCode}{row.currencyCode ? ` · ${row.currencyCode}` : ""}</div></td>
+                    <td className="p-2 text-xs text-muted-foreground"><div>{row.accountClass}</div><div>{row.nodeType}</div></td>
                     <td className="p-2">
                       {row.hasCompanyControl
                         ? <Badge variant="success" size="sm">assigned</Badge>
@@ -152,6 +189,8 @@ export function GlControlsGrid({
                         : chips.map((c) => <Badge key={c.label} variant={c.tone} size="sm">{c.label}</Badge>)}
                     </td>
                     <td className="p-2 text-xs text-muted-foreground">{requires || "—"}</td>
+                    <td className="p-2 text-xs text-muted-foreground"><div>{row.reconciliationType || "—"}</div><div>{row.taxCategory || "—"}</div></td>
+                    <td className="p-2 text-xs text-muted-foreground"><div>CC: {row.defaultCostCenterId || "—"}</div><div>Site: {row.defaultSiteId || "—"}</div></td>
                     <td className="p-2 text-right">
                       {row.hasCompanyControl && row.controlId ? (
                         <Button
@@ -189,6 +228,7 @@ export function GlControlsGrid({
           onClose={() => setAssignTarget(null)}
           companyCode={companyCode}
           glAccountCode={assignTarget.accountCode}
+          glAccountId={assignTarget.glAccountId}
           accountName={assignTarget.accountName}
         />
       )}

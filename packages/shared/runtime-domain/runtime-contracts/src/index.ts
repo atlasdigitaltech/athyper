@@ -9,3 +9,4 @@ export * from "./document-edit-runtime-compiler";
 export * from "./runtime-bootstrap";
 export * from "./compatibility-fallback";
 export * from "./record-workspace";
+export * from "./setup-workspace";

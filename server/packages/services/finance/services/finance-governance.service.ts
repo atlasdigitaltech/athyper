@@ -524,18 +524,23 @@ export async function resolvePostingReadinessGate(
   db: AnyDb,
   tenantId: string,
   companyCodeId: string,
-): Promise<{ enabled: boolean; certified: boolean; certificationId: string | null }> {
-  const { rows } = await sql<{ enabled: boolean; certification_id: string | null }>`
-    SELECT coalesce(
-             CASE WHEN ff.tenant_overrides ? ${tenantId}
-                  THEN (ff.tenant_overrides ->> ${tenantId})::boolean
-                  ELSE ff.is_enabled END,
-             false
-           ) AS enabled,
+): Promise<{ enabled: boolean; certified: boolean; certificationId: string | null; rolloutMode: "observe" | "enforce" }> {
+  const { rows } = await sql<{ enabled: boolean; certification_id: string | null; rollout_mode: "observe"|"enforce" }>`
+    SELECT coalesce(CASE WHEN ff.tenant_overrides ? ${tenantId}
+                  THEN (ff.tenant_overrides ->> ${tenantId})::boolean ELSE ff.is_enabled END,false)
+             AND rollout.rollout_mode='enforce' AS enabled,
+           rollout.rollout_mode,
            cert.id AS certification_id
       FROM (SELECT 1) seed
       LEFT JOIN control.feature_flag ff ON ff.code = 'finance.posting_readiness_gate'
       LEFT JOIN master.company_code cc ON cc.tenant_id = ${tenantId}::uuid AND cc.id = ${companyCodeId}::uuid
+      LEFT JOIN LATERAL (
+        SELECT coalesce((SELECT policy.rollout_mode
+          FROM control.finance_posting_rollout_policy policy
+         WHERE policy.tenant_id=${tenantId}::uuid AND policy.status='active' AND policy.effective_from<=CURRENT_DATE
+           AND (policy.company_code_id IS NULL OR policy.company_code_id=${companyCodeId}::uuid)
+         ORDER BY (policy.company_code_id IS NOT NULL) DESC,policy.effective_from DESC LIMIT 1),'observe') AS rollout_mode
+      ) rollout ON true
       LEFT JOIN LATERAL (
         SELECT cr.id
           FROM governance.cycle_run cr
@@ -549,6 +554,8 @@ export async function resolvePostingReadinessGate(
           FROM governance.cycle_certification c
          WHERE c.tenant_id = ${tenantId}::uuid AND c.cycle_run_id = latest_run.id
            AND c.cert_code = 'FINANCE_POSTING_READY' AND c.status = 'ATTESTED'
+           AND c.snapshot_payload ? 'fourDomainReadiness'
+           AND coalesce((c.snapshot_payload->'fourDomainReadiness'->'summary'->>'readyForCertification')::boolean,false)
            AND NOT EXISTS (
              SELECT 1 FROM governance.cycle_task task
               WHERE task.tenant_id = c.tenant_id AND task.cycle_run_id = c.cycle_run_id
@@ -564,5 +571,5 @@ export async function resolvePostingReadinessGate(
       ) cert ON true
   `.execute(db);
   const r = rows[0];
-  return { enabled: r?.enabled ?? false, certified: Boolean(r?.certification_id), certificationId: r?.certification_id ?? null };
+  return { enabled: r?.enabled ?? false, certified: Boolean(r?.certification_id), certificationId: r?.certification_id ?? null, rolloutMode:r?.rollout_mode??"observe" };
 }

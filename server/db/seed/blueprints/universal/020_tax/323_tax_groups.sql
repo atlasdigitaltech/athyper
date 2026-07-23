@@ -428,7 +428,12 @@ BEGIN
     ) AS v(tg_code, trs_key, seq)
     JOIN tmp_tg tg ON tg.code = v.tg_code
     JOIN tmp_trs trs ON trs.key = v.trs_key
-    ON CONFLICT (tax_group_id, tax_rate_schedule_id) DO NOTHING;
+    ON CONFLICT (
+        tenant_id,
+        tax_group_id,
+        (COALESCE(tax_group_version_id, '00000000-0000-0000-0000-000000000000'::uuid)),
+        tax_rate_schedule_id
+    ) WHERE status = 'active' DO NOTHING;
 
     -- ══════════════════════════════════════════════════════════════════════
     -- ASSERTIONS

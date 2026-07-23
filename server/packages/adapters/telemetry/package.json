@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "clean": "rimraf dist",
-    "build": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --external @athyper/core --external @opentelemetry/api",
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --external @opentelemetry/api",
     "dev": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",

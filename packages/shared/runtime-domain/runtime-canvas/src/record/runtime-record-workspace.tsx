@@ -36,6 +36,11 @@ import { SurfaceStackProvider } from "@athyper/ui/surfaces/stack";
 import type { RuntimeCanvasFlags } from "../surfaces/types";
 import { useRecordWorkspaceObservability } from "./use-record-workspace-observability";
 import { RecordWorkspaceQueryBoundary } from "../record-query";
+import {
+  ADDRESS_CONTACT_TAB_ID,
+  AddressContactPanel,
+  supportsAddressContact,
+} from "../address-contact/address-contact-panel";
 
 interface RuntimeRecordWorkspaceProps {
   contract: MetaEntityRuntimeDescriptor;
@@ -69,13 +74,19 @@ export function RuntimeRecordWorkspace({
 }: RuntimeRecordWorkspaceProps) {
   const { scopeRef, scrollRoot } = useContainingScrollRoot<HTMLDivElement>();
   const effectiveTabs = useMemo(
-    () => chrome.header.tabs?.filter((tab) => {
+    () => {
+      const tabs = chrome.header.tabs?.filter((tab) => {
       const processSurface = resolveProcessSurfaceId(tab.id);
       return !processSurface
         || !workspaceManifest
         || isRecordWorkspaceProcessSurfaceSupported(workspaceManifest, processSurface);
-    }),
-    [chrome.header.tabs, workspaceManifest],
+      }) ?? [];
+      if (supportsAddressContact(contract.entityCode) && !tabs.some((tab) => tab.id === ADDRESS_CONTACT_TAB_ID)) {
+        tabs.push({ id: ADDRESS_CONTACT_TAB_ID, label: "Addresses & Contacts" });
+      }
+      return tabs;
+    },
+    [chrome.header.tabs, contract.entityCode, workspaceManifest],
   );
   const firstTab = effectiveTabs?.[0]?.id;
   const [activeTab, setActiveTab] = useState(firstTab);
@@ -187,7 +198,9 @@ export function RuntimeRecordWorkspace({
           adaptedOps={adaptedOps}
           operationDispatch={operationDispatch}
         />
-        {activeProcessSurface ? (
+        {activeTab === ADDRESS_CONTACT_TAB_ID && recordUuid && supportsAddressContact(contract.entityCode) ? (
+          <AddressContactPanel ownerType={contract.entityCode} ownerId={recordUuid} />
+        ) : activeProcessSurface ? (
           <RuntimeProcessSurface
             activeSurface={activeProcessSurface}
             contract={contract}

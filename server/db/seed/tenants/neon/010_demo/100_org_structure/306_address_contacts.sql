@@ -122,7 +122,7 @@ BEGIN
     ) VALUES (
         v_tid, 'tenant', v_tid, v_addr_id, 'default', NULL, true, v_su
     )
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     INSERT INTO master.contact_link (
         tenant_id, owner_type, owner_id, channel_type, value,
@@ -390,7 +390,7 @@ BEGIN
         ) VALUES
             (v_tid, 'legal_entity', v_le_id, v_cc_addr_id, 'default', NULL, true, v_su),
             (v_tid, 'company_code', v_cc_id, v_cc_addr_id, 'default', NULL, true, v_su)
-        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
         -- LE contacts
         INSERT INTO master.contact_link (
@@ -542,7 +542,7 @@ BEGIN
             ) VALUES (
                 v_tid, 'site', v_site_id, v_cc_addr_id, 'default', NULL, true, v_su
             )
-            ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+            ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
             v_site_links_seeded := v_site_links_seeded + 1;
 
@@ -646,7 +646,7 @@ BEGIN
      AND (cc_al.effective_until IS NULL OR cc_al.effective_until > CURRENT_DATE)
     WHERE s.tenant_id = v_tid
       AND s.status = 'active'
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id)
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id)
     DO UPDATE SET
         role_qualifier = EXCLUDED.role_qualifier,
         is_primary = EXCLUDED.is_primary,

@@ -1,0 +1,2 @@
+import { redirect } from "next/navigation";import { PaymentTermWorkbench } from "@athyper/finance-workbench";import { getNeonServerSession } from "@/lib/server/session";
+export default async function PaymentTermsPage({params}:{params:Promise<{tenantCode:string}>}){const {tenantCode}=await params,decoded=decodeURIComponent(tenantCode);if(!await getNeonServerSession())redirect(`/login?next=${encodeURIComponent(`/finance/setup/tenant/${decoded}/payment-terms`)}`);return <PaymentTermWorkbench tenantCode={decoded}/>;}

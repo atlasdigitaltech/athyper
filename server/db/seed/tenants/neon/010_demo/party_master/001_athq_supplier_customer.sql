@@ -730,7 +730,7 @@ BEGIN
         true, '2008-01-01'::date,
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys
     )
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     RAISE NOTICE '[001_athq_party_master] Supplier SUP-ATHQ-GCM-001 seeded (id=%)', v_sup_id;
 
@@ -1061,7 +1061,7 @@ BEGIN
         true, '2005-01-01'::date,
         '{"_seed":{"pack":"001_athq_party_master"}}'::jsonb, v_sys
     )
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     RAISE NOTICE '[001_athq_party_master] Customer CUS-ATHQ-EPG-001 seeded (id=%)', v_cus_id;
     RAISE NOTICE '[001_athq_party_master] Done — 1 supplier + 1 customer seeded for ATHQ (athyper tenant).';

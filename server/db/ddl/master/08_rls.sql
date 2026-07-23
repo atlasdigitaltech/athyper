@@ -1503,7 +1503,6 @@ DROP POLICY IF EXISTS admin_write ON master.bank_account_link;
 CREATE POLICY tenant_read   ON master.bank_account_link FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
 CREATE POLICY tenant_insert ON master.bank_account_link FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_update ON master.bank_account_link FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON master.bank_account_link FOR DELETE USING     (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read    ON master.bank_account_link FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON master.bank_account_link FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
@@ -2551,3 +2550,40 @@ CREATE POLICY tenant_delete ON master.sales_organization_profile FOR DELETE
 CREATE POLICY admin_read ON master.sales_organization_profile FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write ON master.sales_organization_profile FOR ALL TO athyperadmin
     USING (true) WITH CHECK (true);
+
+-- Named organizational contacts contain PII and must never rely only on an
+-- application WHERE clause for tenant isolation.
+ALTER TABLE master.party_contact_person ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.party_contact_person FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read ON master.party_contact_person;
+DROP POLICY IF EXISTS tenant_insert ON master.party_contact_person;
+DROP POLICY IF EXISTS tenant_update ON master.party_contact_person;
+DROP POLICY IF EXISTS tenant_delete ON master.party_contact_person;
+DROP POLICY IF EXISTS admin_read ON master.party_contact_person;
+DROP POLICY IF EXISTS admin_write ON master.party_contact_person;
+CREATE POLICY tenant_read ON master.party_contact_person FOR SELECT
+    USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.party_contact_person FOR INSERT
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON master.party_contact_person FOR UPDATE
+    USING (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.party_contact_person FOR DELETE
+    USING (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read ON master.party_contact_person FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.party_contact_person FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+
+ALTER TABLE master.party_contact_role ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.party_contact_role FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read ON master.party_contact_role;
+DROP POLICY IF EXISTS tenant_insert ON master.party_contact_role;
+DROP POLICY IF EXISTS tenant_delete ON master.party_contact_role;
+DROP POLICY IF EXISTS admin_read ON master.party_contact_role;
+DROP POLICY IF EXISTS admin_write ON master.party_contact_role;
+CREATE POLICY tenant_read ON master.party_contact_role FOR SELECT
+    USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON master.party_contact_role FOR INSERT
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_delete ON master.party_contact_role FOR DELETE
+    USING (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read ON master.party_contact_role FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write ON master.party_contact_role FOR ALL TO athyperadmin USING (true) WITH CHECK (true);

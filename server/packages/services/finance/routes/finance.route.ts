@@ -38,6 +38,18 @@ export interface FinanceRouteDeps {
    * with 403 — fail-closed by design.
    */
   checkPermissionBatch?: CheckPermissionBatchFn;
+  bankInterfaceTester?: {
+    test(input: {
+      tenantId: string;
+      profileId: string;
+      interfaceType: string;
+      providerCode: string | null;
+      credentialProvider: string | null;
+      credentialReference: string | null;
+      credentialVersion: string | null;
+      config: Record<string, unknown>;
+    }): Promise<{ ok: boolean; code: string; latencyMs?: number }>;
+  };
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
     info?(event: string, fields?: Record<string, unknown>): void;

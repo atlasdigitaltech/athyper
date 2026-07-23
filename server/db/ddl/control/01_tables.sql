@@ -5686,7 +5686,8 @@ CREATE TABLE IF NOT EXISTS control.bank_interface_profile (
     provider_code           text,
     message_version         text,
 
-    -- Provider configuration (encrypt at app layer)
+    -- Non-secret provider routing/capability configuration. Credentials are
+    -- referenced through the Stage A secret-provider contract.
     config                  jsonb           NOT NULL DEFAULT '{}'::jsonb,
 
     -- Capabilities
@@ -5719,8 +5720,7 @@ CREATE TABLE IF NOT EXISTS control.bank_interface_profile (
 
 COMMENT ON TABLE control.bank_interface_profile IS
     'ARCHETYPE=B;SCOPE=T. Describes HOW a payment message is produced: file format, API provider, '
-    'message version, capabilities. config jsonb holds provider credentials — '
-    'application layer must encrypt sensitive values at rest.';
+    'message version, capabilities. config jsonb is non-secret; credentials live in the platform secret provider.';
 
 COMMENT ON COLUMN control.bank_interface_profile.interface_type IS
     'Delivery mechanism. Lookup: control.bank_interface_profile_type. '
@@ -5733,8 +5733,7 @@ COMMENT ON COLUMN control.bank_interface_profile.file_format_code IS
 COMMENT ON COLUMN control.bank_interface_profile.provider_code IS
     'Execution provider identifier. Examples: WISE_API, STRIPE_API, HDFC_H2H.';
 COMMENT ON COLUMN control.bank_interface_profile.config IS
-    'SENSITIVE — provider credentials, API keys, endpoints. '
-    'Application layer MUST encrypt at rest.';
+    'Non-secret endpoints, routing, and capability settings. Credentials and API keys are forbidden.';
 
 
 -- ============================================================================

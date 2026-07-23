@@ -58,8 +58,10 @@ COPY packages/shared/ui-platform/collaboration-ui/package.json ./packages/shared
 COPY packages/shared/data-integration/config/package.json ./packages/shared/data-integration/config/
 COPY packages/shared/ui-platform/content-ui/package.json ./packages/shared/ui-platform/content-ui/
 COPY packages/shared/data-integration/core/package.json ./packages/shared/data-integration/core/
+COPY packages/shared/business-domain/cascade/package.json ./packages/shared/business-domain/cascade/
 COPY packages/shared/business-domain/domain-widgets/package.json ./packages/shared/business-domain/domain-widgets/
 COPY packages/shared/business-domain/entity-print/package.json ./packages/shared/business-domain/entity-print/
+COPY packages/shared/business-domain/finance-rules/package.json ./packages/shared/business-domain/finance-rules/
 COPY packages/shared/shared-infrastructure/i18n/package.json ./packages/shared/shared-infrastructure/i18n/
 COPY packages/shared/ui-platform/icons/package.json ./packages/shared/ui-platform/icons/
 COPY packages/shared/platform-auth/identity-gate/package.json ./packages/shared/platform-auth/identity-gate/
@@ -79,6 +81,7 @@ COPY packages/shared/ui-platform/shell/package.json ./packages/shared/ui-platfor
 COPY packages/shared/runtime-domain/shell-runtime/package.json ./packages/shared/runtime-domain/shell-runtime/
 COPY packages/shared/ui-platform/surface-kit/package.json ./packages/shared/ui-platform/surface-kit/
 COPY packages/shared/ui-platform/theme/package.json ./packages/shared/ui-platform/theme/
+COPY packages/shared/business-domain/temporal/package.json ./packages/shared/business-domain/temporal/
 COPY packages/shared/ui-platform/ui/package.json ./packages/shared/ui-platform/ui/
 COPY packages/shared/ui-platform/workflow-ui/package.json ./packages/shared/ui-platform/workflow-ui/
 COPY server/db/package.json ./server/db/
@@ -118,7 +121,9 @@ RUN pnpm install --frozen-lockfile \
 COPY server/ ./server/
 COPY packages/shared/ ./packages/shared/
 
-# Compile adapters and services first; then compile the server itself.
+RUN pnpm --filter "@athyper/core" run build
+
+# Compile adapters and services next; then compile the server itself.
 RUN pnpm --filter "@athyper/server-foundation" --filter "@athyper/adapter-*" --filter "@athyper/svc-*" run build
 RUN pnpm --filter "@athyper/runtime-server" run build
 
@@ -130,4 +135,4 @@ WORKDIR /app/server
 
 EXPOSE 3000
 
-CMD ["node", "dist/src/app.js"]
+CMD ["node", "--import", "tsx", "dist/src/app.js"]

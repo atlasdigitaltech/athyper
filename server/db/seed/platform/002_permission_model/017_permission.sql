@@ -112,6 +112,9 @@ JOIN  (VALUES
     -- Finance Setup Workbench (Phase 2) — tenant-scoped configure gate.
     ('FINANCE_SETUP.VIEW',          'View Finance Setup',                'special',       'tenant',  'low',      false, 160),
     ('FINANCE_SETUP.CONFIGURE',     'Configure Finance Setup',           'special',       'tenant',  'high',     false, 170),
+    ('ADDRESS_CONTACT.COMPANY_CODE.MANAGE', 'Manage Company Addresses and Contacts', 'special', 'tenant', 'medium', false, 171),
+    ('ADDRESS_CONTACT.LEGAL_ENTITY.MANAGE', 'Manage Legal Entity Addresses and Contacts', 'special', 'tenant', 'high', false, 172),
+    ('ADDRESS_CONTACT.TENANT.MANAGE', 'Manage Tenant Addresses and Contacts', 'special', 'tenant', 'high', false, 173),
     -- ai_governance — NOT granted to base personas; requires explicit tenant grant.
     ('ai.use_extraction',           'Use AI Extraction',                 'ai_governance',  'tenant',  'medium',   true,   10),
     ('ai.review_ai_output',         'Review AI Output',                  'ai_governance',  'tenant',  'low',      false,  20),

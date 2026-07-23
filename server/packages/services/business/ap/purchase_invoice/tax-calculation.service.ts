@@ -55,6 +55,10 @@ interface ScheduleRow {
   recoverability_pct:  string | null;
   reverse_charge_mode: string;
   wht_basis:           string | null;
+  is_compound:         boolean;
+  rounding_method:     string | null;
+  rounding_precision:  number | null;
+  rounding_minimum_unit: string | null;
 }
 
 interface TaxComponent {
@@ -384,6 +388,7 @@ async function loadGroupSchedules(
   tenantId:    string,
   taxGroupId:  string,
   invoiceDate: Date,
+  currencyCode: string | null,
 ): Promise<ScheduleRow[]> {
   // WHT detection: prefer trs.wht_basis (per-rate flag) and fall back to the
   // condition_type kind classification (term_type='withholding'), reached via
@@ -404,7 +409,22 @@ async function loadGroupSchedules(
       trs.recoverability_percent    AS recoverability_pct,
       trs.reverse_charge_mode,
       trs.wht_basis
+      ,COALESCE(tgv.is_compound,tg.is_compound) AS is_compound
+      ,rr.method AS rounding_method
+      ,COALESCE(rr.precision_digits,(SELECT currency.minor_units FROM shared.currency currency WHERE currency.code=${currencyCode} AND currency.status='active')) AS rounding_precision
+      ,rr.minimum_unit::text AS rounding_minimum_unit
     FROM control.tax_group_component tgc
+    JOIN control.tax_group tg ON tg.tenant_id=tgc.tenant_id AND tg.id=tgc.tax_group_id
+    LEFT JOIN LATERAL (
+      SELECT version.id,version.is_compound,version.rounding_rule_id
+        FROM control.tax_group_version version
+       WHERE version.tenant_id=tgc.tenant_id AND version.tax_group_id=tgc.tax_group_id
+         AND version.status='active' AND version.effective_from<=${invoiceDate}::date
+         AND (version.effective_to IS NULL OR version.effective_to>=${invoiceDate}::date)
+       ORDER BY version.effective_from DESC,version.version_no DESC LIMIT 1
+    ) tgv ON true
+    LEFT JOIN control.rounding_rule rr ON rr.tenant_id=tg.tenant_id
+      AND rr.id=COALESCE(tgv.rounding_rule_id,tg.rounding_rule_id) AND rr.status='active'
     JOIN control.tax_rate_schedule trs
       ON  trs.id        = tgc.tax_rate_schedule_id
       AND trs.tenant_id = tgc.tenant_id
@@ -416,6 +436,8 @@ async function loadGroupSchedules(
     WHERE tgc.tenant_id    = ${tenantId}
       AND tgc.tax_group_id = ${taxGroupId}
       AND tgc.is_active    = true
+      AND ((tgv.id IS NOT NULL AND tgc.tax_group_version_id=tgv.id)
+        OR (tgv.id IS NULL AND tgc.tax_group_version_id IS NULL))
       AND trs.is_active    = true
       AND (trs.tax_direction IN ('PURCHASE', 'BOTH') OR trs.wht_basis IS NOT NULL OR ct.term_type = 'withholding')
       AND trs.effective_from <= ${invoiceDate}::date
@@ -432,6 +454,9 @@ async function callCalculateTax(
   base:      number,
   rateValue: number,
   rateKind:  string,
+  method: string,
+  precision: number,
+  minimumUnit: number | null,
 ): Promise<{ taxAmount: number; roundingAdj: number }> {
   const r = await sql<{ result: Record<string, unknown> }>`
     SELECT ledger.calculate_tax(
@@ -439,8 +464,9 @@ async function callCalculateTax(
       ${rateValue}::numeric(18,6),
       ${rateKind}::text,
       1::numeric(18,4),
-      'ROUND_HALF_UP',
-      4::smallint
+      ${method},
+      ${precision}::smallint,
+      ${minimumUnit}::numeric
     ) AS result
   `.execute(db);
   const j = r.rows[0]?.result ?? {};
@@ -467,6 +493,7 @@ export async function computeLineTax(
   whtGroupId:  string | null,
   taxMode:     string,
   invoiceDate: Date,
+  currencyCode: string | null = null,
 ): Promise<LineTaxResult> {
   if (taxMode === "no_tax" || (!taxGroupId && !whtGroupId)) {
     return { taxAmount: 0, whtAmount: 0, components: [] };
@@ -476,8 +503,12 @@ export async function computeLineTax(
   const components: TaxComponent[] = [];
 
   const processGroup = async (groupId: string): Promise<void> => {
-    const rows = await loadGroupSchedules(db, tenantId, groupId, invoiceDate);
+    const rows = await loadGroupSchedules(db, tenantId, groupId, invoiceDate, currencyCode);
     if (rows.length === 0) return;
+    const rounding = rows[0]!;
+    if (!rounding.rounding_method || rounding.rounding_precision == null) {
+      throw new Error(`TAX_ROUNDING_UNRESOLVED:${groupId}:${currencyCode ?? "NO_CURRENCY"}`);
+    }
 
     // For inclusive mode back-calculate base using sum of PERCENT-kind rates.
     // Compound groups (is_compound = true) would require iterative solving;
@@ -491,10 +522,14 @@ export async function computeLineTax(
       ? absNet / (1 + sumPctRates / 100)
       : absNet;
 
+    let compoundBase = base;
     for (const row of rows) {
       const effectiveRate = Number(row.rate_override ?? row.rate_value);
       const isWht         = row.wht_basis != null || row.condition_term_type === "withholding";
-      const { taxAmount, roundingAdj } = await callCalculateTax(db, base, effectiveRate, row.rate_kind);
+      const componentBase = row.is_compound ? compoundBase : base;
+      const { taxAmount, roundingAdj } = await callCalculateTax(db, componentBase, effectiveRate, row.rate_kind,
+        rounding.rounding_method, rounding.rounding_precision,
+        rounding.rounding_minimum_unit == null ? null : Number(rounding.rounding_minimum_unit));
       components.push({
         scheduleId:         row.schedule_id,
         taxGroupId:         row.tax_group_id,
@@ -504,7 +539,7 @@ export async function computeLineTax(
         rateKind:           row.rate_kind,
         effectiveRate,
         calculationBasis:   row.calculation_basis,
-        baseAmount:         base,
+        baseAmount:         componentBase,
         taxAmount,
         roundingAdj,
         isWht,
@@ -513,6 +548,7 @@ export async function computeLineTax(
         creditRecoveryPct:  row.recoverability_pct != null ? Number(row.recoverability_pct) : null,
         reverseChargeMode:  row.reverse_charge_mode,
       });
+      if (row.is_compound && !isWht) compoundBase += taxAmount;
     }
   };
 
@@ -594,7 +630,7 @@ export async function postInvoiceTaxCalculations(
     const result = await computeLineTax(
       trx, tenantId, Math.abs(rawNet),
       line.tax_group_id, line.withholding_tax_group_id,
-      taxMode, invoiceDate,
+      taxMode, invoiceDate, currencyCode,
     );
 
     for (const comp of result.components) {

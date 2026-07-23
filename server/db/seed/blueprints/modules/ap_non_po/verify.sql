@@ -84,7 +84,7 @@ SELECT entity_name, count(*) AS operation_count,
 
 \echo ''
 \echo '── CHECK 7 — Payment settlement rules ───────────────────────────────────'
-\echo 'Expected: 1 row per (company × OUTBOUND payment_method × STAT book)'
+\echo 'Expected: 1 row per (company x OUTBOUND payment_method x effective statutory book)'
 SELECT cc.code AS company,
        pm.code AS method,
        psr.book_code, psr.direction,

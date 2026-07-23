@@ -13,7 +13,7 @@ import {
   type FrameworkPerformanceSnapshot,
   type FrameworkRequestIdentity,
   type FrameworkRolloutCohort,
-} from "../packages/adapters/telemetry/src/index.js";
+} from "@athyper/adapter-telemetry";
 
 export { startFrameworkPhase };
 

@@ -108,6 +108,12 @@ manager_permissions AS (
   SELECT permission_id
   FROM permission_catalog
   WHERE code LIKE 'MESH.PARTNER.%'
+  UNION
+  -- Finance managers may maintain operational address/contact configuration;
+  -- assignment scope still limits them to their Legal Entity/Company Codes.
+  SELECT permission_id
+  FROM permission_catalog
+  WHERE code = 'ADDRESS_CONTACT.COMPANY_CODE.MANAGE'
 ),
 owner_permissions AS (
   SELECT permission_id FROM manager_permissions
@@ -122,9 +128,17 @@ owner_permissions AS (
   SELECT permission_id
   FROM permission_catalog
   WHERE code IN ('PI.SNAPSHOT_RESTORE')
+  UNION
+  SELECT permission_id
+  FROM permission_catalog
+  WHERE code = 'ADDRESS_CONTACT.LEGAL_ENTITY.MANAGE'
 ),
 admin_permissions AS (
   SELECT permission_id FROM owner_permissions
+  UNION
+  SELECT permission_id
+  FROM permission_catalog
+  WHERE code = 'ADDRESS_CONTACT.TENANT.MANAGE'
 ),
 persona_permission_rows AS (
   SELECT 'viewer'::text AS persona_code, permission_id FROM viewer_permissions

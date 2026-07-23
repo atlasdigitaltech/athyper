@@ -36,7 +36,7 @@ VALUES
  true, 'tenant_id',
  true, true,
  ARRAY['bill_from', 'bill_to', 'ship_to', 'ship_from', 'remit_to', 'correspondence', 'default'],
- ARRAY['default'],
+ ARRAY['correspondence', 'notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -93,7 +93,7 @@ VALUES
  true, 'tenant_id',
  true, true,
  ARRAY['bill_to', 'bill_from', 'ship_to', 'ship_from', 'place_of_service', 'remit_to', 'correspondence', 'default'],
- ARRAY['default'],
+ ARRAY['correspondence', 'notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -117,7 +117,7 @@ VALUES
  true, 'tenant_id',
  true, true,
  ARRAY['bill_to', 'ship_to', 'ship_from', 'place_of_service', 'bill_from', 'remit_to', 'correspondence', 'default'],
- ARRAY['default'],
+ ARRAY['correspondence', 'notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -128,7 +128,7 @@ VALUES
  true, 'tenant_id',
  true, true,
  ARRAY['ship_to', 'ship_from', 'bill_to', 'place_of_service', 'bill_from', 'remit_to', 'correspondence', 'default'],
- ARRAY['default'],
+ ARRAY['correspondence', 'notification', 'default'],
  true, false, 'active',
  '00000000-0000-0000-0000-000000000000'),
 
@@ -167,6 +167,14 @@ VALUES
 
 ON CONFLICT (code) WHERE tenant_id IS NULL DO NOTHING;
 
+-- Organizational identity roots expose controlled functional contact channels.
+UPDATE master.owner_type
+   SET allowed_contact_purposes = ARRAY['correspondence', 'notification', 'default'],
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+ WHERE tenant_id IS NULL
+   AND code IN ('tenant', 'legal_entity', 'company_code', 'site', 'business_partner');
+
 -- tenant — root entity; NOT tenant-scoped (master.tenant has no tenant_id FK).
 
 INSERT INTO master.owner_type (
@@ -184,10 +192,16 @@ INSERT INTO master.owner_type (
     false, 'id',
     true, true,
     ARRAY['bill_from', 'bill_to', 'ship_to', 'ship_from', 'place_of_service', 'remit_to', 'correspondence', 'default'],
-    ARRAY['default'],
+    ARRAY['correspondence', 'notification', 'default'],
     true, false, 'active',
     '00000000-0000-0000-0000-000000000000'
 ) ON CONFLICT (code) WHERE tenant_id IS NULL DO NOTHING;
+
+UPDATE master.owner_type
+   SET allowed_contact_purposes = ARRAY['correspondence', 'notification', 'default'],
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'
+ WHERE tenant_id IS NULL AND code = 'tenant';
 
 
 -- bank_party

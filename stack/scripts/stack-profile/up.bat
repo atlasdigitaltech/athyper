@@ -178,9 +178,20 @@ set "ALL_COMPOSE_PROFILES=admin,analytics,apps,core,db,dev,emergency,gateway,iam
 
 REM ----------------------------
 REM Pick override compose based on ENVIRONMENT (or default)
+REM
+REM LOCAL_CONTAINER_MODE=1 (opt-in) swaps the local override to the
+REM local-container variant, which runs the 6 app services as PRODUCTION
+REM containers on the developer machine. Used by dev-container.bat for
+REM perf testing / QA. Ignored outside ENVIRONMENT=local.
 REM ----------------------------
 set "OVERRIDE="
-if /I "!ENVIRONMENT!"=="local"      set "OVERRIDE=%COMPOSE_DIR%\athyper.override.local.yml"
+if /I "!ENVIRONMENT!"=="local" (
+  if /I "!LOCAL_CONTAINER_MODE!"=="1" (
+    set "OVERRIDE=%COMPOSE_DIR%\athyper.override.local-container.yml"
+  ) else (
+    set "OVERRIDE=%COMPOSE_DIR%\athyper.override.local.yml"
+  )
+)
 if /I "!ENVIRONMENT!"=="staging"    set "OVERRIDE=%COMPOSE_DIR%\athyper.override.staging.yml"
 if /I "!ENVIRONMENT!"=="production" set "OVERRIDE=%COMPOSE_DIR%\athyper.override.production.yml"
 if "!OVERRIDE!"=="" set "OVERRIDE=%COMPOSE_DIR%\athyper.override.yml"

@@ -9,7 +9,10 @@
 #   searchcore, iam, memorycache, datastore).
 #
 # Notes :
-#   - Stores state in an embedded SQLite DB mounted at /app/data.
+#   - Stores state in an embedded SQLite DB at /app/data, backed by the
+#     named Docker volume `athyper-stack-statuswatch-data` so container UID
+#     9105 owns the files regardless of host filesystem (Windows bind mounts
+#     cannot honor Linux uid/gid, which caused a chown/restart loop).
 #   - Accessible via Traefik at ${STATUSWATCH_HOST}.
 #   - Protected by DASHBOARD_AUTH_MW in staging/production (statuswatch has its
 #     own login but the gateway gate adds defence-in-depth).
@@ -22,7 +25,7 @@ services:
     user: "9105:9105"
     networks: [edge, internal]
     volumes:
-      - ${ATHYPER_DATA}/statuswatch:/app/data
+      - statuswatch-data:/app/data
     deploy:
       resources:
         limits:
@@ -54,3 +57,7 @@ services:
       - traefik.http.routers.statuswatch.tls.certresolver=${GATEWAY_CERT_RESOLVER}
       - traefik.http.services.statuswatch.loadbalancer.server.port=3001
       - traefik.http.routers.statuswatch.middlewares=${DASHBOARD_AUTH_MW}
+
+volumes:
+  statuswatch-data:
+    name: athyper-stack-statuswatch-data

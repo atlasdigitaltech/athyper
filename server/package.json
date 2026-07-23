@@ -36,6 +36,7 @@
     "@athyper/adapter-db": "workspace:*",
     "@athyper/adapter-memory-cache": "workspace:*",
     "@athyper/adapter-object-storage": "workspace:*",
+    "@athyper/adapter-telemetry": "workspace:*",
     "@athyper/api-contracts": "workspace:*",
     "@athyper/auth-common": "workspace:*",
     "@athyper/runtime-contracts": "workspace:*",
@@ -79,6 +80,7 @@
     "nodemailer": "^8.0.5",
     "pino": "^10.3.1",
     "qrcode": "^1.5.4",
+    "tsx": "^4.19.2",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -89,7 +91,6 @@
     "pg": "^8.13.0",
     "pino-pretty": "^13.0.0",
     "postgres": "^3.4.9",
-    "tsx": "^4.19.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

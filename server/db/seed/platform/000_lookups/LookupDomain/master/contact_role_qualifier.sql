@@ -66,6 +66,39 @@ FROM (VALUES
      'Treasury-specific operational events (payment runs, FX, settlement).',
      'notification', 31)
 
+    ,('accounts_payable',  'Accounts Payable',
+     'master.contact_role_qualifier',
+     'Invoice, supplier-query, and payment-correspondence contact.',
+     'correspondence', 40)
+    ,('accounts_receivable', 'Accounts Receivable',
+     'master.contact_role_qualifier',
+     'Billing, collection, and customer-account correspondence contact.',
+     'correspondence', 41)
+    ,('tax',               'Tax',
+     'master.contact_role_qualifier',
+     'Tax operations and authority correspondence contact.',
+     'correspondence', 42)
+    ,('legal',             'Legal',
+     'master.contact_role_qualifier',
+     'General legal contact distinct from the formal legal-notice channel.',
+     'correspondence', 43)
+    ,('compliance',        'Compliance',
+     'master.contact_role_qualifier',
+     'Regulatory, audit, and compliance contact.',
+     'correspondence', 44)
+    ,('bank_reconciliation', 'Bank Reconciliation',
+     'master.contact_role_qualifier',
+     'Operational bank reconciliation notifications and exceptions.',
+     'notification', 45)
+    ,('payment_notification', 'Payment Notification',
+     'master.contact_role_qualifier',
+     'Payment-run, settlement, and remittance notification channel.',
+     'notification', 46)
+    ,('collection_notification', 'Collection Notification',
+     'master.contact_role_qualifier',
+     'Collection and overdue-account notification channel.',
+     'notification', 47)
+
 ) AS v(code, name, domain_code, description, category, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

@@ -34,10 +34,10 @@ type ConflictSeverity = "info" | "warning" | "error" | "blocker";
 type FinanceSetupScopeType = "tenant" | "legal_entity" | "company";
 
 export type JourneyStepKey =
-  | "chart" | "books" | "gl_controls" | "house_banks" | "fiscal_period";
+  | "foundation" | "chart" | "books" | "gl_controls" | "house_banks" | "fiscal_period";
 
 export type ConflictCategory =
-  | "chart" | "book" | "gl_control" | "posting_role" | "house_bank" | "period" | "assignment";
+  | "foundation" | "chart" | "book" | "gl_control" | "posting_role" | "house_bank" | "period" | "assignment";
 
 interface ScopeRef {
   type:  FinanceSetupScopeType;
@@ -220,6 +220,8 @@ interface CompanyHeader {
   companyName:     string;
   legalEntityCode: string | null;
   legalEntityName: string | null;
+  legalEntityId:   string | null;
+  tenantId:        string;
   tenantCode:      string | null;
   tenantName:      string | null;
 }
@@ -235,6 +237,8 @@ async function loadCompanyHeader(
     company_name:       string;
     legal_entity_code:  string | null;
     legal_entity_name:  string | null;
+    legal_entity_id:    string | null;
+    tenant_id:          string;
     tenant_code:        string | null;
     tenant_name:        string | null;
   }>`
@@ -243,6 +247,8 @@ async function loadCompanyHeader(
            cc.name   AS company_name,
            le.code   AS legal_entity_code,
            le.name   AS legal_entity_name,
+           le.id     AS legal_entity_id,
+           t.id      AS tenant_id,
            t.code    AS tenant_code,
            t.name    AS tenant_name
       FROM master.company_code cc
@@ -259,9 +265,95 @@ async function loadCompanyHeader(
     companyName:     r.company_name,
     legalEntityCode: r.legal_entity_code,
     legalEntityName: r.legal_entity_name,
+    legalEntityId:   r.legal_entity_id,
+    tenantId:        r.tenant_id,
     tenantCode:      r.tenant_code,
     tenantName:      r.tenant_name,
   } : null;
+}
+
+async function evaluateFoundationStep(
+  db: AnyDb,
+  tenantId: string,
+  header: CompanyHeader,
+): Promise<{ step: JourneyStep; conflicts: FinanceSetupConflict[] }> {
+  if (!header.legalEntityId) {
+    return {
+      step: { key: "foundation", label: "Addresses & contacts", state: "blocked", coveragePct: 0,
+        primaryHref: `/app/company-code/${header.companyCodeId}`, conflictCount: 1 },
+      conflicts: [{
+        id: `foundation-legal-entity-missing:${header.companyCode}`,
+        category: "foundation", severity: "blocker", scope: { type: "company", code: header.companyCode },
+        visibleAtScopes: [{ type: "company", code: header.companyCode }],
+        title: "Legal Entity assignment is missing", message: "Assign the Company Code to a Legal Entity before finance setup.",
+        reasonCode: "finance_foundation_legal_entity_missing", actionHref: `/app/company-code/${header.companyCodeId}`,
+        actionLabel: "Open company", detectedAt: new Date().toISOString(),
+      }],
+    };
+  }
+
+  const result = await sql<{
+    registered_office: boolean; bill_from: boolean; remit_to: boolean; finance_email: boolean;
+  }>`
+    WITH owners(owner_type, owner_id, rank) AS (VALUES
+      ('company_code'::text, ${header.companyCodeId}::uuid, 0),
+      ('legal_entity'::text, ${header.legalEntityId}::uuid, 1),
+      ('tenant'::text, ${tenantId}::uuid, 2)
+    )
+    SELECT
+      EXISTS (
+        SELECT 1 FROM master.address_link al
+        WHERE al.tenant_id = ${tenantId}::uuid
+          AND al.owner_type = 'legal_entity' AND al.owner_id = ${header.legalEntityId}::uuid
+          AND al.purpose = 'correspondence' AND al.role_qualifier = 'registered_office'
+          AND al.is_primary = true AND al.effective_from <= CURRENT_DATE
+          AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+      ) AS registered_office,
+      EXISTS (
+        SELECT 1 FROM owners o JOIN master.address_link al
+          ON al.owner_type = o.owner_type AND al.owner_id = o.owner_id
+        WHERE al.tenant_id = ${tenantId}::uuid AND al.purpose IN ('bill_from', 'default')
+          AND al.is_primary = true AND al.effective_from <= CURRENT_DATE
+          AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+      ) AS bill_from,
+      EXISTS (
+        SELECT 1 FROM owners o JOIN master.address_link al
+          ON al.owner_type = o.owner_type AND al.owner_id = o.owner_id
+        WHERE al.tenant_id = ${tenantId}::uuid AND al.purpose IN ('remit_to', 'default')
+          AND al.is_primary = true AND al.effective_from <= CURRENT_DATE
+          AND (al.effective_until IS NULL OR al.effective_until > CURRENT_DATE)
+      ) AS remit_to,
+      EXISTS (
+        SELECT 1 FROM owners o JOIN master.contact_link cl
+          ON cl.owner_type = o.owner_type AND cl.owner_id = o.owner_id
+        WHERE cl.tenant_id = ${tenantId}::uuid AND cl.channel_type = 'email'
+          AND ((cl.purpose = 'correspondence' AND cl.role_qualifier = 'accounts_payable')
+               OR (cl.purpose = 'default' AND cl.role_qualifier IS NULL))
+          AND cl.is_primary = true AND cl.status = 'active'
+      ) AS finance_email
+  `.execute(db);
+  const row = result.rows[0] ?? { registered_office: false, bill_from: false, remit_to: false, finance_email: false };
+  const checks = [
+    [row.registered_office, "registered-office", "Registered office is missing", "Configure the Legal Entity registered-office address."],
+    [row.bill_from, "bill-from", "Bill-from address is missing", "Configure or inherit a bill-from address for this Company Code."],
+    [row.remit_to, "remit-to", "Remittance address is missing", "Configure or inherit a remittance address for this Company Code."],
+    [row.finance_email, "finance-email", "Finance email is missing", "Configure an AP/default email at Company, Legal Entity, or Tenant scope."],
+  ] as const;
+  const missing = checks.filter(([ready]) => !ready);
+  const conflicts: FinanceSetupConflict[] = missing.map(([, code, title, message]) => ({
+    id: `foundation-${code}:${header.companyCode}`, category: "foundation", severity: "error",
+    scope: { type: "company", code: header.companyCode },
+    visibleAtScopes: [{ type: "company", code: header.companyCode }], title, message,
+    reasonCode: `finance_foundation_${code.replace(/-/g, "_")}_missing`,
+    actionHref: `/app/company-code/${header.companyCodeId}`, actionLabel: "Configure addresses & contacts",
+    detectedAt: new Date().toISOString(),
+  }));
+  const coveragePct = Math.round(((checks.length - missing.length) / checks.length) * 100);
+  return {
+    step: { key: "foundation", label: "Addresses & contacts", state: missing.length ? (coveragePct ? "in_progress" : "not_started") : "complete",
+      coveragePct, primaryHref: `/app/company-code/${header.companyCodeId}`, conflictCount: conflicts.length },
+    conflicts,
+  };
 }
 
 
@@ -823,6 +915,7 @@ export async function buildCompanyHubPayload(
   }
 
   const [
+    foundationResult,
     chartResult,
     booksResult,
     glControlsResult,
@@ -831,6 +924,7 @@ export async function buildCompanyHubPayload(
     postingRoleCoverage,
     governanceReadiness,
   ] = await Promise.all([
+    evaluateFoundationStep(db, opts.tenantId, header),
     evaluateChartStep(db, opts.tenantId, header.companyCode, header.companyCodeId),
     evaluateBooksStep(db, opts.tenantId, header.companyCode, header.companyCodeId),
     evaluateGlControlsStep(db, opts.tenantId, header.companyCode),
@@ -868,6 +962,7 @@ export async function buildCompanyHubPayload(
   }
 
   const journey: JourneyStep[] = [
+    foundationResult.step,
     chartResult.step,
     booksResult.step,
     glControlsResult.step,
@@ -875,6 +970,7 @@ export async function buildCompanyHubPayload(
     periodStep,
   ];
   const allConflicts: FinanceSetupConflict[] = [
+    ...foundationResult.conflicts,
     ...chartResult.conflicts,
     ...booksResult.conflicts,
     ...glControlsResult.conflicts,

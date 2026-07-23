@@ -1103,39 +1103,11 @@ CREATE TRIGGER trg_ictp_profile_gate
     FOR EACH ROW EXECUTE FUNCTION master.fn_ictp_profile_gate();
 
 
--- ─── H2: company_code_book_assignment → company_code.default_ledger_book_id sync
--- Keeps the convenience denormalization in sync with the highest-priority assignment.
-CREATE OR REPLACE FUNCTION master.fn_sync_default_ledger_book()
-RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE
-    v_tenant_id uuid;
-    v_cc_id     uuid;
-    v_top_book  uuid;
-BEGIN
-    v_tenant_id := COALESCE(NEW.tenant_id,        OLD.tenant_id);
-    v_cc_id     := COALESCE(NEW.company_code_id,  OLD.company_code_id);
-
-    SELECT book_id INTO v_top_book
-    FROM master.company_code_book_assignment
-    WHERE tenant_id       = v_tenant_id
-      AND company_code_id = v_cc_id
-      AND status          = 'active'
-    ORDER BY priority DESC
-    LIMIT 1;
-
-    UPDATE master.company_code
-    SET default_ledger_book_id = v_top_book
-    WHERE tenant_id = v_tenant_id
-      AND id        = v_cc_id;
-
-    RETURN COALESCE(NEW, OLD);
-END;
-$$;
-
+-- ─── H2: explicit Company default Book authority
+-- Company default Book is an explicit command decision. Assignment priority
+-- remains a routing-conflict input and must not overwrite that decision.
 DROP TRIGGER IF EXISTS trg_sync_default_ledger_book ON master.company_code_book_assignment;
-CREATE TRIGGER trg_sync_default_ledger_book
-    AFTER INSERT OR UPDATE OR DELETE ON master.company_code_book_assignment
-    FOR EACH ROW EXECUTE FUNCTION master.fn_sync_default_ledger_book();
+DROP FUNCTION IF EXISTS master.fn_sync_default_ledger_book();
 
 
 -- ─── H3a: legal_entity hierarchy cycle guard + path maintenance ───────────────

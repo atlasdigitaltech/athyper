@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { PlaneShell, type FavoritesPanelSlotProps } from "@athyper/app-neon-shell";
 import { FavoritesPanelContainer } from "@athyper/app-neon/collaboration";
@@ -13,6 +13,21 @@ import {
   useNotificationStream,
 } from "./NotificationStreamClient";
 
+export interface ShellPublicSession {
+  displayName: string;
+  email?: string;
+  activeOrg: string | null;
+  activeWorkbench: string | null;
+}
+
+const ShellPublicSessionContext = createContext<ShellPublicSession | null>(null);
+
+export function useShellPublicSession(): ShellPublicSession {
+  const session = useContext(ShellPublicSessionContext);
+  if (!session) throw new Error("useShellPublicSession must be used inside AppShellClient");
+  return session;
+}
+
 export function AppShellClient({
   supportMode,
   initialSession,
@@ -23,17 +38,36 @@ export function AppShellClient({
   children: ReactNode;
 }) {
   const cacheScopeIdentity = runtimeListSessionScopeIdentity(initialSession);
+  const shellSession = toShellPublicSession(initialSession);
   return (
-    <RuntimeListBrowserCacheProvider scopeIdentity={cacheScopeIdentity}>
-      <AppRouteNavigationBoundary>
-        <NotificationStreamProvider>
-          <ShellWithNotificationCount supportMode={supportMode} initialSession={initialSession}>
-            {children}
-          </ShellWithNotificationCount>
-        </NotificationStreamProvider>
-      </AppRouteNavigationBoundary>
-    </RuntimeListBrowserCacheProvider>
+    <ShellPublicSessionContext.Provider value={shellSession}>
+      <RuntimeListBrowserCacheProvider scopeIdentity={cacheScopeIdentity}>
+        <AppRouteNavigationBoundary>
+          <NotificationStreamProvider>
+            <ShellWithNotificationCount supportMode={supportMode} initialSession={initialSession}>
+              {children}
+            </ShellWithNotificationCount>
+          </NotificationStreamProvider>
+        </AppRouteNavigationBoundary>
+      </RuntimeListBrowserCacheProvider>
+    </ShellPublicSessionContext.Provider>
   );
+}
+
+function toShellPublicSession(value: unknown): ShellPublicSession {
+  if (!value || typeof value !== "object") {
+    throw new Error("AppShellClient requires a validated public session");
+  }
+  const session = value as Record<string, unknown>;
+  if (typeof session["displayName"] !== "string") {
+    throw new Error("AppShellClient session is missing displayName");
+  }
+  return {
+    displayName: session["displayName"],
+    email: typeof session["email"] === "string" ? session["email"] : undefined,
+    activeOrg: typeof session["activeOrg"] === "string" ? session["activeOrg"] : null,
+    activeWorkbench: typeof session["activeWorkbench"] === "string" ? session["activeWorkbench"] : null,
+  };
 }
 
 function AppRouteNavigationBoundary({ children }: { children: ReactNode }) {

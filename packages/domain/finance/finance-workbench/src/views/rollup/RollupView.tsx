@@ -8,6 +8,7 @@ import { useFinanceRollup, type RollupScopeType } from "../../hooks/useFinanceRo
 import { NeedsAttentionInbox } from "../company-hub/NeedsAttentionInbox";
 import { RollupAggregateStrip } from "./RollupAggregateStrip";
 import { RollupCompanyMatrix } from "./RollupCompanyMatrix";
+import { useCertificationReadinessRollup } from "../../hooks/useCertificationReadiness";
 
 export interface RollupViewProps {
   scopeType: RollupScopeType;
@@ -16,6 +17,7 @@ export interface RollupViewProps {
 
 export function RollupView({ scopeType, scopeCode }: RollupViewProps) {
   const q = useFinanceRollup({ scopeType, scopeCode });
+  const certification = useCertificationReadinessRollup(scopeType,scopeCode);
 
   if (q.isLoading && !q.data) {
     return (
@@ -106,6 +108,8 @@ export function RollupView({ scopeType, scopeCode }: RollupViewProps) {
           isLoading={q.isFetching && !q.data}
           showLegalEntityColumn={isTenant}
         />
+
+        {certification.data&&<section className="rounded-lg border bg-card"><div className="flex flex-wrap items-center justify-between gap-2 border-b p-4"><div><h2 className="font-semibold">Four-domain certification roll-up</h2><p className="text-xs text-muted-foreground">Independent readiness by Company; multi-currency, Book, House Bank, and jurisdiction gaps remain visible.</p></div><Badge variant={certification.data.summary.blockedCount?"warning":"outline"} size="sm">{certification.data.summary.readyCount}/{certification.data.summary.companyCount} ready</Badge></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-muted/30 text-left"><tr>{["Company","Currency & FX","Tax","Payments","Banking","Certification","Gate"].map(label=><th className="p-3" key={label}>{label}</th>)}</tr></thead><tbody className="divide-y">{certification.data.companies.map(company=><tr key={company.company.code}><td className="p-3 font-medium">{company.company.code}</td>{company.domains.map(domain=><td className="p-3" key={domain.domain}><span className={domain.state==="ready"?"text-emerald-700":"text-amber-700"}>{domain.passed}/{domain.total} · {domain.state.replaceAll("_"," ")}</span></td>)}<td className="p-3 capitalize">{company.status.replaceAll("_"," ")}</td><td className="p-3 capitalize">{company.rollout.mode}</td></tr>)}</tbody></table></div></section>}
 
         <NeedsAttentionInbox
           conflicts={rollup.inbox}

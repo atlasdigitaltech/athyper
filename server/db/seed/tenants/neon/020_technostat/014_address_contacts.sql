@@ -120,7 +120,7 @@ BEGIN
         (v_tid, 'company_code', v_cc_tegy,  v_addr_cairo,  'default', true, v_su),
         (v_tid, 'legal_entity', v_le_sdtx,  v_addr_cairo,  'default', true, v_su),
         (v_tid, 'company_code', v_cc_sdtx,  v_addr_cairo,  'default', true, v_su)
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     INSERT INTO master.address_link (tenant_id, owner_type, owner_id, address_id, purpose, is_primary, created_by)
     SELECT
@@ -138,7 +138,7 @@ BEGIN
     WHERE s.tenant_id = v_tid
       AND s.status = 'active'
       AND cc.code IN ('TKSA', 'SSK', 'TEGY', 'SDTX')
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     -- =========================================================================
     -- CONTACTS: Tenant

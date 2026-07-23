@@ -22,7 +22,7 @@
 
 import type { Router } from "express";
 import { sql, type Kysely } from "kysely";
-import { verifyBearer, isUuid, resolveTenantId } from "@athyper/svc-shared";
+import { verifyBearer, isUuid, resolveTenantId, resolvePrincipalIdWithJit } from "@athyper/svc-shared";
 
 // ── Deps ──────────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,9 @@ export interface MasterAddressesRouteDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db:     Kysely<any>;
   auth:   { verifyToken(token: string): Promise<Record<string, unknown>> };
+  authorizeMutation?: (input: {
+    tenantId: string; principalId: string; ownerType: string; ownerId: string;
+  }) => Promise<boolean>;
   logger?: { error(event: string, fields?: Record<string, unknown>): void };
 }
 
@@ -112,7 +115,7 @@ interface AddressGrouped {
 // ── Route factory ─────────────────────────────────────────────────────────────
 
 export function registerMasterAddressRoutes(router: Router, deps: MasterAddressesRouteDeps): void {
-  const { db, auth, logger } = deps;
+  const { db, auth, authorizeMutation, logger } = deps;
 
   // ── GET /master/addresses ─────────────────────────────────────────────────
 
@@ -206,7 +209,7 @@ export function registerMasterAddressRoutes(router: Router, deps: MasterAddresse
         query = query.where((eb: any) =>
           eb.or([
             eb("al.effective_until", "is", null),
-            eb("al.effective_until", ">=", new Date().toISOString().slice(0, 10)),
+            eb("al.effective_until", ">", new Date().toISOString().slice(0, 10)),
           ]),
         );
       }
@@ -324,26 +327,17 @@ export function registerMasterAddressRoutes(router: Router, deps: MasterAddresse
         return res.status(404).json({ error: "NOT_FOUND", message: "Address link not found" });
       }
 
-      // Clear existing primaries for the same owner+purpose (avoid EXCLUDE collision)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (db as any)
-        .updateTable("master.address_link")
-        .set({ is_primary: false, updated_at: new Date() })
-        .where("tenant_id",  "=", tenantId)
-        .where("owner_type", "=", target.owner_type)
-        .where("owner_id",   "=", target.owner_id)
-        .where("purpose",    "=", target.purpose)
-        .where("is_primary", "=", true)
-        .where("id",         "!=", linkId)
-        .execute();
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm ?? "athyper", claims) : "";
+      if (!principalId || !authorizeMutation || !await authorizeMutation({
+        tenantId, principalId, ownerType: target.owner_type, ownerId: target.owner_id,
+      })) {
+        return res.status(403).json({ error: "FORBIDDEN" });
+      }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (db as any)
-        .updateTable("master.address_link")
-        .set({ is_primary: true, updated_at: new Date() })
-        .where("id",        "=", linkId)
-        .where("tenant_id", "=", tenantId)
-        .execute();
+      await sql`SELECT master.fn_set_primary_address_link(
+        ${tenantId}::uuid, ${linkId}::uuid, ${principalId}::uuid
+      )`.execute(db);
 
       return res.json({ ok: true });
 
@@ -375,10 +369,26 @@ export function registerMasterAddressRoutes(router: Router, deps: MasterAddresse
 
       const today = new Date().toISOString().slice(0, 10);
 
+      const target = await db.selectFrom("master.address_link")
+        .select(["owner_type", "owner_id", "effective_from"])
+        .where("tenant_id", "=", tenantId).where("id", "=", linkId).executeTakeFirst();
+      if (!target) return res.status(404).json({ error: "NOT_FOUND", message: "Address link not found" });
+      const sub = typeof claims.sub === "string" ? claims.sub : "";
+      const principalId = sub ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm ?? "athyper", claims) : "";
+      if (!principalId || !authorizeMutation || !await authorizeMutation({
+        tenantId, principalId, ownerType: String(target.owner_type), ownerId: String(target.owner_id),
+      })) return res.status(403).json({ error: "FORBIDDEN" });
+      if (String(target.effective_from) >= today) {
+        return res.status(409).json({
+          error: "EMPTY_EFFECTIVE_RANGE",
+          message: "A link effective today cannot be end-dated today; remove the pending link instead.",
+        });
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await (db as any)
         .updateTable("master.address_link")
-        .set({ effective_until: today, updated_at: new Date() })
+        .set({ effective_until: today, updated_at: new Date(), updated_by: principalId })
         .where("id",        "=", linkId)
         .where("tenant_id", "=", tenantId)
         .execute();

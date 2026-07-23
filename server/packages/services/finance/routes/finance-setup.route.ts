@@ -39,6 +39,8 @@ import {
   loadGlControlsGrid,
   loadChartAssignments,
   loadBookAssignments,
+  loadChartOptions,
+  loadBookOptions,
 } from "../services/finance-configure.service.js";
 import {
   loadBlockersGrouped,
@@ -50,13 +52,21 @@ import {
   updateGlControl,
   deactivateGlControl,
   setPrimaryChartAssignment,
-  setPrimaryBook,
+  createChartAssignment,
+  updateChartAssignment,
+  deactivateChartAssignment,
+  bulkUpdateGlControls,
+  createBookAssignment,
+  updateBookAssignment,
+  deactivateBookAssignment,
+  setCompanyDefaultBook,
   toggleHouseBank,
 } from "../services/finance-setup-mutations.service.js";
 import {
   assignFiscalCalendar,
   generateFiscalPeriods,
   loadFiscalCalendarDesigner,
+  loadFiscalPeriodMatrix,
   previewFiscalCalendar,
   retireFiscalCalendar,
   saveFiscalCalendar,
@@ -68,6 +78,11 @@ import {
   savePostingRoleAccountMap,
   tracePostingRoleResolution,
 } from "../services/posting-role.service.js";
+import { loadCompanyFoundation } from "../services/finance-foundation.service.js";
+import {
+  loadCertificationReadinessRollup,
+  loadCompanyCertificationReadiness,
+} from "../services/finance-certification-readiness.service.js";
 
 // Phase 1/2: authenticated users in the resolved tenant can use Finance Setup.
 // Phase 3 turns this on together with tenant/legal-entity/company scope policy.
@@ -75,6 +90,61 @@ const ENFORCE_PHASE3_FINANCE_SETUP_PERMISSION = false;
 
 export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps): void {
   const { db, auth, logger } = deps;
+
+  router.get("/finance/setup/certification-readiness", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const tenantId = await resolveTenantId(db,(req.headers["x-org"] as string) ?? "",(req.headers["x-realm"] as string) ?? "athyper");
+      if (!tenantId) { res.status(400).json({error:"MISSING_TENANT"}); return; }
+      const scopeType=String(req.query["scopeType"]??"");
+      const scopeCode=String(req.query["scopeCode"]??"").trim();
+      const asOfDate=req.query["asOfDate"]?String(req.query["asOfDate"]):undefined;
+      if (!scopeCode) { res.status(400).json({error:"MISSING_SCOPE",message:"scopeCode is required."}); return; }
+      if (scopeType==="company") {
+        const payload=await loadCompanyCertificationReadiness(db,tenantId,scopeCode,asOfDate);
+        if (!payload) { res.status(404).json({error:"COMPANY_NOT_FOUND"}); return; }
+        res.status(200).json(payload); return;
+      }
+      if (scopeType==="tenant"||scopeType==="legal_entity") {
+        res.status(200).json(await loadCertificationReadinessRollup(db,tenantId,scopeType,scopeCode,asOfDate)); return;
+      }
+      res.status(400).json({error:"INVALID_SCOPE",message:"scopeType must be company, legal_entity, or tenant."});
+    } catch (err) {
+      logger?.error("finance_certification_readiness_error",{err:String(err)}); next(err);
+    }
+  }) as RequestHandler);
+
+  router.get("/finance/setup/company/:companyCode/foundation", (async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const tenantId = await resolveTenantId(
+        db,
+        (req.headers["x-org"] as string) ?? "",
+        (req.headers["x-realm"] as string) ?? "athyper",
+      );
+      if (!tenantId) {
+        res.status(400).json({ error: "MISSING_TENANT", message: "Tenant could not be resolved from x-org/x-realm." });
+        return;
+      }
+      const companyCode = String(req.params["companyCode"] ?? "").trim();
+      const activeLegalEntityId = String(req.headers["x-legal-entity-id"] ?? "").trim() || null;
+      if (!companyCode) {
+        res.status(400).json({ error: "MISSING_COMPANY", message: "companyCode is required." });
+        return;
+      }
+      const payload = await loadCompanyFoundation(db, tenantId, companyCode, activeLegalEntityId);
+      if (!payload) {
+        res.status(404).json({ error: "COMPANY_NOT_FOUND", message: `No company with code=${companyCode} in the active tenant and Legal Entity.` });
+        return;
+      }
+      res.status(200).json(payload);
+    } catch (err) {
+      logger?.error("finance_setup_foundation_error", { err: String(err) });
+      next(err);
+    }
+  }) as RequestHandler);
 
   // ─── GET /finance/setup/readiness ────────────────────────────────────
   const readinessHandler: RequestHandler = async (req, res, next) => {
@@ -291,6 +361,13 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
     }),
   );
   router.get(
+    "/finance/setup/configure/chart-options",
+    createScopedGetHandler(deps, async (db, tenantId) => {
+      const rows = await loadChartOptions(db, tenantId);
+      return { status: 200, body: rows };
+    }),
+  );
+  router.get(
     "/finance/setup/configure/book-assignments",
     createScopedGetHandler(deps, async (db, tenantId, scopeCode) => {
       const rows = await loadBookAssignments(db, tenantId, scopeCode);
@@ -298,9 +375,25 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
     }),
   );
   router.get(
+    "/finance/setup/configure/book-options",
+    createScopedGetHandler(deps, async (db, tenantId) => {
+      const rows = await loadBookOptions(db, tenantId);
+      return { status: 200, body: rows };
+    }),
+  );
+  router.get(
     "/finance/setup/configure/fiscal-calendar",
     createScopedGetHandler(deps, async (db, tenantId, scopeCode) => {
       const payload = await loadFiscalCalendarDesigner(db, tenantId, scopeCode);
+      return { status: 200, body: payload };
+    }),
+  );
+  router.get(
+    "/finance/setup/configure/fiscal-calendar/period-matrix",
+    createScopedGetHandler(deps, async (db, tenantId, scopeCode, req) => {
+      const fiscalYear = Number(req.query["fiscalYear"]);
+      if (!Number.isInteger(fiscalYear)) return { status: 400, body: { error: "MISSING_PARAMS", message: "fiscalYear is required." } };
+      const payload = await loadFiscalPeriodMatrix(db, tenantId, scopeCode, fiscalYear);
       return { status: 200, body: payload };
     }),
   );
@@ -366,11 +459,11 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
   // Actor is resolved via resolvePrincipalIdWithJit (canonical pattern).
   // On success we return 200 with the mutation result body.
 
-  router.post("/finance/setup/mutations/gl-control/assign",
+  router.post("/finance/setup/company/:companyCode/gl-controls",
     createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
       const body = ctx.body as {
-        companyCode:          string;
         glAccountCode:        string;
+        glAccountId?:         string;
         postingAllowed?:      boolean;
         blockedForManual?:    boolean;
         blockedForAuto?:      boolean;
@@ -379,15 +472,19 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
         requiresProject?:     boolean;
         reconciliationType?:  string | null;
         taxCategory?:         string | null;
+        defaultCostCenterId?: string | null;
+        defaultSiteId?:       string | null;
       };
-      if (!body.companyCode || !body.glAccountCode) {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      if (!companyCode || !body.glAccountCode) {
         return { status: 400, body: { error: "MISSING_PARAMS", message: "companyCode and glAccountCode are required." } };
       }
       const result = await assignGlControl(db, {
         tenantId:  ctx.tenantId,
         actorId:   ctx.principalId,
-        companyCode:          body.companyCode,
+        companyCode,
         glAccountCode:        body.glAccountCode,
+        glAccountId:          body.glAccountId,
         postingAllowed:       body.postingAllowed,
         blockedForManual:     body.blockedForManual,
         blockedForAuto:       body.blockedForAuto,
@@ -396,20 +493,123 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
         requiresProject:      body.requiresProject,
         reconciliationType:   body.reconciliationType,
         taxCategory:          body.taxCategory,
+        defaultCostCenterId:  body.defaultCostCenterId,
+        defaultSiteId:        body.defaultSiteId,
+        correlationId:        ctx.correlationId,
       });
       return { status: 200, body: result };
     }),
   );
 
-  router.patch("/finance/setup/mutations/gl-control/:controlId",
+  router.post("/finance/setup/company/:companyCode/gl-controls/bulk",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const body = ctx.body as {
+        glAccountIds?: string[]; postingAllowed?: boolean; blockedForManual?: boolean; blockedForAuto?: boolean;
+        requiresCostCenter?: boolean; requiresProfitCenter?: boolean; requiresProject?: boolean;
+      };
+      if (!companyCode || !Array.isArray(body.glAccountIds)) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "companyCode and glAccountIds are required." } };
+      }
+      const result = await bulkUpdateGlControls(db, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId, correlationId: ctx.correlationId,
+        companyCode, glAccountIds: body.glAccountIds, postingAllowed: body.postingAllowed,
+        blockedForManual: body.blockedForManual, blockedForAuto: body.blockedForAuto,
+        requiresCostCenter: body.requiresCostCenter, requiresProfitCenter: body.requiresProfitCenter,
+        requiresProject: body.requiresProject,
+      });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.post("/finance/setup/company/:companyCode/chart-assignments",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const body = ctx.body as {
+        chartId?: string; assignmentType?: string; effectiveFrom?: string | null; effectiveTo?: string | null;
+        isPrimary?: boolean; status?: "active" | "inactive";
+      };
+      if (!companyCode || !body.chartId || !body.assignmentType) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "companyCode, chartId, and assignmentType are required." } };
+      }
+      if ((body.effectiveFrom && !isIsoDate(body.effectiveFrom)) || (body.effectiveTo && !isIsoDate(body.effectiveTo))) {
+        return { status: 400, body: { error: "INVALID_DATE", message: "Effective dates must be YYYY-MM-DD." } };
+      }
+      const result = await createChartAssignment(db, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId, correlationId: ctx.correlationId, companyCode,
+        chartId: body.chartId, assignmentType: body.assignmentType, effectiveFrom: body.effectiveFrom,
+        effectiveTo: body.effectiveTo, isPrimary: body.isPrimary, status: body.status,
+      });
+      return { status: 201, body: result };
+    }),
+  );
+
+  router.put("/finance/setup/company/:companyCode/chart-assignments/:assignmentId",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const assignmentId = String(ctx.params["assignmentId"] ?? "");
+      const body = ctx.body as {
+        chartId?: string; assignmentType?: string; effectiveFrom?: string | null; effectiveTo?: string | null;
+        isPrimary?: boolean; status?: "active" | "inactive"; expectedUpdatedAt?: string | null;
+      };
+      if (!companyCode || !assignmentId || !body.chartId || !body.assignmentType || body.expectedUpdatedAt === undefined) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "Complete assignment fields and expectedUpdatedAt are required." } };
+      }
+      if ((body.effectiveFrom && !isIsoDate(body.effectiveFrom)) || (body.effectiveTo && !isIsoDate(body.effectiveTo))) {
+        return { status: 400, body: { error: "INVALID_DATE", message: "Effective dates must be YYYY-MM-DD." } };
+      }
+      const result = await updateChartAssignment(db, assignmentId, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId, correlationId: ctx.correlationId, companyCode,
+        chartId: body.chartId, assignmentType: body.assignmentType, effectiveFrom: body.effectiveFrom,
+        effectiveTo: body.effectiveTo, isPrimary: body.isPrimary, status: body.status,
+        expectedUpdatedAt: body.expectedUpdatedAt,
+      });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.delete("/finance/setup/company/:companyCode/chart-assignments/:assignmentId",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const assignmentId = String(ctx.params["assignmentId"] ?? "");
+      const body = ctx.body as { expectedUpdatedAt?: string | null };
+      if (!companyCode || !assignmentId || body.expectedUpdatedAt === undefined) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "companyCode, assignmentId, and expectedUpdatedAt are required." } };
+      }
+      const result = await deactivateChartAssignment(db, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId, correlationId: ctx.correlationId,
+        companyCode, assignmentId, expectedUpdatedAt: body.expectedUpdatedAt,
+      });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.post("/finance/setup/company/:companyCode/chart-assignments/:assignmentId/set-primary",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const assignmentId = String(ctx.params["assignmentId"] ?? "");
+      const body = ctx.body as { expectedUpdatedAt?: string | null };
+      if (!assignmentId || body.expectedUpdatedAt === undefined) return { status: 400, body: { error: "MISSING_PARAMS", message: "assignmentId and expectedUpdatedAt are required." } };
+      const result = await setPrimaryChartAssignment(db, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId, assignmentId, correlationId: ctx.correlationId,
+        expectedUpdatedAt: body.expectedUpdatedAt,
+      });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.patch("/finance/setup/company/:companyCode/gl-controls/:controlId",
     createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
       const controlId = ctx.params["controlId"] as string;
-      if (!controlId) return { status: 400, body: { error: "MISSING_PARAMS", message: "controlId is required." } };
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      if (!controlId || !companyCode) return { status: 400, body: { error: "MISSING_PARAMS", message: "companyCode and controlId are required." } };
       const body = ctx.body as Record<string, unknown>;
+      if (!("expectedUpdatedAt" in body)) return { status: 400, body: { error: "MISSING_PARAMS", message: "expectedUpdatedAt is required." } };
       const result = await updateGlControl(db, {
         tenantId:              ctx.tenantId,
         actorId:               ctx.principalId,
         controlId,
+        companyCode,
+        expectedUpdatedAt:       body["expectedUpdatedAt"] as string | null,
         postingAllowed:        body["postingAllowed"]        as boolean | undefined,
         blockedForManual:      body["blockedForManual"]      as boolean | undefined,
         blockedForAuto:        body["blockedForAuto"]        as boolean | undefined,
@@ -418,19 +618,28 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
         requiresProject:       body["requiresProject"]       as boolean | undefined,
         reconciliationType:    body["reconciliationType"]    as string | null | undefined,
         taxCategory:           body["taxCategory"]           as string | null | undefined,
+        defaultCostCenterId:   body["defaultCostCenterId"]   as string | null | undefined,
+        defaultSiteId:         body["defaultSiteId"]         as string | null | undefined,
+        correlationId:         ctx.correlationId,
       });
       return { status: 200, body: result };
     }),
   );
 
-  router.delete("/finance/setup/mutations/gl-control/:controlId",
+  router.delete("/finance/setup/company/:companyCode/gl-controls/:controlId",
     createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
       const controlId = ctx.params["controlId"] as string;
-      if (!controlId) return { status: 400, body: { error: "MISSING_PARAMS", message: "controlId is required." } };
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      if (!controlId || !companyCode) return { status: 400, body: { error: "MISSING_PARAMS", message: "companyCode and controlId are required." } };
+      const body = ctx.body as { expectedUpdatedAt?: string | null };
+      if (body.expectedUpdatedAt === undefined) return { status: 400, body: { error: "MISSING_PARAMS", message: "expectedUpdatedAt is required." } };
       const result = await deactivateGlControl(db, {
         tenantId:  ctx.tenantId,
         actorId:   ctx.principalId,
         controlId,
+        companyCode,
+        expectedUpdatedAt: body.expectedUpdatedAt,
+        correlationId: ctx.correlationId,
       });
       return { status: 200, body: result };
     }),
@@ -449,15 +658,70 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
     }),
   );
 
-  router.post("/finance/setup/mutations/book/:bookId/set-primary",
+  router.post("/finance/setup/company/:companyCode/book-assignments",
     createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
-      const bookId = ctx.params["bookId"] as string;
-      if (!bookId) return { status: 400, body: { error: "MISSING_PARAMS", message: "bookId is required." } };
-      const result = await setPrimaryBook(db, {
-        tenantId:  ctx.tenantId,
-        actorId:   ctx.principalId,
-        bookId,
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const body = ctx.body as { bookId?: string; effectiveFrom?: string; effectiveTo?: string | null; overrideCurrencyCode?: string | null;
+        alternateCoaPrefix?: string | null; priority?: number; conflictStrategy?: string; status?: "active" | "inactive"; setAsDefault?: boolean };
+      if (!companyCode || !body.bookId || !body.effectiveFrom || typeof body.priority !== "number" || !body.conflictStrategy) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "bookId, effectiveFrom, priority, and conflictStrategy are required." } };
+      }
+      if (!isIsoDate(body.effectiveFrom) || (body.effectiveTo && !isIsoDate(body.effectiveTo))) {
+        return { status: 400, body: { error: "INVALID_DATE", message: "Book assignment dates must be YYYY-MM-DD." } };
+      }
+      const result = await createBookAssignment(db, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId, companyCode, bookId: body.bookId,
+        effectiveFrom: body.effectiveFrom, effectiveTo: body.effectiveTo, overrideCurrencyCode: body.overrideCurrencyCode,
+        alternateCoaPrefix: body.alternateCoaPrefix, priority: body.priority, conflictStrategy: body.conflictStrategy,
+        status: body.status, setAsDefault: body.setAsDefault, correlationId: ctx.correlationId,
       });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.put("/finance/setup/company/:companyCode/book-assignments/:assignmentId",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const assignmentId = String(ctx.params["assignmentId"] ?? "");
+      const body = ctx.body as { bookId?: string; effectiveFrom?: string; effectiveTo?: string | null; overrideCurrencyCode?: string | null;
+        alternateCoaPrefix?: string | null; priority?: number; conflictStrategy?: string; status?: "active" | "inactive";
+        setAsDefault?: boolean; expectedUpdatedAt?: string | null };
+      if (!companyCode || !assignmentId || !body.bookId || !body.effectiveFrom || typeof body.priority !== "number" || !body.conflictStrategy || !("expectedUpdatedAt" in body)) {
+        return { status: 400, body: { error: "MISSING_PARAMS", message: "Complete Book assignment data and expectedUpdatedAt are required." } };
+      }
+      if (!isIsoDate(body.effectiveFrom) || (body.effectiveTo && !isIsoDate(body.effectiveTo))) {
+        return { status: 400, body: { error: "INVALID_DATE", message: "Book assignment dates must be YYYY-MM-DD." } };
+      }
+      const result = await updateBookAssignment(db, assignmentId, {
+        tenantId: ctx.tenantId, actorId: ctx.principalId, companyCode, bookId: body.bookId,
+        effectiveFrom: body.effectiveFrom, effectiveTo: body.effectiveTo, overrideCurrencyCode: body.overrideCurrencyCode,
+        alternateCoaPrefix: body.alternateCoaPrefix, priority: body.priority, conflictStrategy: body.conflictStrategy,
+        status: body.status, setAsDefault: body.setAsDefault, expectedUpdatedAt: body.expectedUpdatedAt, correlationId: ctx.correlationId,
+      });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.delete("/finance/setup/company/:companyCode/book-assignments/:assignmentId",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const assignmentId = String(ctx.params["assignmentId"] ?? "");
+      const body = ctx.body as { expectedUpdatedAt?: string | null };
+      if (!companyCode || !assignmentId || body.expectedUpdatedAt === undefined) return { status: 400, body: { error: "MISSING_PARAMS", message: "assignmentId and expectedUpdatedAt are required." } };
+      const result = await deactivateBookAssignment(db, { tenantId: ctx.tenantId, actorId: ctx.principalId, companyCode,
+        assignmentId, expectedUpdatedAt: body.expectedUpdatedAt, correlationId: ctx.correlationId });
+      return { status: 200, body: result };
+    }),
+  );
+
+  router.post("/finance/setup/company/:companyCode/book-assignments/:bookId/set-default",
+    createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const bookId = String(ctx.params["bookId"] ?? "");
+      const body = ctx.body as { expectedUpdatedAt?: string | null };
+      if (!companyCode || !bookId || body.expectedUpdatedAt === undefined) return { status: 400, body: { error: "MISSING_PARAMS", message: "companyCode, bookId, and expectedUpdatedAt are required." } };
+      const result = await setCompanyDefaultBook(db, { tenantId: ctx.tenantId, actorId: ctx.principalId,
+        companyCode, bookId, expectedUpdatedAt: body.expectedUpdatedAt, correlationId: ctx.correlationId });
       return { status: 200, body: result };
     }),
   );
@@ -577,17 +841,18 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
     }),
   );
 
-  router.post("/finance/setup/mutations/fiscal-calendar/:calendarId/assign",
+  router.post("/finance/setup/company/:companyCode/fiscal-calendar-assignments/:calendarId",
     createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
       const calendarId = String(ctx.params["calendarId"] ?? "");
-      const body = ctx.body as { companyCode?: string; fiscalYearFrom?: number };
-      if (!calendarId || !body.companyCode || !Number.isInteger(body.fiscalYearFrom)) {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const body = ctx.body as { fiscalYearFrom?: number };
+      if (!calendarId || !companyCode || !Number.isInteger(body.fiscalYearFrom)) {
         return { status: 400, body: { error: "MISSING_PARAMS", message: "calendarId, companyCode, and fiscalYearFrom are required." } };
       }
       const result = await assignFiscalCalendar(db, {
         tenantId: ctx.tenantId,
         actorId: ctx.principalId,
-        companyCode: body.companyCode,
+        companyCode,
         calendarId,
         fiscalYearFrom: body.fiscalYearFrom!,
       });
@@ -595,19 +860,20 @@ export function createFinanceSetupRoutes(router: Router, deps: FinanceRouteDeps)
     }),
   );
 
-  router.post("/finance/setup/mutations/fiscal-calendar/:calendarId/generate",
+  router.post("/finance/setup/company/:companyCode/fiscal-periods/:fiscalYear/generate",
     createMutationHandler(deps, "FINANCE_SETUP.CONFIGURE", async (db, ctx) => {
-      const calendarId = String(ctx.params["calendarId"] ?? "");
-      const body = ctx.body as { companyCode?: string; fiscalYear?: number };
-      if (!calendarId || !body.companyCode || !Number.isInteger(body.fiscalYear)) {
+      const companyCode = String(ctx.params["companyCode"] ?? "");
+      const fiscalYear = Number(ctx.params["fiscalYear"]);
+      const body = ctx.body as { calendarId?: string };
+      if (!companyCode || !body.calendarId || !Number.isInteger(fiscalYear)) {
         return { status: 400, body: { error: "MISSING_PARAMS", message: "calendarId, companyCode, and fiscalYear are required." } };
       }
       const result = await generateFiscalPeriods(db, {
         tenantId: ctx.tenantId,
         actorId: ctx.principalId,
-        companyCode: body.companyCode,
-        calendarId,
-        fiscalYear: body.fiscalYear!,
+        companyCode,
+        calendarId: body.calendarId,
+        fiscalYear,
       });
       return { status: 200, body: result };
     }),
@@ -632,6 +898,7 @@ function createMutationHandler(
       principalId: string;
       params:      Record<string, unknown>;
       body:        unknown;
+      correlationId?: string;
     },
   ) => Promise<{ status: number; body: unknown }>,
 ): RequestHandler {
@@ -646,6 +913,24 @@ function createMutationHandler(
       if (!tenantId) {
         res.status(400).json({ error: "MISSING_TENANT", message: "Tenant could not be resolved." });
         return;
+      }
+
+      // Company-scoped command routes must remain inside the session's active
+      // Legal Entity even before detailed Phase 3 permission enforcement lands.
+      const routeCompanyCode = String(req.params["companyCode"] ?? "").trim();
+      const activeLegalEntityId = String(req.headers["x-legal-entity-id"] ?? "").trim();
+      if (routeCompanyCode) {
+        const scopedCompany = await deps.db
+          .selectFrom("master.company_code as cc")
+          .select("cc.id")
+          .where("cc.tenant_id", "=", tenantId)
+          .where("cc.code", "=", routeCompanyCode)
+          .$if(Boolean(activeLegalEntityId), (query) => query.where("cc.legal_entity_id", "=", activeLegalEntityId))
+          .executeTakeFirst();
+        if (!scopedCompany) {
+          res.status(404).json({ error: "COMPANY_NOT_FOUND", message: "Company is not available in the active tenant and Legal Entity." });
+          return;
+        }
       }
 
       const sub = typeof (claims as { sub?: unknown }).sub === "string"
@@ -677,14 +962,16 @@ function createMutationHandler(
           principalId,
           params: (req.params as Record<string, unknown>) ?? {},
           body:   req.body ?? {},
+          correlationId: String(req.headers["x-trace-id"] ?? req.headers["x-request-id"] ?? "") || undefined,
         });
         res.status(result.status).json(result.body);
       } catch (err) {
-        const anyErr = err as Error & { status?: number; code?: string };
+        const anyErr = err as Error & { status?: number; code?: string; details?: Record<string, unknown> };
         if (typeof anyErr.status === "number") {
           res.status(anyErr.status).json({
             error:   anyErr.code ?? "MUTATION_FAILED",
             message: anyErr.message,
+            details: anyErr.details,
           });
           return;
         }

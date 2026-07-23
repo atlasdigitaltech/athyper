@@ -252,7 +252,10 @@ services:
       - "127.0.0.1:9001:9001"
     volumes:
       - ${ATHYPER_DATA}/objectstorage:/data
-    networks: [edge]
+    # API joins edge + internal, while background workers are intentionally
+    # internal-only. MinIO must be reachable from both attachment producers
+    # and consumers without exposing workers to the edge network.
+    networks: [edge, internal]
     depends_on:
       gateway:
         condition: service_healthy

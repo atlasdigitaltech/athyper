@@ -186,7 +186,7 @@ BEGIN
     ) AS owner_roles(owner_type, owner_id, purpose, role_qualifier)
     CROSS JOIN tmp_catl_floor_address floor2
     WHERE floor2.floor_no = 2
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     INSERT INTO master.address_link (
         tenant_id, owner_type, owner_id, address_id, purpose, is_primary, role_qualifier, created_by
@@ -207,7 +207,7 @@ BEGIN
     ) AS owners(owner_type, owner_id)
     CROSS JOIN (VALUES ('ship_to'::text), ('place_of_service'::text)) AS roles(purpose)
     CROSS JOIN tmp_catl_floor_address floors
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     -- Site owners use the same Innovative Data building. Bill/correspondence
     -- use Floor 2; ship/service cycle through Ground Floor through Floor 4.
@@ -225,7 +225,7 @@ BEGIN
         ) AS role_rows(purpose, role_qualifier)
         CROSS JOIN tmp_catl_floor_address floor2
         WHERE floor2.floor_no = 2
-        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
         INSERT INTO master.address_link (
             tenant_id, owner_type, owner_id, address_id, purpose, is_primary, role_qualifier, created_by
@@ -246,7 +246,7 @@ BEGIN
         JOIN tmp_catl_floor_address floors
           ON floors.floor_no = site_rows.floor_no
         CROSS JOIN (VALUES ('ship_to'::text), ('place_of_service'::text)) AS role_rows(purpose)
-        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
     ELSE
         RAISE WARNING '[003_address_contacts] No active CATL sites found for cirrusatlantic tenant';
     END IF;

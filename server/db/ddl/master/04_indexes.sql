@@ -155,15 +155,18 @@ CREATE INDEX IF NOT EXISTS address_tax_jurisdiction_pidx
 CREATE INDEX IF NOT EXISTS address_link_owner_idx
     ON master.address_link (tenant_id, owner_type, owner_id);
 
+DROP INDEX IF EXISTS master.address_link_owner_purpose_idx;
 CREATE INDEX IF NOT EXISTS address_link_owner_purpose_idx
-    ON master.address_link (tenant_id, owner_type, owner_id, purpose);
+    ON master.address_link (tenant_id, owner_type, owner_id, purpose, role_qualifier);
 
+DROP INDEX IF EXISTS master.address_link_active_pidx;
 CREATE INDEX IF NOT EXISTS address_link_active_pidx
-    ON master.address_link (tenant_id, owner_type, owner_id, purpose)
+    ON master.address_link (tenant_id, owner_type, owner_id, purpose, role_qualifier)
     WHERE effective_until IS NULL;
 
+DROP INDEX IF EXISTS master.address_link_primary_pidx;
 CREATE INDEX IF NOT EXISTS address_link_primary_pidx
-    ON master.address_link (tenant_id, owner_type, owner_id, purpose)
+    ON master.address_link (tenant_id, owner_type, owner_id, purpose, role_qualifier)
     WHERE is_primary = true AND effective_until IS NULL;
 
 CREATE INDEX IF NOT EXISTS address_link_default_pidx

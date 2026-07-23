@@ -17,7 +17,9 @@
   },
   "dependencies": {
     "@athyper/finance-rules": "workspace:*",
-    "@athyper/runtime-shared": "workspace:*"
+    "@athyper/runtime-contracts": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*",
+    "@athyper/surface-kit": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

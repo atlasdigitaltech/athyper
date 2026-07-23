@@ -635,7 +635,7 @@ function RuntimeDetailShell({
               return (
                 <div key={fieldItem.key} className="py-1">
                   <dt className="text-sm font-medium text-muted-foreground">{fieldItem.label}</dt>
-                  <dd title={title} className="mt-0.5 truncate text-sm font-medium text-foreground">
+                  <dd title={title} className="mt-0.5 truncate text-sm font-normal text-foreground">
                     {useSharedRenderers && record ? (
                       <RuntimeFieldValueView
                         field={fieldItem}

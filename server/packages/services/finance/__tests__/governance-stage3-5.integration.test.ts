@@ -15,7 +15,7 @@ integrationDescribe("finance governance Stage 3-5 database contracts", () => {
 
   afterAll(async () => db?.destroy(), 30_000);
 
-  it("seeds canonical cycles, executable tasks, and a disabled posting gate", async () => {
+  it("seeds canonical cycles, executable tasks, and the Stage F rollout-aware posting gate", async () => {
     const { rows } = await sql<{
       tenant_count: number;
       canonical_opening_types: number;
@@ -40,7 +40,7 @@ integrationDescribe("finance governance Stage 3-5 database contracts", () => {
     expect(row.legacy_opening_types).toBe(0);
     expect(row.readiness_types).toBe(row.tenant_count);
     expect(row.executable_tasks).toBeGreaterThan(0);
-    expect(row.gate_enabled).toBe(false);
+    expect(row.gate_enabled).toBe(true);
     expect(row.trigger_count).toBe(1);
   });
 });

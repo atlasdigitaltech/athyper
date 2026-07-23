@@ -46,7 +46,11 @@ services:
       REDIS_DB: "${BULLBOARD_REDIS_DB:-0}"
       REDIS_USE_TLS: "${BULLBOARD_REDIS_USE_TLS:-false}"
       REDIS_USERNAME: "${BULLBOARD_REDIS_USERNAME:-app}"
-      REDIS_PASSWORD: "${BULLBOARD_REDIS_PASSWORD:-${MEMORYCACHE_PASSWORD}}"
+      # The Redis `app` ACL user is provisioned from MEMORYCACHE_PASSWORD.
+      # Compose does not support nested defaults such as
+      # ${BULLBOARD_REDIS_PASSWORD:-${MEMORYCACHE_PASSWORD}}; it renders that
+      # expression incorrectly and bull-board attempts AUTH with `"=`.
+      REDIS_PASSWORD: "${MEMORYCACHE_PASSWORD}"
     deploy:
       resources:
         limits:

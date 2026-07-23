@@ -5,6 +5,14 @@ REM ============================================================
 REM athyper - Local Dev Bootstrap - Windows Batch
 REM Location: stack\scripts\dev-local.bat
 REM
+REM Mode: apps on HOST, dev servers (tsx watch / next dev).
+REM       Fast iteration — the workflow you want day-to-day.
+REM
+REM Alternative: stack\scripts\dev-container.bat runs the same 6 apps
+REM       as PRODUCTION containers on the local machine for perf
+REM       testing / QA without leaving Windows. Uses
+REM       stack\compose\athyper.override.local-container.yml.
+REM
 REM Single canonical command for "Option C" local dev (host apps + Docker infra).
 REM Equivalent to running, by hand:
 REM   1. docker stop <any stale app containers>
@@ -99,12 +107,21 @@ if "!STALE_FOUND!"=="0" echo   (none running — clean start)
 echo.
 
 if "!STOP_ONLY!"=="1" (
+  REM Also flip the gateway back to host upstream URLs so the next dev-local
+  REM launch (or a browser hitting neon.athyper.local right now) reaches the
+  REM host dev server on port 3101 — not a dead neon-web:3000 container link.
+  echo   Recreating gateway with host upstream URLs...
+  call "%STACK_DIR%\scripts\stack-profile\up.bat" core >nul 2>&1
+  docker compose --project-directory "%STACK_DIR%\compose" --env-file "%ENV_FILE%" -f "%STACK_DIR%\compose\gateway\athyper-gateway.yml" -f "%STACK_DIR%\compose\athyper.override.local.yml" up -d --force-recreate gateway >nul 2>&1
   echo --stop-only: done.
   goto :end
 )
 
 REM ----------------------------
-REM Step 2: Bring up infra (core profile)
+REM Step 2: Bring up infra (core profile) with LOCAL override
+REM (host-dev routing: gateway points at host.docker.internal:31xx).
+REM If switching back from dev-container.bat, the gateway is force-recreated
+REM below to swap its upstream URLs from container names back to host paths.
 REM ----------------------------
 if "!NO_INFRA!"=="1" (
   echo [2/4] Skipping infra bringup ^(--no-infra^).
@@ -115,6 +132,10 @@ if "!NO_INFRA!"=="1" (
     echo ERROR: infra bringup failed.
     exit /b 1
   )
+  REM Force-recreate gateway so it picks up host upstream URLs from .env
+  REM even if it was previously running with container URLs from dev-container.
+  echo       Recreating gateway with host upstream URLs...
+  docker compose --project-directory "%STACK_DIR%\compose" --env-file "%ENV_FILE%" -f "%STACK_DIR%\compose\gateway\athyper-gateway.yml" -f "%STACK_DIR%\compose\athyper.override.local.yml" up -d --force-recreate gateway >nul 2>&1
 )
 echo.
 

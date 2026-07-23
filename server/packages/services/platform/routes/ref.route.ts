@@ -1133,7 +1133,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
 
   // ── GET /platform/ref/fx-rates/lookup ───────────────────────────────────────
   // Calls master.get_fx_rate() — direct → inverse → triangulation.
-  // ?base= &quote= required; ?pivot= optional (default MYR); ?date= optional.
+  // ?base= &quote= required; ?pivot= optional and never defaulted; ?date= optional.
 
   const fxRateLookupHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -1158,7 +1158,9 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
           : typeof q["asOf"] === "string"
             ? q["asOf"].trim()
             : new Date().toISOString().slice(0, 10);
-      const pivot = typeof q["pivot"] === "string" ? q["pivot"].trim().toUpperCase() : "MYR";
+      const pivot = typeof q["pivot"] === "string" && q["pivot"].trim()
+        ? q["pivot"].trim().toUpperCase()
+        : null;
 
       if (!from || !to) {
         res.status(400).json({ error: "VALIDATION_ERROR", message: "?base= and ?quote= are required" });

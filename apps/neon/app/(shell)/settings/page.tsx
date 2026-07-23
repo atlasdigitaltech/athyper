@@ -1,22 +1,18 @@
 "use client";
 
-import { Suspense, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import {
-  Activity, Bell, Building2, FileText, LogOut, MessageSquare,
-  Palette, ShieldCheck, ShieldAlert, User,
-} from "lucide-react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { PageFrame } from "@athyper/surface-kit";
+import { PageFrame, SurfaceHeader } from "@athyper/surface-kit";
 import {
   Badge, Button,
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Separator, overlayScrimVariants,
+  overlayScrimVariants,
 } from "@athyper/ui/primitives";
 import { MeUIProvider } from "@athyper/me-ui";
 import { bffFetch } from "@/lib/bff-fetch";
-import { useShellSession } from "@/hooks/use-shell-session";
 import { applyThemePreferences } from "@/lib/preferences/theme-dom";
+import { useShellPublicSession } from "../AppShellClient";
 
 import { ProfileSection       } from "./_sections/profile-section";
 import { IdentitySection      } from "./_sections/identity-section";
@@ -34,29 +30,17 @@ type SectionId =
   | "profile" | "identity" | "security" | "preferences"
   | "notifications" | "tenant" | "diagnostics" | "docs" | "feedback";
 
-const NAV_ITEMS: { id: SectionId; label: string; icon: React.ElementType; adminOnly?: boolean }[] = [
-  { id: "profile",       label: "Profile",              icon: User        },
-  { id: "identity",      label: "Identity & Access",    icon: ShieldCheck },
-  { id: "security",      label: "Security & MFA",       icon: ShieldAlert },
-  { id: "preferences",   label: "Preferences",          icon: Palette     },
-  { id: "notifications", label: "Notifications",        icon: Bell        },
-  { id: "tenant",        label: "Tenant Administration",icon: Building2,  adminOnly: true },
-  { id: "diagnostics",   label: "Diagnostics",          icon: Activity,   adminOnly: true },
-  { id: "docs",          label: "Documentation",        icon: FileText    },
-  { id: "feedback",      label: "Feedback",             icon: MessageSquare },
+const NAV_ITEMS: { id: SectionId; label: string; adminOnly?: boolean }[] = [
+  { id: "profile",       label: "Profile" },
+  { id: "identity",      label: "Identity & Access" },
+  { id: "security",      label: "Security & MFA" },
+  { id: "preferences",   label: "Preferences" },
+  { id: "notifications", label: "Notifications" },
+  { id: "tenant",        label: "Tenant Administration", adminOnly: true },
+  { id: "diagnostics",   label: "Diagnostics", adminOnly: true },
+  { id: "docs",          label: "Documentation" },
+  { id: "feedback",      label: "Feedback" },
 ];
-
-const SECTION_TITLES: Record<SectionId, string> = {
-  profile:       "Profile",
-  identity:      "Identity & Access",
-  security:      "Security & MFA",
-  preferences:   "Preferences",
-  notifications: "Notifications",
-  tenant:        "Tenant Administration",
-  diagnostics:   "Diagnostics",
-  docs:          "Documentation",
-  feedback:      "Feedback",
-};
 
 const VALID_SECTIONS = NAV_ITEMS.map((i) => i.id);
 
@@ -64,81 +48,82 @@ const VALID_SECTIONS = NAV_ITEMS.map((i) => i.id);
 
 function SettingsContent() {
   const searchParams = useSearchParams();
-  const { bff } = useShellSession();
+  const router = useRouter();
+  const shellSession = useShellPublicSession();
+  const bff = {
+    ...shellSession,
+    email: shellSession.email ?? "—",
+  };
   const raw = (searchParams.get("section") ?? "profile") as SectionId;
 
   const [active,     setActive]     = useState<SectionId>(VALID_SECTIONS.includes(raw) ? raw : "profile");
   const [showLogout, setShowLogout] = useState(false);
 
   const activated = useRef<Set<SectionId>>(new Set([active]));
+  const initials = shellSession.displayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+  const [tenantCode, entityCode] = (shellSession.activeOrg ?? "").split("--");
+  const tenantLabel = entityCode || tenantCode || "—";
+
+  useEffect(() => {
+    const next = VALID_SECTIONS.includes(raw) ? raw : "profile";
+    activated.current.add(next);
+    setActive(next);
+  }, [raw]);
 
   function go(id: SectionId) {
     activated.current.add(id);
     setActive(id);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("section", id);
+    router.replace(`/settings?${params.toString()}`, { scroll: false });
   }
 
   return (
     <MeUIProvider bffFetch={bffFetch} session={bff} applyThemePreferences={applyThemePreferences}>
-    <PageFrame title="Settings" description="Manage your profile, security, and preferences">
-      <div className="flex gap-0">
-
-        {/* ── Sidebar (desktop ≥ lg) ── */}
-        <aside className="hidden w-[220px] shrink-0 pr-8 lg:block">
-          <nav className="sticky top-8 flex flex-col gap-0.5">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = active === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => go(item.id)}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm leading-5 transition-colors",
-                    isActive
-                      ? "bg-accent font-medium text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1 truncate text-left">{item.label}</span>
-                  {item.adminOnly && <Badge variant="secondary" className="shrink-0 text-xs">Admin</Badge>}
-                </button>
-              );
-            })}
-
-            <Separator className="my-2" />
-
-            <button
-              type="button"
-              onClick={() => setShowLogout(true)}
-              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm leading-5 text-destructive transition-colors hover:bg-muted"
-            >
-              <LogOut className="h-4 w-4 shrink-0" />
-              <span className="text-left">Sign out</span>
-            </button>
-          </nav>
-        </aside>
-
-        {/* ── Content pane ── */}
-        <div className="min-w-0 flex-1">
-          {/* Mobile nav */}
-          <div className="mb-4 lg:hidden">
-            <Select value={active} onValueChange={(v) => go(v as SectionId)}>
-              <SelectTrigger className="w-full text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {NAV_ITEMS.map((item) => (
-                  <SelectItem key={item.id} value={item.id} className="text-sm">{item.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <h2 className="mb-4 text-sm font-semibold text-foreground">{SECTION_TITLES[active]}</h2>
-
+    <PageFrame>
+      <SurfaceHeader
+        kind="record"
+        eyebrow="Settings"
+        title={shellSession.displayName}
+        subtitle={bff.email}
+        leadingVariant="plain"
+        leading={
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-base font-medium text-primary-foreground shadow-sm">
+            {initials}
+          </span>
+        }
+        status={<Badge variant="success">Active</Badge>}
+        facts={[
+          { key: "tenant", label: "Tenant:", value: tenantLabel },
+          { key: "workspace", label: "Workspace:", value: shellSession.activeWorkbench ?? "user" },
+        ]}
+        actions={
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => setShowLogout(true)}>
+            <LogOut className="h-4 w-4" aria-hidden />
+            Sign out
+          </Button>
+        }
+        navigation={NAV_ITEMS.map((item) => ({
+          key: item.id,
+          label: item.label,
+          href: `/settings?section=${item.id}`,
+          active: active === item.id,
+          badge: item.adminOnly
+            ? <Badge variant="secondary" className="text-xs">Admin</Badge>
+            : undefined,
+          onSelect: () => go(item.id),
+        }))}
+        navigationLabel="Settings sections"
+        className="mb-4"
+      />
+      <div className="min-w-0">
           {/* Sections — keep-alive on first activation */}
           <div className={active === "profile"       ? "block" : "hidden"}>
-            {activated.current.has("profile")       && <ProfileSection       active={active === "profile"} />}
+            {activated.current.has("profile")       && <ProfileSection       active={active === "profile"} showSummary={false} />}
           </div>
           <div className={active === "identity"      ? "block" : "hidden"}>
             {activated.current.has("identity")      && <IdentitySection      active={active === "identity"} />}
@@ -164,7 +149,6 @@ function SettingsContent() {
           <div className={active === "feedback"      ? "block" : "hidden"}>
             {activated.current.has("feedback")      && <FeedbackSection />}
           </div>
-        </div>
       </div>
 
       {/* ── Sign-out confirmation ── */}

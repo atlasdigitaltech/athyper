@@ -10,8 +10,9 @@ import { cn } from "@athyper/theme/utils";
 import type { JourneyStepKey, JourneyStepState, JourneyStep } from "../../lib/finance-setup.types";
 import type { RollupCompanyRow } from "../../hooks/useFinanceRollup";
 
-const STEP_ORDER: JourneyStepKey[] = ["chart", "books", "gl_controls", "house_banks", "fiscal_period"];
+const STEP_ORDER: JourneyStepKey[] = ["foundation", "chart", "books", "gl_controls", "house_banks", "fiscal_period"];
 const STEP_LABEL: Record<JourneyStepKey, string> = {
+  foundation:    "Foundation",
   chart:         "Chart",
   books:         "Books",
   gl_controls:   "Controls",

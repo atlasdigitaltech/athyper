@@ -348,7 +348,7 @@ BEGIN
     END IF;
     INSERT INTO master.address_link (tenant_id, owner_type, owner_id, address_id, purpose, is_primary, effective_from, metadata, created_by)
     VALUES (v_tid,'business_partner',v_bp,v_addr,'default',true,'2010-03-15','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
+    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,role_qualifier,address_id) DO NOTHING;
 
     INSERT INTO master.address (
         tenant_id, code, name, address_type, attention_line,
@@ -458,7 +458,7 @@ BEGIN
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-int-ssk-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     VALUES (v_tid,'business_partner',v_bp,v_addr,'default',true,'2014-06-20','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
+    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,role_qualifier,address_id) DO NOTHING;
 
     INSERT INTO master.party_identifier (tenant_id,owner_type,owner_id,scheme,value,issuing_authority,issued_at,is_verified,verified_at,is_primary,metadata,status,created_by)
     SELECT v_tid,'business_partner',v_bp,scheme,val,auth,issued::date,true,now(),pri,
@@ -552,7 +552,7 @@ BEGIN
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-int-tegy-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     VALUES (v_tid,'business_partner',v_bp,v_addr,'default',true,'2015-09-01','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
+    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,role_qualifier,address_id) DO NOTHING;
 
     INSERT INTO master.party_identifier (tenant_id,owner_type,owner_id,scheme,value,issuing_authority,issued_at,is_verified,verified_at,is_primary,metadata,status,created_by)
     SELECT v_tid,'business_partner',v_bp,scheme,val,auth,issued::date,true,now(),pri,
@@ -646,7 +646,7 @@ BEGIN
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-int-sdtx-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     VALUES (v_tid,'business_partner',v_bp,v_addr,'default',true,'2018-04-10','{"_seed":{"pack":"tksa_party_master_v1"}}'::jsonb,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
+    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,role_qualifier,address_id) DO NOTHING;
 
     INSERT INTO master.party_identifier (tenant_id,owner_type,owner_id,scheme,value,issuing_authority,issued_at,is_verified,verified_at,is_primary,metadata,status,created_by)
     SELECT v_tid,'business_partner',v_bp,scheme,val,auth,issued::date,true,now(),pri,

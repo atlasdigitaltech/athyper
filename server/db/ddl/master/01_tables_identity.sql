@@ -500,10 +500,6 @@ CREATE TABLE IF NOT EXISTS master.contact_link (
     CONSTRAINT contact_link_tenant_id_uq      UNIQUE (tenant_id, id),
     CONSTRAINT contact_link_value_nonempty    CHECK (btrim(value) <> ''),
     CONSTRAINT contact_link_verified_at_chk   CHECK (is_verified = false OR verified_at IS NOT NULL),
-    CONSTRAINT contact_link_root_owner_default_purpose_chk CHECK (
-        owner_type NOT IN ('tenant', 'legal_entity', 'company_code', 'site', 'business_partner')
-        OR (purpose = 'default' AND role_qualifier IS NULL)
-    ),
     -- Auth purposes forbid role_qualifier to protect the principal.login_email cache
     -- and to keep auth resolution semantics simple. The trg_contact_link_sync_login_email
     -- trigger and ux_contact_link_principal_login index both assume no qualifier on auth rows.
@@ -514,6 +510,10 @@ CREATE TABLE IF NOT EXISTS master.contact_link (
     )
 );
 
+-- Idempotent upgrade from the former organizational default-only model.
+ALTER TABLE master.contact_link
+    DROP CONSTRAINT IF EXISTS contact_link_root_owner_default_purpose_chk;
+
 COMMENT ON TABLE  master.contact_link IS
   'ARCHETYPE=B;SCOPE=T. Polymorphic canonical address store. One row per owner+channel+purpose+role_qualifier. Detail in contact_email/contact_phone.';
 
@@ -523,7 +523,7 @@ COMMENT ON COLUMN master.contact_link.purpose IS
   'Auth bucket (login/recovery/mfa/verification) is reserved for principal/employee. '
   'Business bucket mirrors address vocabulary (bill_to/remit_to/bill_from/ship_to/ship_from/place_of_service/correspondence). '
   'Generic: support/notification/marketing/default. '
-  'Tenant, legal_entity, company_code, site, and business_partner owners are forced to purpose=''default'' with no role_qualifier. '
+  'Organizational owners may use default, correspondence, or notification purposes with controlled role qualifiers. '
   'Reserved ''default'' = universal fallback resolved by fn_resolve_contact().';
 
 COMMENT ON COLUMN master.contact_link.role_qualifier IS
@@ -956,7 +956,7 @@ CREATE TABLE IF NOT EXISTS master.address_link (
     CONSTRAINT address_link_tenant_id_uq
         UNIQUE (tenant_id, id),
     CONSTRAINT address_link_owner_purpose_address_uq
-        UNIQUE (tenant_id, owner_type, owner_id, purpose, address_id),
+        UNIQUE NULLS NOT DISTINCT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id),
     CONSTRAINT address_link_temporal_chk
         CHECK (effective_until IS NULL OR effective_until > effective_from),
     -- address_link_default_is_primary_chk REMOVED — the invariant "default purpose
@@ -965,13 +965,14 @@ CREATE TABLE IF NOT EXISTS master.address_link (
     -- insert path needed to avoid address_link_one_primary_excl EXCLUDE collisions.
 
     -- Temporal primary exclusion: at most one is_primary=true per
-    -- (tenant, owner, purpose) at any point in time.
+    -- (tenant, owner, purpose, qualifier) at any point in time.
     CONSTRAINT address_link_one_primary_excl
         EXCLUDE USING gist (
             tenant_id  WITH =,
             owner_type WITH =,
             owner_id   WITH =,
             purpose    WITH =,
+            (COALESCE(role_qualifier, '')) WITH =,
             daterange(effective_from, COALESCE(effective_until, '9999-12-31'::date), '[)') WITH &&
         )
         WHERE (is_primary = true)
@@ -981,6 +982,26 @@ CREATE TABLE IF NOT EXISTS master.address_link (
     -- address_link_purpose_chk: deferred to 06_constraints
     -- address_link_tenant_fk: deferred to 06_constraints
 );
+
+-- Idempotent upgrade for deployments created before address qualifiers were
+-- part of primary-election and value-deduplication buckets.
+ALTER TABLE master.address_link
+    DROP CONSTRAINT IF EXISTS address_link_one_primary_excl;
+ALTER TABLE master.address_link
+    DROP CONSTRAINT IF EXISTS address_link_owner_purpose_address_uq;
+ALTER TABLE master.address_link
+    ADD CONSTRAINT address_link_owner_purpose_address_uq
+    UNIQUE NULLS NOT DISTINCT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id);
+ALTER TABLE master.address_link
+    ADD CONSTRAINT address_link_one_primary_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        owner_type WITH =,
+        owner_id WITH =,
+        purpose WITH =,
+        (COALESCE(role_qualifier, '')) WITH =,
+        daterange(effective_from, COALESCE(effective_until, '9999-12-31'::date), '[)') WITH &&
+    ) WHERE (is_primary = true);
 
 COMMENT ON TABLE master.address_link IS
   'ARCHETYPE=C;SCOPE=T. Polymorphic M:N bridge: owner → address with business purpose and temporal validity. '

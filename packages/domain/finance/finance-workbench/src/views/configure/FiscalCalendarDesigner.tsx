@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { CalendarDays, CheckCircle2, Loader2, Plus, Save, Trash2, WandSparkles } from "lucide-react";
+import { AlertTriangle, CalendarDays, CheckCircle2, Database, FileCheck2, Loader2, Plus, Save, Trash2, WandSparkles } from "lucide-react";
 import {
   Badge, Button, Input, Label, Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue, Skeleton,
@@ -10,6 +10,7 @@ import {
   useAssignFiscalCalendar,
   useFiscalCalendarDesigner,
   useFiscalCalendarPreview,
+  useFiscalPeriodMatrix,
   useGenerateFiscalPeriods,
   useRetireFiscalCalendar,
   useSaveFiscalCalendar,
@@ -67,6 +68,7 @@ export function FiscalCalendarDesigner({ companyCode }: { companyCode: string })
   );
   const currentAssignment = designer.data?.assignments[0] ?? null;
   const preview = useFiscalCalendarPreview(companyCode, selectedId, previewYear);
+  const matrix = useFiscalPeriodMatrix(companyCode, previewYear);
 
   useEffect(() => {
     if (selectedId || !designer.data) return;
@@ -172,18 +174,13 @@ export function FiscalCalendarDesigner({ companyCode }: { companyCode: string })
           <div>
             <div className="flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-primary" aria-hidden />
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Fiscal Calendar Designer</h2>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Step 1 · Tenant Fiscal Calendar definition</h2>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               Define once, preview exact dates, assign by fiscal year, then generate posting gates.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {currentAssignment ? (
-              <Badge variant="success" size="sm">
-                Assigned from FY {currentAssignment.fiscalYearFrom}
-              </Badge>
-            ) : <Badge variant="muted" size="sm">Not assigned</Badge>}
             <Button
               size="sm" variant="secondary"
               onClick={() => { setSelectedId(""); setForm(EMPTY_FORM); setRuleDrafts([]); setMessage(null); }}
@@ -288,14 +285,6 @@ export function FiscalCalendarDesigner({ companyCode }: { companyCode: string })
                 {save.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1.5 h-3.5 w-3.5" />}
                 {selected?.status === "active" ? "Create new version" : "Save draft"}
               </Button>
-              <Button size="sm" variant="secondary" onClick={handleAssign} disabled={isBusy || !selectedId}>
-                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />Activate & assign from FY {previewYear}
-              </Button>
-              <Button size="sm" variant="secondary" onClick={handleGenerate}
-                disabled={isBusy || !selectedId || currentAssignment?.calendarId !== selectedId}>
-                {generate.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <WandSparkles className="mr-1.5 h-3.5 w-3.5" />}
-                Generate FY {previewYear}
-              </Button>
               <Button size="sm" variant="ghost" onClick={handleRetire}
                 disabled={isBusy || !selectedId || currentAssignment?.calendarId === selectedId}>
                 <Trash2 className="mr-1.5 h-3.5 w-3.5" />Retire
@@ -377,9 +366,68 @@ export function FiscalCalendarDesigner({ companyCode }: { companyCode: string })
           </div>
         </section>
       )}
+      <CompanyCalendarAdoption
+        selected={selected}
+        fiscalYear={previewYear} setFiscalYear={setPreviewYear} matrix={matrix.data ?? null}
+        loading={matrix.isLoading} isBusy={isBusy} assigning={assign.isPending} generating={generate.isPending}
+        onAssign={handleAssign} onGenerate={handleGenerate} message={message}
+        generationError={generate.error as (Error & { code?: string; details?: Record<string, unknown> }) | null}
+      />
     </div>
   );
 }
+
+function CompanyCalendarAdoption({ selected, fiscalYear, setFiscalYear, matrix, loading, isBusy, assigning, generating, onAssign, onGenerate, message, generationError }: {
+  selected: FiscalCalendarConfig | null;
+  fiscalYear: number; setFiscalYear: (year: number) => void; matrix: import("../../hooks/useFiscalCalendarDesigner").FiscalPeriodMatrixPayload | null;
+  loading: boolean; isBusy: boolean; assigning: boolean; generating: boolean; onAssign: () => void; onGenerate: () => void; message: string | null;
+  generationError: (Error & { code?: string; details?: Record<string, unknown> }) | null;
+}) {
+  const blockingCount = matrix?.conflicts.filter((conflict) => conflict.severity === "blocking").length ?? 0;
+  return (
+    <section className="rounded-lg border bg-card">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b p-4">
+        <div><div className="flex items-center gap-2"><Database className="h-4 w-4 text-primary" /><h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Step 2 · Company assignment and generated posting gates</h2></div>
+          <p className="mt-1 text-xs text-muted-foreground">Adopt an active tenant definition, validate compatibility fields, then generate Company and Book periods.</p></div>
+        <div className="flex items-center gap-2"><Input className="h-8 w-24" type="number" min={1900} max={32767} value={fiscalYear} onChange={(event) => setFiscalYear(Number(event.target.value))} />
+          {matrix?.assignment ? <Badge variant="success" size="sm">assigned from FY {matrix.assignment.fiscalYearFrom}</Badge> : <Badge variant="muted" size="sm">not assigned</Badge>}</div>
+      </div>
+      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(280px,.75fr)_minmax(0,1.25fr)]">
+        <div className="space-y-4">
+          <div className="rounded-lg border p-4"><h3 className="text-sm font-medium">Company adoption</h3><p className="mt-1 text-xs text-muted-foreground">Selected definition: {selected ? `${selected.code} v${selected.versionNo}` : "none"}</p>
+            <div className="mt-3 flex flex-wrap gap-2"><Button size="sm" variant="secondary" onClick={onAssign} disabled={isBusy || !selected}>
+              {assigning ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}Activate & assign from FY {fiscalYear}</Button>
+              <Button size="sm" onClick={onGenerate} disabled={isBusy || !selected || matrix?.assignment?.calendarId !== selected.id || matrix?.canGenerate === false}>
+                {generating ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <WandSparkles className="mr-1.5 h-3.5 w-3.5" />}Generate FY {fiscalYear}</Button></div>
+            {message && <p className="mt-3 text-xs text-muted-foreground">{message}</p>}
+          </div>
+          <div className="rounded-lg border p-4"><div className="flex items-center justify-between"><h3 className="text-sm font-medium">Legacy-field consistency</h3>{matrix?.legacyConsistency.consistent ? <Badge variant="success" size="sm">consistent</Badge> : <Badge variant="warning" size="sm">review</Badge>}</div>
+            <p className="mt-1 text-xs text-muted-foreground">Assigned Calendar is authoritative; Company legacy fields remain compatibility summaries.</p>
+            <div className="mt-3 space-y-2">{matrix?.legacyConsistency.checks.length ? matrix.legacyConsistency.checks.map((check) => <div key={check.key} className="flex gap-2 text-xs">{check.passed ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}<span>{check.message}</span></div>) : <p className="text-xs text-muted-foreground">Assign a Calendar to evaluate compatibility.</p>}</div>
+          </div>
+          <div className="rounded-lg border p-4"><div className="flex items-center justify-between"><h3 className="text-sm font-medium">Generation evidence</h3><FileCheck2 className="h-4 w-4 text-muted-foreground" /></div>
+            <dl className="mt-3 grid grid-cols-2 gap-3 text-xs"><Evidence label="Company periods" value={String(matrix?.evidence.generatedPeriodCount ?? 0)} /><Evidence label="Book gates" value={String(matrix?.evidence.bookGateCount ?? 0)} /><Evidence label="Source" value={matrix?.evidence.sourceCalendar ?? "Not generated"} /><Evidence label="Last generated" value={matrix?.evidence.lastGeneratedAt ?? "Never"} /></dl>
+          </div>
+        </div>
+        <div className="min-w-0 space-y-4">
+          <div className="rounded-lg border"><div className="flex items-center justify-between border-b p-3"><div><h3 className="text-sm font-medium">Generation conflicts</h3><p className="text-xs text-muted-foreground">Protected drift blocks generation; replaceable future differences remain visible.</p></div><Badge variant={blockingCount ? "destructive" : "outline"} size="sm">{matrix?.conflicts.length ?? 0} issues</Badge></div>
+            <div className="max-h-48 overflow-auto p-3">{generationError && <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs"><p className="font-mono text-destructive">{generationError.code ?? "GENERATION_FAILED"}</p><p className="mt-1">{generationError.message}</p>{generationError.details && <pre className="mt-2 overflow-auto whitespace-pre-wrap text-[10px] text-muted-foreground">{JSON.stringify(generationError.details, null, 2)}</pre>}</div>}{loading ? <Skeleton className="h-16 w-full" /> : matrix?.conflicts.length ? <ul className="space-y-2">{matrix.conflicts.map((conflict, index) => <li key={`${conflict.code}-${conflict.periodNumber ?? index}`} className="flex gap-2 text-xs"><AlertTriangle className={conflict.severity === "blocking" ? "h-4 w-4 text-destructive" : "h-4 w-4 text-amber-600"} /><div><span className="font-mono">{conflict.code}</span><p className="text-muted-foreground">{conflict.message}</p></div></li>)}</ul> : <p className="text-xs text-muted-foreground">No generation conflicts detected.</p>}</div>
+          </div>
+          <PeriodMatrix matrix={matrix} loading={loading} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PeriodMatrix({ matrix, loading }: { matrix: import("../../hooks/useFiscalCalendarDesigner").FiscalPeriodMatrixPayload | null; loading: boolean }) {
+  return <div className="overflow-hidden rounded-lg border"><div className="border-b p-3"><h3 className="text-sm font-medium">Company and Book period matrix</h3><p className="text-xs text-muted-foreground">Company gate and one governed status column per active assigned Book.</p></div>
+    <div className="max-h-[520px] overflow-auto">{loading ? <div className="space-y-2 p-3">{Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-8 w-full" />)}</div> : !matrix?.rows.length ? <p className="p-8 text-center text-sm text-muted-foreground">No generated periods for FY {matrix?.fiscalYear ?? ""}.</p> : <table className="w-full min-w-[720px] text-xs"><thead className="sticky top-0 bg-card text-left text-muted-foreground"><tr><th className="px-3 py-2">Period</th><th className="px-3 py-2">Type</th><th className="px-3 py-2">Dates</th><th className="px-3 py-2">Company</th>{matrix.books.map((book) => <th key={book.bookId} className="px-3 py-2">{book.bookCode}{book.isCompanyDefault ? " ★" : ""}</th>)}<th className="px-3 py-2">Evidence</th></tr></thead>
+      <tbody className="divide-y">{matrix.rows.map((row) => <tr key={row.periodId}><td className="px-3 py-2 font-mono">P{String(row.periodNumber).padStart(2, "0")}<span className="ml-2 font-sans text-muted-foreground">{row.name}</span></td><td className="px-3 py-2">{row.periodType}</td><td className="px-3 py-2 font-mono">{row.startDate} – {row.endDate}</td><td className="px-3 py-2"><StatusBadge status={row.companyStatus} /></td>{matrix.books.map((book) => <td key={book.bookId} className="px-3 py-2">{row.bookStatuses[book.bookId] ? <StatusBadge status={row.bookStatuses[book.bookId]!.status} /> : <Badge variant="destructive" size="sm">missing</Badge>}</td>)}<td className="px-3 py-2"><span title={row.generationKey ?? undefined}>{row.calendarVersion ? `v${row.calendarVersion}` : "legacy"}</span></td></tr>)}</tbody></table>}</div></div>;
+}
+
+function StatusBadge({ status }: { status: string }) { const variant = status === "open" ? "success" : status === "future" ? "outline" : status === "soft_close" ? "warning" : "muted"; return <Badge variant={variant} size="sm">{status.replace("_", " ")}</Badge>; }
+function Evidence({ label, value }: { label: string; value: string }) { return <div><dt className="text-muted-foreground">{label}</dt><dd className="mt-0.5 break-all font-medium">{value}</dd></div>; }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return <div className="space-y-1.5"><Label className="text-xs text-muted-foreground">{label}</Label>{children}</div>;

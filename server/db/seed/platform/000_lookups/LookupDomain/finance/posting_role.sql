@@ -26,6 +26,13 @@ FROM (VALUES
     ('ar_clearing','AR Clearing','Accounts receivable settlement clearing','receivables','either',false,200),
     ('input_tax_recoverable','Input Tax Recoverable','Recoverable input VAT or GST','tax','debit',false,300),
     ('wht_payable','Withholding Tax Payable','Withholding tax liability','tax','credit',false,310),
+    ('output_tax_payable','Output Tax Payable','Collected output VAT or GST liability','tax','credit',false,320),
+    ('input_tax_nonrecoverable','Input Tax Nonrecoverable','Nonrecoverable input tax charged to expense or asset cost','tax','debit',false,330),
+    ('reverse_charge_input','Reverse Charge Input Tax','Self-assessed recoverable reverse-charge input tax','tax','debit',false,340),
+    ('reverse_charge_output','Reverse Charge Output Tax','Self-assessed reverse-charge output tax liability','tax','credit',false,350),
+    ('wht_receivable','Withholding Tax Receivable','Withholding tax credit receivable','tax','debit',false,360),
+    ('tax_rounding_variance','Tax Rounding Variance','Tax calculation rounding difference','tax','either',false,370),
+    ('tax_suspense','Tax Suspense','Unresolved or temporarily held tax amount','tax','either',false,380),
     ('bank_settlement','Bank Settlement','Cash or bank settlement','banking','debit',false,400),
     ('wallet_settlement','Wallet Settlement','Digital wallet settlement','banking','debit',false,410),
     ('bank_fee','Bank Fee','Bank and transaction charges','payments','debit',false,500),
@@ -102,6 +109,13 @@ UPDATE control.lookup_value lv
     ('ar_clearing','receivables','either',false),
     ('input_tax_recoverable','tax','debit',false),
     ('wht_payable','tax','credit',false),
+    ('output_tax_payable','tax','credit',false),
+    ('input_tax_nonrecoverable','tax','debit',false),
+    ('reverse_charge_input','tax','debit',false),
+    ('reverse_charge_output','tax','credit',false),
+    ('wht_receivable','tax','debit',false),
+    ('tax_rounding_variance','tax','either',false),
+    ('tax_suspense','tax','either',false),
     ('bank_settlement','banking','debit',false),
     ('wallet_settlement','banking','debit',false),
     ('bank_fee','payments','debit',false),
@@ -120,6 +134,32 @@ UPDATE control.lookup_value lv
    AND lv.tenant_id IS NULL
    AND lv.code = v.code;
 
+-- Tax roles are conditional on enabled flows, so they are not globally
+-- mandatory. Readiness promotes them to required when a Tax Group or rule
+-- exercises the corresponding capability.
+UPDATE control.lookup_value lv
+   SET metadata = lv.metadata || jsonb_build_object(
+         'readiness_criticality', v.readiness_criticality,
+         'valid_account_characteristics', v.account_characteristics,
+         'canonical', true
+       ),
+       updated_at = now(),
+       updated_by = '00000000-0000-0000-0000-000000000000'::uuid
+  FROM (VALUES
+    ('input_tax_recoverable', 'required_when_used', jsonb_build_object('account_types', jsonb_build_array('asset'), 'postable', true)),
+    ('output_tax_payable', 'required_when_used', jsonb_build_object('account_types', jsonb_build_array('liability'), 'postable', true)),
+    ('input_tax_nonrecoverable', 'required_when_used', jsonb_build_object('account_types', jsonb_build_array('expense','asset'), 'postable', true)),
+    ('reverse_charge_input', 'required_when_used', jsonb_build_object('account_types', jsonb_build_array('asset'), 'postable', true)),
+    ('reverse_charge_output', 'required_when_used', jsonb_build_object('account_types', jsonb_build_array('liability'), 'postable', true)),
+    ('wht_payable', 'required_when_used', jsonb_build_object('account_types', jsonb_build_array('liability'), 'postable', true)),
+    ('wht_receivable', 'required_when_used', jsonb_build_object('account_types', jsonb_build_array('asset'), 'postable', true)),
+    ('tax_rounding_variance', 'required_when_used', jsonb_build_object('account_types', jsonb_build_array('expense','revenue'), 'postable', true)),
+    ('tax_suspense', 'required_when_used', jsonb_build_object('account_types', jsonb_build_array('asset','liability'), 'postable', true))
+  ) AS v(code, readiness_criticality, account_characteristics)
+ WHERE lv.domain_code = 'finance.posting_role'
+   AND lv.tenant_id IS NULL
+   AND lv.code = v.code;
+
 INSERT INTO control.posting_role_alias
     (alias_code, canonical_role_code, source_domain_code, description, metadata, status, created_by)
 SELECT v.alias_code, v.canonical_role_code, v.source_domain_code,
@@ -128,7 +168,11 @@ SELECT v.alias_code, v.canonical_role_code, v.source_domain_code,
 FROM (VALUES
     ('accounts_payable','ap_trade_payable',NULL::text),
     ('vat_input','input_tax_recoverable',NULL::text),
+    ('vat_output','output_tax_payable',NULL::text),
+    ('tax_expense','input_tax_nonrecoverable',NULL::text),
     ('withholding_tax_payable','wht_payable',NULL::text),
+    ('withholding_tax_receivable','wht_receivable',NULL::text),
+    ('tax_rounding','tax_rounding_variance',NULL::text),
     ('cash_at_bank','bank_settlement',NULL::text)
 ) AS v(alias_code, canonical_role_code, source_domain_code)
 WHERE NOT EXISTS (

@@ -187,6 +187,8 @@ function extractDocumentChildRelations(
   }
   if (surface && (surface.kind === "polymorphic_pc_lines" || surface.kind === "document_lines")) {
     const relations = surface.config.relations;
+    if (!relations) return undefined;
+
     const lines = declaredRelationOrUndefined(relations?.lines, declaredRelations);
     if (!lines) return undefined;
     return {

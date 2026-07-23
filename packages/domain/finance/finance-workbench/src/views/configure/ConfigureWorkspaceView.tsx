@@ -1,12 +1,12 @@
 "use client";
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@athyper/ui/primitives";
+import Link from "next/link";
+import { Button, Tabs, TabsList, TabsTrigger, TabsContent } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
 import { WorkspaceHeader } from "../workspace/WorkspaceHeader";
 import { GlControlsGrid } from "./GlControlsGrid";
 import { ChartAssignmentPanel, BookAssignmentPanel } from "./ChartAndBookAssignmentPanels";
 import { HouseBanksExplorePanel } from "../explore/BooksAndBanksPanels";
-import { FiscalCalendarDesigner } from "./FiscalCalendarDesigner";
 import { PostingRoleCoverageMatrix } from "./PostingRoleCoverageMatrix";
 import { FinanceAggregateEditor } from "./FinanceAggregateEditor";
 
@@ -35,7 +35,11 @@ export function ConfigureWorkspaceView({ companyCode, initialTab = "gl_controls"
           </TabsList>
 
           <TabsContent value="fiscal_calendar" className="mt-4">
-            <FiscalCalendarDesigner companyCode={companyCode} />
+            <section className="rounded-lg border bg-card p-8 text-center">
+              <h2 className="font-semibold">Fiscal Calendar moved to Company foundation</h2>
+              <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">Calendar definition, Company assignment, generated periods, Book gates, conflicts, and evidence now live in one governed journey.</p>
+              <Button asChild className="mt-4"><Link href={`/finance/setup/company/${encodeURIComponent(companyCode)}/foundation/calendar`}>Open Calendar and periods</Link></Button>
+            </section>
           </TabsContent>
           <TabsContent value="posting_roles" className="mt-4">
             <PostingRoleCoverageMatrix companyCode={companyCode} />

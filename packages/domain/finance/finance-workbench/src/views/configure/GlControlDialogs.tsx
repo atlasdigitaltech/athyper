@@ -26,11 +26,12 @@ export interface GlControlAssignDialogProps {
   onClose:     () => void;
   companyCode: string;
   glAccountCode: string;
+  glAccountId:   string;
   accountName:  string;
 }
 
 export function GlControlAssignDialog({
-  open, onClose, companyCode, glAccountCode, accountName,
+  open, onClose, companyCode, glAccountCode, glAccountId, accountName,
 }: GlControlAssignDialogProps) {
   const [state, setState] = useState<Partial<AssignGlControlPayload>>({
     postingAllowed:       true,
@@ -41,6 +42,8 @@ export function GlControlAssignDialog({
     requiresProject:      false,
     reconciliationType:   "",
     taxCategory:          "",
+    defaultCostCenterId:  "",
+    defaultSiteId:        "",
   });
   const assign = useAssignGlControl();
 
@@ -128,6 +131,10 @@ export function GlControlAssignDialog({
               />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label htmlFor="default_cc" className="text-xs">Default Cost Center ID</Label><Input id="default_cc" value={state.defaultCostCenterId ?? ""} onChange={(e) => setState((s) => ({ ...s, defaultCostCenterId: e.target.value || null }))} placeholder="Optional UUID" className="h-8" /></div>
+            <div><Label htmlFor="default_site" className="text-xs">Default Site ID</Label><Input id="default_site" value={state.defaultSiteId ?? ""} onChange={(e) => setState((s) => ({ ...s, defaultSiteId: e.target.value || null }))} placeholder="Optional UUID" className="h-8" /></div>
+          </div>
 
           {assign.isError && (
             <p className="text-xs text-destructive">
@@ -141,7 +148,7 @@ export function GlControlAssignDialog({
           <Button
             onClick={() => {
               assign.mutate(
-                { companyCode, glAccountCode, ...state } as AssignGlControlPayload,
+                { companyCode, glAccountCode, glAccountId, ...state } as AssignGlControlPayload,
                 {
                   onSuccess: () => {
                     onClose();
@@ -149,6 +156,7 @@ export function GlControlAssignDialog({
                       postingAllowed: true, blockedForManual: false, blockedForAuto: false,
                       requiresCostCenter: false, requiresProfitCenter: false, requiresProject: false,
                       reconciliationType: "", taxCategory: "",
+                      defaultCostCenterId: "", defaultSiteId: "",
                     });
                   },
                 },
@@ -184,6 +192,8 @@ export function GlControlEditDialog({ open, onClose, row, companyCode }: GlContr
     requiresProject:      row.requiresProject,
     reconciliationType:   row.reconciliationType,
     taxCategory:          row.taxCategory,
+    defaultCostCenterId:  row.defaultCostCenterId,
+    defaultSiteId:        row.defaultSiteId,
   });
   const update = useUpdateGlControl();
   const deactivate = useDeactivateGlControl();
@@ -259,6 +269,10 @@ export function GlControlEditDialog({ open, onClose, row, companyCode }: GlContr
               />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label htmlFor="default_cc_e" className="text-xs">Default Cost Center ID</Label><Input id="default_cc_e" value={state.defaultCostCenterId ?? ""} onChange={(e) => setState((s) => ({ ...s, defaultCostCenterId: e.target.value || null }))} placeholder="Optional UUID" className="h-8" /></div>
+            <div><Label htmlFor="default_site_e" className="text-xs">Default Site ID</Label><Input id="default_site_e" value={state.defaultSiteId ?? ""} onChange={(e) => setState((s) => ({ ...s, defaultSiteId: e.target.value || null }))} placeholder="Optional UUID" className="h-8" /></div>
+          </div>
 
           {(update.isError || deactivate.isError) && (
             <p className="text-xs text-destructive">
@@ -275,7 +289,7 @@ export function GlControlEditDialog({ open, onClose, row, companyCode }: GlContr
             onClick={() => {
               if (!confirm("Deactivate this control? Posting will be disallowed.")) return;
               deactivate.mutate(
-                { controlId: row.controlId!, companyCode },
+                { controlId: row.controlId!, companyCode, expectedUpdatedAt: row.updatedAt },
                 { onSuccess: () => onClose() },
               );
             }}
@@ -289,7 +303,7 @@ export function GlControlEditDialog({ open, onClose, row, companyCode }: GlContr
             <Button
               onClick={() => {
                 update.mutate(
-                  { controlId: row.controlId!, companyCode, ...state } as UpdateGlControlPayload,
+                  { controlId: row.controlId!, companyCode, expectedUpdatedAt: row.updatedAt, ...state } as UpdateGlControlPayload,
                   { onSuccess: () => onClose() },
                 );
               }}

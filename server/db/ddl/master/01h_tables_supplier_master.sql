@@ -388,6 +388,10 @@ CREATE TABLE IF NOT EXISTS master.party_contact_person (
     CONSTRAINT pcp_tenant_uq        UNIQUE (tenant_id, id),
     CONSTRAINT pcp_name_nonempty    CHECK (btrim(contact_name) <> ''),
     CONSTRAINT pcp_party_nonempty   CHECK (btrim(party_type) <> ''),
+    CONSTRAINT pcp_party_type_chk   CHECK (party_type IN (
+        'tenant', 'legal_entity', 'company_code',
+        'business_partner', 'supplier', 'customer'
+    )),
     CONSTRAINT pcp_status_chk       CHECK (status IN ('active', 'inactive', 'departed'))
 );
 
@@ -398,6 +402,9 @@ ALTER TABLE master.party_contact_person
 CREATE INDEX IF NOT EXISTS pcp_party_idx
     ON master.party_contact_person (tenant_id, party_type, party_id);
 CREATE INDEX IF NOT EXISTS pcp_primary_pidx
+    ON master.party_contact_person (tenant_id, party_type, party_id)
+    WHERE is_primary = true AND is_active = true;
+CREATE UNIQUE INDEX IF NOT EXISTS pcp_one_active_primary_uq
     ON master.party_contact_person (tenant_id, party_type, party_id)
     WHERE is_primary = true AND is_active = true;
 

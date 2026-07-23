@@ -351,7 +351,7 @@ BEGIN
         v_tenant_id, 'business_partner', v_bp_id, v_bp_addr_id, 'default',
         true, CURRENT_DATE, '{"_seed":{"pack":"ap_non_po_demo"}}'::jsonb, v_sys
     )
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
     -- ── 10. Contact at BP level ───────────────────────────────────────────────
     INSERT INTO master.party_contact_person (

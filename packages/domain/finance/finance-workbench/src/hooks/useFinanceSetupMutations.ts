@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 export interface AssignGlControlPayload {
   companyCode:           string;
   glAccountCode:         string;
+  glAccountId?:          string;
   postingAllowed?:       boolean;
   blockedForManual?:     boolean;
   blockedForAuto?:       boolean;
@@ -15,11 +16,14 @@ export interface AssignGlControlPayload {
   requiresProject?:      boolean;
   reconciliationType?:   string | null;
   taxCategory?:          string | null;
+  defaultCostCenterId?:  string | null;
+  defaultSiteId?:        string | null;
 }
 
 export interface UpdateGlControlPayload {
   controlId:             string;
   companyCode:           string;  // used for invalidation
+  expectedUpdatedAt:     string | null;
   postingAllowed?:       boolean;
   blockedForManual?:     boolean;
   blockedForAuto?:       boolean;
@@ -28,21 +32,76 @@ export interface UpdateGlControlPayload {
   requiresProject?:      boolean;
   reconciliationType?:   string | null;
   taxCategory?:          string | null;
+  defaultCostCenterId?:  string | null;
+  defaultSiteId?:        string | null;
 }
 
 export interface DeactivateGlControlPayload {
   controlId:   string;
   companyCode: string;
+  expectedUpdatedAt: string | null;
 }
 
 export interface SetPrimaryChartAssignmentPayload {
   assignmentId: string;
   companyCode:  string;
+  expectedUpdatedAt: string | null;
 }
 
-export interface SetPrimaryBookPayload {
-  bookId:      string;
+export interface SaveChartAssignmentPayload {
+  assignmentId?: string;
   companyCode: string;
+  chartId: string;
+  assignmentType: "operating" | "local" | "group" | "reporting";
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  isPrimary: boolean;
+  status: "active" | "inactive";
+  expectedUpdatedAt?: string | null;
+}
+
+export interface DeactivateChartAssignmentPayload {
+  assignmentId: string;
+  companyCode: string;
+  expectedUpdatedAt: string | null;
+}
+
+export interface BulkGlControlsPayload {
+  companyCode: string;
+  glAccountIds: string[];
+  postingAllowed?: boolean;
+  blockedForManual?: boolean;
+  blockedForAuto?: boolean;
+  requiresCostCenter?: boolean;
+  requiresProfitCenter?: boolean;
+  requiresProject?: boolean;
+}
+
+export interface SetCompanyDefaultBookPayload {
+  bookId: string;
+  companyCode: string;
+  expectedUpdatedAt: string | null;
+}
+
+export interface SaveBookAssignmentPayload {
+  assignmentId?: string;
+  companyCode: string;
+  bookId: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  overrideCurrencyCode: string | null;
+  alternateCoaPrefix: string | null;
+  priority: number;
+  conflictStrategy: "highest_priority" | "most_specific" | "error_on_conflict";
+  status: "active" | "inactive";
+  setAsDefault?: boolean;
+  expectedUpdatedAt?: string | null;
+}
+
+export interface DeactivateBookAssignmentPayload {
+  assignmentId: string;
+  companyCode: string;
+  expectedUpdatedAt: string | null;
 }
 
 export interface ToggleHouseBankPayload {
@@ -75,10 +134,12 @@ async function postJson<T>(path: string, method: string, body?: unknown): Promis
 /** Invalidate every finance-setup query touched by a mutation on this company. */
 function invalidateFinanceSetup(qc: ReturnType<typeof useQueryClient>, companyCode: string) {
   qc.invalidateQueries({ queryKey: ["finance", "setup", "company-hub", companyCode] });
+  qc.invalidateQueries({ queryKey: ["finance", "setup", "foundation", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "conflicts", "company", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "configure", "gl-controls", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "configure", "chart-assignments", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "configure", "book-assignments", companyCode] });
+  qc.invalidateQueries({ queryKey: ["finance", "setup", "configure", "book-options", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "explore", "chart-tree", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "explore", "gl-accounts", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "explore", "books", companyCode] });
@@ -93,12 +154,14 @@ function invalidateFinanceSetup(qc: ReturnType<typeof useQueryClient>, companyCo
 export function useAssignGlControl() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: AssignGlControlPayload) =>
-      postJson<{ controlId: string; glAccountId: string; companyCodeId: string }>(
-        "/api/finance/setup/mutations/gl-control/assign",
+    mutationFn: (payload: AssignGlControlPayload) => {
+      const { companyCode, ...body } = payload;
+      return postJson<{ controlId: string; glAccountId: string; companyCodeId: string }>(
+        `/api/finance/setup/company/${encodeURIComponent(companyCode)}/gl-controls`,
         "POST",
-        payload,
-      ),
+        body,
+      );
+    },
     onSuccess: (_data, vars) => invalidateFinanceSetup(qc, vars.companyCode),
   });
 }
@@ -107,10 +170,9 @@ export function useUpdateGlControl() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (payload: UpdateGlControlPayload) => {
-      const { controlId, companyCode: _cc, ...body } = payload;
-      void _cc;
+      const { controlId, companyCode, ...body } = payload;
       return postJson<{ controlId: string }>(
-        `/api/finance/setup/mutations/gl-control/${encodeURIComponent(controlId)}`,
+        `/api/finance/setup/company/${encodeURIComponent(companyCode)}/gl-controls/${encodeURIComponent(controlId)}`,
         "PATCH",
         body,
       );
@@ -124,8 +186,9 @@ export function useDeactivateGlControl() {
   return useMutation({
     mutationFn: (payload: DeactivateGlControlPayload) =>
       postJson<{ controlId: string }>(
-        `/api/finance/setup/mutations/gl-control/${encodeURIComponent(payload.controlId)}`,
+        `/api/finance/setup/company/${encodeURIComponent(payload.companyCode)}/gl-controls/${encodeURIComponent(payload.controlId)}`,
         "DELETE",
+        { expectedUpdatedAt: payload.expectedUpdatedAt },
       ),
     onSuccess: (_data, vars) => invalidateFinanceSetup(qc, vars.companyCode),
   });
@@ -136,21 +199,90 @@ export function useSetPrimaryChartAssignment() {
   return useMutation({
     mutationFn: (payload: SetPrimaryChartAssignmentPayload) =>
       postJson<{ assignmentId: string }>(
-        `/api/finance/setup/mutations/chart-assignment/${encodeURIComponent(payload.assignmentId)}/set-primary`,
+        `/api/finance/setup/company/${encodeURIComponent(payload.companyCode)}/chart-assignments/${encodeURIComponent(payload.assignmentId)}/set-primary`,
         "POST",
+        { expectedUpdatedAt: payload.expectedUpdatedAt },
       ),
     onSuccess: (_data, vars) => invalidateFinanceSetup(qc, vars.companyCode),
   });
 }
 
-export function useSetPrimaryBook() {
+export function useSaveChartAssignment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: SetPrimaryBookPayload) =>
-      postJson<{ bookId: string }>(
-        `/api/finance/setup/mutations/book/${encodeURIComponent(payload.bookId)}/set-primary`,
+    mutationFn: (payload: SaveChartAssignmentPayload) => {
+      const { assignmentId, companyCode, ...body } = payload;
+      const path = assignmentId
+        ? `/api/finance/setup/company/${encodeURIComponent(companyCode)}/chart-assignments/${encodeURIComponent(assignmentId)}`
+        : `/api/finance/setup/company/${encodeURIComponent(companyCode)}/chart-assignments`;
+      return postJson<{ assignmentId: string }>(path, assignmentId ? "PUT" : "POST", body);
+    },
+    onSuccess: (_data, vars) => invalidateFinanceSetup(qc, vars.companyCode),
+  });
+}
+
+export function useDeactivateChartAssignment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: DeactivateChartAssignmentPayload) => postJson<{ assignmentId: string }>(
+      `/api/finance/setup/company/${encodeURIComponent(payload.companyCode)}/chart-assignments/${encodeURIComponent(payload.assignmentId)}`,
+      "DELETE",
+      { expectedUpdatedAt: payload.expectedUpdatedAt },
+    ),
+    onSuccess: (_data, vars) => invalidateFinanceSetup(qc, vars.companyCode),
+  });
+}
+
+export function useBulkGlControls() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: BulkGlControlsPayload) => {
+      const { companyCode, ...body } = payload;
+      return postJson<{ updatedCount: number }>(
+        `/api/finance/setup/company/${encodeURIComponent(companyCode)}/gl-controls/bulk`,
         "POST",
+        body,
+      );
+    },
+    onSuccess: (_data, vars) => invalidateFinanceSetup(qc, vars.companyCode),
+  });
+}
+
+export function useSetCompanyDefaultBook() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: SetCompanyDefaultBookPayload) =>
+      postJson<{ bookId: string }>(
+        `/api/finance/setup/company/${encodeURIComponent(payload.companyCode)}/book-assignments/${encodeURIComponent(payload.bookId)}/set-default`,
+        "POST",
+        { expectedUpdatedAt: payload.expectedUpdatedAt },
       ),
+    onSuccess: (_data, vars) => invalidateFinanceSetup(qc, vars.companyCode),
+  });
+}
+
+export function useSaveBookAssignment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: SaveBookAssignmentPayload) => {
+      const { assignmentId, companyCode, ...body } = payload;
+      const path = assignmentId
+        ? `/api/finance/setup/company/${encodeURIComponent(companyCode)}/book-assignments/${encodeURIComponent(assignmentId)}`
+        : `/api/finance/setup/company/${encodeURIComponent(companyCode)}/book-assignments`;
+      return postJson<{ assignmentId: string }>(path, assignmentId ? "PUT" : "POST", body);
+    },
+    onSuccess: (_data, vars) => invalidateFinanceSetup(qc, vars.companyCode),
+  });
+}
+
+export function useDeactivateBookAssignment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: DeactivateBookAssignmentPayload) => postJson<{ assignmentId: string }>(
+      `/api/finance/setup/company/${encodeURIComponent(payload.companyCode)}/book-assignments/${encodeURIComponent(payload.assignmentId)}`,
+      "DELETE",
+      { expectedUpdatedAt: payload.expectedUpdatedAt },
+    ),
     onSuccess: (_data, vars) => invalidateFinanceSetup(qc, vars.companyCode),
   });
 }

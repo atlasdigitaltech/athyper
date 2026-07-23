@@ -32,11 +32,13 @@ integrationDescribe("finance fiscal-period and book-period gates", () => {
           company_code_id: string;
           book_id: string;
           actor_id: string;
+          other_tenant_id: string | null;
         }>`
           SELECT cc.tenant_id,
                  cc.id AS company_code_id,
                  ba.book_id,
-                 p.id AS actor_id
+                 p.id AS actor_id,
+                 (SELECT tenant.id FROM master.tenant tenant WHERE tenant.id <> cc.tenant_id ORDER BY tenant.id LIMIT 1) AS other_tenant_id
             FROM master.company_code cc
             JOIN master.company_code_book_assignment ba
               ON ba.tenant_id = cc.tenant_id
@@ -49,9 +51,10 @@ integrationDescribe("finance fiscal-period and book-period gates", () => {
            LIMIT 1
         `.execute(trx);
         const fixture = scope.rows[0];
-        if (!fixture) throw new Error("Finance integration test requires an active company, book assignment, and principal");
+        if (!fixture?.other_tenant_id) throw new Error("Finance integration test requires two tenants plus an active company, book assignment, and principal");
 
         await sql`SELECT set_config('app.current_tenant_id', ${fixture.tenant_id}, true)`.execute(trx);
+        await sql`SET LOCAL ROLE athyperapp`.execute(trx);
 
         const period = await sql<{ id: string }>`
           INSERT INTO master.fiscal_period (
@@ -109,6 +112,9 @@ integrationDescribe("finance fiscal-period and book-period gates", () => {
         `.execute(trx);
         observed.push(await evaluatePeriodPostability(trx, fixture.tenant_id, fixture.company_code_id, context));
 
+        await sql`SELECT set_config('app.current_tenant_id', ${fixture.other_tenant_id}, true)`.execute(trx);
+        observed.push(await evaluatePeriodPostability(trx, fixture.tenant_id, fixture.company_code_id, context));
+
         throw rollbackMarker;
       });
     } catch (error) {
@@ -120,6 +126,7 @@ integrationDescribe("finance fiscal-period and book-period gates", () => {
       { chip: "adjustment_only", reasonCode: "period_adjustment_only" },
       { chip: "locked", reasonCode: "period_hard_closed" },
       { chip: "locked", reasonCode: "book_period_missing" },
+      { chip: "locked", reasonCode: "period_not_opened" },
     ]);
   });
 });

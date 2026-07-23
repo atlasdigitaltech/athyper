@@ -443,7 +443,7 @@ BEGIN
             v_tid, 'employee', v_emp_id, v_addr_id,
             'correspondence', true, rec.hire_date, v_su
         )
-        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
         -- ── STAGE E: work email ─────────────────────────────────────────────────
         v_cl_id := NULL;

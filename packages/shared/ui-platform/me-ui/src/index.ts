@@ -12,7 +12,7 @@ export {
 } from "./me-ui-provider";
 
 // Section components — typed against @athyper/api-contracts/me
-export { ProfileSection } from "./sections/profile-section";
+export { ProfileSection, type ProfileSectionProps } from "./sections/profile-section";
 export { IdentitySection, type IdentitySectionProps } from "./sections/identity-section";
 export { PreferencesSection } from "./sections/preferences-section";
 export { TenantContextSection } from "./sections/tenant-context-section";
@@ -62,7 +62,6 @@ export {
   type ManagedByProps,
   type ConfirmDialogAction,
 } from "./_shared";
-
 
 
 

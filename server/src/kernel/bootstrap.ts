@@ -32,7 +32,7 @@ import {
   observeFrameworkPoolWait,
   observeFrameworkSql,
   observeFrameworkTransaction,
-} from "../../packages/adapters/telemetry/src/index.js";
+} from "@athyper/adapter-telemetry";
 import { createAuthAdapter } from "@athyper/adapter-auth";
 import {
   createS3ObjectStorageAdapter,

@@ -28,6 +28,7 @@ const SEVERITY_BADGE: Record<ConflictSeverity, "destructive" | "warning" | "info
 };
 
 const CATEGORY_LABEL: Record<FinanceSetupConflict["category"], string> = {
+  foundation:  "Addresses & contacts",
   chart:       "Chart",
   book:        "Books",
   gl_control:  "GL controls",

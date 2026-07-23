@@ -16,7 +16,12 @@ function syncBadgeVariant(syncStatus: string): "success" | "destructive" | "warn
   return "info";
 }
 
-export function ProfileSection({ active }: { active: boolean }) {
+export interface ProfileSectionProps {
+  active: boolean;
+  showSummary?: boolean;
+}
+
+export function ProfileSection({ active, showSummary = true }: ProfileSectionProps) {
   const { session } = useMeUI();
   const { data, loading, error } = useSectionData<MeProfile>(active, "/api/me/profile");
 
@@ -35,34 +40,36 @@ export function ProfileSection({ active }: { active: boolean }) {
     <div className="w-full">
       {error && <Banner variant="warn">Could not load profile data: {error}</Banner>}
 
-      <Card className="mb-4 w-full">
-        <CardContent className="flex flex-wrap items-start gap-5 pt-5">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-medium text-primary-foreground shadow-sm">
-            {initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-base font-medium leading-tight text-foreground">{session.displayName}</p>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-              {session.email}
-              <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <Badge variant="success"   className="text-xs">Active</Badge>
-              <Badge variant="secondary" className="text-xs capitalize">{str(p?.principal_type,   "user")}</Badge>
-              <Badge variant="outline"   className="text-xs capitalize">{str(p?.principal_source, "internal")}</Badge>
-              {!!pp?.employee_id && <Badge variant="success" className="text-xs">Employee Linked</Badge>}
+      {showSummary && (
+        <Card className="mb-4 w-full">
+          <CardContent className="flex flex-wrap items-start gap-5 pt-5">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-lg font-medium text-primary-foreground shadow-sm">
+              {initials}
             </div>
-          </div>
-          {session.activeOrg && (
-            <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
-              <span className="text-xs text-muted-foreground">Tenant</span>
-              <span className="text-sm font-medium text-foreground">{entityCode ?? tenantCode}</span>
-              <span className="font-mono text-xs text-muted-foreground">{tenantCode}/{entityCode ?? "—"}</span>
-              <Badge variant="info" className="text-xs">{str(session.activeWorkbench, "user")}</Badge>
+            <div className="min-w-0 flex-1">
+              <p className="text-base font-medium leading-tight text-foreground">{session.displayName}</p>
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                {session.email}
+                <CheckCircle2 className="h-3 w-3 shrink-0 text-success" />
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <Badge variant="success"   className="text-xs">Active</Badge>
+                <Badge variant="secondary" className="text-xs capitalize">{str(p?.principal_type,   "user")}</Badge>
+                <Badge variant="outline"   className="text-xs capitalize">{str(p?.principal_source, "internal")}</Badge>
+                {!!pp?.employee_id && <Badge variant="success" className="text-xs">Employee Linked</Badge>}
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {session.activeOrg && (
+              <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
+                <span className="text-xs text-muted-foreground">Tenant</span>
+                <span className="text-sm font-medium text-foreground">{entityCode ?? tenantCode}</span>
+                <span className="font-mono text-xs text-muted-foreground">{tenantCode}/{entityCode ?? "—"}</span>
+                <Badge variant="info" className="text-xs">{str(session.activeWorkbench, "user")}</Badge>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {loading ? (
         <><SkeletonCard lines={5} /><SkeletonCard lines={4} /><SkeletonCard lines={4} /></>
@@ -159,4 +166,3 @@ export function ProfileSection({ active }: { active: boolean }) {
     </div>
   );
 }
-

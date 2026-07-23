@@ -242,7 +242,7 @@ export async function handleAddInvoiceLine(
         // Sign follows net_amount: credit-note lines have negative net_amount, so tax
         // amounts are stored negative so that fn_refresh_purchase_invoice_totals sums
         // them correctly (total_amount = subtotal + tax, all signed consistently).
-        const inv = guard.record as { tax_mode: string | null; invoice_date: string };
+        const inv = guard.record as { tax_mode: string | null; invoice_date: string; currency_code?: string | null };
         const taxGroupId = body.tax_group_id ?? null;
         const whtGroupId = body.withholding_tax_group_id ?? null;
         if ((taxGroupId || whtGroupId) && inv.tax_mode && inv.tax_mode !== "no_tax") {
@@ -251,7 +251,7 @@ export async function handleAddInvoiceLine(
           const taxResult = await computeLineTax(
             trx, tenantId, Math.abs(rawNet),
             taxGroupId, whtGroupId,
-            inv.tax_mode, new Date(inv.invoice_date),
+            inv.tax_mode, new Date(inv.invoice_date), inv.currency_code ?? null,
           );
           const signedTax = taxResult.taxAmount * taxSign;
           const signedWht = taxResult.whtAmount * taxSign;
@@ -362,7 +362,7 @@ export async function handleUpdateInvoiceLine(
           Object.prototype.hasOwnProperty.call(body, f),
         );
         if (taxAffectingChanged) {
-          const inv = guard.record as { tax_mode: string | null; invoice_date: string };
+          const inv = guard.record as { tax_mode: string | null; invoice_date: string; currency_code?: string | null };
           const curTaxGroupId = (updated["tax_group_id"] as string | null) ?? null;
           const curWhtGroupId = (updated["withholding_tax_group_id"] as string | null) ?? null;
           const rawNet    = Number(updated["net_amount"] ?? 0);
@@ -370,7 +370,7 @@ export async function handleUpdateInvoiceLine(
           const taxResult = await computeLineTax(
             trx, tenantId, Math.abs(rawNet),
             curTaxGroupId, curWhtGroupId,
-            inv.tax_mode ?? "exclusive", new Date(inv.invoice_date),
+            inv.tax_mode ?? "exclusive", new Date(inv.invoice_date), inv.currency_code ?? null,
           );
           const signedTax = taxResult.taxAmount * taxSign;
           const signedWht = taxResult.whtAmount * taxSign;

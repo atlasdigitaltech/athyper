@@ -394,7 +394,10 @@ async function processOne(args: {
     pii_detected:           piiTypes.length > 0,
     pii_types:              JSON.stringify(piiTypes),
     pii_scanned_at:         new Date(),
-    metadata:               sql`jsonb_set(COALESCE(metadata, '{}'::jsonb), '{scan}', jsonb_build_object('status', 'ok', 'code', 'SCAN_SUCCESS', 'attempts', COALESCE((metadata->'scan'->>'attempts')::int, 0) + 1, 'version_no', ${sql.val(effectiveVersionNo)}, 'sha256', ${effectiveSha256 ?? null}, 'reason', 'ok', 'updated_at', now()::text)::jsonb, true)`,
+    // A null hash is an untyped PostgreSQL parameter inside
+    // jsonb_build_object(), so cast it explicitly rather than relying on
+    // inference (which fails with "could not determine data type").
+    metadata:               sql`jsonb_set(COALESCE(metadata, '{}'::jsonb), '{scan}', jsonb_build_object('status', 'ok', 'code', 'SCAN_SUCCESS', 'attempts', COALESCE((metadata->'scan'->>'attempts')::int, 0) + 1, 'version_no', ${sql.val(effectiveVersionNo)}::integer, 'sha256', ${effectiveSha256 ?? null}::text, 'reason', 'ok', 'updated_at', now()::text)::jsonb, true)`,
     updated_at:             new Date(),
     updated_by:             SYSTEM_ACTOR_ID,
   };
@@ -479,7 +482,7 @@ async function runSweep(args: {
     opts: {
       // Same dedup key as the inline enqueue â€” ensures a sweep never races
       // a still-pending job for the same attachment.
-      jobId:       `tika:${r.id}`,
+      jobId:       `tika-${r.id}`,
       attempts:    3,
       backoff:     { type: "exponential" as const, delay: 30_000 },
       removeOnComplete: { age: 3600, count: 1000 },

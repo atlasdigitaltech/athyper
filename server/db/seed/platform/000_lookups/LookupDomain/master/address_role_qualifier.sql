@@ -38,6 +38,16 @@ FROM (VALUES
      'Payroll-related correspondence to employees (separate from payment remit-to).',
      'correspondence', 15),
 
+    ('registered_office',  'Registered Office',
+     'master.address_role_qualifier',
+     'Official registered office of a legal entity.',
+     'correspondence', 16),
+
+    ('statutory_correspondence', 'Statutory Correspondence',
+     'master.address_role_qualifier',
+     'General statutory correspondence address for a legal entity.',
+     'correspondence', 17),
+
     -- ── Sub-classification within 'ship_to' / 'ship_from' ──────────────────
     ('return_to_supplier', 'Return to Supplier',
      'master.address_role_qualifier',

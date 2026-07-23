@@ -178,7 +178,7 @@ BEGIN
         INSERT INTO master.address_link (
             tenant_id, owner_type, owner_id, address_id, purpose, is_primary, created_by
         ) VALUES (v_tid, 'bank_party', rec.bp_id, v_addr_id, 'correspondence', true, v_su)
-        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, address_id) DO NOTHING;
+        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
 
         -- Email contact
         INSERT INTO master.contact_link (

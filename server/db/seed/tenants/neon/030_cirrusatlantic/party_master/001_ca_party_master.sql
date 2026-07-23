@@ -261,7 +261,7 @@ BEGIN
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-brt-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     VALUES (v_tid,'business_partner',v_bp_brt,v_addr,'default',true,'2008-04-22',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
+    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,role_qualifier,address_id) DO NOTHING;
 
     INSERT INTO master.address (
         tenant_id, code, name, address_type, attention_line,
@@ -588,7 +588,7 @@ BEGIN
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-csm-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     VALUES (v_tid,'business_partner',v_bp_csm,v_addr,'default',true,'2015-09-10',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
+    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,role_qualifier,address_id) DO NOTHING;
 
     INSERT INTO master.address (
         tenant_id, code, name, address_type, attention_line,
@@ -907,7 +907,7 @@ BEGIN
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-apx-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     VALUES (v_tid,'business_partner',v_bp_apx,v_addr,'default',true,'2001-06-15',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
+    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,role_qualifier,address_id) DO NOTHING;
 
     INSERT INTO master.address (
         tenant_id, code, name, address_type, attention_line,
@@ -1216,7 +1216,7 @@ BEGIN
     IF v_addr IS NULL THEN SELECT id INTO v_addr FROM master.address WHERE tenant_id=v_tid AND code='addr-lat-hq'; END IF;
     INSERT INTO master.address_link (tenant_id,owner_type,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by)
     VALUES (v_tid,'business_partner',v_bp_lat,v_addr,'default',true,'2013-02-14',v_seed,v_sys)
-    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,address_id) DO NOTHING;
+    ON CONFLICT (tenant_id,owner_type,owner_id,purpose,role_qualifier,address_id) DO NOTHING;
 
     INSERT INTO master.address (
         tenant_id, code, name, address_type, attention_line,

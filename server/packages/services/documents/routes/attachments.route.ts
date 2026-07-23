@@ -121,7 +121,9 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
         JOB_NAME.EXTRACT_TEXT,
         { attachmentId, tenantId, versionNo, sha256 },
         {
-          jobId:       `tika:${attachmentId}`,  // dedup: repeat uploads of same id collapse
+          // BullMQ rejects custom job IDs containing ":". Keep this stable so
+          // repeat uploads of the same attachment still collapse.
+          jobId:       `tika-${attachmentId}`,
           attempts:    3,
           backoff:     { type: "exponential", delay: 30_000 },
           removeOnComplete: { age: 3600, count: 1000 },
@@ -1165,7 +1167,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
           sha256: linkRow["sha256"] as string | undefined,
         },
         {
-          jobId:    `tika:${attachmentId}:reindex:${Date.now()}`,
+          jobId:    `tika-${attachmentId}-reindex-${Date.now()}`,
           attempts: 3,
           backoff:  { type: "exponential", delay: 30_000 },
           removeOnComplete: { age: 3600, count: 1000 },

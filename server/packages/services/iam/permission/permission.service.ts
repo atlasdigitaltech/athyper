@@ -36,8 +36,11 @@ import type {
   PermissionContext,
 } from "./permission.types.js";
 
+// Permission checks accept the generated database shape as well as transaction
+// handles. Kysely is invariant in its database type, so Record<string, any>
+// rejects a concrete generated DB under TypeScript 6.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyDb = Record<string, any>;
+type AnyDb = any;
 
 // ─── Logger interface ─────────────────────────────────────────────────────────
 

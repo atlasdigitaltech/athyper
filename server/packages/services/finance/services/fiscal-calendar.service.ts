@@ -1,6 +1,6 @@
 import { sql, type Kysely } from "kysely";
 import { writeFinanceSetupAudit } from "./finance-setup-audit.service.js";
-import { CompanyNotFoundError, ResourceNotFoundError } from "./finance-setup-mutations.service.js";
+import { CompanyNotFoundError, ResourceNotFoundError, invalidateFinanceSetupReadiness } from "./finance-setup-mutations.service.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<any>;
@@ -197,6 +197,128 @@ export async function loadFiscalCalendarDesigner(
   };
 }
 
+export type LegacyFiscalVariant = "calendar" | "fy_445" | "fy_454" | "fy_544" | "custom";
+
+export function expectedLegacyFiscalVariant(calendarType: FiscalCalendarType, anchorMonth: number): LegacyFiscalVariant {
+  if (calendarType === "four_four_five") return "fy_445";
+  if (calendarType === "four_five_four") return "fy_454";
+  if (calendarType === "five_four_four") return "fy_544";
+  if (calendarType === "monthly" && anchorMonth === 1) return "calendar";
+  return "custom";
+}
+
+export interface FiscalPeriodMatrixPayload {
+  company: { id: string; code: string; name: string; fiscalYearStartMonth: number; fiscalYearVariant: string | null };
+  fiscalYear: number;
+  assignment: null | { id: string; calendarId: string; calendarCode: string; calendarName: string; calendarVersion: number; calendarType: FiscalCalendarType; anchorMonth: number; fiscalYearFrom: number; fiscalYearTo: number | null };
+  legacyConsistency: { consistent: boolean; expectedStartMonth: number | null; actualStartMonth: number; expectedVariant: LegacyFiscalVariant | null; actualVariant: string | null; checks: Array<{ key: string; passed: boolean; message: string }> };
+  books: Array<{ bookId: string; bookCode: string; bookName: string; isCompanyDefault: boolean }>;
+  rows: Array<{ periodId: string; periodNumber: number; periodType: string; name: string; startDate: string; endDate: string; companyStatus: string;
+    calendarId: string | null; calendarVersion: number | null; generationKey: string | null; generatedAt: string | null;
+    bookStatuses: Record<string, { status: string; gateId: string; metadata: Record<string, unknown> }> }>;
+  conflicts: Array<{ code: string; severity: "blocking" | "warning" | "info"; message: string; periodNumber?: number; bookId?: string }>;
+  evidence: { generatedPeriodCount: number; bookGateCount: number; lastGeneratedAt: string | null; generationKeys: string[]; sourceCalendar: string | null };
+  canGenerate: boolean;
+}
+
+export async function loadFiscalPeriodMatrix(db: AnyDb, tenantId: string, companyCode: string, fiscalYear: number): Promise<FiscalPeriodMatrixPayload> {
+  const companyQ = await sql<{ id: string; code: string; name: string; fiscal_year_start_month: number; fiscal_year_variant: string | null; default_ledger_book_id: string | null }>`
+    SELECT id, code, name, fiscal_year_start_month, fiscal_year_variant, default_ledger_book_id
+      FROM master.company_code WHERE tenant_id = ${tenantId}::uuid AND lower(code) = lower(${companyCode}) LIMIT 1`.execute(db);
+  const company = companyQ.rows[0];
+  if (!company) throw new CompanyNotFoundError(companyCode);
+
+  const [assignmentQ, booksQ, periodsQ, gatesQ] = await Promise.all([
+    sql<{ id: string; calendar_id: string; calendar_code: string; calendar_name: string; version_no: number; calendar_type: FiscalCalendarType; anchor_month: number; fiscal_year_from: number; fiscal_year_to: number | null }>`
+      SELECT a.id, c.id AS calendar_id, c.code AS calendar_code, c.name AS calendar_name, c.version_no, c.calendar_type, c.anchor_month,
+             a.effective_fiscal_year_from AS fiscal_year_from, a.effective_fiscal_year_to AS fiscal_year_to
+        FROM control.company_fiscal_calendar_assignment a JOIN control.fiscal_calendar_config c ON c.tenant_id = a.tenant_id AND c.id = a.fiscal_calendar_config_id
+       WHERE a.tenant_id = ${tenantId}::uuid AND a.company_code_id = ${company.id}::uuid AND a.status = 'active' AND c.status = 'active'
+         AND a.effective_fiscal_year_from <= ${fiscalYear} AND (a.effective_fiscal_year_to IS NULL OR a.effective_fiscal_year_to >= ${fiscalYear})
+       ORDER BY a.priority DESC, a.effective_fiscal_year_from DESC`.execute(db),
+    sql<{ id: string; code: string; name: string; is_default: boolean; effective_from: string; effective_to: string | null }>`
+      SELECT lb.id, lb.code, lb.name, (${company.default_ledger_book_id}::uuid = lb.id) AS is_default,
+             ba.effective_from::text, ba.effective_to::text
+        FROM master.company_code_book_assignment ba JOIN master.ledger_book lb ON lb.tenant_id = ba.tenant_id AND lb.id = ba.book_id
+       WHERE ba.tenant_id = ${tenantId}::uuid AND ba.company_code_id = ${company.id}::uuid AND ba.status = 'active' AND lb.status = 'active'
+       ORDER BY is_default DESC, ba.priority DESC, lb.code`.execute(db),
+    sql<{ id: string; period_number: number; period_type: string; name: string; start_date: string; end_date: string; status: string;
+      fiscal_calendar_config_id: string | null; calendar_version_no: number | null; generation_key: string | null; generated_at: string | null }>`
+      SELECT id, period_number, period_type, name, start_date::text, end_date::text, status,
+             fiscal_calendar_config_id, calendar_version_no, generation_key, generated_at::text
+        FROM master.fiscal_period WHERE tenant_id = ${tenantId}::uuid AND company_code_id = ${company.id}::uuid AND fiscal_year = ${fiscalYear}
+       ORDER BY sort_order, period_number`.execute(db),
+    sql<{ id: string; book_id: string; period_number: number; status: string; metadata: Record<string, unknown> }>`
+      SELECT id, book_id, period_number, status, metadata FROM governance.book_period_status
+       WHERE tenant_id = ${tenantId}::uuid AND company_code_id = ${company.id}::uuid AND fiscal_year = ${fiscalYear}`.execute(db),
+  ]);
+
+  const assignmentRow = assignmentQ.rows[0] ?? null;
+  const assignment = assignmentRow ? { id: assignmentRow.id, calendarId: assignmentRow.calendar_id, calendarCode: assignmentRow.calendar_code,
+    calendarName: assignmentRow.calendar_name, calendarVersion: assignmentRow.version_no, calendarType: assignmentRow.calendar_type, anchorMonth: assignmentRow.anchor_month,
+    fiscalYearFrom: assignmentRow.fiscal_year_from, fiscalYearTo: assignmentRow.fiscal_year_to } : null;
+  const expectedVariant = assignment ? expectedLegacyFiscalVariant(assignment.calendarType, assignment.anchorMonth) : null;
+  const legacyChecks = assignment ? [
+    { key: "start_month", passed: company.fiscal_year_start_month === assignment.anchorMonth, message: `Legacy start month ${company.fiscal_year_start_month}; assigned calendar starts in month ${assignment.anchorMonth}.` },
+    { key: "variant", passed: company.fiscal_year_variant === expectedVariant, message: `Legacy variant ${company.fiscal_year_variant ?? "not set"}; assigned calendar derives ${expectedVariant}.` },
+  ] : [];
+  const conflicts: FiscalPeriodMatrixPayload["conflicts"] = [];
+  if (!assignment) conflicts.push({ code: "CALENDAR_ASSIGNMENT_MISSING", severity: "blocking", message: `No active Fiscal Calendar assignment covers FY ${fiscalYear}.` });
+  if (assignmentQ.rows.length > 1) conflicts.push({ code: "CALENDAR_ASSIGNMENT_OVERLAP", severity: "blocking", message: `${assignmentQ.rows.length} active Calendar assignments cover FY ${fiscalYear}.` });
+  for (const check of legacyChecks) if (!check.passed) conflicts.push({ code: `LEGACY_${check.key.toUpperCase()}_MISMATCH`, severity: "warning", message: check.message });
+
+  let previewRows: Array<{ period_number: number; period_type: string; start_date: string; end_date: string }> = [];
+  if (assignment) {
+    const previewQ = await sql<{ period_number: number; period_type: string; start_date: string; end_date: string }>`SELECT period_number, period_type, start_date::text, end_date::text
+      FROM control.preview_fiscal_calendar(${tenantId}::uuid, ${assignment.calendarId}::uuid, ${fiscalYear})`.execute(db);
+    previewRows = previewQ.rows;
+  }
+  const boundaryRows = previewRows.length ? previewRows : periodsQ.rows;
+  const fiscalStart = boundaryRows.map((row) => row.start_date).sort()[0] ?? null;
+  const fiscalEnd = boundaryRows.map((row) => row.end_date).sort().at(-1) ?? null;
+  const applicableBooks = fiscalStart && fiscalEnd
+    ? booksQ.rows.filter((book) => book.effective_from <= fiscalEnd && (!book.effective_to || book.effective_to >= fiscalStart))
+    : booksQ.rows;
+  const previewByNumber = new Map(previewRows.map((row) => [row.period_number, row]));
+  for (const period of periodsQ.rows) {
+    const expected = previewByNumber.get(period.period_number);
+    if (assignment && period.fiscal_calendar_config_id !== assignment.calendarId) conflicts.push({ code: "CALENDAR_PROVENANCE_MISMATCH", severity: period.status === "future" ? "warning" : "blocking", periodNumber: period.period_number, message: `P${period.period_number} was generated from another Calendar version.` });
+    if (assignment && !expected) conflicts.push({ code: "PERIOD_NOT_IN_CALENDAR", severity: period.status === "future" ? "warning" : "blocking", periodNumber: period.period_number, message: `P${period.period_number} does not exist in the assigned Calendar preview.` });
+    if (expected && (expected.period_type !== period.period_type || expected.start_date !== period.start_date || expected.end_date !== period.end_date)) conflicts.push({ code: "PERIOD_DEFINITION_DRIFT", severity: period.status === "future" ? "warning" : "blocking", periodNumber: period.period_number, message: `P${period.period_number} dates or semantic type differ from the assigned Calendar preview.` });
+  }
+  const normalPeriods = periodsQ.rows.filter((row) => row.period_type === "normal").sort((a, b) => a.start_date.localeCompare(b.start_date));
+  for (let index = 1; index < normalPeriods.length; index += 1) {
+    if (normalPeriods[index]!.start_date <= normalPeriods[index - 1]!.end_date) {
+      const replaceable = normalPeriods[index]!.status === "future" && normalPeriods[index - 1]!.status === "future";
+      conflicts.push({ code: "NORMAL_PERIOD_OVERLAP", severity: replaceable ? "warning" : "blocking", periodNumber: normalPeriods[index]!.period_number, message: `Normal period P${normalPeriods[index]!.period_number} overlaps its predecessor.` });
+    }
+  }
+  const gateByKey = new Map(gatesQ.rows.map((gate) => [`${gate.period_number}:${gate.book_id}`, gate]));
+  for (const period of periodsQ.rows) for (const book of applicableBooks) if (!gateByKey.has(`${period.period_number}:${book.id}`)) conflicts.push({ code: "BOOK_PERIOD_GATE_MISSING", severity: "warning", periodNumber: period.period_number, bookId: book.id, message: `${book.code} has no period gate for P${period.period_number}; generation will seed it.` });
+  if (periodsQ.rows.length === 0 && assignment) conflicts.push({ code: "PERIODS_NOT_GENERATED", severity: "info", message: `FY ${fiscalYear} has not been generated.` });
+
+  const rows = periodsQ.rows.map((period) => ({
+    periodId: period.id, periodNumber: period.period_number, periodType: period.period_type, name: period.name,
+    startDate: period.start_date, endDate: period.end_date, companyStatus: period.status, calendarId: period.fiscal_calendar_config_id,
+    calendarVersion: period.calendar_version_no, generationKey: period.generation_key, generatedAt: period.generated_at,
+    bookStatuses: Object.fromEntries(applicableBooks.flatMap((book) => {
+      const gate = gateByKey.get(`${period.period_number}:${book.id}`);
+      return gate ? [[book.id, { status: gate.status, gateId: gate.id, metadata: gate.metadata }]] : [];
+    })),
+  }));
+  const generationKeys = periodsQ.rows.flatMap((row) => row.generation_key ? [row.generation_key] : []);
+  const generatedAtValues = periodsQ.rows.flatMap((row) => row.generated_at ? [row.generated_at] : []).sort();
+  return {
+    company: { id: company.id, code: company.code, name: company.name, fiscalYearStartMonth: company.fiscal_year_start_month, fiscalYearVariant: company.fiscal_year_variant },
+    fiscalYear, assignment, legacyConsistency: { consistent: legacyChecks.every((check) => check.passed), expectedStartMonth: assignment?.anchorMonth ?? null,
+      actualStartMonth: company.fiscal_year_start_month, expectedVariant, actualVariant: company.fiscal_year_variant, checks: legacyChecks },
+    books: applicableBooks.map((book) => ({ bookId: book.id, bookCode: book.code, bookName: book.name, isCompanyDefault: book.is_default })),
+    rows, conflicts, evidence: { generatedPeriodCount: periodsQ.rows.length, bookGateCount: gatesQ.rows.length,
+      lastGeneratedAt: generatedAtValues.at(-1) ?? null, generationKeys, sourceCalendar: assignment ? `${assignment.calendarCode} v${assignment.calendarVersion}` : null },
+    canGenerate: Boolean(assignment) && !conflicts.some((conflict) => conflict.severity === "blocking"),
+  };
+}
+
 export async function previewFiscalCalendar(
   db: AnyDb,
   tenantId: string,
@@ -344,12 +466,12 @@ export async function assignFiscalCalendar(
 ) {
   return db.transaction().execute(async (trx) => {
     const company = await resolveCompany(trx, input.tenantId, input.companyCode);
-    const configQ = await sql<{ id: string }>`
+    const configQ = await sql<{ id: string; calendar_type: FiscalCalendarType; anchor_month: number }>`
       UPDATE control.fiscal_calendar_config
          SET status = 'active', updated_by = ${input.actorId}::uuid
        WHERE tenant_id = ${input.tenantId}::uuid AND id = ${input.calendarId}::uuid
          AND status IN ('draft', 'active')
-       RETURNING id
+       RETURNING id, calendar_type, anchor_month
     `.execute(trx);
     if (!configQ.rows[0]) throw new ResourceNotFoundError("FISCAL_CALENDAR_NOT_FOUND", "Fiscal calendar was not found.");
 
@@ -385,12 +507,19 @@ export async function assignFiscalCalendar(
       ) RETURNING id
     `.execute(trx);
 
+    const legacyVariant = expectedLegacyFiscalVariant(configQ.rows[0]!.calendar_type, configQ.rows[0]!.anchor_month);
+    await sql`UPDATE master.company_code SET fiscal_year_start_month = ${configQ.rows[0]!.anchor_month},
+        fiscal_year_variant = ${legacyVariant}, updated_at = now(), updated_by = ${input.actorId}::uuid
+      WHERE tenant_id = ${input.tenantId}::uuid AND id = ${company.id}::uuid`.execute(trx);
+
     await writeFinanceSetupAudit(trx, {
       tenantId: input.tenantId, actorId: input.actorId, companyCodeId: company.id,
       activityType: "finance_setup.fiscal_calendar_assigned",
       entityType: "company_fiscal_calendar_assignment", entityId: assignmentQ.rows[0]!.id,
-      detail: { calendar_id: input.calendarId, fiscal_year_from: input.fiscalYearFrom },
+      detail: { calendar_id: input.calendarId, fiscal_year_from: input.fiscalYearFrom,
+        legacy_fiscal_year_start_month: configQ.rows[0]!.anchor_month, legacy_fiscal_year_variant: legacyVariant },
     });
+    await invalidateFinanceSetupReadiness(trx, input.tenantId, company.id, input.actorId, "Company Fiscal Calendar assignment changed");
     return { assignmentId: assignmentQ.rows[0]!.id, companyCodeId: company.id, calendarId: input.calendarId };
   });
 }
@@ -400,13 +529,29 @@ export async function generateFiscalPeriods(
   input: { tenantId: string; actorId: string; companyCode: string; calendarId?: string; fiscalYear: number },
 ) {
   const company = await resolveCompany(db, input.tenantId, input.companyCode);
+  const preflight = await loadFiscalPeriodMatrix(db, input.tenantId, input.companyCode, input.fiscalYear);
+  if (!preflight.canGenerate) {
+    throw serviceError("FISCAL_PERIOD_GENERATION_CONFLICT", 409, "Resolve protected period or Calendar assignment conflicts before generation.", {
+      fiscalYear: input.fiscalYear, conflicts: preflight.conflicts, evidence: preflight.evidence,
+    });
+  }
   return db.transaction().execute(async (trx) => {
-    const { rows } = await sql<{ result: Record<string, unknown> }>`
-      SELECT control.generate_fiscal_periods(
-        ${input.tenantId}::uuid, ${company.id}::uuid, ${input.fiscalYear}::integer,
-        ${input.actorId}::uuid, ${input.calendarId ?? null}::uuid, true
-      ) AS result
-    `.execute(trx);
+    let rows: Array<{ result: Record<string, unknown> }>;
+    try {
+      const generated = await sql<{ result: Record<string, unknown> }>`
+        SELECT control.generate_fiscal_periods(
+          ${input.tenantId}::uuid, ${company.id}::uuid, ${input.fiscalYear}::integer,
+          ${input.actorId}::uuid, ${input.calendarId ?? null}::uuid, true
+        ) AS result
+      `.execute(trx);
+      rows = generated.rows;
+    } catch (error) {
+      const databaseError = error as Error & { code?: string; detail?: string; constraint?: string };
+      throw serviceError("FISCAL_PERIOD_GENERATION_CONFLICT", 409, databaseError.message, {
+        fiscalYear: input.fiscalYear, databaseCode: databaseError.code, detail: databaseError.detail,
+        constraint: databaseError.constraint, preflight: preflight.conflicts, evidence: preflight.evidence,
+      });
+    }
     const result = rows[0]?.result ?? {};
     await writeFinanceSetupAudit(trx, {
       tenantId: input.tenantId, actorId: input.actorId, companyCodeId: company.id,
@@ -414,6 +559,7 @@ export async function generateFiscalPeriods(
       entityType: "fiscal_calendar_config", entityId: input.calendarId ?? null,
       detail: { fiscal_year: input.fiscalYear, ...result },
     });
+    await invalidateFinanceSetupReadiness(trx, input.tenantId, company.id, input.actorId, "Company fiscal periods regenerated");
     return result;
   });
 }
@@ -479,9 +625,10 @@ function normaliseCode(value: string) {
   return value.trim().toUpperCase().replace(/[^A-Z0-9_-]+/g, "_");
 }
 
-function serviceError(code: string, status: number, message: string) {
-  const error = new Error(message) as Error & { code: string; status: number };
+function serviceError(code: string, status: number, message: string, details?: Record<string, unknown>) {
+  const error = new Error(message) as Error & { code: string; status: number; details?: Record<string, unknown> };
   error.code = code;
   error.status = status;
+  error.details = details;
   return error;
 }

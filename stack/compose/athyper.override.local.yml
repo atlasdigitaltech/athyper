@@ -83,12 +83,9 @@ services:
     cap_add:
       - DAC_OVERRIDE
 
-  # statuswatch and analyticsboard do not use cap_drop: ALL — user override only.
-  statuswatch:
-    image: louislam/uptime-kuma:1
-    profiles: ["monitoring"]
-    user: "0:0"
-
+  # analyticsboard does not use cap_drop: ALL — user override only.
+  # (statuswatch previously needed a user override on Windows; now uses a
+  # named volume in athyper-statuswatch.yml, so no local override required.)
   analyticsboard:
     image: metabase/metabase:v0.51.10
     profiles: ["analytics"]

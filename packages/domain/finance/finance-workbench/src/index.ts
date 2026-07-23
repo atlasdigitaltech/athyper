@@ -1,6 +1,7 @@
 export { GlWorkbench } from "./views/GlWorkbench";
 export { CoaWorkbench } from "./views/CoaWorkbench";
 export type { FinanceScope, ScopeType } from "./lib/scope";
+export { FINANCE_SETUP_WORKSPACE } from "./lib/finance-setup.workspace";
 
 // ── Finance Setup Workbench (Phase 1) ──────────────────────────────────────
 export { CompanyHubView, FinanceSetupCompanyEntry } from "./views/company-hub/CompanyHubView";
@@ -10,6 +11,9 @@ export { WorkspaceCards } from "./views/company-hub/WorkspaceCards";
 export { PostabilityChip } from "./views/company-hub/PostabilityChip";
 export { DefinitionStateChip } from "./views/company-hub/DefinitionStateChip";
 export { useCompanyHub } from "./hooks/useCompanyHub";
+export { FoundationView, type FoundationViewProps } from "./views/foundation/FoundationView";
+export { BooksFoundationPanel } from "./views/foundation/BooksFoundationPanel";
+export { useCompanyFoundation } from "./hooks/useCompanyFoundation";
 export { useFinanceSetupConflicts } from "./hooks/useFinanceSetupConflicts";
 export { useReasonCodeCatalog, resolveReasonEntry } from "./hooks/useReasonCodeCatalog";
 
@@ -36,11 +40,13 @@ export { FinanceAggregateEditor, type FinanceAggregateKind } from "./views/confi
 export {
   useFiscalCalendarDesigner,
   useFiscalCalendarPreview,
+  useFiscalPeriodMatrix,
   useSaveFiscalCalendar,
   useAssignFiscalCalendar,
   useGenerateFiscalPeriods,
   useRetireFiscalCalendar,
 } from "./hooks/useFiscalCalendarDesigner";
+export type { FiscalPeriodMatrixPayload } from "./hooks/useFiscalCalendarDesigner";
 export {
   usePostingRoleCoverage,
   usePostingRoleResolutionTrace,
@@ -56,7 +62,9 @@ export {
 export {
   useConfigureGlControls,
   useConfigureChartAssignments,
+  useConfigureChartOptions,
   useConfigureBookAssignments,
+  useConfigureBookOptions,
 } from "./hooks/useFinanceConfigure";
 export {
   useOperateBlockers,
@@ -79,6 +87,13 @@ export type {
   ReasonCodeEntry,
   RollupPayload,
   PostingPreviewPayload,
+  CompanyFoundationPayload,
+  FoundationDomainKey,
+  FoundationDomainStatus,
+  FoundationDomainCompletion,
+  FoundationReadiness,
+  FoundationReadinessStatus,
+  FoundationDeterministicCheck,
 } from "./lib/finance-setup.types";
 
 // ── Phase 1.6 — Rollup (Tenant / Legal Entity) ─────────────────────────────
@@ -99,7 +114,12 @@ export {
   useUpdateGlControl,
   useDeactivateGlControl,
   useSetPrimaryChartAssignment,
-  useSetPrimaryBook,
+  useSaveChartAssignment,
+  useDeactivateChartAssignment,
+  useBulkGlControls,
+  useSetCompanyDefaultBook,
+  useSaveBookAssignment,
+  useDeactivateBookAssignment,
   useToggleHouseBank,
 } from "./hooks/useFinanceSetupMutations";
 export type {
@@ -107,7 +127,34 @@ export type {
   UpdateGlControlPayload,
   DeactivateGlControlPayload,
   SetPrimaryChartAssignmentPayload,
-  SetPrimaryBookPayload,
+  SaveChartAssignmentPayload,
+  DeactivateChartAssignmentPayload,
+  BulkGlControlsPayload,
+  SetCompanyDefaultBookPayload,
+  SaveBookAssignmentPayload,
+  DeactivateBookAssignmentPayload,
   ToggleHouseBankPayload,
 } from "./hooks/useFinanceSetupMutations";
 export { GlControlAssignDialog, GlControlEditDialog } from "./views/configure/GlControlDialogs";
+
+// Phase 2 · Currency and FX
+export { CurrencyFxSetupView } from "./views/currency-fx/CurrencyFxSetupView";
+export { FxRateWorkbench } from "./views/currency-fx/FxRateWorkbench";
+export {
+  useCurrencyFxSetup, useFxResolutionTrace, useSaveFxPolicy,
+  useFxRates, useValidateFxImport, useImportFxRates,
+} from "./hooks/useCurrencyFxSetup";
+export type { CurrencyFxSetupPayload, FxResolutionTrace, FxPolicy, FxRateRow, FxImportValidation } from "./hooks/useCurrencyFxSetup";
+
+// Phase 2 · Tax
+export { CompanyTaxProfileView } from "./views/tax/CompanyTaxProfileView";
+export { TaxConfigurationWorkbench } from "./views/tax/TaxConfigurationWorkbench";
+export * from "./hooks/useTaxSetup";
+export * from "./hooks/usePaymentsSetup";
+export * from "./hooks/useBankingSetup";
+export * from "./hooks/useCertificationReadiness";
+export { PaymentTermWorkbench } from "./views/payments/PaymentTermWorkbench";
+export { CompanyPaymentsSetupView } from "./views/payments/CompanyPaymentsSetupView";
+export { PaymentPolicyControls } from "./views/payments/PaymentPolicyControls";
+export { CompanyBankingTreasuryView } from "./views/banking/CompanyBankingTreasuryView";
+export { CertificationReadinessPanel } from "./views/company-hub/CertificationReadinessPanel";

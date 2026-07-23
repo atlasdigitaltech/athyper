@@ -24,8 +24,8 @@
   "scripts": {
     "clean": "rimraf dist",
     "codegen": "pnpm run db:codegen && pnpm run db:codegen:mesh",
-    "build": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --external kysely --external pg --external @athyper/core",
-    "dev": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --watch --external kysely --external pg --external @athyper/core",
+    "build": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --external kysely --external pg",
+    "dev": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --watch --external kysely --external pg",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest",
     "test:ui": "vitest --ui",

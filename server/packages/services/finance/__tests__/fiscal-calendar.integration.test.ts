@@ -104,6 +104,26 @@ integrationDescribe("fiscal calendar preview, generation, and posting-date resol
               ${fixture.tenant_id}::uuid, ${fixture.company_code_id}::uuid, DATE '2199-07-15', false
             )
         `.execute(trx);
+        await sql`
+          INSERT INTO master.fiscal_period (
+            tenant_id, code, name, company_code_id, fiscal_year, period_number,
+            period_type, start_date, end_date, status, created_by
+          ) VALUES (
+            ${fixture.tenant_id}::uuid, 'INTEGRATION-SPECIAL-2198', 'Integration special period',
+            ${fixture.company_code_id}::uuid, 2198, 13, 'adjustment',
+            DATE '2198-12-31', DATE '2198-12-31', 'open', ${fixture.actor_id}::uuid
+          )
+        `.execute(trx);
+        const normalOnlyQ = await sql<{ period_number: number }>`
+          SELECT period_number FROM master.resolve_fiscal_period(
+            ${fixture.tenant_id}::uuid, ${fixture.company_code_id}::uuid, DATE '2198-12-31', false
+          )
+        `.execute(trx);
+        const specialQ = await sql<{ period_number: number; period_type: string }>`
+          SELECT period_number, period_type FROM master.resolve_fiscal_period(
+            ${fixture.tenant_id}::uuid, ${fixture.company_code_id}::uuid, DATE '2198-12-31', true
+          )
+        `.execute(trx);
         await sql`SELECT set_config('app.current_tenant_id', ${fixture.other_tenant_id}, true)`.execute(trx);
         const isolationQ = await sql<{ visible_count: string }>`
           SELECT count(*)::text AS visible_count
@@ -118,6 +138,8 @@ integrationDescribe("fiscal calendar preview, generation, and posting-date resol
           adjustment: previewQ.rows.find((row) => row.period_type === "adjustment"),
           generated: generatedQ.rows[0]?.result,
           resolved: resolvedQ.rows[0],
+          normalOnlyCount: normalOnlyQ.rows.length,
+          special: specialQ.rows[0],
           crossTenantVisible: Number(isolationQ.rows[0]?.visible_count ?? "0"),
         };
         throw rollbackMarker;
@@ -132,6 +154,8 @@ integrationDescribe("fiscal calendar preview, generation, and posting-date resol
       adjustment: { start_date: "2199-12-31", end_date: "2199-12-31", period_type: "adjustment" },
       generated: { periodCount: 14 },
       resolved: { fiscal_year: 2199, period_number: 7, period_type: "normal" },
+      normalOnlyCount: 0,
+      special: { period_number: 13, period_type: "adjustment" },
       crossTenantVisible: 0,
     });
   });
