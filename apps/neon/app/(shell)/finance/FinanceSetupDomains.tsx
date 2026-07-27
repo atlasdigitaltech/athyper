@@ -8,54 +8,21 @@ import {
   Coins,
   Landmark,
   ReceiptText,
-  ShieldCheck,
+  Settings2,
 } from "lucide-react";
+import { FINANCE_SETTINGS_DIRECTORY } from "@athyper/finance-workbench";
 import { useScopeOptions } from "@athyper/finance-workbench/hooks";
 
-const companyDomains = [
-  {
-    key: "foundation",
-    path: "foundation",
-    title: "Foundation",
-    description: "Organization, chart of accounts, books and fiscal calendar.",
-    icon: Building2,
-  },
-  {
-    key: "currency-fx",
-    path: "currency-fx",
-    title: "Currency & FX",
-    description: "FX policies, rate coverage, imports and revaluation readiness.",
-    icon: Coins,
-  },
-  {
-    key: "tax",
-    path: "tax",
-    title: "Tax",
-    description: "Company registrations, resolution simulation and posting coverage.",
-    icon: ReceiptText,
-  },
-  {
-    key: "payments",
-    path: "payments",
-    title: "Payments & Settlement",
-    description: "Payment policy, interface routing and settlement accounting.",
-    icon: CircleDollarSign,
-  },
-  {
-    key: "banking",
-    path: "banking",
-    title: "Banking & Treasury",
-    description: "House banks, account links, interfaces and reconciliation readiness.",
-    icon: Landmark,
-  },
-  {
-    key: "certification",
-    path: "",
-    title: "Certification & Rollout",
-    description: "Four-domain readiness, certification status and production posting gate.",
-    icon: ShieldCheck,
-  },
-] as const;
+const settingsIcons = {
+  building: Building2,
+  coins: Coins,
+  "receipt-text": ReceiptText,
+  "circle-dollar": CircleDollarSign,
+  landmark: Landmark,
+} as const;
+
+const companySettings = FINANCE_SETTINGS_DIRECTORY.groups.find((group) => group.scope === "company");
+const tenantSettings = FINANCE_SETTINGS_DIRECTORY.groups.find((group) => group.scope === "tenant");
 
 export function FinanceSetupDomains() {
   const scope = useScopeOptions();
@@ -72,27 +39,33 @@ export function FinanceSetupDomains() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" aria-hidden />
-            <h2 id="finance-setup-domains-title" className="font-semibold">Finance setup domains</h2>
+            <Settings2 className="h-5 w-5 text-primary" aria-hidden />
+            <h2 id="finance-setup-domains-title" className="font-semibold">Finance Settings</h2>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Configure the complete posting contract, from company foundation through banking readiness.
+            View or change company and tenant Finance configuration.
           </p>
         </div>
         <Link
           href={companyRoot}
           className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium hover:bg-muted"
         >
-          Setup overview <ArrowRight className="h-4 w-4" aria-hidden />
+          Open settings <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        {companyDomains.map(({ key, path, title, description, icon: Icon }) => {
-          const href = companyCode && path ? `${companyRoot}/${path}` : companyRoot;
+      <div className="mt-5">
+        <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {companySettings?.label ?? "Configuration"}
+        </h3>
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+        {companySettings?.items.map((item) => {
+          const Icon = settingsIcons[item.iconKey as keyof typeof settingsIcons] ?? Settings2;
+          const href = companyCode ? `${companyRoot}/${item.routeSegment}` : companyRoot;
           return (
             <Link
-              key={key}
+              key={item.code}
               href={href}
               className="group flex min-h-40 flex-col rounded-xl border bg-background p-4 transition-colors hover:border-primary/40 hover:bg-muted/20"
             >
@@ -104,8 +77,8 @@ export function FinanceSetupDomains() {
                   Company
                 </span>
               </div>
-              <h3 className="mt-3 text-sm font-semibold">{title}</h3>
-              <p className="mt-1 flex-1 text-xs leading-5 text-muted-foreground">{description}</p>
+              <h4 className="mt-3 text-sm font-semibold">{item.label}</h4>
+              <p className="mt-1 flex-1 text-xs leading-5 text-muted-foreground">{item.description}</p>
               <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary">
                 Open {companyCode ? `for ${companyCode}` : "company selection"}
                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden />
@@ -116,10 +89,16 @@ export function FinanceSetupDomains() {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t pt-4">
-        <span className="mr-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Tenant definitions</span>
-        <DefinitionLink href={tenantHref(tenantCode, "currency-fx")} title="FX rate workbench" />
-        <DefinitionLink href={tenantHref(tenantCode, "tax")} title="Tax groups & WHT" />
-        <DefinitionLink href={tenantHref(tenantCode, "payment-terms")} title="Payment terms" />
+        <span className="mr-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {tenantSettings?.label ?? "Tenant definitions"}
+        </span>
+        {tenantSettings?.items.map((item) => (
+          <DefinitionLink
+            key={item.code}
+            href={tenantHref(tenantCode, item.routeSegment)}
+            title={item.label}
+          />
+        ))}
         {scope.isLoading ? <span className="text-xs text-muted-foreground">Resolving finance context…</span> : null}
       </div>
     </section>

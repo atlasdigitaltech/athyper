@@ -11,16 +11,16 @@
 import { useQueries, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { queryKeys } from "@athyper/api-contracts/query-keys";
-
-function getCsrfToken(): string {
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(/(?:^|;\s*)__csrf=([^;]+)/);
-  return match ? decodeURIComponent(match[1]!) : "";
-}
+import { csrfFetch } from "@athyper/runtime-shared/client";
 
 const MAX_BATCH = 100;
 const CACHE_BATCH_SIZE = 20;
 const RECORD_BOOKMARK_BATCH_KEY = "record-bookmarks";
+
+export type BookmarkRequest = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
 
 export interface BookmarkSnapshot {
   displayName?: string | null;
@@ -50,6 +50,7 @@ interface BookmarkListResponse {
 async function fetchBookmarkedIds(
   entityCode: string,
   recordIds: string[],
+  request: BookmarkRequest,
 ): Promise<string[]> {
   if (recordIds.length === 0) return [];
 
@@ -61,7 +62,7 @@ async function fetchBookmarkedIds(
 
   const results = await Promise.all(
     batches.map((ids) =>
-      fetch(
+      request(
         `/api/collab/bookmarks/batch?entity_code=${encodeURIComponent(entityCode)}&ids=${ids.join(",")}`,
         { cache: "no-store" },
       )
@@ -78,12 +79,12 @@ async function toggleBookmarkRequest(
   entityCode: string,
   recordId: string,
   snapshot?: BookmarkSnapshot,
+  request: BookmarkRequest = csrfFetch,
 ): Promise<{ bookmarked: boolean }> {
-  const res = await fetch("/api/collab/bookmarks", {
+  const res = await request("/api/collab/bookmarks", {
     method:  "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-CSRF-Token": getCsrfToken(),
     },
     body:    JSON.stringify({
       entity_code:  entityCode,
@@ -96,8 +97,8 @@ async function toggleBookmarkRequest(
   return res.json() as Promise<{ bookmarked: boolean }>;
 }
 
-async function fetchBookmarksList(signal?: AbortSignal): Promise<BookmarkListGroup[]> {
-  const res = await fetch("/api/collab/bookmarks", { cache: "no-store", signal });
+async function fetchBookmarksList(request: BookmarkRequest, signal?: AbortSignal): Promise<BookmarkListGroup[]> {
+  const res = await request("/api/collab/bookmarks", { cache: "no-store", signal });
   if (!res.ok) throw new Error("Bookmark list failed");
   const data = await res.json() as BookmarkListResponse;
   return data.groups ?? [];
@@ -117,13 +118,17 @@ function removeFromGroups(
     .filter((group) => group.items.length > 0);
 }
 
-export function useRecordBookmarks(entityCode: string, recordIds: string[]) {
+export function useRecordBookmarks(
+  entityCode: string,
+  recordIds: string[],
+  options?: { request?: BookmarkRequest },
+) {
   const qc         = useQueryClient();
   const batches = chunkStableRecordIds(recordIds, CACHE_BATCH_SIZE);
   const results = useQueries({
     queries: batches.map((ids) => ({
       queryKey: [RECORD_BOOKMARK_BATCH_KEY, entityCode, ids.slice().sort().join(",")],
-      queryFn:  () => fetchBookmarkedIds(entityCode, ids),
+      queryFn:  () => fetchBookmarkedIds(entityCode, ids, options?.request ?? fetch),
       staleTime: 60_000,
       enabled: ids.length > 0,
     })),
@@ -134,7 +139,7 @@ export function useRecordBookmarks(entityCode: string, recordIds: string[]) {
 
   const { mutate, isPending } = useMutation({
     mutationFn: ({ recordId, snapshot }: { recordId: string; snapshot?: BookmarkSnapshot }) =>
-      toggleBookmarkRequest(entityCode, recordId, snapshot),
+      toggleBookmarkRequest(entityCode, recordId, snapshot, options?.request ?? csrfFetch),
 
     // Optimistic update — flip the local set immediately
     onMutate: async ({ recordId }) => {
@@ -182,20 +187,23 @@ function chunkStableRecordIds(recordIds: string[], size: number): string[][] {
   return batches;
 }
 
-export function useBookmarksList(options?: { enabled?: boolean }) {
+export function useBookmarksList(options?: {
+  enabled?: boolean;
+  request?: BookmarkRequest;
+}) {
   const qc = useQueryClient();
   const queryKey = queryKeys.collab.bookmarks;
 
   const query = useQuery<BookmarkListGroup[]>({
     queryKey,
-    queryFn:   ({ signal }) => fetchBookmarksList(signal),
+    queryFn:   ({ signal }) => fetchBookmarksList(options?.request ?? fetch, signal),
     staleTime: 30_000,
     enabled:   options?.enabled ?? true,
   });
 
   const { mutate, isPending } = useMutation({
     mutationFn: ({ entityCode, recordId }: { entityCode: string; recordId: string }) =>
-      toggleBookmarkRequest(entityCode, recordId),
+      toggleBookmarkRequest(entityCode, recordId, undefined, options?.request ?? csrfFetch),
 
     onMutate: async ({ entityCode, recordId }) => {
       await qc.cancelQueries({ queryKey });

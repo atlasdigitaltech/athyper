@@ -94,6 +94,19 @@ export async function PATCH(
     );
   }
 
+  if(entityCode==="fx_rate"){
+    return NextResponse.json(
+      {error:"FX_RATE_REPLACEMENT_REQUIRED",message:"FX rates are immutable. Use the governed Replace Rate command."},
+      {status:409},
+    );
+  }
+  if(entityCode==="fx_policy"){
+    return NextResponse.json(
+      {error:"FX_POLICY_GOVERNED_COMMAND_REQUIRED",message:"FX policy versions are immutable. Use a governed override command."},
+      {status:409},
+    );
+  }
+
   const ledgerRejection = rejectPublicLedgerMutation(descriptor.renderer);
   if (ledgerRejection) return ledgerRejection;
 
@@ -248,6 +261,19 @@ export async function DELETE(
     return NextResponse.json(
       { error: "ENTITY_NOT_FOUND", message: "This Neon route is not registered for the tenant control plane." },
       { status: 404 },
+    );
+  }
+
+  if(entityCode==="fx_rate"){
+    return NextResponse.json(
+      {error:"FX_RATE_DELETE_NOT_SUPPORTED",message:"FX rate versions cannot be deleted."},
+      {status:405},
+    );
+  }
+  if(entityCode==="fx_policy"){
+    return NextResponse.json(
+      {error:"FX_POLICY_DELETE_NOT_SUPPORTED",message:"FX policy history cannot be deleted."},
+      {status:405},
     );
   }
 

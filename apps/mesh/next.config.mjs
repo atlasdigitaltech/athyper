@@ -11,6 +11,9 @@ const nextConfig = {
   outputFileTracingRoot: path.resolve(__dirname, "../.."),
   serverExternalPackages: ["redis"],
   transpilePackages: [
+    "@athyper/app-foundation",
+    "@athyper/api-contracts",
+    "@athyper/dashboard-ui",
     "@athyper/brand",
     "@athyper/auth-bff",
     "@athyper/i18n",
@@ -20,8 +23,13 @@ const nextConfig = {
     "@athyper/app-mesh-route-manifest",
     "@athyper/app-mesh-shell",
     "@athyper/mesh-exchange-contracts",
+    "@athyper/me-ui",
     "@athyper/navigation-core",
+    "@athyper/notifications-client",
     "@athyper/route-manifest-core",
+    "@athyper/runtime-canvas",
+    "@athyper/runtime-contracts",
+    "@athyper/runtime-shared",
     "@athyper/session-plane",
     "@athyper/session-store",
     "@athyper/shell",
@@ -30,6 +38,15 @@ const nextConfig = {
     "@athyper/theme",
     "@athyper/ui",
   ],
+  async headers() {
+    return [{
+      source: "/sw.js",
+      headers: [
+        { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+        { key: "Service-Worker-Allowed", value: "/" },
+      ],
+    }];
+  },
 };
 
 export default nextConfig;

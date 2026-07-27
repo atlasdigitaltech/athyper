@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import { compileMetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
-import { toRuntimeDescriptor } from "../../../../packages/apps/neon/src/list/descriptorConverter";
+import { toRuntimeDescriptor } from "@athyper/app-neon/list";
 
 function descriptor(displayConfig: Record<string, unknown>): MetaEntityRuntimeDescriptor {
   return {

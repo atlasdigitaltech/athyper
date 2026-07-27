@@ -48,19 +48,53 @@ export type WorkspaceNode = z.infer<typeof WorkspaceNodeSchema>;
 
 // ── Notifications ───────────────────────────────────────────────
 
+export const PlaneKeySchema = z.enum(["neon", "mesh", "admin"]);
+export type PlaneKey = z.infer<typeof PlaneKeySchema>;
+
 export const NotificationSchema = z.object({
   id: UuidSchema,
+  message_id: UuidSchema,
+  plane_key: PlaneKeySchema,
   type: z.string(),
   title: z.string(),
   body: z.string().nullable(),
+  subject: z.string().nullable(),
+  event_code: z.string(),
+  payload: z.record(z.string(), z.unknown()),
+  priority: z.string(),
   entity_type: z.string().nullable(),
   entity_id: z.string().nullable(),
   action_url: z.string().nullable(),
   is_read: z.boolean(),
+  read_at: z.string().datetime().nullable(),
   created_at: z.string().datetime(),
 });
 
 export type Notification = z.infer<typeof NotificationSchema>;
+
+export const NotificationChannelCapabilitySchema = z.object({
+  code: z.string(),
+  available: z.boolean(),
+  reason: z.string().optional(),
+});
+
+export const NotificationPreferenceSchema = z.object({
+  id: UuidSchema,
+  event_code: z.string(),
+  channel: z.string(),
+  is_enabled: z.boolean().nullable(),
+  frequency_code: z.string().nullable(),
+  status: z.string().optional(),
+});
+
+export const NotificationCapabilitiesSchema = z.object({
+  plane_key: PlaneKeySchema,
+  channels: z.array(NotificationChannelCapabilitySchema),
+  digest_frequencies: z.array(NotificationChannelCapabilitySchema),
+  effective_preferences: z.array(NotificationPreferenceSchema),
+});
+
+export type NotificationCapabilities = z.infer<typeof NotificationCapabilitiesSchema>;
 
 // ── Saved Views ─────────────────────────────────────────────────
 //

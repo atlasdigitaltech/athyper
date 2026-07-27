@@ -22,8 +22,8 @@ export default defineConfig({
     globals: false,
     environment: "node",
     include: [
-      "app/**/__tests__/**/*.test.{ts,tsx}",
-      "lib/**/__tests__/**/*.test.{ts,tsx}",
+      "app/**/*.test.{ts,tsx}",
+      "lib/**/*.test.{ts,tsx}",
     ],
     exclude: ["node_modules/**", ".next/**"],
   },

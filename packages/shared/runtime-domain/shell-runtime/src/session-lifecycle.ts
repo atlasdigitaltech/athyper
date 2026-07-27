@@ -1,7 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { getPlaneConfig, SESSION_POLICY_DEFAULTS, type PlaneKey, type SessionPolicyDefaults } from "@athyper/session-plane";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  getPlaneConfig,
+  readCookieWithHostPrefix,
+  SESSION_POLICY_DEFAULTS,
+  type PlaneKey,
+  type SessionPolicyDefaults,
+} from "@athyper/session-plane";
 
 export type FavoritesPanelTab = "bookmarks" | "recent";
 
@@ -14,14 +20,39 @@ export interface FavoritesPanelSlotProps {
 export interface ActiveOrg {
   orgName: string;
   legalEntityName: string;
+  legalEntityCode?: string;
   tenantName: string;
+  tenantCode?: string;
+  networkAccountName?: string;
+  networkAccountCode?: string;
+  networkAccountRole?: string;
   roles: string[];
 }
 
 export interface ActiveUser {
   displayName: string;
   initials: string;
+  email?: string;
 }
+
+export interface ActiveSessionStatus {
+  mfaRequired: boolean;
+  mfaVerified: boolean;
+  supportMode: boolean;
+}
+
+export interface OrgOption {
+  alias: string;
+  name: string;
+  legalEntityName: string;
+  legalEntityCode?: string;
+  tenantName: string;
+  tenantCode?: string;
+  workbenches: string[];
+  isActive: boolean;
+}
+
+export type ScopeSwitchStatus = "idle" | "switching";
 
 export type SessionWarningReason = "idle" | "absolute";
 export type SessionLifecycleState = "active" | "idle_warning" | "absolute_warning" | "continuing" | "terminating" | "terminated";
@@ -36,6 +67,10 @@ interface SessionPayload {
   sessionPolicy?: unknown;
   displayName?: string;
   username?: string;
+  email?: string;
+  mfaRequired?: boolean;
+  mfaVerified?: boolean;
+  supportMode?: boolean;
 }
 
 interface RefreshBody {
@@ -101,27 +136,86 @@ function isSessionPayload(value: unknown): value is SessionPayload {
     activeOrg?: unknown;
     organizations?: unknown;
     accessExpiresAt?: unknown;
+    email?: unknown;
+    mfaRequired?: unknown;
+    mfaVerified?: unknown;
+    supportMode?: unknown;
   };
   return (
     candidate.authenticated === true &&
     (candidate.activeOrg === null || typeof candidate.activeOrg === "string") &&
     isRecord(candidate.organizations) &&
-    typeof candidate.accessExpiresAt === "number"
+    typeof candidate.accessExpiresAt === "number" &&
+    (candidate.email === undefined || typeof candidate.email === "string") &&
+    (candidate.mfaRequired === undefined || typeof candidate.mfaRequired === "boolean") &&
+    (candidate.mfaVerified === undefined || typeof candidate.mfaVerified === "boolean") &&
+    (candidate.supportMode === undefined || typeof candidate.supportMode === "boolean")
   );
 }
 
-function isOrgPayload(value: unknown): value is {
+interface OrgPayload {
   name: string;
   legalEntityName?: string;
+  legalEntityCode?: string;
+  tenantName?: string;
+  tenantCode?: string;
+  networkAccountName?: string;
+  networkAccountCode?: string;
+  networkAccountRole?: string;
   roles?: string[];
-} {
+}
+
+function isOrgPayload(value: unknown): value is OrgPayload {
   if (!value || typeof value !== "object") return false;
-  const candidate = value as { name?: unknown; legalEntityName?: unknown; roles?: unknown };
+  const candidate = value as {
+    name?: unknown;
+    legalEntityName?: unknown;
+    legalEntityCode?: unknown;
+    tenantName?: unknown;
+    tenantCode?: unknown;
+    networkAccountName?: unknown;
+    networkAccountCode?: unknown;
+    networkAccountRole?: unknown;
+    roles?: unknown;
+  };
   return (
     typeof candidate.name === "string" &&
     (candidate.legalEntityName === undefined || typeof candidate.legalEntityName === "string") &&
+    (candidate.legalEntityCode === undefined || typeof candidate.legalEntityCode === "string") &&
+    (candidate.tenantName === undefined || typeof candidate.tenantName === "string") &&
+    (candidate.tenantCode === undefined || typeof candidate.tenantCode === "string") &&
+    (candidate.networkAccountName === undefined || typeof candidate.networkAccountName === "string") &&
+    (candidate.networkAccountCode === undefined || typeof candidate.networkAccountCode === "string") &&
+    (candidate.networkAccountRole === undefined || typeof candidate.networkAccountRole === "string") &&
     (candidate.roles === undefined || (Array.isArray(candidate.roles) && candidate.roles.every((role) => typeof role === "string")))
   );
+}
+
+function parseAliasTenant(alias: string): string {
+  const idx = alias.indexOf("--");
+  return idx > 0 ? alias.slice(0, idx) : alias;
+}
+
+export function orgOptionsFromSession(session: {
+  activeOrg: string | null;
+  organizations: Record<string, unknown>;
+}): OrgOption[] {
+  const options: OrgOption[] = [];
+  for (const [alias, membership] of Object.entries(session.organizations)) {
+    if (!isOrgPayload(membership)) continue;
+    const tenantCode = membership.tenantCode ?? parseAliasTenant(alias);
+    options.push({
+      alias,
+      name: membership.name,
+      legalEntityName: membership.legalEntityName ?? membership.name,
+      legalEntityCode: membership.legalEntityCode,
+      tenantName: membership.tenantName ?? tenantCode.toUpperCase(),
+      tenantCode,
+      workbenches: membership.roles ?? [],
+      isActive: session.activeOrg === alias,
+    });
+  }
+  return options.sort((a, b) => a.legalEntityName.localeCompare(b.legalEntityName));
 }
 
 function toInitials(name: string): string {
@@ -133,10 +227,23 @@ function toInitials(name: string): string {
 export function activeUserFromSession(session: {
   displayName?: string;
   username?: string;
+  email?: string;
 }): ActiveUser | null {
   const name = session.displayName ?? session.username;
   if (!name) return null;
-  return { displayName: name, initials: toInitials(name) };
+  return { displayName: name, initials: toInitials(name), email: session.email };
+}
+
+export function activeSessionStatusFromSession(session: {
+  mfaRequired?: boolean;
+  mfaVerified?: boolean;
+  supportMode?: boolean;
+}): ActiveSessionStatus {
+  return {
+    mfaRequired: session.mfaRequired === true,
+    mfaVerified: session.mfaVerified === true,
+    supportMode: session.supportMode === true,
+  };
 }
 
 export function activeOrgFromSession(session: {
@@ -150,7 +257,12 @@ export function activeOrgFromSession(session: {
   return {
     orgName: membership.name,
     legalEntityName: membership.legalEntityName ?? membership.name,
-    tenantName: membership.name,
+    legalEntityCode: membership.legalEntityCode,
+    tenantName: membership.tenantName ?? membership.name,
+    tenantCode: membership.tenantCode,
+    networkAccountName: membership.networkAccountName,
+    networkAccountCode: membership.networkAccountCode,
+    networkAccountRole: membership.networkAccountRole,
     roles: membership.roles ?? [],
   };
 }
@@ -278,15 +390,19 @@ function writeStoredActivity(key: string, at: number): void {
 
 export function readCsrfToken(plane: PlaneKey): string {
   if (typeof document === "undefined") return "";
-  const cookieName = getPlaneConfig(plane).csrfCookieName;
-  const escapedName = cookieName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escapedName}=([^;]+)`));
-  if (!match) return "";
-  try {
-    return decodeURIComponent(match[1] ?? "");
-  } catch {
-    return "";
-  }
+  return readCookieWithHostPrefix(
+    getPlaneConfig(plane).csrfCookieName,
+    (cookieName) => {
+      const escapedName = cookieName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escapedName}=([^;]+)`));
+      if (!match) return undefined;
+      try {
+        return decodeURIComponent(match[1] ?? "");
+      } catch {
+        return undefined;
+      }
+    },
+  ) ?? "";
 }
 
 export function csrfFetch(plane: PlaneKey, input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
@@ -299,6 +415,11 @@ export function csrfFetch(plane: PlaneKey, input: RequestInfo | URL, init: Reque
 export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unknown): {
   activeOrg: ActiveOrg | null;
   activeUser: ActiveUser | null;
+  sessionStatus: ActiveSessionStatus;
+  availableOrgs: OrgOption[];
+  scopeSwitchStatus: ScopeSwitchStatus;
+  scopeSwitchError: string | null;
+  switchOrg: (alias: string, workbench: string) => Promise<void>;
   warningSeconds: number | null;
   warningReason: SessionWarningReason | null;
   lifecycleState: SessionLifecycleState;
@@ -310,6 +431,18 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
   const initial = isSessionPayload(initialSession) ? initialSession : null;
   const [activeOrg, setActiveOrg] = useState<ActiveOrg | null>(() => initial ? activeOrgFromSession(initial) : null);
   const [activeUser, setActiveUser] = useState<ActiveUser | null>(() => initial ? activeUserFromSession(initial) : null);
+  const [sessionStatus, setSessionStatus] = useState<ActiveSessionStatus>(() => (
+    initial ? activeSessionStatusFromSession(initial) : activeSessionStatusFromSession({})
+  ));
+  const [sessionShape, setSessionShape] = useState<{
+    activeOrg: string | null;
+    organizations: Record<string, unknown>;
+  }>(() => initial
+    ? { activeOrg: initial.activeOrg, organizations: initial.organizations }
+    : { activeOrg: null, organizations: {} });
+  const [scopeSwitchStatus, setScopeSwitchStatus] = useState<ScopeSwitchStatus>("idle");
+  const [scopeSwitchError, setScopeSwitchError] = useState<string | null>(null);
+  const availableOrgs = useMemo(() => orgOptionsFromSession(sessionShape), [sessionShape]);
   const [warningSeconds, setWarningSeconds] = useState<number | null>(null);
   const [warningReason, setWarningReason] = useState<SessionWarningReason | null>(null);
   const [lifecycleState, setLifecycleState] = useState<SessionLifecycleState>("active");
@@ -513,6 +646,8 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
         setSessionPolicy((current) => isSameSessionPolicy(current, nextPolicy) ? current : nextPolicy);
         setActiveOrg(activeOrgFromSession(session));
         setActiveUser(activeUserFromSession(session));
+        setSessionStatus(activeSessionStatusFromSession(session));
+        setSessionShape({ activeOrg: session.activeOrg, organizations: session.organizations });
         absoluteExpiresAtRef.current = session.absoluteExpiresAt
           ?? (typeof session.createdAt === "number"
             ? session.createdAt + nextPolicy.absoluteTtlSeconds
@@ -695,5 +830,42 @@ export function usePlaneSessionLifecycle(plane: PlaneKey, initialSession?: unkno
     }
   }, [clearWarning, continuePending, logoutNow, recordActivity, refreshAccessToken, touchSession, warningReason]);
 
-  return { activeOrg, activeUser, warningSeconds, warningReason, lifecycleState, continuePending, continueSession, logoutNow };
+  const switchOrg = useCallback(async (alias: string, workbench: string) => {
+    if (scopeSwitchStatus === "switching" || logoutStartedRef.current) return;
+    setScopeSwitchStatus("switching");
+    setScopeSwitchError(null);
+    try {
+      const response = await csrfFetch(plane, "/api/auth/session", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ org: alias, workbench }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
+        throw new Error(body.message ?? body.error ?? "Failed to switch context.");
+      }
+      // Authenticated shell caches must not survive a principal scope change.
+      window.dispatchEvent(new CustomEvent("athyper:session-context-change", { detail: { org: alias, workbench } }));
+      window.location.reload();
+    } catch (err) {
+      setScopeSwitchStatus("idle");
+      setScopeSwitchError(err instanceof Error ? err.message : "Failed to switch context.");
+    }
+  }, [plane, scopeSwitchStatus]);
+
+  return {
+    activeOrg,
+    activeUser,
+    sessionStatus,
+    availableOrgs,
+    scopeSwitchStatus,
+    scopeSwitchError,
+    switchOrg,
+    warningSeconds,
+    warningReason,
+    lifecycleState,
+    continuePending,
+    continueSession,
+    logoutNow,
+  };
 }

@@ -1,5 +1,5 @@
 <#-- =======================================================================
-     Neon Keycloak Login Theme — login-magic-link.ftl
+     Neon Keycloak Login Theme â€” login-magic-link.ftl
      Magic link / passwordless email sign-in entry page.
      Used by the keycloak-magic-link authenticator extension:
        https://github.com/p2-inc/keycloak-magic-link
@@ -45,9 +45,6 @@
     </div>
   </div>
 
-    </div>
-  </div>
-
   <!-- -- Right form panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
@@ -63,7 +60,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
           </svg>
-          Magic Link — Passwordless
+          Magic Link â€” Passwordless
         </span>
       </div>
 
@@ -82,7 +79,7 @@
 
       <!-- -- Show "check your email" state after submission -- -->
       <#if actionUri??>
-        <!-- Form has been submitted — show confirmation -->
+        <!-- Form has been submitted â€” show confirmation -->
         <div class="kc-magic-sent">
           <div class="kc-magic-sent-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="32" height="32" aria-hidden="true">
@@ -93,7 +90,7 @@
           <p class="kc-magic-sent-title">Check your inbox</p>
           <p class="kc-magic-sent-body">
             We sent a sign-in link to your email address.
-            Click it to sign in — the link is valid for <strong>15 minutes</strong>
+            Click it to sign in â€” the link is valid for <strong>15 minutes</strong>
             and can only be used once.
           </p>
           <p class="kc-magic-sent-tip">

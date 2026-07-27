@@ -96,6 +96,7 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 function invalidate(qc: ReturnType<typeof useQueryClient>, companyCode: string) {
   qc.invalidateQueries({ queryKey: ["finance", "setup", "configure", "posting-role-coverage", companyCode] });
+  qc.invalidateQueries({ queryKey: ["finance", "setup", "fx", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "readiness", companyCode] });
   qc.invalidateQueries({ queryKey: ["finance", "setup", "conflicts", companyCode] });
 }
@@ -150,4 +151,3 @@ export function useRetirePostingRoleAccountMap(companyCode: string) {
     onSuccess: () => invalidate(qc, companyCode),
   });
 }
-

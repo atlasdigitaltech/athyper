@@ -1044,6 +1044,9 @@ function normalizeFields(fields: CompiledMetaEntityFieldInput[], entityCode: str
         name,
         columnName: readString(field, "column_name") ?? readString(field, "columnName") ?? name,
         label: field.label ?? toTitleLabel(name),
+        description: readString(field, "description")
+          ?? readString(field, "help_text")
+          ?? readString(field, "helpText"),
         dataType,
         uiType: nullToUndefined(field.ui_type ?? field.uiType),
         format: nullToUndefined(field.format),

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { PageFrame, StatePanel } from "@athyper/surface-kit";
-import { DataTable, Badge, Button, Switch, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@athyper/ui";
-import { csrfFetch } from "@/lib/bff-fetch";
+import { DataTable, Badge, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@athyper/ui";
 import type { ColumnDef } from "@athyper/ui";
 import type { EntityOperation } from "../[entityId]/_components/types";
 
@@ -21,7 +21,6 @@ export default function EntityOperationsPage() {
   const [loading, setLoading] = useState(true);
   const [entityFilter, setEntityFilter] = useState("all");
   const [surfaceFilter, setSurfaceFilter] = useState("all");
-  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -40,21 +39,6 @@ export default function EntityOperationsPage() {
   }, [entityFilter]);
 
   useEffect(() => { void load(); }, [load]);
-
-  async function toggleEnabled(op: EntityOperation) {
-    const res = await csrfFetch(`/api/relay/metadata/admin/entity-operations/${op.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ is_enabled: !op.is_enabled }),
-    });
-    if (res.ok) setOps((prev) => prev.map((o) => o.id === op.id ? { ...o, is_enabled: !op.is_enabled } : o));
-  }
-
-  async function deleteOp(id: string) {
-    await csrfFetch(`/api/relay/metadata/admin/entity-operations/${id}`, { method: "DELETE" });
-    setOps((prev) => prev.filter((o) => o.id !== id));
-    setDeleting(null);
-  }
 
   const filtered = surfaceFilter === "all" ? ops : ops.filter((o) => o.surface === surfaceFilter);
 
@@ -106,18 +90,15 @@ export default function EntityOperationsPage() {
     {
       id: "enabled",
       header: "Enabled",
-      cell: ({ row }) => (
-        <Switch checked={row.original.is_enabled} onCheckedChange={() => void toggleEnabled(row.original)} />
-      ),
+      cell: ({ row }) => <Badge variant={row.original.is_enabled ? "default" : "outline"}>{row.original.is_enabled ? "Enabled" : "Disabled"}</Badge>,
     },
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => (
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive" onClick={() => setDeleting(row.original.id)}>
-          Delete
-        </Button>
-      ),
+      cell: ({ row }) => {
+        const entity = entities.find((item) => item.name === row.original.entity_name);
+        return entity ? <Button asChild variant="ghost" size="sm"><Link href={`/setup/metadata/${entity.id}#operations`}>Open Studio</Link></Button> : null;
+      },
     },
   ];
 
@@ -127,7 +108,7 @@ export default function EntityOperationsPage() {
     <PageFrame
       eyebrow="Meta Studio"
       title="Entity operations"
-      description={`${filtered.length} operations`}
+      description={`${filtered.length} compiled operations · read-only catalog`}
     >
       <div className="mb-3 flex flex-wrap gap-2">
         <Select value={entityFilter} onValueChange={setEntityFilter}>
@@ -154,21 +135,6 @@ export default function EntityOperationsPage() {
         <StatePanel title="No operations" message="No operations match the current filters." />
       ) : (
         <DataTable columns={columns} data={filtered} />
-      )}
-
-      {deleting && (
-        <AlertDialog open onOpenChange={(o) => !o && setDeleting(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete operation?</AlertDialogTitle>
-              <AlertDialogDescription>This entity operation will be permanently deleted.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => void deleteOp(deleting)}>Delete</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       )}
     </PageFrame>
   );

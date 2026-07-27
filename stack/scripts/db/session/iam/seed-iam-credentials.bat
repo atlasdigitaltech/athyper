@@ -100,11 +100,7 @@ if "!DEMO_PASS!"=="" (
     if defined ENV_FILE_SED for /f "tokens=2 delims==" %%a in ('findstr "^IAM_DEMO_USER_PASSWORD=" "!ENV_FILE_SED!" 2^>nul') do set "DEMO_PASS=%%a"
 )
 if "!DEMO_PASS!"=="" (
-    if /I "!STACK_ENVIRONMENT!"=="production" (
-        set "DEMO_PASS=DemoUser@1234"
-    ) else (
-        set "DEMO_PASS=Demo@1234"
-    )
+    set "DEMO_PASS=Demo@1234"
 )
 
 set "PCC_PASS=%IAM_PLATFORM_CONTROL_USER_PASSWORD%"

@@ -1,5 +1,8 @@
 import { HydrationBoundary } from "@tanstack/react-query";
-import { RuntimeDetailPage } from "@athyper/runtime-canvas";
+import {
+  RuntimeDetailPage,
+  resolveRuntimeObjectPageRenderer,
+} from "@athyper/runtime-canvas";
 import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import { normalizeRouteRecordId } from "@/lib/server/meta-entity-records";
 import { loadRecordWorkspaceBootstrap } from "@/lib/server/record-workspace-bootstrap";
@@ -8,7 +11,11 @@ import {
   RuntimeRecordDiagnosticCollector,
 } from "@/lib/server/runtime-record-observability";
 import { PLANE_KEY } from "@/lib/plane";
+import { getNeonServerSession } from "@/lib/server/session";
+import { resolveFxRateTenantCode } from "@/lib/server/fx-rate-runtime-context";
 import DocumentObjectPageClient from "./DocumentObjectPageClient";
+import { FxRateLineagePanel } from "../FxRateLineagePanel";
+import { AtlasEntityContextBinding } from "./AtlasEntityContextBinding";
 
 /**
  * Generic record route. The server bootstrap owns descriptor, record,
@@ -34,12 +41,13 @@ export default async function RuntimeDetailRoute({
     capabilities: descriptor ? observableCapabilities(descriptor) : {},
   }));
 
-  if (descriptor?.renderer === "document" && record) {
+  if (descriptor && resolveRuntimeObjectPageRenderer(descriptor) === "document" && record) {
     const recordUuid = typeof record.id === "string" && record.id.length > 0
       ? record.id
       : recordId;
     return (
       <HydrationBoundary state={bootstrap.dehydratedState}>
+        <AtlasEntityContextBinding entityType={entity} entityId={recordId} />
         <DocumentObjectPageClient
           entityCode={entity}
           recordId={recordId}
@@ -54,8 +62,9 @@ export default async function RuntimeDetailRoute({
     );
   }
 
-  return (
+  const runtimePage=(
     <HydrationBoundary state={bootstrap.dehydratedState}>
+      <AtlasEntityContextBinding entityType={entity} entityId={recordId} />
       <RuntimeDetailPage
         plane={PLANE_KEY}
         entity={entity}
@@ -68,6 +77,17 @@ export default async function RuntimeDetailRoute({
       />
     </HydrationBoundary>
   );
+  if(entity==="fx_rate"){
+    const session=await getNeonServerSession();
+    const tenantCode=session?resolveFxRateTenantCode(session):null;
+    return (
+      <div className="flex h-full flex-col gap-3">
+        {tenantCode?<FxRateLineagePanel tenantCode={tenantCode} rateId={recordId}/>:null}
+        <div className="min-h-0 flex-1">{runtimePage}</div>
+      </div>
+    );
+  }
+  return runtimePage;
 }
 
 function observableCapabilities(descriptor: MetaEntityRuntimeDescriptor): Record<string, boolean> {

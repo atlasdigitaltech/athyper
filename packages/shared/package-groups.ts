@@ -23,14 +23,20 @@ export const sharedPackageGroups: Record<SharedPackageGroup, string[]> = {
   ],
   session: ["session-store", "session-plane"],
   ui: [
+    "app-foundation",
+    "atlas-agent-ui",
     "ui",
     "theme",
     "surface-kit",
     "shell",
     "workflow-ui",
     "content-ui",
+    "content-hub-ui",
     "collaboration-ui",
+    "dashboard-ui",
     "me-ui",
+    "saved-views-ui",
+    "setup-ui",
     "brand",
     "icons",
   ],
@@ -51,7 +57,7 @@ export const sharedBusinessGroups: Record<SharedBusinessGroup, string[]> = {
     "config",
     "navigation-core",
   ],
-  "ui-platform": ["ui", "theme", "surface-kit", "shell", "workflow-ui", "content-ui", "collaboration-ui", "me-ui", "brand", "icons"],
+  "ui-platform": ["app-foundation", "atlas-agent-ui", "ui", "theme", "surface-kit", "shell", "workflow-ui", "content-ui", "content-hub-ui", "collaboration-ui", "dashboard-ui", "me-ui", "saved-views-ui", "setup-ui", "brand", "icons"],
   "runtime-domain": ["runtime-canvas", "runtime-contracts", "runtime-list", "runtime-add-item", "runtime-bulk-actions", "runtime-line-item", "runtime-shared", "shell-runtime"],
   "business-domain": ["finance-rules", "cascade", "entity-print", "print-templates", "temporal", "domain-widgets"],
   "shared-infrastructure": ["i18n"],
@@ -71,6 +77,8 @@ export const sharedPackageGroupAliases: Array<{ from: SharedPackageGroup; to: Sh
 export const sharedPackageCatalog = [
   "api-client",
   "api-contracts",
+  "app-foundation",
+  "atlas-agent-ui",
   "auth-bff",
   "auth-common",
   "bff-relay",
@@ -79,6 +87,8 @@ export const sharedPackageCatalog = [
   "collaboration-ui",
   "config",
   "content-ui",
+  "content-hub-ui",
+  "dashboard-ui",
   "core",
   "domain-widgets",
   "entity-print",
@@ -88,6 +98,8 @@ export const sharedPackageCatalog = [
   "identity-gate",
   "runtime-line-item",
   "me-ui",
+  "saved-views-ui",
+  "setup-ui",
   "mesh-exchange-contracts",
   "metadata-client",
   "navigation-core",
@@ -111,4 +123,4 @@ export const sharedPackageCatalog = [
   "workflow-ui",
 ];
 
-export const sharedPackageGroupMapVersion = "2026-07-14";
+export const sharedPackageGroupMapVersion = "2026-07-25";

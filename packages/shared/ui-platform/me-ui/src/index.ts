@@ -42,6 +42,19 @@ export {
   type MeAdminSectionId,
 } from "./me-settings";
 
+export {
+  SettingsWorkspace,
+  SETTINGS_SCOPE_MATRIX,
+  deriveSettingsAccess,
+  legacySettingsHref,
+  parseSettingsPath,
+  settingsHref,
+  type SettingsPlane,
+  type SettingsSessionAccess,
+  type SettingsSectionRegistration,
+  type SettingsWorkspaceProps,
+} from "./settings-workspace";
+
 // Re-export shared UI helpers (so neon's existing _shared can re-export from here
 // without duplicating implementations).
 export {
@@ -62,8 +75,6 @@ export {
   type ManagedByProps,
   type ConfirmDialogAction,
 } from "./_shared";
-
-
 
 
 

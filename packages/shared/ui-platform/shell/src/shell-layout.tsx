@@ -15,8 +15,8 @@
  * This matches the spec where the brand mark, tenant chip, scope chips, workbench
  * toggle, search bar, create, notifications, and avatar all live in one global bar.
  *
- * On mobile (< md): rail and panel are hidden; a mobile drawer is provided by
- * the consuming app (not owned by this component).
+ * On mobile (< md): rail and panel are hidden. Plane shells pair this frame
+ * with the shared ResponsiveNavigationDrawer exported by @athyper/shell.
  */
 
 import { type ReactNode } from "react";

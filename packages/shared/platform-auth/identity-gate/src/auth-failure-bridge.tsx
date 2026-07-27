@@ -13,24 +13,29 @@
 //
 //   <ToastProvider>
 //     <QueryClientProvider client={qc}>
-//       <authFailureBridge planeRoot="" />   // root-mounted neon/mesh/admin
-//       {children}
+//       <AuthFailureBridge planeRoot="">
+//         {children}
+//       </AuthFailureBridge>
 //     </QueryClientProvider>
 //   </ToastProvider>
 
-import { useEffect } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
+import { AuthFailurePage } from "./auth-failure-page";
 import { dispatchAuthFailure } from "./auth-failure-handler";
-import type { AuthFailureDispatcherDeps } from "./auth-failure-handler";
+import type {
+  AuthFailureCode,
+  AuthFailureDispatcherDeps,
+} from "./auth-failure-handler";
 
 export interface AuthFailureBridgeProps {
   /** Plane-root for href interpolation; pass "" for root-mounted apps. */
   readonly planeRoot?: string;
   /**
    * Toast emitter â€” typically `useToast().toast` adapted to the dispatcher's
-   * shape. When omitted, the bridge still records telemetry + navigates;
-   * fatal-severity codes only.
+   * shape. When omitted, the bridge still invalidates state, records telemetry,
+   * navigates, and renders wrapped fatal failures.
    */
   readonly emitToast?: AuthFailureDispatcherDeps["emitToast"];
   /**
@@ -39,10 +44,21 @@ export interface AuthFailureBridgeProps {
    */
   readonly navigate?: (href: string) => void;
   /**
+   * Functional notification for session/cache invalidation. This is separate
+   * from telemetry so replacing an observability sink cannot retain stale
+   * authenticated state.
+   */
+  readonly onAuthFailure?: AuthFailureDispatcherDeps["onAuthFailure"];
+  /**
    * Optional telemetry sink. Wire to your beacon, posthog, or a console.log
    * during dev. Omitting it disables the telemetry hook.
    */
   readonly recordTelemetry?: AuthFailureDispatcherDeps["recordTelemetry"];
+  /**
+   * When supplied, a non-navigating fatal failure replaces this subtree with
+   * the shared full-page failure presentation.
+   */
+  readonly children?: ReactNode;
 }
 
 /**
@@ -78,15 +94,22 @@ export function AuthFailureBridge({
   planeRoot = "",
   emitToast,
   navigate,
+  onAuthFailure,
   recordTelemetry,
+  children,
 }: AuthFailureBridgeProps) {
   const queryClient = useQueryClient();
+  const [fatalFailure, setFatalFailure] = useState<{
+    code: AuthFailureCode;
+    requestId?: string;
+  } | null>(null);
 
   useEffect(() => {
     const deps: AuthFailureDispatcherDeps = {
       planeRoot,
       ...(emitToast ? { emitToast } : {}),
       ...(navigate ? { navigate } : {}),
+      ...(onAuthFailure ? { onAuthFailure } : {}),
       ...(recordTelemetry ? { recordTelemetry } : {}),
     };
 
@@ -96,7 +119,7 @@ export function AuthFailureBridge({
       // Prefer the `code` set by ApiError; fall back to `error` field from
       // structured BFF responses.
       const code = err.code ?? err.error ?? null;
-      dispatchAuthFailure(
+      const outcome = dispatchAuthFailure(
         {
           code,
           ...(err.requestId ? { requestId: err.requestId } : {}),
@@ -104,6 +127,16 @@ export function AuthFailureBridge({
         },
         deps,
       );
+      if (
+        outcome.code
+        && outcome.presentation?.severity === "fatal"
+        && !outcome.navigateHref
+      ) {
+        setFatalFailure({
+          code: outcome.code,
+          ...(err.requestId ? { requestId: err.requestId } : {}),
+        });
+      }
     }
 
     const qSub = queryClient.getQueryCache().subscribe((event) => {
@@ -121,9 +154,24 @@ export function AuthFailureBridge({
       qSub();
       mSub();
     };
-  }, [queryClient, planeRoot, emitToast, navigate, recordTelemetry]);
+  }, [
+    queryClient,
+    planeRoot,
+    emitToast,
+    navigate,
+    onAuthFailure,
+    recordTelemetry,
+  ]);
 
-  return null;
+  if (fatalFailure) {
+    return (
+      <AuthFailurePage
+        code={fatalFailure.code}
+        planeRoot={planeRoot}
+        {...(fatalFailure.requestId ? { requestId: fatalFailure.requestId } : {})}
+      />
+    );
+  }
+
+  return children ?? null;
 }
-
-

@@ -5,6 +5,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import type { V4Session } from "@athyper/auth-bff";
 
+export {
+  buildRuntimeApiUrl,
+  normalizeRuntimeApiUrl,
+} from "./runtime-url";
+
 export const TRACE_ID_HEADER = "X-Trace-ID";
 
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 30_000;
@@ -23,6 +28,16 @@ type RelaySession = V4Session & {
   activeWorkContext?: RelayWorkContext;
   authEpoch?: number;
 };
+
+function isRelayWorkContext(value: unknown): value is RelayWorkContext {
+  if (!value || typeof value !== "object") return false;
+  const context = value as Partial<RelayWorkContext>;
+  return (context.type === "legal_entity" || context.type === "operating_organization")
+    && typeof context.id === "string"
+    && context.id.length > 0
+    && typeof context.tenantId === "string"
+    && context.tenantId.length > 0;
+}
 
 // ─── Runtime header construction ──────────────────────────────────────────────
 
@@ -57,7 +72,9 @@ export function buildRuntimeHeaders(session: V4Session): Record<string, string> 
   // preferred source, preserving the alias/header consistency contract.
   const activeContext = activeMembership
     ? toRelayWorkContext(activeMembership)
-    : session.activeWorkContext;
+    : isRelayWorkContext(session.activeWorkContext)
+      ? session.activeWorkContext
+      : undefined;
 
   // X-Org remains the compatibility contract for the runtime tenant stamp and
   // the platform/notification handlers. The typed headers below are the
@@ -140,7 +157,14 @@ export function safePathFromSegments(segments: readonly string[]): string | null
 }
 
 export function buildServiceUrl(baseUrl: string, pathname: string, search = ""): string {
-  return `${baseUrl.replace(/\/+$/, "")}${pathname}${search}`;
+  const normalizedBase = baseUrl.replace(/\/+$/, "");
+  const baseEndsWithApi = /\/api$/i.test(normalizedBase);
+  const normalizedPath = baseEndsWithApi && /^\/api(?:\/|$)/i.test(pathname)
+    ? pathname.replace(/^\/api(?=\/|$)/i, "")
+    : pathname;
+  const safePath = normalizedPath === "" ? "/" : normalizedPath;
+
+  return `${normalizedBase}${safePath}${search}`;
 }
 
 export function sanitizeContentDisposition(disposition: string): string {
@@ -228,6 +252,14 @@ function isEventStream(headers: Headers): boolean {
   return (headers.get("Content-Type") ?? "")
     .toLowerCase()
     .startsWith("text/event-stream");
+}
+
+export function isNotificationEventStreamRequest(input: {
+  request: Pick<NextRequest, "method">;
+  upstreamPath: string;
+}): boolean {
+  return input.request.method === "GET"
+    && input.upstreamPath === "/api/platform/notifications/stream";
 }
 
 function createStreamingBody(
@@ -361,6 +393,7 @@ export function buildRelayHandler(options: RelayHandlerOptions): RelayHandler {
       if (upstream.status === 204) {
         if (streamTimeout) clearTimeout(streamTimeout);
         const response = new NextResponse(null, { status: 204 });
+        response.headers.set("Cache-Control", "private, no-store");
         copyTraceResponseHeaders(upstream.headers, response.headers);
         return response;
       }
@@ -382,6 +415,11 @@ export function buildRelayHandler(options: RelayHandlerOptions): RelayHandler {
         responseHeaders["Cache-Control"] = cacheControl ?? "no-cache, no-transform";
         responseHeaders["X-Accel-Buffering"] = accelBuffering ?? "no";
         if (feedMode) responseHeaders["X-Feed-Mode"] = feedMode;
+      } else {
+        // Every ordinary relay response is authenticated and can be
+        // tenant/principal-effective. Never let an upstream omission or
+        // permissive cache directive make it shared-cacheable.
+        responseHeaders["Cache-Control"] = "private, no-store";
       }
 
       const responseBody = confirmedEventStream && upstream.body && streamController

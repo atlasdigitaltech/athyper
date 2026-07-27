@@ -93,7 +93,7 @@ Set the environment and run the capture:
 
 ```powershell
 $env:PERF_NEON_BASE_URL = 'https://neon.athyper.local'
-$env:PERF_NEON_STORAGE_STATE = 'tests/visual/.auth/storage-state.json'
+$env:PERF_NEON_STORAGE_STATE = 'tests/e2e/.auth/storage-state.json'
 $env:PERF_RECORD_WORKSPACE_MATRIX = 'perf/baselines/record-workspace-matrix.local.json'
 $env:PERF_REPETITIONS = '3'
 $env:PERF_SETTLE_MS = '1000'

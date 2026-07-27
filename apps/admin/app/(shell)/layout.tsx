@@ -35,6 +35,10 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   return (
     <AppShellClient
       supportMode={isSupportSession(PLANE_KEY, validation.session.realmKey)}
+      atlasEnabled={
+        process.env.ATLAS_AGENT_ENABLED === "true"
+        && process.env.ATLAS_AGENT_ADMIN_ENABLED === "true"
+      }
       initialSession={validation.publicSession}
     >
       <RequiredActionBannerSlot actions={requiredActions} />

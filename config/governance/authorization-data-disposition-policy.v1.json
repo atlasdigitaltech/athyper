@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "policyId": "authorization-wave0-data-disposition",
+  "approval": {
+    "status": "pending",
+    "dataOwner": null,
+    "securityApprover": null,
+    "recordsRetentionApprover": null,
+    "operationsApprover": null,
+    "approvedAt": null,
+    "ticket": null
+  },
+  "schemaDefaults": {
+    "public": {
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_versioned_ddl",
+      "retention": "source controlled definition; no source rows copied",
+      "evidence": "DDL revision and schema fingerprint"
+    },
+    "shared": {
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned catalog history retained outside runtime tables",
+      "evidence": "catalog version, seed checksum, and generated-client parity"
+    },
+    "control": {
+      "dataClass": "ddl_catalog_reference",
+      "disposition": "recreate_from_approved_seed",
+      "retention": "versioned contract history retained according to metadata policy",
+      "evidence": "contract/catalog version, row count, and canonical checksum"
+    },
+    "master": {
+      "dataClass": "business_master_transactional",
+      "disposition": "migrate_in_declared_fk_order",
+      "retention": "business and statutory retention policy",
+      "evidence": "stable-ID map, key ranges, row counts, and canonical checksums"
+    },
+    "document": {
+      "dataClass": "document_metadata",
+      "disposition": "migrate_with_referenced_objects",
+      "retention": "document class and legal-hold policy",
+      "evidence": "metadata count/checksum plus object existence, size, and content hash"
+    },
+    "ledger": {
+      "dataClass": "ledger_regulatory",
+      "disposition": "migrate_or_immutable_archive",
+      "retention": "statutory ledger retention and legal hold",
+      "evidence": "tamper-evident checksum, retrieval drill, and retention approval"
+    },
+    "log": {
+      "dataClass": "audit_log",
+      "disposition": "migrate_or_immutable_archive",
+      "retention": "security/audit retention and legal hold",
+      "evidence": "partition manifest, tamper-evident checksum, and retrieval drill"
+    },
+    "event": {
+      "dataClass": "event_outbox_inbox",
+      "disposition": "drain_watermark_and_replay_pending",
+      "retention": "retain pending and migration evidence through observation window",
+      "evidence": "source/target watermarks and duplicate/idempotency report"
+    },
+    "governance": {
+      "dataClass": "governance_audit",
+      "disposition": "migrate_or_immutable_archive",
+      "retention": "governance, statutory, and legal-hold policy",
+      "evidence": "counts, canonical checksum, approval chain, and retrieval drill"
+    },
+    "snapshot": {
+      "dataClass": "derived_projection",
+      "disposition": "rebuild_from_authoritative_data",
+      "retention": "discard after certified rebuild unless held as evidence",
+      "evidence": "rebuild version and authoritative source-count comparison"
+    },
+    "aggregate": {
+      "dataClass": "derived_projection",
+      "disposition": "rebuild_from_authoritative_data",
+      "retention": "discard after certified rebuild",
+      "evidence": "rebuild version and authoritative source-count comparison"
+    },
+    "mesh": {
+      "dataClass": "mesh_owned",
+      "disposition": "provision_and_migrate_in_mesh_db_only",
+      "retention": "Mesh business/document retention policy",
+      "evidence": "Mesh database identity, counts/checksums, and zero-row Neon proof"
+    },
+    "mesh_control": {
+      "dataClass": "mesh_owned_catalog",
+      "disposition": "recreate_in_mesh_db_only",
+      "retention": "versioned Mesh catalog history",
+      "evidence": "Mesh catalog/seed checksum and zero-row Neon proof"
+    },
+    "mesh_log": {
+      "dataClass": "mesh_owned_audit",
+      "disposition": "migrate_or_archive_in_mesh_boundary",
+      "retention": "Mesh security/audit retention and legal hold",
+      "evidence": "Mesh archive checksum/retrieval drill and zero-row Neon proof"
+    }
+  },
+  "tableOverrides": {
+    "master.tenant": {
+      "dataClass": "tenant_foundation",
+      "disposition": "migrate_exact_stable_ids",
+      "retention": "permanent tenant lineage",
+      "evidence": "stable-ID map, counts, field checksum, and realm mapping"
+    },
+    "master.principal": {
+      "dataClass": "identity_projection",
+      "disposition": "import_exact_preserved_projection",
+      "retention": "identity lifecycle and audit policy",
+      "evidence": "field-level manifest hash and Keycloak subject-set equality"
+    },
+    "master.principal_profile": {
+      "dataClass": "identity_projection",
+      "disposition": "import_cleaned_preserved_projection",
+      "retention": "profile and privacy policy",
+      "evidence": "field-level manifest diff; deprecated IdP fields excluded"
+    },
+    "master.principal_identity_binding": {
+      "dataClass": "identity_projection",
+      "disposition": "import_exact_preserved_projection",
+      "retention": "identity lifecycle and audit policy",
+      "evidence": "provider/issuer/subject equality and zero duplicate active bindings"
+    },
+    "shared.persona": {
+      "dataClass": "legacy_authorization",
+      "disposition": "archive_evidence_then_drop",
+      "retention": "through approved rollback observation plus security retention",
+      "evidence": "conservation ledger with exactly one disposition per source row"
+    },
+    "shared.persona_permission": {
+      "dataClass": "legacy_authorization",
+      "disposition": "backfill_role_permissions_archive_then_drop",
+      "retention": "through approved rollback observation plus security retention",
+      "evidence": "source/target counts, checksums, and golden-decision parity"
+    },
+    "shared.role": {
+      "dataClass": "legacy_authorization",
+      "disposition": "backfill_tenant_roles_archive_then_drop",
+      "retention": "through approved rollback observation plus security retention",
+      "evidence": "role/permission conservation ledger and target compilation checksum"
+    },
+    "shared.plan_permission_access": {
+      "dataClass": "legacy_entitlement_authorization_coupling",
+      "disposition": "replace_with_module_feature_entitlement_then_drop",
+      "retention": "through approved rollback observation",
+      "evidence": "feature mapping and affected-decision comparison"
+    },
+    "master.principal_persona": {
+      "dataClass": "legacy_authorization",
+      "disposition": "backfill_group_membership_archive_then_drop",
+      "retention": "through approved rollback observation plus security retention",
+      "evidence": "active-user group assignment and source-row conservation ledger"
+    },
+    "master.tenant_admin_grant": {
+      "dataClass": "legacy_authorization",
+      "disposition": "backfill_admin_plane_membership_and_roles_then_drop",
+      "retention": "through approved rollback observation plus security retention",
+      "evidence": "target-tenant shadow principal, membership, role, and decision parity"
+    },
+    "master.company_code_access": {
+      "dataClass": "legacy_authorization",
+      "disposition": "classify_scope_backfill_or_quarantine_then_drop",
+      "retention": "through approved rollback observation plus security retention",
+      "evidence": "one classification per source row and scope comparison"
+    },
+    "master.access_grant": {
+      "dataClass": "legacy_authorization",
+      "disposition": "split_override_or_record_acl_archive_then_drop",
+      "retention": "through approved rollback observation plus security retention",
+      "evidence": "one classification per source row and deny/allow decision diff"
+    },
+    "master.group_feature_grant": {
+      "dataClass": "legacy_authorization",
+      "disposition": "backfill_exact_role_permission_then_drop",
+      "retention": "through approved rollback observation",
+      "evidence": "feature-to-permission mapping and conservation ledger"
+    },
+    "master.principal_feature_grant": {
+      "dataClass": "legacy_authorization",
+      "disposition": "backfill_role_or_bounded_override_then_drop",
+      "retention": "through approved rollback observation",
+      "evidence": "approved per-principal classification and conservation ledger"
+    },
+    "master.delegation_grant": {
+      "dataClass": "legacy_authorization",
+      "disposition": "normalize_delegation_archive_then_drop",
+      "retention": "through approved rollback observation plus security retention",
+      "evidence": "header/permission/scope checksums and bounded-authority comparison"
+    },
+    "master.attachment_acl": {
+      "dataClass": "legacy_authorization",
+      "disposition": "backfill_canonical_record_acl_then_drop",
+      "retention": "through approved rollback observation plus document retention",
+      "evidence": "record/object ACL count and access comparison"
+    },
+    "master.content_item_access_grant": {
+      "dataClass": "legacy_authorization",
+      "disposition": "backfill_canonical_record_acl_then_drop",
+      "retention": "through approved rollback observation plus document retention",
+      "evidence": "record ACL count/checksum and access comparison"
+    },
+    "master.tenant_permission_override": {
+      "dataClass": "legacy_entitlement_authorization_coupling",
+      "disposition": "classify_feature_entitlement_override_then_drop",
+      "retention": "through approved rollback observation",
+      "evidence": "commercial approval, feature mapping, and decision comparison"
+    },
+    "master.business_network_membership": {
+      "dataClass": "legacy_mesh_authorization",
+      "disposition": "classify_mesh_migration_or_drop_from_neon",
+      "retention": "through approved boundary-migration observation",
+      "evidence": "Mesh lineage/count/checksum or approved intentional-drop record"
+    },
+    "master.business_network_membership_role": {
+      "dataClass": "legacy_mesh_authorization",
+      "disposition": "classify_mesh_migration_or_drop_from_neon",
+      "retention": "through approved boundary-migration observation",
+      "evidence": "Mesh lineage/count/checksum or approved intentional-drop record"
+    },
+    "log.permission_decision_log": {
+      "dataClass": "authorization_audit",
+      "disposition": "immutable_archive_then_start_v2_evidence",
+      "retention": "security/audit retention and legal hold",
+      "evidence": "partition manifest, archive checksum, and retrieval drill"
+    },
+    "log.descriptor_cache_invalidation": {
+      "dataClass": "cache_invalidation_projection",
+      "disposition": "drain_then_rebuild_or_discard",
+      "retention": "retain pending invalidations through cutover",
+      "evidence": "pending count, final watermark, and cache epoch"
+    },
+    "master.atlas_support_session": {
+      "dataClass": "session_token",
+      "disposition": "revoke_and_do_not_migrate",
+      "retention": "audit record retained separately; live session invalidated",
+      "evidence": "revocation count, auth epoch, and zero active target sessions"
+    },
+    "event.authorization_capture_clock": {
+      "dataClass": "authorization_migration_evidence",
+      "disposition": "preserve_immutable_through_observation",
+      "retention": "rollback observation plus approved security retention",
+      "evidence": "source database identity and final source watermark"
+    },
+    "event.authorization_change_transaction": {
+      "dataClass": "authorization_migration_evidence",
+      "disposition": "preserve_immutable_through_observation",
+      "retention": "rollback observation plus approved security retention",
+      "evidence": "transaction continuity and archive checksum"
+    },
+    "event.authorization_change_event": {
+      "dataClass": "authorization_migration_evidence",
+      "disposition": "preserve_immutable_through_observation",
+      "retention": "rollback observation plus approved security retention",
+      "evidence": "watermark continuity, payload hashes, and archive checksum"
+    },
+    "event.authorization_projection_checkpoint": {
+      "dataClass": "authorization_migration_evidence",
+      "disposition": "preserve_immutable_through_observation",
+      "retention": "rollback observation plus approved security retention",
+      "evidence": "final applied watermark and consumer state"
+    }
+  },
+  "externalObjects": [
+    {
+      "id": "neon.document-object-storage",
+      "dataClass": "document_object",
+      "disposition": "migrate_with_document_metadata",
+      "retention": "document class and legal-hold policy",
+      "evidence": "disjoint key manifest, existence, size, hash, and orphan report"
+    },
+    {
+      "id": "neon.attachment-object-storage",
+      "dataClass": "document_object",
+      "disposition": "migrate_with_attachment_metadata",
+      "retention": "attachment owner and legal-hold policy",
+      "evidence": "disjoint key manifest, existence, size, hash, and orphan report"
+    },
+    {
+      "id": "mesh.exchange-object-storage",
+      "dataClass": "mesh_owned_document_object",
+      "disposition": "migrate_with_mesh_exchange_metadata_in_mesh_boundary",
+      "retention": "Mesh document and legal-hold policy",
+      "evidence": "Mesh key manifest/hash and zero Neon credential/reference proof"
+    },
+    {
+      "id": "keycloak.realm-and-credential-store",
+      "dataClass": "authentication_authority",
+      "disposition": "supported_encrypted_backup_and_restore",
+      "retention": "identity/security backup policy",
+      "evidence": "realm DB backup, key material, MFA/federation restore drill, and subject-set hash"
+    },
+    {
+      "id": "redis.application-sessions",
+      "dataClass": "session_token",
+      "disposition": "revoke_flush_and_do_not_migrate",
+      "retention": "none after audit/revocation evidence",
+      "evidence": "session revocation count and zero pre-cutover session acceptance"
+    },
+    {
+      "id": "redis.authorization-cache",
+      "dataClass": "authorization_cache",
+      "disposition": "increment_epoch_flush_and_rebuild",
+      "retention": "none",
+      "evidence": "epoch revision and cache miss/rebuild metrics"
+    },
+    {
+      "id": "search.derived-indexes",
+      "dataClass": "derived_projection",
+      "disposition": "rebuild_from_authoritative_data",
+      "retention": "none after certified rebuild",
+      "evidence": "index version, document counts, and sampled source parity"
+    },
+    {
+      "id": "event-broker.pending-topics",
+      "dataClass": "event_stream",
+      "disposition": "drain_record_offsets_and_resume_idempotently",
+      "retention": "broker and audit retention policy",
+      "evidence": "partition offsets, consumer checkpoints, and duplicate/missing-effect report"
+    },
+    {
+      "id": "secret-manager.plane-runtime-credentials",
+      "dataClass": "secret",
+      "disposition": "rebind_or_rotate_never_export",
+      "retention": "secret-manager policy",
+      "evidence": "credential version and opposite-plane access denial"
+    }
+  ],
+  "dynamicObjectFamilies": [
+    {
+      "id": "postgres-runtime-partitions",
+      "discovery": "pg_class joined to pg_inherits in the live coverage report",
+      "disposition": "inherit from the partitioned parent unless an exact approved override exists"
+    },
+    {
+      "id": "tenant-or-environment-created-tables",
+      "discovery": "pg_class live inventory minus the checked-in DDL inventory",
+      "disposition": "no default; every discovered object requires an explicit approved entry"
+    }
+  ]
+}

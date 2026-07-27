@@ -1,5 +1,8 @@
-import { SetupPage } from "@athyper/app-admin-command-hub";
-
+"use client";
+import { useRouter } from "next/navigation";
+import { SetupDirectory } from "@athyper/setup-ui";
+import { bffFetch } from "@/lib/bff-fetch";
 export default function SetupRoute() {
-  return <SetupPage />;
+  const router = useRouter();
+  return <SetupDirectory plane="admin" fetcher={bffFetch} navigate={(href) => router.push(href)} />;
 }

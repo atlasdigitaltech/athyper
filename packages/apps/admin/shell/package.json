@@ -13,6 +13,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@athyper/atlas-agent-runtime": "workspace:*",
     "@athyper/app-admin-route-manifest": "workspace:*",
     "@athyper/brand": "workspace:*",
     "@athyper/session-plane": "workspace:*",

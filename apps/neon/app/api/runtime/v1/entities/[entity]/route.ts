@@ -106,6 +106,12 @@ export async function POST(
       { status: 404 },
     );
   }
+  if(entityCode==="fx_policy"){
+    return NextResponse.json(
+      {error:"FX_POLICY_GOVERNED_COMMAND_REQUIRED",message:"FX policies are read-only in the Entity App. Use the governed Tenant or Company setup command."},
+      {status:409},
+    );
+  }
 
   const ledgerRejection = rejectPublicLedgerMutation(descriptor.renderer);
   if (ledgerRejection) return ledgerRejection;
@@ -163,6 +169,49 @@ export async function POST(
       { error: validation.error, message: validation.message, fieldErrors: validation.fieldErrors },
       { status: validation.status },
     );
+  }
+
+  if (descriptor.entityCode === "fx_rate") {
+    const tenantCode=membership?.tenantCode?.trim();
+    if(!tenantCode){
+      return NextResponse.json(
+        {error:"FX_TENANT_CONTEXT_REQUIRED",message:"A Tenant context is required to add an FX rate."},
+        {status:400},
+      );
+    }
+    const data=validation.filteredData;
+    const governedResponse=await fetch(
+      buildRuntimeUrl(`/api/finance/setup/tenant/${encodeURIComponent(tenantCode)}/fx/rates`),
+      {
+        method:"POST",
+        headers:{
+          ...buildRuntimeHeaders(session),
+          "Content-Type":"application/json",
+          ...(request.headers.get("Idempotency-Key")
+            ?{"Idempotency-Key":request.headers.get("Idempotency-Key") as string}
+            :{}),
+        },
+        body:JSON.stringify({
+          fromCurrency:data["from_currency"],
+          toCurrency:data["to_currency"],
+          rate:data["rate"],
+          rateType:data["rate_type"],
+          effectiveDate:data["effective_date"],
+          effectiveTime:data["effective_time"]??null,
+          source:data["source"],
+          sourceReference:data["source_reference"]??null,
+        }),
+        cache:"no-store",
+      },
+    );
+    const governedResult=await readJson(governedResponse);
+    if(!governedResponse.ok){
+      return NextResponse.json(
+        normalizeUpstreamError(governedResult,governedResponse.status,"FX_RATE_CREATE_FAILED"),
+        {status:governedResponse.status},
+      );
+    }
+    return NextResponse.json({ok:true,record:governedResult},{status:201});
   }
 
   const response = await fetch(

@@ -6,7 +6,7 @@ vi.mock("@/lib/server/session", () => ({
   getNeonServerSession: vi.fn(),
 }));
 
-import { GET } from "../route";
+import { GET, POST } from "../route";
 import { getNeonServerSession } from "@/lib/server/session";
 
 const SESSION = {
@@ -27,12 +27,17 @@ const SESSION = {
   },
 } as const;
 
-function buildRequest(signal = new AbortController().signal): never {
+function buildRequest(
+  signal = new AbortController().signal,
+  method = "GET",
+): never {
   return {
-    method: "GET",
-    headers: new Headers(),
+    method,
+    headers: new Headers(method === "POST" ? { "Content-Type": "application/json" } : {}),
     nextUrl: { search: "" },
     signal,
+    text: vi.fn().mockResolvedValue(method === "POST" ? "{}" : ""),
+    clone: vi.fn(),
   } as never;
 }
 
@@ -98,6 +103,56 @@ describe("Neon relay SSE timeout policy", () => {
 
     await vi.advanceTimersByTimeAsync(30_001);
     expect(signal.aborted).toBe(true);
+  });
+
+  it("streams the allowlisted Atlas POST route with SSE headers and no ordinary timeout", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(sseResponse());
+
+    const response = await POST(buildRequest(undefined, "POST"), {
+      params: Promise.resolve({ path: ["ai", "agent", "runs"] }),
+    });
+    const fetchCall = vi.mocked(globalThis.fetch).mock.calls[0];
+    const signal = fetchCall?.[1]?.signal as AbortSignal;
+
+    expect(fetchCall?.[1]?.method).toBe("POST");
+    expect(response.headers.get("Content-Type")).toContain("text/event-stream");
+    expect(response.headers.get("Cache-Control")).toBe("no-cache, no-transform");
+    expect(response.headers.get("X-Accel-Buffering")).toBe("no");
+
+    await vi.advanceTimersByTimeAsync(30_001);
+    expect(signal.aborted).toBe(false);
+  });
+
+  it("retains the timeout when the Atlas POST route returns non-SSE", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response("{}", {
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    await POST(buildRequest(undefined, "POST"), {
+      params: Promise.resolve({ path: ["ai", "agent", "runs"] }),
+    });
+    const signal = vi.mocked(globalThis.fetch).mock.calls[0]?.[1]?.signal as AbortSignal;
+
+    await vi.advanceTimersByTimeAsync(30_001);
+    expect(signal.aborted).toBe(true);
+  });
+
+  it("forces tenant-effective Atlas catalog responses to private no-store", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(new Response(
+      JSON.stringify({ models: [] }),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=3600",
+        },
+      },
+    ));
+
+    const response = await GET(buildRequest(), {
+      params: Promise.resolve({ path: ["ai", "agent", "models"] }),
+    });
+
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
   it("retains the timeout when an approved path returns a non-SSE response", async () => {

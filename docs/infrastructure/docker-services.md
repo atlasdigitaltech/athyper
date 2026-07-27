@@ -222,7 +222,7 @@ Traefik and Alloy (log shipper) need Docker socket access. These proxies expose 
 
 | Field | Value |
 |---|---|
-| Image (staging/prod) | `apps/neon/Dockerfile`, `apps/mesh/Dockerfile`, `apps/admin/Dockerfile` |
+| Image (staging/prod) | Parameterized `apps/Dockerfile` with per-service `APP_NAME` and `APP_PACKAGE` build arguments |
 | Port | `3000` (container) |
 | Local dev | Runs on HOST (pnpm dev) at ports 3101, 3102, 3103 |
 | Networks | `athyper-edge`, `athyper-internal` |
@@ -605,4 +605,3 @@ docker compose `
 | 3200 | tracing (Tempo) | HTTP — via Traefik |
 | 3310 | virusscan (ClamAV) | TCP — internal only |
 | 4317 | tracing (Tempo OTLP/gRPC) | gRPC — internal only |
-

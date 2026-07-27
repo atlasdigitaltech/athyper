@@ -18,7 +18,7 @@ const RECORD_WORKSPACE_RESOURCES = new Set([
 ]);
 const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const baseUrl = new URL(required("PERF_NEON_BASE_URL"));
-const storageState = resolve(root, process.env.PERF_NEON_STORAGE_STATE || "tests/visual/.auth/storage-state.json");
+const storageState = resolve(root, process.env.PERF_NEON_STORAGE_STATE || "tests/e2e/.auth/storage-state.json");
 const matrixPath = resolve(root, required("PERF_RECORD_WORKSPACE_MATRIX"));
 const budgetsPath = resolve(root, process.env.PERF_RECORD_WORKSPACE_BUDGETS || "perf/budgets/record-workspace.v1.json");
 const outputDir = resolve(root, process.env.PERF_OUTPUT_DIR || "perf/artifacts/record-workspace");

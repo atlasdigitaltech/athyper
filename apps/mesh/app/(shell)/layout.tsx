@@ -6,6 +6,7 @@ import { getPlaneConfig, isSupportSession } from "@athyper/session-plane";
 import { AppShellClient } from "./AppShellClient";
 import { RequiredActionBannerSlot } from "./RequiredActionBannerSlot";
 import { PLANE_KEY } from "@/lib/plane";
+import { getMeshRuntimeCatalog } from "@/lib/server/mesh-runtime";
 
 export default async function ShellLayout({ children }: { children: ReactNode }) {
   const plane = getPlaneConfig(PLANE_KEY);
@@ -31,11 +32,13 @@ export default async function ShellLayout({ children }: { children: ReactNode })
   // Phase I — surface pending KC required-actions inline above the shell.
   // allow-raw-verify: read-only for banner; gate already applied above.
   const requiredActions = validation.session.requiredActions ?? [];
+  const runtimeCatalog = await getMeshRuntimeCatalog();
 
   return (
     <AppShellClient
       supportMode={isSupportSession(PLANE_KEY, validation.session.realmKey)}
       initialSession={validation.publicSession}
+      runtimeCatalog={runtimeCatalog}
     >
       <RequiredActionBannerSlot actions={requiredActions} />
       {children}

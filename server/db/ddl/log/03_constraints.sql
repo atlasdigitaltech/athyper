@@ -290,6 +290,62 @@ DO $$ BEGIN ALTER TABLE log.ai_inference_log ADD CONSTRAINT ail_accepted_by_fk
     FOREIGN KEY (accepted_by) REFERENCES master.principal (id) ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
+-- Atlas agent request and call ledgers.
+ALTER TABLE log.ai_agent_run
+    ADD COLUMN IF NOT EXISTS provider_account_class text;
+ALTER TABLE log.ai_agent_call
+    ADD COLUMN IF NOT EXISTS provider_account_class text;
+
+ALTER TABLE log.ai_agent_run
+    DROP CONSTRAINT IF EXISTS aar_provider_account_class_chk;
+ALTER TABLE log.ai_agent_run
+    ADD CONSTRAINT aar_provider_account_class_chk CHECK (
+        provider_account_class IS NULL
+        OR provider_account_class IN (
+            'platform_unverified',
+            'platform_paid',
+            'developer_free',
+            'tenant_paid',
+            'tenant_byok',
+            'local',
+            'test'
+        )
+    );
+
+ALTER TABLE log.ai_agent_call
+    DROP CONSTRAINT IF EXISTS aac_provider_account_class_chk;
+ALTER TABLE log.ai_agent_call
+    ADD CONSTRAINT aac_provider_account_class_chk CHECK (
+        provider_account_class IS NULL
+        OR provider_account_class IN (
+            'platform_unverified',
+            'platform_paid',
+            'developer_free',
+            'tenant_paid',
+            'tenant_byok',
+            'local',
+            'test'
+        )
+    );
+
+ALTER TABLE log.ai_agent_run DROP CONSTRAINT IF EXISTS aar_tenant_fk;
+ALTER TABLE log.ai_agent_run ADD CONSTRAINT aar_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+
+ALTER TABLE log.ai_agent_run DROP CONSTRAINT IF EXISTS aar_principal_fk;
+ALTER TABLE log.ai_agent_run ADD CONSTRAINT aar_principal_fk
+    FOREIGN KEY (tenant_id, principal_id)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE log.ai_agent_call DROP CONSTRAINT IF EXISTS aac_tenant_fk;
+ALTER TABLE log.ai_agent_call ADD CONSTRAINT aac_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+
+DO $$ BEGIN ALTER TABLE log.ai_agent_call ADD CONSTRAINT aac_run_fk
+    FOREIGN KEY (tenant_id, run_id)
+    REFERENCES log.ai_agent_run (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 
 -- —— §21  ai_monitoring_log ——————————————————————————————————————————————
 DO $$ BEGIN ALTER TABLE log.ai_monitoring_log ADD CONSTRAINT aml_tenant_fk

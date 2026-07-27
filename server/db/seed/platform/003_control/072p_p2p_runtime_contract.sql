@@ -121,12 +121,12 @@ BEGIN
         ('service_sheet', 'company_code',          'belongs_to', 'company_code',     'fk', 'company_code_id',       NULL, NULL, NULL, NULL, NULL,    'restrict', '{}'::jsonb),
         ('service_sheet', 'purchase_order',        'belongs_to', 'purchase_order',   'fk', 'commitment_id',         NULL, NULL, NULL, NULL, NULL,    'restrict', '{}'::jsonb),
         ('service_sheet', 'supplier',              'belongs_to', 'supplier',         'fk', 'supplier_id',           NULL, NULL, NULL, NULL, NULL,    'restrict', '{}'::jsonb),
-        ('service_sheet', 'site',                  'belongs_to', 'site',             'fk', 'site_id',               NULL, NULL, NULL, NULL, NULL,    'set_null', '{}'::jsonb),
         ('service_sheet', 'accrual_journal_entry', 'belongs_to', 'journal_entry',    'fk', 'accrual_je_id',         NULL, NULL, NULL, NULL, NULL,    'set_null', '{}'::jsonb),
         ('service_sheet', 'workflow_request',      'belongs_to', 'workflow_request', 'fk', 'workflow_request_id',   NULL, NULL, NULL, NULL, NULL,    'set_null', '{}'::jsonb),
         ('service_sheet', 'lines',                 'has_many',   'service_sheet_line','fk','service_sheet_id',      NULL, NULL, NULL, NULL, 'lines', 'cascade',  '{}'::jsonb),
         ('service_sheet_line', 'service_sheet',    'belongs_to', 'service_sheet',    'fk', 'service_sheet_id',      NULL, NULL, NULL, NULL, NULL,    'cascade',  '{}'::jsonb),
         ('service_sheet_line', 'commitment_line',  'belongs_to', 'commitment_line',  'fk', 'commitment_line_id',    NULL, NULL, NULL, NULL, NULL,    'restrict', '{}'::jsonb),
+        ('service_sheet_line', 'site',             'belongs_to', 'site',             'fk', 'site_id',               NULL, NULL, NULL, NULL, NULL,    'set_null', '{}'::jsonb),
         ('service_sheet', 'pricing_components',    'has_many',   'pricing_component',       'polymorphic', NULL, 'source_doc_type', 'service_sheet_line', 'source_doc_id',  'source_line_id', 'pricing_components', 'cascade', '{"superseded_by_id":"null"}'::jsonb),
         ('service_sheet', 'accounting_distributions','has_many', 'accounting_distribution', 'polymorphic', NULL, 'source_doc_type', 'service_sheet_line', 'source_doc_id',  'source_line_id', 'accounting_distributions', 'cascade', '{}'::jsonb),
         ('service_sheet_line', 'pricing_components','has_many',  'pricing_component',       'polymorphic', NULL, 'source_doc_type', 'service_sheet_line', 'source_line_id', NULL,             'pricing_components', 'cascade', '{"superseded_by_id":"null"}'::jsonb),
@@ -539,7 +539,8 @@ VALUES
     ('service_sheet', 'reversed',            'POSTINGS_PREVIEW.OPEN', 'allowed', NULL, NULL, NULL,                                 '{}'::jsonb, '00000000-0000-0000-0000-000000000000'),
     ('service_sheet', 'cancelled',           'POSTINGS_PREVIEW.OPEN', 'allowed', NULL, NULL, NULL,                                 '{}'::jsonb, '00000000-0000-0000-0000-000000000000')
 
-ON CONFLICT (entity_code, status, action_code) DO UPDATE
+ON CONFLICT (entity_code, status, action_code)
+    WHERE entity_version_id IS NULL DO UPDATE
 SET capability          = EXCLUDED.capability,
     required_permission = EXCLUDED.required_permission,
     reason              = EXCLUDED.reason,
@@ -563,7 +564,8 @@ SELECT
     '00000000-0000-0000-0000-000000000000'
 FROM control.entity_action_rule
 WHERE entity_code = 'purchase_order'
-ON CONFLICT (entity_code, status, action_code) DO UPDATE
+ON CONFLICT (entity_code, status, action_code)
+    WHERE entity_version_id IS NULL DO UPDATE
 SET capability          = EXCLUDED.capability,
     required_permission = EXCLUDED.required_permission,
     reason              = EXCLUDED.reason,
@@ -1707,7 +1709,8 @@ VALUES
     (NULL, 'schedule_line', 'retired',    false, false, NULL, 'retired_immutable', ARRAY['neon','admin'], '00000000-0000-0000-0000-000000000000'::uuid),
     (NULL, 'schedule_line', 'cancelled',  false, false, NULL, 'cancelled_immutable',ARRAY['neon','admin'], '00000000-0000-0000-0000-000000000000'::uuid)
 
-ON CONFLICT (tenant_id, entity_name, record_status) DO UPDATE
+ON CONFLICT (tenant_id, entity_name, record_status)
+    WHERE entity_version_id IS NULL DO UPDATE
 SET can_edit         = EXCLUDED.can_edit,
     can_delete       = EXCLUDED.can_delete,
     disabled_reason  = EXCLUDED.disabled_reason,
@@ -1717,9 +1720,6 @@ SET can_edit         = EXCLUDED.can_edit,
 
 
 COMMIT;
-
-
-
 
 
 

@@ -1,6 +1,15 @@
-﻿import { SavedViewsPage } from "@athyper/app-neon-command-hub";
-import { PLANE_KEY } from "@/lib/plane";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { SavedViewsManager } from "@athyper/saved-views-ui";
+import { PageFrame } from "@athyper/surface-kit";
+import { bffFetch } from "@/lib/bff-fetch";
 
 export default function SavedViewsRoute() {
-  return <SavedViewsPage plane={PLANE_KEY} />;
+  const router = useRouter();
+  return (
+    <PageFrame eyebrow="Neon" title="Saved views" description="Open and manage reusable entity-list and operational-workbench configurations.">
+      <SavedViewsManager plane="neon" fetcher={bffFetch} navigate={(href) => router.push(href)} />
+    </PageFrame>
+  );
 }

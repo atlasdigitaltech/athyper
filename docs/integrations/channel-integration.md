@@ -1,6 +1,12 @@
 # Channel Integration Architecture
 
-Athyper's notification and integration system delivers messages across six channels (in-app, email, SMS, push, webhook, WhatsApp) and handles inbound/outbound integration events through a transactional outbox pattern.
+Athyper's notification model describes six channels. Runtime availability is
+reported by `GET /api/notifications/capabilities` for the relay-stamped
+`X-Plane`; clients must not infer availability from lookup or preference rows.
+In-app, email, push, SMS, and webhook have adapter implementations, subject to
+environment configuration. WhatsApp consent/schema support exists, but its
+delivery adapter is not registered. Digest staging and flush logic exist, but
+the scheduler is not active.
 
 ---
 
@@ -195,7 +201,9 @@ const expected = `sha256=${sig}`
 
 ### 6. WhatsApp (`whatsapp`)
 
-**Provider:** Twilio WhatsApp Business API
+**Current status:** Schema, consent, and provider-model groundwork only. No
+WhatsApp channel handler is registered, so the capabilities endpoint returns
+`available: false` and clients do not offer this preference.
 
 **Consent requirement:** A principal must have an `event.whatsapp_consent` row with `consent_status = 'consented'` before any WhatsApp message is delivered.
 
@@ -387,7 +395,9 @@ Principals can configure `frequency_code` in `master.principal_notification_pref
 | `daily_digest` | Batched and sent at 08:00 tenant local time |
 | `weekly_digest` | Batched and sent Monday 08:00 |
 
-Messages for digest recipients land in `event.digest_staging`. A digest worker aggregates and formats them into a single template (e.g. "You have 5 pending approvals") before dispatching.
+Digest staging and aggregation code exist, but the scheduler that activates the
+flow is currently disabled. The capabilities endpoint therefore marks
+non-immediate digest frequencies unavailable.
 
 ---
 

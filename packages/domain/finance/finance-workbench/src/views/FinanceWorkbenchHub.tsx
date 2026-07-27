@@ -21,7 +21,7 @@ const aggregateEditors = [
 
 const governed = [
   ["Opening Balances", "/workbench/finance/opening-balances"],
-  ["Posting Readiness", "/workbench/finance/readiness"],
+  ["Review Configuration", "/workbench/finance/readiness"],
   ["Monthly Close", "/workbench/finance/monthly-close"],
   ["Annual Close", "/workbench/finance/annual-close"],
   ["Posting Role Coverage", "/workbench/finance/posting-role-coverage"],
@@ -39,7 +39,7 @@ export function FinanceWorkbenchHub({ scope }: { scope: FinanceScope }) {
   return (
     <main className="space-y-6 p-6">
       <header className="rounded-2xl border bg-card p-6">
-        <div className="flex items-center gap-3"><Landmark className="h-6 w-6 text-primary" /><div><h1 className="text-2xl font-semibold">Finance Setup and Governance</h1><p className="mt-1 text-sm text-muted-foreground">Canonical Entity masters, aggregate configuration editors and governed finance execution.</p></div></div>
+        <div className="flex items-center gap-3"><Landmark className="h-6 w-6 text-primary" /><div><h1 className="text-2xl font-semibold">Finance Settings and Governance</h1><p className="mt-1 text-sm text-muted-foreground">Canonical Entity masters, aggregate configuration editors and governed finance execution.</p></div></div>
         <div className="mt-4 inline-flex rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">Scope: {scope.scopeId || "select company"} · FY{scope.fiscalYear}{scope.period != null ? ` · P${scope.period}` : ""}</div>
       </header>
 

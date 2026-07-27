@@ -15,7 +15,7 @@ import java.time.Instant;
 
 final class IamPresentationUsernamePasswordForm extends UsernamePasswordForm {
     static final String TEMPLATE_ATTRIBUTE = "iamPresentationDisplayName";
-    private static final String DISPLAY_NAME_AUTH_NOTE = "athyper.iam.presentation.display_name";
+    static final String DISPLAY_NAME_AUTH_NOTE = "athyper.iam.presentation.display_name";
     private static final Logger LOG = Logger.getLogger(IamPresentationUsernamePasswordForm.class);
 
     private final KeycloakSession keycloakSession;

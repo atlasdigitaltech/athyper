@@ -2,6 +2,7 @@
 # pnpm symlinks point to absolute host paths and break inside Linux containers.
 # Docker installs dependencies fresh via pnpm install in the Dockerfile.
 **/node_modules
+.pnpm-store
 
 # Git metadata not needed in image
 .git
@@ -17,6 +18,13 @@
 **/build
 **/.turbo
 **/.next
+**/*.log
+**/coverage
+**/.playwright
+**/test-results
+
+# Local Codex build/prototype artifacts
+.codex-*
 
 # Stack ops directory — contains redis-acl.conf (SHA-256 hashes),
 # pgbouncer userlist.txt (hashed credentials), and other ops-only files.

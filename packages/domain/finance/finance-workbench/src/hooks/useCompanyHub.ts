@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * useCompanyHub — loads the Finance Setup Hub payload for a company.
+ * useCompanyHub — loads the Finance Settings Hub payload for a company.
  *
  * Endpoint: GET /api/finance/setup/readiness?scopeType=company&scopeCode=<code>
  *

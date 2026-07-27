@@ -6,9 +6,11 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./test-harness": "./src/test-harness.ts"
   },
   "scripts": {
+    "test": "node --test src/runtime-url.test.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/"
   },

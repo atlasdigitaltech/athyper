@@ -29,11 +29,15 @@ export MSYS2_ARG_CONV_EXCL="*"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STACK_DIR="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+REPO_DIR="$(cd "$STACK_DIR/.." && pwd)"
 CONFIG_DIR="${STACK_DIR}/config/iam"
 IMPORT_FILE="${CONFIG_DIR}/realm-athyper.json"
 PLATFORM_IMPORT_FILE="${CONFIG_DIR}/realm-platform-control.json"
 DEMO_FILE="${CONFIG_DIR}/realm-athyper-demosetup.json"
 PLATFORM_DEMO_FILE="${CONFIG_DIR}/realm-platform-control-demosetup.json"
+
+node "${REPO_DIR}/tools/scripts/generate-athyper-demo-iam.cjs" --check
+node "${REPO_DIR}/tools/scripts/verify-athyper-demo-iam.cjs"
 
 # ---------------------------------------------------------------------------
 # Shared constants + .env + credential helpers
@@ -70,6 +74,9 @@ KC_IMPORT_ENV_ARGS=(
   -e "KC_SMTP_USERNAME=$(env_or_default KC_SMTP_USERNAME)"
   -e "KC_SMTP_PASSWORD=$(env_or_default KC_SMTP_PASSWORD)"
   -e "KC_WEBAUTHN_RP_ID=$(env_or_default KC_WEBAUTHN_RP_ID athyper.local)"
+  -e "NEON_PUBLIC_WEB_URL=https://$(env_or_default APPS_ATHYPER_NEON_HOST neon.athyper.local)"
+  -e "MESH_PUBLIC_WEB_URL=https://$(env_or_default APPS_ATHYPER_MESH_HOST mesh.athyper.local)"
+  -e "ADMIN_PUBLIC_WEB_URL=https://$(env_or_default APPS_ATHYPER_ADMIN_HOST admin.athyper.local)"
   -e "ADMIN_WEB_CLIENT_SECRET=$(env_or_default ADMIN_WEB_CLIENT_SECRET)"
   -e "ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET=$(env_or_default ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET)"
   -e "NEON_SVC_BFF_CLIENT_SECRET=$(env_or_default NEON_SVC_BFF_CLIENT_SECRET)"
@@ -161,6 +168,9 @@ trap cleanup_temps EXIT
 
 TEMP_IMPORT_DIR="$(mktemp -d)"
 cp -f "${IMPORT_FILE}" "${TEMP_IMPORT_DIR}/${IMPORT_REALM_NAME}-realm.json"
+node "${STACK_DIR}/../tools/scripts/prepare-keycloak-realm-import.cjs" \
+  --realm-file "${TEMP_IMPORT_DIR}/${IMPORT_REALM_NAME}-realm.json" \
+  --demo-file "${DEMO_FILE}"
 node "${STACK_DIR}/../tools/scripts/apply-iam-realm-policy.cjs" \
   --environment "${IMPORT_ENVIRONMENT}" \
   --root "${TEMP_IMPORT_DIR}" \
@@ -188,6 +198,11 @@ if [ -f "${PLATFORM_IMPORT_FILE}" ]; then
   echo -e "${GREEN}[2b/5] Importing platform-control realm...${NC}"
   TEMP_PLATFORM_DIR="$(mktemp -d)"  # picked up by cleanup_temps trap
   cp -f "${PLATFORM_IMPORT_FILE}" "${TEMP_PLATFORM_DIR}/platform-control-realm.json"
+  if [ -f "${PLATFORM_DEMO_FILE}" ]; then
+    node "${STACK_DIR}/../tools/scripts/prepare-keycloak-realm-import.cjs" \
+      --realm-file "${TEMP_PLATFORM_DIR}/platform-control-realm.json" \
+      --demo-file "${PLATFORM_DEMO_FILE}"
+  fi
   node "${STACK_DIR}/../tools/scripts/apply-iam-realm-policy.cjs" \
     --environment "${IMPORT_ENVIRONMENT}" \
     --root "${TEMP_PLATFORM_DIR}" \

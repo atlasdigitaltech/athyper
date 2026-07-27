@@ -20,7 +20,7 @@ function walk(directory) {
 
 function activeWorkspacePaths() {
   const output = process.platform === "win32"
-    ? execFileSync("powershell.exe", ["-NoProfile", "-Command", "pnpm list -r --depth -1 --json"], { cwd: root, encoding: "utf8" })
+    ? execFileSync("powershell.exe", ["-NoProfile", "-Command", "pnpm.cmd list -r --depth -1 --json"], { cwd: root, encoding: "utf8" })
     : execFileSync("pnpm", ["list", "-r", "--depth", "-1", "--json"], { cwd: root, encoding: "utf8" });
   return new Set(JSON.parse(output).map((row) => rel(row.path)));
 }
@@ -29,14 +29,19 @@ const active = activeWorkspacePaths();
 const candidateRoots = [join(root, "packages", "shared"), join(root, "packages", "product-deprecated")];
 const manifests = candidateRoots.flatMap((directory) => walk(directory)).filter((path) => path.endsWith("package.json"));
 const trackedFiles = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).split(/\r?\n/).filter(Boolean).map((path) => resolve(root, path)).filter((path) => existsSync(path));
-const files = trackedFiles.filter((path) => /\.(?:ts|tsx|js|jsx|mjs|cjs|json|yaml|yml|md|sql)$/.test(path) || /Dockerfile(?:\..*)?$/.test(path));
+const files = trackedFiles.filter((path) => {
+  const candidate = rel(path);
+  if (candidate.startsWith("docs/") || candidate.startsWith("scripts/policy/") || candidate === "pnpm-lock.yaml") return false;
+  return /\.(?:ts|tsx|js|jsx|mjs|cjs)$/.test(path) || candidate.endsWith("/package.json") || candidate === "package.json";
+});
 const candidates = [];
 
 for (const manifestPath of manifests) {
   if (!existsSync(manifestPath)) continue;
   const directory = resolve(manifestPath, "..");
   const path = rel(directory);
-  if (active.has(path) || !(path.startsWith("packages/shared/") || path.startsWith("packages/product-deprecated/"))) continue;
+  const deprecated = path.startsWith("packages/product-deprecated/");
+  if ((!deprecated && active.has(path)) || !(path.startsWith("packages/shared/") || deprecated)) continue;
   let manifest;
   try { manifest = JSON.parse(readFileSync(manifestPath, "utf8")); } catch { continue; }
   const name = manifest.name ?? path;
@@ -50,6 +55,7 @@ for (const manifestPath of manifests) {
   candidates.push({
     packageName: name,
     path,
+    workspaceActive: active.has(path),
     replacementRequired: name,
     externalReferences: [...new Set(references)].sort(),
     deletionEligible: references.length === 0,
@@ -83,9 +89,9 @@ const lines = [
   "",
   "> Reference-free is necessary but not sufficient. A candidate may be deleted only after the full build, database reset, hygiene, and smoke gates pass, and after its complete tree is backed up outside the repository.",
   "",
-  "| Package | Path | External references | Pre-gate status |",
-  "|---|---|---:|---|",
-  ...candidates.map((item) => `| ${item.packageName} | ${item.path} | ${item.externalReferences.length} | ${item.deletionEligible ? "Reference-free; gate required" : "Blocked; references remain"} |`),
+  "| Package | Path | Workspace status | External references | Pre-gate status |",
+  "|---|---|---|---:|---|",
+  ...candidates.map((item) => `| ${item.packageName} | ${item.path} | ${item.workspaceActive ? "Active; remove from workspace with retirement" : "Excluded"} | ${item.externalReferences.length} | ${item.deletionEligible ? "Reference-free; gate required" : "Blocked; references remain"} |`),
 ];
 writeFileSync(join(root, "docs", "architecture", "phase-10-deletion-audit.md"), `${lines.join("\n")}\n`);
 console.log(`Phase 10 deletion audit written: ${candidates.length} candidates; ${report.deletionEligibleCount} reference-free before acceptance gates.`);

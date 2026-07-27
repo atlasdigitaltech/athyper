@@ -1,7 +1,7 @@
 -- ============================================================================
 -- FILE: 010_demo/999_visual_fixture_pi.sql
 -- ============================================================================
--- Visual regression fixture for tests/visual/pi-fixture.spec.ts.
+-- Visual regression fixture for tests/e2e/visual/pi-fixture.spec.ts.
 --
 -- Cleanup Plan v5 §P5c.
 --
@@ -11,12 +11,12 @@
 -- screenshot diffing. DO NOT modify this file without:
 --   1. regenerating the reference snapshot via
 --      `pnpm test:visual --update-snapshots`
---   2. committing the new image in `tests/visual/__screenshots__/`
---   3. updating PI_FIXTURE_ID in `tests/visual/pi-fixture.spec.ts` if the
+--   2. committing the new image in `tests/e2e/visual/__screenshots__/`
+--   3. updating PI_FIXTURE_ID in `tests/e2e/visual/pi-fixture.spec.ts` if the
 --      pinned id changes here
 --
 -- The fixture's pinned id `ffffffff-aaaa-0000-0000-000000000001` is wired
--- into the spec at `tests/visual/pi-fixture.spec.ts:51` and into the
+-- into the spec at `tests/e2e/visual/pi-fixture.spec.ts:51` and into the
 -- README's activation checklist.
 --
 -- ─── Required shape (per README) ──────────────────────────────────────────

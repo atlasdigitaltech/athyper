@@ -37,6 +37,13 @@ export interface AuthFailureOutcome {
   readonly toastIntent: "success" | "warning" | "error" | "info" | null;
 }
 
+export interface AuthFailureEvent {
+  readonly event: string;
+  readonly code: AuthFailureCode;
+  readonly requestId?: string;
+  readonly severity: AuthFailureSeverity;
+}
+
 export interface AuthFailureDispatcherDeps {
   /**
    * App-root href used to expand `{plane}` placeholders. Defaults to `""`
@@ -67,15 +74,16 @@ export interface AuthFailureDispatcherDeps {
    */
   readonly navigate?: (href: string) => void;
   /**
+   * Functional notification emitted for every recognized auth failure before
+   * telemetry, navigation, or toast presentation. Use this for deterministic
+   * cache/session invalidation; it must not be replaced by a telemetry sink.
+   */
+  readonly onAuthFailure?: (input: AuthFailureEvent) => void;
+  /**
    * Telemetry sink. Receives the event name from the presentation table plus
    * the request id (if known) so dashboards can join UI symptom â†’ server log.
    */
-  readonly recordTelemetry?: (input: {
-    event: string;
-    code: AuthFailureCode;
-    requestId?: string;
-    severity: AuthFailureSeverity;
-  }) => void;
+  readonly recordTelemetry?: (input: AuthFailureEvent) => void;
 }
 
 function defaultReturnUrl(): string {
@@ -127,14 +135,17 @@ export function dispatchAuthFailure(
     ? null // fatal renders as a full-page screen, not a toast
     : authSeverityToToastIntent(presentation.severity);
 
-  // Telemetry first so we record the surface even if the navigate consumes
-  // the page before the toast fires.
-  deps.recordTelemetry?.({
+  const authFailureEvent: AuthFailureEvent = {
     event: presentation.telemetryEvent,
     code: presentation.code,
     requestId: input.requestId,
     severity: presentation.severity,
-  });
+  };
+
+  // Functional invalidation is deliberately independent from observability.
+  // Both run before navigation so consumers can clear sensitive scoped state.
+  deps.onAuthFailure?.(authFailureEvent);
+  deps.recordTelemetry?.(authFailureEvent);
 
   // Auto-navigate codes win over toast; the page is about to change anyway.
   if (navigateHref) {

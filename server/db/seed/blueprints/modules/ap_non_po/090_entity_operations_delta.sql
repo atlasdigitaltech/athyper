@@ -109,4 +109,5 @@ JOIN control.entity_version ev
   ON ev.entity_id = e.id
  AND ev.tenant_id IS NULL
  AND ev.status = 'EFFECTIVE'
-ON CONFLICT ON CONSTRAINT eo_v2_binding_uq DO NOTHING;
+ON CONFLICT (tenant_id, entity_version_id, permission_code)
+    WHERE entity_version_id IS NOT NULL DO NOTHING;

@@ -34,6 +34,7 @@ export interface NavItem {
   href: string;
   icon: "home" | "inbox" | "bell" | "bookmark" | "settings" | "workbench" | "app" | "content" | "shield" | "setup";
   surface: RouteSurface;
+  category: "global" | "workspace" | "setup" | "utility";
 }
 
 export type RuntimeMutationMode = "none" | "delegated-submit" | "direct";
@@ -45,27 +46,6 @@ export interface RuntimeEntityPolicy {
   detail: boolean;
   create: boolean;
   mutationMode: RuntimeMutationMode;
-}
-
-/** Mesh-specific runtime entity policies — list of entities visible in the Mesh Exchange. */
-export const MESH_RUNTIME_ENTITY_POLICIES = [
-  { entity: "network_account",    label: "Network Accounts",    list: true,  detail: true,  create: false, mutationMode: "none" },
-  { entity: "network_connection", label: "Network Connections", list: true,  detail: true,  create: false, mutationMode: "delegated-submit" },
-  { entity: "document_envelope",  label: "Document Envelopes",  list: true,  detail: true,  create: false, mutationMode: "delegated-submit" },
-  { entity: "document_event",     label: "Document Events",     list: true,  detail: true,  create: false, mutationMode: "none" },
-] as const satisfies readonly RuntimeEntityPolicy[];
-
-export const MESH_VISIBLE_ENTITIES = MESH_RUNTIME_ENTITY_POLICIES
-  .filter((policy) => policy.list || policy.detail)
-  .map((policy) => policy.entity);
-
-export function getMeshRuntimeEntityPolicy(entity: string): RuntimeEntityPolicy | null {
-  const normalizedEntity = normalizeEntityCode(entity);
-  return MESH_RUNTIME_ENTITY_POLICIES.find((policy) => policy.entity === normalizedEntity) ?? null;
-}
-
-export function isMeshVisibleEntity(entity: string): boolean {
-  return getMeshRuntimeEntityPolicy(entity) != null;
 }
 
 /**
@@ -129,26 +109,25 @@ export const ROUTE_MANIFESTS = {
 
 export const NAV_ITEMS = {
   neon: [
-    { key: "dashboard", label: "Dashboard", href: "/dashboard",    icon: "home",      surface: "command" },
-    { key: "inbox",     label: "Inbox",     href: "/inbox",        icon: "inbox",     surface: "command" },
-    { key: "workbench", label: "Workbench", href: "/workbench",    icon: "workbench", surface: "workbench" },
-    { key: "records",   label: "Records",   href: "/app/customer", icon: "app",       surface: "runtime" },
-    { key: "tester",    label: "Tester",    href: "/tester",       icon: "app",       surface: "runtime" },
-    { key: "content",   label: "Content",   href: "/content",      icon: "content",   surface: "content" },
-    { key: "governance",label: "Governance",href: "/governance",   icon: "shield",    surface: "governance" },
-    { key: "settings",  label: "Settings",  href: "/settings",     icon: "settings",  surface: "command" },
+    { key: "dashboard", label: "Dashboard", href: "/dashboard",    icon: "home",      surface: "command",    category: "global" },
+    { key: "inbox",     label: "Inbox",     href: "/inbox",        icon: "inbox",     surface: "command",    category: "global" },
+    { key: "workbench", label: "Workbench", href: "/workbench",    icon: "workbench", surface: "workbench",  category: "workspace" },
+    { key: "records",   label: "Records",   href: "/app/customer", icon: "app",       surface: "runtime",    category: "workspace" },
+    { key: "tester",    label: "Tester",    href: "/tester",       icon: "app",       surface: "runtime",    category: "workspace" },
+    { key: "content",   label: "Content",   href: "/content",      icon: "content",   surface: "content",    category: "workspace" },
+    { key: "governance",label: "Governance",href: "/governance",   icon: "shield",    surface: "governance", category: "workspace" },
+    { key: "settings",  label: "Settings",  href: "/settings",     icon: "settings",  surface: "command",    category: "utility" },
   ],
   mesh: [
-    { key: "dashboard",   label: "Dashboard",    href: "/dashboard",            icon: "home",      surface: "command" },
-    { key: "inbox",       label: "Inbox",        href: "/inbox",                icon: "inbox",     surface: "command" },
-    { key: "workbench",   label: "Workbench",    href: "/workbench",            icon: "workbench", surface: "workbench" },
-    { key: "records",     label: "Exchange",     href: "/app/document_envelope",icon: "app",       surface: "runtime" },
-    { key: "content",     label: "Payloads",     href: "/content",              icon: "content",   surface: "content" },
-    { key: "connections", label: "Connections",  href: "/governance",           icon: "shield",    surface: "governance" },
-    { key: "settings",    label: "Settings",     href: "/settings",             icon: "settings",  surface: "command" },
+    { key: "dashboard",   label: "Dashboard",    href: "/dashboard",  icon: "home",      surface: "command",    category: "global" },
+    { key: "inbox",       label: "Inbox",        href: "/inbox",      icon: "inbox",     surface: "command",    category: "global" },
+    { key: "workbench",   label: "Workbench",    href: "/workbench",  icon: "workbench", surface: "workbench",  category: "workspace" },
+    { key: "content",     label: "Payloads",     href: "/content",    icon: "content",   surface: "content",    category: "workspace" },
+    { key: "connections", label: "Connections",  href: "/governance", icon: "shield",    surface: "governance", category: "workspace" },
+    { key: "settings",    label: "Settings",     href: "/settings",   icon: "settings",  surface: "command",    category: "utility" },
   ],
   admin: [
-    { key: "meta-studio", label: "Meta Entity Studio", href: "/setup/metadata", icon: "app", surface: "setup" },
+    { key: "meta-studio", label: "Meta Entity Studio", href: "/setup/metadata", icon: "app", surface: "setup", category: "setup" },
   ],
 } as const satisfies Record<PlaneKey, readonly NavItem[]>;
 
@@ -223,10 +202,6 @@ function normalizeHost(host?: string | null): string {
     .replace(/^[a-z][a-z0-9+.-]*:\/\//, "")
     .replace(/\/.*$/, "")
     .replace(/:\d+$/, "");
-}
-
-function normalizeEntityCode(entity: string): string {
-  return safeDecode(entity).trim().toLowerCase().replace(/-/g, "_");
 }
 
 function safeDecode(value: string): string {

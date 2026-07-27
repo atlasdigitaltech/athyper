@@ -82,4 +82,31 @@ describe("field-row", () => {
     expect(root).toHaveAttribute("data-dirty");
     expect(root).toHaveAttribute("data-invalid");
   });
+
+  it("exposes help, inheritance, source, audit, and stable loading metadata", () => {
+    const { container, getByText } = render(
+      <FieldRow>
+        <FieldRow.Label helpText="Configured by purchasing policy">Terms</FieldRow.Label>
+        <FieldRow.Read
+          inherited
+          sourceLabel="Purchasing organization"
+          auditLabel="Updated by Ada"
+        >
+          Net 30
+        </FieldRow.Read>
+      </FieldRow>,
+    );
+    expect(getByText("Inherited")).toBeInTheDocument();
+    expect(getByText("Source: Purchasing organization")).toBeInTheDocument();
+    expect(getByText("Updated by Ada")).toBeInTheDocument();
+    expect(container.querySelector("[data-field-read]")).toHaveAttribute("data-inherited");
+
+    const skeleton = render(
+      <FieldRow>
+        <FieldRow.Label>Terms</FieldRow.Label>
+        <FieldRow.Skeleton />
+      </FieldRow>,
+    );
+    expect(skeleton.container.querySelector("[data-field-skeleton]")).not.toBeNull();
+  });
 });

@@ -1,0 +1,21 @@
+event: interaction.created
+data: {"event_type":"interaction.created","interaction":{"id":"int_fixture_tool","model":"gemini-3.6-flash","status":"in_progress","service_tier":"standard"}}
+
+event: step.start
+data: {"event_type":"step.start","index":0,"step":{"type":"function_call","id":"call_fixture","name":"lookup_fixture","arguments":{}}}
+
+event: step.delta
+data: {"event_type":"step.delta","index":0,"delta":{"type":"arguments_delta","arguments":"{\"record_id\":"}}
+
+event: step.delta
+data: {"event_type":"step.delta","index":0,"delta":{"type":"arguments_delta","arguments":"\"fixture-1\"}"}}
+
+event: step.stop
+data: {"event_type":"step.stop","index":0}
+
+event: interaction.completed
+data: {"event_type":"interaction.completed","interaction":{"id":"int_fixture_tool","model":"gemini-3.6-flash","status":"requires_action","service_tier":"standard","usage":{"total_input_tokens":8,"total_cached_tokens":0,"total_output_tokens":3,"total_thought_tokens":0,"total_tool_use_tokens":0,"total_tokens":11}}}
+
+event: done
+data: [DONE]
+

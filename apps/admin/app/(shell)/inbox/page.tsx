@@ -1,6 +1,5 @@
-﻿import { InboxPage } from "@athyper/app-admin-command-hub";
-import { PLANE_KEY } from "@/lib/plane";
+import { InboxClient } from "./InboxClient";
 
 export default function InboxRoute() {
-  return <InboxPage plane={PLANE_KEY} />;
+  return <InboxClient />;
 }

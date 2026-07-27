@@ -15,8 +15,5 @@ CREATE POLICY tenant_insert ON control.fx_policy FOR INSERT
 CREATE POLICY tenant_update ON control.fx_policy FOR UPDATE
     USING (tenant_id = shared.current_tenant_id())
     WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.fx_policy FOR DELETE
-    USING (tenant_id = shared.current_tenant_id());
 CREATE POLICY admin_read ON control.fx_policy FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write ON control.fx_policy FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-

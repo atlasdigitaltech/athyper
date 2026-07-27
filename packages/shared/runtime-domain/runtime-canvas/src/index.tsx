@@ -60,6 +60,20 @@ export {
   type DocumentObjectPageWorkspaceProps,
 } from "./record/document-object-page-workspace";
 export {
+  RuntimeDocumentObjectPage,
+  DocumentEditBootstrapClient,
+  type RuntimeDocumentObjectPageProps,
+} from "./record/runtime-document-object-page";
+export {
+  applyRuntimeDocumentPlanePolicy,
+  resolveRuntimeObjectPageRenderer,
+  type RuntimeDocumentDeepLink,
+  type RuntimeDocumentMutationMode,
+  type RuntimeDocumentPlaneAdapter,
+  type RuntimeDocumentPlanePolicyResult,
+  type RuntimeObjectPageRenderer,
+} from "./record/runtime-document-plane-adapter";
+export {
   DocumentEditCoordinatorProvider,
   useDocumentEditCoordinator,
   useOptionalDocumentEditCoordinator,
@@ -115,6 +129,11 @@ export {
   type SnapshotChildSlot,
   type SnapshotChildContracts,
 } from "./process/snapshot-field-rules";
+export {
+  GovernedEntityForm,
+  type GovernedEntityCommandResult,
+  type GovernedEntityFormProps,
+} from "./governed";
 export {
   resolveProcessSurfaceId,
   isProcessTabId,

@@ -227,8 +227,15 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
           ? "This verification link has expired. Request a new link to continue."
           : "We could not verify this sign-in link.");
       }
-      setVerifiedEmail(data.identifier ?? data.email ?? null);
-      setCandidates(data.candidates ?? []);
+      const verifiedIdentity = data.identifier ?? data.email ?? null;
+      const verifiedCandidates = data.candidates ?? [];
+      setVerifiedEmail(verifiedIdentity);
+      setCandidates(verifiedCandidates);
+      const soleCandidate = soleAutoSelectableCandidate(verifiedCandidates);
+      if (soleCandidate) {
+        await selectWorkspace(soleCandidate, token, verifiedIdentity);
+        return;
+      }
       setMode("verified");
     } catch (err) {
       setMode("email");
@@ -276,11 +283,18 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
         || data.routed
       ) && data.token;
       if (selectionReady && data.token) {
+        const verifiedIdentity = data.identifier ?? data.email ?? data.emailHint ?? data.identifierHint ?? trimmed;
+        const verifiedCandidates = data.candidates ?? [];
         setVerificationToken(data.token);
-        setVerifiedEmail(data.identifier ?? data.email ?? data.emailHint ?? data.identifierHint ?? trimmed);
-        setCandidates(data.candidates ?? []);
+        setVerifiedEmail(verifiedIdentity);
+        setCandidates(verifiedCandidates);
         setDebugVerifyUrl(null);
         setSubmittedEmailHint(null);
+        const soleCandidate = soleAutoSelectableCandidate(verifiedCandidates);
+        if (soleCandidate) {
+          await selectWorkspace(soleCandidate, data.token, verifiedIdentity);
+          return;
+        }
         setMode(data.status === "routed" || data.routed ? "routed" : "verified");
         return;
       }
@@ -303,8 +317,13 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
     }
   }
 
-  async function selectWorkspace(candidate: DiscoveryCandidate) {
-    if (!verificationToken) return;
+  async function selectWorkspace(
+    candidate: DiscoveryCandidate,
+    tokenOverride?: string | null,
+    identityOverride?: string | null,
+  ) {
+    const token = tokenOverride ?? verificationToken;
+    if (!token) return;
     const transitionStartedAt = Date.now();
     setLoading(`select:${candidate.id}`);
     setDiscoveryError(null);
@@ -314,7 +333,7 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "select",
-          token: verificationToken,
+          token,
           optionId: candidate.id,
           returnUrl: finalDestination,
         }),
@@ -323,7 +342,12 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
       if (!res.ok || !data.loginUrl) {
         throw new Error(data.message ?? `We could not prepare this ${plane === "mesh" ? "network account" : "organization"} sign-in.`);
       }
-      rememberOrganization(plane, candidate, safeRememberedLoginUrl(data.loginUrl), verifiedEmail ?? email.trim());
+      rememberOrganization(
+        plane,
+        candidate,
+        safeRememberedLoginUrl(data.loginUrl),
+        identityOverride ?? verifiedEmail ?? email.trim(),
+      );
       await waitForMinimumAuthTransition(transitionStartedAt);
       window.location.assign(data.loginUrl);
     } catch (err) {
@@ -512,6 +536,12 @@ export function LoginGateClient({ plane, reason }: { plane: PlaneKey; reason?: s
       </div>
     </AuthShell>
   );
+}
+
+export function soleAutoSelectableCandidate<T>(
+  candidates: readonly T[],
+): T | null {
+  return candidates.length === 1 ? candidates[0]! : null;
 }
 
 function ReturningOrganizations({

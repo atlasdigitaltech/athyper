@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "requiredCriteria": [
+    "table_roles",
+    "property_coverage",
+    "applicable_checkpoints",
+    "get_zero_writes",
+    "shared_studio_concurrency",
+    "rbac_review_rls",
+    "lossless_roundtrip",
+    "projection_delete_safety",
+    "published_descriptor_authority",
+    "neon_mesh_production_e2e",
+    "zero_unapproved_drift",
+    "rollback_operational",
+    "legacy_retired"
+  ],
+  "gates": [
+    {
+      "id": "schema_projector_stable",
+      "dependsOn": [],
+      "criteria": [
+        "table_roles",
+        "property_coverage",
+        "lossless_roundtrip",
+        "projection_delete_safety"
+      ],
+      "unlocks": ["admin_controls", "runtime_authority"]
+    },
+    {
+      "id": "admin_controls",
+      "dependsOn": ["schema_projector_stable"],
+      "criteria": ["shared_studio_concurrency", "get_zero_writes"],
+      "unlocks": ["production_certification"]
+    },
+    {
+      "id": "runtime_authority",
+      "dependsOn": ["schema_projector_stable"],
+      "criteria": ["published_descriptor_authority", "rbac_review_rls"],
+      "unlocks": ["mesh_consumer"]
+    },
+    {
+      "id": "mesh_consumer",
+      "dependsOn": ["runtime_authority"],
+      "criteria": ["neon_mesh_production_e2e"],
+      "unlocks": ["production_certification"]
+    },
+    {
+      "id": "production_certification",
+      "dependsOn": ["admin_controls", "mesh_consumer"],
+      "criteria": [
+        "applicable_checkpoints",
+        "zero_unapproved_drift",
+        "rollback_operational",
+        "legacy_retired"
+      ],
+      "unlocks": []
+    }
+  ],
+  "criteria": [
+    {
+      "id": "table_roles",
+      "statement": "All 20 entity tables have an explicit governed, derived, referenced or runtime-only role.",
+      "evidence": ["contract-static", "coverage-ledger"]
+    },
+    {
+      "id": "property_coverage",
+      "statement": "Every current and added Contract property has a complete coverage-ledger row.",
+      "evidence": ["contract-static", "coverage-ledger-strict"]
+    },
+    {
+      "id": "applicable_checkpoints",
+      "statement": "All applicable property checkpoints are green.",
+      "evidence": ["contract-static", "contract-postgres", "contract-artifact", "contract-e2e"]
+    },
+    {
+      "id": "get_zero_writes",
+      "statement": "GET requests cause no writes.",
+      "evidence": ["contract-postgres", "get-zero-write-transaction-test"]
+    },
+    {
+      "id": "shared_studio_concurrency",
+      "statement": "One shared Studio state and optimistic concurrency are active.",
+      "evidence": ["contract-e2e", "studio-concurrency-browser-test"]
+    },
+    {
+      "id": "rbac_review_rls",
+      "statement": "RBAC, reviewer separation and RLS pass.",
+      "evidence": ["contract-security"]
+    },
+    {
+      "id": "lossless_roundtrip",
+      "statement": "Contract JSON round-trips without loss.",
+      "evidence": ["contract-artifact"]
+    },
+    {
+      "id": "projection_delete_safety",
+      "statement": "No unrelated lifecycle, numbering or runtime counter data is deleted.",
+      "evidence": ["contract-postgres", "projection-owner-isolation-test"]
+    },
+    {
+      "id": "published_descriptor_authority",
+      "statement": "Runtime behavior comes only from the published compiled descriptor.",
+      "evidence": ["contract-drift", "runtime-shadow-comparison"]
+    },
+    {
+      "id": "neon_mesh_production_e2e",
+      "statement": "Neon list/detail and Mesh list/detail pass production-style E2E.",
+      "evidence": ["contract-e2e", "production-e2e-report"]
+    },
+    {
+      "id": "zero_unapproved_drift",
+      "statement": "Unified drift audit has zero unapproved errors.",
+      "evidence": ["contract-drift", "unified-audit-report"]
+    },
+    {
+      "id": "rollback_operational",
+      "statement": "Rollback is tested and operational.",
+      "evidence": ["contract-e2e", "rollout-gate", "rollback-drill-report"]
+    },
+    {
+      "id": "legacy_retired",
+      "statement": "Legacy metadata writers and runtime fallbacks have been retired.",
+      "evidence": ["legacy-runtime-retirement", "legacy-writer-telemetry"]
+    }
+  ]
+}

@@ -50,6 +50,8 @@ export interface NavRailProps {
   activeKey: NavRailKey | null;
   /** Unread notification count shown on the Inbox icon. */
   inboxCount?: number;
+  /** Hide Favorites when the plane has no supported bookmark BFF. */
+  showFavorites?: boolean;
   /**
    * Override the href for the Home icon. Defaults to "/dashboard".
    * Pass the plane's `config.defaultPath` so the home button lands on the
@@ -173,6 +175,7 @@ export function NavRail({
   hasPlatform = false,
   activeKey,
   inboxCount = 0,
+  showFavorites = true,
   homeHref = "/dashboard",
   showSearch = true,
   accentColor,
@@ -182,7 +185,7 @@ export function NavRail({
     <div className="flex h-full w-full flex-col items-center gap-0.5 py-2">
       {/* ── Zone 1: Global ─────────────────────────────────────── */}
       <RailIcon icon={Home}   label="Home"   href={homeHref} active={activeKey === "home"}   accentColor={accentColor} onClick={() => onSelect("home")} />
-      <RailIcon icon={Inbox}  label="Inbox"  href="/inbox"   active={activeKey === "inbox"}  accentColor={accentColor} badge={inboxCount} onClick={() => onSelect("inbox")} />
+      <RailIcon icon={Inbox}  label={`Inbox${inboxCount > 0 ? ` (${inboxCount} work items pending)` : ""}`} href="/inbox" active={activeKey === "inbox"} accentColor={accentColor} badge={inboxCount} onClick={() => onSelect("inbox")} />
       {showSearch && (
         <RailIcon icon={Search} label="Search" active={activeKey === "search"} accentColor={accentColor} onClick={() => onSelect("search")} />
       )}
@@ -225,7 +228,9 @@ export function NavRail({
       {/* ── Zone 4: Utilities (bottom) ─────────────────────────── */}
       <div className="mt-auto flex flex-col items-center gap-0.5">
         <ZoneSep />
-        <RailIcon icon={Star}     label="Favourites" active={activeKey === "favorites"} onClick={() => onSelect("favorites")} />
+        {showFavorites && (
+          <RailIcon icon={Star} label="Favourites" active={activeKey === "favorites"} onClick={() => onSelect("favorites")} />
+        )}
         <RailIcon icon={Clock}    label="Recent"    active={activeKey === "recent"}    onClick={() => onSelect("recent")} />
         <RailIcon icon={Settings} label="Settings"  href="/settings" active={activeKey === "settings"}  onClick={() => onSelect("settings")} />
       </div>

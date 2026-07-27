@@ -4,7 +4,7 @@ value: atlas-neo
 */
 
 :root[data-theme-preset="atlas-neo"] {
-  --radius: 0px;
+  --preset-radius: 0px;
   --background: oklch(1 0 0);
   --foreground: oklch(0 0 0);
   --card: oklch(1 0 0);

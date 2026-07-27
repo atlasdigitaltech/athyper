@@ -66,6 +66,7 @@ if (demo.realm && demo.realm !== realmName) {
 }
 
 let failureCount = 0;
+let keycloakAssignedIdCount = 0;
 
 function kcadm(parts, options = {}) {
   const result = execFileSync(
@@ -156,6 +157,9 @@ function ensureUser(user) {
   const existing = getUserByUsername(user.username);
   const payload = cleanUser(user);
   if (existing?.id) {
+    if (user.id && existing.id !== user.id) {
+      keycloakAssignedIdCount += 1;
+    }
     if (forceReconcile) {
       tryKcadm(["update", `users/${existing.id}`, "-r", realmName, "-b", body({ ...payload, id: existing.id })]);
     }
@@ -372,6 +376,12 @@ for (const user of demo.users || []) {
   assignGroups(userId, user.groups, groupsByRef);
 }
 console.log(`  users: ${usersByUsername.size}`);
+if (keycloakAssignedIdCount > 0) {
+  console.log(
+    `  Keycloak-assigned runtime subjects: ${keycloakAssignedIdCount} ` +
+      "(application principals remain linked by stable username)",
+  );
+}
 
 let organizationsByAlias = orgMap();
 retireOrganizationAliases(demo.retiredOrganizationAliases || demo.staleOrganizationAliases, organizationsByAlias);

@@ -47,6 +47,8 @@
 -- |                                                                         |
 -- | AI (Phase 6)                                                            |
 -- |  §20  ai_inference_log           — ai_action + ai_prediction → 1       |
+-- |  §20a ai_agent_run               — Atlas request-level execution ledger |
+-- |  §20b ai_agent_call              — provider/tool/retrieval call ledger  |
 -- |  §21  ai_monitoring_log          — ai_drift + anomaly_baseline → 1     |
 -- |  §22  ai_feedback_log            — atlas + classification feedback → 1  |
 -- |  §23  ai_calibration_log         — threshold calibration history        |
@@ -770,6 +772,337 @@ CREATE TABLE IF NOT EXISTS log.ai_inference_log (
     CONSTRAINT ail_conf_chk CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1)
 );
 COMMENT ON TABLE log.ai_inference_log IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. AI inference log. Replaces ai_action + ai_prediction. inference_type=action: action_type, reversal_window. inference_type=prediction: prediction_type, is_accepted.';
+
+-- ============================================================================
+-- §20a  ai_agent_run
+-- ============================================================================
+-- One terminal row per Atlas request. This is an operational/accounting ledger,
+-- not a conversation store: prompts, responses, tool arguments/results, and
+-- retrieved evidence text are intentionally excluded.
+CREATE TABLE IF NOT EXISTS log.ai_agent_run (
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+    log_type                shared.log_type_d NOT NULL DEFAULT 'system',
+    principal_id            uuid        NOT NULL,
+    thread_id               uuid        NOT NULL,
+    client_request_id       uuid        NOT NULL,
+    response_message_id     uuid        NOT NULL,
+    plane                   text        NOT NULL,
+    policy_revision         text,
+    data_handling_profile_id text,
+    requested_model_id      text        NOT NULL,
+    resolved_binding_id     text,
+    resolved_provider_id    text,
+    actual_model_id         text,
+    adapter_version         text,
+    provider_region         text,
+    provider_account_class  text,
+    prompt_version          text,
+    outcome                 text        NOT NULL,
+    finish_reason           text,
+    error_code              text,
+    error_category          text,
+    is_retryable            boolean,
+    usage_source            text        NOT NULL DEFAULT 'unavailable',
+    input_tokens            bigint,
+    cache_read_tokens       bigint,
+    cache_write_tokens      bigint,
+    output_tokens           bigint,
+    reasoning_tokens        bigint,
+    model_call_count        integer     NOT NULL DEFAULT 0,
+    tool_call_count         integer     NOT NULL DEFAULT 0,
+    retrieval_call_count    integer     NOT NULL DEFAULT 0,
+    retry_count             integer     NOT NULL DEFAULT 0,
+    billable_units          numeric(20,6),
+    billable_unit_type      text,
+    cost_amount             numeric(20,8),
+    cost_currency           text        NOT NULL DEFAULT 'USD',
+    cost_basis              text,
+    price_version           text,
+    duration_ms             bigint      NOT NULL,
+    started_at              timestamptz NOT NULL,
+    first_token_at          timestamptz,
+    completed_at            timestamptz NOT NULL,
+    correlation_id          uuid,
+    trace_id                text,
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    CONSTRAINT aar_pkey             PRIMARY KEY (id),
+    CONSTRAINT aar_tenant_id_uq     UNIQUE (tenant_id, id),
+    CONSTRAINT aar_plane_chk        CHECK (plane IN ('neon', 'mesh', 'admin')),
+    CONSTRAINT aar_outcome_chk      CHECK (outcome IN ('completed', 'failed', 'incomplete', 'cancelled', 'rejected')),
+    CONSTRAINT aar_usage_source_chk CHECK (usage_source IN ('provider_final', 'provider_stream', 'estimated', 'unavailable')),
+    CONSTRAINT aar_model_chk        CHECK (btrim(requested_model_id) <> ''),
+    CONSTRAINT aar_binding_chk      CHECK (resolved_binding_id IS NULL OR btrim(resolved_binding_id) <> ''),
+    CONSTRAINT aar_provider_chk     CHECK (resolved_provider_id IS NULL OR btrim(resolved_provider_id) <> ''),
+    CONSTRAINT aar_actual_model_chk CHECK (actual_model_id IS NULL OR btrim(actual_model_id) <> ''),
+    CONSTRAINT aar_provider_account_class_chk CHECK (
+        provider_account_class IS NULL
+        OR provider_account_class IN (
+            'platform_unverified',
+            'platform_paid',
+            'developer_free',
+            'tenant_paid',
+            'tenant_byok',
+            'local',
+            'test'
+        )
+    ),
+    CONSTRAINT aar_tokens_chk       CHECK (
+        (input_tokens IS NULL OR input_tokens >= 0)
+        AND (cache_read_tokens IS NULL OR cache_read_tokens >= 0)
+        AND (cache_write_tokens IS NULL OR cache_write_tokens >= 0)
+        AND (output_tokens IS NULL OR output_tokens >= 0)
+        AND (reasoning_tokens IS NULL OR reasoning_tokens >= 0)
+    ),
+    CONSTRAINT aar_counts_chk       CHECK (
+        model_call_count >= 0 AND tool_call_count >= 0
+        AND retrieval_call_count >= 0 AND retry_count >= 0
+    ),
+    CONSTRAINT aar_billable_chk     CHECK (billable_units IS NULL OR billable_units >= 0),
+    CONSTRAINT aar_cost_chk         CHECK (cost_amount IS NULL OR cost_amount >= 0),
+    CONSTRAINT aar_currency_chk     CHECK (cost_currency ~ '^[A-Z]{3}$'),
+    CONSTRAINT aar_duration_chk     CHECK (duration_ms >= 0),
+    CONSTRAINT aar_usage_coherence_chk CHECK (
+        (
+            usage_source = 'unavailable'
+            AND num_nonnulls(
+                input_tokens,
+                cache_read_tokens,
+                cache_write_tokens,
+                output_tokens,
+                reasoning_tokens
+            ) = 0
+        )
+        OR (
+            usage_source <> 'unavailable'
+            AND num_nonnulls(
+                input_tokens,
+                cache_read_tokens,
+                cache_write_tokens,
+                output_tokens,
+                reasoning_tokens
+            ) > 0
+        )
+    ),
+    CONSTRAINT aar_completed_usage_chk CHECK (
+        outcome <> 'completed' OR usage_source = 'provider_final'
+    ),
+    CONSTRAINT aar_billable_pair_chk CHECK (
+        (billable_units IS NULL) = (billable_unit_type IS NULL)
+    ),
+    CONSTRAINT aar_cost_coherence_chk CHECK (
+        (
+            cost_amount IS NULL
+            AND cost_basis IS NULL
+            AND price_version IS NULL
+        )
+        OR (
+            cost_amount IS NOT NULL
+            AND cost_basis IN (
+                'catalog_estimate',
+                'provider_reported',
+                'billing_reconciled'
+            )
+            AND (
+                cost_basis <> 'catalog_estimate'
+                OR price_version IS NOT NULL
+            )
+        )
+    ),
+    CONSTRAINT aar_time_chk         CHECK (
+        completed_at >= started_at
+        AND (first_token_at IS NULL OR first_token_at BETWEEN started_at AND completed_at)
+    )
+);
+ALTER TABLE log.ai_agent_run
+    ADD COLUMN IF NOT EXISTS provider_account_class text;
+COMMENT ON TABLE log.ai_agent_run IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Terminal Atlas request ledger. '
+    'Stores routing, outcome, usage, cost, and timing metadata only; never prompt or response content.';
+COMMENT ON COLUMN log.ai_agent_run.requested_model_id IS
+    'Public model identifier requested by the client before policy/binding resolution.';
+COMMENT ON COLUMN log.ai_agent_run.resolved_binding_id IS
+    'Exact immutable binding/profile selected by policy for this run.';
+COMMENT ON COLUMN log.ai_agent_run.actual_model_id IS
+    'Primary upstream model actually invoked; NULL when rejected before provider invocation.';
+COMMENT ON COLUMN log.ai_agent_run.provider_account_class IS
+    'Reviewed provider account/data-use class effective for the resolved binding; NULL before provider resolution.';
+COMMENT ON COLUMN log.ai_agent_run.response_message_id IS
+    'Server-generated assistant message identifier used to bind feedback to this exact run response.';
+COMMENT ON COLUMN log.ai_agent_run.error_code IS
+    'Canonical Atlas error code only. Raw provider error bodies must never be stored.';
+
+
+-- ============================================================================
+-- §20b  ai_agent_call
+-- ============================================================================
+-- One terminal row per model, tool, or retrieval call within an Atlas run.
+-- Multiple rows let later governed tool/RAG loops retain an exact call chain
+-- without putting request or response content into the telemetry schema.
+CREATE TABLE IF NOT EXISTS log.ai_agent_call (
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id               uuid        NOT NULL,
+    log_type                shared.log_type_d NOT NULL DEFAULT 'system',
+    run_id                  uuid        NOT NULL,
+    sequence_no             integer     NOT NULL,
+    call_kind               text        NOT NULL,
+    operation_id            text,
+    policy_revision         text,
+    data_handling_profile_id text,
+    binding_id              text,
+    provider_id             text,
+    requested_model_id      text,
+    actual_model_id         text,
+    adapter_version         text,
+    prompt_version          text,
+    provider_request_id     text,
+    provider_region         text,
+    provider_account_class  text,
+    credential_owner        text,
+    credential_source       text,
+    credential_reference_hash text,
+    credential_fingerprint  text,
+    outcome                 text        NOT NULL,
+    finish_reason           text,
+    error_code              text,
+    error_category          text,
+    is_retryable            boolean,
+    retry_count             integer     NOT NULL DEFAULT 0,
+    usage_source            text        NOT NULL DEFAULT 'unavailable',
+    input_tokens            bigint,
+    cache_read_tokens       bigint,
+    cache_write_tokens      bigint,
+    output_tokens           bigint,
+    reasoning_tokens        bigint,
+    billable_units          numeric(20,6),
+    billable_unit_type      text,
+    cost_amount             numeric(20,8),
+    cost_currency           text        NOT NULL DEFAULT 'USD',
+    cost_basis              text,
+    price_version           text,
+    duration_ms             bigint      NOT NULL,
+    started_at              timestamptz NOT NULL,
+    first_token_at          timestamptz,
+    completed_at            timestamptz NOT NULL,
+    created_at              timestamptz NOT NULL DEFAULT now(),
+    created_by              uuid        NOT NULL,
+    CONSTRAINT aac_pkey             PRIMARY KEY (id),
+    CONSTRAINT aac_run_sequence_uq  UNIQUE (tenant_id, run_id, sequence_no),
+    CONSTRAINT aac_sequence_chk     CHECK (sequence_no >= 0),
+    CONSTRAINT aac_kind_chk         CHECK (call_kind IN ('model', 'tool', 'retrieval')),
+    CONSTRAINT aac_operation_chk    CHECK (operation_id IS NULL OR btrim(operation_id) <> ''),
+    CONSTRAINT aac_outcome_chk      CHECK (outcome IN ('completed', 'failed', 'incomplete', 'cancelled')),
+    CONSTRAINT aac_provider_account_class_chk CHECK (
+        provider_account_class IS NULL
+        OR provider_account_class IN (
+            'platform_unverified',
+            'platform_paid',
+            'developer_free',
+            'tenant_paid',
+            'tenant_byok',
+            'local',
+            'test'
+        )
+    ),
+    CONSTRAINT aac_owner_chk        CHECK (credential_owner IS NULL OR credential_owner IN ('platform', 'tenant', 'developer')),
+    CONSTRAINT aac_source_chk       CHECK (
+        credential_source IS NULL
+        OR credential_source IN (
+            'environment',
+            'platform_vault',
+            'tenant_vault',
+            'developer_local'
+        )
+    ),
+    CONSTRAINT aac_credential_coherence_chk CHECK (
+        num_nonnulls(
+            credential_owner,
+            credential_source,
+            credential_reference_hash,
+            credential_fingerprint
+        ) IN (0, 4)
+    ),
+    CONSTRAINT aac_usage_source_chk CHECK (usage_source IN ('provider_final', 'provider_stream', 'estimated', 'unavailable')),
+    CONSTRAINT aac_retry_chk        CHECK (retry_count >= 0),
+    CONSTRAINT aac_tokens_chk       CHECK (
+        (input_tokens IS NULL OR input_tokens >= 0)
+        AND (cache_read_tokens IS NULL OR cache_read_tokens >= 0)
+        AND (cache_write_tokens IS NULL OR cache_write_tokens >= 0)
+        AND (output_tokens IS NULL OR output_tokens >= 0)
+        AND (reasoning_tokens IS NULL OR reasoning_tokens >= 0)
+    ),
+    CONSTRAINT aac_billable_chk     CHECK (billable_units IS NULL OR billable_units >= 0),
+    CONSTRAINT aac_cost_chk         CHECK (cost_amount IS NULL OR cost_amount >= 0),
+    CONSTRAINT aac_currency_chk     CHECK (cost_currency ~ '^[A-Z]{3}$'),
+    CONSTRAINT aac_duration_chk     CHECK (duration_ms >= 0),
+    CONSTRAINT aac_usage_coherence_chk CHECK (
+        (
+            usage_source = 'unavailable'
+            AND num_nonnulls(
+                input_tokens,
+                cache_read_tokens,
+                cache_write_tokens,
+                output_tokens,
+                reasoning_tokens
+            ) = 0
+        )
+        OR (
+            usage_source <> 'unavailable'
+            AND num_nonnulls(
+                input_tokens,
+                cache_read_tokens,
+                cache_write_tokens,
+                output_tokens,
+                reasoning_tokens
+            ) > 0
+        )
+    ),
+    CONSTRAINT aac_completed_usage_chk CHECK (
+        outcome <> 'completed' OR usage_source = 'provider_final'
+    ),
+    CONSTRAINT aac_billable_pair_chk CHECK (
+        (billable_units IS NULL) = (billable_unit_type IS NULL)
+    ),
+    CONSTRAINT aac_cost_coherence_chk CHECK (
+        (
+            cost_amount IS NULL
+            AND cost_basis IS NULL
+            AND price_version IS NULL
+        )
+        OR (
+            cost_amount IS NOT NULL
+            AND cost_basis IN (
+                'catalog_estimate',
+                'provider_reported',
+                'billing_reconciled'
+            )
+            AND (
+                cost_basis <> 'catalog_estimate'
+                OR price_version IS NOT NULL
+            )
+        )
+    ),
+    CONSTRAINT aac_time_chk         CHECK (
+        completed_at >= started_at
+        AND (first_token_at IS NULL OR first_token_at BETWEEN started_at AND completed_at)
+    )
+);
+ALTER TABLE log.ai_agent_call
+    ADD COLUMN IF NOT EXISTS provider_account_class text;
+COMMENT ON TABLE log.ai_agent_call IS
+    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Terminal Atlas provider/tool/retrieval call ledger. '
+    'Stores exact binding and operational metadata only; never prompt, response, arguments, results, or evidence content.';
+COMMENT ON COLUMN log.ai_agent_call.credential_fingerprint IS
+    'Versioned keyed fingerprint for rotation/reconciliation. Never an API key, secret reference, or key suffix.';
+COMMENT ON COLUMN log.ai_agent_call.credential_reference_hash IS
+    'Versioned keyed fingerprint of the approved credential reference. Never the raw secret reference.';
+COMMENT ON COLUMN log.ai_agent_call.provider_request_id IS
+    'Provider-issued request identifier safe for support correlation; no response body is retained.';
+COMMENT ON COLUMN log.ai_agent_call.provider_account_class IS
+    'Reviewed provider account/data-use class effective for this exact call.';
+COMMENT ON COLUMN log.ai_agent_call.operation_id IS
+    'Safe registry identifier: model binding, governed capability, or retrieval profile. Never arguments or query text.';
 
 
 -- ============================================================================

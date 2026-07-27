@@ -12,7 +12,12 @@ FROM (VALUES
      'log.ai_feedback_type',
      'User correction of an AI classification result. Migrated from log.classification_feedback. '
      'detail: {class_label, confidence_before, confidence_after}.',
-     20)
+     20),
+    ('atlas_agent',    'Atlas Agent Response Feedback',
+     'log.ai_feedback_type',
+     'User feedback on an Atlas Agent response. '
+     'target_id is log.ai_agent_run.id; detail: {agent_run_id, message_id}.',
+     30)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

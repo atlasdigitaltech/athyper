@@ -28,18 +28,21 @@ export function MetaEntityListSkeleton({
       data-skeleton-columns={columns.length}
     >
       <div className="shrink-0 overflow-hidden rounded-xl border bg-card px-3 py-3 shadow-sm sm:px-4">
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-          <div className="flex h-11 min-w-48 items-center overflow-hidden rounded-lg border bg-background">
-            <Skeleton className="mx-3 h-4 w-4 rounded-sm" />
-            <div className="h-full border-l" />
+        <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-3">
+          <div className="col-start-1 row-start-1 flex h-10 min-w-0 items-center overflow-hidden rounded-lg border bg-background shadow-sm">
+            <div className="flex h-full w-9 shrink-0 items-center justify-center border-r border-r-border">
+              <Skeleton className="h-4 w-4 rounded-sm" />
+            </div>
             {descriptor ? (
-              <span className="px-4 text-lg font-semibold text-foreground">{descriptor.entityName}</span>
+              <span className="min-w-0 max-w-[16rem] truncate px-3 text-base font-semibold leading-5 text-foreground sm:max-w-[20rem] lg:max-w-[24rem]">
+                {descriptor.entityName}
+              </span>
             ) : (
-              <Skeleton className="mx-4 h-6 w-40" />
+              <Skeleton className="mx-3 h-5 w-40" />
             )}
           </div>
 
-          <div className="flex h-11 min-w-64 flex-1 items-center overflow-hidden rounded-lg border bg-background md:max-w-xl">
+          <div className="col-span-2 row-start-2 flex h-10 min-w-0 w-full items-center overflow-hidden rounded-lg border bg-background shadow-sm md:col-span-1 md:col-start-2 md:row-start-1 md:max-w-sm md:justify-self-end">
             <Skeleton className="mx-3 h-5 w-5 rounded-full" />
             <Skeleton className="h-4 min-w-24 flex-1" />
             <div className="ml-3 hidden h-full items-center gap-4 border-l px-4 sm:flex">
@@ -48,7 +51,7 @@ export function MetaEntityListSkeleton({
               ))}
             </div>
           </div>
-          <Skeleton className="h-8 w-8 rounded-lg" />
+          <Skeleton className="col-start-2 row-start-1 h-8 w-8 rounded-lg md:col-start-3" />
         </div>
       </div>
 

@@ -6,7 +6,7 @@
 // routes/records.route.ts and the sibling sub-resource route files
 // (action-dispatcher, versions, bulk-preflight, bulk-action, bulk-crud). All of
 // those mounts come out in the same PR. After deletion, narrow the allowlist in
-// apps/neon/scripts/check-runtime-api-paths.ts and server/scripts/
+// scripts/policy/verify-runtime-api-paths.ts and server/scripts/
 // check-runtime-server-paths.ts so strict guards enforce true cleanliness.
 import { type NextRequest } from "next/server";
 import type { RelayParams } from "@athyper/bff-relay";

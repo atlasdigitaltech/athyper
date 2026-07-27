@@ -4,7 +4,7 @@ value: athyper-pop
 */
 
 :root[data-theme-preset="athyper-pop"] {
-  --radius: 1rem;
+  --preset-radius: 1rem;
   --background: oklch(0.9789 0.0082 121.6272);
   --foreground: oklch(0 0 0);
   --card: oklch(1 0 0);

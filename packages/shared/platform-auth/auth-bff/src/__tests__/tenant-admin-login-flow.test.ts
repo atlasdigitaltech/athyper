@@ -282,6 +282,32 @@ describe("tenant admin login, context select, and dashboard handoff", () => {
     expect(pkce.forceAuthn).toBeUndefined();
   });
 
+  it("turns an organization-required Neon MFA continuation into a fresh Keycloak step-up", async () => {
+    const loginResponse = await handleLogin(
+      "neon",
+      nextRequest(
+        NEON_HOST,
+        "/api/auth/login?realm=athyper&silent=true&mfa_step_up=1&returnUrl=%2Fdashboard",
+      ),
+    );
+
+    const authRedirect = new URL(requiredHeader(loginResponse, "location"));
+    expect(authRedirect.searchParams.get("client_id")).toBe("neon-web");
+    expect(authRedirect.searchParams.get("prompt")).toBe("login");
+    expect(authRedirect.searchParams.get("max_age")).toBe("0");
+
+    const state = authRedirect.searchParams.get("state");
+    expect(state).toBeTruthy();
+    const pkce = JSON.parse((await requireRedis().get(pkceStateKey(state!)))!) as {
+      silent?: boolean;
+      forceAuthn?: boolean;
+      mfaStepUp?: boolean;
+    };
+    expect(pkce.silent).toBeUndefined();
+    expect(pkce.forceAuthn).toBe(true);
+    expect(pkce.mfaStepUp).toBe(true);
+  });
+
   it("falls back to the Mesh login chooser when silent SSO has no access context", async () => {
     const loginResponse = await handleLogin(
       "mesh",
@@ -306,6 +332,55 @@ describe("tenant admin login, context select, and dashboard handoff", () => {
     expect(location.searchParams.get("error")).toBeNull();
     expect(callbackResponse.cookies.get("sso_skip")?.value).toBe("1");
     expect([...requireRedis().values.keys()].filter((key) => key.startsWith("sess:mesh:"))).toHaveLength(0);
+  });
+
+  it("forces explicit Mesh context selection after silent SSO with buyer and supplier access", async () => {
+    const loginResponse = await handleLogin(
+      "mesh",
+      nextRequest(MESH_HOST, "/api/auth/login?realm=athyper&silent=true&returnUrl=%2Fdashboard"),
+    );
+    const state = authStateFromRedirect(loginResponse.headers.get("location"));
+    const organizations: Record<string, OrgMembership> = {
+      ...MESH_ORGANIZATIONS,
+      "athyper--athq-partner": {
+        ...MESH_ORGANIZATIONS["athyper--athq-buyer"]!,
+        id: "network-account-supplier",
+        alias: "athyper--athq-partner",
+        name: "Athyper Supplier Network",
+        roles: ["partner"],
+        workspaceId: "network-account-supplier",
+        workspaceCode: "ATHQ-PARTNER",
+        organizationId: "network-account-supplier",
+        organizationCode: "ATHQ-PARTNER",
+        organizationName: "Athyper Supplier Network",
+      },
+    };
+    mockFetch({
+      clientId: "mesh-web",
+      realmRoles: ["MESH_BUYER_USER"],
+      organizations,
+    });
+
+    const callbackResponse = await handleCallback(
+      "mesh",
+      nextRequest(MESH_HOST, `/api/auth/callback?code=ok&state=${state}`),
+    );
+
+    const location = new URL(requiredHeader(callbackResponse, "location"));
+    expect(location.pathname).toBe("/auth/select");
+    expect(location.searchParams.get("returnUrl")).toBe("/dashboard");
+    expect(location.searchParams.get("filter")).toBeNull();
+
+    const sidCookieName = effectiveTestCookieName(getPlaneConfig("mesh").cookieName);
+    const sid = callbackResponse.cookies.get(sidCookieName)?.value;
+    expect(sid).toBeTruthy();
+    const session = sessionFromRedis("mesh", sid!);
+    expect(Object.keys(session.organizations)).toEqual([
+      "athyper--athq-buyer",
+      "athyper--athq-partner",
+    ]);
+    expect(session.activeOrg).toBeNull();
+    expect(session.activeWorkbench).toBeNull();
   });
 
   it("blocks a callback when IAM returns a different user than the requested login hint", async () => {

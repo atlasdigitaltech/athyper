@@ -81,7 +81,7 @@ PowerShell example:
 
 ```powershell
 $env:PERF_NEON_BASE_URL = 'https://neon.athyper.local'
-$env:PERF_NEON_STORAGE_STATE = 'tests/visual/.auth/storage-state.json'
+$env:PERF_NEON_STORAGE_STATE = 'tests/e2e/.auth/storage-state.json'
 $env:PERF_CONTEXT_SWITCH_URL = '/api/auth/session/context'
 $env:PERF_CONTEXT_SWITCH_METHOD = 'PATCH'
 $env:PERF_CONTEXT_SWITCH_BODY = '{"type":"operating_organization","id":"<alternate-fixture-id>"}'

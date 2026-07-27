@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity } from "lucide-react";
-import { DiagnosticsSection, MeSettings, MeUIProvider, type MeUISessionView } from "@athyper/me-ui";
+import { Activity, Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  DiagnosticsSection, MeUIProvider, SettingsWorkspace, deriveSettingsAccess,
+  type MeUISessionView,
+} from "@athyper/me-ui";
+import type { SettingsScopeRef } from "@athyper/api-contracts/me";
 import { getPlaneConfig } from "@athyper/session-plane";
 import { PageFrame } from "@athyper/surface-kit";
 import { bffFetch } from "@/lib/bff-fetch";
 import { PLANE_KEY } from "@/lib/plane";
+import { NotificationsSettingsSection } from "@athyper/notifications-client";
 
 interface SessionPayload {
   authenticated: true;
@@ -14,6 +20,10 @@ interface SessionPayload {
   email?: string;
   activeOrg: string | null;
   activeWorkbench: string | null;
+  permissions?: string[];
+  settingsScopes?: SettingsScopeRef[];
+  supportMode?: boolean;
+  organizations?: Record<string, { tenantId?: string; roles: string[] }>;
 }
 
 const DEFAULT_SESSION: MeUISessionView = {
@@ -23,20 +33,16 @@ const DEFAULT_SESSION: MeUISessionView = {
   activeWorkbench: null,
 };
 
-const VALID_SETTINGS_IDS = new Set(["profile", "identity", "preferences", "tenant-context", "tenant", "diagnostics"]);
-
 function isSessionPayload(value: unknown): value is SessionPayload {
   return Boolean(value && typeof value === "object" && (value as Record<string, unknown>)["authenticated"] === true);
 }
 
-function defaultActiveId(path: readonly string[] | undefined): string | undefined {
-  const first = path?.[0];
-  return first && VALID_SETTINGS_IDS.has(first) ? first : undefined;
-}
-
 export function SettingsClient({ path }: { path?: readonly string[] }) {
   const config = getPlaneConfig(PLANE_KEY);
+  const router = useRouter();
   const [session, setSession] = useState<MeUISessionView>(DEFAULT_SESSION);
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [scopes, setScopes] = useState<SettingsScopeRef[]>([{ kind: "personal", id: "me", label: "Personal" }]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -50,6 +56,9 @@ export function SettingsClient({ path }: { path?: readonly string[] }) {
           activeOrg: payload.activeOrg,
           activeWorkbench: payload.activeWorkbench,
         });
+        const access = deriveSettingsAccess("admin", payload);
+        setPermissions(payload.permissions ?? access.permissions);
+        setScopes(payload.settingsScopes ?? [{ kind: "personal", id: "me", label: "Personal" }]);
       })
       .catch(() => {});
     return () => controller.abort();
@@ -62,16 +71,29 @@ export function SettingsClient({ path }: { path?: readonly string[] }) {
         title="Settings"
         description="Profile, security, tenant context, diagnostics, and plane preferences."
       >
-        <MeSettings
-          adminSections={["tenant"]}
-          defaultActiveId={defaultActiveId(path)}
-          extras={[{
-            id: "diagnostics",
-            label: "Diagnostics",
-            icon: Activity,
-            adminOnly: true,
-            render: (active) => <DiagnosticsSection active={active} />,
-          }]}
+        <SettingsWorkspace
+          plane="admin"
+          path={path}
+          permissions={permissions}
+          scopes={scopes}
+          navigate={(href) => router.push(href)}
+          extras={[
+            {
+              id: "notifications",
+              label: "Notifications",
+              icon: Bell,
+              scopes: ["personal"],
+              render: (active) => active ? <NotificationsSettingsSection /> : null,
+            },
+            {
+              id: "diagnostics",
+              label: "Diagnostics",
+              icon: Activity,
+              scopes: ["tenant", "platform"],
+              requiredPermission: "settings.diagnostics.read",
+              render: (active) => <DiagnosticsSection active={active} />,
+            },
+          ]}
         />
       </PageFrame>
     </MeUIProvider>

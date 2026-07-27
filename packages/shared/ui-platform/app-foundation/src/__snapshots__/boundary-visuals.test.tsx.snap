@@ -1,0 +1,190 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`admin boundary visuals > snapshots fatal auth error as visible full-page UI 1`] = `"<main class="flex min-h-screen items-center justify-center bg-background px-4"><div class="w-full max-w-md rounded-lg border bg-card p-8 shadow-sm"><h1 class="text-lg font-semibold text-foreground">Sign-in is temporarily unavailable.</h1><p class="mt-2 text-sm text-muted-foreground">Session services are down. Please try again in a few minutes.</p><p class="mt-4 text-xs text-muted-foreground">Reference: <span class="font-mono">admin-fatal-request</span></p><div class="mt-6 flex flex-col gap-2"><a href="/logout" class="inline-flex h-9 items-center justify-center rounded-md border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted">Sign out</a></div></div></main>"`;
+
+exports[`admin boundary visuals > snapshots generic error 1`] = `"<div class="min-h-screen bg-background p-6 text-foreground"><div class="rounded-lg border bg-card p-4"><h1 class="text-lg font-medium">Route error</h1><p class="mt-2 text-sm text-muted-foreground">Something went wrong while loading this route.</p><button class="mt-4 rounded-md border px-3 py-2 text-sm font-medium">Try again</button></div></div>"`;
+
+exports[`admin boundary visuals > snapshots not-found 1`] = `"<div class="min-h-screen bg-background p-6 text-foreground"><div class="flex min-h-52 flex-col items-center justify-center gap-3 px-6 py-10 text-center"><p class="text-sm font-medium text-foreground">Page not found</p><p class="max-w-sm text-sm text-muted-foreground">This Admin route is not registered for the internal platform control plane.</p><div class="mt-1"><a href="/dashboard" class="inline-flex h-8 items-center rounded-md border bg-background px-3 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50">Dashboard</a></div></div></div>"`;
+
+exports[`admin boundary visuals > snapshots public loading 1`] = `
+"<link rel="preload" as="image" href="/brand/favicon.png"/><link rel="preload" as="image" href="/brand/wordmark-black.png"/><main class="flex min-h-dvh items-center justify-center overflow-hidden bg-background px-6" aria-busy="true" aria-label="Preparing secure sign-in…" data-loading-skeleton="branded-auth" data-minimum-presentation-ms="1500" data-plane="admin"><div class="flex w-full max-w-[30rem] flex-col items-center gap-6 text-center"><div class="flex w-full items-center justify-center gap-3 sm:gap-5" aria-hidden="true"><div class="athyper-auth-orbit flex h-14 w-14 shrink-0 items-center justify-center rounded-full sm:h-16 sm:w-16"><img alt="" class="relative z-10 h-7 w-7 rounded-md object-contain sm:h-8 sm:w-8" draggable="false" src="/brand/favicon.png"/></div><div class="relative flex min-w-0 max-w-[calc(100%_-_4.5rem)] items-center sm:h-14 sm:max-w-[18rem]" data-brand-lockup="admin"><img alt="" class="block h-10 w-auto max-w-full object-contain sm:h-full" draggable="false" src="/brand/wordmark-black.png"/><span class="athyper-auth-wordmark-sweep absolute inset-0"></span></div></div><div class="flex h-10 w-full max-w-[30rem] items-start justify-center sm:h-5"><p role="status" aria-live="polite" class="text-xs leading-5 text-muted-foreground transition-opacity pointer-events-none opacity-0">Preparing secure sign-in…</p></div><span class="sr-only">Business Technology Platform</span></div><style>
+        @keyframes athyper-auth-orbit-spin {
+          to { transform: rotate(1turn); }
+        }
+        @keyframes athyper-auth-wordmark-shine {
+          from { transform: translateX(-140%); }
+          to { transform: translateX(140%); }
+        }
+        .athyper-auth-orbit {
+          position: relative;
+          background: color-mix(in oklab, var(--muted) 55%, transparent);
+        }
+        .athyper-auth-orbit::before {
+          position: absolute;
+          inset: 0;
+          border: 2px solid color-mix(in oklab, var(--foreground) 20%, transparent);
+          border-top-color: color-mix(in oklab, var(--foreground) 82%, transparent);
+          border-right-color: color-mix(in oklab, var(--foreground) 48%, transparent);
+          border-radius: 9999px;
+          content: "";
+          animation: athyper-auth-orbit-spin 1.35s linear infinite;
+        }
+        .athyper-auth-wordmark-sweep {
+          background: linear-gradient(100deg, transparent 20%, color-mix(in oklab, white 78%, transparent) 50%, transparent 80%);
+          mix-blend-mode: screen;
+          pointer-events: none;
+          animation: athyper-auth-wordmark-shine 1.8s ease-in-out infinite;
+          -webkit-mask: url("/brand/wordmark-black.png") center / contain no-repeat;
+          mask: url("/brand/wordmark-black.png") center / contain no-repeat;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .athyper-auth-orbit::before, .athyper-auth-wordmark-sweep { animation: none; }
+          .athyper-auth-wordmark-sweep { display: none; }
+        }
+      </style></main>"
+`;
+
+exports[`admin boundary visuals > snapshots shell loading 1`] = `
+"<link rel="preload" as="image" href="/brand/wordmark-black.png"/><div class="flex h-dvh flex-col overflow-hidden bg-background" aria-busy="true" aria-label="Loading application" data-plane="admin"><header class="flex h-12 shrink-0 items-center border-b border-border bg-background px-2"><div class="flex w-full items-center justify-between gap-4" aria-hidden="true"><img alt="" class="h-5 w-auto max-w-36 object-contain" draggable="false" src="/brand/wordmark-black.png"/><div class="flex items-center gap-3"><div class="animate-pulse rounded-md bg-muted hidden h-5 w-32 sm:block"></div><div class="animate-pulse bg-muted h-8 w-8 rounded-full"></div></div></div></header><div class="h-0.5 w-full overflow-hidden bg-primary/10" role="progressbar" aria-label="Loading"><div class="athyper-app-loading-progress h-full w-2/5 bg-primary motion-reduce:w-full"></div></div><style>
+        @keyframes athyper-app-loading-progress {
+          from { transform: translateX(-110%); }
+          to { transform: translateX(360%); }
+        }
+        .athyper-app-loading-progress {
+          animation: athyper-app-loading-progress 1.35s ease-in-out infinite;
+          will-change: transform;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .athyper-app-loading-progress {
+            animation: none;
+            transform: none;
+          }
+        }
+      </style><div class="flex min-h-0 flex-1 overflow-hidden"><nav aria-hidden="true" class="hidden w-nav-rail shrink-0 flex-col items-center gap-3 border-r border-sidebar-border bg-sidebar py-3 md:flex"><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div></nav><main class="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-6" data-loading-skeleton="application-shell"><div class="w-full max-w-screen-2xl space-y-5"><div class="space-y-5" aria-hidden="true"><div class="flex items-center justify-between gap-6"><div class="space-y-2"><div class="animate-pulse rounded-md bg-muted h-3 w-28"></div><div class="animate-pulse rounded-md bg-muted h-7 w-52"></div></div><div class="animate-pulse rounded-md bg-muted h-9 w-24"></div></div><div class="grid gap-4 md:grid-cols-3"><div class="rounded-xl border bg-card p-4"><div class="animate-pulse rounded-md bg-muted mb-4 h-4 w-24"></div><div class="animate-pulse rounded-md bg-muted h-8 w-32"></div></div><div class="rounded-xl border bg-card p-4"><div class="animate-pulse rounded-md bg-muted mb-4 h-4 w-24"></div><div class="animate-pulse rounded-md bg-muted h-8 w-32"></div></div><div class="rounded-xl border bg-card p-4"><div class="animate-pulse rounded-md bg-muted mb-4 h-4 w-24"></div><div class="animate-pulse rounded-md bg-muted h-8 w-32"></div></div></div><div class="rounded-xl border bg-card p-5"><div class="animate-pulse rounded-md bg-muted mb-5 h-5 w-40"></div><div class="space-y-3"><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div></div></div></div></div></main></div></div>"
+`;
+
+exports[`mesh boundary visuals > snapshots fatal auth error as visible full-page UI 1`] = `"<main class="flex min-h-screen items-center justify-center bg-background px-4"><div class="w-full max-w-md rounded-lg border bg-card p-8 shadow-sm"><h1 class="text-lg font-semibold text-foreground">Sign-in is temporarily unavailable.</h1><p class="mt-2 text-sm text-muted-foreground">Session services are down. Please try again in a few minutes.</p><p class="mt-4 text-xs text-muted-foreground">Reference: <span class="font-mono">mesh-fatal-request</span></p><div class="mt-6 flex flex-col gap-2"><a href="/logout" class="inline-flex h-9 items-center justify-center rounded-md border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted">Sign out</a></div></div></main>"`;
+
+exports[`mesh boundary visuals > snapshots generic error 1`] = `"<div class="min-h-screen bg-background p-6 text-foreground"><div class="rounded-lg border bg-card p-4"><h1 class="text-lg font-medium">Route error</h1><p class="mt-2 text-sm text-muted-foreground">Something went wrong while loading this route.</p><button class="mt-4 rounded-md border px-3 py-2 text-sm font-medium">Try again</button></div></div>"`;
+
+exports[`mesh boundary visuals > snapshots not-found 1`] = `"<div class="min-h-screen bg-background p-6 text-foreground"><div class="flex min-h-52 flex-col items-center justify-center gap-3 px-6 py-10 text-center"><p class="text-sm font-medium text-foreground">Page not found</p><p class="max-w-sm text-sm text-muted-foreground">This Mesh route is not registered for the partner control plane.</p><div class="mt-1"><a href="/dashboard" class="inline-flex h-8 items-center rounded-md border bg-background px-3 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50">Dashboard</a></div></div></div>"`;
+
+exports[`mesh boundary visuals > snapshots public loading 1`] = `
+"<link rel="preload" as="image" href="/brand/favicon.png"/><link rel="preload" as="image" href="/brand/wordmark-black.png"/><main class="flex min-h-dvh items-center justify-center overflow-hidden bg-background px-6" aria-busy="true" aria-label="Preparing secure sign-in…" data-loading-skeleton="branded-auth" data-minimum-presentation-ms="1500" data-plane="mesh"><div class="flex w-full max-w-[30rem] flex-col items-center gap-6 text-center"><div class="flex w-full items-center justify-center gap-3 sm:gap-5" aria-hidden="true"><div class="athyper-auth-orbit flex h-14 w-14 shrink-0 items-center justify-center rounded-full sm:h-16 sm:w-16"><img alt="" class="relative z-10 h-7 w-7 rounded-md object-contain sm:h-8 sm:w-8" draggable="false" src="/brand/favicon.png"/></div><div class="relative flex min-w-0 max-w-[calc(100%_-_4.5rem)] items-center sm:h-14 sm:max-w-[18rem]" data-brand-lockup="mesh"><img alt="" class="block h-10 w-auto max-w-full object-contain sm:h-full" draggable="false" src="/brand/wordmark-black.png"/><span class="athyper-auth-wordmark-sweep absolute inset-0"></span></div></div><div class="flex h-10 w-full max-w-[30rem] items-start justify-center sm:h-5"><p role="status" aria-live="polite" class="text-xs leading-5 text-muted-foreground transition-opacity pointer-events-none opacity-0">Preparing secure sign-in…</p></div><span class="sr-only">Business Collaboration Network</span></div><style>
+        @keyframes athyper-auth-orbit-spin {
+          to { transform: rotate(1turn); }
+        }
+        @keyframes athyper-auth-wordmark-shine {
+          from { transform: translateX(-140%); }
+          to { transform: translateX(140%); }
+        }
+        .athyper-auth-orbit {
+          position: relative;
+          background: color-mix(in oklab, var(--muted) 55%, transparent);
+        }
+        .athyper-auth-orbit::before {
+          position: absolute;
+          inset: 0;
+          border: 2px solid color-mix(in oklab, var(--foreground) 20%, transparent);
+          border-top-color: color-mix(in oklab, var(--foreground) 82%, transparent);
+          border-right-color: color-mix(in oklab, var(--foreground) 48%, transparent);
+          border-radius: 9999px;
+          content: "";
+          animation: athyper-auth-orbit-spin 1.35s linear infinite;
+        }
+        .athyper-auth-wordmark-sweep {
+          background: linear-gradient(100deg, transparent 20%, color-mix(in oklab, white 78%, transparent) 50%, transparent 80%);
+          mix-blend-mode: screen;
+          pointer-events: none;
+          animation: athyper-auth-wordmark-shine 1.8s ease-in-out infinite;
+          -webkit-mask: url("/brand/wordmark-black.png") center / contain no-repeat;
+          mask: url("/brand/wordmark-black.png") center / contain no-repeat;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .athyper-auth-orbit::before, .athyper-auth-wordmark-sweep { animation: none; }
+          .athyper-auth-wordmark-sweep { display: none; }
+        }
+      </style></main>"
+`;
+
+exports[`mesh boundary visuals > snapshots shell loading 1`] = `
+"<link rel="preload" as="image" href="/brand/wordmark-black.png"/><div class="flex h-dvh flex-col overflow-hidden bg-background" aria-busy="true" aria-label="Loading application" data-plane="mesh"><header class="flex h-12 shrink-0 items-center border-b border-border bg-background px-2"><div class="flex w-full items-center justify-between gap-4" aria-hidden="true"><img alt="" class="h-5 w-auto max-w-36 object-contain" draggable="false" src="/brand/wordmark-black.png"/><div class="flex items-center gap-3"><div class="animate-pulse rounded-md bg-muted hidden h-5 w-32 sm:block"></div><div class="animate-pulse bg-muted h-8 w-8 rounded-full"></div></div></div></header><div class="h-0.5 w-full overflow-hidden bg-primary/10" role="progressbar" aria-label="Loading"><div class="athyper-app-loading-progress h-full w-2/5 bg-primary motion-reduce:w-full"></div></div><style>
+        @keyframes athyper-app-loading-progress {
+          from { transform: translateX(-110%); }
+          to { transform: translateX(360%); }
+        }
+        .athyper-app-loading-progress {
+          animation: athyper-app-loading-progress 1.35s ease-in-out infinite;
+          will-change: transform;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .athyper-app-loading-progress {
+            animation: none;
+            transform: none;
+          }
+        }
+      </style><div class="flex min-h-0 flex-1 overflow-hidden"><nav aria-hidden="true" class="hidden w-nav-rail shrink-0 flex-col items-center gap-3 border-r border-sidebar-border bg-sidebar py-3 md:flex"><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div></nav><main class="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-6" data-loading-skeleton="application-shell"><div class="w-full max-w-screen-2xl space-y-5"><div class="space-y-5" aria-hidden="true"><div class="flex items-center justify-between gap-6"><div class="space-y-2"><div class="animate-pulse rounded-md bg-muted h-3 w-28"></div><div class="animate-pulse rounded-md bg-muted h-7 w-52"></div></div><div class="animate-pulse rounded-md bg-muted h-9 w-24"></div></div><div class="grid gap-4 md:grid-cols-3"><div class="rounded-xl border bg-card p-4"><div class="animate-pulse rounded-md bg-muted mb-4 h-4 w-24"></div><div class="animate-pulse rounded-md bg-muted h-8 w-32"></div></div><div class="rounded-xl border bg-card p-4"><div class="animate-pulse rounded-md bg-muted mb-4 h-4 w-24"></div><div class="animate-pulse rounded-md bg-muted h-8 w-32"></div></div><div class="rounded-xl border bg-card p-4"><div class="animate-pulse rounded-md bg-muted mb-4 h-4 w-24"></div><div class="animate-pulse rounded-md bg-muted h-8 w-32"></div></div></div><div class="rounded-xl border bg-card p-5"><div class="animate-pulse rounded-md bg-muted mb-5 h-5 w-40"></div><div class="space-y-3"><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div></div></div></div></div></main></div></div>"
+`;
+
+exports[`neon boundary visuals > snapshots fatal auth error as visible full-page UI 1`] = `"<main class="flex min-h-screen items-center justify-center bg-background px-4"><div class="w-full max-w-md rounded-lg border bg-card p-8 shadow-sm"><h1 class="text-lg font-semibold text-foreground">Sign-in is temporarily unavailable.</h1><p class="mt-2 text-sm text-muted-foreground">Session services are down. Please try again in a few minutes.</p><p class="mt-4 text-xs text-muted-foreground">Reference: <span class="font-mono">neon-fatal-request</span></p><div class="mt-6 flex flex-col gap-2"><a href="/logout" class="inline-flex h-9 items-center justify-center rounded-md border border-border bg-card px-4 text-sm font-medium text-foreground hover:bg-muted">Sign out</a></div></div></main>"`;
+
+exports[`neon boundary visuals > snapshots generic error 1`] = `"<div class="min-h-screen bg-background p-6 text-foreground"><div class="rounded-lg border bg-card p-4"><h1 class="text-lg font-medium">Route error</h1><p class="mt-2 text-sm text-muted-foreground">Something went wrong while loading this route.</p><button class="mt-4 rounded-md border px-3 py-2 text-sm font-medium">Try again</button></div></div>"`;
+
+exports[`neon boundary visuals > snapshots not-found 1`] = `"<div class="min-h-screen bg-background p-6 text-foreground"><div class="flex min-h-52 flex-col items-center justify-center gap-3 px-6 py-10 text-center"><p class="text-sm font-medium text-foreground">Page not found</p><p class="max-w-sm text-sm text-muted-foreground">This Neon route is not registered for the tenant user control plane.</p><div class="mt-1"><a href="/dashboard" class="inline-flex h-8 items-center rounded-md border bg-background px-3 text-sm font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50">Dashboard</a></div></div></div>"`;
+
+exports[`neon boundary visuals > snapshots public loading 1`] = `
+"<link rel="preload" as="image" href="/brand/favicon.png"/><link rel="preload" as="image" href="/brand/wordmark-black.png"/><main class="flex min-h-dvh items-center justify-center overflow-hidden bg-background px-6" aria-busy="true" aria-label="Preparing secure sign-in…" data-loading-skeleton="branded-auth" data-minimum-presentation-ms="1500" data-plane="neon"><div class="flex w-full max-w-[30rem] flex-col items-center gap-6 text-center"><div class="flex w-full items-center justify-center gap-3 sm:gap-5" aria-hidden="true"><div class="athyper-auth-orbit flex h-14 w-14 shrink-0 items-center justify-center rounded-full sm:h-16 sm:w-16"><img alt="" class="relative z-10 h-7 w-7 rounded-md object-contain sm:h-8 sm:w-8" draggable="false" src="/brand/favicon.png"/></div><div class="relative flex min-w-0 max-w-[calc(100%_-_4.5rem)] items-center sm:h-14 sm:max-w-[18rem]" data-brand-lockup="neon"><img alt="" class="block h-10 w-auto max-w-full object-contain sm:h-full" draggable="false" src="/brand/wordmark-black.png"/><span class="athyper-auth-wordmark-sweep absolute inset-0"></span></div></div><div class="flex h-10 w-full max-w-[30rem] items-start justify-center sm:h-5"><p role="status" aria-live="polite" class="text-xs leading-5 text-muted-foreground transition-opacity pointer-events-none opacity-0">Preparing secure sign-in…</p></div><span class="sr-only">Business Operating Platform</span></div><style>
+        @keyframes athyper-auth-orbit-spin {
+          to { transform: rotate(1turn); }
+        }
+        @keyframes athyper-auth-wordmark-shine {
+          from { transform: translateX(-140%); }
+          to { transform: translateX(140%); }
+        }
+        .athyper-auth-orbit {
+          position: relative;
+          background: color-mix(in oklab, var(--muted) 55%, transparent);
+        }
+        .athyper-auth-orbit::before {
+          position: absolute;
+          inset: 0;
+          border: 2px solid color-mix(in oklab, var(--foreground) 20%, transparent);
+          border-top-color: color-mix(in oklab, var(--foreground) 82%, transparent);
+          border-right-color: color-mix(in oklab, var(--foreground) 48%, transparent);
+          border-radius: 9999px;
+          content: "";
+          animation: athyper-auth-orbit-spin 1.35s linear infinite;
+        }
+        .athyper-auth-wordmark-sweep {
+          background: linear-gradient(100deg, transparent 20%, color-mix(in oklab, white 78%, transparent) 50%, transparent 80%);
+          mix-blend-mode: screen;
+          pointer-events: none;
+          animation: athyper-auth-wordmark-shine 1.8s ease-in-out infinite;
+          -webkit-mask: url("/brand/wordmark-black.png") center / contain no-repeat;
+          mask: url("/brand/wordmark-black.png") center / contain no-repeat;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .athyper-auth-orbit::before, .athyper-auth-wordmark-sweep { animation: none; }
+          .athyper-auth-wordmark-sweep { display: none; }
+        }
+      </style></main>"
+`;
+
+exports[`neon boundary visuals > snapshots shell loading 1`] = `
+"<link rel="preload" as="image" href="/brand/wordmark-black.png"/><div class="flex h-dvh flex-col overflow-hidden bg-background" aria-busy="true" aria-label="Loading application" data-plane="neon"><header class="flex h-12 shrink-0 items-center border-b border-border bg-background px-2"><div class="flex w-full items-center justify-between gap-4" aria-hidden="true"><img alt="" class="h-5 w-auto max-w-36 object-contain" draggable="false" src="/brand/wordmark-black.png"/><div class="flex items-center gap-3"><div class="animate-pulse rounded-md bg-muted hidden h-5 w-32 sm:block"></div><div class="animate-pulse bg-muted h-8 w-8 rounded-full"></div></div></div></header><div class="h-0.5 w-full overflow-hidden bg-primary/10" role="progressbar" aria-label="Loading"><div class="athyper-app-loading-progress h-full w-2/5 bg-primary motion-reduce:w-full"></div></div><style>
+        @keyframes athyper-app-loading-progress {
+          from { transform: translateX(-110%); }
+          to { transform: translateX(360%); }
+        }
+        .athyper-app-loading-progress {
+          animation: athyper-app-loading-progress 1.35s ease-in-out infinite;
+          will-change: transform;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .athyper-app-loading-progress {
+            animation: none;
+            transform: none;
+          }
+        }
+      </style><div class="flex min-h-0 flex-1 overflow-hidden"><nav aria-hidden="true" class="hidden w-nav-rail shrink-0 flex-col items-center gap-3 border-r border-sidebar-border bg-sidebar py-3 md:flex"><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div><div class="animate-pulse bg-muted h-9 w-9 rounded-lg"></div></nav><main class="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-6" data-loading-skeleton="application-shell"><div class="w-full max-w-screen-2xl space-y-5"><div class="space-y-5" aria-hidden="true"><div class="flex items-center justify-between gap-6"><div class="space-y-2"><div class="animate-pulse rounded-md bg-muted h-3 w-28"></div><div class="animate-pulse rounded-md bg-muted h-7 w-52"></div></div><div class="animate-pulse rounded-md bg-muted h-9 w-24"></div></div><div class="grid gap-4 md:grid-cols-3"><div class="rounded-xl border bg-card p-4"><div class="animate-pulse rounded-md bg-muted mb-4 h-4 w-24"></div><div class="animate-pulse rounded-md bg-muted h-8 w-32"></div></div><div class="rounded-xl border bg-card p-4"><div class="animate-pulse rounded-md bg-muted mb-4 h-4 w-24"></div><div class="animate-pulse rounded-md bg-muted h-8 w-32"></div></div><div class="rounded-xl border bg-card p-4"><div class="animate-pulse rounded-md bg-muted mb-4 h-4 w-24"></div><div class="animate-pulse rounded-md bg-muted h-8 w-32"></div></div></div><div class="rounded-xl border bg-card p-5"><div class="animate-pulse rounded-md bg-muted mb-5 h-5 w-40"></div><div class="space-y-3"><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div><div class="animate-pulse rounded-md bg-muted h-10 w-full"></div></div></div></div></div></main></div></div>"
+`;

@@ -10,7 +10,7 @@ on:
       - main
       - develop
   # Cleanup-plan v5 P5c — manual trigger for the screenshot parity gate
-  # while activation prereqs land. See tests/visual/README.md.
+  # while activation prereqs land. See tests/e2e/README.md.
   workflow_dispatch:
     inputs:
       playwright_base_url:
@@ -24,7 +24,7 @@ concurrency:
 
 env:
   NODE_VERSION: '20.20.0'
-  PNPM_VERSION: '10.28.2'
+  PNPM_VERSION: '10.33.0'
 
 jobs:
   # ─── Quality Gate ────────────────────────────────────────────────
@@ -65,6 +65,12 @@ jobs:
       - name: Verify deployment profiles and package boundaries
         run: pnpm policy:release-boundaries
 
+      - name: Verify server Docker workspace manifests
+        run: pnpm policy:server-docker-workspaces
+
+      - name: Verify Docker and CI pnpm pins
+        run: pnpm policy:docker-toolchain
+
       - name: Generate Prisma/Kysely types
         run: pnpm --filter @athyper/adapter-db run prisma:generate
 
@@ -85,8 +91,14 @@ jobs:
       - name: Check generated typography CSS
         run: pnpm --filter @athyper/theme run check:typography
 
-      - name: Test
-        run: pnpm run test -- --coverage
+      - name: Workspace tests with coverage
+        run: pnpm run test:workspace -- --coverage
+        env:
+          CI: 'true'
+          FORCE_COLOR: '1'
+
+      - name: Root tests and reachability
+        run: pnpm run test:root
         env:
           CI: 'true'
           FORCE_COLOR: '1'
@@ -199,6 +211,12 @@ jobs:
       - name: Verify performance phase history and legacy boundary
         run: pnpm policy:performance-phase-history
 
+      - name: Verify unified experience production budgets
+        run: pnpm perf:verify:experience-contracts && pnpm perf:verify:shell-bundle
+
+      - name: Verify unified experience cleanup inventory
+        run: pnpm policy:experience-cleanup
+
       - name: Verify meta-entity retirement evidence boundary
         run: pnpm test:meta-entity-retirement
 
@@ -261,7 +279,7 @@ jobs:
   # the framework (Playwright dep, global setup, fixture seed
   # skeleton, spec) is in place; the test itself stays guarded by
   # `test.skip(...)` until the activation steps in
-  # `tests/visual/README.md` complete:
+  # `tests/e2e/README.md` complete:
   #   1. `pnpm exec playwright install chromium` (per-machine)
   #   2. PC + AD INSERTs authored in
   #      server/db/seed/tenants/neon/010_demo/999_visual_fixture_pi.sql
@@ -270,7 +288,7 @@ jobs:
   #   5. Reference snapshot generated + committed
   #
   # To enable: flip the `if:` guard below + the `env:` block per
-  # `tests/visual/README.md` § "Flip the CI gate".
+  # `tests/e2e/README.md` § "Flip the CI gate".
   # ─────────────────────────────────────────────────────────────────
   screenshot-parity-pi:
     name: Screenshot Regression (PI)
@@ -316,8 +334,8 @@ jobs:
         with:
           name: screenshot-parity-diffs
           path: |
-            tests/visual/.playwright-output/
-            tests/visual/__screenshots__/
+            tests/e2e/.playwright-output/
+            tests/e2e/visual/__screenshots__/
           retention-days: 14
 
   # ─── Build ───────────────────────────────────────────────────────

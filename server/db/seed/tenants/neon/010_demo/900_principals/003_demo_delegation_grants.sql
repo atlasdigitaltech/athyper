@@ -27,7 +27,7 @@ BEGIN
             ('athq.owner'),
             ('athq.manager'),
             ('athq.admin'),
-            ('athq.cfo')
+            ('athq.agent')
     )
     SELECT array_agg(rp.code ORDER BY rp.code)
     INTO v_missing_codes
@@ -56,7 +56,7 @@ BEGIN
             (
                 'ff100002-0000-0000-0000-000000000001'::uuid,
                 'athq.admin',
-                'athq.cfo',
+                'athq.agent',
                 ARRAY['export']::text[],
                 'entity',
                 'ATHQ',

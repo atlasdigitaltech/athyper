@@ -21,7 +21,7 @@ The followup session migrated client callers for the sub-resources that had dedi
   - [packages/shared/data-integration/api-client/src/__tests__/clients.test.ts](packages/shared/data-integration/api-client/src/__tests__/clients.test.ts) â€” test fixtures updated to canonical paths; 7 tests pass.
 
 ### Deprecated tree exclusion ([packages/product-deprecated/runtime-ui/](packages/product-deprecated/runtime-ui/))
-Per user instruction, the deprecated `runtime-ui/` tree is **not** migrated. All session changes there were reverted to HEAD. The server-side legacy `/records/*` aliases keep that tree functioning. The BFF strict guard ([apps/neon/scripts/check-runtime-api-paths.ts](apps/neon/scripts/check-runtime-api-paths.ts)) now allow-lists `packages/product-deprecated/runtime-ui/` so the tree's legacy URL references don't block CI; non-deprecated regressions still surface.
+Per user instruction, the deprecated `runtime-ui/` tree is **not** migrated. All session changes there were reverted to HEAD. The server-side legacy `/records/*` aliases keep that tree functioning. The BFF strict guard ([scripts/policy/verify-runtime-api-paths.ts](scripts/policy/verify-runtime-api-paths.ts)) now allow-lists `packages/product-deprecated/runtime-ui/` so the tree's legacy URL references don't block CI; non-deprecated regressions still surface.
 
 ### Final guard state
 ```
@@ -32,7 +32,7 @@ Per user instruction, the deprecated `runtime-ui/` tree is **not** migrated. All
   packages/                               137 hits (mostly deprecated tree; rest is JSDoc + tests)
   unsuppressed:                             0
 
-[runtime:path-check] --strict (BFF)  exit 0  â€” clean
+[runtime-api-paths] --strict (repo-wide)  exit 0  â€” clean
 ```
 
 ### Known follow-ups
@@ -73,7 +73,7 @@ Covered handlers (non-thin logic only â€” thin factory exports and catchall
 
 ### Final guard + test state
 ```
-[runtime:path-check] --strict (BFF)  exit 0  â€” clean
+[runtime-api-paths] --strict (repo-wide)  exit 0  â€” clean
 pnpm --filter @athyper/neon lint  â†’ next typegen + tsc --noEmit + path-check --strict + vitest run
                                     ALL GREEN  (76/76 tests across 11 files)
 ```
@@ -257,7 +257,7 @@ Before designing Phase 2, decide between three approaches in a 1-day spike:
 ### 2.1 â€” Client coupling is its own cleanup track
 The 60-file client migration is **not Phase 2 work**. It needs a separate, parallel plan modeled after the BFF cleanup track I executed earlier:
 - Path-builder helpers (`runtimePath.list`, `runtimePath.detail`, etc.) already exist in `@athyper/api-contracts/runtime-paths` â€” reuse.
-- Client-side guard (mirror of `apps/neon/scripts/check-runtime-api-paths.ts`) â€” already exists and is wired into `lint`.
+- Client-side guard (mirror of `scripts/policy/verify-runtime-api-paths.ts`) â€” already exists and is wired into `lint`.
 - Migrate 60 files in commits split by package (similar to the runtime-canvas / content-ui / app-neon split I did).
 - BFF records catchall (`apps/neon/app/api/records/[...path]/route.ts`) updates from `makeModuleRelay("records")` to something that forwards to the new upstream path â€” or removes the catchall entirely once clients no longer hit it.
 
@@ -337,7 +337,7 @@ These do not change as a result of the discovery â€” they are the deciding 
 - `@athyper/svc-records typecheck` â€” clean.
 - `@athyper/runtime-server typecheck` (full server) â€” clean.
 - `@athyper/neon typecheck` (BFF) â€” clean.
-- `runtime:path-check --strict` (BFF) â€” OK; the BFF cleanup's strict guard still passes.
+- `policy:runtime-api-paths` (repo-wide, strict) â€” OK; the cleanup's strict guard still passes.
 - `runtime:server-path-check` (server warn mode) â€” 6 unsuppressed (the 4 edit-lock docs + 2 auth-pipeline prefixes). No new noise introduced; the api.ts comment was allow-listed.
 
 NOT verified: runtime server boot + curl request. The route duplication should serve both paths identically because they call the same named handler â€” no code path divergence. Smoke test before merge.

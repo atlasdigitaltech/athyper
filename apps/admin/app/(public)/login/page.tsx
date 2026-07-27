@@ -41,6 +41,9 @@ export default async function LoginPage({
   const returnUrl = safeReturnUrl(params.returnUrl);
   if (session && !changeUser) redirect(returnUrl);
 
+  // sso_skip is a short-lived HttpOnly cookie (60 s) set by the auth callback
+  // when KC returns login_required on a silent SSO attempt. Avoids a retry loop
+  // and keeps the URL clean — no ?sso_failed=1 visible to the user.
   const cookieStore = await cookies();
   const ssoSkip = cookieStore.get("sso_skip")?.value;
 

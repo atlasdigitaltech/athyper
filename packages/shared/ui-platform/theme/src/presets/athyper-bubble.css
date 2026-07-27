@@ -4,7 +4,7 @@ value: athyper-bubble
 */
 
 :root[data-theme-preset="athyper-bubble"] {
-  --radius: 1.25rem;
+  --preset-radius: 1.25rem;
   --background: oklch(0.97 0.015 340);
   --foreground: oklch(0.2 0.04 340);
   --card: oklch(0.99 0.008 340);

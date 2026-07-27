@@ -1,5 +1,5 @@
 <#-- =======================================================================
-     Neon Keycloak Login Theme — select-organization.ftl
+     Neon Keycloak Login Theme â€” select-organization.ftl
      Organization selection step (KC 26.x multi-org login flow).
      Rendered when a user belongs to more than one organization.
      ======================================================================= -->
@@ -99,14 +99,13 @@
         </div>
       </form>
 
-      <!-- Footer -->
-      <div class="kc-footer">
-        <p>&copy; ${.now?string("yyyy")} athyper. All rights reserved.</p>
-        <p><a href="${url.loginRestartFlowUrl}" data-kc-change-user>Use another user ID</a></p>
-      </div>
-
     </div><!-- /.kc-form-card -->
   </div><!-- /.kc-form-wrapper -->
+
+  <div class="kc-footer">
+    <p>&copy; ${.now?string("yyyy")} athyper. All rights reserved.</p>
+    <p><a href="${url.loginRestartFlowUrl}" data-kc-change-user>Use another user ID</a></p>
+  </div><!-- /.kc-footer -->
 
   </div><!-- /.kc-panel-right -->
 

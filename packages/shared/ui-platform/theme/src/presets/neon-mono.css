@@ -4,7 +4,7 @@ value: neon-mono
 */
 
 :root[data-theme-preset="neon-mono"] {
-  --radius: 0.5rem;
+  --preset-radius: 0.5rem;
   --background: oklch(0.985 0 0);
   --foreground: oklch(0.14 0 0);
   --card: oklch(1 0 0);

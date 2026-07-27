@@ -74,7 +74,7 @@ Traefik (gateway)
     └── iam.staging.athyper.com → iam:8080
 ```
 
-All three web apps (`neon-web`, `mesh-web`, `admin-web`) run from their Dockerfiles in `apps/neon/Dockerfile`, `apps/mesh/Dockerfile`, `apps/admin/Dockerfile`.
+All three web apps (`neon-web`, `mesh-web`, `admin-web`) run from the parameterized `apps/Dockerfile`; Compose supplies the validated app name and package pair for each service.
 
 The `athyper.override.staging.yml` file:
 - Sets `restart: unless-stopped` on all services

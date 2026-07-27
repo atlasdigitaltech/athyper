@@ -17,7 +17,10 @@ import { validatePresetCSS } from "./preset-validator";
 if (process.argv.includes("--check-shipped")) {
   const presetsDir = join(import.meta.dirname ?? ".", "presets");
 
-  const files = readdirSync(presetsDir).filter((f) => f.endsWith(".css"));
+  const legacyEntryPoints = new Set(["base.css", "neon-base.css"]);
+  const files = readdirSync(presetsDir).filter(
+    (file) => file.endsWith(".css") && !legacyEntryPoints.has(file),
+  );
   let allValid = true;
 
   console.log(`Validating ${files.length} presets against contract v${THEME_CONTRACT_VERSION}\n`);

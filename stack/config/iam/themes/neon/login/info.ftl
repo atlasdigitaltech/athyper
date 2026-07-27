@@ -1,5 +1,5 @@
 <#-- =======================================================================
-     Neon Keycloak Login Theme — info.ftl
+     Neon Keycloak Login Theme â€” info.ftl
      Generic info/success page (e.g. "Your account has been updated").
      Matches the split-panel layout of login.ftl.
      ======================================================================= -->
@@ -40,9 +40,6 @@
       <button class="kc-dot" aria-label="Slide 5"></button>
       <button class="kc-dot" aria-label="Slide 6"></button>
       <button class="kc-dot" aria-label="Slide 7"></button>
-    </div>
-  </div>
-
     </div>
   </div>
 

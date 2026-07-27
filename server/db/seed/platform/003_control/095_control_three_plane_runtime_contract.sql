@@ -136,7 +136,8 @@ VALUES
         '00000000-0000-0000-0000-000000000000'::uuid),
     (NULL, 'fiscal_period', 'frozen', false, false, 'period_frozen',
         '00000000-0000-0000-0000-000000000000'::uuid)
-ON CONFLICT (tenant_id, entity_name, record_status) DO UPDATE
+ON CONFLICT (tenant_id, entity_name, record_status)
+    WHERE entity_version_id IS NULL DO UPDATE
 SET can_edit = EXCLUDED.can_edit,
     can_delete = EXCLUDED.can_delete,
     disabled_reason = EXCLUDED.disabled_reason,
@@ -205,6 +206,5 @@ BEGIN
         RAISE EXCEPTION '[three_plane_runtime_contract] expected at least 13 platform lifecycle masks, got %', v_count;
     END IF;
 END $$;
-
 
 

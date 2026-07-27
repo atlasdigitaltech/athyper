@@ -1,5 +1,5 @@
 /**
- * Finance Setup — canonical DTOs (Phase 1 read-only; extensible for Phase 2 mutations).
+ * Finance Settings — canonical DTOs (Phase 1 read-only; extensible for Phase 2 mutations).
  *
  * ─── Scope contract (frozen) ──────────────────────────────────────────────
  *   UI route param      → :companyCode      (stable readable code, e.g. "ACFB")
@@ -38,6 +38,34 @@ export type DefinitionStateVocabulary = ReadonlyArray<DefinitionState>;
 
 /** Scope in the finance-setup domain. */
 export type FinanceSetupScopeType = "tenant" | "legal_entity" | "company";
+
+/** Static navigation contract for Finance Settings. It intentionally contains
+ * no readiness, completion, certification, or operational-health state. */
+export type FinanceSettingsDirectoryScope = "company" | "tenant";
+
+export interface FinanceSettingsDirectoryItem {
+  code: string;
+  routeSegment: string;
+  label: string;
+  description: string;
+  iconKey: string;
+  order: number;
+  requiredPermissions: readonly string[];
+  searchKeywords: readonly string[];
+}
+
+export interface FinanceSettingsDirectoryGroup {
+  code: string;
+  label: string;
+  scope: FinanceSettingsDirectoryScope;
+  order: number;
+  items: readonly FinanceSettingsDirectoryItem[];
+}
+
+export interface FinanceSettingsDirectoryManifest {
+  schemaVersion: "1.0";
+  groups: readonly FinanceSettingsDirectoryGroup[];
+}
 
 /** Journey-step lifecycle. */
 export type JourneyStepState =

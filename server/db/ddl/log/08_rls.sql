@@ -298,6 +298,30 @@ CREATE POLICY tenant_insert ON log.ai_inference_log FOR INSERT WITH CHECK (tenan
 CREATE POLICY admin_read    ON log.ai_inference_log FOR SELECT TO athyperadmin USING (true);
 CREATE POLICY admin_write   ON log.ai_inference_log FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
 
+-- Atlas request-level ledger.
+ALTER TABLE log.ai_agent_run ENABLE ROW LEVEL SECURITY;
+ALTER TABLE log.ai_agent_run FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON log.ai_agent_run;
+DROP POLICY IF EXISTS tenant_insert ON log.ai_agent_run;
+DROP POLICY IF EXISTS admin_read    ON log.ai_agent_run;
+DROP POLICY IF EXISTS admin_write   ON log.ai_agent_run;
+CREATE POLICY tenant_read   ON log.ai_agent_run FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON log.ai_agent_run FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON log.ai_agent_run FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON log.ai_agent_run FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
+-- Atlas provider/tool/retrieval call ledger.
+ALTER TABLE log.ai_agent_call ENABLE ROW LEVEL SECURITY;
+ALTER TABLE log.ai_agent_call FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_read   ON log.ai_agent_call;
+DROP POLICY IF EXISTS tenant_insert ON log.ai_agent_call;
+DROP POLICY IF EXISTS admin_read    ON log.ai_agent_call;
+DROP POLICY IF EXISTS admin_write   ON log.ai_agent_call;
+CREATE POLICY tenant_read   ON log.ai_agent_call FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON log.ai_agent_call FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY admin_read    ON log.ai_agent_call FOR SELECT TO athyperadmin USING (true);
+CREATE POLICY admin_write   ON log.ai_agent_call FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+
 
 -- —— §21  ai_monitoring_log ——————————————————————————————————————————————
 ALTER TABLE log.ai_monitoring_log ENABLE ROW LEVEL SECURITY;

@@ -9,3 +9,7 @@ CREATE TRIGGER trg_fx_policy_scope
     ON control.fx_policy
     FOR EACH ROW EXECUTE FUNCTION control.guard_fx_policy_scope();
 
+DROP TRIGGER IF EXISTS trg_fx_policy_immutable ON control.fx_policy;
+CREATE TRIGGER trg_fx_policy_immutable
+    BEFORE UPDATE OR DELETE ON control.fx_policy
+    FOR EACH ROW EXECUTE FUNCTION control.guard_fx_policy_immutable();

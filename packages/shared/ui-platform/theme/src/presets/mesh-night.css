@@ -4,7 +4,7 @@ value: mesh-night
 */
 
 :root[data-theme-preset="mesh-night"] {
-  --radius: 0.625rem;
+  --preset-radius: 0.625rem;
   --background: oklch(0.9730 0.0133 286.1503);
   --foreground: oklch(0.3015 0.0572 282.4176);
   --card: oklch(1.0000 0 0);

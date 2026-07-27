@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { readdirSync } from "node:fs";
@@ -26,7 +26,10 @@ function discoverPackageFiles(directory) {
 
 const packageFiles = [...new Set([
   ...tracked.filter((file) => existsSync(resolve(root, file))),
-  ...discoverPackageFiles(resolve(root, "packages", "product")),
+  // Include new, not-yet-tracked workspace packages in every ownership area.
+  // Restricting discovery to packages/product made generated ownership output
+  // silently omit new shared packages until after their first commit.
+  ...discoverPackageFiles(resolve(root, "packages")),
 ])];
 const manifests = packageFiles.map((file) => {
   const path = resolve(root, file);
@@ -42,12 +45,18 @@ const manifests = packageFiles.map((file) => {
 
 let active = [];
 try {
-  const output = process.platform === "win32"
-    ? execFileSync("powershell.exe", ["-NoProfile", "-Command", "pnpm list -r --depth -1 --json"], { cwd: root, encoding: "utf8" })
-    : execFileSync("pnpm", ["list", "-r", "--depth", "-1", "--json"], {
-      cwd: root,
-      encoding: "utf8",
-    });
+  const command = process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : "pnpm";
+  const args = process.platform === "win32"
+    ? ["/d", "/s", "/c", "pnpm.cmd list -r --depth -1 --json"]
+    : ["list", "-r", "--depth", "-1", "--json"];
+  const listed = spawnSync(command, args, {
+    cwd: root,
+    encoding: "utf8",
+    shell: false,
+  });
+  // pnpm can return a non-zero status for duplicate-name diagnostics while
+  // still emitting a complete JSON workspace inventory.
+  const output = listed.stdout;
   active = JSON.parse(output).map((item) => relPath(item.path));
 } catch {
   active = [];

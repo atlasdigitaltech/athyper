@@ -7,3 +7,7 @@ export {
   type FavoriteBookmarkGroup,
   type FavoriteRecentItem,
 } from "./favorites-panel";
+export {
+  FavoritesPanelContainer,
+  type FavoritesPanelContainerProps,
+} from "./favorites-panel-container";

@@ -23,6 +23,8 @@ const REPO_ROOT = resolve(__dir, "../../../../..");
 const WATCHED = [
   "packages/shared/data-integration/api-contracts/src/schemas/common.ts",
   "packages/shared/data-integration/api-contracts/src/schemas/metadata.ts",
+  "packages/shared/data-integration/api-contracts/src/schemas/meta-entity-contract-v2.ts",
+  "packages/shared/data-integration/api-contracts/src/schemas/meta-entity-contract-versioning.ts",
   "packages/shared/data-integration/api-contracts/src/schemas/records.ts",
   "packages/shared/data-integration/api-contracts/src/schemas/documents.ts",
   "packages/shared/data-integration/api-contracts/src/schemas/workflow.ts",

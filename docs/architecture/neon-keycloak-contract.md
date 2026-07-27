@@ -38,3 +38,33 @@ Keycloak organization membership is an optional discovery projection only. Neon
 resolves the authoritative Legal Entity through
 `master.legal_entity_identity_binding`, then discovers Legal Entity and
 Operating Organization work contexts from Neon RBAC.
+
+## Demo identity generation
+
+The shared `athyper` realm serves Neon, Mesh, and Admin demo clients. Its
+systematic demo users are generated with:
+
+```bash
+pnpm iam:demo:generate
+pnpm iam:demo:check
+```
+
+`tools/scripts/generate-athyper-demo-iam.cjs` generates 119 legal-entity users
+(17 legal entities × 7 personas) and the tenant-level `athyper.owner` and
+`athyper.admin` users. Fixture IDs and the `principal_id` attribute identify
+the corresponding database principal. Keycloak owns its internal user ID and
+JWT `sub`; runtime identity reconciliation updates
+`master.principal_identity_binding.subject_id` by stable username.
+
+Named, platform, buyer, and partner demo identities remain explicit exceptions
+in `stack/config/iam/realm-athyper-demosetup.json`. The generator preserves
+those exceptions while replacing the systematic identity slice and its
+organization memberships.
+
+Changing an existing Keycloak user's ID is not supported or required. Use the
+full IAM reset when replacing the complete demo identity dataset:
+
+```text
+stack/scripts/db/session/iam/reset-iam.bat
+stack/scripts/db/session/iam/reset-iam.sh
+```

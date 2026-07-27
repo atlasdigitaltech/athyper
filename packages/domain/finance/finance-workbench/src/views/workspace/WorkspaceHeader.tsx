@@ -42,15 +42,15 @@ export function WorkspaceHeader({ companyCode, workspace, className }: Workspace
     >
       <div className="flex items-center gap-3">
         <Button asChild variant="ghost" size="sm" className="-ml-2">
-          <Link href={hubHref} aria-label="Back to Company Hub">
+          <Link href={hubHref} aria-label="Back to Finance Settings">
             <ArrowLeft className="h-4 w-4" aria-hidden />
-            <span className="ml-1">Hub</span>
+            <span className="ml-1">Settings</span>
           </Link>
         </Button>
         <Building2 className="h-4 w-4 text-muted-foreground" aria-hidden />
         <div className="flex flex-col leading-tight">
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
-            Finance Setup · {WORKSPACE_LABEL[workspace]}
+            Finance Settings · {WORKSPACE_LABEL[workspace]}
           </span>
           <span className="text-base font-semibold">
             {hub.data?.companyName ?? companyCode}

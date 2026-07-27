@@ -2,7 +2,6 @@ import { fileURLToPath } from "url";
 import path from "path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const themeSourcePath = path.resolve(__dirname, "node_modules", "@athyper", "theme", "src");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -12,8 +11,12 @@ const nextConfig = {
   outputFileTracingRoot: path.resolve(__dirname, "../.."),
   serverExternalPackages: ["redis"],
   transpilePackages: [
+    "@athyper/app-foundation",
+    "@athyper/atlas-agent-runtime",
+    "@athyper/atlas-agent-ui",
     "@athyper/app-neon",
     "@athyper/runtime-list",
+    "@athyper/runtime-add-item",
     "@athyper/api-client",
     "@athyper/brand",
     "@athyper/api-contracts",
@@ -23,6 +26,7 @@ const nextConfig = {
     "@athyper/bff-relay",
     "@athyper/collaboration-ui",
     "@athyper/content-ui",
+    "@athyper/dashboard-ui",
     "@athyper/entity-print",
     "@athyper/me-ui",
     "@athyper/query",
@@ -33,6 +37,7 @@ const nextConfig = {
     "@athyper/i18n",
     "@athyper/identity-gate",
     "@athyper/metadata-client",
+    "@athyper/notifications-client",
     "@athyper/finance-rules",
     "@athyper/finance-workbench",
     "@athyper/icons",
@@ -51,18 +56,6 @@ const nextConfig = {
     "@athyper/theme",
     "@athyper/ui",
   ],
-  webpack: (config) => {
-    config.resolve = {
-      ...(config.resolve ?? {}),
-      alias: {
-        ...(config.resolve?.alias ?? {}),
-      },
-    };
-    return config;
-  },
-  turbopack: {
-    resolveAlias: {},
-  },
   async headers() {
     return [
       {

@@ -4,7 +4,7 @@ value: atlas-doom
 */
 
 :root[data-theme-preset="atlas-doom"] {
-  --radius: 0.625rem;
+  --preset-radius: 0.625rem;
   --background: oklch(0.8452 0 0);
   --foreground: oklch(0.2393 0 0);
   --card: oklch(0.7572 0 0);

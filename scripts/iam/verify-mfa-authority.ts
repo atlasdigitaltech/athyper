@@ -23,7 +23,7 @@ function forbidText(label: string, contents: string, text: string): void {
 }
 
 async function main(): Promise<void> {
-  const [routes, sync, ddl, realmText, sessionPlane, challenge, mfaSection] = await Promise.all([
+  const [routes, sync, ddl, realmText, sessionPlane, challenge, mfaSection, authBff, otpFactory, stepUpCondition] = await Promise.all([
     source("server/packages/services/iam/routes/mfa.routes.ts"),
     source("server/packages/services/iam/mfa/mfa-sync.service.ts"),
     source("server/db/ddl/control/01_tables.sql"),
@@ -31,12 +31,18 @@ async function main(): Promise<void> {
     source("packages/shared/platform-auth/session-plane/src/index.ts"),
     source("packages/shared/platform-auth/identity-gate/src/mfa-challenge-client.tsx"),
     source("apps/neon/app/(shell)/settings/_sections/mfa-section.tsx"),
+    source("packages/shared/platform-auth/auth-bff/src/index.ts"),
+    source("stack/config/iam/extensions/iam-presentation-context/src/main/java/com/athyper/iam/presentation/IamPresentationOtpFormFactory.java"),
+    source("stack/config/iam/extensions/iam-presentation-context/src/main/java/com/athyper/iam/presentation/IamMfaStepUpCondition.java"),
   ]);
 
   const routeCode = executable(routes);
   const syncCode = executable(sync);
   const challengeCode = executable(challenge);
   const mfaSectionCode = executable(mfaSection);
+  const authBffCode = executable(authBff);
+  const otpFactoryCode = executable(otpFactory);
+  const stepUpConditionCode = executable(stepUpCondition);
 
   requireText("TOTP AIA route", routeCode, '"CONFIGURE_TOTP"');
   requireText("WebAuthn AIA route", routeCode, '"webauthn-register"');
@@ -44,14 +50,17 @@ async function main(): Promise<void> {
   requireText("MFA mirror authority", syncCode, 'authority: "keycloak"');
   requireText("MFA table authority", ddl, "authority           text");
   requireText("MFA table authority constraint", ddl, "mfa_config_authority_chk");
-  requireText("Neon/Mesh conditional flow", realmText, '"flowAlias": "Browser - Conditional 2FA"');
-  requireText("Admin mandatory second factor", realmText, '"flowAlias": "admin-mfa-required second factor"');
-  requireText("Admin OTP execution", realmText, '"authenticator": "auth-otp-form"');
-  requireText("Admin WebAuthn execution", realmText, '"authenticator": "webauthn-authenticator"');
+  requireText("Neon/Mesh organization MFA flow", realmText, '"flowAlias": "athyper-user-plane-step-up-2fa"');
+  requireText("Athyper OTP execution", realmText, '"authenticator": "athyper-iam-otp-form"');
+  requireText("First-time OTP enrollment capability", otpFactoryCode, "boolean isUserSetupAllowed()");
+  requireText("First-time OTP enrollment enabled", otpFactoryCode, "return true;");
+  requireText("Fresh step-up condition", stepUpConditionCode, "OIDCLoginProtocol.MAX_AGE_PARAM");
+  requireText("BFF MFA step-up marker", authBffCode, '"mfa_step_up"');
+  requireText("BFF fresh-authentication request", authBffCode, 'finalUrl.searchParams.set("max_age", "0")');
   requireText("Neon policy", sessionPlane, 'mandatoryMfa: false');
   requireText("Mesh policy", sessionPlane, 'mandatoryMfa: false');
   requireText("Admin policy", sessionPlane, 'mandatoryMfa: true');
-  requireText("Keycloak MFA challenge UI", challengeCode, "Continue with Keycloak");
+  requireText("Keycloak MFA challenge UI", challengeCode, "Continue to verification");
   requireText("Keycloak TOTP settings UI", mfaSectionCode, "Keycloak securely generates");
 
   for (const retired of [
@@ -73,17 +82,42 @@ async function main(): Promise<void> {
   }
 
   const realm = JSON.parse(realmText) as {
-    authenticationFlows?: Array<{ alias?: string; authenticationExecutions?: Array<{ flowAlias?: string; requirement?: string }> }>;
+    authenticationFlows?: Array<{
+      alias?: string;
+      authenticationExecutions?: Array<{
+        authenticator?: string;
+        flowAlias?: string;
+        requirement?: string;
+        userSetupAllowed?: boolean;
+      }>;
+    }>;
+    requiredActions?: Array<{ alias?: string; enabled?: boolean }>;
   };
   const userForms = realm.authenticationFlows?.find((flow) => flow.alias === "athyper-user-plane-browser forms");
   if (!userForms?.authenticationExecutions?.some((execution) =>
-    execution.flowAlias === "Browser - Conditional 2FA" && execution.requirement === "CONDITIONAL")) {
-    throw new Error("User-plane browser flow is not conditionally MFA-protected by Keycloak.");
+    execution.flowAlias === "athyper-user-plane-step-up-2fa" && execution.requirement === "CONDITIONAL")) {
+    throw new Error("User-plane browser flow is not protected by the organization-driven fresh-MFA subflow.");
   }
-  const admin = realm.authenticationFlows?.find((flow) => flow.alias === "admin-mfa-required");
-  if (!admin?.authenticationExecutions?.some((execution) =>
-    execution.flowAlias === "admin-mfa-required second factor" && execution.requirement === "REQUIRED")) {
-    throw new Error("Admin browser flow does not require its Keycloak second-factor subflow.");
+  const userStepUp = realm.authenticationFlows?.find((flow) => flow.alias === "athyper-user-plane-step-up-2fa");
+  if (!userStepUp?.authenticationExecutions?.some((execution) =>
+    execution.authenticator === "athyper-mfa-step-up-condition" && execution.requirement === "REQUIRED")) {
+    throw new Error("User-plane MFA subflow does not require the fresh step-up condition.");
+  }
+  if (!userStepUp?.authenticationExecutions?.some((execution) =>
+    execution.authenticator === "athyper-iam-otp-form"
+      && execution.requirement === "REQUIRED"
+      && execution.userSetupAllowed === true)) {
+    throw new Error("User-plane MFA subflow does not challenge or enroll OTP.");
+  }
+  const adminForms = realm.authenticationFlows?.find((flow) => flow.alias === "admin-mfa-required forms");
+  if (!adminForms?.authenticationExecutions?.some((execution) =>
+    execution.authenticator === "athyper-iam-otp-form"
+      && execution.requirement === "REQUIRED"
+      && execution.userSetupAllowed === true)) {
+    throw new Error("Admin browser flow does not require an enrollment-aware OTP execution.");
+  }
+  if (!realm.requiredActions?.some((action) => action.alias === "CONFIGURE_TOTP" && action.enabled === true)) {
+    throw new Error("CONFIGURE_TOTP required action is not enabled.");
   }
 
   console.log("Keycloak MFA authority contracts verified.");

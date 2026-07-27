@@ -2,7 +2,9 @@
 
 import type { RuntimeFieldGroupModel } from "@athyper/runtime-shared/meta-entity";
 import { evaluateMetaEntityFieldVisibility } from "@athyper/runtime-shared/meta-entity";
+import { readRuntimeRecordField } from "@athyper/runtime-shared/core";
 import type { MetaEntityField, MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
+import { FieldRow } from "@athyper/content-ui";
 import {
   defaultFormValue,
   fieldInputId,
@@ -70,6 +72,8 @@ export function RuntimeFieldSet({
           disabled={disabled}
           error={fieldErrors[field.name]}
           warning={fieldWarnings?.[field.name]}
+          dirty={record !== undefined
+            && formValues[field.name] !== readRuntimeRecordField(record, field.name, field.columnName)}
           contract={contract}
           recordId={recordId}
           selectedOptionLabel={selectedOptionLabels?.[field.name]}
@@ -88,6 +92,7 @@ interface RuntimeFieldRowProps {
   disabled: boolean;
   error?: string;
   warning?: string;
+  dirty?: boolean;
   contract: MetaEntityRuntimeDescriptor;
   recordId: string;
   selectedOptionLabel?: RuntimeOption;
@@ -102,6 +107,7 @@ export function RuntimeFieldRow({
   disabled,
   error,
   warning,
+  dirty,
   contract,
   recordId,
   selectedOptionLabel,
@@ -115,37 +121,38 @@ export function RuntimeFieldRow({
   const warnId  = !error && warning ? `${inputId}-warn` : undefined;
 
   return (
-    <div className="grid gap-1">
-      <span id={labelId} className="text-sm font-medium text-muted-foreground">
-        {field.label}
-        {field.isRequired ? (
-          <span className="ml-0.5 text-sm font-medium text-destructive" aria-hidden="true">*</span>
-        ) : null}
-      </span>
-      <RuntimeEditInput
-        field={field}
-        inputId={inputId}
-        labelId={labelId}
-        value={formValues[field.name] ?? defaultFormValue(field)}
-        disabled={disabled}
-        entitySlug={contract.routeSlug}
-        recordId={recordId}
-        formValues={formValues}
-        selectedOptionLabel={selectedOptionLabel}
-        optionInvalidationEpoch={optionInvalidationEpoch}
-        optionBatchContext={optionBatchContext}
-        onChange={(value) => onFieldChange(field.name, value)}
-        ariaDescribedBy={errorId ?? warnId}
-      />
-      {error ? (
-        <p id={errorId} className="text-xs text-destructive" role="alert">
-          {error}
-        </p>
-      ) : warning ? (
-        <p id={warnId} className="text-xs text-muted-foreground" role="status">
-          {warning}
-        </p>
-      ) : null}
-    </div>
+    <FieldRow dirty={dirty} invalid={Boolean(error)} className="rounded-md border">
+      <FieldRow.Label
+        htmlFor={inputId}
+        required={field.isRequired}
+        helpText={field.description}
+      >
+        <span id={labelId}>{field.label}</span>
+      </FieldRow.Label>
+      <FieldRow.Edit error={error} errorId={errorId} dirty={dirty}>
+        <div className="grid gap-1">
+          <RuntimeEditInput
+            field={field}
+            inputId={inputId}
+            labelId={labelId}
+            value={formValues[field.name] ?? defaultFormValue(field)}
+            disabled={disabled}
+            entitySlug={contract.routeSlug}
+            recordId={recordId}
+            formValues={formValues}
+            selectedOptionLabel={selectedOptionLabel}
+            optionInvalidationEpoch={optionInvalidationEpoch}
+            optionBatchContext={optionBatchContext}
+            onChange={(value) => onFieldChange(field.name, value)}
+            ariaDescribedBy={errorId ?? warnId}
+          />
+          {!error && warning ? (
+            <p id={warnId} className="text-xs text-muted-foreground" role="status">
+              {warning}
+            </p>
+          ) : null}
+        </div>
+      </FieldRow.Edit>
+    </FieldRow>
   );
 }

@@ -17,6 +17,20 @@ COMMENT ON ROLE athyperapp IS
     'Runtime application role. Can EXECUTE SECURITY DEFINER functions and '
     'SELECT via RLS. Cannot directly INSERT/UPDATE/DELETE base tables '
     'except where tenant RLS policies permit.';
+
+-- The purge worker uses a separate login granted only this NOLOGIN group
+-- role. It can select/update the Atlas envelope needed for legal-hold-safe
+-- retention and delete the parent conversation after its grace pass. Database
+-- cascades remove children; there is no direct transcript/run privilege.
+GRANT USAGE ON SCHEMA master TO athyperadmin_atlas_maintenance;
+GRANT SELECT, UPDATE, DELETE
+    ON master.conversation TO athyperadmin_atlas_maintenance;
+GRANT SELECT, UPDATE
+    ON master.atlas_thread TO athyperadmin_atlas_maintenance;
+REVOKE ALL ON master.atlas_message
+    FROM athyperadmin_atlas_maintenance;
+REVOKE ALL ON event.atlas_run
+    FROM athyperadmin_atlas_maintenance;
  
 -- ── Ownership ────────────────────────────────────────────────────────────────
 -- All SECURITY DEFINER functions must be owned by athyperadmin so they run
@@ -215,6 +229,107 @@ GRANT INSERT, UPDATE, DELETE ON
     master.owner_type,
     master.label
 TO athyperapp;
+
+-- Atlas operational ledgers and feedback are append-only from the application
+-- path. Tenant RLS still constrains every insert; UPDATE/DELETE remain denied.
+GRANT INSERT ON
+    log.ai_agent_run,
+    log.ai_agent_call,
+    log.ai_feedback_log
+TO athyperapp;
+
+-- Atlas conversation persistence. Transcript rows and runs are insert/finalize
+-- only from the application path; no tenant hard-delete privilege is granted.
+-- The parent conversation is soft-deleted with UPDATE and later purged through
+-- an admin-owned retention worker.
+GRANT INSERT, UPDATE ON
+    master.conversation,
+    master.conversation_participant,
+    master.atlas_thread,
+    master.atlas_message,
+    event.atlas_run,
+    event.ai_tool_invocation
+TO athyperapp;
+
+-- Atlas RLS recursion-safe boolean helpers. This block intentionally runs
+-- after every 03/05/06/08 Atlas layer in the cross-schema provision order.
+DO $$ BEGIN
+    ALTER FUNCTION master.fn_is_atlas_conversation(uuid, uuid)
+        OWNER TO athyperadmin;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN
+    ALTER FUNCTION master.fn_atlas_conversation_access(uuid, uuid, boolean)
+        OWNER TO athyperadmin;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+DO $$ BEGIN
+    REVOKE EXECUTE ON FUNCTION master.fn_is_atlas_conversation(uuid, uuid)
+        FROM PUBLIC;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN
+    REVOKE EXECUTE ON FUNCTION master.fn_atlas_conversation_access(uuid, uuid, boolean)
+        FROM PUBLIC;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+DO $$ BEGIN
+    GRANT EXECUTE ON FUNCTION master.fn_is_atlas_conversation(uuid, uuid)
+        TO athyperapp;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN
+    GRANT EXECUTE ON FUNCTION master.fn_atlas_conversation_access(uuid, uuid, boolean)
+        TO athyperapp;
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- Trigger functions execute through their triggers only.
+DO $$ BEGIN ALTER FUNCTION master.trg_guard_atlas_thread_mutation()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION master.trg_validate_atlas_thread_envelope()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION master.trg_allocate_atlas_message_sequence()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION master.trg_guard_atlas_message_mutation()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION event.trg_guard_atlas_run_mutation()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION event.trg_validate_atlas_run_messages()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION event.trg_validate_ai_tool_invocation_insert()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION event.trg_guard_ai_tool_invocation_mutation()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION master.trg_guard_atlas_conversation_mutation()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION master.trg_guard_atlas_participant_insert()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION master.trg_guard_atlas_participant_mutation()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN ALTER FUNCTION master.trg_validate_atlas_participant_cursor()
+    OWNER TO athyperadmin; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION master.trg_guard_atlas_thread_mutation()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION master.trg_validate_atlas_thread_envelope()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION master.trg_allocate_atlas_message_sequence()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION master.trg_guard_atlas_message_mutation()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION event.trg_guard_atlas_run_mutation()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION event.trg_validate_atlas_run_messages()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION event.trg_validate_ai_tool_invocation_insert()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION event.trg_guard_ai_tool_invocation_mutation()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION master.trg_guard_atlas_conversation_mutation()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION master.trg_guard_atlas_participant_insert()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION master.trg_guard_atlas_participant_mutation()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
+DO $$ BEGIN REVOKE EXECUTE ON FUNCTION master.trg_validate_atlas_participant_cursor()
+    FROM PUBLIC; EXCEPTION WHEN OTHERS THEN NULL; END $$;
  
 -- ── athyperadmin — schema + table access for SECURITY DEFINER functions ──────
 -- SECURITY DEFINER functions owned by athyperadmin execute as athyperadmin.

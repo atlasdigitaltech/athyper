@@ -11,7 +11,7 @@
  *   import { getEntityClassIcon } from "@athyper/icons/entity-classes";
  *   import { getActionIcon }      from "@athyper/icons/actions";
  *   import { getStatusIcon }      from "@athyper/icons/statuses";
- *   import {  }        from "@athyper/icon./custom/athyper-logo";
+ *   import { AthyperLogo }      from "@athyper/icons";
  *   import { NeonLogo }           from "@athyper/app-neon-brand";
  *
  * Or use this barrel for multiple imports:
@@ -51,8 +51,7 @@ export {
 export { getStatusIcon } from "./status-icons";
 
 // Custom SVGs (Athyper platform logo — plane-specific logos live in packages/apps/{plane}/brand)
-export {  } from "./custom/athyper-logo";
+export { AthyperLogo } from "./custom/athyper-logo";
 
 // Types
 export type { IconComponent, IconProps } from "./types";
-

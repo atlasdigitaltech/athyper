@@ -67,6 +67,12 @@ function nextFrameId(): StackFrameId {
 export interface SurfaceStackProviderProps {
   children: ReactNode;
   /**
+   * Create a deliberately isolated stack even when a shell-level controller
+   * already exists. The default reuses the parent so independently mounted
+   * product surfaces participate in one focus/Escape/z-index policy.
+   */
+  isolate?: boolean;
+  /**
    * Override the rule-violation behavior. Defaults to "throw" in
    * `NODE_ENV !== "production"`, "warn" in production. Tests can pin
    * `"warn"` to assert rejection paths without try/catch noise.
@@ -77,7 +83,24 @@ export interface SurfaceStackProviderProps {
 export function SurfaceStackProvider({
   children,
   onRuleViolation,
+  isolate = false,
 }: SurfaceStackProviderProps) {
+  const parent = useContext(SurfaceStackContext);
+  if (parent && !isolate) return <>{children}</>;
+
+  return (
+    <SurfaceStackProviderRoot
+      {...(onRuleViolation === undefined ? {} : { onRuleViolation })}
+    >
+      {children}
+    </SurfaceStackProviderRoot>
+  );
+}
+
+function SurfaceStackProviderRoot({
+  children,
+  onRuleViolation,
+}: Omit<SurfaceStackProviderProps, "isolate">) {
   const [frames, setFrames] = useState<ReadonlyArray<StackFrame>>([]);
   // Keep a ref to the latest frames so `open()` / `close()` see the freshest
   // stack even when called multiple times within a single tick.
@@ -163,4 +186,3 @@ export function SurfaceStackProvider({
     </SurfaceStackContext.Provider>
   );
 }
-

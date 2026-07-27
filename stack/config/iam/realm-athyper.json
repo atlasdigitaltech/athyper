@@ -3109,7 +3109,7 @@
     {
       "alias": "linkedin",
       "displayName": "LinkedIn",
-      "providerId": "linkedin",
+      "providerId": "linkedin-openid-connect",
       "enabled": false,
       "trustEmail": false,
       "storeToken": false,
@@ -3429,14 +3429,16 @@
           "userSetupAllowed": false
         },
         {
-          "authenticator": "auth-otp-form",
+          "authenticatorConfig": "athyper-amr-otp",
+          "authenticator": "athyper-iam-otp-form",
           "authenticatorFlow": false,
           "requirement": "ALTERNATIVE",
           "priority": 30,
           "autheticatorFlow": false,
-          "userSetupAllowed": false
+          "userSetupAllowed": true
         },
         {
+          "authenticatorConfig": "athyper-amr-webauthn",
           "authenticator": "webauthn-authenticator",
           "authenticatorFlow": false,
           "requirement": "DISABLED",
@@ -3445,6 +3447,7 @@
           "userSetupAllowed": false
         },
         {
+          "authenticatorConfig": "athyper-amr-recovery",
           "authenticator": "auth-recovery-authn-code-form",
           "authenticatorFlow": false,
           "requirement": "DISABLED",
@@ -3558,12 +3561,12 @@
           "userSetupAllowed": false
         },
         {
-          "authenticator": "auth-otp-form",
+          "authenticator": "athyper-iam-otp-form",
           "authenticatorFlow": false,
           "requirement": "ALTERNATIVE",
           "priority": 30,
           "autheticatorFlow": false,
-          "userSetupAllowed": false
+          "userSetupAllowed": true
         },
         {
           "authenticator": "webauthn-authenticator",
@@ -3977,6 +3980,7 @@
       "builtIn": false,
       "authenticationExecutions": [
         {
+          "authenticatorConfig": "athyper-amr-password",
           "authenticator": "athyper-iam-username-password-form",
           "authenticatorFlow": false,
           "requirement": "REQUIRED",
@@ -3989,8 +3993,35 @@
           "requirement": "CONDITIONAL",
           "priority": 20,
           "autheticatorFlow": true,
-          "flowAlias": "Browser - Conditional 2FA",
+          "flowAlias": "athyper-user-plane-step-up-2fa",
           "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "id": "186e2618-2d00-4f78-81f4-568aa26c88c1",
+      "alias": "athyper-user-plane-step-up-2fa",
+      "description": "Fresh Keycloak MFA challenge or first-time OTP enrollment for organization-protected Neon and Mesh sessions",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "athyper-mfa-step-up-condition",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "autheticatorFlow": false,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorConfig": "athyper-amr-otp",
+          "authenticator": "athyper-iam-otp-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "autheticatorFlow": false,
+          "userSetupAllowed": true
         }
       ]
     },
@@ -4228,12 +4259,12 @@
           "userSetupAllowed": false
         },
         {
-          "authenticator": "auth-otp-form",
+          "authenticator": "athyper-iam-otp-form",
           "authenticatorFlow": false,
           "requirement": "ALTERNATIVE",
           "priority": 30,
           "autheticatorFlow": false,
-          "userSetupAllowed": false
+          "userSetupAllowed": true
         },
         {
           "authenticator": "webauthn-authenticator",
@@ -4379,14 +4410,6 @@
           "autheticatorFlow": true,
           "flowAlias": "admin-mfa-required forms",
           "userSetupAllowed": false
-        },
-        {
-          "authenticatorFlow": true,
-          "requirement": "REQUIRED",
-          "priority": 40,
-          "autheticatorFlow": true,
-          "flowAlias": "admin-mfa-required second factor",
-          "userSetupAllowed": false
         }
       ]
     },
@@ -4399,12 +4422,22 @@
       "builtIn": false,
       "authenticationExecutions": [
         {
+          "authenticatorConfig": "athyper-amr-password",
           "authenticator": "athyper-iam-username-password-form",
           "authenticatorFlow": false,
           "requirement": "REQUIRED",
           "priority": 10,
           "autheticatorFlow": false,
           "userSetupAllowed": false
+        },
+        {
+          "authenticatorConfig": "athyper-amr-otp",
+          "authenticator": "athyper-iam-otp-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "autheticatorFlow": false,
+          "userSetupAllowed": true
         }
       ]
     },
@@ -4417,14 +4450,16 @@
       "builtIn": false,
       "authenticationExecutions": [
         {
-          "authenticator": "auth-otp-form",
+          "authenticatorConfig": "athyper-amr-otp",
+          "authenticator": "athyper-iam-otp-form",
           "authenticatorFlow": false,
           "requirement": "ALTERNATIVE",
           "priority": 20,
           "autheticatorFlow": false,
-          "userSetupAllowed": false
+          "userSetupAllowed": true
         },
         {
+          "authenticatorConfig": "athyper-amr-webauthn",
           "authenticator": "webauthn-authenticator",
           "authenticatorFlow": false,
           "requirement": "ALTERNATIVE",
@@ -4436,6 +4471,38 @@
     }
   ],
   "authenticatorConfig": [
+    {
+      "id": "53bb50ad-61fd-42eb-80bb-ea62fd5630bc",
+      "alias": "athyper-amr-password",
+      "config": {
+        "default.reference.value": "pwd",
+        "default.reference.maxAge": "3600"
+      }
+    },
+    {
+      "id": "e58179ed-f5d9-4a1c-8dd2-035ddbec8957",
+      "alias": "athyper-amr-otp",
+      "config": {
+        "default.reference.value": "otp",
+        "default.reference.maxAge": "3600"
+      }
+    },
+    {
+      "id": "69dc45e5-c7ae-41ea-9c11-e208f94488f2",
+      "alias": "athyper-amr-webauthn",
+      "config": {
+        "default.reference.value": "webauthn",
+        "default.reference.maxAge": "3600"
+      }
+    },
+    {
+      "id": "e3f7dbf5-a4a0-4ed3-9858-eb94090fc68f",
+      "alias": "athyper-amr-recovery",
+      "config": {
+        "default.reference.value": "mfa",
+        "default.reference.maxAge": "3600"
+      }
+    },
     {
       "id": "801d3b7f-0f89-4a58-9e98-5e063b77b8e5",
       "alias": "browser-conditional-credential",

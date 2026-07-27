@@ -2239,6 +2239,25 @@ BEGIN
   SELECT id INTO v_customer_step_tax      FROM control.entity_flow_step WHERE flow_id = v_customer_flow AND step_key = 'tax_identifier';
   SELECT id INTO v_customer_step_review   FROM control.entity_flow_step WHERE flow_id = v_customer_flow AND step_key = 'review';
 
+  INSERT INTO control.entity_flow_section (
+    tenant_id, flow_step_id, section_key, label, sort_order,
+    section_type, entity_code, collapse_default, created_by)
+  VALUES
+    (NULL, v_customer_step_identity, 'business_partner_identity', 'Business Partner Identity', 10,
+     'fields', 'business_partner', false, v_su),
+    (NULL, v_customer_step_identity, 'customer_role', 'Customer Role', 20,
+     'fields', 'customer', false, v_su),
+    (NULL, v_customer_step_tax, 'identifiers', 'Identifiers', 10,
+     'fields', 'party_identifier', false, v_su),
+    (NULL, v_customer_step_tax, 'tax_profile', 'Tax Profile', 20,
+     'fields', 'party_tax_profile', false, v_su)
+  ON CONFLICT (flow_step_id, section_key) DO UPDATE SET
+    label = EXCLUDED.label,
+    sort_order = EXCLUDED.sort_order,
+    section_type = EXCLUDED.section_type,
+    entity_code = EXCLUDED.entity_code,
+    collapse_default = EXCLUDED.collapse_default;
+
   DELETE FROM control.entity_flow_field
    WHERE flow_step_id IN (v_customer_step_identity, v_customer_step_tax, v_customer_step_review)
      AND tenant_id IS NULL;
@@ -2249,22 +2268,22 @@ BEGIN
     visible_when, required_when, default_source,
     summary_role, span, help_text, sort_order, created_by)
   SELECT NULL, v.step_id, ef.id,
-         NULL, v.mode, v.derivation_mode, v.ui_variant,
+         v.section_key, v.mode, v.derivation_mode, v.ui_variant,
          v.visible_when, v.required_when, v.default_source,
          v.summary_role, v.span::smallint, v.help_text, v.sort_order::smallint, v_su
     FROM (VALUES
-      (v_customer_step_identity, 'business_partner', 'name',                      'required', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 'meta'::text, 1, 'Trading name as known to your organisation.',         10),
-      (v_customer_step_identity, 'business_partner', 'legal_name',                'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 'meta'::text, 1, 'Registered legal name for contracts and AR.',         20),
-      (v_customer_step_identity, 'business_partner', 'registration_country_code', 'editable', 'manual', 'country',       NULL::jsonb, NULL::jsonb, NULL::text,                                 'meta'::text, 1, 'Country of registration.',                            30),
-      (v_customer_step_identity, 'business_partner', 'registration_no',           'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, 'Company registration or business number.',            40),
-      (v_customer_step_identity, 'business_partner', 'website_url',               'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, NULL::text,                                             50),
-      (v_customer_step_identity, 'customer',         'customer_type',             'required', 'manual', 'select',        NULL::jsonb, NULL::jsonb, 'lookup.master.customer_type.corporate',     'meta'::text, 1, NULL::text,                                             60),
-      (v_customer_step_identity, 'customer',         'is_key_account',            'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, 'const:false',                              NULL::text,   1, NULL::text,                                             70),
-      (v_customer_step_identity, 'customer',         'risk_rating',               'editable', 'manual', 'select',        NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, NULL::text,                                             80),
-      (v_customer_step_tax,      'party_identifier', 'scheme',         'editable', 'manual', 'select',        NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, 'Optional external identifier type.',                   10),
-      (v_customer_step_tax,      'party_identifier', 'value',          'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, 'Identifier value exactly as issued.',                  20),
-      (v_customer_step_tax,      'party_tax_profile', 'tax_number',    'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, 'Primary tax registration number.',                     30)
-    ) AS v(step_id, entity_code, field_name, mode, derivation_mode, ui_variant,
+      (v_customer_step_identity, 'business_partner_identity', 'business_partner', 'name',                      'required', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 'meta'::text, 1, 'Trading name as known to your organisation.',         10),
+      (v_customer_step_identity, 'business_partner_identity', 'business_partner', 'legal_name',                'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 'meta'::text, 1, 'Registered legal name for contracts and AR.',         20),
+      (v_customer_step_identity, 'business_partner_identity', 'business_partner', 'registration_country_code', 'editable', 'manual', 'country',       NULL::jsonb, NULL::jsonb, NULL::text,                                 'meta'::text, 1, 'Country of registration.',                            30),
+      (v_customer_step_identity, 'business_partner_identity', 'business_partner', 'registration_no',           'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, 'Company registration or business number.',            40),
+      (v_customer_step_identity, 'business_partner_identity', 'business_partner', 'website_url',               'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, NULL::text,                                             50),
+      (v_customer_step_identity, 'customer_role',             'customer',         'customer_type',             'required', 'manual', 'select',        NULL::jsonb, NULL::jsonb, 'lookup.master.customer_type.corporate',     'meta'::text, 1, NULL::text,                                             60),
+      (v_customer_step_identity, 'customer_role',             'customer',         'is_key_account',            'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, 'const:false',                              NULL::text,   1, NULL::text,                                             70),
+      (v_customer_step_identity, 'customer_role',             'customer',         'risk_rating',               'editable', 'manual', 'select',        NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, NULL::text,                                             80),
+      (v_customer_step_tax,      'identifiers',               'party_identifier', 'scheme',         'editable', 'manual', 'select',        NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, 'Optional external identifier type.',                   10),
+      (v_customer_step_tax,      'identifiers',               'party_identifier', 'value',          'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, 'Identifier value exactly as issued.',                  20),
+      (v_customer_step_tax,      'tax_profile',               'party_tax_profile', 'tax_number',    'editable', 'manual', NULL::text,      NULL::jsonb, NULL::jsonb, NULL::text,                                 NULL::text,   1, 'Primary tax registration number.',                     30)
+    ) AS v(step_id, section_key, entity_code, field_name, mode, derivation_mode, ui_variant,
            visible_when, required_when, default_source, summary_role, span, help_text, sort_order)
     JOIN control.entity e ON e.entity_code = v.entity_code AND e.tenant_id IS NULL
     JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1
@@ -2343,6 +2362,21 @@ BEGIN
   SELECT id INTO v_extension_step_company FROM control.entity_flow_step WHERE flow_id = v_extension_flow AND step_key = 'company_scope';
   SELECT id INTO v_extension_step_review  FROM control.entity_flow_step WHERE flow_id = v_extension_flow AND step_key = 'review';
 
+  INSERT INTO control.entity_flow_section (
+    tenant_id, flow_step_id, section_key, label, sort_order,
+    section_type, entity_code, collapse_default, created_by)
+  VALUES
+    (NULL, v_extension_step_select, 'business_partner_extension', 'Business Partner Extension', 10,
+     'fields', 'business_partner', false, v_su),
+    (NULL, v_extension_step_company, 'company_scope', 'Company Code Scope', 10,
+     'fields', 'company_code_supplier_profile', false, v_su)
+  ON CONFLICT (flow_step_id, section_key) DO UPDATE SET
+    label = EXCLUDED.label,
+    sort_order = EXCLUDED.sort_order,
+    section_type = EXCLUDED.section_type,
+    entity_code = EXCLUDED.entity_code,
+    collapse_default = EXCLUDED.collapse_default;
+
   DELETE FROM control.entity_flow_field
    WHERE flow_step_id IN (v_extension_step_select, v_extension_step_company, v_extension_step_review)
      AND tenant_id IS NULL;
@@ -2353,15 +2387,15 @@ BEGIN
     visible_when, required_when, default_source,
     summary_role, span, help_text, sort_order, created_by)
   SELECT NULL, v.step_id, ef.id,
-         NULL, v.mode, v.derivation_mode, v.ui_variant,
+         v.section_key, v.mode, v.derivation_mode, v.ui_variant,
          v.visible_when, v.required_when, v.default_source,
          v.summary_role, v.span::smallint, v.help_text, v.sort_order::smallint, v_su
     FROM (VALUES
-      (v_extension_step_select,  'business_partner',              'code',           'required', 'manual', NULL::text,          NULL::jsonb, NULL::jsonb, NULL::text,                              'meta'::text, 1, 'Enter the BP code or UUID to extend.', 10),
-      (v_extension_step_select,  'business_partner',              'extension_type', 'required', 'manual', 'select',            NULL::jsonb, NULL::jsonb, 'lookup.master.business_partner_extension_type.supplier_role', 'meta'::text, 1, NULL::text, 20),
-      (v_extension_step_company, 'company_code_supplier_profile', 'company_code_id','required', 'manual', 'inline_search',     '{"in":[{"var":"extension_type"},["supplier_company_code","customer_company_code"]]}'::jsonb, NULL::jsonb, NULL::text, 'meta'::text, 1, NULL::text, 10),
-      (v_extension_step_company, 'company_code_supplier_profile', 'currency_code',  'editable', 'manual', 'currency',          '{"in":[{"var":"extension_type"},["supplier_company_code","customer_company_code"]]}'::jsonb, NULL::jsonb, NULL::text, NULL::text,   1, NULL::text, 20)
-    ) AS v(step_id, entity_code, field_name, mode, derivation_mode, ui_variant,
+      (v_extension_step_select,  'business_partner_extension', 'business_partner',              'code',           'required', 'manual', NULL::text,          NULL::jsonb, NULL::jsonb, NULL::text,                              'meta'::text, 1, 'Enter the BP code or UUID to extend.', 10),
+      (v_extension_step_select,  'business_partner_extension', 'business_partner',              'extension_type', 'required', 'manual', 'select',            NULL::jsonb, NULL::jsonb, 'lookup.master.business_partner_extension_type.supplier_role', 'meta'::text, 1, NULL::text, 20),
+      (v_extension_step_company, 'company_scope',              'company_code_supplier_profile', 'company_code_id','required', 'manual', 'inline_search',     '{"in":[{"var":"extension_type"},["supplier_company_code","customer_company_code"]]}'::jsonb, NULL::jsonb, NULL::text, 'meta'::text, 1, NULL::text, 10),
+      (v_extension_step_company, 'company_scope',              'company_code_supplier_profile', 'currency_code',  'editable', 'manual', 'currency',          '{"in":[{"var":"extension_type"},["supplier_company_code","customer_company_code"]]}'::jsonb, NULL::jsonb, NULL::text, NULL::text,   1, NULL::text, 20)
+    ) AS v(step_id, section_key, entity_code, field_name, mode, derivation_mode, ui_variant,
            visible_when, required_when, default_source, summary_role, span, help_text, sort_order)
     JOIN control.entity e ON e.entity_code = v.entity_code AND e.tenant_id IS NULL
     JOIN control.entity_version ev ON ev.entity_id = e.id AND ev.version_no = 1
@@ -3301,4 +3335,3 @@ BEGIN
 
     RAISE NOTICE '033_journal_entry_flow_two_step completed: removed % review step(s)', v_deleted_steps;
 END $$;
-

@@ -1,6 +1,15 @@
-﻿import { SavedViewsPage } from "@athyper/app-admin-command-hub";
-import { PLANE_KEY } from "@/lib/plane";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { SavedViewsManager } from "@athyper/saved-views-ui";
+import { PageFrame } from "@athyper/surface-kit";
+import { bffFetch } from "@/lib/bff-fetch";
 
 export default function SavedViewsRoute() {
-  return <SavedViewsPage plane={PLANE_KEY} />;
+  const router = useRouter();
+  return (
+    <PageFrame eyebrow="Admin" title="Saved views" description="Open and govern reusable Admin list, job, registry, and audit configurations.">
+      <SavedViewsManager plane="admin" fetcher={bffFetch} navigate={(href) => router.push(href)} />
+    </PageFrame>
+  );
 }

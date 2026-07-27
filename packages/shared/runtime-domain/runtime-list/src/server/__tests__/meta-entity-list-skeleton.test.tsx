@@ -38,8 +38,12 @@ describe("MetaEntityListSkeleton", () => {
     render(<MetaEntityListSkeleton descriptor={descriptor} rowCount={2} />);
 
     const skeleton = screen.getByLabelText("Loading Journal Entry records");
+    const title = screen.getByText("Journal Entry");
     expect(skeleton).toHaveAttribute("data-skeleton-level", "descriptor");
     expect(skeleton).toHaveAttribute("data-skeleton-columns", "5");
+    expect(title).toHaveClass("text-base", "px-3");
+    expect(title.parentElement).toHaveClass("h-10");
+    expect(title.parentElement).not.toHaveClass("min-w-48");
     expect(skeleton.querySelectorAll('[data-skeleton-column-type="numeric"]')).toHaveLength(2);
     expect(skeleton.querySelectorAll('[data-skeleton-column-type="status"]')).toHaveLength(1);
     expect(skeleton).not.toHaveTextContent("Secret note");

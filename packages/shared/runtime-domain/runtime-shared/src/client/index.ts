@@ -1,11 +1,13 @@
 export {
   setBffClientPlane,
+  createPlaneBffClient,
   getCsrfToken,
   csrfFetch,
   bffFetch,
   relayMutate,
   BffError,
   type BffFetchOptions,
+  type PlaneBffClient,
 } from "./csrf";
 export { fetchLatestFxRate, type FxRateClientLookup, type FxRateClientResult } from "./fx-rate";
 export {

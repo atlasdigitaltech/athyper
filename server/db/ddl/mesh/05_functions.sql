@@ -36,12 +36,32 @@ AS $$
         OR lower(COALESCE(current_setting('app.mesh_admin', true), '')) IN ('1', 'true', 'on', 'yes')
 $$;
 
+-- Stamps updated_at on every UPDATE. When the target table also carries
+-- updated_by (audit-pair invariant), stamps that column too — sourced from the
+-- session GUC app.subject_id, else the caller-supplied value, else the prior
+-- row's value, else the 'system' sentinel. The final fallback keeps
+-- (updated_at IS NULL) = (updated_by IS NULL) intact even when the GUC is
+-- unset. The jsonb column-existence check keeps the trigger safe for tables
+-- that don't have updated_by.
 CREATE OR REPLACE FUNCTION mesh.trg_set_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
+DECLARE
+    v_new jsonb;
 BEGIN
     NEW.updated_at := now();
+    v_new := to_jsonb(NEW);
+    IF v_new ? 'updated_by' THEN
+        NEW := jsonb_populate_record(NEW, jsonb_build_object(
+            'updated_by', COALESCE(
+                NULLIF(current_setting('app.subject_id', true), ''),
+                v_new->>'updated_by',
+                to_jsonb(OLD)->>'updated_by',
+                'system'
+            )
+        ));
+    END IF;
     RETURN NEW;
 END;
 $$;

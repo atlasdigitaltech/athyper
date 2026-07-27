@@ -480,7 +480,8 @@ describe("workspace lifecycle route guard wiring", () => {
       "utf8",
     );
 
-    expect(formSource).toContain('import { csrfFetch } from "@athyper/runtime-shared/client"');
+    expect(formSource).toContain('from "@athyper/runtime-shared/client"');
+    expect(formSource).toMatch(/import\s*\{[^}]*csrfFetch[^}]*\}\s*from "@athyper\/runtime-shared\/client"/s);
     expect(formSource).toContain("csrfFetch(batchContext.endpoint");
     expect(batchRoute).toContain("resolveRuntimeFieldOptions");
     expect(batchRoute).toContain("MAX_BATCH_CONCURRENCY = 8");

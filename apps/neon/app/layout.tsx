@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
-import { getPublicBrandAssets } from "@athyper/brand";
+import { createPlaneMetadata } from "@athyper/app-foundation";
 import { getPlaneConfig } from "@athyper/session-plane";
 import { DEFAULT_PRESET, getPresetMeta } from "@athyper/theme/presets";
 import { PLANE_KEY } from "@/lib/plane";
@@ -11,18 +10,7 @@ import { NeonProviders } from "./providers";
 import "./globals.css";
 
 const plane = getPlaneConfig(PLANE_KEY);
-const brandAssets = getPublicBrandAssets(PLANE_KEY);
-
-export const metadata: Metadata = {
-  title: plane.browserTitle,
-  description: plane.productName,
-  applicationName: plane.appName,
-  icons: {
-    icon: [{ url: brandAssets.favicon, type: "image/png" }],
-    shortcut: [{ url: brandAssets.favicon, type: "image/png" }],
-    apple: [{ url: brandAssets.appIcon, type: "image/png" }],
-  },
-};
+export const metadata = createPlaneMetadata(PLANE_KEY);
 
 const THEME_PRESET_COOKIE = "theme_preset";
 

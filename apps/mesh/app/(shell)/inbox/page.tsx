@@ -1,6 +1,5 @@
-import { MeshInboxPage } from "@athyper/app-mesh/console";
-import { PLANE_KEY } from "@/lib/plane";
+import { InboxClient } from "./InboxClient";
 
 export default function InboxRoute() {
-  return <MeshInboxPage plane={PLANE_KEY} />;
+  return <InboxClient />;
 }

@@ -17,6 +17,7 @@
 import { z } from "zod";
 import { SemanticIntentSchema, UuidSchema } from "./common";
 import { MetaEntityContractV2Schema } from "./meta-entity-contract-v2";
+import { MetaEntityContractV21Schema } from "./meta-entity-contract-v21";
 import {
   EntityClassListCachePolicySchema,
   EntityListCachePolicyOverrideSchema,
@@ -1527,6 +1528,8 @@ export const CompiledEntitySchema = z.object({
   capability_manifest: EntityCapabilityManifestSchema,
   /** Canonical Phase B graph. Legacy fields above are derived adapters. */
   contract_v2: MetaEntityContractV2Schema.optional(),
+  /** Exact published v2.1 plane contract. Runtime behavior must prefer this graph. */
+  contract_v21: MetaEntityContractV21Schema.optional(),
   compiled_at: z.string().datetime(),
   compiled_hash: z.string(),
 });

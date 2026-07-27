@@ -1,5 +1,5 @@
 /**
- * /finance/setup — Finance Setup Workbench root
+ * /finance/setup — Finance Settings root
  *
  * Resolves the accessible company-code set. A single company is selected
  * automatically; multiple companies require an explicit user choice.

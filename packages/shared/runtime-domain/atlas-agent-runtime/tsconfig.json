@@ -1,0 +1,9 @@
+{
+  "extends": "@athyper/config/tsconfig",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "rootDir": "src",
+    "types": ["vitest/globals"]
+  },
+  "include": ["src"]
+}

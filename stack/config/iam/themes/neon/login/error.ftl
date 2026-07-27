@@ -1,5 +1,5 @@
 <#-- =======================================================================
-     Neon Keycloak Login Theme — error.ftl
+     Neon Keycloak Login Theme â€” error.ftl
      Styled error page matching the Neon split-panel layout.
      ======================================================================= -->
 <#include "_iam-context.ftl">
@@ -39,9 +39,6 @@
       <button class="kc-dot" aria-label="Slide 5"></button>
       <button class="kc-dot" aria-label="Slide 6"></button>
       <button class="kc-dot" aria-label="Slide 7"></button>
-    </div>
-  </div>
-
     </div>
   </div>
 

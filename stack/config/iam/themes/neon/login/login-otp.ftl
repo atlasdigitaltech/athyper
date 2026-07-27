@@ -75,11 +75,13 @@
 
         <!-- Header -->
         <div class="kc-header">
-          <#assign _verifiedFirstName = "">
-          <#if user?? && user.firstName??>
-            <#assign _verifiedFirstName = user.firstName>
+          <#assign _verifiedDisplayName = "">
+          <#if iamPresentationDisplayName?? && iamPresentationDisplayName?trim?has_content>
+            <#assign _verifiedDisplayName = iamPresentationDisplayName?trim>
+          <#elseif user??>
+            <#assign _verifiedDisplayName = ((user.firstName!"") + " " + (user.lastName!""))?trim>
           </#if>
-          <@iamGreeting verifiedName=_verifiedFirstName />
+          <@iamGreeting verifiedName=_verifiedDisplayName />
           <p>Enter the one-time code from your authenticator app to continue.</p>
         </div>
 

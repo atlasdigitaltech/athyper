@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  ArrowUpRight, Building2, Check, Circle, CircleAlert, Coins, RefreshCw,
+  ArrowUpRight, Building2, CircleAlert, Coins, RefreshCw,
 } from "lucide-react";
 import { Button, Skeleton } from "@athyper/ui/primitives";
 import { PageFrame } from "@athyper/ui/layout";
@@ -14,9 +14,7 @@ import { useCompanyFoundation } from "../../hooks/useCompanyFoundation";
 import { useScopeOptions } from "../../hooks/useScopeOptions";
 import { resolveAccessibleCompany } from "../../lib/company-selection";
 import { FINANCE_SETUP_WORKSPACE } from "../../lib/finance-setup.workspace";
-import type {
-  CompanyFoundationPayload, FoundationDomainKey, FoundationDomainStatus,
-} from "../../lib/finance-setup.types";
+import type { CompanyFoundationPayload, FoundationDomainKey } from "../../lib/finance-setup.types";
 import { AccountsFoundationPanel } from "./AccountsFoundationPanel";
 import { BooksFoundationPanel } from "./BooksFoundationPanel";
 import { FiscalCalendarDesigner } from "../configure/FiscalCalendarDesigner";
@@ -54,8 +52,7 @@ export function FoundationView({ companyCode, activeDomain }: FoundationViewProp
         {activeDomain === "organization" ? <OrganizationReviewCard payload={payload} />
           : activeDomain === "accounts" ? <AccountsFoundationPanel companyCode={payload.context.company.code} />
           : activeDomain === "books" ? <BooksFoundationPanel companyCode={payload.context.company.code} />
-          : activeDomain === "calendar" ? <FiscalCalendarDesigner companyCode={payload.context.company.code} />
-          : <FutureDomainPanel payload={payload} domainKey={activeDomain} />}
+          : <FiscalCalendarDesigner companyCode={payload.context.company.code} />}
       </div>
     </PageFrame>
   );
@@ -70,10 +67,10 @@ function FoundationHeader({ payload, refreshing, onRefresh }: {
     <SurfaceHeader
       kind="workspace"
       back={{
-        label: "Setup overview",
+        label: "Finance settings",
         href: setupScopePath(FINANCE_SETUP_WORKSPACE, scope),
       }}
-      eyebrow="Finance Setup · Company foundation"
+      eyebrow="Finance Settings · Company foundation"
       leading={<Building2 className="h-5 w-5" aria-hidden />}
       title={`${company.name} (${company.code})`}
       facts={[
@@ -82,23 +79,13 @@ function FoundationHeader({ payload, refreshing, onRefresh }: {
       ]}
       actions={(
         <>
-          <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium">
-            Foundation readiness: {payload.completedDomainCount} of {payload.totalDomainCount} complete
-          </span>
-          <span className={cn(
-            "rounded-full px-3 py-1 text-sm font-medium",
-            payload.readiness.status === "certified" ? "bg-emerald-100 text-emerald-800"
-              : payload.readiness.status === "stale" ? "bg-red-100 text-red-800"
-                : payload.readiness.status === "ready_for_certification" ? "bg-blue-100 text-blue-800"
-                  : "bg-amber-100 text-amber-900",
-          )}>
-            {payload.readiness.status === "certified" ? "Certified"
-              : payload.readiness.status === "stale" ? "Certification stale"
-                : payload.readiness.status === "ready_for_certification" ? "Ready to certify"
-                  : "Not ready"}
-          </span>
-          <Button variant="ghost" size="sm" aria-label="Refresh foundation status" onClick={onRefresh}>
+          <Button variant="ghost" size="sm" aria-label="Refresh foundation settings" onClick={onRefresh}>
             <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} aria-hidden />
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/workbench/finance/readiness?scopeId=${encodeURIComponent(company.code)}`}>
+              Review configuration
+            </Link>
           </Button>
           <Button asChild variant="outline" size="sm"><Link href="/finance/setup">Change company</Link></Button>
         </>
@@ -116,7 +103,7 @@ function FoundationHeader({ payload, refreshing, onRefresh }: {
           active: domain.code === "foundation",
         })),
       ]}
-      navigationLabel="Finance setup domains"
+      navigationLabel="Finance settings"
     />
   );
 }
@@ -126,7 +113,7 @@ function FoundationNavigation({ payload, activeDomain }: {
 }) {
   return (
     <nav className="grid gap-3 md:grid-cols-2 xl:grid-cols-4" aria-label="Foundation domains">
-      {payload.domains.map((domain, index) => (
+      {payload.domains.map((domain) => (
         <Link
           key={domain.key}
           href={domain.href}
@@ -136,13 +123,7 @@ function FoundationNavigation({ payload, activeDomain }: {
             domain.key === activeDomain && "border-primary ring-1 ring-primary",
           )}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">{index + 1}</p>
-              <p className="mt-1 text-sm font-semibold">{domain.label}</p>
-            </div>
-            <StatusPill status={domain.status} />
-          </div>
+          <p className="text-sm font-semibold">{domain.label}</p>
         </Link>
       ))}
     </nav>
@@ -151,15 +132,13 @@ function FoundationNavigation({ payload, activeDomain }: {
 
 function OrganizationReviewCard({ payload }: { payload: CompanyFoundationPayload }) {
   const { tenant, legalEntity, company } = payload.context;
-  const domain = payload.domains.find((item) => item.key === "organization")!;
   return (
     <section className="rounded-xl border bg-card" aria-labelledby="organization-title">
-      <div className="flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="border-b p-5">
         <div>
           <div className="flex items-center gap-2"><Coins className="h-5 w-5 text-muted-foreground" aria-hidden /><h2 id="organization-title" className="font-semibold">Organization and Currency</h2></div>
-          <p className="mt-1 text-sm text-muted-foreground">Review the statutory and accounting boundary. Changes stay in the canonical Entity records.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Company identity, statutory context, currencies, locale, and accounting framework.</p>
         </div>
-        <StatusPill status={domain.status} />
       </div>
 
       <div className="grid divide-y lg:grid-cols-3 lg:divide-x lg:divide-y-0">
@@ -190,32 +169,6 @@ function OrganizationReviewCard({ payload }: { payload: CompanyFoundationPayload
         </ReviewSection>
       </div>
 
-      <div className="border-t bg-muted/20 p-5">
-        <h3 className="text-sm font-semibold">Completion checks</h3>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          {domain.checks.map((check) => (
-            <div key={check.key} className="flex items-start gap-2 text-sm">
-              {check.passed
-                ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
-                : <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />}
-              <span>{check.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FutureDomainPanel({ payload, domainKey }: { payload: CompanyFoundationPayload; domainKey: FoundationDomainKey }) {
-  const domain = payload.domains.find((item) => item.key === domainKey)!;
-  return (
-    <section className="rounded-xl border bg-card p-6">
-      <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">{domain.label}</h2><StatusPill status={domain.status} /></div>
-      <p className="mt-2 text-sm text-muted-foreground">This domain is included in the foundation journey. Its dedicated editing experience lands in the next delivery slice.</p>
-      <div className="mt-5 grid gap-2 sm:grid-cols-2">
-        {domain.checks.map((check) => <div key={check.key} className="flex items-center gap-2 text-sm">{check.passed ? <Check className="h-4 w-4 text-emerald-600" /> : <Circle className="h-4 w-4 text-muted-foreground" />} {check.label}</div>)}
-      </div>
     </section>
   );
 }
@@ -226,11 +179,6 @@ function ReviewSection({ title, children }: { title: string; children: React.Rea
 
 function ReviewField({ label, value }: { label: string; value: string }) {
   return <div><dt className={LABEL_SM}>{label}</dt><dd className={`mt-0.5 ${BODY_SM}`}>{value}</dd></div>;
-}
-
-function StatusPill({ status }: { status: FoundationDomainStatus }) {
-  const label = status === "complete" ? "Complete" : status === "in_progress" ? "In progress" : "Not started";
-  return <span className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-medium", status === "complete" ? "bg-emerald-100 text-emerald-800" : status === "in_progress" ? "bg-amber-100 text-amber-900" : "bg-muted text-muted-foreground")}>{label}</span>;
 }
 
 function formatRecord(name: string | null, code: string | null): string { return name ? `${name}${code ? ` (${code})` : ""}` : displayValue(code); }

@@ -26,7 +26,12 @@ FROM (VALUES
      'master.conversation_type',
      'One-way broadcast from owner to all participants. '
      'Participants cannot reply.',
-     50, '{"max_participants": null, "is_one_way": true}')
+     50, '{"max_participants": null, "is_one_way": true}'),
+    ('atlas_agent', 'Atlas Agent',
+     'master.conversation_type',
+     'Principal-private Atlas conversation envelope. Transcript content is '
+     'stored in master.atlas_message and remains provider-portable.',
+     60, '{"max_participants": 1, "is_private": true, "principal_private": true}')
 ) AS v(code, name, domain_code, description, sort_order, meta)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

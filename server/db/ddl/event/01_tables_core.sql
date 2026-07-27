@@ -103,6 +103,8 @@ CREATE TABLE IF NOT EXISTS event.notification_message (
     -- Identity
     id              uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid            NOT NULL,
+    -- Delivery/visibility boundary. This is intentionally not event provenance.
+    plane_key       text            NOT NULL,
 
     -- Trigger context
     event_id        text            NOT NULL,
@@ -154,6 +156,7 @@ CREATE TABLE IF NOT EXISTS event.notification_message (
     CONSTRAINT nmsg_status_chk       CHECK (status IN (
         'pending', 'planning', 'delivering', 'completed', 'partial', 'failed'
     )),
+    CONSTRAINT nmsg_plane_key_chk    CHECK (plane_key IN ('neon', 'mesh', 'admin')),
     CONSTRAINT nmsg_expiry_chk       CHECK (expires_at IS NULL OR expires_at > created_at)
     -- priority: 09_triggers — control.trg_validate_lookup_columns('notification.priority')
 );
@@ -167,6 +170,20 @@ COMMENT ON COLUMN event.notification_message.event_id IS
     'Originating event identifier (from event.outbox.id or external event source).';
 COMMENT ON COLUMN event.notification_message.payload IS
     'Template variable data used to render the message body at dispatch time.';
+COMMENT ON COLUMN event.notification_message.plane_key IS
+    'Trusted delivery and visibility plane. Used for inbox, SSE, preference, and push isolation; not event provenance.';
+
+-- Expand/backfill for databases created before plane isolation, then contract
+-- the default so missed writers fail instead of silently leaking into Neon.
+ALTER TABLE event.notification_message
+    ADD COLUMN IF NOT EXISTS plane_key text NOT NULL DEFAULT 'neon';
+ALTER TABLE event.notification_message
+    ALTER COLUMN plane_key DROP DEFAULT;
+DO $$ BEGIN
+    ALTER TABLE event.notification_message
+        ADD CONSTRAINT nmsg_plane_key_chk
+        CHECK (plane_key IN ('neon', 'mesh', 'admin'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 
 -- ============================================================================
@@ -756,6 +773,7 @@ CREATE TABLE IF NOT EXISTS event.push_subscription (
     id              uuid            NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid            NOT NULL,
     principal_id    uuid            NOT NULL,
+    plane_key       text            NOT NULL,
 
     -- Subscription identity
     platform        text            NOT NULL,   -- 'web', 'android', 'ios'
@@ -786,9 +804,10 @@ CREATE TABLE IF NOT EXISTS event.push_subscription (
 
     CONSTRAINT ps_pkey              PRIMARY KEY (id),
     CONSTRAINT ps_tenant_uq         UNIQUE (tenant_id, id),
-    CONSTRAINT ps_device_uq         UNIQUE (tenant_id, principal_id, platform, device_id),
+    CONSTRAINT ps_device_uq         UNIQUE (tenant_id, principal_id, plane_key, platform, device_id),
     CONSTRAINT ps_endpoint_chk      CHECK  (btrim(endpoint) <> ''),
     CONSTRAINT ps_platform_chk      CHECK  (platform IN ('web', 'android', 'ios')),
+    CONSTRAINT ps_plane_key_chk     CHECK  (plane_key IN ('neon', 'mesh', 'admin')),
     CONSTRAINT ps_web_keys_chk      CHECK  (
         platform <> 'web'
         OR (p256dh_key IS NOT NULL AND auth_key IS NOT NULL)
@@ -812,9 +831,35 @@ COMMENT ON COLUMN event.push_subscription.device_id IS
 COMMENT ON COLUMN event.push_subscription.endpoint IS
     'Push service delivery URL. For Web Push this is the browser-generated URL. '
     'For FCM/APNs this is the gateway endpoint for the device_token.';
+COMMENT ON COLUMN event.push_subscription.plane_key IS
+    'Trusted plane on which this device subscription was registered.';
 
-CREATE INDEX IF NOT EXISTS ps_principal_active_idx
-    ON event.push_subscription (tenant_id, principal_id)
+ALTER TABLE event.push_subscription
+    ADD COLUMN IF NOT EXISTS plane_key text NOT NULL DEFAULT 'neon';
+ALTER TABLE event.push_subscription
+    ALTER COLUMN plane_key DROP DEFAULT;
+DO $$ BEGIN
+    ALTER TABLE event.push_subscription
+        ADD CONSTRAINT ps_plane_key_chk
+        CHECK (plane_key IN ('neon', 'mesh', 'admin'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+          FROM pg_constraint
+         WHERE conrelid = 'event.push_subscription'::regclass
+           AND conname = 'ps_device_uq'
+           AND pg_get_constraintdef(oid) LIKE '%plane_key%'
+    ) THEN
+        ALTER TABLE event.push_subscription DROP CONSTRAINT IF EXISTS ps_device_uq;
+        ALTER TABLE event.push_subscription
+            ADD CONSTRAINT ps_device_uq
+            UNIQUE (tenant_id, principal_id, plane_key, platform, device_id);
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS ps_principal_plane_active_idx
+    ON event.push_subscription (tenant_id, principal_id, plane_key)
     WHERE is_active = true;
 
 CREATE INDEX IF NOT EXISTS ps_expired_pidx

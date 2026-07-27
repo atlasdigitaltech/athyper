@@ -1,6 +1,9 @@
-﻿import { DashboardPage } from "@athyper/app-admin-command-hub";
-import { PLANE_KEY } from "@/lib/plane";
+import { redirect } from "next/navigation";
+import { getAdminServerSession } from "@/lib/server/session";
+import { AdminDashboardClient } from "./DashboardClient";
 
-export default function DashboardRoute() {
-  return <DashboardPage plane={PLANE_KEY} />;
+export default async function DashboardRoute() {
+  const session = await getAdminServerSession();
+  if (!session) redirect("/login?next=/dashboard");
+  return <AdminDashboardClient userName={session.displayName} />;
 }

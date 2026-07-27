@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@athyper/collaboration-ui": "workspace:*",
-    "@athyper/query": "workspace:*",
     "@athyper/runtime-list": "workspace:*"
   },
   "peerDependencies": {

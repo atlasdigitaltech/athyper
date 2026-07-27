@@ -20,6 +20,10 @@
     "lucide-react": "^1.8.0",
     "react": "^19.2.5"
   },
+  "dependencies": {
+    "@athyper/session-plane": "workspace:*",
+    "@athyper/shell-runtime": "workspace:*"
+  },
   "devDependencies": {
     "@athyper/config": "workspace:*",
     "@athyper/i18n": "workspace:*",

@@ -69,6 +69,10 @@ const removedNeonProductPackages = [
 const neonOnlyPackages = [
   ...removedNeonProductPackages,
   {
+    name: "@athyper/app-neon",
+    reason: "Neon app composition package",
+  },
+  {
     name: "@athyper/app-neon-command-hub",
     reason: "Neon app-specific package",
   },
@@ -87,6 +91,10 @@ const neonOnlyPackages = [
 ];
 
 const adminOnlyPackages = [
+  {
+    name: "@athyper/app-admin",
+    reason: "Admin app composition package",
+  },
   {
     name: "@athyper/app-admin-command-hub",
     reason: "Admin app-specific package",

@@ -24,6 +24,7 @@ DECLARE
     v_cc_id     uuid;
     v_le_id     uuid;
     v_person_id uuid;
+    v_principal_id uuid;
     v_emp_id    uuid;
     v_addr_id   uuid;
     v_cl_id     uuid;
@@ -309,6 +310,17 @@ BEGIN
         END IF;
 
         -- ── STAGE A: master.person ──────────────────────────────────────────────
+        -- The persona-matrix reset assigns new deterministic UUIDs. Resolve the
+        -- active principal by code, and skip retired narrative identities.
+        SELECT id INTO v_principal_id
+        FROM master.principal
+        WHERE tenant_id = v_tid AND code = rec.p_code;
+
+        IF v_principal_id IS NULL THEN
+            RAISE NOTICE '[007_principal_people] principal % is retired; skipping HR row', rec.p_code;
+            CONTINUE;
+        END IF;
+
         INSERT INTO master.person (
             tenant_id, code, name, person_number,
             first_name, last_name, display_name,
@@ -353,7 +365,7 @@ BEGIN
             rec.first_name || ' ' || rec.last_name,
             rec.work_email,
             rec.work_phone,
-            rec.principal_id,
+            v_principal_id,
             v_person_id,
             v_cc_id,
             'full_time',
@@ -364,6 +376,7 @@ BEGIN
         ON CONFLICT (tenant_id, code) DO UPDATE
             SET email           = EXCLUDED.email,
                 phone           = EXCLUDED.phone,
+                principal_id    = EXCLUDED.principal_id,
                 person_id       = EXCLUDED.person_id,
                 company_code_id = EXCLUDED.company_code_id,
                 display_name    = EXCLUDED.display_name,

@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import { getPublicBrandAssets } from "@athyper/brand";
-import { BrandedAuthLoader } from "@athyper/identity-gate";
+import { PlaneAppBootstrapSkeleton } from "@athyper/app-foundation";
 import { Skeleton } from "@athyper/ui/primitives";
 import { DelayedLoadingMessage } from "./DelayedLoadingMessage";
 
@@ -84,15 +83,6 @@ export function DashboardSkeleton() {
   );
 }
 
-export function BrandedLoginLoader() {
-  return (
-    <BrandedAuthLoader
-      plane="neon"
-      message="Preparing secure sign-in…"
-      longWaitMessage="Secure sign-in is taking longer than expected."
-    />
-  );
-}
 
 export function DocumentDetailSkeleton() {
   return (
@@ -168,49 +158,5 @@ export function DocumentDetailSkeleton() {
 }
 
 export function AppBootstrapSkeleton() {
-  const brandAssets = getPublicBrandAssets("neon");
-
-  return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-background" aria-busy="true" aria-label="Loading application">
-      <header className="flex h-12 shrink-0 items-center border-b border-border bg-background px-2">
-        <div className="flex w-full items-center justify-between gap-4" aria-hidden="true">
-          <img
-            alt=""
-            className="h-5 w-auto max-w-36 object-contain"
-            draggable={false}
-            src={brandAssets.wordmarkBlack}
-          />
-          <div className="flex items-center gap-3">
-            <Skeleton className="hidden h-5 w-32 sm:block" />
-            <Skeleton className="h-8 w-8 rounded-full" />
-          </div>
-        </div>
-      </header>
-      <LoadingProgressBar />
-
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        <nav
-          aria-hidden="true"
-          className="hidden w-nav-rail shrink-0 flex-col items-center gap-3 border-r border-sidebar-border bg-sidebar py-3 md:flex"
-        >
-          {Array.from({ length: 7 }, (_, index) => (
-            <Skeleton key={index} className="h-9 w-9 rounded-lg" />
-          ))}
-        </nav>
-        <main
-          className="flex min-h-0 flex-1 items-center justify-center overflow-hidden px-6"
-          data-loading-skeleton="neutral-bootstrap"
-        >
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div className="flex items-center gap-2" aria-hidden="true">
-              <Skeleton className="h-2.5 w-2.5 rounded-full [animation-delay:-300ms]" />
-              <Skeleton className="h-2.5 w-2.5 rounded-full [animation-delay:-150ms]" />
-              <Skeleton className="h-2.5 w-2.5 rounded-full" />
-            </div>
-            <DelayedLoadingMessage label="Loading Neon…" />
-          </div>
-        </main>
-      </div>
-    </div>
-  );
+  return <PlaneAppBootstrapSkeleton plane="neon" />;
 }

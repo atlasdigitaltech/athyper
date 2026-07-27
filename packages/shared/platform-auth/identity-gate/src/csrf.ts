@@ -1,17 +1,24 @@
-import type { PlaneKey } from "@athyper/session-plane";
-import { getPlaneConfig } from "@athyper/session-plane";
+import {
+  getPlaneConfig,
+  readCookieWithHostPrefix,
+  type PlaneKey,
+} from "@athyper/session-plane";
 
 export function readCsrfToken(plane: PlaneKey): string | null {
-  const cookieName = getPlaneConfig(plane).csrfCookieName;
-  const escapedName = cookieName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escapedName}=([^;]+)`));
-  if (!match) return null;
-  try {
-    return decodeURIComponent(match[1] ?? "");
-  } catch {
-    // A malformed cookie should fail CSRF validation server-side, not crash the UI.
-    return null;
-  }
+  return readCookieWithHostPrefix(
+    getPlaneConfig(plane).csrfCookieName,
+    (cookieName) => {
+      const escapedName = cookieName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escapedName}=([^;]+)`));
+      if (!match) return undefined;
+      try {
+        return decodeURIComponent(match[1] ?? "");
+      } catch {
+        // A malformed cookie should fail CSRF validation server-side, not crash the UI.
+        return undefined;
+      }
+    },
+  ) ?? null;
 }
 
 export function csrfHeaders(plane: PlaneKey): Record<string, string> {

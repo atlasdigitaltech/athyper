@@ -66,7 +66,7 @@ after P5b is reviewed and the descriptor seed PR is ready.
       - `packages/shared/ui-platform/content-ui/src/document-components/**`
       - `server/db/seed/platform/003_control/049_*.sql`
       - `server/db/seed/platform/003_control/050_*.sql`
-- [ ] Reference screenshot committed at `tests/visual/pi-fixture-1440x900.png`
+- [ ] Reference screenshot committed at `tests/e2e/visual/__screenshots__/pi-fixture-chromium-1440x900.png`
 - [ ] Diff threshold initially **5%** (permissive); tightened to **1%**
       before P7 cleanup ships
 - [ ] On failure, CI annotates the PR with the diff image so reviewers

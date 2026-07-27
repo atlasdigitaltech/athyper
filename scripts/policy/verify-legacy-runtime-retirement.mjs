@@ -82,7 +82,7 @@ async function main() {
     } else if (recordCalls > allowance.maxOccurrences) {
       failures.push(`${path}: has ${recordCalls} legacy /api/records occurrence(s), above allowlisted maximum ${allowance.maxOccurrences}`);
     }
-    allowance.actualOccurrences = recordCalls;
+    if (allowance) allowance.actualOccurrences = recordCalls;
   }
 
   for (const allowance of rootAllowances) {

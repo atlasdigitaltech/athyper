@@ -4,7 +4,7 @@ value: atlas-vintage
 */
 
 :root[data-theme-preset="atlas-vintage"] {
-  --radius: 0.625rem;
+  --preset-radius: 0.625rem;
   --background: #f5f1e6;
   --foreground: #4a3f35;
   --card: #fffcf5;

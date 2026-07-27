@@ -73,6 +73,22 @@ export function cookieNamesWithHostPrefix(baseCookieName: string): string[] {
   return [hostPrefixed, baseCookieName];
 }
 
+/**
+ * Reads a cookie using the hardened production name first and the local/legacy
+ * base name second. Keeping the precedence here prevents each consumer from
+ * implementing a subtly different migration fallback.
+ */
+export function readCookieWithHostPrefix<T>(
+  baseCookieName: string,
+  readCandidate: (cookieName: string) => T | null | undefined,
+): T | undefined {
+  for (const cookieName of cookieNamesWithHostPrefix(baseCookieName)) {
+    const value = readCandidate(cookieName);
+    if (value !== null && value !== undefined) return value;
+  }
+  return undefined;
+}
+
 // Policy values that govern every session across all planes. Shared here so that
 // auth-bff and any future server-side validators use the same constants without
 // importing from each other.
@@ -253,7 +269,7 @@ export const PLANE_CONFIGS = {
     localeCookieName: "neon_locale",
     realmCookieName: "neon_realm",
     mfaPendingCookieName: "neon_mfa_pending",
-    themePreset: "neon-base",
+    themePreset: "athyper-base",
     nativeRealm: "athyper",
     supportRealm: PLATFORM_REALM_KEY,
     supportLoginVisibility: "visible",
@@ -290,7 +306,7 @@ export const PLANE_CONFIGS = {
     localeCookieName: "mesh_locale",
     realmCookieName: "mesh_realm",
     mfaPendingCookieName: "mesh_mfa_pending",
-    themePreset: "neon-base",
+    themePreset: "athyper-base",
     nativeRealm: "athyper",
     supportRealm: PLATFORM_REALM_KEY,
     supportLoginVisibility: "hidden",
@@ -327,7 +343,7 @@ export const PLANE_CONFIGS = {
     localeCookieName: "admin_locale",
     realmCookieName: "admin_realm",
     mfaPendingCookieName: "admin_mfa_pending",
-    themePreset: "neon-base",
+    themePreset: "athyper-base",
     nativeRealm: "athyper",
     supportRealm: PLATFORM_REALM_KEY,
     supportLoginVisibility: "hidden",

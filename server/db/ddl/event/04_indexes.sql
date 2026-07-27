@@ -49,6 +49,9 @@ CREATE INDEX IF NOT EXISTS outbox_locked_pidx
 CREATE INDEX IF NOT EXISTS nmsg_tenant_created_idx
     ON event.notification_message (tenant_id, created_at DESC);
 
+CREATE INDEX IF NOT EXISTS nmsg_tenant_plane_created_idx
+    ON event.notification_message (tenant_id, plane_key, created_at DESC);
+
 -- Event correlation: find message from outbox event
 CREATE INDEX IF NOT EXISTS nmsg_event_idx
     ON event.notification_message (tenant_id, event_code, created_at DESC);

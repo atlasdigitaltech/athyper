@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://athyper.local/schemas/authorization-golden-corpus-v1.json",
+  "title": "Authorization Wave 0 golden decision corpus",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "readOnly",
+    "capture",
+    "identityInventory",
+    "actions",
+    "cases",
+    "coverage",
+    "hashes"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "readOnly": {
+      "const": true
+    },
+    "capture": {
+      "type": "object",
+      "required": [
+        "generatedAt",
+        "repositoryRevision",
+        "neon"
+      ]
+    },
+    "identityInventory": {
+      "type": "object",
+      "required": [
+        "neonActivePrincipals",
+        "meshActivePrincipals"
+      ]
+    },
+    "actions": {
+      "type": "array"
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "caseId",
+          "tenantId",
+          "principalId",
+          "permissionId",
+          "permissionCode",
+          "riskLevel",
+          "legacy"
+        ]
+      }
+    },
+    "engineDisagreements": {
+      "type": "array"
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "expectedNeonPrincipalActionCases",
+        "capturedNeonPrincipalActionCases",
+        "gates",
+        "gaps"
+      ]
+    },
+    "hashes": {
+      "type": "object",
+      "required": [
+        "catalogSha256",
+        "identitySha256",
+        "actionsSha256",
+        "casesSha256"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

@@ -89,6 +89,17 @@ CREATE TRIGGER trg_afl_feedback_type_lookup
     BEFORE INSERT OR UPDATE OF feedback_type ON log.ai_feedback_log
     FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('log.ai_feedback_type', 'feedback_type');
 
+-- Atlas operational ledgers are immutable for tenant and administrative roles.
+DROP TRIGGER IF EXISTS trg_ai_agent_run_immutable ON log.ai_agent_run;
+CREATE TRIGGER trg_ai_agent_run_immutable
+    BEFORE UPDATE OR DELETE ON log.ai_agent_run
+    FOR EACH ROW EXECUTE FUNCTION log.trg_prevent_mutation();
+
+DROP TRIGGER IF EXISTS trg_ai_agent_call_immutable ON log.ai_agent_call;
+CREATE TRIGGER trg_ai_agent_call_immutable
+    BEFORE UPDATE OR DELETE ON log.ai_agent_call
+    FOR EACH ROW EXECUTE FUNCTION log.trg_prevent_mutation();
+
 
 -- ============================================================================
 -- §27  notification_delivery_attempt — SCOPED IMMUTABILITY GUARD

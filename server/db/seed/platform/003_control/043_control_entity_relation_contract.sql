@@ -118,7 +118,7 @@ BEGIN
         ('asset', 'asset_class',             'belongs_to', 'asset_class',           'asset_class_id', 'restrict'),
         ('asset', 'company_code',            'belongs_to', 'company_code',          'company_code_id','restrict'),
         ('asset', 'books',                   'has_many',   'asset_book',            'asset_id',       'cascade'),
-        ('asset', 'components',              'has_many',   'asset_component',       'asset_id',       'cascade'),
+        ('asset', 'components',              'has_many',   'asset_component',       'parent_asset_id','cascade'),
 
         -- â”€â”€ Dimensions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('dimension_value', 'dimension_type','belongs_to', 'dimension_type',        'dimension_type_id','restrict'),
@@ -309,6 +309,7 @@ BEGIN
            target_entity = EXCLUDED.target_entity,
            resolution_kind = EXCLUDED.resolution_kind,
            fk_field = EXCLUDED.fk_field,
+           source_field = EXCLUDED.fk_field,
            source_type_field = EXCLUDED.source_type_field,
            source_type_value = EXCLUDED.source_type_value,
            source_id_field = EXCLUDED.source_id_field,
@@ -470,6 +471,7 @@ BEGIN
            target_entity = EXCLUDED.target_entity,
            resolution_kind = EXCLUDED.resolution_kind,
            fk_field = EXCLUDED.fk_field,
+           source_field = EXCLUDED.fk_field,
            source_type_field = EXCLUDED.source_type_field,
            source_type_value = EXCLUDED.source_type_value,
            source_id_field = EXCLUDED.source_id_field,
@@ -555,6 +557,7 @@ BEGIN
            target_entity = EXCLUDED.target_entity,
            resolution_kind = EXCLUDED.resolution_kind,
            fk_field = EXCLUDED.fk_field,
+           source_field = EXCLUDED.fk_field,
            source_type_field = EXCLUDED.source_type_field,
            source_type_value = EXCLUDED.source_type_value,
            source_id_field = EXCLUDED.source_id_field,

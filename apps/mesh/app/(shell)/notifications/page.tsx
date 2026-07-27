@@ -1,6 +1,9 @@
-import { MeshNotificationsPage } from "@athyper/app-mesh/console";
-import { PLANE_KEY } from "@/lib/plane";
+import { NotificationsPage } from "@athyper/notifications-client";
 
 export default function NotificationsRoute() {
-  return <MeshNotificationsPage plane={PLANE_KEY} />;
+  return (
+    <div className="mx-auto w-full max-w-4xl p-6">
+      <NotificationsPage />
+    </div>
+  );
 }

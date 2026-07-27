@@ -3,8 +3,19 @@ import type {
   RuntimeAccessScope,
   RuntimeDescriptor,
   RuntimeListServerAdapter,
+  EntityListResponse,
+  RawSearchParams,
 } from "@athyper/runtime-list/adapter";
 import { createDelegatedAccessScope, resolveRuntimeAccessScope } from "@athyper/runtime-list/core";
+
+export interface MeshAdapterConfig {
+  fetchDescriptor(entityCode: string): Promise<RuntimeDescriptor | null>;
+  fetchRecords(
+    entityCode: string,
+    params: RawSearchParams,
+    descriptor: RuntimeDescriptor,
+  ): Promise<EntityListResponse>;
+}
 
 export function resolveMeshAccessScope(
   descriptor: RuntimeDescriptor,
@@ -13,31 +24,35 @@ export function resolveMeshAccessScope(
   return resolveRuntimeAccessScope("mesh", descriptor, context);
 }
 
-export const meshAdapter: RuntimeListServerAdapter = {
-  plane: "mesh",
-  features: {
-    export:              true,
-    columnCustomization: true,
-    grouping:            true,
-    viewModes:           ["list", "compact"],
-    searchMode:          "server",
-    maxPageSize:         200,
-  },
+export function createMeshAdapter(config: MeshAdapterConfig): RuntimeListServerAdapter {
+  return {
+    plane: "mesh",
+    features: {
+      savedViews:          false,
+      bulkActions:         false,
+      export:              false,
+      import:              false,
+      columnCustomization: true,
+      grouping:            true,
+      viewModes:           ["list", "compact"],
+      searchMode:          "server",
+      maxPageSize:         200,
+    },
 
-  async fetchDescriptor(_entityCode) {
-    // Return null so RuntimeListPage renders the graceful "entity unavailable" state
-    // rather than propagating an unhandled error to the Next.js error boundary.
-    return null;
-  },
-  async resolveAccessScope(_entityCode, descriptor) {
-    return createDelegatedAccessScope("mesh", descriptor);
-  },
-  async fetchRecords(_entityCode, _params, _descriptor) {
-    return { records: [], pagination: undefined, isFullyLoaded: true };
-  },
+    fetchDescriptor: config.fetchDescriptor,
+    async resolveAccessScope(_entityCode, descriptor) {
+      // The Mesh runtime API has already intersected the active account grant,
+      // record grants, tenant, plane and descriptor. No client-supplied scope
+      // may widen that server boundary.
+      return createDelegatedAccessScope("mesh", descriptor);
+    },
+    async fetchRecords(entityCode, params, descriptor) {
+      return config.fetchRecords(entityCode, params, descriptor);
+    },
 
-  entityListHref:   (code) => `/workspace/${code}`,
-  entityDetailHref: (code, id) => `/workspace/${code}/${id}`,
-  entityNewHref:    (code) => `/workspace/${code}/new`,
-
-};
+    entityListHref:   (code) => `/app/${code}`,
+    entityDetailHref: (code, id) => `/app/${code}/${id}`,
+    // Mesh never exposes generic direct create/write routes.
+    entityNewHref:    (code) => `/app/${code}`,
+  };
+}

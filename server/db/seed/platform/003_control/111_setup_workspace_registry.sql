@@ -19,8 +19,8 @@ SELECT
     w.id,
     'finance-setup',
     'finance',
-    'Finance Setup',
-    'Company accounting, payment, treasury, tax, and certification setup.',
+    'Finance Settings',
+    'Finance settings and master-data directory.',
     '1.0',
     '[
       {"type":"tenant","routeSegment":"tenant","selectionMode":"explicit","required":false},
@@ -38,6 +38,13 @@ SELECT
     }'::jsonb,
     '{
       "basePath":"/finance/setup",
+      "entryPath":"/setup/finance",
+      "entityDirectory":{
+        "manifest":"FINANCE_ENTITY_DIRECTORY",
+        "scopes":["tenant","company_code"],
+        "schemas":["master","control","shared_reference"],
+        "excludeKinds":["document","transaction","log","runtime_metadata","security"]
+      },
       "overview":{
         "title":"Setup overview",
         "layout":"cards",

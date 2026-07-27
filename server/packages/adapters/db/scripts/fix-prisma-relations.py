@@ -5,12 +5,14 @@ fix-prisma-relations.py
 Re-applies manual Prisma schema relation fixes that `prisma db pull` always
 overwrites. Run this immediately after every `prisma db pull`.
 
-Fixes applied (7 total):
+Fixes applied (8 total):
   1-3. acct_profile_config back-refs → []
   4.   commitment.commitment_procurement back-ref → []
   5.   payment_term_discount_result self-ref back-ref → []
   6.   brand_profile.tenant_profile back-ref → []
   7.   letterhead.tenant_profile back-ref → []
+  8.   atlas_thread.atlas_run back-ref → [] (partial-unique on atlas_run is
+       WHERE status='started' only → semantically one-to-many)
 
 Phase D.4 — fixes 5+6 (invoice_{bank,party}_snapshot @@unique inject) were
 removed alongside the dropped tables.
@@ -22,10 +24,12 @@ Or add to package.json:
     "prisma:pull": "prisma db pull && python3 scripts/fix-prisma-relations.py"
 """
 
+import re
 import sys
 from pathlib import Path
 
-SCHEMA = Path(__file__).parent.parent / "src" / "prisma" / "schema.prisma"
+SCHEMA_DIR = Path(__file__).parent.parent / "src" / "prisma"
+SCHEMAS = [SCHEMA_DIR / "schema.prisma", SCHEMA_DIR / "schema.mesh.prisma"]
 
 
 def replace_once(content: str, old: str, new: str, label: str) -> str:
@@ -39,8 +43,12 @@ def replace_once(content: str, old: str, new: str, label: str) -> str:
     return result
 
 
-def main():
-    text = SCHEMA.read_text(encoding="utf-8")
+def apply_fixes(schema_path: Path) -> None:
+    if not schema_path.exists():
+        print(f"\nSkip {schema_path.name} — file not present")
+        return
+    print(f"\n-- {schema_path.name} --")
+    text = schema_path.read_text(encoding="utf-8")
 
     # ── Fix 1-3: acct_profile_config back-refs → one-to-many ─────────────────
     text = replace_once(
@@ -120,8 +128,25 @@ def main():
     else:
         print("  WARN [letterhead.tenant_profile []] pattern not found — already fixed or schema changed")
 
-    SCHEMA.write_text(text, encoding="utf-8")
-    print(f"\nWrote {SCHEMA}")
+    # -- Fix 8: atlas_run? back-refs -> [] --
+    # Both ai_agent_run and atlas_thread carry `atlas_run atlas_run?` back-refs
+    # whose FK on the atlas_run side is not unique (partial-unique WHERE
+    # status='started') -> semantically one-to-many. Whitespace varies per pull.
+    pattern = re.compile(r"^(  atlas_run\s+)atlas_run\?\s*$", re.MULTILINE)
+    matches = pattern.findall(text)
+    if matches:
+        text = pattern.sub(lambda m: f"{m.group(1)}atlas_run[]", text)
+        print(f"  OK   [atlas_run? back-refs -> [] ({len(matches)} occurrences)]")
+    else:
+        print("  WARN [atlas_run? back-refs] pattern not found -- already fixed or schema changed")
+
+    schema_path.write_text(text, encoding="utf-8")
+    print(f"Wrote {schema_path}")
+
+
+def main():
+    for schema_path in SCHEMAS:
+        apply_fixes(schema_path)
 
 
 if __name__ == "__main__":

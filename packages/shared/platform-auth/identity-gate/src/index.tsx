@@ -22,12 +22,12 @@ export {
   type AuthFailureCode,
   type AuthFailureOutcome,
   type AuthFailureDispatcherDeps,
+  type AuthFailureEvent,
   type AuthFailureSeverity,
 } from "./auth-failure-handler";
 export { RequiredActionBanner, type RequiredActionBannerProps } from "./required-action-banner";
 export { AuthFailurePage, type AuthFailurePageProps } from "./auth-failure-page";
 export { AuthFailureBridge, type AuthFailureBridgeProps } from "./auth-failure-bridge";
-
 
 
 

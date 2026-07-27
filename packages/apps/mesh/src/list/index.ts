@@ -1,2 +1,2 @@
-export { meshAdapter, resolveMeshAccessScope } from "./meshAdapter";
+export { createMeshAdapter, resolveMeshAccessScope, type MeshAdapterConfig } from "./meshAdapter";
 export { MeshListPage } from "./MeshListPage";

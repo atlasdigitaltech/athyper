@@ -63,6 +63,9 @@ echo -e "${YELLOW}Using checked-in realm-athyper.json.${NC}"
 DEMO_REALM_NAME="$(node -e 'const fs=require("fs"); const file=process.argv[1]; const realm=JSON.parse(fs.readFileSync(file,"utf8")).realm; if(!realm) process.exit(1); process.stdout.write(realm);' "$IMPORT_FILE")"
 echo -e "${GREEN}✓ realm-athyper.json validated (realm=${DEMO_REALM_NAME})${NC}"
 
+node "${REPO_DIR}/tools/scripts/generate-athyper-demo-iam.cjs" --check
+node "${REPO_DIR}/tools/scripts/verify-athyper-demo-iam.cjs"
+
 # Validate JSON
 if command -v jq &>/dev/null; then
   if ! jq empty "$IMPORT_FILE" 2>/dev/null; then

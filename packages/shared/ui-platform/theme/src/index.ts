@@ -46,6 +46,7 @@ export type {
 export {
   themePresets,
   DEFAULT_PRESET,
+  LEGACY_PRESET_ALIASES,
   getPresetMeta,
   getPresetsByCategory,
 } from "./presets/registry";

@@ -1,6 +1,9 @@
-import { MeshDashboardPage } from "@athyper/app-mesh/console";
-import { PLANE_KEY } from "@/lib/plane";
+import { redirect } from "next/navigation";
+import { getMeshServerSession } from "@/lib/server/session";
+import { MeshDashboardClient } from "./DashboardClient";
 
-export default function DashboardRoute() {
-  return <MeshDashboardPage plane={PLANE_KEY} />;
+export default async function DashboardRoute() {
+  const session = await getMeshServerSession();
+  if (!session) redirect("/login?next=/dashboard");
+  return <MeshDashboardClient userName={session.displayName} />;
 }

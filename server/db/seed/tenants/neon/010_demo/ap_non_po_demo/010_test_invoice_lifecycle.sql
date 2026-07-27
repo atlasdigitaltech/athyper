@@ -9,10 +9,9 @@
 -- Assumptions:
 --   - Tenant realm/code is athyper.
 --   - Company code ATHQ represents Athyper Group Holdings.
---   - User athq.admin has principal id aa001000-0000-0000-0000-000000000007.
 --   - TI-ATHQ-2026-002 uses a 2-level approval route:
 --       level 1: athq.admin + athq.manager in parallel,
---       level 2: athq.cfo as the serial approver after level 1 completes.
+--       level 2: athq.owner as the serial approver after level 1 completes.
 --   - The script is additive. If an invoice number already exists, that invoice
 --     is left unchanged so re-running the script does not duplicate child rows.
 
@@ -22,10 +21,10 @@ DECLARE
   v_company_code_id uuid;
   v_supplier_id uuid;
   v_supplier_name text := 'ATHQ Test Supplier';
-  v_admin_id uuid := 'aa001000-0000-0000-0000-000000000007';
-  v_parallel_approver_1_id uuid := 'aa001000-0000-0000-0000-000000000007'; -- athq.admin
-  v_parallel_approver_2_id uuid := 'aa001000-0000-0000-0000-000000000005'; -- athq.manager
-  v_serial_approver_id uuid := 'aa001000-0000-0000-0000-00000000000c'; -- athq.cfo
+  v_admin_id uuid;
+  v_parallel_approver_1_id uuid; -- athq.admin
+  v_parallel_approver_2_id uuid; -- athq.manager
+  v_serial_approver_id uuid; -- athq.owner
   v_book_id uuid;
   v_fiscal_period_id uuid;
   v_payment_term_id uuid;
@@ -60,20 +59,27 @@ BEGIN
     RAISE EXCEPTION 'Tenant athyper was not found.';
   END IF;
 
-  PERFORM set_config('app.current_tenant_id', v_tenant_id::text, true);
-  PERFORM set_config('app.current_principal_id', v_admin_id::text, true);
+  SELECT id INTO v_admin_id
+  FROM master.principal
+  WHERE tenant_id = v_tenant_id AND code = 'athq.admin';
 
-  IF NOT EXISTS (
-    SELECT 1
-    FROM master.principal p
-    WHERE p.tenant_id = v_tenant_id
-      AND p.id IN (v_parallel_approver_1_id, v_parallel_approver_2_id, v_serial_approver_id)
-    GROUP BY p.tenant_id
-    HAVING count(*) = 3
-  ) THEN
-    RAISE EXCEPTION 'Required ATHQ approval principals were not found. Expected athq.admin %, athq.manager %, athq.cfo %.',
+  SELECT id INTO v_parallel_approver_2_id
+  FROM master.principal
+  WHERE tenant_id = v_tenant_id AND code = 'athq.manager';
+
+  SELECT id INTO v_serial_approver_id
+  FROM master.principal
+  WHERE tenant_id = v_tenant_id AND code = 'athq.owner';
+
+  v_parallel_approver_1_id := v_admin_id;
+
+  IF v_admin_id IS NULL OR v_parallel_approver_2_id IS NULL OR v_serial_approver_id IS NULL THEN
+    RAISE EXCEPTION 'Required ATHQ approval principals were not found. Resolved athq.admin %, athq.manager %, athq.owner %.',
       v_parallel_approver_1_id, v_parallel_approver_2_id, v_serial_approver_id;
   END IF;
+
+  PERFORM set_config('app.current_tenant_id', v_tenant_id::text, true);
+  PERFORM set_config('app.current_principal_id', v_admin_id::text, true);
 
   SELECT cc.id
     INTO v_company_code_id
@@ -1042,7 +1048,7 @@ BEGIN
                   'name', 'Level 2 CFO Approval',
                   'mode', 'serial',
                   'required', 1,
-                  'approvers', jsonb_build_array('athq.cfo'),
+                  'approvers', jsonb_build_array('athq.owner'),
                   'status', 'pending'
                 )
               )
@@ -1227,7 +1233,7 @@ BEGIN
             jsonb_build_object(
               'seed', 'TestInvoice.sql',
               'principalAware', true,
-              'visibleTo', jsonb_build_array('athq.cfo'),
+              'visibleTo', jsonb_build_array('athq.owner'),
               'uiMessage', 'Waiting for level 1 parallel approvals.',
               'actions', '[]'::jsonb,
               'approvalLevel', 2,
@@ -1393,7 +1399,7 @@ BEGIN
               'mode', 'parallel_then_serial',
               'activeStage', 'Level 1 Parallel Approval',
               'pendingParallelApprovers', jsonb_build_array('athq.admin', 'athq.manager'),
-              'nextSerialApprover', 'athq.cfo'
+              'nextSerialApprover', 'athq.owner'
             )
             ELSE jsonb_build_object('mode', 'single_stage')
           END
@@ -1875,5 +1881,5 @@ END $$;
 --     - Approvals shows only principal-visible work items. For TI-ATHQ-2026-002,
 --       level 1 is active with two parallel work items:
 --         athq.admin + athq.manager, both due tomorrow.
---       level 2 is pending with athq.cfo as the serial approver.
+--       level 2 is pending with athq.owner as the serial approver.
 --     - Versions shows activity/version events first, then accounting/workflow links.

@@ -45,3 +45,54 @@ $$;
 COMMENT ON FUNCTION master.end_bank_account_link(uuid, uuid, date, uuid) IS
     'Governed temporal lifecycle command for bank_account_link. Generic delete/retire is not supported.';
 
+CREATE OR REPLACE FUNCTION master.guard_fx_rate_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog, pg_temp
+AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '55000',
+            MESSAGE = 'FX rates are append-only and cannot be deleted',
+            HINT = 'Use the governed rate replacement command.';
+    END IF;
+
+    IF NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.from_currency IS DISTINCT FROM OLD.from_currency
+       OR NEW.to_currency IS DISTINCT FROM OLD.to_currency
+       OR NEW.rate IS DISTINCT FROM OLD.rate
+       OR NEW.rate_type IS DISTINCT FROM OLD.rate_type
+       OR NEW.effective_date IS DISTINCT FROM OLD.effective_date
+       OR NEW.effective_time IS DISTINCT FROM OLD.effective_time
+       OR NEW.source IS DISTINCT FROM OLD.source
+       OR NEW.source_reference IS DISTINCT FROM OLD.source_reference
+       OR NEW.version_no IS DISTINCT FROM OLD.version_no
+       OR NEW.supersedes_id IS DISTINCT FROM OLD.supersedes_id
+       OR NEW.metadata IS DISTINCT FROM OLD.metadata
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '55000',
+            MESSAGE = 'FX rate values and lineage are immutable',
+            HINT = 'Use the governed rate replacement command.';
+    END IF;
+
+    IF OLD.status = 'superseded' OR NEW.status <> 'superseded' THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '55000',
+            MESSAGE = 'The only permitted FX rate update is active to superseded';
+    END IF;
+
+    IF NEW.status_changed_at IS NULL OR NEW.status_changed_by IS NULL THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            MESSAGE = 'Superseding an FX rate requires status_changed_at and status_changed_by';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.guard_fx_rate_immutable() IS
+    'Database boundary for immutable FX quotes: only the active-to-superseded lifecycle transition is mutable.';

@@ -1,5 +1,5 @@
 <#-- =======================================================================
-     Neon Keycloak Login Theme — login-update-password.ftl
+     Neon Keycloak Login Theme â€” login-update-password.ftl
      Required action: UPDATE_PASSWORD (set new password after reset link).
      Matches the split-panel layout of login.ftl.
      ======================================================================= -->
@@ -40,9 +40,6 @@
       <button class="kc-dot" aria-label="Slide 5"></button>
       <button class="kc-dot" aria-label="Slide 6"></button>
       <button class="kc-dot" aria-label="Slide 7"></button>
-    </div>
-  </div>
-
     </div>
   </div>
 

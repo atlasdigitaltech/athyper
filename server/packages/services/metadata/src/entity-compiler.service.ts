@@ -29,7 +29,15 @@ import {
 import { createCanonicalGraphLoader } from "./canonical-metadata-graph.js";
 import { evaluateExecutionEligibility } from "./execution-eligibility.js";
 import { buildMetaEntityContractV2 } from "./meta-entity-contract-v2.js";
-import type { MetaEntityContractV2 } from "@athyper/api-contracts/meta-entity-contract-v2";
+import {
+  MetaEntityContractV2Schema,
+  type MetaEntityContractV2,
+} from "@athyper/api-contracts/meta-entity-contract-v2";
+import {
+  MetaEntityContractV21Schema,
+  canonicalizeMetaEntityContractV21,
+  type MetaEntityContractV21,
+} from "@athyper/api-contracts/meta-entity-contract-v21";
 import {
   resolveEntityListCachePolicy,
   type EntityListCachePolicy,
@@ -40,6 +48,11 @@ import {
   resolveTenantOverlay,
   type TenantOverlayResolution,
 } from "./tenant-overlay-resolver.js";
+import {
+  loadPublishedRuntimeDescriptor,
+  RuntimeDescriptorAdmissionError,
+} from "./published-runtime-descriptor.js";
+import type { ExecutionDescriptorPlane } from "./execution-descriptor/provider.js";
 
 export interface CompiledField {
   id: string;
@@ -147,6 +160,8 @@ export interface CompiledEntity {
   execution_diagnostics: ExecutionDescriptorDiagnostic[];
   /** Canonical v2 graph. Legacy response properties above are derived only. */
   contract_v2?: MetaEntityContractV2;
+  /** Portable canonical v2.1 release graph, including flows and capability rules. */
+  contract_v21?: MetaEntityContractV21;
 }
 
 export interface CompiledDocumentRuntimePlan {
@@ -247,6 +262,9 @@ interface EntityVersionRow {
   id: string;
   version_no: number;
   version_hash: string | null;
+  contract_schema_version: string | null;
+  contract_document: unknown;
+  behaviors: unknown;
 }
 
 interface EntityFieldRow {
@@ -365,6 +383,14 @@ function coerceRecord(value: unknown): Record<string, unknown> | null {
   return parsed && typeof parsed === "object" && !Array.isArray(parsed)
     ? parsed as Record<string, unknown>
     : null;
+}
+
+function isLegacyPublishedDescriptorFallback(error: unknown): boolean {
+  return error instanceof RuntimeDescriptorAdmissionError
+    && (
+      error.code === "PUBLISHED_VERSION_REQUIRED"
+      || error.code === "PUBLISHED_DESCRIPTOR_NOT_READY"
+    );
 }
 
 function stringValue(value: unknown): string | null {
@@ -1092,7 +1118,73 @@ export class EntityCompilerService {
    * snapshot. A tenant overlay snapshot may carry either a fully compiled
    * descriptor or the small execution overlay consumed by the pure compiler.
    */
-  async loadExecutionDescriptor(entityCode: string, tenantId: string): Promise<SerializedExecutionDescriptorV1 | null> {
+  async loadExecutionDescriptor(
+    entityCode: string,
+    tenantId: string,
+    plane: ExecutionDescriptorPlane = "neon",
+  ): Promise<SerializedExecutionDescriptorV1 | null> {
+    try {
+      return (await loadPublishedRuntimeDescriptor(this.db, {
+        entityCode,
+        tenantId,
+        plane,
+        requireApi: true,
+      })).executionDescriptor;
+    } catch (error) {
+      this.logger?.warn("published_execution_descriptor_admission_failed", {
+        entityCode,
+        tenantId,
+        plane,
+        code: error instanceof RuntimeDescriptorAdmissionError ? error.code : "UNKNOWN",
+        err: String(error),
+      });
+      if (plane !== "neon" || !isLegacyPublishedDescriptorFallback(error)) return null;
+      this.logger?.warn("published_execution_descriptor_legacy_fallback", {
+        entityCode,
+        tenantId,
+        plane,
+        code: error instanceof RuntimeDescriptorAdmissionError ? error.code : "UNKNOWN",
+      });
+      return this.loadLegacyExecutionDescriptor(entityCode, tenantId);
+    }
+  }
+
+  /** Effective public compiled entity used by the one-call runtime bootstrap. */
+  async loadRuntimeCompiledEntity(
+    entityCode: string,
+    tenantId: string,
+    plane: ExecutionDescriptorPlane = "neon",
+  ): Promise<CompiledEntity | null> {
+    try {
+      return (await loadPublishedRuntimeDescriptor(this.db, {
+        entityCode,
+        tenantId,
+        plane,
+        requireApi: true,
+      })).compiled;
+    } catch (error) {
+      this.logger?.warn("published_runtime_descriptor_admission_failed", {
+        entityCode,
+        tenantId,
+        plane,
+        code: error instanceof RuntimeDescriptorAdmissionError ? error.code : "UNKNOWN",
+        err: String(error),
+      });
+      if (plane !== "neon" || !isLegacyPublishedDescriptorFallback(error)) return null;
+      this.logger?.warn("published_runtime_descriptor_legacy_fallback", {
+        entityCode,
+        tenantId,
+        plane,
+        code: error instanceof RuntimeDescriptorAdmissionError ? error.code : "UNKNOWN",
+      });
+      return this.loadLegacyRuntimeCompiledEntity(entityCode, tenantId);
+    }
+  }
+
+  private async loadLegacyExecutionDescriptor(
+    entityCode: string,
+    tenantId: string,
+  ): Promise<SerializedExecutionDescriptorV1 | null> {
     const graphValidation = await this.validateRuntimeGraph([entityCode]);
     if (!graphValidation.passed) {
       this.logger?.warn("entity_descriptor_preflight_failed", {
@@ -1113,10 +1205,14 @@ export class EntityCompilerService {
        WHERE ev.status = 'EFFECTIVE'
          AND e.is_active = true
          AND e.runtime_enabled = true
-       AND e.status = 'ACTIVE'
-       AND e.tenant_id IS NULL
-       AND ec.artifact_kind = 'execution'
-         AND (e.entity_code = ${entityCode} OR e.name = ${entityCode} OR e.slug = ${entityCode.replace(/_/g, "-")})
+         AND e.status = 'ACTIVE'
+         AND e.tenant_id IS NULL
+         AND ec.artifact_kind = 'execution'
+         AND (
+           e.entity_code = ${entityCode}
+           OR e.name = ${entityCode}
+           OR e.slug = ${entityCode.replace(/_/g, "-")}
+         )
        ORDER BY ec.created_at DESC
        LIMIT 1
     `.execute(this.db);
@@ -1138,10 +1234,14 @@ export class EntityCompilerService {
          AND overlay_hash = ${overlayResolution.overlayHash}
        ORDER BY created_at DESC
        LIMIT 1
-    `.execute(this.db).catch(() => ({ rows: [] as Array<{ compiled_json: unknown; compiled_hash: string }> }));
+    `.execute(this.db).catch(() => ({
+      rows: [] as Array<{ compiled_json: unknown; compiled_hash: string }>,
+    }));
     const overlayRecord = coerceRecord(overlay.rows[0]?.compiled_json);
     const precompiledOverlay = coerceRecord(overlayRecord?.["execution_descriptor"]);
-    if (precompiledOverlay) return precompiledOverlay as unknown as SerializedExecutionDescriptorV1;
+    if (precompiledOverlay) {
+      return precompiledOverlay as unknown as SerializedExecutionDescriptorV1;
+    }
 
     const result = compileExecutionDescriptor({
       compiledEntity: compiled,
@@ -1152,8 +1252,10 @@ export class EntityCompilerService {
     return result.serialized;
   }
 
-  /** Effective public compiled entity used by the one-call runtime bootstrap. */
-  async loadRuntimeCompiledEntity(entityCode: string, tenantId: string): Promise<CompiledEntity | null> {
+  private async loadLegacyRuntimeCompiledEntity(
+    entityCode: string,
+    tenantId: string,
+  ): Promise<CompiledEntity | null> {
     const base = await this.compile(entityCode);
     if (!base) return null;
     const overlayResolution = await this.resolveTenantOverlay(base, tenantId);
@@ -1389,7 +1491,14 @@ export class EntityCompilerService {
 
     let versionQuery = this.db
       .selectFrom("control.entity_version as ev" as never)
-      .select(["ev.id", "ev.version_no", "ev.version_hash"] as never[])
+      .select([
+        "ev.id",
+        "ev.version_no",
+        "ev.version_hash",
+        "ev.contract_schema_version",
+        "ev.contract_document",
+        "ev.behaviors",
+      ] as never[])
       .where("ev.entity_id" as never, "=" as never, entityRow.id as never)
       .where("ev.tenant_id" as never, "is" as never, null as never);
     versionQuery = selectedVersionId
@@ -1400,6 +1509,18 @@ export class EntityCompilerService {
     const versionRow = versionRows[0];
 
     if (!versionRow) return null;
+    const stagedContractCandidate = coerceRecord(versionRow.contract_document)
+      ?? coerceRecord(coerceRecord(versionRow.behaviors)?.["studio_contract_v2"]);
+    const stagedContractResult = stagedContractCandidate
+      ? MetaEntityContractV2Schema.safeParse(stagedContractCandidate)
+      : null;
+    const authoredContractV2 = stagedContractResult?.success ? stagedContractResult.data : null;
+    const contractV21Result = versionRow.contract_schema_version === "2.1"
+      ? MetaEntityContractV21Schema.safeParse(versionRow.contract_document)
+      : null;
+    const authoredContractV21 = contractV21Result?.success
+      ? canonicalizeMetaEntityContractV21(contractV21Result.data)
+      : null;
 
     const versionContract = await this.loadVersionContractV2(versionRow.id);
 
@@ -1515,7 +1636,7 @@ export class EntityCompilerService {
       handlerManifest: this.handlerManifest,
     });
 
-    const contractV2 = buildMetaEntityContractV2({
+    const contractV2 = authoredContractV2 ?? buildMetaEntityContractV2({
       catalog: {
         id: entityRow.id,
         tenant_id: null,
@@ -1620,6 +1741,7 @@ export class EntityCompilerService {
       data_policy: dataPolicy,
       feature_flags: featureFlags,
       contract_v2: contractV2,
+      ...(authoredContractV21 ? { contract_v21: authoredContractV21 } : {}),
       governance_level: entityRow.governance_level,
       security_tier: entityRow.security_tier,
       mutability: entityRow.mutability,

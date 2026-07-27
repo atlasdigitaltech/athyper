@@ -17,6 +17,7 @@ viewer_permissions AS (
       (category_code = 'entity' AND code IN ('read'))
       OR (category_code = 'collaboration' AND code IN ('follow', 'tag', 'attachment.read'))
       OR (category_code = 'utility' AND code IN ('report', 'print', 'export'))
+      OR code = 'FINANCE_SETUP.VIEW'
     )
 ),
 reporter_permissions AS (
@@ -114,6 +115,10 @@ manager_permissions AS (
   SELECT permission_id
   FROM permission_catalog
   WHERE code = 'ADDRESS_CONTACT.COMPANY_CODE.MANAGE'
+  UNION
+  SELECT permission_id
+  FROM permission_catalog
+  WHERE code IN ('FINANCE_SETUP.CONFIGURE', 'replace')
 ),
 owner_permissions AS (
   SELECT permission_id FROM manager_permissions
@@ -131,7 +136,7 @@ owner_permissions AS (
   UNION
   SELECT permission_id
   FROM permission_catalog
-  WHERE code = 'ADDRESS_CONTACT.LEGAL_ENTITY.MANAGE'
+  WHERE code IN ('ADDRESS_CONTACT.LEGAL_ENTITY.MANAGE', 'FINANCE_SETUP.ADVANCED_CONFIGURE')
 ),
 admin_permissions AS (
   SELECT permission_id FROM owner_permissions

@@ -15,7 +15,7 @@ import { runtimePath } from "@athyper/api-contracts/runtime-paths";
 import { type CatalogEntity, type CompiledEntity, type LookupDomainBundle, type EntityOperation, type StatusRoute, type EntityCapability } from "@athyper/api-contracts/metadata";
 import { type MasterRecord } from "@athyper/api-contracts/records";
 import { type InboxItem, type ApprovalAction, type ApprovalContext, type WorkflowEvent, type ActivityEntry } from "@athyper/api-contracts/workflow";
-import { type Notification, type SavedView } from "@athyper/api-contracts/platform";
+import { type SavedView } from "@athyper/api-contracts/platform";
 import { type MetadataClient, type RecordsClient, type WorkflowClient, type PlatformClient, type DocumentsClient, type EntityListParams } from "@athyper/api-client";
 import { type DocumentDetail, type FlowBundle, type StatusTransitionRequest } from "@athyper/api-contracts/documents";
 
@@ -321,25 +321,6 @@ export function useRecentActivity(limit = 20) {
 }
 
 // ── Notifications Hooks ─────────────────────────────────────────
-
-export function useNotifications(params?: Record<string, string>) {
-  return useQuery<{ data: Notification[] }>({
-    queryKey: params
-      ? [...queryKeys.notifications.all, params]
-      : queryKeys.notifications.all,
-    queryFn: () => platform().getNotifications(params),
-    staleTime: 30 * 1000,
-  });
-}
-
-export function useUnreadCount() {
-  return useQuery<{ count: number }>({
-    queryKey: queryKeys.notifications.unreadCount,
-    queryFn: () => platform().getUnreadCount(),
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
-  });
-}
 
 // ── Saved Views Hooks ───────────────────────────────────────────
 

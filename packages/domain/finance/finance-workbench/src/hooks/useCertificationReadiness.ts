@@ -2,7 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 export type CertificationDomainKey="currency_fx"|"tax"|"payments_settlement"|"banking_treasury";
-export interface CertificationDomainReadiness{domain:CertificationDomainKey;label:string;state:"not_started"|"in_progress"|"ready"|"blocked";passed:number;total:number;blockerCount:number;warningCount:number;checks:Array<{code:string;label:string;passed:boolean}>;primaryAction:{label:string;href:string};}
+export interface CertificationDomainReadiness{domain:CertificationDomainKey;label:string;state:"not_started"|"in_progress"|"ready"|"blocked";passed:number;total:number;blockerCount:number;warningCount:number;checks:Array<{code:string;label:string;passed:boolean;classification:"setup"}>;operationalHealth?:{state:"healthy"|"attention"|"not_applicable";attentionCount:number;affectsCertification:false};primaryAction:{label:string;href:string};}
 export interface CompanyCertificationReadiness{company:{id:string;code:string;name:string;legalEntityCode:string|null};asOfDate:string;domains:CertificationDomainReadiness[];summary:{passed:number;total:number;blockerCount:number;warningCount:number;readyForCertification:boolean};certification:{id:string|null;status:string|null;certifiedAt:string|null;fresh:boolean;materialChangeAt:string|null};rollout:{capabilityEnabled:boolean;mode:"observe"|"enforce";effectiveFrom:string|null;postingGateActive:boolean};status:"not_started"|"in_progress"|"blocked"|"ready_for_certification"|"certified"|"stale";computedAt:string;}
 export interface CertificationReadinessRollup{scope:{type:"tenant"|"legal_entity";code:string};companies:CompanyCertificationReadiness[];summary:{companyCount:number;certifiedCount:number;readyCount:number;blockedCount:number};computedAt:string;}
 

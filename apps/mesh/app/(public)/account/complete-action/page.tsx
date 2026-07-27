@@ -1,4 +1,16 @@
-// apps/mesh/app/(public)/account/complete-action/page.tsx — see neon for docs.
+// apps/mesh/app/(public)/account/complete-action/page.tsx
+//
+// Phase A — Required-actions completion deep link.
+//
+// The shared RequiredActionBanner / AuthFailurePage redirects users here when
+// REQUIRED_ACTION_PENDING fires. This page authoritatively decides where in
+// Keycloak to send the user — either to the account console (for self-service
+// actions like UPDATE_PROFILE) or back through the OIDC auth endpoint with
+// `kc_action=<X>` so KC re-prompts for the specific action mid-session.
+//
+// Why a dedicated route instead of redirecting client-side: the server reads
+// the validated session realm here and constructs the correct KC URL. The
+// client never has direct access to KEYCLOAK_BASE_URL.
 
 import { redirect } from "next/navigation";
 
@@ -48,10 +60,14 @@ function buildKcUrl(
   returnUrl: string,
 ): string {
   const kcBase = process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local";
+  // Self-service actions live in the KC account console; everything else
+  // re-enters the OIDC auth flow with kc_action.
   if (action && ACCOUNT_CONSOLE_ACTIONS.has(action)) {
     const ref = encodeURIComponent("mesh");
     return `${kcBase}/realms/${realmKey}/account?referrer=${ref}`;
   }
+  // Re-enter login with kc_action so KC re-prompts for the specific action.
+  // The login BFF forwards kc_action through to the OIDC authorization URL.
   const params = new URLSearchParams();
   params.set("returnUrl", returnUrl);
   if (action) params.set("kc_action", action);
@@ -66,6 +82,8 @@ export default async function CompleteActionPage({
   const params = await searchParams;
   const session = await getMeshServerSession();
 
+  // No active session → send to login. The post-login flow will surface the
+  // required action via the banner/page again.
   if (!session) {
     const returnUrl = safeReturnUrl(params.returnUrl);
     redirect(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);

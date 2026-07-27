@@ -1,17 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  AlertTriangle, Archive, Check, ChevronDown, ChevronRight, Globe, Grid3x3,
-  Loader2, Lock, Moon, Palette, Pin, RotateCcw, Save, Settings,
-  Share2, Star, Sun, SunMoon, XCircle,
+  AlertTriangle, Check, Globe, Grid3x3,
+  Loader2, Lock, Moon, Palette, RotateCcw, Save, Settings,
+  Sun, SunMoon, XCircle,
 } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
-import { themePresets } from "@athyper/theme/presets";
+import { DEFAULT_PRESET, getPresetMeta, themePresets } from "@athyper/theme/presets";
 import {
   Badge, Button,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  Separator, Skeleton,
+  Separator,
 } from "@athyper/ui/primitives";
 import { bffFetch, BffError } from "@athyper/runtime-shared/client";
 import type {
@@ -20,16 +20,15 @@ import type {
   MePreferences,
   MePreferencesPatch,
   MePreferencesPatchResponse,
-  MeSavedView,
-  MeSavedViewAction,
 } from "@athyper/api-contracts/me";
+import { SavedViewsSummary } from "@athyper/saved-views-ui";
 
 import {
   Banner, SectionCard, ToggleGroup,
-  SourceChip, fmtDate,
+  SourceChip,
 } from "../_shared";
 import { useMeUI } from "../me-ui-provider";
-import { HOME_WORKSPACES, HOME_MODULES_BY_WS } from "../preferences/navigation-defaults";
+import type { NavigationModuleOption, NavigationWorkspaceOption } from "../preferences/navigation-defaults";
 
 // ─── Local view-model ────────────────────────────────────────────────────────
 
@@ -44,6 +43,12 @@ interface BaselinePrefs {
   homeWs:         string;
   homeMod:        string;
   digest:         string;
+}
+
+interface EntitledModule {
+  module_id: string;
+  status: string;
+  metadata?: Record<string, unknown>;
 }
 
 // ─── PresetCard ──────────────────────────────────────────────────────────────
@@ -68,8 +73,8 @@ function PresetCard({ preset, active, onSelect }: {
         </span>
       )}
       <div className="flex gap-1">
-        <div className="h-4 w-4 shrink-0" style={{ borderRadius: preset.radius, backgroundColor: preset.primaryColor }} />
-        <div className="h-4 flex-1" style={{ borderRadius: preset.radius, backgroundColor: preset.mutedColor }} />
+        <div className="h-4 w-4 shrink-0" style={{ borderRadius: preset.previewRadius, backgroundColor: preset.primaryColor }} />
+        <div className="h-4 flex-1" style={{ borderRadius: preset.previewRadius, backgroundColor: preset.mutedColor }} />
       </div>
       <p className="pr-5 text-sm font-medium leading-tight text-foreground">{preset.label}</p>
       <p className="line-clamp-2 text-xs leading-tight text-muted-foreground">{preset.description}</p>
@@ -78,80 +83,6 @@ function PresetCard({ preset, active, onSelect }: {
 }
 
 // ─── SavedViewCard ───────────────────────────────────────────────────────────
-
-function SavedViewCard({ view, onAction }: {
-  view: MeSavedView;
-  onAction: (id: string, action: MeSavedViewAction) => Promise<void>;
-}) {
-  const [busy, setBusy]         = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(false);
-
-  async function act(action: MeSavedViewAction) {
-    setBusy(action);
-    try { await onAction(view.id, action); } finally { setBusy(null); }
-  }
-
-  return (
-    <div className="rounded-md border border-border bg-card">
-      <button
-        type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
-      >
-        {expanded
-          ? <ChevronDown  className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          : <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-        <span className="flex-1 text-sm font-medium leading-5 text-foreground">{view.name}</span>
-        <div className="flex shrink-0 items-center gap-1">
-          {view.is_pinned  && <Pin    className="h-3 w-3 text-info" />}
-          {view.is_starred && <Star   className="h-3 w-3 text-warning" />}
-          {view.is_shared  && <Share2 className="h-3 w-3 text-success" />}
-          <Badge variant="secondary" className="text-xs capitalize">{view.view_type}</Badge>
-          <Badge variant="outline"   className="text-xs">{view.module_code}</Badge>
-        </div>
-      </button>
-
-      {expanded && (
-        <div className="border-t border-border px-3 pb-3 pt-2">
-          {view.description && <p className="mb-2 text-xs text-muted-foreground">{view.description}</p>}
-          <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>Created: {fmtDate(view.created_at)}</span>
-            {view.updated_at && <span>Updated: {fmtDate(view.updated_at)}</span>}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {(["pin", "star", "share"] as const).map((action) => {
-              const icons  = { pin: <Pin className="h-2.5 w-2.5" />, star: <Star className="h-2.5 w-2.5" />, share: <Share2 className="h-2.5 w-2.5" /> };
-              const labels = { pin: view.is_pinned ? "Unpin" : "Pin", star: view.is_starred ? "Unstar" : "Star", share: view.is_shared ? "Unshare" : "Share" };
-              const activeClass = {
-                pin: view.is_pinned ? "border-info text-info" : "",
-                star: view.is_starred ? "border-warning text-warning" : "",
-                share: view.is_shared ? "border-success text-success" : "",
-              };
-              return (
-                <Button
-                  key={action} variant="outline" size="sm"
-                  className={cn("h-7 gap-1 px-2 text-xs", activeClass[action])}
-                  onClick={() => void act(action)} disabled={!!busy}
-                >
-                  {busy === action ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : icons[action]}
-                  {labels[action]}
-                </Button>
-              );
-            })}
-            <Button
-              variant="outline" size="sm"
-              className="h-7 gap-1 px-2 text-xs text-destructive hover:border-destructive hover:text-destructive"
-              onClick={() => void act("archive")} disabled={!!busy}
-            >
-              {busy === "archive" ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Archive className="h-2.5 w-2.5" />}
-              Archive
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── Preset categories (label tree) ──────────────────────────────────────────
 
@@ -179,7 +110,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
   const { session, applyThemePreferences } = useMeUI();
 
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>("system");
-  const [themePreset,    setThemePreset]    = useState("neon-base");
+  const [themePreset,    setThemePreset]    = useState(DEFAULT_PRESET);
   const [densityCode,    setDensityCode]    = useState<DensityCode>("compact");
   const [languageCode,   setLanguageCode]   = useState("en");
   const [timezone,       setTimezone]       = useState("Asia/Dubai");
@@ -194,13 +125,11 @@ export function PreferencesSection({ active }: { active: boolean }) {
   const [saving,      setSaving]       = useState(false);
   const [saveStatus,  setSaveStatus]   = useState<"idle" | "saved" | "error" | "warn">("idle");
   const [saveMessage, setSaveMessage]  = useState<string | null>(null);
+  const [homeWorkspaces, setHomeWorkspaces] = useState<NavigationWorkspaceOption[]>([]);
+  const [homeModulesByWorkspace, setHomeModulesByWorkspace] = useState<Record<string, NavigationModuleOption[]>>({});
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const baselineRef = useRef<BaselinePrefs | null>(null);
-
-  const [views,        setViews]        = useState<MeSavedView[]>([]);
-  const [viewsLoading, setViewsLoading] = useState(false);
-  const [viewsLoaded,  setViewsLoaded]  = useState(false);
 
   function applyThemeFromValues(b: BaselinePrefs) {
     applyThemePreferences?.({
@@ -218,7 +147,10 @@ export function PreferencesSection({ active }: { active: boolean }) {
       .then((d) => {
         const meta         = d.metadata ?? {};
         const nextMode     = d.appearance_mode ?? "system";
-        const nextPreset   = String(d.theme_preset ?? meta["theme_preset"] ?? "neon-base");
+        const persistedPreset = String(
+          d.theme_preset ?? meta["theme_preset"] ?? DEFAULT_PRESET,
+        );
+        const nextPreset = getPresetMeta(persistedPreset)?.value ?? DEFAULT_PRESET;
         const nextDens     = d.density_code ?? "compact";
         const nextLang     = d.language_code ?? "en";
         const nextTz       = d.timezone_code ?? "Asia/Dubai";
@@ -252,14 +184,28 @@ export function PreferencesSection({ active }: { active: boolean }) {
   }, [active, prefsLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!active || viewsLoaded) return;
-    setViewsLoaded(true);
-    setViewsLoading(true);
-    bffFetch<MeSavedView[]>("/api/me/saved-views")
-      .then(setViews)
-      .catch(() => setViews([]))
-      .finally(() => setViewsLoading(false));
-  }, [active, viewsLoaded]);
+    if (!active) return;
+    bffFetch<EntitledModule[]>("/api/relay/platform/modules")
+      .then((rows) => {
+        const modules: Record<string, NavigationModuleOption[]> = {};
+        const labels = new Map<string, string>();
+        for (const row of rows.filter((item) => item.status === "active")) {
+          const meta = row.metadata ?? {};
+          const workspace = typeof meta["workspace_code"] === "string" ? meta["workspace_code"] : "CORE";
+          const workspaceLabel = typeof meta["workspace_name"] === "string" ? meta["workspace_name"] : workspace;
+          const value = typeof meta["module_code"] === "string" ? meta["module_code"] : row.module_id;
+          const label = typeof meta["module_name"] === "string" ? meta["module_name"] : value;
+          labels.set(workspace, workspaceLabel);
+          (modules[workspace] ??= []).push({ value, label });
+        }
+        setHomeWorkspaces([...labels].map(([value, label]) => ({ value, label })));
+        setHomeModulesByWorkspace(modules);
+      })
+      .catch(() => {
+        setHomeWorkspaces([]);
+        setHomeModulesByWorkspace({});
+      });
+  }, [active]);
 
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
 
@@ -326,27 +272,7 @@ export function PreferencesSection({ active }: { active: boolean }) {
     setDirty(false); setSaveStatus("idle");
   }
 
-  const handleViewAction = useCallback(
-    async (id: string, action: MeSavedViewAction) => {
-      await bffFetch(`/api/me/saved-views/${id}/${action}`, { method: "PATCH" });
-      setViews((prev) =>
-        action === "archive"
-          ? prev.filter((v) => v.id !== id)
-          : prev.map((v) =>
-              v.id !== id ? v : {
-                ...v,
-                is_pinned:  action === "pin"   ? !v.is_pinned  : v.is_pinned,
-                is_starred: action === "star"  ? !v.is_starred : v.is_starred,
-                is_shared:  action === "share" ? !v.is_shared  : v.is_shared,
-              },
-            ),
-      );
-    },
-    [],
-  );
-
-  const activeViews = views.filter((v) => !v.is_archived);
-  const homeModOpts = HOME_MODULES_BY_WS[homeWs] ?? HOME_MODULES_BY_WS["FIN"] ?? [];
+  const homeModOpts = homeModulesByWorkspace[homeWs] ?? [];
 
   const appearanceOptions: { value: AppearanceMode; label: ReactNode; desc: string }[] = [
     { value: "light",  label: <><Sun     className="h-3.5 w-3.5" /> Light</>,  desc: "Always light" },
@@ -479,13 +405,13 @@ export function PreferencesSection({ active }: { active: boolean }) {
             </div>
             <Select value={homeWs} onValueChange={(v) => {
               setHomeWs(v);
-              const firstMod = HOME_MODULES_BY_WS[v]?.[0]?.value;
+              const firstMod = homeModulesByWorkspace[v]?.[0]?.value;
               setHomeMod(firstMod ?? "");
               setDirty(true);
             }}>
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {HOME_WORKSPACES.map((ws) => <SelectItem key={ws.value} value={ws.value} className="text-sm">{ws.label}</SelectItem>)}
+                {homeWorkspaces.map((ws) => <SelectItem key={ws.value} value={ws.value} className="text-sm">{ws.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <p className="mt-1 text-xs text-muted-foreground">The workspace you land on after login.</p>
@@ -536,25 +462,9 @@ export function PreferencesSection({ active }: { active: boolean }) {
       <SectionCard
         title="Saved Views"
         icon={Lock}
-        badge={<Badge variant="secondary" className="text-xs">{activeViews.length} active</Badge>}
-        managedBy={{ manager: "You", source: "master.saved_view", editPath: "Manage per-module view presets" }}
+        managedBy={{ manager: "You", source: "master.saved_view", editPath: "/saved-views" }}
       >
-        {viewsLoading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-10 w-full rounded-md" />
-            <Skeleton className="h-10 w-full rounded-md" />
-            <Skeleton className="h-10 w-3/4 rounded-md" />
-          </div>
-        ) : activeViews.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No saved views yet. Create views in module list pages and they will appear here.</p>
-        ) : (
-          <div className="space-y-2">
-            {activeViews.map((v) => <SavedViewCard key={v.id} view={v} onAction={handleViewAction} />)}
-          </div>
-        )}
-        <p className="mt-3 text-xs text-muted-foreground">
-          <strong>Pinned</strong> views appear at the top. <strong>Starred</strong> views are bookmarked. <strong>Shared</strong> views are visible to team members.
-        </p>
+        <SavedViewsSummary fetcher={bffFetch} />
       </SectionCard>
 
       {(dirty || saveStatus !== "idle") && (
@@ -595,4 +505,3 @@ export function PreferencesSection({ active }: { active: boolean }) {
     </div>
   );
 }
-

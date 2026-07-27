@@ -45,6 +45,27 @@ describe("resolveVerifiedRequestContext", () => {
       status: 403,
     });
   });
+
+  it("does not interpret a tenant-admin organization context as a typed work context", async () => {
+    const result = await resolveVerifiedRequestContext(fakeDb(), {
+      iss: "https://iam.athyper.local/realms/athyper",
+      sub: "keycloak-subject",
+    }, {
+      org: "athyper",
+      realm: "athyper",
+      tenantCode: "athyper",
+      trustedTenantId: TENANT_ID,
+      orgContextType: "tenant_admin",
+    });
+
+    expect(result).toMatchObject({
+      ok: true,
+      context: {
+        tenantId: TENANT_ID,
+        principalId: PRINCIPAL_ID,
+      },
+    });
+  });
 });
 
 function fakeDb(): any {

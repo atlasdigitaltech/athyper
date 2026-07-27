@@ -180,6 +180,30 @@ COMMENT ON COLUMN master.principal_ui_preference.surface_code IS
 COMMENT ON COLUMN master.principal_ui_preference.preference_value IS
     'JSONB payload. Size-capped at 8 KB to prevent misuse as a document store.';
 
+CREATE TABLE IF NOT EXISTS master.scoped_setting (
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+    scope_kind      text        NOT NULL,
+    scope_id        text        NOT NULL,
+    section_code    text        NOT NULL,
+    setting_key     text        NOT NULL,
+    setting_value   jsonb       NOT NULL,
+    version         integer     NOT NULL DEFAULT 1,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+    CONSTRAINT scoped_setting_pkey PRIMARY KEY (id),
+    CONSTRAINT scoped_setting_uq UNIQUE (tenant_id, scope_kind, scope_id, section_code, setting_key),
+    CONSTRAINT scoped_setting_scope_chk CHECK (scope_kind IN ('tenant', 'organization', 'company', 'purchasing-org', 'network-account', 'platform')),
+    CONSTRAINT scoped_setting_version_chk CHECK (version >= 1),
+    CONSTRAINT scoped_setting_value_size_chk CHECK (pg_column_size(setting_value) <= 8192)
+);
+CREATE INDEX IF NOT EXISTS scoped_setting_resolution_idx
+    ON master.scoped_setting (tenant_id, section_code, setting_key, scope_kind, scope_id);
+COMMENT ON TABLE master.scoped_setting IS
+    'Versioned non-personal settings overrides resolved after platform defaults and tenant settings.';
+
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- §3  master.saved_view  — named grid/list/query presets
@@ -199,6 +223,8 @@ CREATE TABLE IF NOT EXISTS master.saved_view (
     -- Target surface
     surface_code            text        NOT NULL,       -- lookup: ui.surface_code
     entity_key              text,                       -- optional entity discriminator
+    plane_key               text        NOT NULL DEFAULT 'neon',
+    target                  jsonb       NOT NULL DEFAULT '{}'::jsonb,
 
     -- Display
     code                    text        NOT NULL,       -- machine-stable key (immutable)
@@ -236,6 +262,8 @@ CREATE TABLE IF NOT EXISTS master.saved_view (
     CONSTRAINT sv_code_chk            CHECK (btrim(code) <> ''),
     CONSTRAINT sv_name_chk            CHECK (btrim(name) <> ''),
     CONSTRAINT sv_surface_chk         CHECK (btrim(surface_code) <> ''),
+    CONSTRAINT sv_plane_chk           CHECK (plane_key IN ('admin', 'neon', 'mesh')),
+    CONSTRAINT sv_target_chk          CHECK (jsonb_typeof(target) = 'object'),
     CONSTRAINT sv_version_chk         CHECK (version >= 1),
     CONSTRAINT sv_status_chk          CHECK (status IN ('active', 'archived')),
     CONSTRAINT sv_deleted_status_chk  CHECK (deleted_at IS NULL OR status = 'archived'),
@@ -251,6 +279,17 @@ CREATE TABLE IF NOT EXISTS master.saved_view (
     -- surface_code validated by trigger (ui.surface_code)
 );
 
+-- Additive upgrade for databases created before the experience discriminator
+-- and typed target were introduced.
+ALTER TABLE master.saved_view ADD COLUMN IF NOT EXISTS plane_key text NOT NULL DEFAULT 'neon';
+ALTER TABLE master.saved_view ADD COLUMN IF NOT EXISTS target jsonb NOT NULL DEFAULT '{}'::jsonb;
+DO $$ BEGIN ALTER TABLE master.saved_view ADD CONSTRAINT sv_plane_chk
+  CHECK (plane_key IN ('admin', 'neon', 'mesh'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.saved_view ADD CONSTRAINT sv_target_chk
+  CHECK (jsonb_typeof(target) = 'object');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 COMMENT ON TABLE master.saved_view IS
     'ARCHETYPE=B;SCOPE=T. Named grid/list/query presets. Durable artifact in master. '
     'Scope: personal (owner only), shared (all tenant users), system (platform-seeded). '
@@ -261,6 +300,10 @@ COMMENT ON TABLE master.saved_view IS
 COMMENT ON COLUMN master.saved_view.entity_key IS
     'Optional discriminator when a surface hosts multiple entity types. '
     'e.g. surface=document_list, entity_key=purchase_order.';
+COMMENT ON COLUMN master.saved_view.plane_key IS
+    'Owning user experience. Prevents a saved target from being interpreted by a different plane.';
+COMMENT ON COLUMN master.saved_view.target IS
+    'Typed target envelope: plane, surface, optional entityCode/routeName/parameters.';
 COMMENT ON COLUMN master.saved_view.state_hash IS
     'SHA-256 of canonical state_json. Enables dedup and change detection. '
     'Computed by application layer on write.';
@@ -643,6 +686,7 @@ CREATE TABLE IF NOT EXISTS master.principal_notification_preference (
 
     -- Owner
     principal_id    uuid        NOT NULL,
+    plane_key       text        NOT NULL,
 
     -- Scope — what event + channel this preference applies to
     event_code      text        NOT NULL,   -- matches notification_routing_rule.event_type
@@ -671,10 +715,11 @@ CREATE TABLE IF NOT EXISTS master.principal_notification_preference (
 
     CONSTRAINT pnp_pkey                PRIMARY KEY (id),
     CONSTRAINT pnp_tenant_id_uq        UNIQUE (tenant_id, id),
-    CONSTRAINT pnp_natural_key_uq      UNIQUE (tenant_id, principal_id, event_code, channel),
+    CONSTRAINT pnp_natural_key_uq      UNIQUE (tenant_id, principal_id, plane_key, event_code, channel),
     CONSTRAINT pnp_status_chk          CHECK (status IN ('active', 'deprecated')),
     CONSTRAINT pnp_event_code_nonempty CHECK (btrim(event_code) <> ''),
-    CONSTRAINT pnp_channel_nonempty    CHECK (btrim(channel) <> '')
+    CONSTRAINT pnp_channel_nonempty    CHECK (btrim(channel) <> ''),
+    CONSTRAINT pnp_plane_key_chk       CHECK (plane_key IN ('neon', 'mesh', 'admin'))
     -- channel validated by trigger (notification.channel)
     -- frequency_code validated by trigger (notification.digest_frequency)
 );
@@ -694,6 +739,33 @@ COMMENT ON COLUMN master.principal_notification_preference.is_enabled IS
     'NULL = inherit routing rule. false = suppress all deliveries for this event+channel.';
 COMMENT ON COLUMN master.principal_notification_preference.frequency_code IS
     'Lookup: notification.digest_frequency. NULL = immediate. Only honoured for digest-eligible priorities.';
+COMMENT ON COLUMN master.principal_notification_preference.plane_key IS
+    'Trusted plane for which this preference is effective.';
+
+ALTER TABLE master.principal_notification_preference
+    ADD COLUMN IF NOT EXISTS plane_key text NOT NULL DEFAULT 'neon';
+ALTER TABLE master.principal_notification_preference
+    ALTER COLUMN plane_key DROP DEFAULT;
+DO $$ BEGIN
+    ALTER TABLE master.principal_notification_preference
+        ADD CONSTRAINT pnp_plane_key_chk
+        CHECK (plane_key IN ('neon', 'mesh', 'admin'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+          FROM pg_constraint
+         WHERE conrelid = 'master.principal_notification_preference'::regclass
+           AND conname = 'pnp_natural_key_uq'
+           AND pg_get_constraintdef(oid) LIKE '%plane_key%'
+    ) THEN
+        ALTER TABLE master.principal_notification_preference
+            DROP CONSTRAINT IF EXISTS pnp_natural_key_uq;
+        ALTER TABLE master.principal_notification_preference
+            ADD CONSTRAINT pnp_natural_key_uq
+            UNIQUE (tenant_id, principal_id, plane_key, event_code, channel);
+    END IF;
+END $$;
 
 -- Foreign keys
 DO $$ BEGIN ALTER TABLE master.principal_notification_preference ADD CONSTRAINT pnp_tenant_fk
@@ -714,6 +786,6 @@ DO $$ BEGIN ALTER TABLE master.principal_notification_preference ADD CONSTRAINT 
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Index: lookups by principal
-CREATE INDEX IF NOT EXISTS pnp_principal_idx
-    ON master.principal_notification_preference (tenant_id, principal_id)
+CREATE INDEX IF NOT EXISTS pnp_principal_plane_idx
+    ON master.principal_notification_preference (tenant_id, principal_id, plane_key)
     WHERE is_active = true;

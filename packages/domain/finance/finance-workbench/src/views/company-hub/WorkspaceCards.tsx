@@ -76,7 +76,7 @@ export function WorkspaceCards({ companyCode, counts, className }: WorkspaceCard
   return (
     <section
       className={cn("grid grid-cols-1 gap-4 md:grid-cols-3", className)}
-      aria-label="Finance setup workspaces"
+      aria-label="Finance settings workspaces"
     >
       {SPECS.map((spec) => {
         const Icon   = spec.icon;

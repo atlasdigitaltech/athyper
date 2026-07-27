@@ -7,9 +7,9 @@
 #   - api          (server/Dockerfile.prod in staging)
 #   - worker       (server/Dockerfile.prod in staging)
 #   - scheduler    (server/Dockerfile.prod in staging)
-#   - neon-web     (apps/neon/Dockerfile)
-#   - mesh-web     (apps/mesh/Dockerfile)
-#   - admin-web    (apps/admin/Dockerfile)
+#   - neon-web     (apps/Dockerfile, APP_NAME=neon)
+#   - mesh-web     (apps/Dockerfile, APP_NAME=mesh)
+#   - admin-web    (apps/Dockerfile, APP_NAME=admin)
 #
 # This script ONLY builds images. It does not pull source, deploy
 # new containers, or prune anything. To deploy after building, use:

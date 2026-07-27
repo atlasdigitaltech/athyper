@@ -6,6 +6,7 @@ import { getDocumentEditCoordinatorIdentity } from "@/lib/server/document-edit-c
 import { resolveMetaEntityEditRoute } from "@/lib/server/meta-entity-edit-routing";
 import { PLANE_KEY } from "@/lib/plane";
 import { DocumentEditBootstrapClient } from "../DocumentObjectPageClient";
+import { AtlasEntityContextBinding } from "../AtlasEntityContextBinding";
 
 /**
  * Generic edit route — branches on `descriptor.renderer`:
@@ -24,6 +25,7 @@ export default async function RuntimeEditRoute({
   params: Promise<{ entity: string; id: string }>;
 }) {
   const { entity, id } = await params;
+  if(entity==="fx_policy")notFound();
   const recordId = normalizeRouteRecordId(id);
   const descriptor = await getMetaEntityRuntimeDescriptor(entity, recordId);
   const routeDecision = resolveMetaEntityEditRoute(descriptor);
@@ -44,11 +46,14 @@ export default async function RuntimeEditRoute({
       return <main className="p-6 text-sm text-destructive">The document editor is unavailable for this session.</main>;
     }
     return (
-      <DocumentEditBootstrapClient
-        entityCode={entity}
-        recordId={recordId}
-        identity={editCoordinatorIdentity}
-      />
+      <>
+        <AtlasEntityContextBinding entityType={entity} entityId={recordId} />
+        <DocumentEditBootstrapClient
+          entityCode={entity}
+          recordId={recordId}
+          identity={editCoordinatorIdentity}
+        />
+      </>
     );
   }
 
@@ -60,13 +65,16 @@ export default async function RuntimeEditRoute({
   // unavailable shell when the descriptor or record cannot be resolved.
   const detail = await getMetaEntityRecordDetail(entity, recordId, descriptor);
   return (
-    <RuntimeEditPage
-      plane={PLANE_KEY}
-      entity={entity}
-      id={recordId}
-      descriptor={descriptor}
-      record={detail.record}
-      detailState={detail.state}
-    />
+    <>
+      <AtlasEntityContextBinding entityType={entity} entityId={recordId} />
+      <RuntimeEditPage
+        plane={PLANE_KEY}
+        entity={entity}
+        id={recordId}
+        descriptor={descriptor}
+        record={detail.record}
+        detailState={detail.state}
+      />
+    </>
   );
 }

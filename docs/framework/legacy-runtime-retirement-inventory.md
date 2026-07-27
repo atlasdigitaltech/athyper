@@ -6,8 +6,6 @@ The deprecated runtime tree contains four workspace packages:
 
 - `@athyper/entity-runtime`
 - `@athyper/document-runtime`
-- `@athyper/runtime-document`
-- `@athyper/runtime-record`
 
 The only legacy BFF surface is [`apps/neon/app/api/records/[...path]/route.ts`](../../apps/neon/app/api/records/[...path]/route.ts). It exists solely for the deprecated tree and emits `legacy_records_call` telemetry with method, caller route, entity, and migration blocker.
 

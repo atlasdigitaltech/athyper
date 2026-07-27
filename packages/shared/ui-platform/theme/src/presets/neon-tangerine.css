@@ -4,7 +4,7 @@ value: neon-tangerine
 */
 
 :root[data-theme-preset="neon-tangerine"] {
-  --radius: 0.625rem;
+  --preset-radius: 0.625rem;
   --background: oklch(0.94 0 236.5);
   --foreground: oklch(0.32 0 0);
   --card: oklch(1 0 0);

@@ -77,9 +77,9 @@ export function MfaChallengeClient({ plane }: { plane: PlaneKey }) {
       plane={plane}
       title="Verify sign in"
       subtitle={plane === "admin"
-        ? "Admin access requires Keycloak AAL2. A passkey or security key is preferred."
-        : "Your organization requires additional Athyper verification."}
-      variant="compact"
+        ? "Admin access requires multi-factor authentication."
+        : "Your organization requires additional verification."}
+      variant="brand"
     >
       <AuthCard>
         <form
@@ -91,10 +91,11 @@ export function MfaChallengeClient({ plane }: { plane: PlaneKey }) {
         >
           <ErrorBanner message={error} />
           <p className="text-sm text-muted-foreground">
-            Continue to Keycloak to complete the MFA challenge. Athyper does not verify or store your authenticator code.
+            Continue to the Athyper identity service to complete verification.
+            Your application never receives or stores your authenticator code.
           </p>
           <PrimaryAction disabled={submitting} type="submit">
-            {submitting ? "Opening Keycloak..." : "Continue with Keycloak"}
+            {submitting ? "Opening secure verification..." : "Continue to verification"}
           </PrimaryAction>
           <SecondaryAction disabled={submitting} href="/logout">
             Cancel sign in

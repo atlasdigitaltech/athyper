@@ -55,16 +55,40 @@ function resolveCookieCandidates(): string[] {
   return cookieNamesWithHostPrefix(resolveCookieName());
 }
 
-// ─── Token reading ───────────────────────────────────────────────────────────
-
-export function getCsrfToken(): string {
+function readCsrfToken(cookieNames: readonly string[]): string {
   if (typeof document === "undefined") return "";
-  for (const cookieName of resolveCookieCandidates()) {
+  for (const cookieName of cookieNames) {
     const escapedName = cookieName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${escapedName}=([^;]+)`));
+    const match = document.cookie.match(
+      new RegExp(`(?:^|;\\s*)${escapedName}=([^;]+)`),
+    );
     if (match) return decodeURIComponent(match[1] ?? "");
   }
   return "";
+}
+
+export interface PlaneBffClient {
+  getCsrfToken(): string;
+}
+
+/**
+ * Binds cookie lookup to one plane while registering that plane for existing
+ * unbound shared clients.
+ */
+export function createPlaneBffClient(plane: PlaneKey): PlaneBffClient {
+  setBffClientPlane(plane);
+  const cookieNames = cookieNamesWithHostPrefix(
+    getPlaneConfig(plane).csrfCookieName,
+  );
+  return {
+    getCsrfToken: () => readCsrfToken(cookieNames),
+  };
+}
+
+// ─── Token reading ───────────────────────────────────────────────────────────
+
+export function getCsrfToken(): string {
+  return readCsrfToken(resolveCookieCandidates());
 }
 
 // ─── Low-level: raw Response ─────────────────────────────────────────────────

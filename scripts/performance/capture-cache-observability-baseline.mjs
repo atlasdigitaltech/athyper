@@ -6,7 +6,7 @@ import { chromium } from "@playwright/test";
 
 const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const baseUrl = new URL(required("PERF_NEON_BASE_URL"));
-const storageState = resolve(root, process.env.PERF_NEON_STORAGE_STATE || "tests/visual/.auth/storage-state.json");
+const storageState = resolve(root, process.env.PERF_NEON_STORAGE_STATE || "tests/e2e/.auth/storage-state.json");
 const outputDir = resolve(root, process.env.PERF_OUTPUT_DIR || "perf/artifacts/cache-observability");
 const repetitions = positiveInt(process.env.PERF_REPETITIONS || "3", "PERF_REPETITIONS");
 const settleMs = positiveInt(process.env.PERF_SETTLE_MS || "1000", "PERF_SETTLE_MS");

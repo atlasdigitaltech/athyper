@@ -43,6 +43,11 @@ export interface TopbarProps {
   // ── Center-right ────────────────────────────────────────
   /** Called when the launcher trigger is clicked. Opens universal launcher. */
   onSearchClick?: () => void;
+  /**
+   * Optional assistant/utility control. Rendered after the launcher and before
+   * notifications so keyboard and visual order remain predictable.
+   */
+  assistantSlot?: ReactNode;
 
   // ── Right zone ──────────────────────────────────────────
   /** Unread notification count. */
@@ -69,6 +74,7 @@ export function Topbar({
   workbenchToggle,
   delegationIndicator,
   onSearchClick,
+  assistantSlot,
   notificationCount = 0,
   notificationActive = false,
   onNotificationClick,
@@ -146,6 +152,15 @@ export function Topbar({
         </>
       )}
 
+      {assistantSlot ? (
+        <div
+          className="flex shrink-0 items-center"
+          data-topbar-slot="assistant"
+        >
+          {assistantSlot}
+        </div>
+      ) : null}
+
       <VSep />
 
       {/* ── Right zone ─────────────────────────────────────── */}
@@ -157,7 +172,7 @@ export function Topbar({
           className={`relative h-10 w-10 rounded-lg ${notificationActive ? "bg-muted text-foreground" : "text-muted-foreground"}`}
           onClick={onNotificationClick}
           aria-current={notificationActive ? "page" : undefined}
-          aria-label={`Notifications${notificationCount > 0 ? ` (${notificationCount} unread)` : ""}`}
+          aria-label={`Notifications${notificationCount > 0 ? ` (${notificationCount} notifications unread)` : ""}`}
         >
           <Bell className="h-6 w-6" />
           <NavBadge count={notificationCount} variant="overlay" />

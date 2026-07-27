@@ -32,7 +32,13 @@ import {
   registerMetadataRoutes,
   RuntimeBootstrapProvider,
 } from "@athyper/svc-metadata";
-import { getRecordsCapabilityHandlerManifest, registerRecordsRoutes } from "@athyper/svc-records";
+import {
+  EntityQueryService,
+  KyselyEntityQueryExecutor,
+  KyselyEntityQueryScopeResolver,
+  getRecordsCapabilityHandlerManifest,
+  registerRecordsRoutes,
+} from "@athyper/svc-records";
 import { createResolverRoute, registerAllResolvers } from "@athyper/svc-shared";
 import { registerSearchRoutes } from "@athyper/svc-search";
 import { registerDocumentsRoutes } from "@athyper/svc-documents";
@@ -67,7 +73,9 @@ import { createGotenbergClient } from "@athyper/server-foundation/render/gotenbe
 import { createOpenApiRouter } from "@athyper/server-foundation/openapi/openapi-generator";
 import {
   createAiServiceBundle,
+  registerAiAgentRoutes,
   registerAiRoutes,
+  registerAiThreadRoutes,
 } from "@athyper/svc-ai";
 
 import {
@@ -89,6 +97,7 @@ import {
   startFrameworkPhase,
 } from "../framework-performance.js";
 import { resolveEntityQueryRuntimeConfig } from "../entity-query-runtime-config.js";
+import { createAtlasCompanyCodeDataGateway } from "../atlas-record-data-gateway.js";
 
 /**
  * HTTP-date string for the `Sunset` response header on @deprecated routes.
@@ -237,6 +246,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     audit,
     breakers,
     serviceHealthChecks,
+    featureFlags,
     credentialEncryption,
     mentionService,
   } = deps;
@@ -444,7 +454,8 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   const executionDescriptorProvider = new ExecutionDescriptorProvider({
     redis: descriptorCache,
     generationCacheTtlMs: 1_000,
-    loadFromL3: ({ entityCode, tenantId }) => deps.entityCompiler.loadExecutionDescriptor(entityCode, tenantId),
+    loadFromL3: ({ entityCode, tenantId, plane }) =>
+      deps.entityCompiler.loadExecutionDescriptor(entityCode, tenantId, plane),
     logger,
   });
   // Keep each API replica's bounded generation cache exact without polling
@@ -454,11 +465,32 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   descriptorInvalidationSubscriber.on("message", (_channel, raw) => {
     try {
       const payload = JSON.parse(raw) as { plane?: string; tenant?: string; entity?: string };
+      const plane = payload.plane === "neon" || payload.plane === "mesh" || payload.plane === "admin"
+        ? payload.plane
+        : undefined;
       executionDescriptorProvider.applyInvalidation({
-        ...(payload.plane === "neon" || payload.plane === "mesh" || payload.plane === "admin" ? { plane: payload.plane } : {}),
+        ...(plane ? { plane } : {}),
         ...(payload.tenant ? { tenantId: payload.tenant } : {}),
         ...(payload.entity ? { entityCode: payload.entity } : {}),
       });
+      // The invalidation message is emitted by the durable publication outbox
+      // only after commit. Warm exact tenant/entity/plane scopes immediately;
+      // broad platform invalidations remain demand-loaded because they do not
+      // identify one safe cache key.
+      if (plane && payload.tenant && payload.entity) {
+        void executionDescriptorProvider.get({
+          plane,
+          tenantId: payload.tenant,
+          entityCode: payload.entity,
+        }).catch((error) => {
+          logger.warn("execution_descriptor_post_publish_warm_failed", {
+            plane,
+            tenantId: payload.tenant,
+            entityCode: payload.entity,
+            err: String(error),
+          });
+        });
+      }
     } catch (error) {
       logger.warn("execution_descriptor_invalidation_message_invalid", { err: String(error) });
     }
@@ -471,8 +503,8 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     redis: descriptorCache,
     load: createRuntimeBootstrapLoader({
       db: db.kysely as never,
-      loadCompiledEntity: async (entityCode, tenantId) =>
-        deps.entityCompiler.loadRuntimeCompiledEntity(entityCode, tenantId) as unknown as Promise<Record<string, unknown> | null>,
+      loadCompiledEntity: async (entityCode, tenantId, plane) =>
+        deps.entityCompiler.loadRuntimeCompiledEntity(entityCode, tenantId, plane) as unknown as Promise<Record<string, unknown> | null>,
     }),
   });
 
@@ -1088,9 +1120,27 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     checkPermissionBatch,
     getEffectiveModuleAccess,
     validateEntityVersionActivation: (versionId) => deps.entityCompiler.validateVersionForActivation(versionId),
+    compileEntityVersionInTransaction: (transaction, versionId) =>
+      createEntityCompilerService(
+        transaction,
+        logger,
+        getRecordsCapabilityHandlerManifest(),
+      ).validateVersionForActivation(versionId),
   });
 
   const entityQueryRuntimeConfig = resolveEntityQueryRuntimeConfig(process.env);
+  const atlasDataGateway =
+    entityQueryRuntimeConfig.enabled
+    && entityQueryRuntimeConfig.cursorSecret
+      ? createAtlasCompanyCodeDataGateway({
+          descriptors: executionDescriptorProvider,
+          query: new EntityQueryService({
+            executor: new KyselyEntityQueryExecutor(db.kysely),
+            scopeResolver: new KyselyEntityQueryScopeResolver(db.kysely),
+            cursorSecret: entityQueryRuntimeConfig.cursorSecret,
+          }),
+        })
+      : undefined;
   if (entityQueryRuntimeConfig.enabled) {
     logger.info("entity_query_v1_ready", {
       cursorSecretSource: entityQueryRuntimeConfig.cursorSecretSource,
@@ -1235,6 +1285,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     db: db.kysely,
     auth: routeAuth,
     cache: iamCache,
+    featureFlags,
     logger,
     deprecation: {
       recordHit: recordDeprecatedRouteHit,
@@ -1271,6 +1322,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     auth: routeAuth,
     cache: iamCache,
     checkPermissionBatch,
+    featureFlags,
     logger,
   });
 
@@ -1416,6 +1468,15 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       configured: Boolean(config.push?.vapidSubject && config.push.vapidPublicKey && config.push.vapidPrivateKey),
       publicKey:  config.push?.vapidPublicKey,
     },
+    capabilities: {
+      in_app: true,
+      email: Boolean(config.email),
+      push: Boolean(config.push?.vapidSubject && config.push.vapidPublicKey && config.push.vapidPrivateKey),
+      webhook: true,
+      sms: Boolean(config.sms),
+      whatsapp: false,
+      digest: false,
+    },
   });
 
   const _gotenberg = createGotenbergClient({ logger });
@@ -1447,12 +1508,69 @@ export async function startApi(deps: ServerDeps): Promise<void> {
           scan(cursor: string, ...args: unknown[]): Promise<[string, string[]]>;
         }
       ).scan(cursor, matchFlag, pattern, countFlag, count),
+    incr: (key: string) => redis.incr(key),
+    expire: (key: string, seconds: number) => redis.expire(key, seconds),
+    eval: (
+      script: string,
+      numberOfKeys: number,
+      key: string,
+      ttlSeconds: number,
+    ) => redis.eval(script, numberOfKeys, key, ttlSeconds),
   };
+  const aiMetrics = createAiLogMetrics();
   const aiBundle = await createAiServiceBundle({
     db: _db,
     redis: aiCache,
     logger,
-    metrics: createAiLogMetrics(),
+    metrics: aiMetrics,
+    environment: config.env,
+    featureFlags,
+    permissionResolverRegistry,
+    ...(atlasDataGateway ? { atlasDataGateway } : {}),
+    atlasAgent: config.atlasAgent,
+  });
+  healthChecks.set("atlasAgentOpenAi", async () => {
+    if (!config.atlasAgent.enabled || !config.atlasAgent.openai.enabled) {
+      return { status: "healthy", message: "disabled_by_environment" };
+    }
+    const readiness = aiBundle.agentProviderReadiness.openai;
+    return readiness.eligible && readiness.healthy
+      ? { status: "healthy", message: "model_metadata_probe_succeeded" }
+      : { status: "degraded", message: readiness.reason };
+  });
+  healthChecks.set("atlasAgentGemini", async () => {
+    if (!config.atlasAgent.enabled || !config.atlasAgent.gemini.enabled) {
+      return { status: "healthy", message: "disabled_by_environment" };
+    }
+    const readiness = aiBundle.agentProviderReadiness.gemini;
+    return readiness.eligible && readiness.healthy
+      ? { status: "healthy", message: "model_metadata_probe_succeeded" }
+      : { status: "degraded", message: readiness.reason };
+  });
+  healthChecks.set("atlasAgent", async () => {
+    if (!config.atlasAgent.enabled) {
+      return { status: "healthy", message: "disabled_by_environment" };
+    }
+    if (!aiBundle.agentRuntime.available) {
+      return {
+        status: "degraded",
+        message: "no_eligible_provider_binding",
+      };
+    }
+    if (!aiBundle.agentProviderReadiness.anthropic.eligible) {
+      return {
+        status: "degraded",
+        message: "default_provider_binding_not_ready",
+      };
+    }
+    // A configured secret is not proof that the upstream accepted it. Until a
+    // startup Anthropic probe/circuit is added, overall Atlas readiness stays
+    // explicitly degraded. OpenAI evaluation readiness is reported separately
+    // by the no-content model metadata contributor above.
+    return {
+      status: "degraded",
+      message: "provider_credential_configured_but_not_live_verified",
+    };
   });
   registerAiRoutes(apiRouter, {
     db:    _db,
@@ -1462,6 +1580,56 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     confidenceResolver: aiBundle.confidenceResolver,
     feedbackLogWriter:  aiBundle.feedbackLogWriter,
     logger,
+  });
+  registerAiAgentRoutes(apiRouter, {
+    db: _db,
+    auth: routeAuth as { verifyToken(token: string): Promise<{ sub: string; [k: string]: unknown }> },
+    agentRuntime: aiBundle.agentRuntime,
+    catalogResolver: aiBundle.agentCatalogResolver,
+    planePolicyResolver: aiBundle.agentPlanePolicyResolver,
+    rateLimiter: aiBundle.agentRateLimiter,
+    featureFlags,
+    permissionResolverRegistry,
+    logger,
+    metrics: aiMetrics,
+    envEnabled: config.atlasAgent.enabled,
+    persistenceEnvEnabled: config.atlasAgent.persistence.enabled,
+    toolsEnvEnabled: config.atlasAgent.tools.enabled,
+    readAuthenticatedContext: (req) => {
+      const context = tryGetContext();
+      const claims =
+        (req as Request & { athyperClaims?: Record<string, unknown> }).athyperClaims;
+      return context || claims
+        ? {
+            tenantId: context?.tenantId,
+            claims,
+          }
+        : undefined;
+    },
+    onVerifiedContext: bindVerifiedRequestContext,
+  });
+  registerAiThreadRoutes(apiRouter, {
+    db: _db,
+    auth: routeAuth as { verifyToken(token: string): Promise<{ sub: string; [k: string]: unknown }> },
+    threadService: aiBundle.atlasThreadService,
+    planePolicyResolver: aiBundle.agentPlanePolicyResolver,
+    featureFlags,
+    permissionResolverRegistry,
+    logger,
+    envEnabled: config.atlasAgent.enabled,
+    persistenceEnvEnabled: config.atlasAgent.persistence.enabled,
+    readAuthenticatedContext: (req) => {
+      const context = tryGetContext();
+      const claims =
+        (req as Request & { athyperClaims?: Record<string, unknown> }).athyperClaims;
+      return context || claims
+        ? {
+            tenantId: context?.tenantId,
+            claims,
+          }
+        : undefined;
+    },
+    onVerifiedContext: bindVerifiedRequestContext,
   });
 
   app.use("/api", apiRouter);
@@ -1553,26 +1721,16 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   });
 
   // RUNTIME_ROUTING_SPEC §10 — Entity compliance suite (dev/staging only).
-  // Compiles all system entities first so snapshot.entity_compiled rows exist,
-  // then validates the 10-point checklist. Never blocks boot or affects /readyz.
+  // Compiles execution descriptors before the catalog projection so runtime
+  // entities can be enriched from READY snapshots without noisy admission
+  // failures. Never blocks boot or affects /readyz.
   lifecycle.onReady(async () => {
     const startedAt = Date.now();
     logger.info("entity_compile_pipeline_started", {
-      mode: "catalog_then_execution",
+      mode: "execution_then_catalog",
       environment: config.env,
     });
     try {
-      logger.info("entity_catalog_compile_started");
-      const catalogSummary = await createCatalogCompiler(_db, logger, deps.entityCompiler).compileAll();
-      logger.info("entity_catalog_compile_finished", {
-        total: catalogSummary.total,
-        compiled: catalogSummary.compiled,
-        persisted: catalogSummary.persisted,
-        failed: catalogSummary.failed,
-        diagnostics: catalogSummary.diagnostics.length,
-        durationMs: Date.now() - startedAt,
-      });
-
       logger.info("entity_execution_compile_started");
       const compiler = createEntityCompilerService(_db, logger, getRecordsCapabilityHandlerManifest());
       const compileSummary = await compiler.compileAllSystemEntities();
@@ -1585,6 +1743,23 @@ export async function startApi(deps: ServerDeps): Promise<void> {
         snapshotPersistenceFailed: compileSummary.snapshotPersistenceFailedEntityCodes.length,
         graphPassed: compileSummary.graphValidation.passed,
         diagnostics: compileSummary.graphValidation.diagnostics.length,
+        durationMs: Date.now() - startedAt,
+      });
+
+      logger.info("entity_catalog_compile_started");
+      // Catalog warm-up consumes the canonical compiler output created above.
+      // The strict published-descriptor loader is reserved for request-time
+      // admission and correctly rejects snapshots whose publication state has
+      // not yet transitioned to READY.
+      const catalogSummary = await createCatalogCompiler(_db, logger, {
+        loadRuntimeCompiledEntity: (entityCode) => compiler.compile(entityCode),
+      }).compileAll();
+      logger.info("entity_catalog_compile_finished", {
+        total: catalogSummary.total,
+        compiled: catalogSummary.compiled,
+        persisted: catalogSummary.persisted,
+        failed: catalogSummary.failed,
+        diagnostics: catalogSummary.diagnostics.length,
         durationMs: Date.now() - startedAt,
       });
 

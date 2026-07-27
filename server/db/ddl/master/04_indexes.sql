@@ -945,15 +945,18 @@ CREATE INDEX IF NOT EXISTS tj_type_pidx
     WHERE is_active = true;
 
 -- ── master.fx_rate ───────────────────────────────────────────────────────────
--- Unique: one active rate per (pair, type, date, time)
+-- Unique per source: independently supplied active quotes may coexist.
 CREATE UNIQUE INDEX IF NOT EXISTS fxr_pair_date_uq
     ON master.fx_rate (
         tenant_id, from_currency, to_currency, rate_type, effective_date,
-        COALESCE(effective_time, '00:00:00'::time)
+        COALESCE(effective_time, '00:00:00'::time), source
     ) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS fxr_pair_idx
     ON master.fx_rate (tenant_id, from_currency, to_currency, effective_date DESC)
     WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS fxr_supersedes_idx
+    ON master.fx_rate (tenant_id, supersedes_id)
+    WHERE supersedes_id IS NOT NULL;
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- BUDGET · COMMITMENT · PLANNING ENGINE — Master indexes

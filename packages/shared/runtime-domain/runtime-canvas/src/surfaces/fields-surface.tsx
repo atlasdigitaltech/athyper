@@ -10,8 +10,9 @@ import {
 } from "@athyper/runtime-shared/meta-entity";
 import { lockReasonMessage, titleCaseStatus } from "@athyper/runtime-shared";
 import { applyServerDefaultsResolve, createRefilterCheck } from "@athyper/runtime-shared/resolvers";
-import { useEditDraftContext } from "@athyper/content-ui";
-import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
+import { FieldRow, useEditDraftContext } from "@athyper/content-ui";
+import type { MetaEntityField } from "@athyper/runtime-contracts";
+import { readRuntimeRecordField, type RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { RuntimeFieldValueView } from "../fields/runtime-field-value-view";
 import { RuntimeFieldRow } from "../edit/runtime-field-set";
 import { useFormProvenance } from "../edit/use-form-provenance";
@@ -364,6 +365,8 @@ function FieldsEditView({
                     disabled={isSaving}
                     error={error}
                     warning={fieldWarnings[field.name]}
+                    dirty={formValues[field.name]
+                      !== readRuntimeRecordField(recordData, field.name, field.columnName)}
                     contract={contract}
                     recordId={recordId}
                     selectedOptionLabel={selectedOptionLabels[field.name]}
@@ -431,7 +434,7 @@ function FieldsEditView({
                   />
                 ) : (
                   <FieldReadCell
-                    label={field.label}
+                    field={field}
                     value={formatFieldValue(recordData, field)}
                     reason={
                       maskEntry.editable === false && maskEntry.reason
@@ -458,24 +461,30 @@ function FieldsEditView({
 }
 
 function FieldReadCell({
-  label,
+  field,
   value,
   reason,
 }: {
-  label: string;
+  field: MetaEntityField;
   value: string;
   reason?: string;
 }) {
   return (
-    <div className="grid gap-1 text-sm">
-      <span className="font-medium text-muted-foreground">{label}</span>
+    <FieldRow className="rounded-md border">
+      <FieldRow.Label required={field.isRequired} helpText={field.description}>
+        {field.label}
+      </FieldRow.Label>
+      <FieldRow.Read
+        reason={reason ? "status_locked" : field.isComputed ? "computed" : "readonly"}
+        reasonMessage={reason}
+        empty={!value}
+        sourceLabel={field.origin}
+      >
       <span className="truncate text-sm font-normal text-foreground" title={reason}>
         {value || "—"}
       </span>
-      {reason ? (
-        <span className="text-xs text-muted-foreground/80">{reason}</span>
-      ) : null}
-    </div>
+      </FieldRow.Read>
+    </FieldRow>
   );
 }
 

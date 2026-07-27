@@ -290,6 +290,36 @@ CREATE INDEX IF NOT EXISTS ail_unreviewed_pidx
     ON log.ai_inference_log (tenant_id, created_at DESC)
     WHERE inference_type = 'prediction' AND is_accepted IS NULL;
 
+-- Atlas run history, idempotency/support lookup, and provider reliability.
+CREATE INDEX IF NOT EXISTS aar_thread_idx
+    ON log.ai_agent_run (tenant_id, principal_id, thread_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS aar_client_request_idx
+    ON log.ai_agent_run (tenant_id, client_request_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS aar_model_idx
+    ON log.ai_agent_run (tenant_id, resolved_provider_id, actual_model_id, created_at DESC)
+    WHERE resolved_provider_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS aar_failure_pidx
+    ON log.ai_agent_run (tenant_id, error_category, created_at DESC)
+    WHERE outcome = 'failed';
+
+-- Ordered call chain is already covered by aac_run_sequence_uq.
+-- Additional provider, support, and credential reconciliation indexes follow.
+CREATE INDEX IF NOT EXISTS aac_provider_model_idx
+    ON log.ai_agent_call (tenant_id, provider_id, actual_model_id, created_at DESC)
+    WHERE provider_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS aac_provider_request_pidx
+    ON log.ai_agent_call (provider_id, provider_request_id)
+    WHERE provider_request_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS aac_operation_pidx
+    ON log.ai_agent_call (tenant_id, call_kind, operation_id, created_at DESC)
+    WHERE operation_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS aac_credential_pidx
+    ON log.ai_agent_call (tenant_id, credential_fingerprint, created_at DESC)
+    WHERE credential_fingerprint IS NOT NULL;
+CREATE INDEX IF NOT EXISTS aac_credential_reference_pidx
+    ON log.ai_agent_call (tenant_id, credential_reference_hash, created_at DESC)
+    WHERE credential_reference_hash IS NOT NULL;
+
 
 -- —— §21  ai_monitoring_log ——————————————————————————————————————————————
 -- Model monitoring timeline

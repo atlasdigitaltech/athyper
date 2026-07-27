@@ -58,7 +58,7 @@ export function RollupView({ scopeType, scopeCode }: RollupViewProps) {
         <header className="flex flex-col gap-3 rounded-lg border bg-card p-5 md:flex-row md:items-start md:justify-between">
           <div className="flex flex-col gap-1">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              Finance Setup · {scopeLabel} rollup
+              Finance Settings · {scopeLabel} rollup
             </span>
             <div className="flex items-center gap-2">
               <ScopeIcon className="h-5 w-5 text-muted-foreground" aria-hidden />

@@ -13,6 +13,10 @@ import {
   type MetaEntityContractV2,
 } from "@athyper/api-contracts/meta-entity-contract-v2";
 import {
+  MetaEntityContractV21Schema,
+  type MetaEntityContractV21,
+} from "@athyper/api-contracts/meta-entity-contract-v21";
+import {
   compileMetaEntityRuntimeDescriptor,
   MetaEntityRecordOperationOverlayV1Schema,
   MetaEntityRuntimeBootstrapV1Schema,
@@ -310,6 +314,7 @@ async function loadBootstrapRuntimeDescriptor(input: RuntimeLoadInput): Promise<
     input.session,
     input.entityCode,
     input.recordId,
+    compiledResult.data.version_id,
     bootstrap.bootstrapHash,
   );
   const cached = descriptorSharedCache.get(descriptorKey);
@@ -357,7 +362,8 @@ async function loadLegacyRuntimeDescriptor(
   );
   if (!compiled) return undefined;
   const descriptorKey = buildDescriptorCacheKey(
-    input.session, input.entityCode, input.recordId, compiled.compiled_hash ?? compiled.version_hash,
+    input.session, input.entityCode, input.recordId, compiled.version_id,
+    compiled.compiled_hash ?? compiled.version_hash,
   );
   const cached = input.cacheEnabled ? descriptorSharedCache.get(descriptorKey) : undefined;
   if (cached) { descriptorCacheStates.set(cached, "warm"); return cached; }
@@ -389,6 +395,7 @@ type CanonicalRuntimeInput = Omit<CompiledMetaEntityInput, "fields"> & {
   fields: CompiledMetaEntityFieldInput[];
   relations: EntityRelationInput[];
   phaseBContract: MetaEntityContractV2;
+  publishedContract?: MetaEntityContractV21;
 };
 
 /**
@@ -398,6 +405,7 @@ type CanonicalRuntimeInput = Omit<CompiledMetaEntityInput, "fields"> & {
  */
 function projectCanonicalRuntimeInput(compiled: CompiledEntity): CanonicalRuntimeInput {
   const contract = MetaEntityContractV2Schema.parse(compiled.contract_v2);
+  const publishedResult = MetaEntityContractV21Schema.safeParse(compiled.contract_v21);
   const fieldsByName = new Map(contract.fields.map((field) => [field.name, field]));
   const relationsByCode = new Map(contract.relations.map((relation) => [relation.relation_code, relation]));
   const fieldNamesById = new Map(contract.fields.map((field) => [field.id, field.name]));
@@ -526,10 +534,45 @@ function projectCanonicalRuntimeInput(compiled: CompiledEntity): CanonicalRuntim
       ...(contract.lifecycle ? { has_lifecycle: true } : {}),
     },
     phaseBContract: contract,
+    ...(publishedResult.success ? { publishedContract: publishedResult.data } : {}),
   };
 }
 
-function projectContractLifecycle(contract: MetaEntityContractV2): MetaEntityLifecycleSummary | null {
+function projectPublishedLifecycle(contract: MetaEntityContractV21): MetaEntityLifecycleSummary | null {
+  if (!contract.lifecycle) return null;
+  return {
+    enabled: true,
+    lifecycleId: contract.lifecycle.binding.code,
+    states: contract.lifecycle.states.map((state) => state.code),
+    terminalStates: contract.lifecycle.states.filter((state) => state.terminal).map((state) => state.code),
+    transitions: contract.lifecycle.transitions.map((transition) => `${transition.from}->${transition.to}`),
+  };
+}
+
+function projectPublishedNumbering(contract: MetaEntityContractV21): MetaEntityNumberingSummary | null {
+  const configuration = contract.numbering.configurations.find((candidate) => candidate.enabled);
+  if (!configuration) return null;
+  return {
+    enabled: true,
+    numberField: configuration.field_scope.field_name,
+    resetStrategy: configuration.reset_policy,
+    uniquenessScope: configuration.field_scope.uniqueness,
+    segments: configuration.segments,
+  };
+}
+
+function projectPublishedFlows(contract: MetaEntityContractV21) {
+  return contract.flows.map((flow) => ({
+    id: flow.id,
+    flow_code: flow.flow_code,
+    label: flow.label,
+    trigger_context: flow.trigger_context,
+    is_default: flow.default,
+    status: "ACTIVE",
+  }));
+}
+
+function projectLegacyLifecycle(contract: MetaEntityContractV2): MetaEntityLifecycleSummary | null {
   if (!contract.lifecycle) return null;
   return {
     enabled: true,
@@ -543,7 +586,7 @@ function projectContractLifecycle(contract: MetaEntityContractV2): MetaEntityLif
   };
 }
 
-function projectContractNumbering(contract: MetaEntityContractV2): MetaEntityNumberingSummary | null {
+function projectLegacyNumbering(contract: MetaEntityContractV2): MetaEntityNumberingSummary | null {
   if (!contract.numbering) return null;
   return {
     enabled: contract.numbering.status === "active",
@@ -552,6 +595,22 @@ function projectContractNumbering(contract: MetaEntityContractV2): MetaEntityNum
     uniquenessScope: contract.numbering.uniqueness_scope,
     segments: contract.numbering.segments,
   };
+}
+
+function projectRuntimeLifecycle(input: CanonicalRuntimeInput): MetaEntityLifecycleSummary | null {
+  return input.publishedContract
+    ? projectPublishedLifecycle(input.publishedContract)
+    : projectLegacyLifecycle(input.phaseBContract);
+}
+
+function projectRuntimeNumbering(input: CanonicalRuntimeInput): MetaEntityNumberingSummary | null {
+  return input.publishedContract
+    ? projectPublishedNumbering(input.publishedContract)
+    : projectLegacyNumbering(input.phaseBContract);
+}
+
+function projectRuntimeFlows(input: CanonicalRuntimeInput) {
+  return input.publishedContract ? projectPublishedFlows(input.publishedContract) : undefined;
 }
 
 function projectBootstrapChildren(
@@ -570,9 +629,11 @@ function projectBootstrapChildren(
         lifecycleStateMasks: child.lifecycleStateMasks,
         permissionAliasMap: bootstrap.permissionAliases,
         relations: [],
-        lifecycle: projectContractLifecycle(runtimeInput.phaseBContract),
-        numbering: projectContractNumbering(runtimeInput.phaseBContract),
-        concurrencyPolicy: runtimeInput.phaseBContract.version_contract.concurrency_config,
+        lifecycle: projectRuntimeLifecycle(runtimeInput),
+        numbering: projectRuntimeNumbering(runtimeInput),
+        concurrencyPolicy: runtimeInput.publishedContract?.runtime.concurrency
+          ?? runtimeInput.phaseBContract.version_contract.concurrency_config,
+        flows: projectRuntimeFlows(runtimeInput),
         compiledAt: runtimeInput.compiled_at,
       });
       entries.push([normalizeEntityCode(child.entityCode), { compiled: compiled.data, descriptor }]);
@@ -605,9 +666,20 @@ function compileProjectedDescriptor(input: {
       relations: runtimeInput.relations,
       relationCapabilities,
       entityPolicy: input.entityPolicy,
-      lifecycle: projectContractLifecycle(runtimeInput.phaseBContract),
-      numbering: projectContractNumbering(runtimeInput.phaseBContract),
-      concurrencyPolicy: runtimeInput.phaseBContract.version_contract.concurrency_config,
+      lifecycle: projectRuntimeLifecycle(runtimeInput),
+      numbering: projectRuntimeNumbering(runtimeInput),
+      concurrencyPolicy: runtimeInput.publishedContract?.runtime.concurrency
+        ?? runtimeInput.phaseBContract.version_contract.concurrency_config,
+      flows: projectRuntimeFlows(runtimeInput),
+      ...(runtimeInput.publishedContract
+        ? {
+            extensions: {
+              contractV21: runtimeInput.publishedContract,
+              publishedVersionId: input.compiled.version_id,
+              compiledHash: input.compiled.compiled_hash,
+            },
+          }
+        : {}),
       lifecycleStateMasks: input.lifecycleStateMasks,
       permissionAliasMap: input.permissionAliasMap,
       documentSaveAndTransitionEnabled: isDocumentSaveAndTransitionEnabled({ tenantId, entityCode: input.entityCode }),
@@ -697,9 +769,11 @@ async function fetchRelationRuntimeProjections(
         operations,
         entityPolicy,
         relations: [],
-        lifecycle: projectContractLifecycle(runtimeInput.phaseBContract),
-        numbering: projectContractNumbering(runtimeInput.phaseBContract),
-        concurrencyPolicy: runtimeInput.phaseBContract.version_contract.concurrency_config,
+        lifecycle: projectRuntimeLifecycle(runtimeInput),
+        numbering: projectRuntimeNumbering(runtimeInput),
+        concurrencyPolicy: runtimeInput.publishedContract?.runtime.concurrency
+          ?? runtimeInput.phaseBContract.version_contract.concurrency_config,
+        flows: projectRuntimeFlows(runtimeInput),
         compiledAt: runtimeInput.compiled_at,
       });
       return [targetEntity, { compiled, descriptor: child }] as const;
@@ -753,8 +827,25 @@ async function fetchCompiledEntityCached(
   return compiled;
 }
 
-function buildDescriptorCacheKey(session: V4Session, entityCode: string, recordId: string | undefined, compiledHash: string): string {
-  return `${buildSecurityScopeKey(session, entityCode)}\u0000${recordId ?? "entity"}\u0000${compiledHash}`;
+function buildDescriptorCacheKey(
+  session: V4Session,
+  entityCode: string,
+  recordId: string | undefined,
+  publishedVersionId: string,
+  compiledHash: string,
+): string {
+  const identity = buildRuntimeCacheIdentity(session, entityCode);
+  return [
+    identity.tenant,
+    entityCode,
+    publishedVersionId,
+    compiledHash,
+    identity.plane,
+    identity.realm,
+    identity.principal,
+    identity.permissionStamp,
+    recordId ?? "entity",
+  ].join("\u0000");
 }
 
 function buildSecurityScopeKey(session: V4Session, entityCode: string): string {

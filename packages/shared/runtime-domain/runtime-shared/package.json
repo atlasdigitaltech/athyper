@@ -17,7 +17,8 @@
     "./validation": "./src/validation/index.ts",
     "./meta-entity": "./src/meta-entity/index.ts",
     "./edit": "./src/edit/index.ts",
-    "./resolvers": "./src/resolvers/index.ts"
+    "./resolvers": "./src/resolvers/index.ts",
+    "./observability": "./src/observability/index.ts"
   },
   "scripts": {
     "test": "vitest run",
@@ -48,4 +49,3 @@
     "vitest": "^4.1.4"
   }
 }
-

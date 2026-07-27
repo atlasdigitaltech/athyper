@@ -3285,7 +3285,12 @@ FROM (VALUES
             (v_ev,'rate',           'rate',           'Rate',          'decimal', 'number','one','standard',true, false, true,  false,130,v_su),
             (v_ev,'rate_type',      'rate_type',      'Rate Type',     'enum',    'select','one','standard',true, true,  true,  false,140,v_su),
             (v_ev,'effective_date', 'effective_date', 'Effective Date','date',    'date',  'one','standard',true, true,  true,  false,150,v_su),
-            (v_ev,'source',         'source',         'Source',        'enum',    'select','one','standard',true, true,  true,  false,160,v_su)
+            (v_ev,'effective_time', 'effective_time', 'Effective Time','time',    'time',  'one','standard',false,true,  true,  false,160,v_su),
+            (v_ev,'source',         'source',         'Source',        'enum',    'select','one','standard',true, true,  true,  false,170,v_su),
+            (v_ev,'source_reference','source_reference','Source Reference','string','text','one','standard',false,true, false, false,180,v_su),
+            (v_ev,'inverse_rate',   'inverse_rate',   'Inverse Rate',  'decimal', 'number','one','system',false,false, true, false,190,v_su),
+            (v_ev,'version_no',     'version_no',     'Version',       'integer', 'number','one','system',true, true,  true,  false,200,v_su),
+            (v_ev,'supersedes_id',  'supersedes_id',  'Supersedes Rate','uuid',   'reference','one','system',false,false,false,false,210,v_su)
 ) AS v(entity_version_id, name, column_name, label, data_type, ui_type,
        cardinality, origin, is_required, is_filterable, is_sortable,
        is_searchable, sort_order, created_by)
@@ -9050,7 +9055,7 @@ WHERE EXISTS (
 ON CONFLICT ON CONSTRAINT eo_binding_uq DO NOTHING;
 
 -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
--- fx_rate  (Set A + import + bulk_update)
+-- fx_rate (append-only create/replace plus import/export)
 -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 INSERT INTO control.entity_operation
     (tenant_id, entity_name, permission_code, surface, placement,
@@ -9067,12 +9072,10 @@ SELECT
     v.sort_order::integer,
     v.created_by::uuid
 FROM (VALUES
-    (NULL,'fx_rate','create',     'LIST',  'PRIMARY', 'NAVIGATE','/app/fx_rate/new',       false,10,v_su),
-    (NULL,'fx_rate','update',     'DETAIL','PRIMARY', 'NAVIGATE','/app/fx_rate/{id}/edit', true, 20,v_su),
-    (NULL,'fx_rate','delete',     'DETAIL','OVERFLOW','MODAL',   'delete',                 true, 30,v_su),
-    (NULL,'fx_rate','export',     'LIST',  'TOOLBAR', 'API',     'export',                 false,40,v_su),
-    (NULL,'fx_rate','import',     'LIST',  'TOOLBAR', 'API',     'import',                 false,50,v_su),
-    (NULL,'fx_rate','bulk_update','LIST',  'TOOLBAR', 'API',     'bulk_update',            false,60,v_su)
+    (NULL,'fx_rate','create','LIST',  'PRIMARY','NAVIGATE','/app/fx_rate/new',          false,10,v_su),
+    (NULL,'fx_rate','amend', 'DETAIL','PRIMARY','NAVIGATE','/app/fx_rate/{id}/replace', true, 20,v_su),
+    (NULL,'fx_rate','export','LIST',  'TOOLBAR','API',     'export',                    false,40,v_su),
+    (NULL,'fx_rate','import','LIST',  'TOOLBAR','NAVIGATE','/app/fx_rate/import',       false,50,v_su)
 ) AS v(tenant_id, entity_name, permission_code, surface, placement,
        handler_type, handler_target, is_record_required, sort_order, created_by)
 WHERE EXISTS (

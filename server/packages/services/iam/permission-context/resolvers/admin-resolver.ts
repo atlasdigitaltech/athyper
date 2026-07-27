@@ -138,9 +138,20 @@ async function loadAdminScope(
     WITH persona AS (
       SELECT pp.persona_id
         FROM master.principal_persona pp
+        JOIN master.principal principal
+          ON principal.id = pp.principal_id
        WHERE pp.principal_id = ${principalId}::uuid
-         AND (pp.tenant_id   = ${tenantId}::uuid OR pp.tenant_id IS NULL)
-       ORDER BY pp.tenant_id NULLS LAST
+         AND (
+              pp.tenant_id = ${tenantId}::uuid
+           OR pp.tenant_id IS NULL
+           OR pp.tenant_id = principal.tenant_id
+         )
+       ORDER BY
+         CASE
+           WHEN pp.tenant_id = ${tenantId}::uuid THEN 0
+           WHEN pp.tenant_id IS NULL THEN 1
+           ELSE 2
+         END
        LIMIT 1
     ),
     group_roles AS (
@@ -188,9 +199,14 @@ async function loadAdminScope(
       (SELECT persona_id FROM persona)                                  AS persona_id,
       COALESCE((SELECT array_agg(DISTINCT role_id::text)   FROM group_roles),   ARRAY[]::text[]) AS role_ids,
       COALESCE((SELECT array_agg(DISTINCT group_id::text)  FROM group_roles),   ARRAY[]::text[]) AS group_ids,
-      COALESCE((SELECT array_agg(DISTINCT code)            FROM persona_allows
-                UNION
-                SELECT array_agg(DISTINCT code)            FROM grant_allows),  ARRAY[]::text[]) AS allowed_codes,
+      COALESCE((
+        SELECT array_agg(DISTINCT code)
+          FROM (
+            SELECT code FROM persona_allows
+            UNION
+            SELECT code FROM grant_allows
+          ) effective_allows
+      ), ARRAY[]::text[]) AS allowed_codes,
       COALESCE((SELECT array_agg(DISTINCT code) FROM grant_denies),             ARRAY[]::text[]) AS denied_codes
   `.execute(db);
 

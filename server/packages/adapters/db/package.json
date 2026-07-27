@@ -37,7 +37,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:pull": "prisma db pull && python3 scripts/fix-prisma-relations.py && pnpm run prisma:generate",
-    "prisma:pull:mesh": "prisma db pull --schema src/prisma/schema.mesh.prisma && pnpm run prisma:generate:mesh",
+    "prisma:pull:mesh": "prisma db pull --schema src/prisma/schema.mesh.prisma && python3 scripts/fix-prisma-relations.py && pnpm run prisma:generate:mesh",
     "prisma:pull:force": "prisma db pull --force && python3 scripts/fix-prisma-relations.py && pnpm run prisma:generate",
     "prisma:studio": "prisma studio",
     "kysely:codegen": "pnpm run prisma:generate",

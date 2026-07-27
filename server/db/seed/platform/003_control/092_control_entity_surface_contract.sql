@@ -285,7 +285,8 @@ SELECT
     COALESCE(config, '{}'::jsonb),
     (SELECT system_user_id FROM constants)
 FROM surfaces
-ON CONFLICT (tenant_id, entity_id, mode, surface_key) DO UPDATE
+ON CONFLICT (tenant_id, entity_id, mode, surface_key)
+    WHERE entity_version_id IS NULL DO UPDATE
 SET kind                 = EXCLUDED.kind,
     placement            = EXCLUDED.placement,
     label                = EXCLUDED.label,
@@ -366,7 +367,8 @@ SELECT
     ui_behavior - 'label' - 'placement' - 'renderer_key' - 'visible_as_tab' - 'sort_order',
     (SELECT system_user_id FROM constants)
 FROM relations
-ON CONFLICT (tenant_id, entity_id, mode, surface_key) DO UPDATE
+ON CONFLICT (tenant_id, entity_id, mode, surface_key)
+    WHERE entity_version_id IS NULL DO UPDATE
 SET kind          = EXCLUDED.kind,
     placement     = EXCLUDED.placement,
     label         = EXCLUDED.label,
@@ -442,7 +444,8 @@ SELECT
     '{}'::jsonb,
     (SELECT system_user_id FROM constants)
 FROM surface_specs
-ON CONFLICT (tenant_id, entity_id, mode, surface_key) DO UPDATE
+ON CONFLICT (tenant_id, entity_id, mode, surface_key)
+    WHERE entity_version_id IS NULL DO UPDATE
 SET kind       = EXCLUDED.kind,
     placement  = EXCLUDED.placement,
     label      = EXCLUDED.label,

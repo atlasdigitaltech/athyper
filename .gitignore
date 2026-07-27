@@ -29,11 +29,11 @@ pids/
 *.lcov
 .nyc_output/
 
-# Playwright visual regression — never commit sign-in session state or
+# Playwright browser tests — never commit sign-in session state or
 # the test report bundle. Reference screenshots in __screenshots__/
 # ARE committed (they're the regression baseline).
-tests/visual/.auth/
-tests/visual/.playwright-output/
+tests/e2e/.auth/
+tests/e2e/.playwright-output/
 playwright-report/
 
 # =========================

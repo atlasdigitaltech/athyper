@@ -61,8 +61,9 @@ END $$;
 -- Currency and FX
 DROP TRIGGER IF EXISTS trg_fin_ready_fx_policy ON control.fx_policy;
 CREATE TRIGGER trg_fin_ready_fx_policy AFTER INSERT OR UPDATE OR DELETE ON control.fx_policy FOR EACH ROW EXECUTE FUNCTION governance.trg_invalidate_finance_setup_certification('company_optional','FX policy changed');
+-- Rates are operational health, not setup evidence. Keep the historical DROP
+-- so an upgrade removes the Stage F trigger without rewriting any rate data.
 DROP TRIGGER IF EXISTS trg_fin_ready_fx_rate ON master.fx_rate;
-CREATE TRIGGER trg_fin_ready_fx_rate AFTER INSERT OR UPDATE OR DELETE ON master.fx_rate FOR EACH ROW EXECUTE FUNCTION governance.trg_invalidate_finance_setup_certification('tenant','FX rate coverage changed');
 
 -- Tax
 DROP TRIGGER IF EXISTS trg_fin_ready_tax_group ON control.tax_group;
@@ -104,4 +105,3 @@ DROP TRIGGER IF EXISTS trg_fin_ready_bank_link ON master.bank_account_link;
 CREATE TRIGGER trg_fin_ready_bank_link AFTER INSERT OR UPDATE OR DELETE ON master.bank_account_link FOR EACH ROW EXECUTE FUNCTION governance.trg_invalidate_finance_setup_certification('company_optional','Bank Account Company link changed');
 DROP TRIGGER IF EXISTS trg_fin_ready_house_bank ON master.bank_account_house_config;
 CREATE TRIGGER trg_fin_ready_house_bank AFTER INSERT OR UPDATE OR DELETE ON master.bank_account_house_config FOR EACH ROW EXECUTE FUNCTION governance.trg_invalidate_finance_setup_certification('tenant','House Bank configuration changed');
-

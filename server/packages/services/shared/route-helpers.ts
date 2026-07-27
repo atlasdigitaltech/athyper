@@ -406,7 +406,17 @@ export async function resolveVerifiedRequestContext(
     };
   }
 
-  const rawWorkContextType = normalizeClaimString(hints.workContextType) ?? normalizeClaimString(hints.orgContextType);
+  const explicitWorkContextType = normalizeClaimString(hints.workContextType);
+  const orgContextType = normalizeClaimString(hints.orgContextType)?.toLowerCase();
+  // X-Org-Context-Type also describes tenant-level memberships such as
+  // `tenant_admin`; those are not typed work contexts. Preserve the legacy
+  // fallback only for organization types that map to the work-context model.
+  const legacyWorkContextType = orgContextType === "legal_entity"
+    || orgContextType === "operating_organization"
+    || orgContextType === "company_code"
+    ? orgContextType
+    : undefined;
+  const rawWorkContextType = explicitWorkContextType ?? legacyWorkContextType;
   const workContextType = rawWorkContextType?.toLowerCase();
   const workContextId = normalizeClaimString(hints.workContextId)
     ?? (workContextType === "legal_entity" ? normalizeClaimString(hints.organizationId) : undefined);

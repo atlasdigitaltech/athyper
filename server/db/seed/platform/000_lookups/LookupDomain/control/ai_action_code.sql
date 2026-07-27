@@ -66,7 +66,15 @@ FROM (VALUES
      'Translate source content to a target locale, preserving domain terminology. '
      'Used for multi-locale invoice processing. '
      'Consumer ceiling: auto.',
-     80)
+     80),
+
+    ('atlas_tool_read',
+     'Atlas Tool Read',
+     'control.ai_action_code',
+     'Execute a registered read-only Atlas tool after verified-context, feature, '
+     'permission, plane, schema, and tenant-policy checks. Consumer ceiling: auto; '
+     'this action code cannot authorize mutation tools.',
+     90)
 ) AS v(code, name, domain_code, description, sort_order)
 WHERE NOT EXISTS (
     SELECT 1 FROM control.lookup_value x

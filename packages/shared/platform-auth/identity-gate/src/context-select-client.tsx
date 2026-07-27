@@ -13,7 +13,7 @@ import {
   TextLinkButton,
 } from "./components";
 import { useMinimumAuthReveal, waitForMinimumAuthTransition } from "./auth-transition-timing";
-import { getLastContext, setLastContext } from "./context-storage";
+import { setLastContext } from "./context-storage";
 import { csrfHeaders } from "./csrf";
 import { authErrorFromResponse, authErrorMessageFromSearch } from "./errors";
 import {
@@ -165,20 +165,12 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
     if (!session || autoActivatedRef.current || entries.length === 0) return;
     autoActivatedRef.current = true;
 
-    const last = getLastContext(plane);
-    if (last) {
-      const match = entries.find((entry) => entry.alias === last.org);
-      if (match?.workbenches.includes(last.workbench)) {
-        void activate(match, last.workbench);
-        return;
-      }
-    }
-
-    const onlyEntry = entries.length === 1 ? entries[0] : undefined;
-    if (onlyEntry && onlyEntry.workbenches.length === 1) {
-      void activate(onlyEntry, onlyEntry.workbenches[0]!);
+    const soleContext = resolveSingleContextActivation(entries);
+    if (soleContext) {
+      void activate(soleContext.org, soleContext.workbench);
       return;
     }
+    const onlyEntry = entries.length === 1 ? entries[0] : undefined;
     if (onlyEntry) {
       setSelectedOrg(onlyEntry);
     }
@@ -255,6 +247,15 @@ export function ContextSelectClient({ plane }: { plane: PlaneKey }) {
       </div>
     </AuthShell>
   );
+}
+
+export function resolveSingleContextActivation(
+  entries: readonly OrgEntry[],
+): { org: OrgEntry; workbench: string } | null {
+  if (entries.length !== 1) return null;
+  const org = entries[0]!;
+  if (org.workbenches.length !== 1) return null;
+  return { org, workbench: org.workbenches[0]! };
 }
 
 function OrgPicker({

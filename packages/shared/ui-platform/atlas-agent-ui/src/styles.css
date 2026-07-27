@@ -1,0 +1,111 @@
+/*
+ * Shared motion contract for Atlas triggers and the DashboardHero surface.
+ *
+ * Host applications that render @athyper/atlas-agent-ui or the DashboardHero
+ * exported from @athyper/dashboard-ui must import this stylesheet once from
+ * their root stylesheet.
+ */
+
+@keyframes atlas-aurora {
+  0%   { transform: translate(0%, 0%) scale(1);    }
+  50%  { transform: translate(8%, 6%) scale(1.15); }
+  100% { transform: translate(0%, 0%) scale(1);    }
+}
+
+.atlas-aurora {
+  animation: atlas-aurora 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes atlas-breathe {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 30%, transparent); }
+  50%      { box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 10%, transparent); }
+}
+
+.atlas-breathe:focus-within {
+  animation: atlas-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes atlas-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+@keyframes atlas-enter-scale {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+.atlas-enter,
+.atlas-enter-scale {
+  animation-duration: 0.5s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+.atlas-enter       { animation-name: atlas-enter;       }
+.atlas-enter-scale { animation-name: atlas-enter-scale; }
+
+@keyframes atlas-shimmer {
+  0% {
+    background-position: 200% 50%;
+  }
+
+  100% {
+    background-position: -200% 50%;
+  }
+}
+
+.atlas-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--foreground) 0%,
+    var(--foreground) 40%,
+    var(--primary) 50%,
+    var(--foreground) 60%,
+    var(--foreground) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: atlas-shimmer 3.5s linear infinite;
+  will-change: background-position;
+  -webkit-background-clip: text;
+}
+
+@keyframes atlas-spark {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.75;
+  }
+
+  50% {
+    transform: scale(1.15) rotate(12deg);
+    opacity: 1;
+  }
+}
+
+.atlas-spark {
+  animation: atlas-spark 2.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atlas-aurora,
+  .atlas-breathe:focus-within,
+  .atlas-enter,
+  .atlas-enter-scale,
+  .atlas-shimmer,
+  .atlas-spark {
+    animation: none;
+    transform: none;
+  }
+
+  .atlas-shimmer {
+    background: none;
+    background-clip: initial;
+    color: var(--foreground);
+    -webkit-background-clip: initial;
+  }
+}

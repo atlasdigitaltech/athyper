@@ -17,3 +17,7 @@ docker build -f server/Dockerfile.prod .
 
 Do not introduce source junctions, host-specific absolute paths, or copied Windows dependency
 trees into the image. Only pnpm-created links below `node_modules` are expected.
+
+For build-time browser variables, image reporting, scheduled clean builds, and
+the read-only filesystem assessment, see
+[Container hardening and maintenance](./container-hardening.md).

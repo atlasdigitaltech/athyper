@@ -19,8 +19,8 @@ export interface ThemePresetMeta {
   label: string;
   /** Short aesthetic description */
   description: string;
-  /** Border radius from --radius */
-  radius: string;
+  /** Suggested preset radius used by previews; chrome geometry stays stable. */
+  previewRadius: string;
   /** Visual category for UI grouping */
   category: "professional" | "expressive" | "playful" | "retro";
   /** Contract version this preset targets */
@@ -33,20 +33,10 @@ export interface ThemePresetMeta {
 
 export const themePresets: readonly ThemePresetMeta[] = [
   {
-    value: "neon-base",
-    label: "neon base",
-    description: "Shared baseline palette for Neon, Mesh, Admin, and IAM while plane themes are consolidated.",
-    radius: "0.625rem",
-    category: "professional",
-    contractVersion: THEME_CONTRACT_VERSION,
-    primaryColor: "oklch(0.205 0 0)",
-    mutedColor: "oklch(0.97 0 0)",
-  },
-  {
-    value: "base",
-    label: "base",
-    description: "Clean neutral palette. Pure white background, black primary, warm chart accents.",
-    radius: "0.625rem",
+    value: "athyper-base",
+    label: "Athyper Base",
+    description: "Canonical neutral baseline palette shared by every control plane.",
+    previewRadius: "0.625rem",
     category: "professional",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.205 0 0)",
@@ -56,7 +46,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "neon-modern",
     label: "neon modern",
     description: "Clean, restrained, monochrome-accented. Ideal for enterprise dashboards.",
-    radius: "0.5rem",
+    previewRadius: "0.5rem",
     category: "professional",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.45 0.18 250)",
@@ -66,7 +56,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "neon-mono",
     label: "neon mono",
     description: "Pure greyscale with no chroma. Maximum typographic focus.",
-    radius: "0.5rem",
+    previewRadius: "0.5rem",
     category: "professional",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.22 0 0)",
@@ -76,7 +66,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "neon-tangerine",
     label: "neon tangerine",
     description: "Warm orange primary on cool slate. Approachable yet professional.",
-    radius: "0.625rem",
+    previewRadius: "0.625rem",
     category: "professional",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.64 0.17 36.44)",
@@ -86,7 +76,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "mesh-night",
     label: "mesh night",
     description: "Violet-purple palette with lavender tints. Polished light mode, deep dark mode.",
-    radius: "0.5rem",
+    previewRadius: "0.625rem",
     category: "expressive",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.5417 0.1790 288.0332)",
@@ -96,7 +86,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "mesh-bloom",
     label: "mesh bloom",
     description: "Vivid violet primary with bright green and orange chart accents. Crisp and energetic.",
-    radius: "0.625rem",
+    previewRadius: "0.625rem",
     category: "expressive",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.475 0.267 283)",
@@ -106,7 +96,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "athyper-pop",
     label: "athyper pop",
     description: "Candy-colored palette with generous rounding.",
-    radius: "1rem",
+    previewRadius: "1rem",
     category: "playful",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.5106 0.2301 276.9656)",
@@ -116,7 +106,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "athyper-bubble",
     label: "athyper bubble",
     description: "Hot pink primary with extra-round corners.",
-    radius: "1.25rem",
+    previewRadius: "1.25rem",
     category: "playful",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.6 0.22 340)",
@@ -126,7 +116,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "atlas-vintage",
     label: "atlas vintage",
     description: "Warm ochre and parchment tones. Earthy elegance for timeless interfaces.",
-    radius: "0.625rem",
+    previewRadius: "0.625rem",
     category: "retro",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.583 0.067 54)",
@@ -136,7 +126,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "atlas-neo",
     label: "atlas neo",
     description: "Zero radius, black borders, hard offset shadows. Raw and uncompromising.",
-    radius: "0px",
+    previewRadius: "0px",
     category: "retro",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.6489 0.237 26.9728)",
@@ -146,7 +136,7 @@ export const themePresets: readonly ThemePresetMeta[] = [
     value: "atlas-doom",
     label: "atlas doom",
     description: "Red, green and blue primaries on deep greys. Tactical intensity with vivid contrast.",
-    radius: "0.625rem",
+    previewRadius: "0.625rem",
     category: "retro",
     contractVersion: THEME_CONTRACT_VERSION,
     primaryColor: "oklch(0.5016 0.1887 27.4816)",
@@ -154,10 +144,17 @@ export const themePresets: readonly ThemePresetMeta[] = [
   },
 ] as const;
 
-export const DEFAULT_PRESET = "neon-base";
+export const DEFAULT_PRESET = "athyper-base";
+
+export const LEGACY_PRESET_ALIASES = {
+  base: DEFAULT_PRESET,
+  "neon-base": DEFAULT_PRESET,
+} as const;
 
 export function getPresetMeta(value: string): ThemePresetMeta | undefined {
-  return themePresets.find((p) => p.value === value);
+  const canonicalValue =
+    LEGACY_PRESET_ALIASES[value as keyof typeof LEGACY_PRESET_ALIASES] ?? value;
+  return themePresets.find((p) => p.value === canonicalValue);
 }
 
 export function getPresetsByCategory(

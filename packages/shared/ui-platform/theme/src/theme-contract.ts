@@ -19,7 +19,7 @@
  * Contract version. Bump when adding, removing, or renaming variables.
  * Presets declare which version they target; the validator checks compatibility.
  */
-export const THEME_CONTRACT_VERSION = 1;
+export const THEME_CONTRACT_VERSION = 2;
 
 // ── Variable Groups ─────────────────────────────────────────────
 
@@ -95,7 +95,8 @@ export interface ThemeShadowVars {
 }
 
 export interface ThemeLayoutVars {
-  "--radius": string;
+  /** Preset suggestion used by previews; stable chrome owns --radius. */
+  "--preset-radius": string;
 }
 
 // ── Full Contract ───────────────────────────────────────────────
@@ -143,7 +144,7 @@ export const REQUIRED_THEME_VARIABLES: readonly (keyof ThemeVariableContract)[] 
   "--shadow-2xs", "--shadow-xs", "--shadow-sm", "--shadow",
   "--shadow-md", "--shadow-lg", "--shadow-xl", "--shadow-2xl",
   // Layout (1)
-  "--radius",
+  "--preset-radius",
 ] as const;
 
 /**
@@ -152,7 +153,7 @@ export const REQUIRED_THEME_VARIABLES: readonly (keyof ThemeVariableContract)[] 
  * redeclare layout values unless the preset wants a different dark-mode shape.
  */
 export const DARK_MODE_INHERITED_THEME_VARIABLES = [
-  "--radius",
+  "--preset-radius",
 ] as const satisfies readonly (keyof ThemeVariableContract)[];
 
 /**

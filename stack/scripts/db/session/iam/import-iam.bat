@@ -31,6 +31,9 @@ if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
 pushd "%SCRIPT_DIR%\..\..\..\.." >nul
 set "STACK_DIR=%CD%"
 popd >nul
+pushd "%STACK_DIR%\.." >nul
+set "REPO_DIR=%CD%"
+popd >nul
 
 set "CONFIG_DIR=%STACK_DIR%\config\iam"
 set "IMPORT_FILE=%CONFIG_DIR%\realm-athyper.json"
@@ -38,6 +41,11 @@ set "PLATFORM_IMPORT_FILE=%CONFIG_DIR%\realm-platform-control.json"
 set "DEMO_FILE=%CONFIG_DIR%\realm-athyper-demosetup.json"
 set "PLATFORM_DEMO_FILE=%CONFIG_DIR%\realm-platform-control-demosetup.json"
 set "TEMP_IMPORT_DIR=%TEMP%\keycloak-import-%RANDOM%%RANDOM%"
+
+node "%REPO_DIR%\tools\scripts\generate-athyper-demo-iam.cjs" --check
+if errorlevel 1 exit /b 1
+node "%REPO_DIR%\tools\scripts\verify-athyper-demo-iam.cjs"
+if errorlevel 1 exit /b 1
 
 REM ---------------------------------------------------------------------------
 REM Container / network / DB names ? honour env-var overrides (mirrors lib/constants.sh)
@@ -153,7 +161,7 @@ if "!IAM_ADMIN_PASS!"=="" (
     exit /b 1
 )
 
-for %%V in (KC_SMTP_HOST KC_SMTP_PORT KC_SMTP_FROM KC_SMTP_FROM_DISPLAY_NAME KC_SMTP_AUTH KC_SMTP_SSL KC_SMTP_STARTTLS KC_SMTP_USERNAME KC_SMTP_PASSWORD KC_WEBAUTHN_RP_ID ADMIN_WEB_CLIENT_SECRET ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID MICROSOFT_CLIENT_SECRET LINKEDIN_CLIENT_ID LINKEDIN_CLIENT_SECRET ATHYPER_ENTERPRISE_WINDOWS_AUTH_ENABLED) do (
+for %%V in (KC_SMTP_HOST KC_SMTP_PORT KC_SMTP_FROM KC_SMTP_FROM_DISPLAY_NAME KC_SMTP_AUTH KC_SMTP_SSL KC_SMTP_STARTTLS KC_SMTP_USERNAME KC_SMTP_PASSWORD KC_WEBAUTHN_RP_ID ADMIN_WEB_CLIENT_SECRET ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET NEON_SVC_BFF_CLIENT_SECRET GITHUB_OAUTH_CLIENT_ID GITHUB_OAUTH_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET MICROSOFT_CLIENT_ID MICROSOFT_CLIENT_SECRET LINKEDIN_CLIENT_ID LINKEDIN_CLIENT_SECRET ATHYPER_ENTERPRISE_WINDOWS_AUTH_ENABLED APPS_ATHYPER_NEON_HOST APPS_ATHYPER_MESH_HOST APPS_ATHYPER_ADMIN_HOST) do (
     if not defined %%V (
         if defined ENV_FILE_IMP (
             for /f "tokens=2 delims==" %%a in ('findstr /B /C:"%%V=" "!ENV_FILE_IMP!" 2^>nul') do set "%%V=%%a"
@@ -168,6 +176,12 @@ if not defined KC_SMTP_AUTH set "KC_SMTP_AUTH=false"
 if not defined KC_SMTP_SSL set "KC_SMTP_SSL=false"
 if not defined KC_SMTP_STARTTLS set "KC_SMTP_STARTTLS=false"
 if not defined KC_WEBAUTHN_RP_ID set "KC_WEBAUTHN_RP_ID=athyper.local"
+if not defined APPS_ATHYPER_NEON_HOST set "APPS_ATHYPER_NEON_HOST=neon.athyper.local"
+if not defined APPS_ATHYPER_MESH_HOST set "APPS_ATHYPER_MESH_HOST=mesh.athyper.local"
+if not defined APPS_ATHYPER_ADMIN_HOST set "APPS_ATHYPER_ADMIN_HOST=admin.athyper.local"
+set "NEON_PUBLIC_WEB_URL=https://!APPS_ATHYPER_NEON_HOST!"
+set "MESH_PUBLIC_WEB_URL=https://!APPS_ATHYPER_MESH_HOST!"
+set "ADMIN_PUBLIC_WEB_URL=https://!APPS_ATHYPER_ADMIN_HOST!"
 
 echo [1/6] Creating temporary import directory...
 mkdir "%TEMP_IMPORT_DIR%" 2>nul
@@ -179,6 +193,12 @@ if "!IMPORT_REALM_NAME!"=="" (
     exit /b 1
 )
 copy /y "%IMPORT_FILE%" "%TEMP_IMPORT_DIR%\!IMPORT_REALM_NAME!-realm.json" >nul
+node "%STACK_DIR%\..\tools\scripts\prepare-keycloak-realm-import.cjs" --realm-file "%TEMP_IMPORT_DIR%\!IMPORT_REALM_NAME!-realm.json" --demo-file "%DEMO_FILE%"
+if errorlevel 1 (
+    echo Error: failed to materialize stable demo users into the realm import
+    rmdir /s /q "%TEMP_IMPORT_DIR%" 2>nul
+    exit /b 1
+)
 node "%STACK_DIR%\..\tools\scripts\apply-iam-realm-policy.cjs" --environment "!IMPORT_ENVIRONMENT!" --root "%TEMP_IMPORT_DIR%" --write
 if errorlevel 1 (
     echo Error: failed to apply IAM realm policy for !IMPORT_ENVIRONMENT!
@@ -217,6 +237,9 @@ docker run --rm ^
   -e KC_SMTP_USERNAME=!KC_SMTP_USERNAME! ^
   -e KC_SMTP_PASSWORD=!KC_SMTP_PASSWORD! ^
   -e KC_WEBAUTHN_RP_ID=!KC_WEBAUTHN_RP_ID! ^
+  -e NEON_PUBLIC_WEB_URL=!NEON_PUBLIC_WEB_URL! ^
+  -e MESH_PUBLIC_WEB_URL=!MESH_PUBLIC_WEB_URL! ^
+  -e ADMIN_PUBLIC_WEB_URL=!ADMIN_PUBLIC_WEB_URL! ^
   -e ADMIN_WEB_CLIENT_SECRET=!ADMIN_WEB_CLIENT_SECRET! ^
   -e ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET=!ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET! ^
   -e NEON_SVC_BFF_CLIENT_SECRET=!NEON_SVC_BFF_CLIENT_SECRET! ^
@@ -248,6 +271,14 @@ if exist "%PLATFORM_IMPORT_FILE%" (
     set "TEMP_PLATFORM_DIR=%TEMP%\keycloak-import-platform-%RANDOM%%RANDOM%"
     mkdir "!TEMP_PLATFORM_DIR!" 2>nul
     copy /y "%PLATFORM_IMPORT_FILE%" "!TEMP_PLATFORM_DIR!\platform-control-realm.json" >nul
+    if exist "%PLATFORM_DEMO_FILE%" (
+      node "%STACK_DIR%\..\tools\scripts\prepare-keycloak-realm-import.cjs" --realm-file "!TEMP_PLATFORM_DIR!\platform-control-realm.json" --demo-file "%PLATFORM_DEMO_FILE%"
+      if errorlevel 1 (
+        echo Error: failed to materialize stable platform-control demo users
+        rmdir /s /q "!TEMP_PLATFORM_DIR!" 2>nul
+        exit /b 1
+      )
+    )
     node "%STACK_DIR%\..\tools\scripts\apply-iam-realm-policy.cjs" --environment "!IMPORT_ENVIRONMENT!" --root "!TEMP_PLATFORM_DIR!" --write
     if errorlevel 1 (
         echo Warning: failed to apply IAM realm policy to platform-control import
@@ -270,6 +301,9 @@ if exist "%PLATFORM_IMPORT_FILE%" (
       -e KC_SMTP_USERNAME=!KC_SMTP_USERNAME! ^
       -e KC_SMTP_PASSWORD=!KC_SMTP_PASSWORD! ^
       -e KC_WEBAUTHN_RP_ID=!KC_WEBAUTHN_RP_ID! ^
+      -e NEON_PUBLIC_WEB_URL=!NEON_PUBLIC_WEB_URL! ^
+      -e MESH_PUBLIC_WEB_URL=!MESH_PUBLIC_WEB_URL! ^
+      -e ADMIN_PUBLIC_WEB_URL=!ADMIN_PUBLIC_WEB_URL! ^
       -e ADMIN_WEB_CLIENT_SECRET=!ADMIN_WEB_CLIENT_SECRET! ^
       -e ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET=!ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET! ^
       -e NEON_SVC_BFF_CLIENT_SECRET=!NEON_SVC_BFF_CLIENT_SECRET! ^

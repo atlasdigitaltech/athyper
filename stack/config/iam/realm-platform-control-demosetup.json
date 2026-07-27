@@ -5,10 +5,10 @@
   "plane": "platform-control",
   "sourceRealmFile": "realm-platform-control.json",
   "importableByKeycloak": false,
-  "description": "Product-owner support demo data for the platform-control realm. Stable UUIDs (gg001000-… series) ensure consistent identities across environments.",
+  "description": "Product-owner support demo data for the platform-control realm. Stable UUIDs (dd001000-… series) ensure consistent identities across environments.",
   "users": [
     {
-      "id": "gg001000-0000-0000-0000-000000000001",
+      "id": "dd001000-0000-0000-0000-000000000001",
       "username": "product.admin",
       "enabled": true,
       "emailVerified": true,
@@ -21,7 +21,7 @@
       ]
     },
     {
-      "id": "gg001000-0000-0000-0000-000000000002",
+      "id": "dd001000-0000-0000-0000-000000000002",
       "username": "tenant.manager",
       "enabled": true,
       "emailVerified": true,
@@ -34,7 +34,7 @@
       ]
     },
     {
-      "id": "gg001000-0000-0000-0000-000000000003",
+      "id": "dd001000-0000-0000-0000-000000000003",
       "username": "support.admin",
       "enabled": true,
       "emailVerified": true,

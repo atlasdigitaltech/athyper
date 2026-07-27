@@ -14,7 +14,13 @@
 // __csrf so mesh and admin silently read nothing.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { csrfFetch, getCsrfToken, setBffClientPlane } from "../csrf";
+import {
+  bffFetch,
+  createPlaneBffClient,
+  csrfFetch,
+  getCsrfToken,
+  setBffClientPlane,
+} from "../csrf";
 
 // â”€â”€â”€ Fake document.cookie â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -37,6 +43,14 @@ afterEach(() => {
 // â”€â”€â”€ Tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 describe("getCsrfToken â€” plane-aware cookie reader", () => {
+  it("keeps a factory client bound to its plane", () => {
+    mockCookie = "__admin_csrf=admin-bound; __mesh_csrf=mesh-bound";
+    const adminClient = createPlaneBffClient("admin");
+    setBffClientPlane("mesh");
+
+    expect(adminClient.getCsrfToken()).toBe("admin-bound");
+  });
+
   it("neon plane reads __csrf", () => {
     setBffClientPlane("neon");
     mockCookie = "__csrf=neon-token-xyz; other=foo";
@@ -124,5 +138,20 @@ describe("csrfFetch", () => {
     expect(headers.get("x-document-edit-permission-stamp")).toBe("permission-stamp");
     expect(init.credentials).toBe("include");
     expect(init.signal).toBe(controller.signal);
+  });
+});
+
+describe("bffFetch error diagnostics", () => {
+  it("retains the upstream error code and diagnostic detail", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: "AUTH_CONTEXT_MISMATCH",
+      message: "auth_context_mismatch:tenant",
+    }), { status: 403, statusText: "Forbidden" })));
+
+    await expect(bffFetch("/api/me/profile")).rejects.toMatchObject({
+      name: "BffError",
+      status: 403,
+      message: "AUTH_CONTEXT_MISMATCH: auth_context_mismatch:tenant",
+    });
   });
 });

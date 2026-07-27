@@ -12,7 +12,8 @@ INSERT INTO shared.permission
 SELECT v.code, v.name, c.id, v.st, v.rl, v.pr,
        CASE
          WHEN v.code LIKE 'MESH.%' THEN ARRAY['mesh']::text[]
-         WHEN v.code IN ('IAM.PARAMETER.MANAGE', 'IAM.IDP.READ', 'IAM.IDP.MANAGE', 'PLATFORM.REFERENCE.VIEW', 'PLATFORM.REFERENCE.IMPORT',
+         WHEN v.code LIKE 'metadata.%'
+           OR v.code IN ('IAM.PARAMETER.MANAGE', 'IAM.IDP.READ', 'IAM.IDP.MANAGE', 'PLATFORM.REFERENCE.VIEW', 'PLATFORM.REFERENCE.IMPORT',
                          'PLATFORM.TAXONOMY.VIEW', 'PLATFORM.TAXONOMY.IMPORT',
                          'PLATFORM.CATALOG.VIEW', 'PLATFORM.CATALOG.MANAGE',
                          'PLATFORM.SUBSCRIPTIONS.VIEW', 'PLATFORM.SUBSCRIPTIONS.MANAGE',
@@ -31,6 +32,7 @@ JOIN  (VALUES
     ('create',                      'Create',                            'entity',        'record',  'low',      false,  20),
     ('update',                      'Update',                            'entity',        'record',  'low',      false,  30),
     ('edit',                        'Edit',                              'entity',        'record',  'low',      false,  30),
+    ('replace',                     'Replace with New Version',          'entity',        'record',  'medium',   false,  32),
     ('exit',                        'Exit',                              'entity',        'record',  'low',      false,  35),
     ('delete_draft',                'Delete Draft',                      'entity',        'record',  'low',      false,  40),
     ('delete',                      'Delete',                            'entity',        'record',  'high',     false,  50),
@@ -112,10 +114,20 @@ JOIN  (VALUES
     -- Finance Setup Workbench (Phase 2) — tenant-scoped configure gate.
     ('FINANCE_SETUP.VIEW',          'View Finance Setup',                'special',       'tenant',  'low',      false, 160),
     ('FINANCE_SETUP.CONFIGURE',     'Configure Finance Setup',           'special',       'tenant',  'high',     false, 170),
-    ('ADDRESS_CONTACT.COMPANY_CODE.MANAGE', 'Manage Company Addresses and Contacts', 'special', 'tenant', 'medium', false, 171),
+    ('FINANCE_SETUP.ADVANCED_CONFIGURE','Advanced Finance Setup',         'special',       'tenant',  'high',     false, 171),
+    ('ADDRESS_CONTACT.COMPANY_CODE.MANAGE', 'Manage Company Addresses and Contacts', 'special', 'tenant', 'medium', false, 172),
     ('ADDRESS_CONTACT.LEGAL_ENTITY.MANAGE', 'Manage Legal Entity Addresses and Contacts', 'special', 'tenant', 'high', false, 172),
     ('ADDRESS_CONTACT.TENANT.MANAGE', 'Manage Tenant Addresses and Contacts', 'special', 'tenant', 'high', false, 173),
     -- ai_governance — NOT granted to base personas; requires explicit tenant grant.
+    ('ai.agent.use',                'Use Atlas Agent',                    'ai_governance',  'tenant',  'medium',   true,    5),
+    ('ai.agent.provider_diagnostics','Use Atlas Provider Diagnostics',     'ai_governance',  'tenant',  'high',     true,    6),
+    ('ai.agent.feedback.submit',    'Submit Atlas Agent Feedback',        'ai_governance',  'tenant',  'low',      false,   7),
+    ('ai.agent.history.read',       'Read Own Atlas History',              'ai_governance',  'tenant',  'medium',   true,    8),
+    ('ai.agent.history.manage',     'Manage Own Atlas History',            'ai_governance',  'tenant',  'medium',   true,    9),
+    ('ai.agent.history.delete',     'Delete Own Atlas History',            'ai_governance',  'tenant',  'high',     true,   10),
+    ('ai.agent.history.export',     'Export Own Atlas History',            'ai_governance',  'tenant',  'high',     true,   11),
+    ('ai.agent.tools.read',         'Use Read-Only Atlas Tools',            'ai_governance',  'tenant',  'medium',   true,   12),
+    ('ai.agent.admin.support_session','Start Atlas Support Session',         'ai_governance',  'tenant',  'high',     true,   13),
     ('ai.use_extraction',           'Use AI Extraction',                 'ai_governance',  'tenant',  'medium',   true,   10),
     ('ai.review_ai_output',         'Review AI Output',                  'ai_governance',  'tenant',  'low',      false,  20),
     ('ai.calibrate_thresholds',     'Calibrate AI Thresholds',           'ai_governance',  'tenant',  'high',     true,   30),
@@ -128,6 +140,19 @@ JOIN  (VALUES
     ('PLATFORM.CATALOG.MANAGE',     'Manage Platform Catalog',           'platform_admin', 'tenant',  'high',     false,  60),
     ('PLATFORM.SUBSCRIPTIONS.VIEW', 'View Subscription Plans',           'platform_admin', 'tenant',  'low',      false,  70),
     ('PLATFORM.SUBSCRIPTIONS.MANAGE','Manage Subscription Plans',        'platform_admin', 'tenant',  'critical', false,  80),
+    -- Meta Entity Contract workflow. Admin plane only; route guards also
+    -- enforce tenant/module/entity scope from the effective permission context.
+    ('metadata.contract.view',        'View Metadata Contracts',          'platform_admin', 'tenant',  'low',      false, 100),
+    ('metadata.contract.draft.create','Create Metadata Contract Draft',   'platform_admin', 'tenant',  'medium',   false, 110),
+    ('metadata.contract.edit',        'Edit Metadata Contract Draft',     'platform_admin', 'tenant',  'high',     false, 120),
+    ('metadata.contract.submit',      'Submit Metadata Contract',         'platform_admin', 'tenant',  'high',     false, 130),
+    ('metadata.contract.review',      'Review Metadata Contract',         'platform_admin', 'tenant',  'high',     false, 140),
+    ('metadata.contract.publish',     'Publish Metadata Contract',        'platform_admin', 'tenant',  'critical', true,  150),
+    ('metadata.contract.rollback',    'Rollback Metadata Contract',       'platform_admin', 'tenant',  'critical', true,  160),
+    ('metadata.contract.import',      'Import Metadata Contract',         'platform_admin', 'tenant',  'critical', true,  170),
+    ('metadata.contract.export',      'Export Metadata Contract',         'platform_admin', 'tenant',  'medium',   false, 180),
+    ('metadata.overlay.edit',         'Edit Metadata Tenant Overlay',     'platform_admin', 'tenant',  'high',     true,  190),
+    ('metadata.contract.break_glass', 'Break-glass Metadata Approval',    'platform_admin', 'tenant',  'critical', true,  200),
     -- P2P operation verbs — required by entity_operation FK (PR/POC/DN/receipt/service_sheet).
     -- Uppercase PR.APPROVE / RECEIPT.POST style codes live below in the P2P capability block.
     ('convert',                     'Convert',                           'workflow',      'record',  'low',      false, 115),  -- PR → PO

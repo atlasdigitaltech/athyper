@@ -29,6 +29,9 @@ export const MetaEntityRuntimeBootstrapV1Schema = z.object({
   lifecycleStateMasks: z.array(MetaEntityLifecycleStateMaskSchema),
   permissionAliases: z.record(z.string(), z.string()),
   childProjections: z.array(MetaEntityRuntimeBootstrapChildSchema),
+  /** Request-effective Mesh projection; absent on principal-agnostic planes. */
+  effectiveSurfaceIds: z.array(z.string().uuid()).optional(),
+  effectiveFieldIds: z.array(z.string().uuid()).optional(),
 }).strict();
 
 export const MetaEntityRecordOperationOverlayV1Schema = z.object({

@@ -1,7 +1,6 @@
 import type { PlaneKey } from "@athyper/session-plane";
 import { getPlaneConfig } from "@athyper/session-plane";
 import { PageFrame, PanelGrid, StatePanel, WorkPanel } from "@athyper/surface-kit";
-import type { ReactNode } from "react";
 
 export interface PlanePageProps {
   plane: PlaneKey;
@@ -10,34 +9,6 @@ export interface PlanePageProps {
 export interface PathPageProps extends PlanePageProps {
   /** Remaining route segments after the command surface root. */
   path?: readonly string[];
-}
-
-export function DashboardPage({
-  plane,
-  entityQuickAccess,
-}: PlanePageProps & { entityQuickAccess?: ReactNode }) {
-  const config = getPlaneConfig(plane);
-  return (
-    <PageFrame
-      eyebrow={config.appName}
-      title="Dashboard"
-      description={config.productSubtitle}
-    >
-      {entityQuickAccess ? (
-        <PanelGrid>
-          <WorkPanel
-            title="Quick access"
-            description="Open selected entity lists."
-          >
-            {entityQuickAccess}
-          </WorkPanel>
-          <StatePanel title="Dashboard" message="Your workspace overview is coming soon." />
-        </PanelGrid>
-      ) : (
-        <StatePanel title="Dashboard" message="Your workspace overview is coming soon." />
-      )}
-    </PageFrame>
-  );
 }
 
 export function InboxPage({ plane }: PlanePageProps) {

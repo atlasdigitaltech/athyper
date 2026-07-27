@@ -56,7 +56,7 @@ export function GlControlsGrid({
   );
 
   return (
-    <section className={cn("rounded-lg border bg-card", className)}>
+    <section id="gl-controls" className={cn("scroll-mt-24 rounded-lg border bg-card", className)}>
       {/* Header + coverage bar */}
       <div className="border-b p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">

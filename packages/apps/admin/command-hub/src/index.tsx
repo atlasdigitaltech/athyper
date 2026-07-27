@@ -17,19 +17,6 @@ export interface SetupPageProps {
   eyebrow?: string;
 }
 
-export function DashboardPage({ plane }: PlanePageProps) {
-  const config = getPlaneConfig(plane);
-  return (
-    <PageFrame
-      eyebrow={config.appName}
-      title="Dashboard"
-      description={config.productSubtitle}
-    >
-      <StatePanel title="Dashboard" message="Your workspace overview is coming soon." />
-    </PageFrame>
-  );
-}
-
 export function InboxPage({ plane }: PlanePageProps) {
   const config = getPlaneConfig(plane);
   return (

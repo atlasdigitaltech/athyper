@@ -2,12 +2,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
   AppBootstrapSkeleton,
-  BrandedLoginLoader,
   DashboardSkeleton,
   DocumentDetailSkeleton,
   GenericPageSkeleton,
   RouteLoadingFrame,
 } from "../_components/loading/LoadingSkeletons";
+import LoginLoading from "../(public)/login/loading";
 
 describe("Neon loading skeletons", () => {
   it("renders a neutral application shell while session validation is pending", () => {
@@ -17,7 +17,7 @@ describe("Neon loading skeletons", () => {
     expect(markup).toContain('aria-busy="true"');
     expect(markup).toContain('role="progressbar"');
     expect(markup).toContain("w-nav-rail");
-    expect(markup).toContain('data-loading-skeleton="neutral-bootstrap"');
+    expect(markup).toContain('data-loading-skeleton="application-bootstrap"');
     expect(markup).not.toContain('data-loading-skeleton="dashboard"');
     expect(markup).not.toContain("Settings");
     expect(markup).not.toContain("Notifications");
@@ -30,8 +30,8 @@ describe("Neon loading skeletons", () => {
     expect(markup).not.toContain("grid-cols-5");
   });
 
-  it("renders a login-only brand loader without authenticated application chrome", () => {
-    const markup = renderToStaticMarkup(<BrandedLoginLoader />);
+  it("renders the /login route's branded loader without authenticated application chrome", () => {
+    const markup = renderToStaticMarkup(<LoginLoading />);
 
     expect(markup).toContain('data-loading-skeleton="branded-auth"');
     expect(markup).toContain('aria-label="Preparing secure sign-in…"');

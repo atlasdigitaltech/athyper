@@ -3042,7 +3042,16 @@ BEGIN
         );
     ELSE -- UPDATE
         v_tenant    := NEW.tenant_id;
-        v_actor     := COALESCE(NEW.updated_by, NEW.created_by, '00000000-0000-0000-0000-000000000000'::uuid);
+        -- This trigger is shared by both mutable entities and append-only
+        -- association tables such as principal_persona.  The latter can still
+        -- receive an UPDATE from an idempotent UPSERT, but intentionally have
+        -- no updated_by column.  Read the optional field through JSON so the
+        -- trigger remains valid for both row shapes.
+        v_actor     := COALESCE(
+            NULLIF(to_jsonb(NEW)->>'updated_by', '')::uuid,
+            NEW.created_by,
+            '00000000-0000-0000-0000-000000000000'::uuid
+        );
         v_entity_id := NEW.id;
         v_payload   := jsonb_build_object(
             'op', 'UPDATE',

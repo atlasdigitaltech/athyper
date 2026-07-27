@@ -85,10 +85,11 @@ update inside each handler — no new abstraction needed.
 
 ## Enforcement
 
-`apps/neon/scripts/check-runtime-api-paths.ts` scans `.ts` and `.tsx` files
-under `apps/` and `packages/` for legacy path literals. Phase 1 runs in warn
-mode (`pnpm --filter @athyper/neon run runtime:path-check`). Phase 5 wires
-`--strict` into the `lint` script — any reintroduction fails the build.
+`scripts/policy/verify-runtime-api-paths.ts` scans `.ts` and `.tsx` files
+under `apps/` and `packages/` for legacy path literals. Run repo-wide with
+`pnpm policy:runtime-api-paths` (strict). The same guard also runs inline
+during `pnpm --filter @athyper/neon lint` so Neon contributors get fast
+local feedback — any reintroduction fails the build.
 
 ## Future: runtime service rename
 

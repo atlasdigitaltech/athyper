@@ -130,7 +130,7 @@ export function PostingRoleCoverageMatrix({ companyCode }: { companyCode: string
                       <div className="font-mono text-xs text-muted-foreground">{row.roleCode}</div>
                       <div className="mt-1 flex gap-1"><Badge variant="outline" size="sm">{label(row.domain)}</Badge><Badge variant="muted" size="sm">{row.normalBalance}</Badge></div>
                     </td>
-                    {row.cells.map((cell) => <CoverageCell key={cell.bookId} cell={cell} onOpen={() => setSelection({ row, cell })} />)}
+                    {row.cells.map((cell) => <CoverageCell key={cell.bookId} roleCode={row.roleCode} cell={cell} onOpen={() => setSelection({ row, cell })} />)}
                   </tr>
                 ))}
               </tbody>
@@ -147,11 +147,11 @@ export function PostingRoleCoverageMatrix({ companyCode }: { companyCode: string
   );
 }
 
-function CoverageCell({ cell, onOpen }: { cell: PostingRoleCoverageCell; onOpen: () => void }) {
+function CoverageCell({ roleCode, cell, onOpen }: { roleCode: string; cell: PostingRoleCoverageCell; onOpen: () => void }) {
   const tone = cell.status === "resolved" ? "success" : cell.status === "invalid" ? "warning" : cell.status === "missing" ? "warning" : "muted";
   return (
     <td className="border-l px-3 py-3 align-top">
-      <button type="button" onClick={onOpen} className="w-full rounded-lg border bg-background p-2.5 text-left transition hover:border-primary/50 hover:bg-primary/5">
+      <button id={`posting-role-${roleCode}-${cell.bookCode}`} type="button" onClick={onOpen} className="scroll-mt-24 w-full rounded-lg border bg-background p-2.5 text-left transition hover:border-primary/50 hover:bg-primary/5">
         <div className="flex items-center justify-between gap-2">
           <Badge variant={tone} size="sm">{cell.status.replace("_", " ")}</Badge>
           {cell.required && <span className="text-[10px] font-semibold uppercase text-warning">required</span>}

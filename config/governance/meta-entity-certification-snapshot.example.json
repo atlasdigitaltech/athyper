@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "replace-with-release-id",
+  "evaluatedAt": "2026-07-25T00:00:00.000Z",
+  "criteria": {
+    "table_roles": { "status": "PENDING", "evidence": [] },
+    "property_coverage": { "status": "PENDING", "evidence": [] },
+    "applicable_checkpoints": { "status": "PENDING", "evidence": [] },
+    "get_zero_writes": { "status": "PENDING", "evidence": [] },
+    "shared_studio_concurrency": { "status": "PENDING", "evidence": [] },
+    "rbac_review_rls": { "status": "PENDING", "evidence": [] },
+    "lossless_roundtrip": { "status": "PENDING", "evidence": [] },
+    "projection_delete_safety": { "status": "PENDING", "evidence": [] },
+    "published_descriptor_authority": { "status": "PENDING", "evidence": [] },
+    "neon_mesh_production_e2e": { "status": "PENDING", "evidence": [] },
+    "zero_unapproved_drift": { "status": "PENDING", "evidence": [] },
+    "rollback_operational": { "status": "PENDING", "evidence": [] },
+    "legacy_retired": { "status": "PENDING", "evidence": [] }
+  }
+}

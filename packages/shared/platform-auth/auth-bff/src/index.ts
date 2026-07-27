@@ -308,6 +308,8 @@ interface PkceState {
   expectedContext?: LoginExpectedContext;
   silent?: boolean;
   forceAuthn?: boolean;
+  /** Fresh Keycloak MFA transaction requested by the organization-policy gate. */
+  mfaStepUp?: boolean;
   stepUpAction?: StepUpActionClass;
 }
 
@@ -652,7 +654,7 @@ function resolveCanonicalActiveOrgAlias(
   }
   return session.activeOrg && session.organizations[session.activeOrg]
     ? session.activeOrg
-    : Object.keys(session.organizations)[0] ?? null;
+    : null;
 }
 
 function normalizeAuthPolicy(values: Record<string, unknown>): SessionPolicyDefaults {
@@ -2081,10 +2083,12 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
     : requestedReturnUrl;
 
   const adminNativeMfaRequired = plane === "admin" && realmKey === "athyper";
+  const mfaStepUp = request.nextUrl.searchParams.get("mfa_step_up") === "1";
   const requestedSilent = request.nextUrl.searchParams.get("silent") === "true";
-  const isSilent = requestedSilent && !adminNativeMfaRequired;
+  const isSilent = requestedSilent && !adminNativeMfaRequired && !mfaStepUp;
   const forceAuthn =
     adminNativeMfaRequired ||
+    mfaStepUp ||
     request.nextUrl.searchParams.get("force") === "1" ||
     request.nextUrl.searchParams.get("force_authn") === "true";
   const promptValue = isSilent ? "none" : (forceAuthn ? "login" : undefined);
@@ -2101,6 +2105,7 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
     expectedContext: expectedContext ?? undefined,
     silent: isSilent || undefined,
     forceAuthn: forceAuthn || undefined,
+    mfaStepUp: mfaStepUp || undefined,
     stepUpAction,
   };
   await redis.set(pkceStateKey(state), JSON.stringify(pkce), { EX: PKCE_STATE_TTL_SECONDS });
@@ -2146,7 +2151,7 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
   if (plane === "admin" && realmKey === "athyper") {
     finalUrl.searchParams.set("max_age", "3600");
   }
-  if (stepUpAction) {
+  if (stepUpAction || mfaStepUp) {
     // A step-up is a fresh Keycloak authentication transaction. The normal
     // browser SSO cookie must not silently satisfy it.
     finalUrl.searchParams.set("max_age", "0");
@@ -2164,6 +2169,7 @@ export async function handleLogin(plane: PlaneKey, request: NextRequest): Promis
       provider: provider ?? null,
       expectedContextPresent: Boolean(expectedContext),
       contextTokenPresent: Boolean(contextToken),
+      mfaStepUp,
     },
   });
   return NextResponse.redirect(finalUrl);
@@ -2438,9 +2444,10 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
       await redis.expire(reverseKey, sessionPolicy.absoluteTtlSeconds);
     }
 
+    const postAuthReturnUrl = requireExplicitMeshContextSelection(plane, pkce.returnUrl);
     const destination = mfaRequired
-      ? new URL(`/mfa/challenge?returnUrl=${encodeURIComponent(pkce.returnUrl)}`, publicBaseUrl)
-      : new URL(pkce.returnUrl, publicBaseUrl);
+      ? new URL(`/mfa/challenge?returnUrl=${encodeURIComponent(postAuthReturnUrl)}`, publicBaseUrl)
+      : new URL(postAuthReturnUrl, publicBaseUrl);
     const response = NextResponse.redirect(destination);
     setPlaneCookies(response, plane, sid, csrfToken, realmKey, sessionPolicy.absoluteTtlSeconds);
     if (mfaRequired) {
@@ -3237,6 +3244,7 @@ export async function handleMfaVerify(plane: PlaneKey, request: NextRequest): Pr
   const reauthenticateUrl = new URL("/api/auth/login", publicBaseUrl);
   reauthenticateUrl.searchParams.set("returnUrl", continuation);
   reauthenticateUrl.searchParams.set("force", "1");
+  reauthenticateUrl.searchParams.set("mfa_step_up", "1");
   reauthenticateUrl.searchParams.set("realm", loaded.session.realmKey);
 
   await recordAuthAudit({
@@ -5323,6 +5331,11 @@ function buildAuthSelectReturnUrl(finalDestination: string, filter: string | nul
   params.set("returnUrl", finalDestination);
   if (filter) params.set("filter", filter);
   return `/auth/select?${params.toString()}`;
+}
+
+function requireExplicitMeshContextSelection(plane: PlaneKey, returnUrl: string): string {
+  if (plane !== "mesh" || isAuthSelectContinuation(returnUrl)) return returnUrl;
+  return buildAuthSelectReturnUrl(returnUrl, null);
 }
 
 function defaultWorkbenchForPlane(plane: PlaneKey, expectedContext?: LoginExpectedContext): string | null {

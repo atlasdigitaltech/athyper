@@ -42,6 +42,52 @@ function assert(condition: boolean, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+function validateCenteredShell(page: string, source: string, failures: string[]): void {
+  type Frame = { classes: Set<string>; line: number };
+  const stack: Frame[] = [];
+  const counts = new Map<string, number>();
+  const requiredParents = new Map<string, string>([
+    ["kc-panel-right", "iam-shell"],
+    ["kc-form-wrapper", "kc-panel-right"],
+    ["kc-form-card", "kc-form-wrapper"],
+    ["kc-footer", "kc-panel-right"],
+  ]);
+  const tags = /<\/?div\b[^>]*>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = tags.exec(source)) !== null) {
+    const line = source.slice(0, match.index).split("\n").length;
+    if (match[0].startsWith("</")) {
+      if (stack.length === 0) {
+        failures.push(`${page}:${line}: unexpected closing div`);
+      } else {
+        stack.pop();
+      }
+      continue;
+    }
+
+    const classMatch = match[0].match(/\bclass=(?:"([^"]*)"|'([^']*)')/i);
+    const classes = new Set((classMatch?.[1] ?? classMatch?.[2] ?? "").split(/\s+/).filter(Boolean));
+    for (const className of classes) counts.set(className, (counts.get(className) ?? 0) + 1);
+
+    for (const [child, expectedParent] of requiredParents) {
+      if (!classes.has(child)) continue;
+      const parent = stack.at(-1);
+      if (!parent?.classes.has(expectedParent)) {
+        failures.push(`${page}:${line}: .${child} must be directly inside .${expectedParent}`);
+      }
+    }
+    stack.push({ classes, line });
+  }
+
+  for (const frame of stack) failures.push(`${page}:${frame.line}: unclosed div`);
+  for (const className of ["iam-shell", "kc-panel-right", "kc-form-wrapper", "kc-form-card", "kc-footer"]) {
+    if (counts.get(className) !== 1) {
+      failures.push(`${page}: expected exactly one .${className}, found ${counts.get(className) ?? 0}`);
+    }
+  }
+}
+
 async function main(): Promise<void> {
   const failures: string[] = [];
 
@@ -61,6 +107,7 @@ async function main(): Promise<void> {
     for (const [label, passed] of checks) {
       if (!passed) failures.push(`${page}: missing ${label}`);
     }
+    validateCenteredShell(page, source, failures);
   }
 
   const resolver = await readFile(path.join(loginRoot, "_theme-resolver.ftl"), "utf8");

@@ -12,7 +12,6 @@
     "./hooks/records": "./src/hooks/records/index.ts",
     "./hooks/documents": "./src/hooks/documents/index.ts",
     "./hooks/workflow": "./src/hooks/workflow/index.ts",
-    "./hooks/notifications": "./src/hooks/notifications/index.ts",
     "./hooks/collaboration": "./src/hooks/collaboration/index.ts",
     "./hooks/edit-lock": "./src/hooks/edit-lock/index.ts",
     "./hooks/saved-views": "./src/hooks/saved-views/index.ts"
@@ -24,6 +23,7 @@
   "dependencies": {
     "@athyper/api-client": "workspace:*",
     "@athyper/api-contracts": "workspace:*",
+    "@athyper/runtime-shared": "workspace:*",
     "@tanstack/react-query": "^5.99.0"
   },
   "peerDependencies": {

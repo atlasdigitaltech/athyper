@@ -45,4 +45,3 @@ packages:
   - "!packages/shared/ui-platform/finance-rules"
   - "!packages/shared/ui-platform/i18n"
   - "!packages/shared/ui-platform/temporal"
-  - "!packages/tooling/tsconfig"

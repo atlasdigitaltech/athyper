@@ -200,8 +200,29 @@ export type MePreferencesPatchResponse = z.infer<typeof MePreferencesPatchRespon
 // returns a richer shape (config: EntityListQueryState) — that's the editor
 // surface. This one is the manage surface (pin/star/share/archive).
 
-export const MeSavedViewActionSchema = z.enum(["pin", "star", "share", "archive"]);
+export const MeSavedViewActionSchema = z.enum(["pin", "star", "share", "archive", "delete"]);
 export type MeSavedViewAction = z.infer<typeof MeSavedViewActionSchema>;
+
+export const SavedViewCapabilitiesSchema = z.object({
+  canOpen: z.boolean(),
+  canEdit: z.boolean(),
+  canSetDefault: z.boolean(),
+  canPin: z.boolean(),
+  canShare: z.boolean(),
+  canArchive: z.boolean(),
+  canDelete: z.boolean(),
+  canCloneToPersonal: z.boolean().default(false),
+});
+export type SavedViewCapabilities = z.infer<typeof SavedViewCapabilitiesSchema>;
+
+export const SavedViewTargetSchema = z.object({
+  plane: z.enum(["admin", "neon", "mesh"]),
+  surface: z.string().min(1),
+  entityCode: z.string().min(1).optional(),
+  routeName: z.string().min(1).optional(),
+  parameters: z.record(z.string(), z.string()).optional(),
+});
+export type SavedViewTarget = z.infer<typeof SavedViewTargetSchema>;
 
 export const MeSavedViewSchema = z.object({
   id: UuidSchema,
@@ -215,11 +236,59 @@ export const MeSavedViewSchema = z.object({
   is_starred: z.boolean(),
   is_shared: z.boolean(),
   is_archived: z.boolean(),
+  scope: z.enum(["personal", "shared", "system"]),
+  owner_principal_id: UuidSchema.nullable(),
+  plane_key: z.enum(["admin", "neon", "mesh"]),
+  target: SavedViewTargetSchema,
+  capabilities: SavedViewCapabilitiesSchema,
   created_at: z.string().datetime(),
   updated_at: z.string().datetime().nullable(),
 });
 
 export type MeSavedView = z.infer<typeof MeSavedViewSchema>;
+
+export const SettingsScopeKindSchema = z.enum([
+  "platform",
+  "tenant",
+  "organization",
+  "company",
+  "purchasing-org",
+  "network-account",
+  "personal",
+]);
+export type SettingsScopeKind = z.infer<typeof SettingsScopeKindSchema>;
+
+export const SettingsScopeRefSchema = z.object({
+  kind: SettingsScopeKindSchema,
+  id: z.string().min(1),
+  label: z.string().min(1).optional(),
+});
+export type SettingsScopeRef = z.infer<typeof SettingsScopeRefSchema>;
+
+export const EffectiveSettingSchema = z.object({
+  key: z.string().min(1),
+  effectiveValue: z.unknown(),
+  sourceScope: SettingsScopeRefSchema,
+  editableScope: SettingsScopeRefSchema.optional(),
+  inherited: z.boolean(),
+  overrideAllowed: z.boolean(),
+  requiredPermission: z.string().optional(),
+  version: z.string().min(1),
+  updatedAt: z.string().datetime().optional(),
+  updatedBy: z.string().optional(),
+  sensitive: z.boolean().default(false),
+});
+export type EffectiveSetting<T = unknown> = Omit<z.infer<typeof EffectiveSettingSchema>, "effectiveValue"> & {
+  effectiveValue: T;
+};
+
+export const EffectiveSettingsResponseSchema = z.object({
+  scope: SettingsScopeRefSchema,
+  etag: z.string().min(1),
+  settings: z.array(EffectiveSettingSchema),
+  historyHref: z.string().optional(),
+});
+export type EffectiveSettingsResponse = z.infer<typeof EffectiveSettingsResponseSchema>;
 
 // ── Tenant Context ──────────────────────────────────────────────
 

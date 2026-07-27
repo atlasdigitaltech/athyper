@@ -10,8 +10,15 @@ export {
   withTraceResponseHeaders,
 } from "@athyper/bff-relay";
 
-export const RUNTIME_API_URL = process.env.RUNTIME_API_URL ?? "http://localhost:4000";
+import {
+  buildRuntimeApiUrl,
+  normalizeRuntimeApiUrl,
+} from "@athyper/bff-relay";
+
+export const RUNTIME_API_URL = normalizeRuntimeApiUrl(
+  process.env.RUNTIME_API_URL ?? "http://localhost:4000",
+);
 
 export function buildRuntimeUrl(pathname: string): string {
-  return `${RUNTIME_API_URL.replace(/\/+$/, "")}${pathname}`;
+  return buildRuntimeApiUrl(RUNTIME_API_URL, pathname);
 }

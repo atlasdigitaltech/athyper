@@ -186,12 +186,9 @@ BEGIN
      WHERE eo.entity_name IN (e.entity_code, e.name, e.table_name)
        AND eo.tenant_id IS NULL;
 
-    -- All legacy control seeds have now run. Promote the entity-scoped v1
-    -- bindings to version-scoped v2 bindings only after every operation and
-    -- surface has an entity_version_id. This ordering is required because
-    -- earlier seeds use ON CONFLICT ON CONSTRAINT eo_binding_uq and because a
-    -- NULLS-NOT-DISTINCT v2 key would collapse different legacy entities
-    -- before their version association has been materialized.
+    -- All legacy control seeds have now run. Verify the data conversion only.
+    -- Structural indexes and constraints belong to forward-only DDL files;
+    -- seed 101 must never alter schema.
     IF EXISTS (
         SELECT 1
           FROM control.entity_operation eo
@@ -207,27 +204,11 @@ BEGIN
         RAISE EXCEPTION '[101 contract v2] cannot promote surfaces: at least one row has no entity_version_id';
     END IF;
 
-    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'es_v2_binding_uq') THEN
-        ALTER TABLE control.entity_surface DROP CONSTRAINT es_v2_binding_uq;
+    IF to_regclass('control.es_v2_binding_uq_idx') IS NULL
+       OR to_regclass('control.eo_v2_binding_uq_idx') IS NULL
+    THEN
+        RAISE EXCEPTION '[101 contract v2] required version-aware indexes were not installed by DDL';
     END IF;
-    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'es_binding_uq') THEN
-        ALTER TABLE control.entity_surface DROP CONSTRAINT es_binding_uq;
-    END IF;
-    ALTER TABLE control.entity_surface
-        ADD CONSTRAINT es_v2_binding_uq UNIQUE NULLS NOT DISTINCT (
-            tenant_id, entity_id, entity_version_id, mode, surface_key
-        );
-
-    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'eo_v2_binding_uq') THEN
-        ALTER TABLE control.entity_operation DROP CONSTRAINT eo_v2_binding_uq;
-    END IF;
-    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'eo_binding_uq') THEN
-        ALTER TABLE control.entity_operation DROP CONSTRAINT eo_binding_uq;
-    END IF;
-    ALTER TABLE control.entity_operation
-        ADD CONSTRAINT eo_v2_binding_uq UNIQUE NULLS NOT DISTINCT (
-            tenant_id, entity_version_id, permission_code
-        );
 
     RAISE NOTICE '[101 contract v2] canonical runtime/storage/type/relation/surface/operation properties materialized.';
 END $$;

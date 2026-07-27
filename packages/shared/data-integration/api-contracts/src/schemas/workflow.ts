@@ -53,6 +53,46 @@ export const InboxItemSchema = z.object({
 
 export type InboxItem = z.infer<typeof InboxItemSchema>;
 
+export const WorkItemActionIntentSchema = z.enum([
+  "neutral",
+  "positive",
+  "warning",
+  "destructive",
+]);
+export type WorkItemActionIntent = z.infer<typeof WorkItemActionIntentSchema>;
+
+export const WorkItemActionSchema = z.object({
+  code: z.string(),
+  label: z.string(),
+  intent: WorkItemActionIntentSchema,
+  requiresComment: z.boolean().optional(),
+  requiresStepUp: z.boolean().optional(),
+});
+export type WorkItemAction = z.infer<typeof WorkItemActionSchema>;
+
+export const WorkItemSourceSchema = z.object({
+  plane: z.enum(["neon", "mesh", "admin"]),
+  surface: z.string(),
+  entityCode: z.string().optional(),
+  entityId: z.string().optional(),
+  href: z.string().optional(),
+});
+export type WorkItemSource = z.infer<typeof WorkItemSourceSchema>;
+
+export const WorkItemSummarySchema = z.object({
+  id: z.string(),
+  kind: z.string(),
+  title: z.string(),
+  description: z.string().optional(),
+  status: z.string(),
+  priority: z.string(),
+  assignedAt: z.string().optional(),
+  dueAt: z.string().optional(),
+  source: WorkItemSourceSchema,
+  availableActions: z.array(WorkItemActionSchema),
+});
+export type WorkItemSummary = z.infer<typeof WorkItemSummarySchema>;
+
 /** Approval action request. */
 export const ApprovalActionSchema = z.object({
   action: z.enum(["approve", "reject", "delegate", "request_info"]),

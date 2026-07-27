@@ -2371,6 +2371,16 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE master.fx_rate ADD CONSTRAINT fxr_created_by_fk
     FOREIGN KEY (created_by) REFERENCES master.principal (id);
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.fx_rate ADD CONSTRAINT fxr_supersedes_fk
+    FOREIGN KEY (tenant_id, supersedes_id)
+    REFERENCES master.fx_rate (tenant_id, id) ON DELETE RESTRICT;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.fx_rate ADD CONSTRAINT fxr_status_changed_by_fk
+    FOREIGN KEY (status_changed_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE master.fx_rate ADD CONSTRAINT fxr_updated_by_fk
+    FOREIGN KEY (updated_by) REFERENCES master.principal (id);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ── master.product — default_tax_group_id FK ─────────────────────────────────
 DO $$ BEGIN ALTER TABLE master.product ADD CONSTRAINT product_default_tax_group_fk

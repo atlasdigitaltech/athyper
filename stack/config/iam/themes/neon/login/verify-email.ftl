@@ -1,5 +1,5 @@
 <#-- =======================================================================
-     Neon Keycloak Login Theme — verify-email.ftl
+     Neon Keycloak Login Theme â€” verify-email.ftl
      Email verification page shown after social/email login when VERIFY_EMAIL
      required action is triggered.
      Matches the split-panel layout of login.ftl.
@@ -41,9 +41,6 @@
       <button class="kc-dot" aria-label="Slide 5"></button>
       <button class="kc-dot" aria-label="Slide 6"></button>
       <button class="kc-dot" aria-label="Slide 7"></button>
-    </div>
-  </div>
-
     </div>
   </div>
 

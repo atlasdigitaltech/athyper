@@ -1,0 +1,117 @@
+name: Container Maintenance
+
+on:
+  pull_request:
+    paths:
+      - ".dockerignore"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "server/**"
+      - "scripts/policy/verify-docker-toolchain.mjs"
+      - ".github/workflows/container-maintenance.yml"
+  workflow_dispatch:
+    inputs:
+      no_cache:
+        description: "Build without Docker layer cache"
+        required: false
+        default: true
+        type: boolean
+  schedule:
+    # Monday 03:17 UTC. The non-round minute avoids common scheduler spikes.
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-maintenance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server-runtime:
+    name: Server image size and vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select cache policy
+        id: cache-policy
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "schedule" || "${{ inputs.no_cache || false }}" == "true" ]]; then
+            echo "args=--no-cache" >> "$GITHUB_OUTPUT"
+            echo "A clean Docker build was selected." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "args=" >> "$GITHUB_OUTPUT"
+            echo "A normal Docker build was selected." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Build server runtime image
+        run: >-
+          docker build
+          ${{ steps.cache-policy.outputs.args }}
+          --pull
+          --target runtime
+          --file server/Dockerfile.prod
+          --tag athyper/runtime-server:ci
+          .
+
+      - name: Report image size
+        shell: bash
+        run: |
+          bytes="$(docker image inspect athyper/runtime-server:ci --format '{{.Size}}')"
+          mib="$(awk -v bytes="$bytes" 'BEGIN { printf "%.1f", bytes / 1024 / 1024 }')"
+          {
+            echo "## Server runtime image"
+            echo
+            echo "| Image | Uncompressed content size |"
+            echo "| --- | ---: |"
+            echo "| \`athyper/runtime-server:ci\` | ${mib} MiB (${bytes} bytes) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          printf '{"image":"athyper/runtime-server:ci","sizeBytes":%s,"sizeMiB":%s}\n' \
+            "$bytes" "$mib" > container-size.json
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: athyper/runtime-server:ci
+          format: json
+          output: trivy-server.json
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+
+      - name: Summarize vulnerabilities
+        if: always()
+        shell: bash
+        run: |
+          if [[ ! -f trivy-server.json ]]; then
+            echo "Trivy did not produce a report." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          critical="$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' trivy-server.json)"
+          high="$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' trivy-server.json)"
+          medium="$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "MEDIUM")] | length' trivy-server.json)"
+          {
+            echo
+            echo "### Vulnerability report"
+            echo
+            echo "| Critical | High | Medium |"
+            echo "| ---: | ---: | ---: |"
+            echo "| $critical | $high | $medium |"
+            echo
+            echo "The full machine-readable Trivy report is attached to this workflow run."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload container reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-container-reports-${{ github.sha }}
+          path: |
+            container-size.json
+            trivy-server.json
+          if-no-files-found: error
+          retention-days: 30

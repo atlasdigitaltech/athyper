@@ -38,12 +38,20 @@ async function main(): Promise<void> {
   requireText("environment", env, "LINKEDIN_CLIENT_ID=");
   requireText("environment", env, "ATHYPER_ENTERPRISE_WINDOWS_AUTH_ENABLED=false");
   requireText("import script", importScript, "LINKEDIN_CLIENT_SECRET");
+  for (const publicUrl of ["NEON_PUBLIC_WEB_URL", "MESH_PUBLIC_WEB_URL", "ADMIN_PUBLIC_WEB_URL"]) {
+    requireText("import script", importScript, publicUrl);
+  }
 
   const parsedRealm = JSON.parse(realm) as {
     identityProviders?: Array<{ alias?: string; providerId?: string; enabled?: boolean; trustEmail?: boolean }>;
   };
   const linkedin = parsedRealm.identityProviders?.find((provider) => provider.alias === "linkedin");
-  if (!linkedin || linkedin.providerId !== "linkedin" || linkedin.enabled !== false || linkedin.trustEmail !== false) {
+  if (
+    !linkedin
+    || linkedin.providerId !== "linkedin-openid-connect"
+    || linkedin.enabled !== false
+    || linkedin.trustEmail !== false
+  ) {
     throw new Error("Keycloak LinkedIn broker must be present, disabled by default, and must not trust email implicitly.");
   }
 

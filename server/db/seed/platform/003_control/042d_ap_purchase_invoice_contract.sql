@@ -1942,7 +1942,8 @@ VALUES
     ('purchase_invoice', 'reversed',         'POSTINGS_PREVIEW.OPEN', 'allowed', NULL, NULL, NULL, '{}'::jsonb, '00000000-0000-0000-0000-000000000000'),
     ('purchase_invoice', 'cancelled',        'POSTINGS_PREVIEW.OPEN', 'allowed', NULL, NULL, NULL, '{}'::jsonb, '00000000-0000-0000-0000-000000000000')
 
-ON CONFLICT (entity_code, status, action_code) DO UPDATE
+ON CONFLICT (entity_code, status, action_code)
+    WHERE entity_version_id IS NULL DO UPDATE
 SET capability          = EXCLUDED.capability,
     required_permission = EXCLUDED.required_permission,
     reason              = EXCLUDED.reason,

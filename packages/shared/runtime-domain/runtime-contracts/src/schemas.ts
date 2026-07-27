@@ -956,6 +956,7 @@ export const MetaEntityFieldSchema = z.object({
   name: z.string().min(1),
   columnName: z.string(),
   label: z.string().min(1),
+  description: z.string().optional(),
   dataType: z.string().min(1),
   uiType: z.string().optional(),
   format: z.string().optional(),

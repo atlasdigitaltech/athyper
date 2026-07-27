@@ -1,7 +1,6 @@
-import { SettingsPage } from "@athyper/app-neon-command-hub";
-import { PLANE_KEY } from "@/lib/plane";
+import { SettingsClient } from "../SettingsClient";
 
 export default async function SettingsPathRoute({ params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
-  return <SettingsPage plane={PLANE_KEY} path={path} />;
+  return <SettingsClient path={path} />;
 }

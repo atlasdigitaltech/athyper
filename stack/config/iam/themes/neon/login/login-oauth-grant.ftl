@@ -1,7 +1,7 @@
 <#-- =======================================================================
-     Neon Keycloak Login Theme — login-oauth-grant.ftl
+     Neon Keycloak Login Theme â€” login-oauth-grant.ftl
      OAuth consent page for Keycloak 26.x.
-     NOTE: In KC 26.x `oauth` is a plain string — do NOT access oauth.client.*
+     NOTE: In KC 26.x `oauth` is a plain string â€” do NOT access oauth.client.*
      The form only needs url.loginAction + accept/cancel buttons.
      ======================================================================= -->
 <#include "_iam-context.ftl">
@@ -20,7 +20,7 @@
 <body>
 <div class="iam-shell kc-page" data-plane="${iamPlane}">
 
-  <!-- ── Left branding panel ── -->
+  <!-- â”€â”€ Left branding panel â”€â”€ -->
   <div class="kc-panel-left">
 
     <#include "_neon-brand-logo.ftl">
@@ -44,10 +44,7 @@
     </div>
   </div>
 
-    </div>
-  </div>
-
-  <!-- ── Right panel ── -->
+  <!-- -- Right form panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
     <div class="kc-form-card">
@@ -68,7 +65,7 @@
         </div>
       </#if>
 
-      <!-- Grant form — url.loginAction always exists; accept/cancel handled by Keycloak -->
+      <!-- Grant form: accept/cancel are handled by Keycloak. -->
       <form class="kc-form kc-grant-form" action="${url.oauthAction}" method="POST">
         <#if clientData?? && clientData?has_content>
           <input type="hidden" name="client_data" value="${clientData}" />
@@ -83,15 +80,15 @@
         </div>
       </form>
 
-      <!-- Footer -->
-      <div class="kc-footer">
-        <p>&copy; ${.now?string("yyyy")} athyper. All rights reserved.</p>
-      </div>
+    </div><!-- /.kc-form-card -->
+  </div><!-- /.kc-form-wrapper -->
 
-    </div>
+  <div class="kc-footer">
+    <p>&copy; ${.now?string("yyyy")} athyper. All rights reserved.</p>
   </div>
+</div><!-- /.kc-panel-right -->
 
-</div>
+</div><!-- /.kc-page -->
 <script>
 (function () {
   var slides = document.querySelectorAll('#kc-carousel .kc-slide');

@@ -1523,7 +1523,7 @@ function StandardDetailPanel({
                 ["Tier", `${surfaceTier(entityConfig)} - ${surfaceTierDetail(entityConfig)}`],
                 ["Route", href],
                 ["Company", selectedRow.company ?? SCOPE_META[entityConfig.scope].label],
-                ["Owner", selectedRow.owner ?? "Finance setup owner"],
+                ["Owner", selectedRow.owner ?? "Finance settings owner"],
                 ["Updated", selectedRow.updated ?? "2026-05-18"],
               ].map(([label, value]) => (
                 <label key={label} className="block">
@@ -2106,7 +2106,7 @@ export function FinanceDataSetupWorkbench() {
     <PageFrame
       width="full"
       className="min-h-0 p-0"
-      title="Finance Setup"
+      title="Finance Settings"
       description="Master, control, and governance workbench with company-scope aware setup"
       actions={
         <>

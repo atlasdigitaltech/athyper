@@ -1,70 +1,92 @@
 "use client";
 
-import { Clock3, LogOut } from "lucide-react";
-
 export function SessionWarningDialog({
   secondsRemaining,
   reason = "idle",
   pending,
   onContinue,
   onLogout,
+  brandWordmarkSrc,
+  brandAlt,
 }: {
   secondsRemaining: number;
   reason?: "idle" | "absolute";
   pending: boolean;
   onContinue: () => void;
   onLogout: () => void;
+  brandWordmarkSrc?: string;
+  brandAlt?: string;
 }) {
+  const remaining = Math.max(secondsRemaining, 0);
+  const description =
+    reason === "absolute"
+      ? "Your session is reaching its maximum lifetime and cannot be extended."
+      : "Your session will close soon because there has not been activity.";
+
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="session-warning-title"
       aria-describedby="session-warning-description"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 font-sans text-foreground backdrop-blur-sm"
     >
-      <div className="w-full max-w-md overflow-hidden rounded-lg border border-border bg-card shadow-2xl">
-        <div className="h-1.5 bg-warning" />
-        <div className="px-7 py-6">
-          <div className="mb-5 flex justify-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-warning/10 text-warning">
-              <Clock3 className="h-7 w-7" aria-hidden="true" />
-            </div>
+      <div className="w-full max-w-md rounded-lg border bg-card p-4 text-card-foreground shadow-sm sm:p-6">
+        {brandWordmarkSrc ? (
+          <div className="mb-4 flex items-center">
+            <img
+              alt={brandAlt ?? ""}
+              className="h-5 w-auto max-w-36 object-contain"
+              draggable={false}
+              src={brandWordmarkSrc}
+            />
           </div>
-          <h2 id="session-warning-title" className="text-center text-lg font-semibold text-foreground">
+        ) : null}
+        <div className="mb-4 grid gap-1">
+          <h2
+            id="session-warning-title"
+            className="text-2xl font-medium leading-tight sm:text-[1.75rem]"
+          >
             Still there?
           </h2>
-          <p id="session-warning-description" className="mt-2 text-center text-sm leading-6 text-muted-foreground">
-             {reason === "absolute"
-               ? "Your session is reaching its maximum lifetime and cannot be extended."
-               : "Your session will close soon because there has not been activity."}
+          <p
+            id="session-warning-description"
+            className="text-sm font-normal leading-5 text-muted-foreground sm:text-base sm:leading-6"
+          >
+            {description}
           </p>
-          <p aria-live="polite" aria-atomic="true" className="mt-4 text-center text-xs text-muted-foreground/70">
-            Signing out in{" "}
-            <span className="font-semibold tabular-nums text-foreground/80">
-              {Math.max(secondsRemaining, 0)}s
-            </span>
-          </p>
-          <div className="mt-6 flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={onContinue}
-                disabled={pending || reason === "absolute"}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-foreground px-4 py-2.5 text-sm font-semibold text-background shadow-sm hover:bg-foreground/90 disabled:pointer-events-none disabled:opacity-60"
-            >
-              <Clock3 className="h-4 w-4" aria-hidden="true" />
-              {reason === "absolute" ? "Continue unavailable" : pending ? "Checking session..." : "Continue session"}
-            </button>
-            <button
-              type="button"
-              onClick={onLogout}
-              disabled={pending}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted/60 disabled:pointer-events-none disabled:opacity-60"
-            >
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-              Sign out
-            </button>
-          </div>
+        </div>
+        <p
+          aria-live="polite"
+          aria-atomic="true"
+          className="mb-5 text-sm text-muted-foreground"
+        >
+          Signing out in{" "}
+          <span className="font-medium tabular-nums text-foreground">
+            {remaining}s
+          </span>
+        </p>
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            onClick={onContinue}
+            disabled={pending || reason === "absolute"}
+            className="inline-flex h-10 w-full items-center justify-center gap-3 rounded-md bg-foreground px-4 text-base font-medium text-background transition-colors hover:bg-foreground/90 disabled:pointer-events-none disabled:opacity-60"
+          >
+            {reason === "absolute"
+              ? "Continue unavailable"
+              : pending
+                ? "Checking session..."
+                : "Continue session"}
+          </button>
+          <button
+            type="button"
+            onClick={onLogout}
+            disabled={pending}
+            className="inline-flex h-10 w-full items-center justify-center rounded-md border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-60"
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </div>

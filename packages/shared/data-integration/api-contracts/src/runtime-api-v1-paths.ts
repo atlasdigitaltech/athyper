@@ -1,7 +1,7 @@
 // Canonical URL builder for the /api/runtime/v1/* surface.
 // Single source of truth — every caller goes through these helpers so a future
 // rename (e.g. v2) is a one-file change. Hand-rolled URL strings in callers
-// are rejected by apps/neon/scripts/check-runtime-api-paths.ts.
+// are rejected by scripts/policy/verify-runtime-api-paths.ts.
 
 const ROOT = "/api/runtime/v1";
 

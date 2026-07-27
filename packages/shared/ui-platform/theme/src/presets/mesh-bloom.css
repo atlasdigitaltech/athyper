@@ -4,7 +4,7 @@ value: mesh-bloom
 */
 
 :root[data-theme-preset="mesh-bloom"] {
-  --radius: 0.625rem;
+  --preset-radius: 0.625rem;
   --background: #fdfdfd;
   --foreground: #000000;
   --card: #fdfdfd;

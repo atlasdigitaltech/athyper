@@ -38,7 +38,7 @@ export function ChartAssignmentPanel({ companyCode, className }: { companyCode: 
   const [editor, setEditor] = useState<ConfigureChartAssignment | "new" | null>(null);
 
   return (
-    <section className={cn("rounded-lg border bg-card", className)}>
+    <section id="chart-assignments" className={cn("scroll-mt-24 rounded-lg border bg-card", className)}>
       <div className="flex items-center justify-between border-b p-4">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -179,7 +179,7 @@ export function BookAssignmentPanel({ companyCode, className }: { companyCode: s
   const [editor, setEditor] = useState<ConfigureBookAssignment | "new" | null>(null);
 
   return (
-    <section className={cn("rounded-lg border bg-card", className)}>
+    <section id="book-assignments" className={cn("scroll-mt-24 rounded-lg border bg-card", className)}>
       <div className="flex items-center justify-between border-b p-4">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">

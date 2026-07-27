@@ -15,6 +15,7 @@
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
     "@athyper/runtime-shared": "workspace:*",
+    "@athyper/saved-views-ui": "workspace:*",
     "lucide-react": "^1.8.0"
   },
   "peerDependencies": {

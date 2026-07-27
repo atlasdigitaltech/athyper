@@ -964,6 +964,11 @@ CREATE TABLE IF NOT EXISTS master.fx_rate (
     source              text            NOT NULL DEFAULT 'MANUAL',
     source_reference    text,
 
+    -- Version lineage. Corrections append a successor and supersede this row;
+    -- the quoted rate and its business key never change in place.
+    version_no          integer         NOT NULL DEFAULT 1,
+    supersedes_id       uuid,
+
     -- Metadata
     metadata            jsonb           NOT NULL DEFAULT '{}'::jsonb,
 
@@ -987,11 +992,13 @@ CREATE TABLE IF NOT EXISTS master.fx_rate (
         'SPOT','PERIOD_AVG','PERIOD_END','BUDGET','CONTRACTED','HISTORICAL')),
     CONSTRAINT fxr_source_chk           CHECK (source IN (
         'ECB','REUTERS','BLOOMBERG','CENTRAL_BANK','MANUAL','CUSTOM','API')),
-    CONSTRAINT fxr_status_chk           CHECK (status IN ('active','superseded'))
+    CONSTRAINT fxr_status_chk           CHECK (status IN ('active','superseded')),
+    CONSTRAINT fxr_version_chk          CHECK (version_no > 0),
+    CONSTRAINT fxr_not_self_superseding_chk CHECK (supersedes_id IS NULL OR supersedes_id <> id)
 );
 COMMENT ON TABLE master.fx_rate IS
-    'ARCHETYPE=B;SCOPE=T. Exchange rate store. inverse_rate GENERATED. Triangulation via master.get_fx_rate(). '
-    'Rate types: SPOT (intraday), PERIOD_AVG/END (closing), BUDGET, CONTRACTED, HISTORICAL.';
+    'ARCHETYPE=B;SCOPE=T. Immutable, append-only exchange rate store. Corrections create a successor linked by '
+    'supersedes_id; multiple active sources may coexist. inverse_rate is GENERATED. Triangulation via master.get_fx_rate().';
 
 
 

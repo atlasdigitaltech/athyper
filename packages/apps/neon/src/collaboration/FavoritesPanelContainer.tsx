@@ -2,54 +2,39 @@
 
 import { useCallback } from "react";
 import {
-  FavoritesPanel,
-  type FavoritesPanelTab,
+  FavoritesPanelContainer as SharedFavoritesPanelContainer,
   type FavoriteBookmarkItem,
   type FavoriteRecentItem,
+  type FavoritesPanelContainerProps as SharedFavoritesPanelContainerProps,
 } from "@athyper/collaboration-ui/bookmarks";
-import { useBookmarksList, useRecentItems } from "@athyper/query";
+import {
+  useBookmarksList,
+  useRecentItems,
+  type BookmarkRequest,
+} from "@athyper/query";
 
-interface FavoritesPanelContainerProps {
-  activeTab: FavoritesPanelTab;
-  onTabChange: (tab: FavoritesPanelTab) => void;
-  onClose: () => void;
-  navigate: (href: string) => void;
-}
+type ShellProps = Pick<
+  SharedFavoritesPanelContainerProps,
+  "activeTab" | "onTabChange" | "onClose" | "navigate"
+>;
 
 export function FavoritesPanelContainer({
-  activeTab,
-  onTabChange,
-  onClose,
-  navigate,
-}: FavoritesPanelContainerProps) {
-  const { groups, isLoading, error, removeBookmark, isRemoving } = useBookmarksList();
-  const { items: recentItems, dismiss } = useRecentItems();
-
-  const handleNavigate = useCallback(
-    (href: string) => {
-      navigate(href);
-      onClose();
-    },
-    [navigate, onClose],
-  );
-
-  const handleRemoveBookmark = useCallback(
-    (item: FavoriteBookmarkItem) => {
-      removeBookmark({ entityCode: item.entityCode, recordId: item.recordId });
-    },
-    [removeBookmark],
-  );
+  request,
+  ...props
+}: ShellProps & { request: BookmarkRequest }) {
+  const { groups, isLoading, error, removeBookmark, isRemoving } = useBookmarksList({ request });
+  const { items, dismiss } = useRecentItems();
+  const handleRemoveBookmark = useCallback((item: FavoriteBookmarkItem) => {
+    removeBookmark({ entityCode: item.entityCode, recordId: item.recordId });
+  }, [removeBookmark]);
 
   return (
-    <FavoritesPanel
-      activeTab={activeTab}
-      onTabChange={onTabChange}
-      onClose={onClose}
+    <SharedFavoritesPanelContainer
+      {...props}
       bookmarks={groups}
       bookmarksLoading={isLoading}
       bookmarksError={error}
-      recentItems={recentItems as FavoriteRecentItem[]}
-      onNavigate={handleNavigate}
+      recentItems={items as FavoriteRecentItem[]}
       onRemoveBookmark={handleRemoveBookmark}
       bookmarkActionPending={isRemoving}
       onDismissRecent={dismiss}

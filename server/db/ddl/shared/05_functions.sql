@@ -8,7 +8,11 @@
 -- shared.uuidv7() — defined in 03_bootstrap_functions/001_shared.sql (must exist before 04_tables).
 
 -- [0] trg_set_updated_at — stamps updated_at + updated_by on every UPDATE
--- updated_by sourced from session GUC app.current_principal_id (NULL if unset)
+-- updated_by sourced from session GUC app.current_principal_id, else the
+-- caller-supplied NEW.updated_by, else the prior row's updated_by, else the
+-- system sentinel principal. The final fallback keeps the audit pair invariant
+-- (updated_at IS NULL) = (updated_by IS NULL) intact even for admin/system
+-- UPDATEs that never set the GUC.
 CREATE OR REPLACE FUNCTION shared.trg_set_updated_at() RETURNS trigger
     LANGUAGE plpgsql VOLATILE
     SET search_path = shared
@@ -18,7 +22,8 @@ BEGIN
     NEW.updated_by := COALESCE(
         nullif(current_setting('app.current_principal_id', true), '')::uuid,
         NEW.updated_by,
-        OLD.updated_by
+        OLD.updated_by,
+        '00000000-0000-0000-0000-000000000000'::uuid
     );
     RETURN NEW;
 END;

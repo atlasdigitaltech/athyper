@@ -19,7 +19,7 @@ import {
   createDelegatedAccessScope,
   resolveRuntimeAccessScope,
 } from "@athyper/runtime-list/core";
-import { toRuntimeDescriptor } from "./descriptorConverter";
+import { toRuntimeDescriptor } from "@athyper/runtime-list/adapter";
 
 // ─── Fallback list policy for the neon plane ──────────────────────────────────
 // Entity descriptor metadata is resolved above this policy at request time.

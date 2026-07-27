@@ -1,9 +1,13 @@
+import { notFound } from "next/navigation";
 import { RuntimeNewPage } from "@athyper/runtime-canvas";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import { getMetaEntityRecordDetail } from "@/lib/server/meta-entity-records";
 import { getMetaEntityRuntimeDescriptor } from "@/lib/server/meta-entity-runtime";
 import { PLANE_KEY } from "@/lib/plane";
+import { getNeonServerSession } from "@/lib/server/session";
+import { resolveFxRateTenantCode } from "@/lib/server/fx-rate-runtime-context";
+import { FxRateGovernedForm } from "../FxRateGovernedForm";
 import { EarlyDraftLauncher } from "./EarlyDraftLauncher";
 import { DirectCreateLauncher } from "./DirectCreateLauncher";
 import { SourceDocumentCreateLauncher } from "./SourceDocumentCreateLauncher";
@@ -17,6 +21,21 @@ export default async function RuntimeNewRoute({
 }) {
   const { entity } = await params;
   const descriptor = await getMetaEntityRuntimeDescriptor(entity);
+  if(entity==="fx_policy")notFound();
+  if(entity==="fx_rate"&&descriptor){
+    const session=await getNeonServerSession();
+    const tenantCode=session?resolveFxRateTenantCode(session):null;
+    if(!tenantCode)notFound();
+    const resolvedSearchParams=await searchParams;
+    return (
+      <FxRateGovernedForm
+        tenantCode={tenantCode}
+        descriptor={descriptor}
+        mode="create"
+        record={buildInitialRecord(descriptor,resolvedSearchParams)}
+      />
+    );
+  }
   if (descriptor?.createMode === "EARLY_DRAFT") {
     return <EarlyDraftLauncher entity={descriptor.entityCode} />;
   }

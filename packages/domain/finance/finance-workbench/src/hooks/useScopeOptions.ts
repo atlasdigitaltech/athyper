@@ -98,6 +98,9 @@ export interface ScopeOptionsData {
   activeLegalEntityCode: string | null;
   activeLegalEntityName: string | null;
   defaultCompanyCode: string | null;
+  featureFlags: {
+    financeSettingsDirectory: boolean;
+  };
 }
 
 export interface LedgerBookOption {
@@ -110,7 +113,7 @@ export interface LedgerBookOption {
   isPrimary: boolean;
 }
 
-async function fetchScopeOptions(): Promise<ScopeOptionsData> {
+export async function fetchScopeOptions(): Promise<ScopeOptionsData> {
   const response = await fetch("/api/finance/master/scope-options", { cache: "no-store" });
   if (!response.ok) {
     throw new Error("Failed to load scope options");
@@ -125,6 +128,9 @@ async function fetchScopeOptions(): Promise<ScopeOptionsData> {
     defaultCompanyCode: string | null;
     legalEntities: Array<{ id: string; code: string; name: string }>;
     companies: CompanyOption[];
+    featureFlags?: {
+      financeSettingsDirectory?: boolean;
+    };
   };
   const companyCodesByEntity = new Map<string, string[]>();
   for (const company of payload.companies) {
@@ -154,6 +160,9 @@ async function fetchScopeOptions(): Promise<ScopeOptionsData> {
     activeLegalEntityCode: payload.activeLegalEntityCode,
     activeLegalEntityName: payload.activeLegalEntityName,
     defaultCompanyCode: payload.defaultCompanyCode,
+    featureFlags: {
+      financeSettingsDirectory: payload.featureFlags?.financeSettingsDirectory ?? true,
+    },
   };
 }
 

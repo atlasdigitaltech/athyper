@@ -3640,3 +3640,9 @@ CREATE TRIGGER trg_sop_validate_domain
     BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id
     ON master.sales_organization_profile
     FOR EACH ROW EXECUTE FUNCTION master.trg_validate_operating_organization_profile('sales');
+
+-- FX quote corrections are versioned replacements, never in-place edits.
+DROP TRIGGER IF EXISTS trg_fx_rate_immutable ON master.fx_rate;
+CREATE TRIGGER trg_fx_rate_immutable
+    BEFORE UPDATE OR DELETE ON master.fx_rate
+    FOR EACH ROW EXECUTE FUNCTION master.guard_fx_rate_immutable();

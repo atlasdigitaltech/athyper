@@ -1,9 +1,24 @@
 "use client";
 
-import { createContext, useContext, useEffect, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { PlaneShell, type FavoritesPanelSlotProps } from "@athyper/app-neon-shell";
+import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  PlaneShell,
+  neonAtlasProfile,
+  type FavoritesPanelSlotProps,
+} from "@athyper/app-neon-shell";
 import { FavoritesPanelContainer } from "@athyper/app-neon/collaboration";
+import { createAtlasSessionScope } from "@athyper/atlas-agent-runtime";
+import { ATLAS_THREAD_PERSISTENCE_CAPABILITY_ID } from "@athyper/atlas-agent-runtime";
+import {
+  AtlasHeaderTrigger,
+  AtlasShellWrapper,
+} from "@athyper/atlas-agent-ui";
+import { bffFetch, csrfFetch } from "@/lib/bff-fetch";
+import {
+  usePlaneInboxCount,
+  type InboxCountAdapter,
+} from "@athyper/app-foundation/client";
 import {
   RuntimeListBrowserCacheProvider,
   runtimeListSessionScopeIdentity,
@@ -11,7 +26,16 @@ import {
 import {
   NotificationStreamProvider,
   useNotificationStream,
-} from "./NotificationStreamClient";
+} from "@athyper/notifications-client";
+import { createNotificationsConfig } from "@/lib/notifications-config";
+
+const NEON_INBOX_ADAPTER: InboxCountAdapter = {
+  queryKey: ["shell", "neon", "inbox-count"],
+  load: async (signal) => {
+    const response = await bffFetch<{ count?: number }>("/api/relay/workflow/inbox/count", { signal });
+    return response.count ?? 0;
+  },
+};
 
 export interface ShellPublicSession {
   displayName: string;
@@ -30,27 +54,64 @@ export function useShellPublicSession(): ShellPublicSession {
 
 export function AppShellClient({
   supportMode,
+  atlasEnabled,
+  atlasHistoryEnabled,
   initialSession,
   children,
 }: {
   supportMode: boolean;
+  atlasEnabled: boolean;
+  atlasHistoryEnabled: boolean;
   initialSession: unknown;
   children: ReactNode;
 }) {
+  const router = useRouter();
+  const notificationsConfig = useMemo(
+    () => createNotificationsConfig((href) => router.push(href)),
+    [router],
+  );
   const cacheScopeIdentity = runtimeListSessionScopeIdentity(initialSession);
   const shellSession = toShellPublicSession(initialSession);
+  const atlasProfile = atlasHistoryEnabled
+    ? {
+        ...neonAtlasProfile,
+        capabilityIds: [ATLAS_THREAD_PERSISTENCE_CAPABILITY_ID],
+      }
+    : neonAtlasProfile;
   return (
-    <ShellPublicSessionContext.Provider value={shellSession}>
-      <RuntimeListBrowserCacheProvider scopeIdentity={cacheScopeIdentity}>
-        <AppRouteNavigationBoundary>
-          <NotificationStreamProvider>
-            <ShellWithNotificationCount supportMode={supportMode} initialSession={initialSession}>
-              {children}
-            </ShellWithNotificationCount>
-          </NotificationStreamProvider>
-        </AppRouteNavigationBoundary>
-      </RuntimeListBrowserCacheProvider>
-    </ShellPublicSessionContext.Provider>
+    <AtlasShellWrapper
+      enabled={atlasEnabled}
+      scope={createAtlasSessionScope(initialSession)}
+      profile={atlasProfile}
+      mutationFetch={csrfFetch}
+      {...(atlasHistoryEnabled
+        ? {
+            threadHistory: {
+              enabled: true,
+              // The rail remains hidden until the authenticated list call
+              // returns the tenant-effective server copy.
+              retentionNotice: "Loading the effective retention policy.",
+              pageSize: 25,
+              maxThreads: 200,
+              maxResumeMessages: 100,
+              archiveEnabled: false,
+              deleteEnabled: false,
+            },
+          }
+        : {})}
+    >
+      <ShellPublicSessionContext.Provider value={shellSession}>
+        <RuntimeListBrowserCacheProvider scopeIdentity={cacheScopeIdentity}>
+          <AppRouteNavigationBoundary>
+            <NotificationStreamProvider config={notificationsConfig}>
+              <ShellWithNotificationCount supportMode={supportMode} initialSession={initialSession}>
+                {children}
+              </ShellWithNotificationCount>
+            </NotificationStreamProvider>
+          </AppRouteNavigationBoundary>
+        </RuntimeListBrowserCacheProvider>
+      </ShellPublicSessionContext.Provider>
+    </AtlasShellWrapper>
   );
 }
 
@@ -110,12 +171,17 @@ function ShellWithNotificationCount({
   children: ReactNode;
 }) {
   const { unreadCount } = useNotificationStream();
+  const inboxCount = usePlaneInboxCount(NEON_INBOX_ADAPTER);
   const router = useRouter();
+  const pathname = usePathname();
   return (
     <PlaneShell
+      pathname={pathname}
       supportMode={supportMode}
       initialSession={initialSession}
+      inboxCount={inboxCount}
       notificationCount={unreadCount}
+      assistantSlot={<AtlasHeaderTrigger />}
       FavoritesPanelComponent={ClientFavoritesPanel}
       navigate={(href) => router.push(href)}
     >
@@ -126,5 +192,11 @@ function ShellWithNotificationCount({
 
 function ClientFavoritesPanel(props: FavoritesPanelSlotProps) {
   const router = useRouter();
-  return <FavoritesPanelContainer {...props} navigate={(href) => router.push(href)} />;
+  return (
+    <FavoritesPanelContainer
+      {...props}
+      navigate={(href) => router.push(href)}
+      request={csrfFetch}
+    />
+  );
 }

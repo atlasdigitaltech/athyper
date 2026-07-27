@@ -1,5 +1,5 @@
 import { type ReactNode, type CSSProperties } from "react";
-import { Lock, EyeOff, ShieldAlert, Sparkles, Cpu } from "lucide-react";
+import { Lock, EyeOff, ShieldAlert, Sparkles, Cpu, CircleHelp } from "lucide-react";
 import { cn } from "@athyper/theme/utils";
 import {
   FIELD_ROW_SPACING,
@@ -66,6 +66,7 @@ function FieldRowRoot({
       className={cn(
         "grid items-center gap-3 px-2",
         "border-b border-border/50 last:border-b-0",
+        "focus-within:outline-none focus-within:ring-2 focus-within:ring-primary/30",
         dirty && "bg-primary/[0.03]",
         invalid && "bg-destructive/[0.04]",
         className,
@@ -80,10 +81,11 @@ export interface FieldRowLabelProps {
   children: ReactNode;
   htmlFor?: string;
   required?: boolean;
+  helpText?: string;
   className?: string;
 }
 
-function FieldRowLabel({ children, htmlFor, required, className }: FieldRowLabelProps) {
+function FieldRowLabel({ children, htmlFor, required, helpText, className }: FieldRowLabelProps) {
   return (
     <label
       htmlFor={htmlFor}
@@ -100,6 +102,12 @@ function FieldRowLabel({ children, htmlFor, required, className }: FieldRowLabel
           *
         </span>
       )}
+      {helpText && (
+        <span title={helpText} className="ml-1 inline-flex shrink-0">
+          <CircleHelp aria-hidden="true" className="size-3.5 opacity-60" />
+          <span className="sr-only">{helpText}</span>
+        </span>
+      )}
     </label>
   );
 }
@@ -112,6 +120,9 @@ export interface FieldRowReadProps {
   reasonMessage?: string;
   /** Render the empty placeholder ("—") regardless of children. */
   empty?: boolean;
+  inherited?: boolean;
+  sourceLabel?: string;
+  auditLabel?: string;
   className?: string;
 }
 
@@ -138,6 +149,9 @@ function FieldRowRead({
   reason,
   reasonMessage,
   empty,
+  inherited,
+  sourceLabel,
+  auditLabel,
   className,
 }: FieldRowReadProps) {
   const Icon = reason ? REASON_ICON[reason] : null;
@@ -147,7 +161,8 @@ function FieldRowRead({
     <div
       data-field-read=""
       data-reason={reason}
-      title={title}
+      data-inherited={inherited ? "" : undefined}
+      title={[title, sourceLabel && `Source: ${sourceLabel}`, auditLabel].filter(Boolean).join(" · ") || undefined}
       className={cn(
         "flex h-full min-w-0 items-center gap-1.5 text-sm",
         empty && "italic text-muted-foreground",
@@ -162,6 +177,9 @@ function FieldRowRead({
           className="size-3.5 shrink-0 opacity-60"
         />
       )}
+      {inherited && <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">Inherited</span>}
+      {sourceLabel && <span className="sr-only">Source: {sourceLabel}</span>}
+      {auditLabel && <span className="sr-only">{auditLabel}</span>}
     </div>
   );
 }
@@ -172,10 +190,11 @@ export interface FieldRowEditProps {
   error?: string;
   /** Indicates the field has unsaved local changes. */
   dirty?: boolean;
+  errorId?: string;
   className?: string;
 }
 
-function FieldRowEdit({ children, error, dirty, className }: FieldRowEditProps) {
+function FieldRowEdit({ children, error, dirty, errorId, className }: FieldRowEditProps) {
   return (
     <div
       data-field-edit=""
@@ -188,11 +207,21 @@ function FieldRowEdit({ children, error, dirty, className }: FieldRowEditProps) 
     >
       <div className="min-w-0 flex-1">{children}</div>
       {error && (
-        <span role="alert" className="shrink-0 text-xs text-destructive">
+        <span id={errorId} role="alert" className="shrink-0 text-xs text-destructive">
           {error}
         </span>
       )}
     </div>
+  );
+}
+
+function FieldRowSkeleton() {
+  return (
+    <div
+      data-field-skeleton=""
+      aria-hidden="true"
+      className="h-5 w-full animate-pulse rounded bg-muted"
+    />
   );
 }
 
@@ -201,4 +230,5 @@ export const FieldRow = Object.assign(FieldRowRoot, {
   Label: FieldRowLabel,
   Read: FieldRowRead,
   Edit: FieldRowEdit,
+  Skeleton: FieldRowSkeleton,
 });

@@ -95,6 +95,16 @@ if "!DEMO_REALM_NAME!"=="" (
     exit /b 1
 )
 echo realm-athyper.json validated ^(realm=!DEMO_REALM_NAME!^)
+node "%REPO_DIR%\tools\scripts\generate-athyper-demo-iam.cjs" --check
+if errorlevel 1 (
+    echo Error: realm-athyper-demosetup.json is stale
+    exit /b 1
+)
+node "%REPO_DIR%\tools\scripts\verify-athyper-demo-iam.cjs"
+if errorlevel 1 (
+    echo Error: realm-athyper-demosetup.json contract validation failed
+    exit /b 1
+)
 
 REM --- Step 1: Stop KC container ---------------------------------------------
 echo.

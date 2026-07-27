@@ -1,6 +1,6 @@
 <#-- =======================================================================
-     Neon Keycloak Login Theme — login-config-totp.ftl
-     Mobile Authenticator (TOTP) Setup page — matches login.ftl split-panel layout.
+     Neon Keycloak Login Theme - login-config-totp.ftl
+     Mobile Authenticator (TOTP) Setup page - matches login.ftl split-panel layout.
      ======================================================================= -->
 <#include "_iam-context.ftl">
 <!DOCTYPE html>
@@ -153,9 +153,6 @@
     </div>
   </div>
 
-    </div>
-  </div>
-
   <!-- -- Right form panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
@@ -178,7 +175,7 @@
 
       <form class="kc-form" action="${url.loginAction}" method="post">
 
-        <!-- Step 1 — Install app -->
+        <!-- Step 1 - Install app -->
         <div class="kc-totp-step">
           <div class="kc-totp-step-title">
             <span class="kc-totp-step-num">1</span>
@@ -193,7 +190,7 @@
           </div>
         </div>
 
-        <!-- Step 2 — Scan QR -->
+        <!-- Step 2 - Scan QR -->
         <div class="kc-totp-step">
           <div class="kc-totp-step-title">
             <span class="kc-totp-step-num">2</span>
@@ -203,7 +200,7 @@
             <img src="data:image/png;base64,${totp.totpSecretQrCode}" alt="${msg("loginTotpUnableToScan")}" />
           </div>
           <div style="text-align:center;">
-            <button type="button" class="kc-scan-manually" onclick="toggleSecret()">
+            <button type="button" class="kc-scan-manually" onclick="toggleSecret(this)">
               ${msg("loginTotpUnableToScan")}
             </button>
           </div>
@@ -213,7 +210,7 @@
           </div>
         </div>
 
-        <!-- Step 3 — Enter OTP -->
+        <!-- Step 3 - Enter OTP -->
         <div class="kc-totp-step">
           <div class="kc-totp-step-title">
             <span class="kc-totp-step-num">3</span>
@@ -260,9 +257,8 @@
 </div><!-- /.kc-page -->
 
 <script>
-function toggleSecret() {
+function toggleSecret(btn) {
   var el = document.getElementById('kc-totp-secret-key');
-  var btn = event.target;
   if (el.style.display === 'none' || el.style.display === '') {
     el.style.display = 'flex';
     btn.textContent = '${msg("loginTotpScanBarcode")?js_string}';

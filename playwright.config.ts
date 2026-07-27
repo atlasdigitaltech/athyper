@@ -3,9 +3,9 @@
  *
  * Cleanup Plan v5 §P5c.
  *
- * Scoped to `tests/visual/` so day-to-day CI is not impacted. The suite
- * itself stays dormant via `test.skip(...)` in `pi-fixture.spec.ts`
- * until the four prerequisites in `tests/visual/README.md` are met:
+ * Session E2E and PI visual checks share authentication setup but run as
+ * separate projects. The PI visual project stays dormant via `test.skip(...)`
+ * until the prerequisites in `tests/e2e/README.md` are met.
  *
  *   1. PI fixture seeded in the test tenant (id pinned in the spec)
  *   2. Auth bypass cookie OR test-user storageState in env
@@ -14,15 +14,21 @@
  *
  * Once those land, remove `test.skip` and run:
  *   pnpm test:visual --update-snapshots
- *   git add tests/visual/__screenshots__/
+ *   git add tests/e2e/visual/__screenshots__/
  */
 
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
+
+const planeBaseUrls = {
+  admin: process.env.PLAYWRIGHT_ADMIN_BASE_URL ?? "https://admin.athyper.local",
+  neon: process.env.PLAYWRIGHT_NEON_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? "https://neon.athyper.local",
+  mesh: process.env.PLAYWRIGHT_MESH_BASE_URL ?? "https://mesh.athyper.local",
+} as const;
 
 export default defineConfig({
-  testDir:        "./tests/visual",
-  outputDir:      "./tests/visual/.playwright-output",
-  snapshotDir:    "./tests/visual/__screenshots__",
+  testDir:        "./tests/e2e",
+  outputDir:      "./tests/e2e/.playwright-output",
+  snapshotDir:    "./tests/e2e/visual/__screenshots__",
   fullyParallel:  false,
   forbidOnly:     !!process.env.CI,
   retries:        process.env.CI ? 2 : 0,
@@ -35,7 +41,7 @@ export default defineConfig({
   // when PLAYWRIGHT_USER / PLAYWRIGHT_PASSWORD are not set, so the
   // dormant suite still type-checks + dry-runs.
   // ───────────────────────────────────────────────────────────────
-  globalSetup:    require.resolve("./tests/visual/global-setup"),
+  globalSetup:    require.resolve("./tests/e2e/global-setup"),
   // ───────────────────────────────────────────────────────────────
   // Single fixed viewport per v5 P5c §6 — desktop only for now.
   // Tablet / mobile out of scope until visual parity is established.
@@ -46,13 +52,42 @@ export default defineConfig({
     screenshot:        "on",
     trace:             "retain-on-failure",
     ignoreHTTPSErrors: true,
-    storageState:      "./tests/visual/.auth/storage-state.json",
+    storageState:      "./tests/e2e/.auth/storage-state.json",
   },
   projects: [
     {
-      name: "chromium-1440x900",
+      name: "session",
+      testMatch: "**/session/**/*.spec.ts",
       use:  { browserName: "chromium" },
     },
+    {
+      name: "visual",
+      testMatch: "**/visual/**/*.spec.ts",
+      use:  { browserName: "chromium" },
+    },
+    ...(["admin", "neon", "mesh"] as const).flatMap((plane) => [
+      {
+        name: `production-${plane}-desktop`,
+        testMatch: "**/production/**/*.spec.ts",
+        metadata: { plane, formFactor: "desktop" },
+        use: {
+          browserName: "chromium" as const,
+          baseURL: planeBaseUrls[plane],
+          storageState: `./tests/e2e/.auth/${plane}.json`,
+          viewport: { width: 1440, height: 900 },
+        },
+      },
+      {
+        name: `production-${plane}-mobile`,
+        testMatch: "**/production/**/*.spec.ts",
+        metadata: { plane, formFactor: "mobile" },
+        use: {
+          ...devices["Pixel 7"],
+          baseURL: planeBaseUrls[plane],
+          storageState: `./tests/e2e/.auth/${plane}.json`,
+        },
+      },
+    ]),
   ],
   // 1% diff threshold per v5 P5c §5 (tighten to 0.5% once stable).
   expect: {

@@ -1,12 +1,12 @@
 /**
- * /finance/setup/company/:companyCode — Finance Setup Company Hub
+ * /finance/setup/company/:companyCode — Company Finance Settings
  *
- * Renders the top-level readiness Hub for a company. Server-side responsibilities:
+ * Renders the feature-flagged Finance company landing surface.
  *   - Auth guard
  *   - Redirect to login if session is missing
  *
- * All data loading is client-side via React Query (useCompanyHub +
- * useFinanceSetupConflicts). The Hub is a snapshot view; mutations are Phase 2.
+ * finance.settings_directory changes navigation only:
+ * enabled renders the Settings directory; disabled renders the legacy Company Hub.
  */
 
 import { redirect } from "next/navigation";

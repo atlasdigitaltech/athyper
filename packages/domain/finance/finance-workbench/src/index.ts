@@ -1,10 +1,15 @@
 export { GlWorkbench } from "./views/GlWorkbench";
 export { CoaWorkbench } from "./views/CoaWorkbench";
 export type { FinanceScope, ScopeType } from "./lib/scope";
-export { FINANCE_SETUP_WORKSPACE } from "./lib/finance-setup.workspace";
+export { FINANCE_SETTINGS_DIRECTORY, FINANCE_SETUP_WORKSPACE } from "./lib/finance-setup.workspace";
+export { FINANCE_ENTITY_DIRECTORY } from "./lib/finance-entity-directory";
 
-// ── Finance Setup Workbench (Phase 1) ──────────────────────────────────────
-export { CompanyHubView, FinanceSetupCompanyEntry } from "./views/company-hub/CompanyHubView";
+// ── Finance Settings Workbench (Phase 1) ───────────────────────────────────
+export {
+  CompanyFinanceSettingsDirectory,
+  CompanyHubView,
+  FinanceSetupCompanyEntry,
+} from "./views/company-hub/CompanyHubView";
 export { ReadinessJourney } from "./views/company-hub/ReadinessJourney";
 export { NeedsAttentionInbox } from "./views/company-hub/NeedsAttentionInbox";
 export { WorkspaceCards } from "./views/company-hub/WorkspaceCards";
@@ -94,6 +99,10 @@ export type {
   FoundationReadiness,
   FoundationReadinessStatus,
   FoundationDeterministicCheck,
+  FinanceSettingsDirectoryScope,
+  FinanceSettingsDirectoryItem,
+  FinanceSettingsDirectoryGroup,
+  FinanceSettingsDirectoryManifest,
 } from "./lib/finance-setup.types";
 
 // ── Phase 1.6 — Rollup (Tenant / Legal Entity) ─────────────────────────────
@@ -139,12 +148,22 @@ export { GlControlAssignDialog, GlControlEditDialog } from "./views/configure/Gl
 
 // Phase 2 · Currency and FX
 export { CurrencyFxSetupView } from "./views/currency-fx/CurrencyFxSetupView";
-export { FxRateWorkbench } from "./views/currency-fx/FxRateWorkbench";
+export { CompanyCurrencyFxSettingsPage } from "./views/currency-fx/CompanyCurrencyFxSettingsPage";
+export { TenantCurrencyFxSettingsPage } from "./views/currency-fx/TenantCurrencyFxSettingsPage";
 export {
   useCurrencyFxSetup, useFxResolutionTrace, useSaveFxPolicy,
+  useSaveCompanyFxOverride, useEndCompanyFxOverride,
+  useSaveBookFxOverride, useEndBookFxOverride,
+  useTenantCurrencyFxSummary, useSaveTenantFxPolicy,
   useFxRates, useValidateFxImport, useImportFxRates,
 } from "./hooks/useCurrencyFxSetup";
-export type { CurrencyFxSetupPayload, FxResolutionTrace, FxPolicy, FxRateRow, FxImportValidation } from "./hooks/useCurrencyFxSetup";
+export type {
+  CurrencyFxSetupPayload, FxResolutionTrace, FxPolicy, FxRateRow, FxImportValidation,
+  TenantCurrencyFxSummary, TenantFxPermissions, TenantFxRateRequirement, SaveTenantFxPolicyInput,
+  CompanyFxCompany, CompanyFxExposureSource, CompanyFxPostingCell, CompanyFxPostingRow,
+  CompanyFxRateRequirement, SaveCompanyFxOverrideInput, SaveBookFxOverrideInput,
+  FxResolutionTraceInput, FxNavigation,
+} from "./hooks/useCurrencyFxSetup";
 
 // Phase 2 · Tax
 export { CompanyTaxProfileView } from "./views/tax/CompanyTaxProfileView";

@@ -1,6 +1,9 @@
 import "server-only";
 
-import { buildRelayHandler } from "@athyper/bff-relay";
+import {
+  buildRelayHandler,
+  isNotificationEventStreamRequest,
+} from "@athyper/bff-relay";
 import { getMeshServerSession } from "@/lib/server/session";
 
 const RUNTIME_API_URL = process.env.RUNTIME_API_URL ?? "http://localhost:4000";
@@ -10,6 +13,9 @@ const handler = buildRelayHandler({
   runtimeApiUrl: RUNTIME_API_URL,
   appLabel: "mesh:relay",
   passthroughHeaders: ["Idempotency-Key", "X-Idempotency-Key", "If-Match"],
+  isStreamingRequest: ({ request, upstreamPath }) =>
+    (request.method === "POST" && upstreamPath === "/api/ai/agent/runs")
+    || isNotificationEventStreamRequest({ request, upstreamPath }),
 });
 
 export const GET = handler;
