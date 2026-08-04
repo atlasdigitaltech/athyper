@@ -59,7 +59,7 @@ import {
   handleVoidPayment,
 } from "@athyper/svc-business";
 import type { BusinessLifecycleSyncHook } from "@athyper/svc-business";
-import { checkPermission, createCompanyCodeScopeService, requireVerifiedContext } from "@athyper/svc-iam";
+import { checkPermission, hasCompanyCodeAccess, requireVerifiedContext } from "@athyper/svc-iam";
 import {
   createWorkflowEngine,
   syncLifecycleInstanceForStatus,
@@ -351,10 +351,11 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
       // ── Look up the operation ─────────────────────────────────────────────────
       const operation = await db
         .selectFrom("control.entity_operation as eo")
-        .innerJoin("shared.permission as p", "p.code" as never, "eo.permission_code" as never)
-        .innerJoin("shared.permission_category as pc", "pc.id" as never, "p.category_id" as never)
+        .innerJoin("control.auth_permission as p", "p.id" as never, "eo.permission_id_v2" as never)
+        .innerJoin("shared.auth_permission_category as pc", "pc.id" as never, "p.category_id" as never)
         .select([
           "eo.permission_code",
+          "eo.operation_code_v2 as operation_code",
           "eo.handler_type",
           "eo.handler_target",
           "eo.execution_target",
@@ -363,15 +364,9 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
           "pc.code as permission_category_code",
         ] as never[])
         .where("eo.entity_name" as never, "=", entityCode as never)
-        .where("p.status" as never, "=", "active" as never)
-        // Match simple code (e.g. "submit") OR qualified code ending in ".code"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .where((eb: any) =>
-          eb.or([
-            eb("eo.permission_code" as never, "=", code as never),
-            eb("eo.permission_code" as never, "like", (`%.${code}`) as never),
-          ]),
-        )
+        .where("p.status" as never, "=", "published" as never)
+        .where("eo.operation_code_v2" as never, "=", code as never)
+        .where("eo.v2_publication_status" as never, "=", "published" as never)
         // Prefer tenant override over global
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .where((eb: any) =>
@@ -384,6 +379,7 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
         .limit(1)
         .executeTakeFirst() as {
           permission_code: string;
+          operation_code: string;
           handler_type: string;
           handler_target: string | null;
           execution_target: string | null;
@@ -402,7 +398,7 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
         return;
       }
 
-      if (isWorkflowTaskDecision(operation.permission_code, operation.permission_category_code)) {
+      if (isWorkflowTaskDecision(operation.operation_code, operation.permission_category_code)) {
         res.status(400).json({
           error: "WORKFLOW_TASK_ACTION",
           message: `Operation '${code}' must be executed through the workflow work-item action endpoint`,
@@ -494,8 +490,11 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
             return;
           }
         }
-        const companyAllowed = await createCompanyCodeScopeService(db)
-          .hasAccess(principalId, recordCompanyCodeId, tenantId);
+        const companyAllowed = hasCompanyCodeAccess(
+          verifiedContext.permissions,
+          operation.permission_code,
+          recordCompanyCodeId,
+        );
         if (!companyAllowed) {
           res.status(403).json({ error: "COMPANY_SCOPE_DENIED", message: "The principal is not authorized for the record company." });
           return;
@@ -1347,8 +1346,8 @@ export function createActionDispatcherRoute(router: Router, deps: ActionDispatch
   return router;
 }
 
-function isWorkflowTaskDecision(permissionCode: string, categoryCode: string): boolean {
-  return categoryCode === "workflow" && WORKFLOW_TASK_DECISIONS.has(permissionLeaf(permissionCode));
+function isWorkflowTaskDecision(operationCode: string, categoryCode: string): boolean {
+  return categoryCode === "workflow" && WORKFLOW_TASK_DECISIONS.has(operationCode);
 }
 
 function normalizeDateOnly(value: unknown): string | null {
@@ -1360,10 +1359,6 @@ function normalizeDateOnly(value: unknown): string | null {
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
   const parsed = new Date(trimmed);
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
-}
-
-function permissionLeaf(permissionCode: string): string {
-  return permissionCode.toLowerCase().split(/[.:_/-]+/).filter(Boolean).at(-1) ?? "";
 }
 
 function requireAllowedPermission(

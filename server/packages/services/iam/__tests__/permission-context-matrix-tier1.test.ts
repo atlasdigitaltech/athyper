@@ -25,12 +25,23 @@ import {
   composeDescInvalidatePattern,
 } from "../../../../src/services/cache-invalidation/listener.js";
 import {
-  computePersonaFingerprint,
   computeProfileHash,
 } from "../permission-context/resolvers/base.js";
 import { partitionDecisions } from "../permission-context/resolvers/neon-resolver.js";
 
 import type { PermissionBatchResult } from "../permission/permission.types.js";
+
+function computePersonaFingerprint(args: {
+  personaId?: string | null;
+  roleIds: string[];
+  groupIds: string[];
+}): string {
+  return JSON.stringify({
+    personaId: args.personaId ?? null,
+    roleIds: [...args.roleIds].sort(),
+    groupIds: [...args.groupIds].sort(),
+  });
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers

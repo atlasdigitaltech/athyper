@@ -1,12 +1,12 @@
--- ============================================================================
+﻿-- ============================================================================
 -- 313_reopen_fiscal_periods_2024_2026.sql
 -- ============================================================================
--- Opens all fiscal periods and governance.book_period_status gates from
+-- Opens all fiscal periods and ledger.book_period_status gates from
 -- Jan 2024 through May 2026 for every company code in the athyper tenant.
 --
 -- Part A: CREATE FY2023+FY2024 fiscal periods for all companies (idempotent)
--- Part B: UPDATE master.fiscal_period → 'open' for start_date 2024-01-01..2026-05-31
--- Part C: UPSERT governance.book_period_status for FY2024 periods 0-12
+-- Part B: UPDATE master.fiscal_period â†’ 'open' for start_date 2024-01-01..2026-05-31
+-- Part C: UPSERT ledger.book_period_status for FY2024 periods 0-12
 --          (312 only covers FY2025-2026; the je_period_gate trigger blocks
 --           FY2024 journal_entry INSERTs without this)
 -- Part D: Assertions
@@ -14,7 +14,7 @@
 -- Depends: 310 (FY2025-2026 created as open), 312 (FY2025-2026 BPS seeded)
 --
 -- FY boundary notes:
---   Jan-start (11 cos): FY2024 = Jan 2024–Dec 2024  (all in range)
+--   Jan-start (11 cos): FY2024 = Jan 2024â€“Dec 2024  (all in range)
 --   Mar-start ASGF:     FY2024 P11-P12 = Jan-Feb 2024 (in range)
 --   Apr-start (5 cos):  FY2024 P10-P12 = Jan-Mar 2024 (in range)
 --   Apr/May 2026 already 'open' as FY2026 P4/P5 for Jan-start companies (310).
@@ -39,14 +39,14 @@ BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'athyper';
     IF v_tid IS NULL THEN RAISE EXCEPTION 'Tenant ATHYPER not found'; END IF;
 
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     -- PART A: Create FY2023 and FY2024 fiscal periods for all companies
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     -- Inserted as 'hard_close'; Part B will re-open those whose start_date
-    -- falls in the Jan 2024–May 2026 window.
+    -- falls in the Jan 2024â€“May 2026 window.
     -- ON CONFLICT DO NOTHING: leaves existing rows (e.g. from 500 Section C)
-    -- unchanged — Part B handles the status flip regardless.
-    -- ══════════════════════════════════════════════════════════════════════
+    -- unchanged â€” Part B handles the status flip regardless.
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     FOR v_cc IN
         SELECT id, code, fiscal_year_start_month
@@ -120,16 +120,16 @@ BEGIN
 
     RAISE NOTICE '313 Part A: FY2023-2024 fiscal periods created/verified for all companies';
 
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     -- PART B: Open all periods whose start_date falls 2024-01-01..2026-05-31
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     -- What this covers per fiscal year start type:
     --   Jan-start: FY2024 P0-P12 (Jan-Dec 2024) + FY2025 (all) + FY2026 P0-P5
     --   Apr-start: FY2024 P10-P12 (Jan-Mar 2024) + FY2025 (all) + FY2026 (all)
     --   Mar-start: FY2024 P11-P12 (Jan-Feb 2024) + FY2025 (all) + FY2026 (all)
-    -- FY2025/FY2026 are already 'open' from 310 — idempotent for those rows.
+    -- FY2025/FY2026 are already 'open' from 310 â€” idempotent for those rows.
     -- Period 13 (adjustment) intentionally excluded; stays hard_close.
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     UPDATE master.fiscal_period
     SET    status     = 'open',
@@ -143,14 +143,14 @@ BEGIN
     GET DIAGNOSTICS v_fp_updated = ROW_COUNT;
     RAISE NOTICE '313 Part B: % fiscal_period rows updated to open', v_fp_updated;
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- PART C: Seed governance.book_period_status for FY2024 (periods 0-12)
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    -- PART C: Seed ledger.book_period_status for FY2024 (periods 0-12)
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     -- 312_book_period_status.sql only covers FY2025-2026. The trigger
     -- trg_je_period_gate_fn treats any missing book_period_status row as
     -- 'future' and blocks the journal_entry INSERT. This section covers
-    -- all (company × statutory book) pairs for FY2024.
-    -- ══════════════════════════════════════════════════════════════════════
+    -- all (company Ã— statutory book) pairs for FY2024.
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     FOR v_ba IN
         SELECT ba.company_code_id, ba.book_id
@@ -162,7 +162,7 @@ BEGIN
           AND  lb.category  = 'statutory'
     LOOP
         FOR v_pnum IN 0..12 LOOP
-            INSERT INTO governance.book_period_status
+            INSERT INTO ledger.book_period_status
                 (tenant_id, company_code_id, book_id,
                  fiscal_year, period_number,
                  status, opened_at, opened_by,
@@ -175,7 +175,7 @@ BEGIN
             ON CONFLICT (tenant_id, company_code_id, book_id, fiscal_year, period_number)
             DO UPDATE SET
                 status     = 'open',
-                opened_at  = COALESCE(governance.book_period_status.opened_at, now()),
+                opened_at  = COALESCE(ledger.book_period_status.opened_at, now()),
                 updated_at = now(),
                 updated_by = v_su;
 
@@ -185,9 +185,9 @@ BEGIN
 
     RAISE NOTICE '313 Part C: % book_period_status rows processed for FY2024', v_bps_rows;
 
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     -- PART D: Assertions
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     -- D1: No blocked normal/opening periods remain in the target window
     IF EXISTS (
@@ -198,7 +198,7 @@ BEGIN
           AND  start_date   BETWEEN '2024-01-01' AND '2026-05-31'
           AND  status       NOT IN ('open', 'soft_close')
     ) THEN
-        RAISE EXCEPTION '313 FAIL: Some periods in Jan 2024–May 2026 are not open — check fiscal_period.status';
+        RAISE EXCEPTION '313 FAIL: Some periods in Jan 2024â€“May 2026 are not open â€” check fiscal_period.status';
     END IF;
 
     -- D2: Apr 2026 (P4) and May 2026 (P5) explicitly open for Jan-start companies
@@ -224,7 +224,7 @@ BEGIN
         WHERE  ba.tenant_id = v_tid AND ba.status = 'active' AND lb.category = 'statutory'
         EXCEPT
         SELECT company_code_id, book_id
-        FROM   governance.book_period_status
+        FROM   ledger.book_period_status
         WHERE  tenant_id     = v_tid
           AND  fiscal_year   = 2024
           AND  period_number = 0
@@ -233,6 +233,7 @@ BEGIN
         RAISE EXCEPTION '313 FAIL: Some statutory books missing FY2024 book_period_status (open)';
     END IF;
 
-    RAISE NOTICE '313: All assertions passed — Jan 2024 through May 2026 are fully open';
+    RAISE NOTICE '313: All assertions passed â€” Jan 2024 through May 2026 are fully open';
 END;
 $seed$;
+

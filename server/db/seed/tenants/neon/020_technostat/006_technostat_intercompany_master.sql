@@ -51,12 +51,12 @@ BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
 
     UPDATE master.company_code
-    SET    is_intercompany_enabled = true
+    SET    metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('intercompany_enabled', true)
     WHERE  tenant_id = v_tid
-      AND  code IN ('TKSA', 'SSK', 'TEGY', 'SDTX')
-      AND  is_intercompany_enabled = false;
+      AND  lower(code) IN ('tksa', 'ssk', 'tegy', 'sdtx')
+      AND  NOT COALESCE((metadata ->> 'intercompany_enabled')::boolean, false);
 
-    RAISE NOTICE '[P01] is_intercompany_enabled = true for TKSA, SSK, TEGY, SDTX';
+    RAISE NOTICE '[P01] company_code metadata intercompany flag set for TKSA, SSK, TEGY, SDTX';
 END $p01$;
 
 
@@ -69,11 +69,15 @@ END $p01$;
 
 DO $p02$
 DECLARE
-    v_su  uuid := '00000000-0000-0000-0000-000000000000';
+    v_su  uuid;
     v_tid uuid;
     v_meta jsonb;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
+    SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    IF v_su IS NULL THEN
+      SELECT id INTO v_su FROM master.principal WHERE tenant_id = v_tid ORDER BY created_at LIMIT 1;
+    END IF;
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '006_ic_master', 'version', '1.0.0'));
 
     INSERT INTO master.business_partner (
@@ -120,7 +124,7 @@ BEGIN
      'Internal BP for Satellites DT (SDTX). Used as counterparty in IC AP/AR flows.',
      v_meta, 'active', v_su)
 
-    ON CONFLICT (tenant_id, code) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
     RAISE NOTICE '[P02] 4 internal business partners seeded (BP-TKSA, BP-SSK, BP-TEGY, BP-SDTX)';
 END $p02$;
@@ -135,44 +139,44 @@ END $p02$;
 
 DO $p03$
 DECLARE
-    v_su  uuid := '00000000-0000-0000-0000-000000000000';
+    v_su  uuid;
     v_tid uuid;
     v_meta jsonb;
-    v_pm_offset uuid;
+    -- v_pm_offset removed with this DDL (no legacy payment method contract dependency)
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
-    SELECT id INTO v_pm_offset FROM master.payment_method
-        WHERE tenant_id = v_tid AND code = 'PM-IC-OFFSET';
+    SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    IF v_su IS NULL THEN
+      SELECT id INTO v_su FROM master.principal WHERE tenant_id = v_tid ORDER BY created_at LIMIT 1;
+    END IF;
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '006_ic_master', 'version', '1.0.0'));
 
     INSERT INTO master.supplier (
         id, tenant_id, business_partner_id,
         supplier_code, supplier_type,
-        payment_method_id,
-        is_payment_ready,
         metadata, status, created_by)
     VALUES
     ('dd002000-0000-0000-0000-000000000011'::uuid,
      v_tid, 'dd002000-0000-0000-0000-000000000001'::uuid,
      'SUP-TKSA', 'intercompany',
-     v_pm_offset, true, v_meta, 'active', v_su),
+     v_meta, 'active', v_su),
 
     ('dd002000-0000-0000-0000-000000000012'::uuid,
      v_tid, 'dd002000-0000-0000-0000-000000000002'::uuid,
      'SUP-SSK', 'intercompany',
-     v_pm_offset, true, v_meta, 'active', v_su),
+     v_meta, 'active', v_su),
 
     ('dd002000-0000-0000-0000-000000000013'::uuid,
      v_tid, 'dd002000-0000-0000-0000-000000000003'::uuid,
      'SUP-TEGY', 'intercompany',
-     v_pm_offset, true, v_meta, 'active', v_su),
+     v_meta, 'active', v_su),
 
     ('dd002000-0000-0000-0000-000000000014'::uuid,
      v_tid, 'dd002000-0000-0000-0000-000000000004'::uuid,
      'SUP-SDTX', 'intercompany',
-     v_pm_offset, true, v_meta, 'active', v_su)
+     v_meta, 'active', v_su)
 
-    ON CONFLICT (tenant_id, supplier_code) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
     RAISE NOTICE '[P03] 4 intercompany supplier roles seeded (SUP-TKSA/SSK/TEGY/SDTX)';
 END $p03$;
@@ -187,11 +191,15 @@ END $p03$;
 
 DO $p04$
 DECLARE
-    v_su  uuid := '00000000-0000-0000-0000-000000000000';
+    v_su  uuid;
     v_tid uuid;
     v_meta jsonb;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
+    SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    IF v_su IS NULL THEN
+      SELECT id INTO v_su FROM master.principal WHERE tenant_id = v_tid ORDER BY created_at LIMIT 1;
+    END IF;
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '006_ic_master', 'version', '1.0.0'));
 
     INSERT INTO master.customer (
@@ -219,7 +227,7 @@ BEGIN
      'CUS-SDTX', 'intercompany',
      v_meta, 'active', v_su)
 
-    ON CONFLICT (tenant_id, customer_code) DO NOTHING;
+    ON CONFLICT (id) DO NOTHING;
 
     RAISE NOTICE '[P04] 4 intercompany customer roles seeded (CUS-TKSA/SSK/TEGY/SDTX)';
 END $p04$;
@@ -234,51 +242,94 @@ END $p04$;
 
 DO $p05$
 DECLARE
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_su   uuid;
     v_tid  uuid;
     v_meta jsonb;
+    v_has_relationship_type boolean;
     -- LE IDs
     v_le_tksa uuid; v_le_ssk  uuid;
     v_le_tegy uuid; v_le_sdtx uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
+    SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    IF v_su IS NULL THEN
+      SELECT id INTO v_su FROM master.principal WHERE tenant_id = v_tid ORDER BY created_at LIMIT 1;
+    END IF;
 
-    SELECT id INTO v_le_tksa FROM master.legal_entity WHERE tenant_id = v_tid AND code = 'LE-TKSA';
-    SELECT id INTO v_le_ssk  FROM master.legal_entity WHERE tenant_id = v_tid AND code = 'LE-SSK';
-    SELECT id INTO v_le_tegy FROM master.legal_entity WHERE tenant_id = v_tid AND code = 'LE-TEGY';
-    SELECT id INTO v_le_sdtx FROM master.legal_entity WHERE tenant_id = v_tid AND code = 'LE-SDTX';
+    SELECT id INTO v_le_tksa FROM master.legal_entity WHERE tenant_id = v_tid AND lower(code) = 'le_tksa';
+    SELECT id INTO v_le_ssk  FROM master.legal_entity WHERE tenant_id = v_tid AND lower(code) = 'le_ssk';
+    SELECT id INTO v_le_tegy FROM master.legal_entity WHERE tenant_id = v_tid AND lower(code) = 'le_tegy';
+    SELECT id INTO v_le_sdtx FROM master.legal_entity WHERE tenant_id = v_tid AND lower(code) = 'le_sdtx';
+
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'master'
+        AND table_name = 'legal_entity_business_partner_link'
+        AND column_name = 'relationship_type'
+    ) INTO v_has_relationship_type;
 
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '006_ic_master', 'version', '1.0.0'));
 
-    INSERT INTO master.legal_entity_business_partner_link (
-        id, tenant_id, legal_entity_id, business_partner_id,
-        relationship_type, status, notes, created_by)
-    VALUES
-    ('dd002000-0000-0000-0000-000000000061'::uuid,
-     v_tid, v_le_tksa, 'dd002000-0000-0000-0000-000000000001'::uuid,
-     'self_bp', 'active',
-     'LE-TKSA canonical internal BP. TKSA appears as AR customer (CUS-TKSA) when subsidiaries bill HQ.',
-     v_su),
+    IF v_has_relationship_type THEN
+        INSERT INTO master.legal_entity_business_partner_link (
+            id, tenant_id, legal_entity_id, business_partner_id,
+            relationship_type, status, notes, created_by)
+        VALUES
+        ('dd002000-0000-0000-0000-000000000061'::uuid,
+         v_tid, v_le_tksa, 'dd002000-0000-0000-0000-000000000001'::uuid,
+         'self_bp', 'active',
+         'LE-TKSA canonical internal BP. TKSA appears as AR customer (CUS-TKSA) when subsidiaries bill HQ.',
+         v_su),
 
-    ('dd002000-0000-0000-0000-000000000062'::uuid,
-     v_tid, v_le_ssk, 'dd002000-0000-0000-0000-000000000002'::uuid,
-     'self_bp', 'active',
-     'LE-SSK canonical internal BP. SSK appears as AP buyer (via SUP-TKSA) when paying HQ management fees.',
-     v_su),
+        ('dd002000-0000-0000-0000-000000000062'::uuid,
+         v_tid, v_le_ssk, 'dd002000-0000-0000-0000-000000000002'::uuid,
+         'self_bp', 'active',
+         'LE-SSK canonical internal BP. SSK appears as AP buyer (via SUP-TKSA) when paying HQ management fees.',
+         v_su),
 
-    ('dd002000-0000-0000-0000-000000000063'::uuid,
-     v_tid, v_le_tegy, 'dd002000-0000-0000-0000-000000000003'::uuid,
-     'self_bp', 'active',
-     'LE-TEGY canonical internal BP. TEGY appears as AP buyer when paying TKSA and SDTX.',
-     v_su),
+        ('dd002000-0000-0000-0000-000000000063'::uuid,
+         v_tid, v_le_tegy, 'dd002000-0000-0000-0000-000000000003'::uuid,
+         'self_bp', 'active',
+         'LE-TEGY canonical internal BP. TEGY appears as AP buyer when paying TKSA and SDTX.',
+         v_su),
 
-    ('dd002000-0000-0000-0000-000000000064'::uuid,
-     v_tid, v_le_sdtx, 'dd002000-0000-0000-0000-000000000004'::uuid,
-     'self_bp', 'active',
-     'LE-SDTX canonical internal BP. SDTX appears as AP buyer (TKSA fees) and AR seller (TEGY ICT services).',
-     v_su)
+        ('dd002000-0000-0000-0000-000000000064'::uuid,
+         v_tid, v_le_sdtx, 'dd002000-0000-0000-0000-000000000004'::uuid,
+         'self_bp', 'active',
+         'LE-SDTX canonical internal BP. SDTX appears as AP buyer (TKSA fees) and AR seller (TEGY ICT services).',
+         v_su)
+        ON CONFLICT (id) DO NOTHING;
+    ELSE
+        INSERT INTO master.legal_entity_business_partner_link (
+            id, tenant_id, legal_entity_id, business_partner_id,
+            status, notes, created_by)
+        VALUES
+        ('dd002000-0000-0000-0000-000000000061'::uuid,
+         v_tid, v_le_tksa, 'dd002000-0000-0000-0000-000000000001'::uuid,
+         'active',
+         'LE-TKSA canonical internal BP. TKSA appears as AR customer (CUS-TKSA) when subsidiaries bill HQ.',
+         v_su),
 
-    ON CONFLICT (tenant_id, legal_entity_id, business_partner_id, relationship_type) DO NOTHING;
+        ('dd002000-0000-0000-0000-000000000062'::uuid,
+         v_tid, v_le_ssk, 'dd002000-0000-0000-0000-000000000002'::uuid,
+         'active',
+         'LE-SSK canonical internal BP. SSK appears as AP buyer (via SUP-TKSA) when paying HQ management fees.',
+         v_su),
+
+        ('dd002000-0000-0000-0000-000000000063'::uuid,
+         v_tid, v_le_tegy, 'dd002000-0000-0000-0000-000000000003'::uuid,
+         'active',
+         'LE-TEGY canonical internal BP. TEGY appears as AP buyer when paying TKSA and SDTX.',
+         v_su),
+
+        ('dd002000-0000-0000-0000-000000000064'::uuid,
+         v_tid, v_le_sdtx, 'dd002000-0000-0000-0000-000000000004'::uuid,
+         'active',
+         'LE-SDTX canonical internal BP. SDTX appears as AP buyer (TKSA fees) and AR seller (TEGY ICT services).',
+         v_su)
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
 
     RAISE NOTICE '[P05] 4 LE→BP self_bp identity links seeded';
 END $p05$;
@@ -297,7 +348,7 @@ END $p05$;
 
 DO $p06$
 DECLARE
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_su   uuid;
     v_tid  uuid;
     v_meta jsonb;
     -- Company code IDs
@@ -310,19 +361,21 @@ DECLARE
     v_ap_std uuid;
     -- Payment terms
     v_pt_net30 uuid;
-    v_pm_offset uuid;
+    -- payment_method_id is not modeled on CC supplier profile in current schema
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
+    SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    IF v_su IS NULL THEN
+      SELECT id INTO v_su FROM master.principal WHERE tenant_id = v_tid ORDER BY created_at LIMIT 1;
+    END IF;
 
-    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND code = 'TKSA';
-    SELECT id INTO v_cc_ssk  FROM master.company_code WHERE tenant_id = v_tid AND code = 'SSK';
-    SELECT id INTO v_cc_tegy FROM master.company_code WHERE tenant_id = v_tid AND code = 'TEGY';
-    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND code = 'SDTX';
+    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'tksa';
+    SELECT id INTO v_cc_ssk  FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'ssk';
+    SELECT id INTO v_cc_tegy FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'tegy';
+    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'sdtx';
 
     SELECT id INTO v_ap_std   FROM master.accounting_profile WHERE tenant_id = v_tid AND code = 'AP_NON_PO_STANDARD';
     SELECT id INTO v_pt_net30 FROM master.payment_term       WHERE tenant_id = v_tid AND code = 'PT-NET30';
-    SELECT id INTO v_pm_offset FROM master.payment_method    WHERE tenant_id = v_tid AND code = 'PM-IC-OFFSET';
-
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '006_ic_master', 'version', '1.0.0'));
 
     -- SSK CC / SUP-TKSA — SSK pays TKSA management fees
@@ -330,12 +383,12 @@ BEGIN
         id, tenant_id, supplier_id, company_code_id,
         currency_code,
         default_accounting_profile_id,
-        payment_term_id, payment_method_id,
+        payment_term_id,
         metadata, status, created_by)
     VALUES
     ('dd002000-0000-0000-0000-000000000031'::uuid,
      v_tid, v_sup_tksa, v_cc_ssk,
-     'SAR', v_ap_std, v_pt_net30, v_pm_offset,
+     'SAR', v_ap_std, v_pt_net30,
      v_meta, 'active', v_su)
     ON CONFLICT (tenant_id, supplier_id, company_code_id) DO NOTHING;
 
@@ -344,12 +397,12 @@ BEGIN
         id, tenant_id, supplier_id, company_code_id,
         currency_code,
         default_accounting_profile_id,
-        payment_term_id, payment_method_id,
+        payment_term_id,
         metadata, status, created_by)
     VALUES
     ('dd002000-0000-0000-0000-000000000032'::uuid,
      v_tid, v_sup_tksa, v_cc_tegy,
-     'SAR', v_ap_std, v_pt_net30, v_pm_offset,
+     'SAR', v_ap_std, v_pt_net30,
      v_meta, 'active', v_su)
     ON CONFLICT (tenant_id, supplier_id, company_code_id) DO NOTHING;
 
@@ -358,12 +411,12 @@ BEGIN
         id, tenant_id, supplier_id, company_code_id,
         currency_code,
         default_accounting_profile_id,
-        payment_term_id, payment_method_id,
+        payment_term_id,
         metadata, status, created_by)
     VALUES
     ('dd002000-0000-0000-0000-000000000033'::uuid,
      v_tid, v_sup_tksa, v_cc_sdtx,
-     'SAR', v_ap_std, v_pt_net30, v_pm_offset,
+     'SAR', v_ap_std, v_pt_net30,
      v_meta, 'active', v_su)
     ON CONFLICT (tenant_id, supplier_id, company_code_id) DO NOTHING;
 
@@ -372,12 +425,12 @@ BEGIN
         id, tenant_id, supplier_id, company_code_id,
         currency_code,
         default_accounting_profile_id,
-        payment_term_id, payment_method_id,
+        payment_term_id,
         metadata, status, created_by)
     VALUES
     ('dd002000-0000-0000-0000-000000000034'::uuid,
      v_tid, v_sup_sdtx, v_cc_tegy,
-     'EGP', v_ap_std, v_pt_net30, v_pm_offset,
+     'EGP', v_ap_std, v_pt_net30,
      v_meta, 'active', v_su)
     ON CONFLICT (tenant_id, supplier_id, company_code_id) DO NOTHING;
 
@@ -398,7 +451,7 @@ END $p06$;
 
 DO $p07$
 DECLARE
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_su   uuid;
     v_tid  uuid;
     v_meta jsonb;
     -- Company code IDs
@@ -412,9 +465,13 @@ DECLARE
     v_pt_net30 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
+    SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    IF v_su IS NULL THEN
+      SELECT id INTO v_su FROM master.principal WHERE tenant_id = v_tid ORDER BY created_at LIMIT 1;
+    END IF;
 
-    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND code = 'TKSA';
-    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND code = 'SDTX';
+    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'tksa';
+    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'sdtx';
 
     SELECT id INTO v_ar_std   FROM master.accounting_profile WHERE tenant_id = v_tid AND code = 'AR_STANDARD';
     SELECT id INTO v_pt_net30 FROM master.payment_term       WHERE tenant_id = v_tid AND code = 'PT-NET30';
@@ -495,25 +552,47 @@ END $p07$;
 
 DO $p08$
 DECLARE
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_su   uuid;
     v_tid  uuid;
     v_meta jsonb;
+    v_has_legacy_auto_flags boolean;
+    v_has_mirror_mode boolean;
     v_cc_tksa uuid; v_cc_ssk  uuid;
     v_cc_tegy uuid; v_cc_sdtx uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
+    SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    IF v_su IS NULL THEN
+      SELECT id INTO v_su FROM master.principal WHERE tenant_id = v_tid ORDER BY created_at LIMIT 1;
+    END IF;
 
-    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND code = 'TKSA';
-    SELECT id INTO v_cc_ssk  FROM master.company_code WHERE tenant_id = v_tid AND code = 'SSK';
-    SELECT id INTO v_cc_tegy FROM master.company_code WHERE tenant_id = v_tid AND code = 'TEGY';
-    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND code = 'SDTX';
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'master'
+        AND table_name = 'intercompany_trading_pair'
+        AND column_name = 'auto_create_mirror_transaction'
+    ) INTO v_has_legacy_auto_flags;
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'master'
+        AND table_name = 'intercompany_trading_pair'
+        AND column_name = 'mirror_mode'
+    ) INTO v_has_mirror_mode;
+
+    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'tksa';
+    SELECT id INTO v_cc_ssk  FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'ssk';
+    SELECT id INTO v_cc_tegy FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'tegy';
+    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'sdtx';
 
     v_meta := jsonb_build_object('_seed', jsonb_build_object('pack', '006_ic_master', 'version', '1.0.0'));
 
     -- Profile IDs are stable (seeded in P06/P07) so they can be inlined here.
     -- This satisfies trg_ictp_profile_gate which requires counterparty_supplier_profile_id
     -- IS NOT NULL before a pair can be set to status='active'.
-    INSERT INTO master.intercompany_trading_pair (
+    IF v_has_legacy_auto_flags THEN
+      INSERT INTO master.intercompany_trading_pair (
         id, tenant_id,
         source_company_code_id, counterparty_company_code_id,
         counterparty_supplier_profile_id,
@@ -522,52 +601,98 @@ BEGIN
         auto_create_mirror_transaction, auto_create_mirror_invoice,
         settlement_mode, valid_from, valid_until,
         status, notes, created_by)
+      VALUES
+      -- ICTP-001: SSK buys management services from TKSA
+      ('dd002000-0000-0000-0000-000000000051'::uuid,
+       v_tid, v_cc_ssk, v_cc_tksa,
+       'dd002000-0000-0000-0000-000000000031',  -- CCSP: SSK CC / SUP-TKSA
+       'dd002000-0000-0000-0000-000000000041',  -- CCCP: TKSA CC / CUS-SSK
+       true, false, false,
+       'open_item', '2025-01-01', NULL,
+       'active',
+       'SSK pays TKSA group management and shared services fee. Governed by ICA-2025-001.',
+       v_su),
+      -- ICTP-002: TEGY buys management services from TKSA
+      ('dd002000-0000-0000-0000-000000000052'::uuid,
+       v_tid, v_cc_tegy, v_cc_tksa,
+       'dd002000-0000-0000-0000-000000000032',  -- CCSP: TEGY CC / SUP-TKSA
+       'dd002000-0000-0000-0000-000000000042',  -- CCCP: TKSA CC / CUS-TEGY
+       true, false, false,
+       'open_item', '2025-01-01', NULL,
+       'active',
+       'TEGY pays TKSA group management and shared services fee. Governed by ICA-2025-002.',
+       v_su),
+      -- ICTP-003: SDTX buys IT services from TKSA
+      ('dd002000-0000-0000-0000-000000000053'::uuid,
+       v_tid, v_cc_sdtx, v_cc_tksa,
+       'dd002000-0000-0000-0000-000000000033',  -- CCSP: SDTX CC / SUP-TKSA
+       'dd002000-0000-0000-0000-000000000043',  -- CCCP: TKSA CC / CUS-SDTX
+       true, false, false,
+       'open_item', '2025-01-01', NULL,
+       'active',
+       'SDTX pays TKSA group IT and shared services fee. Governed by ICA-2025-003.',
+       v_su),
+      -- ICTP-004: TEGY buys ICT services from SDTX
+      ('dd002000-0000-0000-0000-000000000054'::uuid,
+       v_tid, v_cc_tegy, v_cc_sdtx,
+       'dd002000-0000-0000-0000-000000000034',  -- CCSP: TEGY CC / SUP-SDTX
+       'dd002000-0000-0000-0000-000000000044',  -- CCCP: SDTX CC / CUS-TEGY
+       true, false, false,
+       'open_item', '2025-01-01', NULL,
+       'active',
+       'TEGY pays SDTX for ICT infrastructure and NOC monitoring. Governed by ICA-2025-004.',
+       v_su)
+      ON CONFLICT (id) DO NOTHING;
+    ELSIF v_has_mirror_mode THEN
+      INSERT INTO master.intercompany_trading_pair (
+        id, tenant_id,
+        source_company_code_id, counterparty_company_code_id,
+        counterparty_supplier_profile_id,
+        mirror_customer_profile_id,
+        requires_agreement,
+        mirror_mode,
+        settlement_mode, effective_from, effective_until,
+        notes, metadata, status, created_by)
     VALUES
-    -- ICTP-001: SSK buys management services from TKSA
-    ('dd002000-0000-0000-0000-000000000051'::uuid,
-     v_tid, v_cc_ssk, v_cc_tksa,
-     'dd002000-0000-0000-0000-000000000031',  -- CCSP: SSK CC / SUP-TKSA
-     'dd002000-0000-0000-0000-000000000041',  -- CCCP: TKSA CC / CUS-SSK
-     true, false, false,
-     'open_item', '2025-01-01', NULL,
-     'active',
-     'SSK pays TKSA group management and shared services fee. Governed by ICA-2025-001.',
-     v_su),
+      ('dd002000-0000-0000-0000-000000000051'::uuid,
+       v_tid, v_cc_ssk, v_cc_tksa,
+       'dd002000-0000-0000-0000-000000000031',  -- CCSP: SSK CC / SUP-TKSA
+       'dd002000-0000-0000-0000-000000000041',  -- CCCP: TKSA CC / CUS-SSK
+       true, 'manual',
+       'open_item', '2025-01-01', NULL,
+       'SSK pays TKSA group management and shared services fee. Governed by ICA-2025-001.',
+       v_meta, 'active', v_su),
 
-    -- ICTP-002: TEGY buys management services from TKSA
-    ('dd002000-0000-0000-0000-000000000052'::uuid,
-     v_tid, v_cc_tegy, v_cc_tksa,
-     'dd002000-0000-0000-0000-000000000032',  -- CCSP: TEGY CC / SUP-TKSA
-     'dd002000-0000-0000-0000-000000000042',  -- CCCP: TKSA CC / CUS-TEGY
-     true, false, false,
-     'open_item', '2025-01-01', NULL,
-     'active',
-     'TEGY pays TKSA group management and shared services fee. Governed by ICA-2025-002.',
-     v_su),
+      ('dd002000-0000-0000-0000-000000000052'::uuid,
+       v_tid, v_cc_tegy, v_cc_tksa,
+       'dd002000-0000-0000-0000-000000000032',
+       'dd002000-0000-0000-0000-000000000042',
+       true, 'manual',
+       'open_item', '2025-01-01', NULL,
+       'TEGY pays TKSA group management and shared services fee. Governed by ICA-2025-002.',
+       v_meta, 'active', v_su),
 
-    -- ICTP-003: SDTX buys IT services from TKSA
-    ('dd002000-0000-0000-0000-000000000053'::uuid,
-     v_tid, v_cc_sdtx, v_cc_tksa,
-     'dd002000-0000-0000-0000-000000000033',  -- CCSP: SDTX CC / SUP-TKSA
-     'dd002000-0000-0000-0000-000000000043',  -- CCCP: TKSA CC / CUS-SDTX
-     true, false, false,
-     'open_item', '2025-01-01', NULL,
-     'active',
-     'SDTX pays TKSA group IT and shared services fee. Governed by ICA-2025-003.',
-     v_su),
+      ('dd002000-0000-0000-0000-000000000053'::uuid,
+       v_tid, v_cc_sdtx, v_cc_tksa,
+       'dd002000-0000-0000-0000-000000000033',
+       'dd002000-0000-0000-0000-000000000043',
+       true, 'manual',
+       'open_item', '2025-01-01', NULL,
+       'SDTX pays TKSA group IT and shared services fee. Governed by ICA-2025-003.',
+       v_meta, 'active', v_su),
 
-    -- ICTP-004: TEGY buys ICT services from SDTX
-    ('dd002000-0000-0000-0000-000000000054'::uuid,
-     v_tid, v_cc_tegy, v_cc_sdtx,
-     'dd002000-0000-0000-0000-000000000034',  -- CCSP: TEGY CC / SUP-SDTX
-     'dd002000-0000-0000-0000-000000000044',  -- CCCP: SDTX CC / CUS-TEGY
-     true, false, false,
-     'open_item', '2025-01-01', NULL,
-     'active',
-     'TEGY pays SDTX for ICT infrastructure and NOC monitoring. Governed by ICA-2025-004.',
-     v_su)
-
-    ON CONFLICT (tenant_id, source_company_code_id, counterparty_company_code_id) DO NOTHING;
+      ('dd002000-0000-0000-0000-000000000054'::uuid,
+       v_tid, v_cc_tegy, v_cc_sdtx,
+       'dd002000-0000-0000-0000-000000000034',
+       'dd002000-0000-0000-0000-000000000044',
+       true, 'manual',
+       'open_item', '2025-01-01', NULL,
+       'TEGY pays SDTX for ICT infrastructure and NOC monitoring. Governed by ICA-2025-004.',
+       v_meta, 'active', v_su)
+      ON CONFLICT (id) DO NOTHING;
+    ELSE
+      RAISE EXCEPTION 'intercompany_trading_pair schema not recognized';
+    END IF;
 
     RAISE NOTICE '[P08] 4 intercompany_trading_pair rows seeded';
 END $p08$;
@@ -625,6 +750,7 @@ END $p09$;
 DO $p10$
 DECLARE
     v_tid             uuid;
+    v_has_relationship_type boolean;
     v_ic_cc           int;
     v_internal_bp     int;
     v_ic_suppliers    int;
@@ -639,7 +765,7 @@ BEGIN
     IF v_tid IS NULL THEN RAISE EXCEPTION '[P10] technostat tenant missing'; END IF;
 
     SELECT count(*) INTO v_ic_cc
-        FROM master.company_code WHERE tenant_id = v_tid AND is_intercompany_enabled = true;
+        FROM master.company_code WHERE tenant_id = v_tid AND COALESCE((metadata ->> 'intercompany_enabled')::boolean, false);
 
     SELECT count(*) INTO v_internal_bp
         FROM master.business_partner WHERE tenant_id = v_tid AND partner_category = 'internal';
@@ -654,9 +780,24 @@ BEGIN
         JOIN master.business_partner bp ON bp.id = c.business_partner_id AND bp.tenant_id = c.tenant_id
         WHERE c.tenant_id = v_tid AND c.customer_type = 'intercompany';
 
-    SELECT count(*) INTO v_le_bp_links
+    v_has_relationship_type := FALSE;
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = 'master'
+        AND table_name = 'legal_entity_business_partner_link'
+        AND column_name = 'relationship_type'
+    ) INTO v_has_relationship_type;
+
+    IF v_has_relationship_type THEN
+      SELECT count(*) INTO v_le_bp_links
         FROM master.legal_entity_business_partner_link
         WHERE tenant_id = v_tid AND relationship_type = 'self_bp' AND status = 'active';
+    ELSE
+      SELECT count(*) INTO v_le_bp_links
+        FROM master.legal_entity_business_partner_link
+        WHERE tenant_id = v_tid AND status = 'active';
+    END IF;
 
     SELECT count(*) INTO v_ccsp
         FROM master.company_code_supplier_profile ccsp

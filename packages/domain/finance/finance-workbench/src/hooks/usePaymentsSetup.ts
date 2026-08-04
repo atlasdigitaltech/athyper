@@ -1,7 +1,7 @@
 "use client";
 import { useMutation,useQuery,useQueryClient } from "@tanstack/react-query";
 export type SetupRow=Record<string,unknown>;
-export interface PaymentTerm extends SetupRow{id:string;code:string;name:string;version:number;status:string;dueRuleType:string;dueDays:number|null;clauses:SetupRow[];discountTiers:SetupRow[];}
+export interface PaymentTerm extends SetupRow{id:string;code:string;name:string;status:string;dueRuleType:string;dueDays:number|null;clauses:SetupRow[];discountTiers:SetupRow[];}
 export interface PaymentTermDefinitions{terms:PaymentTerm[];holidayCalendars:SetupRow[];}
 export interface PaymentsSetup{company:{id:string;code:string;name:string;tenantCode:string;functionalCurrency:string};asOfDate:string;methods:SetupRow[];policies:SetupRow[];bindings:SetupRow[];interfaces:SetupRow[];settlements:SetupRow[];houseBanks:SetupRow[];books:SetupRow[];postingRoleCoverage:SetupRow[];diagnostics:Array<{code:string;severity:string;message:string;policyId?:string}>;readiness:{eligibleMethods:boolean;houseBanksReady:boolean;interfacesReady:boolean;settlementReady:boolean;postingRolesReady:boolean;ready:boolean};}
 export interface InterfaceTrace{request:SetupRow;found:boolean;ambiguous:boolean;winner:SetupRow|null;candidates:Array<SetupRow&{matched:boolean;reasons:string[];specificity:number[]}>;explanation:string;}

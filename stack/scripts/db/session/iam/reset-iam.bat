@@ -56,6 +56,27 @@ if not defined DOCKER_CONTAINER_DB            set "DOCKER_CONTAINER_DB=!COMPOSE_
 if not defined DOCKER_CONTAINER_DBPOOL_SESSION set "DOCKER_CONTAINER_DBPOOL_SESSION=!COMPOSE_PROJECT_NAME!-dbpool-session-1"
 if not defined DB_NAME_AUTH                   set "DB_NAME_AUTH=athyper_iam"
 
+if not "%ATHYPER_DISPOSABLE_ENVIRONMENT%"=="I_UNDERSTAND_DATA_WILL_BE_DESTROYED" (
+    echo REFUSED: IAM reset requires ATHYPER_DISPOSABLE_ENVIRONMENT=I_UNDERSTAND_DATA_WILL_BE_DESTROYED.
+    exit /b 64
+)
+if not "%ATHYPER_IDENTITY_RESET_ACKNOWLEDGEMENT%"=="RESET_KEYCLOAK_IAM" (
+    echo REFUSED: IAM reset requires ATHYPER_IDENTITY_RESET_ACKNOWLEDGEMENT=RESET_KEYCLOAK_IAM.
+    exit /b 64
+)
+if "%IAM_EXPECTED_DATABASE%"=="" (
+    echo REFUSED: IAM_EXPECTED_DATABASE is required.
+    exit /b 64
+)
+if not "%IAM_EXPECTED_DATABASE%"=="%DB_NAME_AUTH%" (
+    echo REFUSED: IAM_EXPECTED_DATABASE does not match DB_NAME_AUTH.
+    exit /b 64
+)
+if "%ATHYPER_IDENTITY_RESTORE_EVIDENCE_SHA256%"=="" (
+    echo REFUSED: a restore-drill evidence SHA-256 is required.
+    exit /b 64
+)
+
 REM ---------------------------------------------------------------------------
 REM Resolve .env helper
 REM ---------------------------------------------------------------------------
@@ -80,6 +101,11 @@ where node >nul 2>&1
 if errorlevel 1 (
     echo Error: node not found in PATH
     exit /b 1
+)
+node -e "if(!/^[0-9a-f]{64}$/.test(process.env.ATHYPER_IDENTITY_RESTORE_EVIDENCE_SHA256||''))process.exit(64)"
+if errorlevel 1 (
+    echo REFUSED: ATHYPER_IDENTITY_RESTORE_EVIDENCE_SHA256 must be a lowercase SHA-256.
+    exit /b 64
 )
 
 echo Using checked-in realm-athyper.json.

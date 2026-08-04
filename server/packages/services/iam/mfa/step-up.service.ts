@@ -47,11 +47,16 @@ export type ActionClass =
   | "tenant_settings"   // tenant configuration changes
   | "delegation_accept" // accepting a delegation grant directed at the user
   | "atlas_support"     // explicit tenant-bound Admin support session
+  | "metadata_release"  // publish, rollback, or retire a Meta Entity release
   | "payment_release"   // financial payment approval actions
   | "security_change";  // password/MFA changes, API key rotation
 
 /** Default elevation TTL: 10 minutes. */
 export const STEP_UP_TTL_SEC = 600;
+
+const TRUSTED_DEVICE_ALLOWED_ACTIONS: ReadonlySet<ActionClass> = new Set([
+  "tenant_settings",
+]);
 
 export interface StepUpBinding {
   subject: string;
@@ -247,7 +252,7 @@ type AnyDb = Kysely<Record<string, any>>;
 
 /**
  * Hashes a raw device token (32-byte random hex string from the cookie) using
- * SHA-256. Only the hash is stored in master.trusted_device.
+ * SHA-256. Only the hash is stored in authz.trusted_device.
  */
 export function hashDeviceToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");
@@ -259,8 +264,9 @@ export function hashDeviceToken(rawToken: string): string {
  *
  * Returns true only when:
  *   - A non-revoked, non-expired trusted_device row exists for (tenantId, principalId, hash)
- *   - The action class is within the allowed list for device trust
- *     (all current classes are allowed; future classes may opt out via the exclusion set)
+ *   - The action class is explicitly eligible for remembered-device trust.
+ *     IAM administration, delegation, support, payment, and security changes
+ *     always require fresh step-up evidence.
  *
  * Also bumps last_seen_at so the UI can show "last seen" info.
  */
@@ -269,20 +275,20 @@ export async function isDeviceTrusted(
   tenantId: string,
   principalId: string,
   rawToken: string | undefined | null,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _actionClass: ActionClass,
+  actionClass: ActionClass,
 ): Promise<boolean> {
   if (!rawToken?.trim()) return false;
+  if (!TRUSTED_DEVICE_ALLOWED_ACTIONS.has(actionClass)) return false;
 
   const hash = hashDeviceToken(rawToken);
 
   const row = await db
-    .selectFrom("master.trusted_device as td")
+    .selectFrom("authz.trusted_device as td")
     .select("td.id")
     .where("td.tenant_id",          "=", tenantId)
     .where("td.principal_id",       "=", principalId)
     .where("td.device_token_hash",  "=", hash)
-    .where("td.is_revoked",         "=", false)
+    .where("td.revoked_at",         "is", null)
     .where("td.expires_at",         ">", new Date())
     .executeTakeFirst() as { id: string } | undefined;
 
@@ -290,7 +296,7 @@ export async function isDeviceTrusted(
 
   // Bump last_seen_at — best-effort, ignore failure
   await db
-    .updateTable("master.trusted_device")
+    .updateTable("authz.trusted_device")
     .set({ last_seen_at: new Date() })
     .where("id", "=", row.id)
     .execute()
@@ -320,7 +326,8 @@ export async function revokeAllElevations(cache: CacheClient, sub: string, tenan
 
   // Fallback: delete each known action class individually
   const allClasses: ActionClass[] = [
-    "iam_admin", "tenant_settings", "delegation_accept", "payment_release", "security_change",
+    "iam_admin", "tenant_settings", "delegation_accept", "atlas_support", "metadata_release",
+    "payment_release", "security_change",
   ];
   await cache.del(allClasses.flatMap((ac) => [
     `mfa_elevation:v2:${sub}:*:*:${ac}`,

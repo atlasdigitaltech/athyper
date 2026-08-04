@@ -50,6 +50,8 @@
     "iam:verify:testing-foundation": "tsx scripts/iam/verify-testing-foundation.ts",
     "iam:demo:generate": "node tools/scripts/generate-athyper-demo-iam.cjs",
     "iam:demo:check": "node tools/scripts/generate-athyper-demo-iam.cjs --check && node tools/scripts/verify-athyper-demo-iam.cjs",
+    "iam:reconcile:authorization-v2": "node tools/scripts/reconcile-keycloak-authorization-v2.mjs",
+    "iam:test:authorization-v2-reconciler": "node --test tools/scripts/reconcile-keycloak-authorization-v2.test.mjs",
     "policy:versions": "syncpack lint",
     "policy:versions:fix": "syncpack fix",
     "policy:peers": "tsx scripts/policy/verify-peer-ranges.ts",

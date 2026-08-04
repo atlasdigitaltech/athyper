@@ -84,12 +84,6 @@ const SYSTEM_WRITE_COLUMNS = new Set([
   "status_changed_by",
 ]);
 
-const MUTATION_PERMISSION_TOKENS: Record<EntityMutationAction, string[]> = {
-  create: ["create", "new", "insert", "add"],
-  update: ["edit", "update", "write", "save", "patch"],
-  delete: ["delete", "remove", "destroy"],
-};
-
 /**
  * Pure-decision outcome of an entity mutation authorization check.
  *
@@ -602,14 +596,15 @@ async function resolveMutationOperation(
 ): Promise<OperationRow | null> {
   const rows = await db
     .selectFrom("control.entity_operation as eo")
-    .innerJoin("shared.permission as p", "p.code" as never, "eo.permission_code" as never)
+    .innerJoin("control.auth_permission as p", "p.id" as never, "eo.permission_id_v2" as never)
     .select([
       "eo.permission_code",
       "eo.is_enabled",
       "eo.tenant_id",
     ] as never[])
     .where("eo.entity_name" as never, "=" as never, entityCode as never)
-    .where("p.status" as never, "=" as never, "active" as never)
+    .where("p.status" as never, "=" as never, "published" as never)
+    .where("eo.operation_code_v2" as never, "=" as never, action as never)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .where((eb: any) => eb.or([
       eb("eo.tenant_id" as never, "is", null),
@@ -622,24 +617,7 @@ async function resolveMutationOperation(
     if (!deduped.has(row.permission_code)) deduped.set(row.permission_code, row);
   }
 
-  const matches = [...deduped.values()].filter((row) => permissionMatchesAction(row.permission_code, action));
-  const ranked = matches.sort((left, right) =>
-    mutationPermissionRank(left.permission_code, action) - mutationPermissionRank(right.permission_code, action)
-  );
-  return ranked.find((row) => row.is_enabled) ?? ranked[0] ?? null;
-}
-
-function permissionMatchesAction(permissionCode: string, action: EntityMutationAction): boolean {
-  const normalized = permissionCode.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-  const tokens = new Set(normalized.split("_").filter(Boolean));
-  return MUTATION_PERMISSION_TOKENS[action].some((token) => tokens.has(token));
-}
-
-function mutationPermissionRank(permissionCode: string, action: EntityMutationAction): number {
-  const normalized = permissionCode.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-  if (normalized === action) return 0;
-  if (MUTATION_PERMISSION_TOKENS[action].includes(normalized)) return 1;
-  return 10;
+  return [...deduped.values()].find((row) => row.is_enabled) ?? [...deduped.values()][0] ?? null;
 }
 
 function hardDeleteEnabled(featureFlags: Record<string, unknown>): boolean {

@@ -1,0 +1,22 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "people-payroll",
+  "packVersion": "2.0.0",
+  "packChecksum": "29806c9cf5cd6494cbd40c28870c86b64e9a35fbd5a0a962769de3aee9f63350",
+  "plane": "neon",
+  "tenantId": "f5000000-0000-0000-0000-000000000001",
+  "status": "validated-disposable-neon",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [
+    {"payload":"310_job_classification.sql","status":"passed-twice","rowCounts":{"families":15,"functions":70,"bands":9,"levels":19,"grades":15,"designations":49,"jobs":87}},
+    {"payload":"320_work_schedules.sql","status":"passed-twice","rowCounts":{"patterns":10,"patternDays":73,"shifts":10}},
+    {"payload":"330_leave_management.sql","status":"passed-twice","rowCounts":{"leaveTypes":17,"plans":14,"rules":23}},
+    {"payload":"340_payroll_masters.sql","status":"passed-twice","rowCounts":{"formulas":14,"formulaVersions":14,"rateTables":7,"rateRows":52,"components":63,"structures":3,"structureLines":53,"schemes":18}}
+  ],
+  "assertionResults": [
+    {"assertion":"deterministic-identity","status":"passed","evidence":"zero shared.uuidv7 calls; UUIDs derive from tenant, dataset, and stable payload coordinate"},
+    {"assertion":"cross-reference-integrity","status":"passed","evidence":"all four payload semantic and orphan assertions passed"},
+    {"assertion":"idempotent-convergence","status":"passed","evidence":"second same-session pass produced zero parent updates and zero child inserts"},
+    {"assertion":"explicit-currency-scope","status":"passed","evidence":"pay structures use asserted active app.seed_currency_code instead of invalid XXX placeholder"}
+  ]
+}

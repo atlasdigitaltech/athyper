@@ -257,10 +257,10 @@ describe("compileMetaEntityRuntimeDescriptor", () => {
     const descriptor = compileMetaEntityRuntimeDescriptor(entity, {
       relations,
       operations: [
-        { id: "op-read", permission_code: "purchase_invoice.read", surface: "BOTH" },
-        { id: "op-create", permission_code: "purchase_invoice.create", surface: "LIST" },
-        { id: "op-edit", permission_code: "purchase_invoice.edit", surface: "DETAIL" },
-        { id: "op-delete", permission_code: "purchase_invoice.delete", surface: "DETAIL" },
+        { id: "op-read", operation_code: "read", permission_code: "purchase_invoice.read", surface: "BOTH" },
+        { id: "op-create", operation_code: "create", permission_code: "purchase_invoice.create", surface: "LIST" },
+        { id: "op-edit", operation_code: "update", permission_code: "purchase_invoice.update", surface: "DETAIL" },
+        { id: "op-delete", operation_code: "delete", permission_code: "purchase_invoice.delete", surface: "DETAIL" },
       ],
       entityPolicy: {
         access_mode: "default_allow",

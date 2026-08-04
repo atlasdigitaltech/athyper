@@ -8,7 +8,7 @@
 DO $seed$
 DECLARE
     v_tid  uuid;
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_su   uuid := nullif(trim(current_setting('app.current_principal_id', true)), '')::uuid;
     v_meta jsonb := '{"_seed": {"pack": "322_org", "version": "2.1.1"}}'::jsonb;
     v_inserted int;
 BEGIN
@@ -18,7 +18,7 @@ BEGIN
     END IF;
 
     CREATE TEMP TABLE tmp_tj ON COMMIT DROP AS SELECT code, id FROM master.tax_jurisdiction WHERE tenant_id = v_tid;
-    CREATE TEMP TABLE tmp_tt ON COMMIT DROP AS SELECT code, id FROM master.tax_type WHERE tenant_id = v_tid;
+    CREATE TEMP TABLE tmp_tt ON COMMIT DROP AS SELECT code,id,tax_class FROM master.tax_type WHERE tenant_id=v_tid;
 
     -- ══════════════════════════════════════════════════════════════════════
     -- Rate seed table: one row per (jurisdiction, type, direction, component)
@@ -176,52 +176,40 @@ BEGIN
     END IF;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- SEED UPDATE STRATEGY: delete-owned-then-reinsert
-    -- Prune dependents first (no ON DELETE CASCADE on these FKs):
-    --   ledger.tax_calculation      → control.tax_rate_schedule
-    --   control.tax_group_component → control.tax_rate_schedule
+    -- Effective-policy convergence. Posted calculations and group components are
+    -- historical evidence and must never be changed by a reference-data pack.
+    -- Existing natural-key revisions are preserved; missing revisions are added.
     -- ══════════════════════════════════════════════════════════════════════
-    DELETE FROM ledger.tax_calculation
-    WHERE tenant_id = v_tid
-      AND tax_rate_schedule_id IN (
-          SELECT id FROM control.tax_rate_schedule
-          WHERE tenant_id = v_tid
-            AND metadata->'_seed'->>'pack' = '322_org');
-
-    DELETE FROM control.tax_group_component
-    WHERE tenant_id = v_tid
-      AND tax_rate_schedule_id IN (
-          SELECT id FROM control.tax_rate_schedule
-          WHERE tenant_id = v_tid
-            AND metadata->'_seed'->>'pack' = '322_org');
-
-    DELETE FROM control.tax_rate_schedule
-    WHERE tenant_id = v_tid
-      AND metadata->'_seed'->>'pack' = '322_org';
-
     WITH ins AS (
         INSERT INTO control.tax_rate_schedule
             (tenant_id, jurisdiction_id, tax_type_id,
              tax_direction, component_code,
              rate_kind, rate_value,
              recoverability_mode, recoverability_percent,
-             reverse_charge_mode, calculation_basis,
+             reverse_charge_mode, calculation_basis,wht_basis,
              effective_from,
              status, created_by, metadata)
         SELECT
             v_tid, tj.id, tt.id,
-            r.direction, r.component,
+            r.direction, upper(COALESCE(r.component,r.tt_code)),
             'PERCENT', r.rate,
             r.recover_mode, r.recover_pct,
-            r.reverse_mode, 'LINE_NET',
+            r.reverse_mode, 'LINE_NET',CASE WHEN tt.tax_class='withholding' THEN 'GROSS' ELSE NULL END,
             '2025-01-01'::date,
-            'active', v_su, v_meta
+            'draft', v_su, v_meta
         FROM tmp_rates r
         JOIN tmp_tj tj ON tj.code = r.tj_code
         JOIN tmp_tt tt ON tt.code = r.tt_code
+        WHERE NOT EXISTS (SELECT 1 FROM control.tax_rate_schedule existing
+          WHERE existing.tenant_id=v_tid AND existing.jurisdiction_id=tj.id
+            AND existing.tax_type_id=tt.id AND existing.tax_direction=r.direction
+            AND existing.component_code=upper(COALESCE(r.component,r.tt_code)) AND existing.effective_from=DATE '2025-01-01')
         RETURNING id
     )
     SELECT count(*) INTO v_inserted FROM ins;
+
+    UPDATE control.tax_rate_schedule SET status='active',status_changed_at=now(),status_changed_by=v_su
+    WHERE tenant_id=v_tid AND status='draft' AND metadata->'_seed'->>'pack'='322_org';
 
     -- ══════════════════════════════════════════════════════════════════════
     -- ASSERTIONS
@@ -316,7 +304,7 @@ BEGIN
               AND trs.jurisdiction_id = tj.id
               AND trs.tax_type_id = tt.id
               AND trs.tax_direction = r.direction
-              AND COALESCE(trs.component_code, '') = COALESCE(r.component, '')
+              AND trs.component_code = upper(COALESCE(r.component,r.tt_code))
               AND trs.is_active = true
               AND trs.metadata->'_seed'->>'pack' = '322_org')
     ) THEN RAISE EXCEPTION '322 FAIL: declared rate has no active schedule: %',
@@ -332,7 +320,7 @@ BEGIN
                AND trs.jurisdiction_id = tj.id
                AND trs.tax_type_id = tt.id
                AND trs.tax_direction = r.direction
-               AND COALESCE(trs.component_code, '') = COALESCE(r.component, '')
+               AND trs.component_code = upper(COALESCE(r.component,r.tt_code))
                AND trs.is_active = true
                AND trs.metadata->'_seed'->>'pack' = '322_org'));
     END IF;

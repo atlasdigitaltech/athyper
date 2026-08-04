@@ -37,7 +37,7 @@ export interface EntityComment {
   parentCommentId: string | null;
   threadDepth: number;
   visibility: string;
-  /** Lookup code from master.comment_intent. Drives the intent badge + filter. */
+  /** Lookup code from document.comment_intent. Drives the intent badge + filter. */
   commentIntent?: string;
   /** Server-flagged true when this comment has not been read by the current user. */
   isUnread?: boolean;
@@ -48,7 +48,7 @@ export interface EntityComment {
 
 /**
  * Single comment-intent option as returned from the lookup domain.
- * Driven by control.lookup_value rows where domain_code = 'master.comment_intent'.
+ * Driven by control.lookup_value rows where domain_code = 'document.comment_intent'.
  */
 export interface CommentIntentOption {
   code: string;
@@ -72,7 +72,7 @@ export interface UseCommentsOptions {
   limit?: number;
   offset?: number;
   enabled?: boolean;
-  /** Filter list by intent codes (master.comment_intent). Empty = all intents. */
+  /** Filter list by intent codes (document.comment_intent). Empty = all intents. */
   intents?: string[];
 }
 
@@ -253,9 +253,9 @@ export function useCommentActions(entityType: string, entityId: string) {
       contentJson?: unknown;
       contentHtml?: string;
       visibility?: string;
-      /** master.comment_intent lookup code. Defaults to 'general' server-side. */
+      /** document.comment_intent lookup code. Defaults to 'general' server-side. */
       commentIntent?: string;
-      /** master.comment_type lookup code. Defaults to 'entity' server-side. */
+      /** document.comment_type lookup code. Defaults to 'entity' server-side. */
       contextType?: string;
     }) =>
       collabMutate<CommentActionResponse>("/api/collab/comments", "POST", {
@@ -352,7 +352,7 @@ export function useCommentActions(entityType: string, entityId: string) {
 }
 
 // ── useCommentIntents ─────────────────────────────────────────────────────────
-// Fetches the master.comment_intent lookup domain via the canonical metadata
+// Fetches the document.comment_intent lookup domain via the canonical metadata
 // route. Drives the IntentBadge label/icon/tone and the CommentsPanel filter
 // chips. Cached for 5 minutes — lookup values rarely change at runtime.
 
@@ -368,12 +368,18 @@ interface LookupBundleResponse {
   }>;
 }
 
+export interface ReactionTypeOption {
+  code: string;
+  name: string;
+  emoji: string;
+}
+
 export function useCommentIntents() {
   const query = useQuery<LookupBundleResponse>({
-    queryKey: ["lookup", "master.comment_intent"],
+    queryKey: ["lookup", "document.comment_intent"],
     queryFn: ({ signal }) =>
       collabGet<LookupBundleResponse>(
-        "/api/relay/metadata/lookups/master.comment_intent",
+        "/api/relay/metadata/lookups/document.comment_intent",
         signal,
       ),
     staleTime: 5 * 60 * 1000,
@@ -391,6 +397,31 @@ export function useCommentIntents() {
 
   return {
     intents,
+    isLoading: query.isLoading,
+    error: query.error,
+  };
+}
+
+export function useReactionTypes() {
+  const query = useQuery<LookupBundleResponse>({
+    queryKey: ["lookup", "document.reaction_type"],
+    queryFn: ({ signal }) =>
+      collabGet<LookupBundleResponse>(
+        "/api/relay/metadata/lookups/document.reaction_type",
+        signal,
+      ),
+    staleTime: 5 * 60 * 1000,
+  });
+  return {
+    reactionTypes: (query.data?.values ?? [])
+      .filter((value) => value.status === "active")
+      .map((value) => ({
+        code: value.code,
+        name: value.name,
+        emoji: typeof value.metadata?.["emoji"] === "string"
+          ? value.metadata["emoji"]
+          : value.code,
+      })),
     isLoading: query.isLoading,
     error: query.error,
   };

@@ -66,7 +66,7 @@ const ALLOW_FILES = new Set<string>([
 const ALLOW_PREFIXES: readonly string[] = [
   // Records service. Many sub-resources (lines, distributions, lifecycle,
   // versions, action-dispatcher, bulk-*, business-partner-management,
-  // supplier-intake, export, import, activity, filter-presets,
+  // supplier-intake, export, import, activity,
   // stream, attachments, sub-resource stubs) still mount under
   // /records/* and are out of scope for the current rename slice. Documentation
   // comments referencing /api/records/* in JSDoc remain as well. Narrow this

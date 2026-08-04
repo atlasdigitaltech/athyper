@@ -135,9 +135,10 @@ async function resolveModuleId(db: Kysely<any>, moduleCode: string): Promise<str
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function resolvePermissionId(db: Kysely<any>, permCode: string): Promise<string | null> {
   const row = await db
-    .selectFrom("shared.permission as p")
+    .selectFrom("control.auth_permission as p")
     .select("p.id" as never)
-    .where("p.code" as never, "=", permCode as never)
+    .where("p.canonical_code" as never, "=", permCode as never)
+    .where("p.status" as never, "=", "published" as never)
     .executeTakeFirst() as { id: string } | undefined;
   return row?.id ?? null;
 }
@@ -656,14 +657,14 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = await (db.selectFrom("shared.plan_permission_access as ppa") as any)
-        .innerJoin("shared.permission as p",                   "p.id",   "ppa.permission_id")
+        .innerJoin("control.auth_permission as p",             "p.id",   "ppa.permission_id")
         .innerJoin("shared.subscription_plan_version as spv",  "spv.id", "ppa.plan_version_id")
         .innerJoin("shared.subscription_plan as sp",           "sp.id",  "spv.plan_id")
         .select([
           "ppa.id"                as never,
-          "p.code"                as never,
-          "p.name"                as never,
-          "p.is_plan_restricted"  as never,
+          "p.canonical_code as code" as never,
+          sql<string | null>`p.metadata #>> '{label}'`.as("name"),
+          sql<boolean>`true`.as("is_plan_restricted"),
           "ppa.is_included"       as never,
           "ppa.is_addon"          as never,
           "ppa.addon_price_monthly" as never,
@@ -673,7 +674,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
         .where("sp.code"      as never, "=",  planCode as never)
         .where("spv.valid_to" as never, "is", null     as never)
         .where("spv.status"   as never, "=",  "active" as never)
-        .orderBy("p.sort_order" as never, "asc")
+        .where("p.status" as never, "=", "published" as never)
+        .orderBy("p.canonical_code" as never, "asc")
         .execute();
 
       res.setHeader("Cache-Control", "no-store");
@@ -1323,7 +1325,7 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
 
       // Plan-restricted permissions only
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (db.selectFrom("shared.permission as p") as any)
+      (db.selectFrom("control.auth_permission as p") as any)
         .leftJoin("shared.plan_permission_access as ppa", (join: any) =>
           join
             .onRef("ppa.permission_id", "=", "p.id")
@@ -1336,8 +1338,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
         )
         .select([
           "p.id"                    as never,
-          "p.code"                  as never,
-          "p.name"                  as never,
+          "p.canonical_code as code" as never,
+          sql<string | null>`p.metadata #>> '{label}'`.as("name"),
           "ppa.is_included"         as never,
           "ppa.is_addon"            as never,
           "ppa.addon_price_monthly" as never,
@@ -1353,9 +1355,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
             )
           )`.as("is_effective"),
         ])
-        .where("p.is_plan_restricted" as never, "=", true as never)
-        .where("p.is_active"          as never, "=", true as never)
-        .orderBy("p.sort_order" as never, "asc")
+        .where("p.status" as never, "=", "published" as never)
+        .orderBy("p.canonical_code" as never, "asc")
         .execute(),
     ]);
 

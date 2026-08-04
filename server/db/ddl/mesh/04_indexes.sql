@@ -33,14 +33,6 @@ CREATE INDEX IF NOT EXISTS mesh_network_account_identifier_account_idx
 CREATE INDEX IF NOT EXISTS mesh_principal_identity_subject_idx
     ON mesh.principal_identity_binding (realm_key, provider_code, subject_id);
 
-CREATE UNIQUE INDEX IF NOT EXISTS mesh_account_grant_active_uq
-    ON mesh.account_grant (account_id, principal_id, role_code)
-    WHERE status = 'active';
-CREATE INDEX IF NOT EXISTS mesh_account_grant_principal_idx
-    ON mesh.account_grant (principal_id, status);
-CREATE INDEX IF NOT EXISTS mesh_account_grant_account_idx
-    ON mesh.account_grant (account_id, status);
-
 CREATE INDEX IF NOT EXISTS mesh_network_account_network_role_idx
     ON mesh.network_account (network_role, status);
 

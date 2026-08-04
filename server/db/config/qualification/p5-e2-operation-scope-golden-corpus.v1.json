@@ -1,0 +1,18 @@
+{
+  "contractVersion": "p5-e2.operation-scope-golden-corpus.v1",
+  "description": "Captured legacy-equivalent deny cases used without installing legacy authorization tables in clean consumer databases.",
+  "scenarios": [
+    {
+      "code": "identity_missing",
+      "authorityFixture": "none",
+      "expectedDecision": "deny",
+      "expectedReason": "identity_inactive"
+    },
+    {
+      "code": "admitted_without_grant",
+      "authorityFixture": "admitted_without_grant",
+      "expectedDecision": "deny",
+      "expectedReason": "no_complete_allow_path"
+    }
+  ]
+}

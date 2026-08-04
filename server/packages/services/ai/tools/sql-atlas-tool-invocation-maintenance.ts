@@ -97,8 +97,8 @@ export class SqlAtlasToolInvocationMaintenanceAuthority {
         ),
         candidates AS (
           SELECT i.id
-          FROM event.ai_tool_invocation i
-          JOIN event.atlas_run r
+          FROM ai.ai_tool_invocation i
+          JOIN ai.atlas_run r
             ON r.tenant_id = i.tenant_id
            AND r.conversation_id = i.thread_id
            AND r.plane = i.plane
@@ -131,7 +131,7 @@ export class SqlAtlasToolInvocationMaintenanceAuthority {
           LIMIT ${input.batchSize}
           FOR UPDATE OF i SKIP LOCKED
         )
-        UPDATE event.ai_tool_invocation i
+        UPDATE ai.ai_tool_invocation i
         SET status = 'failed',
             terminal_error_class = ${RECOVERY_ERROR_CLASS},
             result_hash = NULL,

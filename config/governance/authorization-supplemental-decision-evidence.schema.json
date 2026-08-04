@@ -1,0 +1,336 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://athyper.local/schemas/authorization-supplemental-decision-evidence-v1.json",
+  "title": "Authorization supplemental decision evidence",
+  "description": "PII-free, source-bound evaluator evidence used to certify Mesh engines and non-capability authorization contexts.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "evidenceId",
+    "generatedAt",
+    "repositoryRevision",
+    "governanceCatalogSha256",
+    "source",
+    "principals",
+    "actions",
+    "cases",
+    "engineDisagreements",
+    "hashes"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "evidenceId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repositoryRevision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40,64}$"
+    },
+    "governanceCatalogSha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "principals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/principal"
+      }
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/action"
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/decisionCase"
+      }
+    },
+    "engineDisagreements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/disagreement"
+      }
+    },
+    "hashes": {
+      "$ref": "#/$defs/hashes"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "plane": {
+      "enum": [
+        "neon",
+        "admin",
+        "mesh"
+      ]
+    },
+    "legacyEngine": {
+      "enum": [
+        "legacy_single",
+        "legacy_batch",
+        "legacy_admin",
+        "legacy_mesh"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "plane",
+        "sourceDatabaseId",
+        "captureWatermark",
+        "actionSelection",
+        "principalSelection",
+        "decisionCatalogSha256",
+        "evaluatorId",
+        "evaluatorRevision"
+      ],
+      "properties": {
+        "plane": {
+          "$ref": "#/$defs/plane"
+        },
+        "sourceDatabaseId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "captureWatermark": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "actionSelection": {
+          "const": "all_active_high_critical"
+        },
+        "principalSelection": {
+          "const": "all_active_plus_certification_fixtures"
+        },
+        "decisionCatalogSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evaluatorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evaluatorRevision": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "principal": {
+      "type": "object",
+      "required": [
+        "principalId",
+        "principalClass"
+      ],
+      "properties": {
+        "principalId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "principalClass": {
+          "enum": [
+            "active_inventory",
+            "certification_fixture"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "required": [
+        "operationId",
+        "permissionId",
+        "permissionCode",
+        "riskLevel"
+      ],
+      "properties": {
+        "operationId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "permissionId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "permissionCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "riskLevel": {
+          "enum": [
+            "high",
+            "critical"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "decisionCase": {
+      "type": "object",
+      "required": [
+        "caseId",
+        "plane",
+        "authorityScopeId",
+        "membershipId",
+        "principalId",
+        "operationId",
+        "permissionId",
+        "permissionCode",
+        "contextClass",
+        "resourceType",
+        "resourceIdSha256",
+        "resourceSentinel",
+        "engine",
+        "decision",
+        "decisionEvidenceSha256"
+      ],
+      "properties": {
+        "caseId": {
+          "$ref": "#/$defs/sha256"
+        },
+        "plane": {
+          "$ref": "#/$defs/plane"
+        },
+        "authorityScopeId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "membershipId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "principalId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "operationId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "permissionId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "permissionCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contextClass": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resourceType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "resourceIdSha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "resourceSentinel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "engine": {
+          "$ref": "#/$defs/legacyEngine"
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decisionEvidenceSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "disagreement": {
+      "type": "object",
+      "required": [
+        "caseId",
+        "comparison",
+        "left",
+        "right",
+        "classification",
+        "approval"
+      ],
+      "properties": {
+        "caseId": {
+          "$ref": "#/$defs/sha256"
+        },
+        "comparison": {
+          "type": "string",
+          "minLength": 1
+        },
+        "left": {
+          "type": "string",
+          "minLength": 1
+        },
+        "right": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "approval": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "hashes": {
+      "type": "object",
+      "required": [
+        "principalsSha256",
+        "actionsSha256",
+        "casesSha256",
+        "engineDisagreementsSha256"
+      ],
+      "properties": {
+        "principalsSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "actionsSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "casesSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "engineDisagreementsSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

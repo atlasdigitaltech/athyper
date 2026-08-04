@@ -1,102 +1,154 @@
 -- ============================================================================
 -- CIRRUSATLANTIC — TENANT SETUP
 -- ============================================================================
--- File:     000_tenant.sql
--- Schema:   master.tenant
--- Purpose:  Provision the CirrusAtlantic tenant.
--- Depends:  seed/platform/006_system_tenant (system principal must exist)
--- Idempotent: Yes — ON CONFLICT (realm_key, code) DO UPDATE
+-- seed-pack-version: 2.1.0
+-- Dataset:  cirrusatlantic.tenant
+-- Version:  2.1.0
+-- Plane:    neon
+-- Scope:    tenant identity/bootstrap
+-- Depends:  common system authority; neon control.subscription_plan seed
+-- Natural key: (realm_key, code) = ('athyper', 'cirrusatlantic')
+-- Idempotent: convergent ON CONFLICT update; created_* is preserved
 -- ============================================================================
 
 DO $catl_tenant$
 DECLARE
-    v_su uuid := '00000000-0000-0000-0000-000000000000';  -- system principal
-    v_replication_role text;
+    v_su      constant uuid := '00000000-0000-0000-0000-000000000000';
+    v_tenant  uuid := md5('neon:tenant:athyper:cirrusatlantic')::uuid;
+    v_seed_actor constant uuid :=
+        md5('neon:principal:athyper:cirrusatlantic:seed-service')::uuid;
+    v_plan_id uuid;
+    v_metadata constant jsonb := jsonb_build_object(
+        '_seed', jsonb_build_object(
+            'pack', 'cirrusatlantic.tenant',
+            'version', '2.1.0',
+            'provenance', 'tenant onboarding seed'
+        ),
+        'setup', jsonb_build_object(
+            'industry_pack', 'infocomm',
+            'coa_framework', 'coa_ifrs'
+        )
+    );
 BEGIN
-
     PERFORM set_config('app.current_principal_id', v_su::text, true);
 
-    -- Repair older CATL sandbox rows that used status='dev', which is outside
-    -- the current tenant lifecycle and cannot transition through the guard.
-    IF EXISTS (
-        SELECT 1
-        FROM master.tenant
-        WHERE realm_key = 'athyper'
-          AND code = 'cirrusatlantic'
-          AND status = 'dev'
-    ) THEN
-        v_replication_role := current_setting('session_replication_role');
-        PERFORM set_config('session_replication_role', 'replica', true);
+    SELECT id
+      INTO v_plan_id
+      FROM control.subscription_plan
+     WHERE code = 'enterprise'
+       AND status = 'active';
 
-        UPDATE master.tenant
-           SET status = 'active',
-               status_changed_at = now(),
-               status_changed_by = v_su,
-               updated_at = now(),
-               updated_by = v_su,
-               metadata = metadata || jsonb_build_object(
-                   '_seed_repair', jsonb_build_object(
-                       'pack', '000_tenant',
-                       'from_status', 'dev',
-                       'to_status', 'active',
-                       'repaired_at', now()::text
-                   )
-               )
-         WHERE realm_key = 'athyper'
-           AND code = 'cirrusatlantic'
-           AND status = 'dev';
-
-        PERFORM set_config('session_replication_role', v_replication_role, true);
+    IF v_plan_id IS NULL THEN
+        RAISE EXCEPTION
+            '[000_tenant] active Neon subscription plan enterprise is required';
     END IF;
 
     INSERT INTO master.tenant (
-        code, name, display_name, realm_key, tenant_type, region, subscription,
-        status, metadata, created_by
+        id,
+        code,
+        name,
+        display_name,
+        realm_key,
+        subscription_plan_id,
+        metadata,
+        status,
+        created_by
     ) VALUES (
+        v_tenant,
         'cirrusatlantic',
         'CirrusAtlantic Ltd',
         'CirrusAtlantic Limited',
         'athyper',
-        'customer',
-        'UK',
-        'enterprise',
+        v_plan_id,
+        v_metadata,
         'active',
-        jsonb_build_object(
-            '_seed', jsonb_build_object(
-                'pack',      '000_tenant',
-                'version',   '1.0.1',
-                'seeded_at', now()::text
-            ),
-            'setup', jsonb_build_object(
-                'mode',       'development',
-                'industry',   'infocomm',
-                'country',    'GB',
-                'coa',        'coa_ifrs',
-                'fy_start',   4
-            )
-        ),
         v_su
     )
     ON CONFLICT (realm_key, code) DO UPDATE SET
-        name         = EXCLUDED.name,
-        display_name = EXCLUDED.display_name,
-        tenant_type  = EXCLUDED.tenant_type,
-        region       = EXCLUDED.region,
-        subscription = EXCLUDED.subscription,
-        status       = EXCLUDED.status,
-        metadata     = master.tenant.metadata
-                       || jsonb_build_object('_seed', jsonb_build_object(
-                              'pack',      '000_tenant',
-                              'version',   '1.0.1',
-                              'seeded_at', now()::text
-                          )),
-        updated_at   = now(),
-        updated_by   = v_su
-    WHERE (master.tenant.realm_key, master.tenant.tenant_type, master.tenant.name, master.tenant.status)
-       IS DISTINCT FROM
-          (EXCLUDED.realm_key, EXCLUDED.tenant_type, EXCLUDED.name, EXCLUDED.status);
+        name                 = EXCLUDED.name,
+        display_name         = EXCLUDED.display_name,
+        subscription_plan_id = EXCLUDED.subscription_plan_id,
+        metadata             = master.tenant.metadata || EXCLUDED.metadata,
+        status               = EXCLUDED.status,
+        updated_at           = now(),
+        updated_by           = v_su
+    WHERE (
+        master.tenant.name,
+        master.tenant.display_name,
+        master.tenant.subscription_plan_id,
+        master.tenant.metadata,
+        master.tenant.status
+    ) IS DISTINCT FROM (
+        EXCLUDED.name,
+        EXCLUDED.display_name,
+        EXCLUDED.subscription_plan_id,
+        master.tenant.metadata || EXCLUDED.metadata,
+        EXCLUDED.status
+    );
+
+    SELECT id
+      INTO v_tenant
+      FROM master.tenant
+     WHERE realm_key = 'athyper'
+       AND code = 'cirrusatlantic';
+
+    -- Tenant-local application actor used by onboarding packs. Tenant-owned
+    -- audit foreign keys require (tenant_id, principal_id) to share scope.
+    INSERT INTO master.principal (
+        id, tenant_id, code, name, principal_type, provisioning_source,
+        metadata, status, created_by
+    ) VALUES (
+        v_seed_actor, v_tenant, 'seed-service',
+        'CirrusAtlantic Seed Service', 'service_account', 'internal',
+        '{"_seed":{"pack":"cirrusatlantic.tenant","version":"2.1.0"}}'::jsonb,
+        'active', v_su
+    )
+    ON CONFLICT (tenant_id, code) DO UPDATE SET
+        name                = EXCLUDED.name,
+        principal_type      = EXCLUDED.principal_type,
+        provisioning_source = EXCLUDED.provisioning_source,
+        metadata            = master.principal.metadata || EXCLUDED.metadata,
+        status              = EXCLUDED.status,
+        updated_at          = now(),
+        updated_by          = v_su
+    WHERE (
+        master.principal.name,
+        master.principal.principal_type,
+        master.principal.provisioning_source,
+        master.principal.metadata,
+        master.principal.status
+    ) IS DISTINCT FROM (
+        EXCLUDED.name,
+        EXCLUDED.principal_type,
+        EXCLUDED.provisioning_source,
+        master.principal.metadata || EXCLUDED.metadata,
+        EXCLUDED.status
+    );
+
+    IF NOT EXISTS (
+        SELECT 1
+          FROM master.tenant tenant_row
+          JOIN control.subscription_plan plan
+            ON plan.id = tenant_row.subscription_plan_id
+         WHERE tenant_row.realm_key = 'athyper'
+           AND tenant_row.code = 'cirrusatlantic'
+           AND tenant_row.status = 'active'
+           AND plan.code = 'enterprise'
+           AND plan.status = 'active'
+           AND EXISTS (
+               SELECT 1 FROM master.principal principal_row
+                WHERE principal_row.tenant_id = tenant_row.id
+                  AND principal_row.id = v_seed_actor
+                  AND principal_row.code = 'seed-service'
+                  AND principal_row.status = 'active'
+           )
+    ) THEN
+        RAISE EXCEPTION
+            '[000_tenant] tenant identity or subscription assertion failed';
+    END IF;
 
     RAISE NOTICE '[000_tenant] CirrusAtlantic tenant ready (id=%)',
-        (SELECT id FROM master.tenant WHERE code = 'cirrusatlantic' AND realm_key = 'athyper');
-
-END $catl_tenant$;
+        (SELECT id FROM master.tenant
+          WHERE realm_key = 'athyper' AND code = 'cirrusatlantic');
+END
+$catl_tenant$;

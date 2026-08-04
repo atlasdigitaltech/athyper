@@ -1,21 +1,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { expectedLegacyFiscalVariant } from "../services/fiscal-calendar.service.js";
 
 const root = resolve(import.meta.dirname, "../../../../..");
 const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Finance Settings Calendar foundation", () => {
-  it("derives compatibility variants from the assigned versioned Calendar", () => {
-    expect(expectedLegacyFiscalVariant("monthly", 1)).toBe("calendar");
-    expect(expectedLegacyFiscalVariant("monthly", 4)).toBe("custom");
-    expect(expectedLegacyFiscalVariant("four_four_five", 2)).toBe("fy_445");
-    expect(expectedLegacyFiscalVariant("four_five_four", 2)).toBe("fy_454");
-    expect(expectedLegacyFiscalVariant("five_four_four", 2)).toBe("fy_544");
-    expect(expectedLegacyFiscalVariant("thirteen_period", 1)).toBe("custom");
-  });
-
   it("keeps definition and Company adoption as settings without an operational matrix", () => {
     const foundation = read("packages/domain/finance/finance-workbench/src/views/foundation/FoundationView.tsx");
     const designer = read("packages/domain/finance/finance-workbench/src/views/configure/FiscalCalendarDesigner.tsx");
@@ -52,13 +42,14 @@ describe("Finance Settings Calendar foundation", () => {
     expect(service).toContain("FISCAL_PERIOD_GENERATION_CONFLICT");
   });
 
-  it("keeps compatibility fields synchronized and available to Review", () => {
+  it("uses the versioned assignment as the sole Calendar authority in Review", () => {
     const calendar = read("server/packages/services/finance/services/fiscal-calendar.service.ts");
     const foundation = read("server/packages/services/finance/services/finance-foundation.service.ts");
-    expect(calendar).toContain("fiscal_year_start_month =");
-    expect(calendar).toContain("fiscal_year_variant =");
+    expect(calendar).not.toContain("fiscal_year_start_month =");
+    expect(calendar).not.toContain("fiscal_year_variant =");
     expect(calendar).toContain("invalidateFinanceSetupReadiness");
-    expect(foundation).toContain("legacy_calendar_consistent");
-    expect(foundation).toContain("legacy_calendar_consistency");
+    expect(foundation).toContain("calendar_definition_valid");
+    expect(foundation).toContain("calendar_definition");
+    expect(foundation).toContain("ledger.book_period_status");
   });
 });

@@ -28,16 +28,16 @@ const today = () => new Date().toISOString().slice(0, 10);
 const emptyHouseBank = (currencyCode = ""): BankingRow => ({
   bankAccountId: "",
   bankPartyId: "",
-  accountIdType: "LOCAL",
+  accountIdType: "local",
   currencyCode,
-  usageType: "DISBURSEMENT",
+  usageType: "disbursement",
   isDisbursementEnabled: true,
   isCollectionEnabled: false,
   isDefaultDisbursement: false,
   isDefaultCollection: false,
   isManualAllowed: true,
   isFileAllowed: true,
-  reconciliationMode: "MANUAL",
+  reconciliationMode: "manual",
   priority: 0,
   effectiveFrom: today(),
 });
@@ -161,8 +161,8 @@ export function CompanyBankingTreasuryView({ companyCode }: { companyCode: strin
                   </Field>
                   <Field label="Identifier type">
                     <Choice
-                      value={String(form.accountIdType ?? "LOCAL")}
-                      values={["LOCAL", "IBAN"]}
+                      value={String(form.accountIdType ?? "local")}
+                      values={["local", "iban"]}
                       onChange={(value) => setForm({ ...form, accountIdType: value })}
                     />
                   </Field>
@@ -201,15 +201,15 @@ export function CompanyBankingTreasuryView({ companyCode }: { companyCode: strin
               </Field>
               <Field label="Usage">
                 <Choice
-                  value={String(form.usageType ?? "DISBURSEMENT")}
-                  values={["DISBURSEMENT", "COLLECTION", "PAYROLL", "TREASURY", "ESCROW", "PETTY_CASH"]}
+                  value={String(form.usageType ?? "disbursement")}
+                  values={["disbursement", "collection", "payroll", "treasury", "escrow", "petty_cash"]}
                   onChange={(value) => setForm({ ...form, usageType: value })}
                 />
               </Field>
               <Field label="Reconciliation">
                 <Choice
-                  value={String(form.reconciliationMode ?? "MANUAL")}
-                  values={["MANUAL", "SEMI_AUTO", "AUTO"]}
+                  value={String(form.reconciliationMode ?? "manual")}
+                  values={["manual", "semi_auto", "auto"]}
                   onChange={(value) => setForm({ ...form, reconciliationMode: value })}
                 />
               </Field>
@@ -351,7 +351,7 @@ function HouseBankCard({ companyCode, bank, onEdit }: {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => verify.mutate({ verified: true, verificationMethod: "MANUAL" })}
+            onClick={() => verify.mutate({ verified: true, verificationMethod: "manual" })}
           >
             <ShieldCheck className="mr-1 h-4 w-4" />Verify
           </Button>
@@ -405,7 +405,11 @@ function Choice({ value, values, onChange }: {
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
-      {values.map((item) => <option key={item}>{item}</option>)}
+      {values.map((item) => (
+        <option key={item} value={item}>
+          {item.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase())}
+        </option>
+      ))}
     </select>
   );
 }

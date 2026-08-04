@@ -45,7 +45,7 @@ maybeDescribe("enriched comments live database contract", () => {
     }>`
       WITH cursor AS (
         SELECT last_read_at
-        FROM master.comment_feed_cursor
+        FROM document.comment_feed_cursor
         WHERE tenant_id = ${TENANT_ID}::uuid
           AND principal_id = ${PRINCIPAL_ID}::uuid
           AND entity_type = 'collab_contract_test'
@@ -61,7 +61,7 @@ maybeDescribe("enriched comments live database contract", () => {
               OR c.created_at > (SELECT last_read_at FROM cursor))
         )::text AS unread_count,
         (SELECT last_read_at FROM cursor) AS last_read_at
-      FROM master.comment c
+      FROM document.comment c
       WHERE c.tenant_id = ${TENANT_ID}::uuid
         AND c.entity_type = 'collab_contract_test'
         AND c.entity_id = ${entityId}

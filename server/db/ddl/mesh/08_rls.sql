@@ -10,7 +10,6 @@
 ALTER TABLE mesh.network_provider ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_document_type ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mesh.account_grant ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_relationship ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.document_envelope ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.document_event ENABLE ROW LEVEL SECURITY;
@@ -29,7 +28,6 @@ ALTER TABLE mesh.certification_type ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.certification ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account_reference ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.attachment ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mesh.attachment_acl ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.attachment_folder ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.attachment_comment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.comment ENABLE ROW LEVEL SECURITY;
@@ -41,7 +39,6 @@ ALTER TABLE mesh.conversation ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.conversation_participant ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.content_item ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.content_item_link ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mesh.content_item_access_grant ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.multipart_upload ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.holiday_calendar ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.holiday_calendar_day ENABLE ROW LEVEL SECURITY;
@@ -78,7 +75,6 @@ ALTER TABLE mesh.logistics_rate_break ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_provider FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_document_type FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account FORCE ROW LEVEL SECURITY;
-ALTER TABLE mesh.account_grant FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_relationship FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.document_envelope FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.document_event FORCE ROW LEVEL SECURITY;
@@ -97,7 +93,6 @@ ALTER TABLE mesh.certification_type FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.certification FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account_reference FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.attachment FORCE ROW LEVEL SECURITY;
-ALTER TABLE mesh.attachment_acl FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.attachment_folder FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.attachment_comment FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.comment FORCE ROW LEVEL SECURITY;
@@ -109,7 +104,6 @@ ALTER TABLE mesh.conversation FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.conversation_participant FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.content_item FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.content_item_link FORCE ROW LEVEL SECURITY;
-ALTER TABLE mesh.content_item_access_grant FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.multipart_upload FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.holiday_calendar FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.holiday_calendar_day FORCE ROW LEVEL SECURITY;
@@ -163,36 +157,19 @@ CREATE POLICY mesh_network_account_read ON mesh.network_account
         OR account_code = mesh.current_account_code()
         OR EXISTS (
             SELECT 1
-            FROM mesh.account_grant ag
-            JOIN mesh.principal_identity_binding pib ON pib.principal_id = ag.principal_id
-            WHERE ag.account_id = network_account.id
-              AND ag.status = 'active'
+            FROM mesh.auth_plane_membership membership
+            JOIN mesh.principal_identity_binding pib
+              ON pib.principal_id = membership.principal_id
+            WHERE membership.account_id = network_account.id
+              AND membership.plane_code = 'mesh'
+              AND membership.status = 'active'
+              AND membership.effective_from <= now()
+              AND (membership.effective_until IS NULL OR membership.effective_until > now())
               AND pib.subject_id = mesh.current_subject_id()
         )
     );
 DROP POLICY IF EXISTS mesh_network_account_admin ON mesh.network_account;
 CREATE POLICY mesh_network_account_admin ON mesh.network_account
-    FOR ALL USING (mesh.is_mesh_admin()) WITH CHECK (mesh.is_mesh_admin());
-
-DROP POLICY IF EXISTS mesh_account_grant_read ON mesh.account_grant;
-CREATE POLICY mesh_account_grant_read ON mesh.account_grant
-    FOR SELECT USING (
-        mesh.is_mesh_admin()
-        OR EXISTS (
-            SELECT 1
-            FROM mesh.network_account na
-            WHERE na.id = account_grant.account_id
-              AND na.account_code = mesh.current_account_code()
-        )
-        OR EXISTS (
-            SELECT 1
-            FROM mesh.principal_identity_binding pib
-            WHERE pib.principal_id = account_grant.principal_id
-              AND pib.subject_id = mesh.current_subject_id()
-        )
-    );
-DROP POLICY IF EXISTS mesh_account_grant_admin ON mesh.account_grant;
-CREATE POLICY mesh_account_grant_admin ON mesh.account_grant
     FOR ALL USING (mesh.is_mesh_admin()) WITH CHECK (mesh.is_mesh_admin());
 
 -- Relationships are visible to either side. This OR is required: buyer-only
@@ -386,29 +363,9 @@ CREATE POLICY mesh_attachment_read ON mesh.attachment
     FOR SELECT USING (
         mesh.is_mesh_admin()
         OR account_code = mesh.current_account_code()
-        OR EXISTS (
-            SELECT 1
-            FROM mesh.attachment_acl acl
-            WHERE acl.attachment_id = attachment.id
-              AND acl.is_granted = true
-              AND acl.permission IN ('read', 'download', 'share')
-              AND (acl.expires_at IS NULL OR acl.expires_at > now())
-              AND acl.grantee_account_code = mesh.current_account_code()
-        )
     );
 DROP POLICY IF EXISTS mesh_attachment_admin ON mesh.attachment;
 CREATE POLICY mesh_attachment_admin ON mesh.attachment
-    FOR ALL USING (mesh.is_mesh_admin()) WITH CHECK (mesh.is_mesh_admin());
-
-DROP POLICY IF EXISTS mesh_attachment_acl_read ON mesh.attachment_acl;
-CREATE POLICY mesh_attachment_acl_read ON mesh.attachment_acl
-    FOR SELECT USING (
-        mesh.is_mesh_admin()
-        OR account_code = mesh.current_account_code()
-        OR grantee_account_code = mesh.current_account_code()
-    );
-DROP POLICY IF EXISTS mesh_attachment_acl_admin ON mesh.attachment_acl;
-CREATE POLICY mesh_attachment_acl_admin ON mesh.attachment_acl
     FOR ALL USING (mesh.is_mesh_admin()) WITH CHECK (mesh.is_mesh_admin());
 
 DROP POLICY IF EXISTS mesh_attachment_folder_read ON mesh.attachment_folder;
@@ -423,15 +380,6 @@ CREATE POLICY mesh_attachment_comment_read ON mesh.attachment_comment
     FOR SELECT USING (
         mesh.is_mesh_admin()
         OR account_code = mesh.current_account_code()
-        OR EXISTS (
-            SELECT 1
-            FROM mesh.attachment_acl acl
-            WHERE acl.attachment_id = attachment_comment.attachment_id
-              AND acl.is_granted = true
-              AND acl.permission IN ('read', 'download', 'share')
-              AND (acl.expires_at IS NULL OR acl.expires_at > now())
-              AND acl.grantee_account_code = mesh.current_account_code()
-        )
     );
 DROP POLICY IF EXISTS mesh_attachment_comment_admin ON mesh.attachment_comment;
 CREATE POLICY mesh_attachment_comment_admin ON mesh.attachment_comment
@@ -523,17 +471,6 @@ CREATE POLICY mesh_content_item_read ON mesh.content_item
     FOR SELECT USING (
         mesh.is_mesh_admin()
         OR account_code = mesh.current_account_code()
-        OR EXISTS (
-            SELECT 1
-            FROM mesh.content_item_access_grant grant_row
-            WHERE grant_row.content_item_id = content_item.id
-              AND grant_row.access_level IN ('read', 'write', 'publish', 'admin')
-              AND (grant_row.expires_at IS NULL OR grant_row.expires_at > now())
-              AND (
-                  grant_row.subject_type = 'public'
-                  OR grant_row.subject_account_code = mesh.current_account_code()
-              )
-        )
     );
 DROP POLICY IF EXISTS mesh_content_item_admin ON mesh.content_item;
 CREATE POLICY mesh_content_item_admin ON mesh.content_item
@@ -544,18 +481,6 @@ CREATE POLICY mesh_content_item_link_read ON mesh.content_item_link
     FOR SELECT USING (mesh.is_mesh_admin() OR account_code = mesh.current_account_code());
 DROP POLICY IF EXISTS mesh_content_item_link_admin ON mesh.content_item_link;
 CREATE POLICY mesh_content_item_link_admin ON mesh.content_item_link
-    FOR ALL USING (mesh.is_mesh_admin()) WITH CHECK (mesh.is_mesh_admin());
-
-DROP POLICY IF EXISTS mesh_content_item_access_grant_read ON mesh.content_item_access_grant;
-CREATE POLICY mesh_content_item_access_grant_read ON mesh.content_item_access_grant
-    FOR SELECT USING (
-        mesh.is_mesh_admin()
-        OR account_code = mesh.current_account_code()
-        OR subject_type = 'public'
-        OR subject_account_code = mesh.current_account_code()
-    );
-DROP POLICY IF EXISTS mesh_content_item_access_grant_admin ON mesh.content_item_access_grant;
-CREATE POLICY mesh_content_item_access_grant_admin ON mesh.content_item_access_grant
     FOR ALL USING (mesh.is_mesh_admin()) WITH CHECK (mesh.is_mesh_admin());
 
 -- Utility tables.
@@ -605,11 +530,16 @@ CREATE POLICY mesh_principal_notification_pref_read ON mesh.principal_notificati
             account_code = mesh.current_account_code()
             AND EXISTS (
                 SELECT 1
-                FROM mesh.account_grant ag
-                JOIN mesh.network_account na ON na.id = ag.account_id
-                JOIN mesh.principal_identity_binding pib ON pib.principal_id = ag.principal_id
+                FROM mesh.auth_plane_membership membership
+                JOIN mesh.network_account na ON na.id = membership.account_id
+                JOIN mesh.principal_identity_binding pib
+                  ON pib.principal_id = membership.principal_id
                 WHERE na.account_code = principal_notification_preference.account_code
-                  AND ag.principal_id = principal_notification_preference.principal_id
+                  AND membership.principal_id = principal_notification_preference.principal_id
+                  AND membership.plane_code = 'mesh'
+                  AND membership.status = 'active'
+                  AND membership.effective_from <= now()
+                  AND (membership.effective_until IS NULL OR membership.effective_until > now())
                   AND pib.subject_id = mesh.current_subject_id()
                   AND ag.status = 'active'
             )
@@ -629,11 +559,16 @@ CREATE POLICY mesh_saved_view_read ON mesh.saved_view
                 scope IN ('shared', 'system')
                 OR EXISTS (
                     SELECT 1
-                    FROM mesh.account_grant ag
-                    JOIN mesh.network_account na ON na.id = ag.account_id
-                    JOIN mesh.principal_identity_binding pib ON pib.principal_id = ag.principal_id
+                    FROM mesh.auth_plane_membership membership
+                    JOIN mesh.network_account na ON na.id = membership.account_id
+                    JOIN mesh.principal_identity_binding pib
+                      ON pib.principal_id = membership.principal_id
                     WHERE na.account_code = saved_view.account_code
-                      AND ag.principal_id = saved_view.owner_principal_id
+                      AND membership.principal_id = saved_view.owner_principal_id
+                      AND membership.plane_code = 'mesh'
+                      AND membership.status = 'active'
+                      AND membership.effective_from <= now()
+                      AND (membership.effective_until IS NULL OR membership.effective_until > now())
                       AND pib.subject_id = mesh.current_subject_id()
                       AND ag.status = 'active'
                 )

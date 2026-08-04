@@ -67,22 +67,23 @@ import { createSessionRoutes } from "./session.routes.js";
 import { createBootstrapRoutes } from "./bootstrap.routes.js";
 import { createIamRoutes } from "./iam.routes.js";
 import { createLogoutRoutes } from "./logout.routes.js";
-import { createOperatorRoutes } from "./operator.routes.js";
 import { createMfaRoutes } from "./mfa.routes.js";
-import { createCcaRoutes } from "./company-code-access.routes.js";
 import { createIamAdminRoutes } from "./iam-admin.routes.js";
 import { createParameterRoutes } from "./parameter.routes.js";
-import { createIdentityProviderRoutes } from "./identity-provider.routes.js";
+import type { PlaneDatabaseRegistry } from "../runtime/plane-database-registry.js";
 import {
   createAtlasSupportSessionRoutes,
   type AtlasSupportSessionRoutesDependencies,
 } from "../support/atlas-support-session.routes.js";
 
 export interface IamRoutesDeps {
+  /** Mandatory DDL-native IAM authority router for Admin/Athyper, Neon and Mesh. */
+  planeDatabases: PlaneDatabaseRegistry;
+  discoveryKeycloak: import("../discovery/discovery.service.js").KeycloakDiscoveryConfig;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: import("kysely").Kysely<any>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  meshDb?: import("kysely").Kysely<any>;
+  meshDb: import("kysely").Kysely<any>;
   cache: CacheClient;
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
@@ -118,7 +119,7 @@ export interface IamRoutesDeps {
 }
 
 export function registerIamRoutes(router: Router, deps: IamRoutesDeps): Router {
-  createDiscoveryRoutes(router, { db: deps.db, meshDb: deps.meshDb, logger: deps.logger });
+  createDiscoveryRoutes(router, { keycloak: deps.discoveryKeycloak, logger: deps.logger });
   createContextRoutes(router, deps);
 
   // Bootstrap must be registered BEFORE session so /session/bootstrap is
@@ -127,9 +128,8 @@ export function registerIamRoutes(router: Router, deps: IamRoutesDeps): Router {
   createSessionRoutes(router, { ...deps, metrics: deps.sessionMetrics });
   createIamRoutes(router, deps);
 
-  // Phase 2: logout signal + Phase 3: operator API
+  // Logout signal.
   createLogoutRoutes(router, deps);
-  createOperatorRoutes(router, deps);
 
   // Phase 5: Keycloak-owned MFA AIA, metadata sync and step-up evidence.
   createMfaRoutes(router, {
@@ -137,11 +137,8 @@ export function registerIamRoutes(router: Router, deps: IamRoutesDeps): Router {
     kc: deps.kc,
   });
 
-  // Sprint 43: Company-code access admin + permission log viewer + IdP sync health
-  createCcaRoutes(router, deps);
   createIamAdminRoutes(router, deps);
   createParameterRoutes(router, deps);
-  createIdentityProviderRoutes(router, deps);
   if (deps.atlasSupportSessions) {
     createAtlasSupportSessionRoutes(router, deps.atlasSupportSessions);
   }

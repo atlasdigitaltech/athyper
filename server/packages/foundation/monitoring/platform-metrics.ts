@@ -296,7 +296,7 @@ async function collectQuotaMetrics(db: DB, samples: MetricSample[]): Promise<voi
   const rows = await queryRows<QuotaRow>(db, sql<QuotaRow>`
     WITH counts AS (
       SELECT tenant_id, kind, count(*) AS item_count
-      FROM master.content_item
+      FROM document.content_item
       GROUP BY tenant_id, kind
     ),
     quotas AS (
@@ -360,7 +360,7 @@ async function collectPrivacyMetrics(db: DB, samples: MetricSample[]): Promise<v
       a.tenant_id::text AS tenant_id,
       count(*) FILTER (WHERE a.pii_scanned_at IS NOT NULL)::text AS inspected,
       count(*) FILTER (WHERE a.pii_detected = true)::text AS warned
-    FROM master.attachment a
+    FROM document.attachment a
     JOIN master.tenant t ON t.id = a.tenant_id
     WHERE a.created_at >= now() - interval '30 days'
        OR a.pii_scanned_at >= now() - interval '30 days'

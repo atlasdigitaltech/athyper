@@ -196,6 +196,10 @@ tmp/
 # =========================
 docs/local/
 
+# Local database backups and diagnostic evidence
+**/.local-backups/
+**/.local-evidence/
+
 # =========================
 # Claude Code artifacts
 # =========================

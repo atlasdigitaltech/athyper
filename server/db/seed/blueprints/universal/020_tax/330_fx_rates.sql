@@ -18,12 +18,13 @@
 -- Mar baseline, Apr −0.23%, May −0.46% (also drives SPOT), Jun −0.69%.
 --
 -- Idempotency: master.fx_rate's unique index is partial (WHERE is_active=true),
--- so ON CONFLICT can't see it. Uses delete-owned + reinsert on metadata._seed.pack.
+-- FX observations are append-only. The pack inserts version 1 once and verifies
+-- that an existing observation has the same published value.
 
 DO $seed$
 DECLARE
     v_tid       uuid;
-    v_su        uuid  := '00000000-0000-0000-0000-000000000000';
+    v_su        uuid  := nullif(trim(current_setting('app.current_principal_id', true)), '')::uuid;
     v_meta      jsonb := '{"_seed": {"pack": "330_org", "version": "4.0.1"}}'::jsonb;
     v_inserted  int;
     v_active    int;
@@ -44,10 +45,6 @@ BEGIN
     -- ══════════════════════════════════════════════════════════════════════════
     -- SEED UPDATE STRATEGY: delete-owned-then-reinsert
     -- ══════════════════════════════════════════════════════════════════════════
-    DELETE FROM master.fx_rate
-    WHERE tenant_id = v_tid
-      AND metadata->'_seed'->>'pack' = '330_org';
-
     -- ══════════════════════════════════════════════════════════════════════════
     -- BASE RATE TABLE (Mar 31, 2026 anchor — drives Q1 PERIOD_END + SPOT)
     -- All rates: 1 unit foreign currency → X MYR (approximate mid-market).
@@ -254,6 +251,8 @@ BEGIN
             v_tid, f.from_curr, 'MYR', f.rate, f.rate_type,
             f.eff_date, 'CUSTOM', 'active', v_su, v_meta
         FROM tmp_fx f
+        ON CONFLICT (tenant_id, from_currency, to_currency, rate_type, source, effective_date, version_no)
+        DO NOTHING
         RETURNING id
     )
     SELECT count(*) INTO v_inserted FROM ins;
@@ -290,9 +289,24 @@ BEGIN
         RAISE EXCEPTION '330 FAIL: duplicate FX rate natural key in seed';
     END IF;
 
-    -- A4: Exact total row count (1115 = 65 FY2025 + 900 FY2026 Q1+Q2 + 150 SPOT)
-    IF v_inserted != 1115 THEN
-        RAISE EXCEPTION '330 FAIL: expected exactly 1115 FX rates, inserted %', v_inserted;
+    -- A4: Exact desired observation set (1115 = 65 FY2025 + 900 FY2026
+    -- Q1+Q2 + 150 SPOT). Reruns insert zero rows and must still converge.
+    IF (SELECT count(*) FROM tmp_fx) != 1115 THEN
+        RAISE EXCEPTION '330 FAIL: expected exactly 1115 desired FX observations';
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM tmp_fx desired
+        LEFT JOIN master.fx_rate actual
+          ON actual.tenant_id=v_tid
+         AND actual.from_currency=desired.from_curr
+         AND actual.to_currency='MYR'
+         AND actual.rate_type=desired.rate_type
+         AND actual.source='CUSTOM'
+         AND actual.effective_date=desired.eff_date
+         AND actual.version_no=1
+        WHERE actual.id IS NULL OR actual.rate IS DISTINCT FROM desired.rate
+    ) THEN
+        RAISE EXCEPTION '330 FAIL: published FX observation is missing or differs; publish a successor version instead of overwriting history';
     END IF;
 
     -- A5: Sub-counts by rate_type (965 = 900 FY2026 Q1+Q2 + 65 FY2025)
@@ -371,7 +385,7 @@ BEGIN
         RAISE EXCEPTION '330 FAIL: non-positive rate detected';
     END IF;
 
-    RAISE NOTICE '330: % FX rates inserted (% PERIOD_END, % SPOT) covering % active currencies → MYR (H1 2026 Q1+Q2 + SPOT @2026-05-15; FY2025 quarterly for 13 demo-driver currencies)',
+    RAISE NOTICE '330: % FX observations inserted this pass; desired set has % PERIOD_END and % SPOT observations covering % active currencies → MYR',
         v_inserted,
         (SELECT count(*) FROM master.fx_rate
          WHERE tenant_id = v_tid AND metadata->'_seed'->>'pack' = '330_org'

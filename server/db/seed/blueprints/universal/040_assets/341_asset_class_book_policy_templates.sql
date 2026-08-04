@@ -1,83 +1,39 @@
--- Platform-global IFRS asset policy templates (tenant_id IS NULL).
--- Concrete per-(company × book) rows are created later by
--- control.provision_asset_policies() — this file only seeds the templates.
+-- seed-contract-version: 1
+-- seed-pack: neon.blueprint.asset-policies
+-- seed-pack-version: 2.0.0
+-- seed-dataset: control.asset-class-book-policy
+-- seed-data-class: production_reference
+-- seed-provenance: {"source":"Wave 5 IFRS asset-policy rewrite","publisher":"Athyper","source_version":"IFRS_DEFAULT-v1","retrieved_at":"2026-08-03","license":"internal"}
+-- seed-plane: neon
+-- seed-tenant-scope: tenant
+-- seed-natural-key: control.asset_class_book_policy(tenant_id,company_code_id,asset_class_id,ledger_book_id,effective_from)
+-- seed-id-strategy: deterministic-uuid:athyper-wave5-asset-policy-v2
+-- seed-expected-row-count: 12-per-active-assigned-statutory-or-management-book
+-- seed-assertions: expected-count,orphan,uniqueness,semantic,idempotent-convergence
+-- seed-demo-data: false
 
 DO $seed$
 DECLARE
-    v_su      uuid := '00000000-0000-0000-0000-000000000000';
-    v_pack    text := '341_asset_policy_templates';
-    v_version text := '1.0.0';
-    v_meta    jsonb;
-    v_count   int;
+  v_tid uuid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+  v_actor uuid := nullif(trim(current_setting('app.current_principal_id', true)), '')::uuid;
+  v_expected integer;
 BEGIN
-    v_meta := jsonb_build_object('_seed', jsonb_build_object(
-        'pack', v_pack,
-        'version', v_version,
-        'seeded_at', now()::text
-    ));
+  IF current_setting('app.database_plane', true) <> 'neon' OR v_tid IS NULL
+     OR NOT EXISTS (SELECT 1 FROM master.tenant WHERE id=v_tid AND status='active') THEN
+    RAISE EXCEPTION '[wave5.asset-policy] active Neon tenant scope required';
+  END IF;
+  IF v_actor IS NULL OR NOT EXISTS (
+    SELECT 1 FROM master.principal
+    WHERE tenant_id = v_tid AND id = v_actor AND status = 'active'
+  ) THEN
+    RAISE EXCEPTION '[wave5.asset-policy] active tenant-local app.current_principal_id required';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM master.company_code_book_assignment WHERE tenant_id=v_tid AND status='active') THEN
+    RAISE EXCEPTION '[wave5.asset-policy] at least one active company/book assignment required';
+  END IF;
 
-    INSERT INTO control.asset_class_book_policy_template (
-        tenant_id, template_code, framework,
-        asset_class_code, book_category,
-        capitalization_threshold_multiplier,
-        priority, effective_from,
-        is_depreciable, depreciation_method,
-        useful_life_months, useful_life_min_months, useful_life_max_months,
-        residual_value_mode, residual_value_pct,
-        convention, prorate_basis, depreciation_start_rule, method_params,
-        source_note,
-        allow_manual_life_override,
-        allow_manual_residual_override,
-        allow_manual_method_override,
-        acquisition_posting_role_code,
-        accum_depr_posting_role_code,
-        depr_expense_posting_role_code,
-        gain_loss_posting_role_code,
-        cwip_posting_role_code,
-        impairment_expense_posting_role_code,
-        impairment_reserve_posting_role_code,
-        revaluation_surplus_posting_role_code,
-        revaluation_loss_posting_role_code,
-        metadata, status, created_by
-    )
-    SELECT
-        NULL::uuid,
-        'IFRS_DEFAULT',
-        'ifrs',
-        v.asset_class_code,
-        v.book_category,
-        v.threshold_multiplier,
-        50,
-        '2025-01-01'::date,
-        v.is_depreciable,
-        v.depreciation_method,
-        v.useful_life_months,
-        v.useful_life_min_months,
-        v.useful_life_max_months,
-        v.residual_value_mode,
-        v.residual_value_pct,
-        v.convention,
-        'monthly',
-        v.depreciation_start_rule,
-        v.method_params,
-        v.source_note,
-        CASE WHEN v.is_depreciable THEN true ELSE false END,
-        CASE WHEN v.is_depreciable THEN true ELSE false END,
-        false,
-        v.acquisition_role,
-        v.accum_depr_role,
-        v.depr_expense_role,
-        v.gain_loss_role,
-        v.cwip_role,
-        v.impairment_expense_role,
-        v.impairment_reserve_role,
-        v.revaluation_surplus_role,
-        v.revaluation_loss_role,
-        v_meta,
-        'active',
-        v_su
-    FROM (VALUES
-        -- Statutory book policies
+  WITH policy_template(asset_class_code, book_category, is_depreciable, depreciation_method, useful_life_months, useful_life_min_months, useful_life_max_months, residual_value_mode, residual_value_pct, convention, depreciation_start_rule, threshold_multiplier, acquisition_role, accum_depr_role, depr_expense_role, gain_loss_role, cwip_role, impairment_expense_role, impairment_reserve_role, revaluation_surplus_role, revaluation_loss_role, method_params, source_note) AS (VALUES
+-- Statutory book policies
         ('LAND',      'statutory', false, 'no_depreciation', NULL::integer, NULL::integer, NULL::integer, 'zero',    NULL::numeric(9,4), NULL,         'in_service_date',       10.0000, 'fa_acq_land',      NULL,            NULL,            'fa_gainloss_disposal', 'fa_cwip', NULL,           NULL,           'fa_reval_surplus_land', 'fa_reval_loss_land', '{}'::jsonb, 'IAS 16: land normally has an unlimited useful life and is not depreciated.'),
         ('BUILDINGS', 'statutory', true,  'straight_line',   480,           240,           600,           'percent', 5.0000,             'full_month', 'in_service_date',        5.0000, 'fa_acq_bldg',      'fa_accum_bldg', 'fa_depr_bldg', 'fa_gainloss_disposal', 'fa_cwip', 'fa_impair_exp','fa_impair_rsv','fa_reval_surplus_bldg', 'fa_reval_loss_bldg', '{}'::jsonb, 'IAS 16 best-practice range for buildings: commonly 20 to 50 years; default 40 years.'),
         ('PLANT',     'statutory', true,  'straight_line',   120,           60,            180,           'percent', 5.0000,             'half_year',  'in_service_date',        2.0000, 'fa_acq_plant',     'fa_accum_plant','fa_depr_plant','fa_gainloss_disposal', 'fa_cwip', 'fa_impair_exp','fa_impair_rsv',NULL,                   NULL,                  '{}'::jsonb, 'IAS 16 best-practice range for plant and machinery: commonly 5 to 15 years; default 10 years.'),
@@ -104,64 +60,83 @@ BEGIN
         ('ROU-PROP',  'management', true,  'straight_line',   60,            12,            120,           'zero',    NULL::numeric(9,4), 'full_month', 'in_service_date',        1.0000, 'fa_acq_rou_prop',  'fa_accum_rou',  'fa_depr_rou',  'fa_gainloss_disposal', NULL,      NULL,           NULL,           NULL,                   NULL,                  '{}'::jsonb, 'Management view: right-of-use property defaults to expected lease term; default 5 years.'),
         ('ROU-EQUIP', 'management', true,  'straight_line',   36,            12,            60,            'zero',    NULL::numeric(9,4), 'full_month', 'in_service_date',        0.5000, 'fa_acq_rou_equip', 'fa_accum_rou',  'fa_depr_rou',  'fa_gainloss_disposal', NULL,      NULL,           NULL,           NULL,                   NULL,                  '{}'::jsonb, 'Management view: right-of-use equipment defaults to expected lease term; default 3 years.'),
         ('CWIP-GEN',  'management', false, 'no_depreciation', NULL::integer, NULL::integer, NULL::integer, 'zero',    NULL::numeric(9,4), NULL,         'in_service_date',        0.0000, 'fa_cwip',          NULL,            NULL,            NULL,                   NULL,      NULL,           NULL,           NULL,                   NULL,                  '{}'::jsonb, 'Management view: CWIP is not depreciated until ready for intended use and capitalized.')
-    ) AS v(
-        asset_class_code, book_category, is_depreciable, depreciation_method,
-        useful_life_months, useful_life_min_months, useful_life_max_months,
-        residual_value_mode, residual_value_pct,
-        convention, depreciation_start_rule, threshold_multiplier,
-        acquisition_role, accum_depr_role, depr_expense_role, gain_loss_role,
-        cwip_role, impairment_expense_role, impairment_reserve_role,
-        revaluation_surplus_role, revaluation_loss_role, method_params, source_note
-    )
-    ON CONFLICT (tenant_id, template_code, asset_class_code, book_category, effective_from)
-    DO UPDATE SET
-        framework                              = EXCLUDED.framework,
-        capitalization_threshold_multiplier    = EXCLUDED.capitalization_threshold_multiplier,
-        priority                               = EXCLUDED.priority,
-        is_depreciable                         = EXCLUDED.is_depreciable,
-        depreciation_method                    = EXCLUDED.depreciation_method,
-        useful_life_months                     = EXCLUDED.useful_life_months,
-        useful_life_min_months                 = EXCLUDED.useful_life_min_months,
-        useful_life_max_months                 = EXCLUDED.useful_life_max_months,
-        residual_value_mode                    = EXCLUDED.residual_value_mode,
-        residual_value_amount                  = EXCLUDED.residual_value_amount,
-        residual_value_pct                     = EXCLUDED.residual_value_pct,
-        convention                             = EXCLUDED.convention,
-        prorate_basis                          = EXCLUDED.prorate_basis,
-        depreciation_start_rule                = EXCLUDED.depreciation_start_rule,
-        method_params                          = EXCLUDED.method_params,
-        source_note                            = EXCLUDED.source_note,
-        allow_manual_life_override             = EXCLUDED.allow_manual_life_override,
-        allow_manual_residual_override         = EXCLUDED.allow_manual_residual_override,
-        allow_manual_method_override           = EXCLUDED.allow_manual_method_override,
-        acquisition_posting_role_code          = EXCLUDED.acquisition_posting_role_code,
-        accum_depr_posting_role_code           = EXCLUDED.accum_depr_posting_role_code,
-        depr_expense_posting_role_code         = EXCLUDED.depr_expense_posting_role_code,
-        gain_loss_posting_role_code            = EXCLUDED.gain_loss_posting_role_code,
-        cwip_posting_role_code                 = EXCLUDED.cwip_posting_role_code,
-        impairment_expense_posting_role_code   = EXCLUDED.impairment_expense_posting_role_code,
-        impairment_reserve_posting_role_code   = EXCLUDED.impairment_reserve_posting_role_code,
-        revaluation_surplus_posting_role_code  = EXCLUDED.revaluation_surplus_posting_role_code,
-        revaluation_loss_posting_role_code     = EXCLUDED.revaluation_loss_posting_role_code,
-        capitalization_event_code              = EXCLUDED.capitalization_event_code,
-        disposal_event_code                    = EXCLUDED.disposal_event_code,
-        depreciation_event_code                = EXCLUDED.depreciation_event_code,
-        impairment_event_code                  = EXCLUDED.impairment_event_code,
-        revaluation_event_code                 = EXCLUDED.revaluation_event_code,
-        metadata                               = EXCLUDED.metadata,
-        status                                 = EXCLUDED.status,
-        updated_at                             = now(),
-        updated_by                             = v_su;
+  ), currency_threshold(currency_code,base_threshold) AS (VALUES
+    ('MYR'::character(3),5000::numeric),('SAR',5000),('AED',5000),('USD',1000),
+    ('SGD',1500),('INR',50000),('CAD',1000),('EUR',1000),('TWD',30000),
+    ('ZAR',10000),('GBP',1000),('JPY',100000),('PHP',50000)
+  ), resolved AS (
+    SELECT cc.id company_id, ac.id class_id, lb.id book_id,
+      COALESCE(ba.override_currency_code,lb.base_currency_code) currency_code,
+      COALESCE(ct.base_threshold,1000)*p.threshold_multiplier threshold,
+      p.*
+    FROM policy_template p
+    JOIN master.asset_class ac ON ac.tenant_id=v_tid AND ac.code=p.asset_class_code AND ac.status='active'
+    JOIN master.ledger_book lb ON lb.tenant_id=v_tid AND lb.category=p.book_category AND lb.status='active'
+    JOIN master.company_code_book_assignment ba ON ba.tenant_id=v_tid AND ba.book_id=lb.id AND ba.status='active'
+      AND ba.effective_from<=DATE '2025-01-01' AND (ba.effective_to IS NULL OR ba.effective_to>=DATE '2025-01-01')
+    JOIN master.company_code cc ON cc.tenant_id=v_tid AND cc.id=ba.company_code_id AND cc.status='active'
+    LEFT JOIN currency_threshold ct ON ct.currency_code=COALESCE(ba.override_currency_code,lb.base_currency_code)
+  )
+  INSERT INTO control.asset_class_book_policy(
+    id,tenant_id,company_code_id,asset_class_id,ledger_book_id,capitalization_threshold,
+    capitalization_currency,effective_from,depreciation_method,useful_life_months,
+    residual_value_mode,residual_value_pct,convention,prorate_basis,depreciation_start_rule,
+    method_params,allow_manual_life_override,allow_manual_residual_override,allow_manual_method_override,
+    acquisition_posting_role_code,accum_depr_posting_role_code,depr_expense_posting_role_code,
+    gain_loss_posting_role_code,impairment_expense_posting_role_code,impairment_reserve_posting_role_code,
+    revaluation_surplus_posting_role_code,revaluation_loss_posting_role_code,cwip_posting_role_code,
+    metadata,status,created_by)
+  SELECT md5('wave5:asset-policy:'||v_tid||':'||company_id||':'||class_id||':'||book_id||':2025-01-01')::uuid,
+    v_tid,company_id,class_id,book_id,threshold,CASE WHEN threshold=0 THEN NULL ELSE currency_code END,DATE '2025-01-01',
+    depreciation_method,COALESCE(useful_life_months,0),residual_value_mode,residual_value_pct,convention,
+    'monthly',depreciation_start_rule,method_params,is_depreciable,is_depreciable,false,
+    acquisition_role,accum_depr_role,depr_expense_role,gain_loss_role,impairment_expense_role,
+    impairment_reserve_role,revaluation_surplus_role,revaluation_loss_role,cwip_role,
+    jsonb_build_object('_seed',jsonb_build_object('pack','asset-policies','version','2.0.0'),
+      'framework','ifrs','source_note',source_note,'useful_life_min_months',useful_life_min_months,
+      'useful_life_max_months',useful_life_max_months),'active',v_actor
+  FROM resolved
+  ON CONFLICT(tenant_id,company_code_id,asset_class_id,ledger_book_id,effective_from) DO UPDATE SET
+    capitalization_threshold=excluded.capitalization_threshold,capitalization_currency=excluded.capitalization_currency,
+    depreciation_method=excluded.depreciation_method,useful_life_months=excluded.useful_life_months,
+    residual_value_mode=excluded.residual_value_mode,residual_value_pct=excluded.residual_value_pct,
+    convention=excluded.convention,prorate_basis=excluded.prorate_basis,
+    depreciation_start_rule=excluded.depreciation_start_rule,method_params=excluded.method_params,
+    allow_manual_life_override=excluded.allow_manual_life_override,
+    allow_manual_residual_override=excluded.allow_manual_residual_override,
+    allow_manual_method_override=excluded.allow_manual_method_override,
+    acquisition_posting_role_code=excluded.acquisition_posting_role_code,
+    accum_depr_posting_role_code=excluded.accum_depr_posting_role_code,
+    depr_expense_posting_role_code=excluded.depr_expense_posting_role_code,
+    gain_loss_posting_role_code=excluded.gain_loss_posting_role_code,
+    impairment_expense_posting_role_code=excluded.impairment_expense_posting_role_code,
+    impairment_reserve_posting_role_code=excluded.impairment_reserve_posting_role_code,
+    revaluation_surplus_posting_role_code=excluded.revaluation_surplus_posting_role_code,
+    revaluation_loss_posting_role_code=excluded.revaluation_loss_posting_role_code,
+    cwip_posting_role_code=excluded.cwip_posting_role_code,metadata=excluded.metadata,status='active',
+    updated_at=now(),updated_by=v_actor
+  WHERE (control.asset_class_book_policy.capitalization_threshold,
+         control.asset_class_book_policy.capitalization_currency,
+         control.asset_class_book_policy.depreciation_method,
+         control.asset_class_book_policy.useful_life_months,
+         control.asset_class_book_policy.residual_value_mode,
+         control.asset_class_book_policy.residual_value_pct,
+         control.asset_class_book_policy.convention,
+         control.asset_class_book_policy.method_params,
+         control.asset_class_book_policy.metadata,
+         control.asset_class_book_policy.status)
+    IS DISTINCT FROM
+        (excluded.capitalization_threshold,excluded.capitalization_currency,
+         excluded.depreciation_method,excluded.useful_life_months,
+         excluded.residual_value_mode,excluded.residual_value_pct,excluded.convention,
+         excluded.method_params,excluded.metadata,'active'::shared.active_inactive_d);
 
-    SELECT count(*) INTO v_count
-    FROM control.asset_class_book_policy_template
-    WHERE tenant_id IS NULL
-      AND template_code = 'IFRS_DEFAULT'
-      AND metadata->'_seed'->>'pack' = v_pack;
-
-    IF v_count != 24 THEN
-        RAISE EXCEPTION '[341_asset_policy_templates] Expected 24 IFRS_DEFAULT template rows, got %', v_count;
-    END IF;
-
-    RAISE NOTICE '[341_asset_policy_templates] OK: % IFRS_DEFAULT asset policy template rows seeded', v_count;
+  SELECT count(*)*12 INTO v_expected FROM master.company_code_book_assignment ba
+  JOIN master.ledger_book lb ON lb.tenant_id=ba.tenant_id AND lb.id=ba.book_id AND lb.status='active'
+  WHERE ba.tenant_id=v_tid AND ba.status='active' AND lb.category IN ('statutory','management')
+    AND ba.effective_from<=DATE '2025-01-01' AND (ba.effective_to IS NULL OR ba.effective_to>=DATE '2025-01-01');
+  IF (SELECT count(*) FROM control.asset_class_book_policy WHERE tenant_id=v_tid
+      AND metadata->'_seed'->>'pack'='asset-policies') <> v_expected THEN
+    RAISE EXCEPTION '[wave5.asset-policy] expected % effective policies',v_expected;
+  END IF;
 END $seed$;

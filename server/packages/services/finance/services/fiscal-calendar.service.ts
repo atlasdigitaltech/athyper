@@ -108,16 +108,16 @@ export async function loadFiscalCalendarDesigner(
              period_type, name_template, duration_unit, duration_value,
              anchor, quarter_number, absorbs_leap_week
         FROM control.fiscal_calendar_period_rule
-       WHERE tenant_id = ${tenantId}::uuid AND status = 'active'
+       WHERE tenant_id = ${tenantId}::uuid
        ORDER BY fiscal_calendar_config_id, sequence_no
     `.execute(db),
     sql<{
       id: string; fiscal_calendar_config_id: string;
       effective_fiscal_year_from: number; effective_fiscal_year_to: number | null;
-      priority: number; status: string;
+      status: string;
     }>`
       SELECT id, fiscal_calendar_config_id, effective_fiscal_year_from,
-             effective_fiscal_year_to, priority, status
+             effective_fiscal_year_to, status
         FROM control.company_fiscal_calendar_assignment
        WHERE tenant_id = ${tenantId}::uuid
          AND company_code_id = ${company.id}::uuid
@@ -183,7 +183,6 @@ export async function loadFiscalCalendarDesigner(
       calendarId: row.fiscal_calendar_config_id,
       fiscalYearFrom: row.effective_fiscal_year_from,
       fiscalYearTo: row.effective_fiscal_year_to,
-      priority: row.priority,
       status: row.status,
     })),
     generatedYears: generatedQ.rows.map((row) => ({
@@ -197,22 +196,11 @@ export async function loadFiscalCalendarDesigner(
   };
 }
 
-export type LegacyFiscalVariant = "calendar" | "fy_445" | "fy_454" | "fy_544" | "custom";
-
-export function expectedLegacyFiscalVariant(calendarType: FiscalCalendarType, anchorMonth: number): LegacyFiscalVariant {
-  if (calendarType === "four_four_five") return "fy_445";
-  if (calendarType === "four_five_four") return "fy_454";
-  if (calendarType === "five_four_four") return "fy_544";
-  if (calendarType === "monthly" && anchorMonth === 1) return "calendar";
-  return "custom";
-}
-
 export interface FiscalPeriodMatrixPayload {
-  company: { id: string; code: string; name: string; fiscalYearStartMonth: number; fiscalYearVariant: string | null };
+  company: { id: string; code: string; name: string };
   fiscalYear: number;
   assignment: null | { id: string; calendarId: string; calendarCode: string; calendarName: string; calendarVersion: number; calendarType: FiscalCalendarType; anchorMonth: number; fiscalYearFrom: number; fiscalYearTo: number | null };
-  legacyConsistency: { consistent: boolean; expectedStartMonth: number | null; actualStartMonth: number; expectedVariant: LegacyFiscalVariant | null; actualVariant: string | null; checks: Array<{ key: string; passed: boolean; message: string }> };
-  books: Array<{ bookId: string; bookCode: string; bookName: string; isCompanyDefault: boolean }>;
+  books: Array<{ bookId: string; bookCode: string; bookName: string; isPrimary: boolean }>;
   rows: Array<{ periodId: string; periodNumber: number; periodType: string; name: string; startDate: string; endDate: string; companyStatus: string;
     calendarId: string | null; calendarVersion: number | null; generationKey: string | null; generatedAt: string | null;
     bookStatuses: Record<string, { status: string; gateId: string; metadata: Record<string, unknown> }> }>;
@@ -222,8 +210,8 @@ export interface FiscalPeriodMatrixPayload {
 }
 
 export async function loadFiscalPeriodMatrix(db: AnyDb, tenantId: string, companyCode: string, fiscalYear: number): Promise<FiscalPeriodMatrixPayload> {
-  const companyQ = await sql<{ id: string; code: string; name: string; fiscal_year_start_month: number; fiscal_year_variant: string | null; default_ledger_book_id: string | null }>`
-    SELECT id, code, name, fiscal_year_start_month, fiscal_year_variant, default_ledger_book_id
+  const companyQ = await sql<{ id: string; code: string; name: string }>`
+    SELECT id, code, name
       FROM master.company_code WHERE tenant_id = ${tenantId}::uuid AND lower(code) = lower(${companyCode}) LIMIT 1`.execute(db);
   const company = companyQ.rows[0];
   if (!company) throw new CompanyNotFoundError(companyCode);
@@ -235,9 +223,9 @@ export async function loadFiscalPeriodMatrix(db: AnyDb, tenantId: string, compan
         FROM control.company_fiscal_calendar_assignment a JOIN control.fiscal_calendar_config c ON c.tenant_id = a.tenant_id AND c.id = a.fiscal_calendar_config_id
        WHERE a.tenant_id = ${tenantId}::uuid AND a.company_code_id = ${company.id}::uuid AND a.status = 'active' AND c.status = 'active'
          AND a.effective_fiscal_year_from <= ${fiscalYear} AND (a.effective_fiscal_year_to IS NULL OR a.effective_fiscal_year_to >= ${fiscalYear})
-       ORDER BY a.priority DESC, a.effective_fiscal_year_from DESC`.execute(db),
+       ORDER BY a.effective_fiscal_year_from DESC`.execute(db),
     sql<{ id: string; code: string; name: string; is_default: boolean; effective_from: string; effective_to: string | null }>`
-      SELECT lb.id, lb.code, lb.name, (${company.default_ledger_book_id}::uuid = lb.id) AS is_default,
+      SELECT lb.id, lb.code, lb.name, lb.is_primary AS is_default,
              ba.effective_from::text, ba.effective_to::text
         FROM master.company_code_book_assignment ba JOIN master.ledger_book lb ON lb.tenant_id = ba.tenant_id AND lb.id = ba.book_id
        WHERE ba.tenant_id = ${tenantId}::uuid AND ba.company_code_id = ${company.id}::uuid AND ba.status = 'active' AND lb.status = 'active'
@@ -249,23 +237,24 @@ export async function loadFiscalPeriodMatrix(db: AnyDb, tenantId: string, compan
         FROM master.fiscal_period WHERE tenant_id = ${tenantId}::uuid AND company_code_id = ${company.id}::uuid AND fiscal_year = ${fiscalYear}
        ORDER BY sort_order, period_number`.execute(db),
     sql<{ id: string; book_id: string; period_number: number; status: string; metadata: Record<string, unknown> }>`
-      SELECT id, book_id, period_number, status, metadata FROM governance.book_period_status
-       WHERE tenant_id = ${tenantId}::uuid AND company_code_id = ${company.id}::uuid AND fiscal_year = ${fiscalYear}`.execute(db),
+      SELECT gate.id, gate.ledger_book_id AS book_id, period.period_number,
+             gate.status, '{}'::jsonb AS metadata
+        FROM ledger.book_period_status gate
+        JOIN master.fiscal_period period
+          ON period.tenant_id = gate.tenant_id
+         AND period.id = gate.fiscal_period_id
+       WHERE gate.tenant_id = ${tenantId}::uuid
+         AND period.company_code_id = ${company.id}::uuid
+         AND period.fiscal_year = ${fiscalYear}`.execute(db),
   ]);
 
   const assignmentRow = assignmentQ.rows[0] ?? null;
   const assignment = assignmentRow ? { id: assignmentRow.id, calendarId: assignmentRow.calendar_id, calendarCode: assignmentRow.calendar_code,
     calendarName: assignmentRow.calendar_name, calendarVersion: assignmentRow.version_no, calendarType: assignmentRow.calendar_type, anchorMonth: assignmentRow.anchor_month,
     fiscalYearFrom: assignmentRow.fiscal_year_from, fiscalYearTo: assignmentRow.fiscal_year_to } : null;
-  const expectedVariant = assignment ? expectedLegacyFiscalVariant(assignment.calendarType, assignment.anchorMonth) : null;
-  const legacyChecks = assignment ? [
-    { key: "start_month", passed: company.fiscal_year_start_month === assignment.anchorMonth, message: `Legacy start month ${company.fiscal_year_start_month}; assigned calendar starts in month ${assignment.anchorMonth}.` },
-    { key: "variant", passed: company.fiscal_year_variant === expectedVariant, message: `Legacy variant ${company.fiscal_year_variant ?? "not set"}; assigned calendar derives ${expectedVariant}.` },
-  ] : [];
   const conflicts: FiscalPeriodMatrixPayload["conflicts"] = [];
   if (!assignment) conflicts.push({ code: "CALENDAR_ASSIGNMENT_MISSING", severity: "blocking", message: `No active Fiscal Calendar assignment covers FY ${fiscalYear}.` });
   if (assignmentQ.rows.length > 1) conflicts.push({ code: "CALENDAR_ASSIGNMENT_OVERLAP", severity: "blocking", message: `${assignmentQ.rows.length} active Calendar assignments cover FY ${fiscalYear}.` });
-  for (const check of legacyChecks) if (!check.passed) conflicts.push({ code: `LEGACY_${check.key.toUpperCase()}_MISMATCH`, severity: "warning", message: check.message });
 
   let previewRows: Array<{ period_number: number; period_type: string; start_date: string; end_date: string }> = [];
   if (assignment) {
@@ -309,10 +298,9 @@ export async function loadFiscalPeriodMatrix(db: AnyDb, tenantId: string, compan
   const generationKeys = periodsQ.rows.flatMap((row) => row.generation_key ? [row.generation_key] : []);
   const generatedAtValues = periodsQ.rows.flatMap((row) => row.generated_at ? [row.generated_at] : []).sort();
   return {
-    company: { id: company.id, code: company.code, name: company.name, fiscalYearStartMonth: company.fiscal_year_start_month, fiscalYearVariant: company.fiscal_year_variant },
-    fiscalYear, assignment, legacyConsistency: { consistent: legacyChecks.every((check) => check.passed), expectedStartMonth: assignment?.anchorMonth ?? null,
-      actualStartMonth: company.fiscal_year_start_month, expectedVariant, actualVariant: company.fiscal_year_variant, checks: legacyChecks },
-    books: applicableBooks.map((book) => ({ bookId: book.id, bookCode: book.code, bookName: book.name, isCompanyDefault: book.is_default })),
+    company: { id: company.id, code: company.code, name: company.name },
+    fiscalYear, assignment,
+    books: applicableBooks.map((book) => ({ bookId: book.id, bookCode: book.code, bookName: book.name, isPrimary: book.is_default })),
     rows, conflicts, evidence: { generatedPeriodCount: periodsQ.rows.length, bookGateCount: gatesQ.rows.length,
       lastGeneratedAt: generatedAtValues.at(-1) ?? null, generationKeys, sourceCalendar: assignment ? `${assignment.calendarCode} v${assignment.calendarVersion}` : null },
     canGenerate: Boolean(assignment) && !conflicts.some((conflict) => conflict.severity === "blocking"),
@@ -500,24 +488,19 @@ export async function assignFiscalCalendar(
     const assignmentQ = await sql<{ id: string }>`
       INSERT INTO control.company_fiscal_calendar_assignment (
         tenant_id, company_code_id, fiscal_calendar_config_id,
-        effective_fiscal_year_from, priority, status, created_by
+        effective_fiscal_year_from, status, created_by
       ) VALUES (
         ${input.tenantId}::uuid, ${company.id}::uuid, ${input.calendarId}::uuid,
-        ${input.fiscalYearFrom}, 100, 'active', ${input.actorId}::uuid
+        ${input.fiscalYearFrom}, 'active', ${input.actorId}::uuid
       ) RETURNING id
     `.execute(trx);
-
-    const legacyVariant = expectedLegacyFiscalVariant(configQ.rows[0]!.calendar_type, configQ.rows[0]!.anchor_month);
-    await sql`UPDATE master.company_code SET fiscal_year_start_month = ${configQ.rows[0]!.anchor_month},
-        fiscal_year_variant = ${legacyVariant}, updated_at = now(), updated_by = ${input.actorId}::uuid
-      WHERE tenant_id = ${input.tenantId}::uuid AND id = ${company.id}::uuid`.execute(trx);
 
     await writeFinanceSetupAudit(trx, {
       tenantId: input.tenantId, actorId: input.actorId, companyCodeId: company.id,
       activityType: "finance_setup.fiscal_calendar_assigned",
       entityType: "company_fiscal_calendar_assignment", entityId: assignmentQ.rows[0]!.id,
       detail: { calendar_id: input.calendarId, fiscal_year_from: input.fiscalYearFrom,
-        legacy_fiscal_year_start_month: configQ.rows[0]!.anchor_month, legacy_fiscal_year_variant: legacyVariant },
+        calendar_type: configQ.rows[0]!.calendar_type, anchor_month: configQ.rows[0]!.anchor_month },
     });
     await invalidateFinanceSetupReadiness(trx, input.tenantId, company.id, input.actorId, "Company Fiscal Calendar assignment changed");
     return { assignmentId: assignmentQ.rows[0]!.id, companyCodeId: company.id, calendarId: input.calendarId };

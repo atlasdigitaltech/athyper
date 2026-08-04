@@ -1,478 +1,180 @@
 -- ============================================================================
 -- snapshot/01_tables.sql
--- Concept: Version Snapshots — lifecycle routes, entity compiled state
--- Depends on: 04_tables/002_control.sql, 04_tables/003a_master_identity.sql
--- Scope: Snapshot schema — immutable compiled versions and pre-computed route maps.
---
--- Tables (snapshot schema, all append-only unless noted):
---   §1  lifecycle_version         — frozen compiled lifecycle definition (append-only)
---   §2  lifecycle_route           — full compiled route graph per lifecycle (mutable — recompiled in-place)
---   §3  status_route              — simplified transition map for Pattern A/B entities (mutable)
---   §4  entity_compiled           — pre-compiled entity version snapshot (append-only)
---   §5  entity_compiled_overlay   — compiled overlay delta for an entity version (append-only)
---   §6  template_version          — immutable frozen template content per version (append-only)
---   §7  content_item_version      — immutable body snapshot per CMS content item (append-only)
---
--- FK constraints  → 06_constraints/009_snapshot.sql + 06_constraints/011_cms.sql
--- Indexes         → 07_indexes/009_snapshot.sql
--- Triggers        → 09_triggers/009_snapshot.sql
--- RLS             → 11_rls_policies/009_snapshot.sql
+-- Tables reconstructed from the live catalog.
+-- Generated from the live Neon database snapshot schema. Do not hand-edit.
 -- ============================================================================
 
-
--- =============================================================================
--- §1  snapshot.lifecycle_version — frozen immutable compiled lifecycle definition
--- =============================================================================
--- Immutable snapshot of a lifecycle at a point in time.
--- workflow_instance pins to lifecycle_version_id for version-pinned in-flight execution.
--- Append-only: UPDATE and DELETE blocked by trg_lv_immutable trigger.
-
-CREATE TABLE IF NOT EXISTS snapshot.lifecycle_version (
-    -- Identity
-    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id       uuid        NOT NULL,
-
-    -- Parent reference
-    lifecycle_id    uuid        NOT NULL,
-
-    -- Version
-    version         integer     NOT NULL,
-
-    -- Compiled definition (denormalised from control.lifecycle + child tables)
-    -- {states: [{id, code, name, is_terminal, is_initial, sort_order, config}],
-    --  transitions: [{id, from, to, operation_code, is_active, config}],
-    --  hooks: [{id, timing, action, config, origin, contract_role, safety_level, sort_order}],
-    --  gates: {transition_id: {required_operations, conditions, threshold_rules}},
-    --  timers: {state_code: {policy_code, rules: [...]}}}
-    definition      jsonb       NOT NULL,
-
-    -- Source hash (matches lifecycle.definition_hash at compile time)
-    compiled_hash   text        NOT NULL,
-
-    -- Audit (append-only — no updated_at)
-    created_at      timestamptz NOT NULL DEFAULT now(),
-    created_by      uuid        NOT NULL,
-
-    CONSTRAINT lv_pkey          PRIMARY KEY (id),
-    CONSTRAINT lv_tenant_id_uq  UNIQUE (tenant_id, id),
-    CONSTRAINT lv_version_uq    UNIQUE (tenant_id, lifecycle_id, version),
-    CONSTRAINT lv_version_chk   CHECK (version >= 1),
-    CONSTRAINT lv_definition_chk CHECK (jsonb_typeof(definition) = 'object'),
-    CONSTRAINT lv_hash_chk      CHECK (length(compiled_hash) >= 64)
+CREATE TABLE "snapshot"."content_item_version" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "content_item_id" uuid NOT NULL,
+  "version" integer NOT NULL,
+  "body_json" jsonb NOT NULL,
+  "body_format" text DEFAULT 'slate'::text NOT NULL,
+  "change_summary" text,
+  "checksum" text NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL
 );
 
-COMMENT ON TABLE snapshot.lifecycle_version IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable compiled snapshots of lifecycle definitions. '
-    'document.workflow_instance pins to lifecycle_version_id — '
-    'in-flight workflows continue on the version active when they started. '
-    'advance_workflow_state() reads definition jsonb (one row, no joins). '
-    'Append-only: trg_lv_immutable blocks UPDATE and DELETE.';
-COMMENT ON COLUMN snapshot.lifecycle_version.definition IS
-    'Fully denormalised lifecycle definition. Structure: '
-    '{states:[{id,code,name,is_terminal,is_initial,sort_order,config}], '
-    'transitions:[{id,from,to,operation_code,is_active,config}], '
-    'hooks:[{id,timing,action,config,origin,contract_role,safety_level,sort_order}], '
-    'gates:{transition_id:{required_operations,conditions,threshold_rules}}, '
-    'timers:{state_code:{policy_code,rules:[...]}}}.';
+COMMENT ON TABLE "snapshot"."content_item_version" IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable body snapshot per content item version. UPDATE and DELETE blocked by snapshot.trg_content_item_version_immutable trigger. Pattern mirrors snapshot.template_version. checksum prevents saving an identical body under a new version number.';
 
+COMMENT ON COLUMN "snapshot"."content_item_version"."version" IS 'Monotonically increasing per (tenant_id, content_item_id). Starts at 1.';
 
--- =============================================================================
--- §2  snapshot.lifecycle_route — full compiled route map per lifecycle
--- =============================================================================
--- Pre-computed traversal graph: which states are reachable from each state.
--- Used by UI to visualise "what can happen next" and by navigation helpers.
--- Mutable: recompiled in-place (UNIQUE lifecycle_id) when definition changes.
+COMMENT ON COLUMN "snapshot"."content_item_version"."body_json" IS 'Rich-text document tree. Format declared in body_format.';
 
-CREATE TABLE IF NOT EXISTS snapshot.lifecycle_route (
-    -- Identity
-    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id       uuid        NOT NULL,
+COMMENT ON COLUMN "snapshot"."content_item_version"."body_format" IS 'Sealed: slate | prosemirror | html | markdown.';
 
-    -- Parent reference
-    lifecycle_id    uuid        NOT NULL,
+COMMENT ON COLUMN "snapshot"."content_item_version"."checksum" IS 'SHA-256 of body_json. Unique per (tenant, content_item) — prevents saving a duplicate body as a new version.';
 
-    -- Compiled route graph
-    -- {reachable_from: {state_code: [reachable_state_codes]},
-    --  shortest_paths: {from_code: {to_code: [path_codes]}},
-    --  terminal_states: [state_codes],
-    --  initial_state: state_code}
-    compiled_json   jsonb       NOT NULL,
-    compiled_hash   text        NOT NULL,
+CREATE TABLE "snapshot"."document_snapshot" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "entity_type" text NOT NULL,
+  "entity_id" uuid NOT NULL,
+  "document_code" text,
+  "version_number" integer DEFAULT 1 NOT NULL,
+  "gate_event" text NOT NULL,
+  "gate_event_kind" text NOT NULL,
+  "activity_log_id" uuid,
+  "header_json" jsonb NOT NULL,
+  "lines_json" jsonb,
+  "components_json" jsonb,
+  "distributions_json" jsonb,
+  "schedules_json" jsonb,
+  "related_json" jsonb,
+  "payload_hash" text NOT NULL,
+  "previous_snapshot_id" uuid,
+  "chain_seq" integer DEFAULT 1 NOT NULL,
+  "captured_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "captured_by" uuid NOT NULL,
+  "capture_source" text DEFAULT 'transition_hook'::text NOT NULL
+)
+PARTITION BY RANGE (captured_at);
 
-    -- Audit (append-only — recompiled by replace, no in-place UPDATE)
-    created_at      timestamptz NOT NULL DEFAULT now(),
-    created_by      uuid        NOT NULL,
+COMMENT ON TABLE "snapshot"."document_snapshot" IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_PARTITIONED. Generic P2P / approvable document snapshot. Captures full graph (header + lines + components + distributions + schedules + related) at lifecycle gate events. Append-only — UPDATE/DELETE blocked by snapshot.trg_document_snapshot_immutable. Partitioned by captured_at; default partition catches all until a range strategy is configured. Hash chain (previous_snapshot_id + chain_seq + payload_hash) enables tamper detection — verified by snapshot.fn_verify_chain().';
 
-    CONSTRAINT lr_pkey          PRIMARY KEY (id),
-    CONSTRAINT lr_lifecycle_uq  UNIQUE NULLS NOT DISTINCT (tenant_id, lifecycle_id),
-    CONSTRAINT lr_json_chk      CHECK (jsonb_typeof(compiled_json) = 'object'),
-    CONSTRAINT lr_hash_chk      CHECK (length(compiled_hash) >= 64)
+COMMENT ON COLUMN "snapshot"."document_snapshot"."entity_type" IS 'Polymorphic entity code — e.g. ''purchase_invoice'', ''commitment'', ''receipt'', ''service_sheet''.';
+
+COMMENT ON COLUMN "snapshot"."document_snapshot"."gate_event_kind" IS 'Sealed taxonomy: authoring_lock | commitment | fulfillment | financial_post | match_decision | amendment_baseline | reversal.';
+
+COMMENT ON COLUMN "snapshot"."document_snapshot"."activity_log_id" IS 'log.activity_log row that triggered this snapshot. NO FK — activity_log has composite PK (id, created_at) due to partitioning; we store the id alone and LEFT JOIN in views.';
+
+COMMENT ON COLUMN "snapshot"."document_snapshot"."payload_hash" IS 'SHA-256 hex of the canonical JSON payload (jsonb_to_text with sorted keys). Used by snapshot.fn_verify_chain() to detect tampering or storage corruption.';
+
+COMMENT ON COLUMN "snapshot"."document_snapshot"."previous_snapshot_id" IS 'Prior snapshot in this entity''s chain (NULL for the first snapshot). NOT a tenant-scoped FK — chains span partition boundaries and the PK includes captured_at.';
+
+CREATE TABLE "snapshot"."entity_compiled" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid,
+  "entity_version_id" uuid NOT NULL,
+  "artifact_kind" text DEFAULT 'execution'::text NOT NULL,
+  "compiled_json" jsonb NOT NULL,
+  "compiled_hash" text NOT NULL,
+  "compliance_report" jsonb DEFAULT '{}'::jsonb NOT NULL,
+  "compliance_score" numeric(5,2),
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL
 );
 
-COMMENT ON TABLE snapshot.lifecycle_route IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Pre-compiled full route graph for a lifecycle. '
-    'Used by UI to render ''what happens next'' state visualisation. '
-    'Recompiled by fn_lifecycle_child_changed when definition changes (replace, not in-place UPDATE — no updated_* columns). '
-    'UNIQUE(tenant_id, lifecycle_id) — one route map per lifecycle.';
+COMMENT ON TABLE "snapshot"."entity_compiled" IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Compiled entity artifact for catalog metadata or API execution. Append-only — trg_fn_ec_immutable blocks UPDATE/DELETE. One artifact per tenant scope, entity version, and artifact_kind. catalog includes every valid effective entity; execution is API-eligible only. compliance_score: 0–100 linting quality score.';
 
-
--- =============================================================================
--- §3  snapshot.status_route — simplified route for Pattern A/B entities
--- =============================================================================
--- One row per (tenant, entity_name). Flat allowed-transitions map.
--- Used by control.validate_status_transition() for O(1) status update validation.
--- Used by control.guard_terminal_immutability() to block edits on terminal records.
--- Used by control.guard_deletable_states() to block DELETE on non-draft records.
-
-CREATE TABLE IF NOT EXISTS snapshot.status_route (
-    -- Identity
-    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id       uuid        NOT NULL,
-    entity_name     text        NOT NULL,
-
-    -- Compiled route (flat map for O(1) lookups)
-    -- {allowed_transitions: {from_status: [to_statuses]},
-    --  terminal_states: [status_codes],
-    --  deletable_states: [status_codes],
-    --  initial_state: status_code,
-    --  all_states: [status_codes]}
-    compiled_json   jsonb       NOT NULL,
-    compiled_hash   text        NOT NULL,
-
-    -- Audit (mutable — recompiled in-place)
-    created_at      timestamptz NOT NULL DEFAULT now(),
-    created_by      uuid        NOT NULL,
-    updated_at      timestamptz,
-    updated_by      uuid,
-
-    CONSTRAINT sr_pkey      PRIMARY KEY (id),
-    CONSTRAINT sr_entity_uq UNIQUE (tenant_id, entity_name),
-    CONSTRAINT sr_entity_chk CHECK (btrim(entity_name) <> ''),
-    CONSTRAINT sr_json_chk  CHECK (jsonb_typeof(compiled_json) = 'object'),
-    CONSTRAINT sr_hash_chk  CHECK (length(compiled_hash) >= 64)
+CREATE TABLE "snapshot"."entity_compiled_overlay" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "entity_version_id" uuid NOT NULL,
+  "overlay_set" jsonb NOT NULL,
+  "overlay_hash" text NOT NULL,
+  "base_compiled_hash" text NOT NULL,
+  "compiled_json" jsonb NOT NULL,
+  "compiled_hash" text NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL
 );
 
-COMMENT ON TABLE snapshot.status_route IS
-    'ARCHETYPE=C;SCOPE=T. Mutable compiled cache — not a D-snapshot. Recompiled in-place. '
-    'Simplified compiled status transition map for Pattern A/B entities. '
-    'One row per (tenant, entity_name) — fastest possible lookup for status validation. '
-    'Read by control.validate_status_transition() on every entity status UPDATE. '
-    'Read by control.guard_terminal_immutability() to block field edits. '
-    'Read by control.guard_deletable_states() to block DELETE. '
-    'Recompiled by snapshot.compile_status_route() when lifecycle definition changes. '
-    'updated_at/updated_by: mutable (recompiled in-place, not appended).';
+COMMENT ON TABLE "snapshot"."entity_compiled_overlay" IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Compiled overlay delta for a specific entity version + overlay set. Append-only. Applied on top of snapshot.entity_compiled at serve time. overlay_set: jsonb array of overlay_ids included in this compilation.';
 
-
--- =============================================================================
--- §4  snapshot.entity_compiled — pre-compiled entity version snapshot
--- =============================================================================
--- Read-only after creation: compile function creates new rows, never updates.
--- Append-only: trg_fn_ec_immutable blocks UPDATE and DELETE.
-
-CREATE TABLE IF NOT EXISTS snapshot.entity_compiled (
-    -- Identity
-    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id           uuid,
-
-    -- Parent reference
-    entity_version_id   uuid        NOT NULL,
-
-    -- One table can hold both products during the compatibility period.
-    -- catalog = all valid entity metadata; execution = API descriptor.
-    artifact_kind       text        NOT NULL DEFAULT 'execution',
-
-    -- Compiled output
-    compiled_json       jsonb       NOT NULL,
-    compiled_hash       text        NOT NULL,
-
-    -- Compliance lint results
-    compliance_report   jsonb       NOT NULL DEFAULT '{}',
-    compliance_score    numeric(5,2),
-
-    -- Audit (append-only — no updated_at)
-    created_at          timestamptz NOT NULL DEFAULT now(),
-    created_by          uuid        NOT NULL,
-
-    CONSTRAINT ec_pkey          PRIMARY KEY (id),
-    CONSTRAINT ec_version_uq    UNIQUE NULLS NOT DISTINCT (tenant_id, entity_version_id, artifact_kind),
-    CONSTRAINT ec_artifact_kind_chk CHECK (artifact_kind IN ('catalog', 'execution')),
-    CONSTRAINT ec_hash_chk      CHECK (length(compiled_hash) >= 64),
-    CONSTRAINT ec_score_chk     CHECK (compliance_score IS NULL OR compliance_score BETWEEN 0 AND 100),
-    CONSTRAINT ec_json_chk      CHECK (jsonb_typeof(compiled_json) = 'object'),
-    CONSTRAINT ec_report_chk    CHECK (jsonb_typeof(compliance_report) = 'object')
+CREATE TABLE "snapshot"."entity_plane_compiled" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid,
+  "entity_version_id" uuid NOT NULL,
+  "plane_key" text NOT NULL,
+  "contract_hash" text NOT NULL,
+  "materialized_hash" text NOT NULL,
+  "compiled_json" jsonb NOT NULL,
+  "compiled_hash" text NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL
 );
 
-COMMENT ON TABLE snapshot.entity_compiled IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Compiled entity artifact for catalog metadata or API execution. '
-    'Append-only — trg_fn_ec_immutable blocks UPDATE/DELETE. '
-    'One artifact per tenant scope, entity version, and artifact_kind. '
-    'catalog includes every valid effective entity; execution is API-eligible only. '
-    'compliance_score: 0–100 linting quality score.';
+COMMENT ON TABLE "snapshot"."entity_plane_compiled" IS 'Immutable Admin, Neon and Mesh descriptor artifacts produced inside the metadata publication transaction.';
 
-
--- =============================================================================
--- §5  snapshot.entity_compiled_overlay — compiled overlay delta
--- =============================================================================
--- Diff applied to entity_compiled for a specific overlay set.
--- Enables overlay rendering without re-compiling the base snapshot.
--- Append-only.
-
-CREATE TABLE IF NOT EXISTS snapshot.entity_compiled_overlay (
-    -- Identity
-    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id           uuid        NOT NULL,
-
-    -- Parent reference
-    entity_version_id   uuid        NOT NULL,
-
-    -- Which overlays are included in this compilation
-    overlay_set         jsonb       NOT NULL,   -- [overlay_id, ...]
-    -- Content-addressed identity of the overlay set and its base artifact.
-    overlay_hash        text        NOT NULL,
-    base_compiled_hash  text        NOT NULL,
-
-    -- Compiled delta
-    compiled_json       jsonb       NOT NULL,
-    compiled_hash       text        NOT NULL,
-
-    -- Audit (append-only — no updated_at)
-    created_at          timestamptz NOT NULL DEFAULT now(),
-    created_by          uuid        NOT NULL,
-
-    CONSTRAINT eco_pkey     PRIMARY KEY (id),
-    CONSTRAINT eco_scope_uq  UNIQUE (tenant_id, entity_version_id, overlay_hash),
-    CONSTRAINT eco_hash_chk CHECK (length(compiled_hash) >= 64),
-    CONSTRAINT eco_overlay_hash_chk CHECK (length(overlay_hash) >= 64),
-    CONSTRAINT eco_base_hash_chk CHECK (length(base_compiled_hash) >= 64),
-    CONSTRAINT eco_set_chk  CHECK (jsonb_typeof(overlay_set) = 'array'),
-    CONSTRAINT eco_json_chk CHECK (jsonb_typeof(compiled_json) = 'object')
+CREATE TABLE "snapshot"."lifecycle_route" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "lifecycle_id" uuid NOT NULL,
+  "compiled_json" jsonb NOT NULL,
+  "compiled_hash" text NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL
 );
 
-COMMENT ON TABLE snapshot.entity_compiled_overlay IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Compiled overlay delta for a specific entity version + overlay set. '
-    'Append-only. Applied on top of snapshot.entity_compiled at serve time. '
-    'overlay_set: jsonb array of overlay_ids included in this compilation.';
+COMMENT ON TABLE "snapshot"."lifecycle_route" IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Pre-compiled full route graph for a lifecycle. Used by UI to render ''what happens next'' state visualisation. Recompiled by fn_lifecycle_child_changed when definition changes (replace, not in-place UPDATE — no updated_* columns). UNIQUE(tenant_id, lifecycle_id) — one route map per lifecycle.';
 
-
--- =============================================================================
--- §6  snapshot.template_version — immutable frozen template content per version
--- =============================================================================
--- Created once — UPDATE and DELETE blocked by trg_fn_template_version_immutable.
--- btree_gist extension required for the GiST temporal index (00_extensions).
-
-CREATE TABLE IF NOT EXISTS snapshot.template_version (
-    -- Identity
-    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id       uuid        NOT NULL,
-
-    -- Parent reference
-    template_id     uuid        NOT NULL,
-    version         integer     NOT NULL,
-
-    -- Content (at least one of html / json must be NOT NULL)
-    content_html    text,
-    content_json    jsonb,
-    header_html     text,
-    footer_html     text,
-    styles_css      text,
-
-    -- Schema & assets
-    variables_schema    jsonb,
-    assets_manifest     jsonb,
-
-    -- Integrity
-    checksum        text        NOT NULL,
-
-    -- Effective date window for "which version on date X?" queries
-    effective_from  date,
-    effective_to    date,
-
-    -- Audit (append-only — no updated_at)
-    created_at      timestamptz NOT NULL DEFAULT now(),
-    created_by      uuid        NOT NULL,
-
-    CONSTRAINT template_version_pkey         PRIMARY KEY (id),
-    CONSTRAINT template_version_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT template_version_checksum_uq  UNIQUE (tenant_id, template_id, checksum),
-    CONSTRAINT template_version_version_pos  CHECK (version >= 1),
-    CONSTRAINT template_version_has_content  CHECK (content_html IS NOT NULL OR content_json IS NOT NULL),
-    CONSTRAINT template_version_date_order   CHECK (
-        effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from),
-    CONSTRAINT template_version_checksum_chk CHECK (btrim(checksum) <> '')
-    -- Circular FK from master.template.current_version_id → 06_constraints/009_snapshot.sql
-    -- (DEFERRABLE INITIALLY DEFERRED)
+CREATE TABLE "snapshot"."lifecycle_version" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "lifecycle_id" uuid NOT NULL,
+  "version" integer NOT NULL,
+  "definition" jsonb NOT NULL,
+  "compiled_hash" text NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL
 );
 
-COMMENT ON TABLE snapshot.template_version IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable point-in-time snapshot of template content per version. '
-    'UPDATE and DELETE blocked by trg_fn_template_version_immutable trigger. '
-    'GiST temporal index supports ''which version was effective on date X?'' queries.';
-COMMENT ON COLUMN snapshot.template_version.checksum IS
-    'SHA-256 or similar hash of content. Unique per (tenant, template) — prevents '
-    'duplicate version content being published.';
-COMMENT ON COLUMN snapshot.template_version.variables_schema IS
-    'JSON Schema for template variables. Validated by fn_validate_variables_schema().';
+COMMENT ON TABLE "snapshot"."lifecycle_version" IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable compiled snapshots of lifecycle definitions. document.workflow_instance pins to lifecycle_version_id — in-flight workflows continue on the version active when they started. advance_workflow_state() reads definition jsonb (one row, no joins). Append-only: trg_lv_immutable blocks UPDATE and DELETE.';
 
+COMMENT ON COLUMN "snapshot"."lifecycle_version"."definition" IS 'Fully denormalised lifecycle definition. Structure: {states:[{id,code,name,is_terminal,is_initial,sort_order,config}], transitions:[{id,from,to,operation_code,is_active,config}], hooks:[{id,timing,action,config,origin,contract_role,safety_level,sort_order}], gates:{transition_id:{required_operations,conditions,threshold_rules}}, timers:{state_code:{policy_code,rules:[...]}}}.';
 
--- =============================================================================
--- §7  snapshot.content_item_version — immutable body snapshot per CMS content item
--- =============================================================================
--- One row per (tenant, content_item, version). Append-only.
--- checksum prevents saving an identical body as a new version number.
--- master.content_item.current_version_id points to the active row.
--- UPDATE and DELETE blocked by snapshot.trg_content_item_version_immutable (09_triggers/011_cms.sql).
--- FKs → 06_constraints/011_cms.sql
-
-CREATE TABLE IF NOT EXISTS snapshot.content_item_version (
-    -- Identity
-    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id           uuid        NOT NULL,
-
-    -- Parent reference
-    content_item_id     uuid        NOT NULL,
-    version             integer     NOT NULL,
-
-    -- Body
-    body_json           jsonb       NOT NULL,
-    body_format         text        NOT NULL DEFAULT 'slate',
-
-    -- Metadata
-    change_summary      text,
-    checksum            text        NOT NULL,
-
-    -- Audit (append-only — no updated_at)
-    created_at          timestamptz NOT NULL DEFAULT now(),
-    created_by          uuid        NOT NULL,
-
-    CONSTRAINT civ_pkey             PRIMARY KEY (id),
-    CONSTRAINT civ_tenant_id_uq     UNIQUE (tenant_id, id),
-    CONSTRAINT civ_version_uq       UNIQUE (tenant_id, content_item_id, version),
-    CONSTRAINT civ_checksum_uq      UNIQUE (tenant_id, content_item_id, checksum),
-    CONSTRAINT civ_version_pos      CHECK (version >= 1),
-    CONSTRAINT civ_checksum_chk     CHECK (btrim(checksum) <> ''),
-    CONSTRAINT civ_body_format_chk  CHECK (body_format IN ('slate','prosemirror','html','markdown'))
-    -- FKs (tenant, content_item, principal) → 06_constraints/011_cms.sql
-    -- Circular FK from master.content_item.current_version_id → 06_constraints/011_cms.sql
+CREATE TABLE "snapshot"."status_route" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "entity_name" text NOT NULL,
+  "compiled_json" jsonb NOT NULL,
+  "compiled_hash" text NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL,
+  "updated_at" timestamp with time zone,
+  "updated_by" uuid
 );
 
-COMMENT ON TABLE snapshot.content_item_version IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable body snapshot per content item version. '
-    'UPDATE and DELETE blocked by snapshot.trg_content_item_version_immutable trigger. '
-    'Pattern mirrors snapshot.template_version. '
-    'checksum prevents saving an identical body under a new version number.';
-COMMENT ON COLUMN snapshot.content_item_version.version IS
-    'Monotonically increasing per (tenant_id, content_item_id). Starts at 1.';
-COMMENT ON COLUMN snapshot.content_item_version.body_json IS
-    'Rich-text document tree. Format declared in body_format.';
-COMMENT ON COLUMN snapshot.content_item_version.body_format IS
-    'Sealed: slate | prosemirror | html | markdown.';
-COMMENT ON COLUMN snapshot.content_item_version.checksum IS
-    'SHA-256 of body_json. Unique per (tenant, content_item) — prevents '
-    'saving a duplicate body as a new version.';
+COMMENT ON TABLE "snapshot"."status_route" IS 'ARCHETYPE=C;SCOPE=T. Mutable compiled cache — not a D-snapshot. Recompiled in-place. Simplified compiled status transition map for Pattern A/B entities. One row per (tenant, entity_name) — fastest possible lookup for status validation. Read by control.validate_status_transition() on every entity status UPDATE. Read by control.guard_terminal_immutability() to block field edits. Read by control.guard_deletable_states() to block DELETE. Recompiled by snapshot.compile_status_route() when lifecycle definition changes. updated_at/updated_by: mutable (recompiled in-place, not appended).';
 
+CREATE TABLE "snapshot"."template_version" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "template_id" uuid NOT NULL,
+  "version" integer NOT NULL,
+  "content_html" text,
+  "content_json" jsonb,
+  "header_html" text,
+  "footer_html" text,
+  "styles_css" text,
+  "variables_schema" jsonb,
+  "assets_manifest" jsonb,
+  "checksum" text NOT NULL,
+  "effective_from" date,
+  "effective_to" date,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL
+);
 
--- =============================================================================
--- §8  snapshot.document_snapshot — generic P2P / approvable document snapshot
--- =============================================================================
--- Captures the full graph (header + lines + components + distributions +
--- schedules + related) at a lifecycle gate event. Powers point-in-time
--- audit, "what did this PI look like when it was approved?" queries,
--- amendment baselines, and hash-chain integrity verification.
---
--- Append-only: written by snapshot.fn_capture_full() from the snapshot.capture
--- hook action; UPDATE/DELETE blocked by snapshot.trg_document_snapshot_immutable.
--- Partitioned by captured_at (DEFAULT partition catches everything until a
--- range partition strategy lands — pattern mirrors log.activity_log).
---
--- gate_event_kind taxonomy (sealed):
---   authoring_lock      — draft → pending_approval (entity locks for review)
---   commitment          — approval / placement / acceptance
---   fulfillment         — receipt / service_sheet post
---   financial_post      — PI / payment post
---   match_decision      — three-way match resolved
---   amendment_baseline  — supersede / publish_revision
---   reversal            — posted → reversed
---
--- Chain integrity:
---   previous_snapshot_id + chain_seq + payload_hash form a hash chain per
---   (entity_type, entity_id). snapshot.fn_verify_chain() recomputes hashes
---   and asserts continuity.
+COMMENT ON TABLE "snapshot"."template_version" IS 'ARCHETYPE=D;SCOPE=T;SUBTYPE=SNAPSHOT. Immutable point-in-time snapshot of template content per version. UPDATE and DELETE blocked by trg_fn_template_version_immutable trigger. GiST temporal index supports ''which version was effective on date X?'' queries.';
 
-CREATE TABLE IF NOT EXISTS snapshot.document_snapshot (
-    -- Identity
-    id                      uuid          NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id               uuid          NOT NULL,
+COMMENT ON COLUMN "snapshot"."template_version"."variables_schema" IS 'JSON Schema for template variables. Validated by fn_validate_variables_schema().';
 
-    -- Subject (polymorphic)
-    entity_type             text          NOT NULL,        -- e.g. 'purchase_invoice'
-    entity_id               uuid          NOT NULL,
-    document_code           text,                          -- denormalised display code (invoice_number, etc.)
-    version_number          int           NOT NULL DEFAULT 1,
+COMMENT ON COLUMN "snapshot"."template_version"."checksum" IS 'SHA-256 or similar hash of content. Unique per (tenant, template) — prevents duplicate version content being published.';
 
-    -- Gate event context
-    gate_event              text          NOT NULL,        -- transition.event_code or 'manual'
-    gate_event_kind         text          NOT NULL,        -- sealed enum (see CHECK)
-    activity_log_id         uuid,                          -- no FK (activity_log is partitioned with composite PK)
-
-    -- Payload (full graph; NULL where the entity has no children of that kind)
-    header_json             jsonb         NOT NULL,
-    lines_json              jsonb,
-    components_json         jsonb,
-    distributions_json      jsonb,
-    schedules_json          jsonb,
-    related_json            jsonb,
-
-    -- Hash chain
-    payload_hash            text          NOT NULL,        -- sha256 hex of canonical payload
-    previous_snapshot_id    uuid,                          -- prior snapshot in this entity's chain
-    chain_seq               int           NOT NULL DEFAULT 1,
-
-    -- Capture audit (append-only — no updated_at)
-    captured_at             timestamptz   NOT NULL DEFAULT now(),
-    captured_by             uuid          NOT NULL,
-    capture_source          text          NOT NULL DEFAULT 'transition_hook',
-
-    CONSTRAINT ds_pkey              PRIMARY KEY (id, captured_at),
-    CONSTRAINT ds_tenant_id_uq      UNIQUE (tenant_id, id, captured_at),
-    CONSTRAINT ds_kind_chk          CHECK (gate_event_kind IN (
-        'authoring_lock','commitment','fulfillment','financial_post',
-        'match_decision','amendment_baseline','reversal')),
-    CONSTRAINT ds_capture_source_chk CHECK (capture_source IN (
-        'transition_hook','manual','reconcile','migration')),
-    CONSTRAINT ds_entity_type_chk   CHECK (btrim(entity_type) <> ''),
-    CONSTRAINT ds_hash_chk          CHECK (length(payload_hash) >= 64),
-    CONSTRAINT ds_chain_pos         CHECK (chain_seq >= 1),
-    CONSTRAINT ds_version_pos       CHECK (version_number >= 1),
-    CONSTRAINT ds_header_json_chk   CHECK (jsonb_typeof(header_json) = 'object'),
-    CONSTRAINT ds_no_self_prev      CHECK (previous_snapshot_id IS DISTINCT FROM id)
-) PARTITION BY RANGE (captured_at);
-
-CREATE TABLE IF NOT EXISTS snapshot.document_snapshot_default
-    PARTITION OF snapshot.document_snapshot DEFAULT;
-
-COMMENT ON TABLE snapshot.document_snapshot IS
-    'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY_PARTITIONED. Generic P2P / approvable document snapshot. '
-    'Captures full graph (header + lines + components + distributions + schedules + related) at lifecycle gate events. '
-    'Append-only — UPDATE/DELETE blocked by snapshot.trg_document_snapshot_immutable. '
-    'Partitioned by captured_at; default partition catches all until a range strategy is configured. '
-    'Hash chain (previous_snapshot_id + chain_seq + payload_hash) enables tamper detection — '
-    'verified by snapshot.fn_verify_chain().';
-
-COMMENT ON COLUMN snapshot.document_snapshot.entity_type IS
-    'Polymorphic entity code — e.g. ''purchase_invoice'', ''commitment'', ''receipt'', ''service_sheet''.';
-
-COMMENT ON COLUMN snapshot.document_snapshot.gate_event_kind IS
-    'Sealed taxonomy: authoring_lock | commitment | fulfillment | financial_post | '
-    'match_decision | amendment_baseline | reversal.';
-
-COMMENT ON COLUMN snapshot.document_snapshot.payload_hash IS
-    'SHA-256 hex of the canonical JSON payload (jsonb_to_text with sorted keys). '
-    'Used by snapshot.fn_verify_chain() to detect tampering or storage corruption.';
-
-COMMENT ON COLUMN snapshot.document_snapshot.previous_snapshot_id IS
-    'Prior snapshot in this entity''s chain (NULL for the first snapshot). '
-    'NOT a tenant-scoped FK — chains span partition boundaries and the PK includes captured_at.';
-
-COMMENT ON COLUMN snapshot.document_snapshot.activity_log_id IS
-    'log.activity_log row that triggered this snapshot. NO FK — activity_log has composite PK '
-    '(id, created_at) due to partitioning; we store the id alone and LEFT JOIN in views.';
+CREATE TABLE "snapshot"."document_snapshot_default"
+  PARTITION OF "snapshot"."document_snapshot"
+  DEFAULT;

@@ -35,7 +35,13 @@ export function createLogEnvelope(
   const trace = getTraceContext();
   return {
     ...input,
-    ...(trace ? { traceId: trace.traceId, spanId: trace.spanId, parentSpanId: trace.parentSpanId } : {}),
+    ...(trace
+      ? {
+          trace_id: trace.traceId,
+          span_id: trace.spanId,
+          parent_span_id: trace.parentSpanId,
+        }
+      : {}),
     ts: Date.now(),
   };
 }

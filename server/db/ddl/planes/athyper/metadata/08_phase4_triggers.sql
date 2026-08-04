@@ -1,0 +1,30 @@
+CREATE TRIGGER trg_entity_surface_operation_10_graph_guard BEFORE INSERT OR UPDATE OR DELETE ON metadata.entity_surface_operation FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row('entity_surface_id', 'placement_key');
+CREATE TRIGGER trg_entity_surface_operation_20_binding BEFORE INSERT OR UPDATE ON metadata.entity_surface_operation FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_phase4_binding();
+CREATE TRIGGER trg_entity_operation_rule_10_graph_guard BEFORE INSERT OR UPDATE OR DELETE ON metadata.entity_operation_rule FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row('entity_operation_id', 'rule_key');
+CREATE TRIGGER trg_entity_operation_rule_20_binding BEFORE INSERT OR UPDATE ON metadata.entity_operation_rule FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_phase4_binding();
+CREATE TRIGGER trg_entity_flow_10_graph_guard BEFORE INSERT OR UPDATE OR DELETE ON metadata.entity_flow FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row('flow_key');
+CREATE TRIGGER trg_entity_flow_20_binding BEFORE INSERT OR UPDATE ON metadata.entity_flow FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_phase4_binding();
+CREATE TRIGGER trg_entity_flow_step_10_graph_guard BEFORE INSERT OR UPDATE OR DELETE ON metadata.entity_flow_step FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row('entity_flow_id', 'step_key');
+CREATE TRIGGER trg_entity_flow_step_20_binding BEFORE INSERT OR UPDATE ON metadata.entity_flow_step FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_phase4_binding();
+CREATE TRIGGER trg_entity_policy_binding_10_graph_guard BEFORE INSERT OR UPDATE OR DELETE ON metadata.entity_policy_binding FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row('binding_key');
+CREATE TRIGGER trg_entity_policy_binding_20_binding BEFORE INSERT OR UPDATE ON metadata.entity_policy_binding FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_phase4_binding();
+CREATE TRIGGER trg_entity_field_policy_binding_10_graph_guard BEFORE INSERT OR UPDATE OR DELETE ON metadata.entity_field_policy_binding FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row('binding_key');
+CREATE TRIGGER trg_entity_field_policy_binding_20_binding BEFORE INSERT OR UPDATE ON metadata.entity_field_policy_binding FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_phase4_binding();
+CREATE TRIGGER trg_entity_contract_test_case_10_graph_guard BEFORE INSERT OR UPDATE OR DELETE ON metadata.entity_contract_test_case FOR EACH ROW EXECUTE FUNCTION metadata.trg_guard_entity_graph_row('test_key');
+CREATE TRIGGER trg_entity_contract_test_case_20_binding BEFORE INSERT OR UPDATE ON metadata.entity_contract_test_case FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_phase4_binding();
+
+CREATE TRIGGER trg_entity_surface_operation_90_updated_at BEFORE UPDATE ON metadata.entity_surface_operation FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_entity_operation_rule_90_updated_at BEFORE UPDATE ON metadata.entity_operation_rule FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_entity_flow_90_updated_at BEFORE UPDATE ON metadata.entity_flow FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_entity_flow_step_90_updated_at BEFORE UPDATE ON metadata.entity_flow_step FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_entity_policy_binding_90_updated_at BEFORE UPDATE ON metadata.entity_policy_binding FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_entity_field_policy_binding_90_updated_at BEFORE UPDATE ON metadata.entity_field_policy_binding FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_entity_contract_test_case_90_updated_at BEFORE UPDATE ON metadata.entity_contract_test_case FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE CONSTRAINT TRIGGER trg_entity_surface_operation_95_graph_validate AFTER INSERT OR UPDATE OR DELETE ON metadata.entity_surface_operation DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred();
+CREATE CONSTRAINT TRIGGER trg_entity_operation_rule_95_graph_validate AFTER INSERT OR UPDATE OR DELETE ON metadata.entity_operation_rule DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred();
+CREATE CONSTRAINT TRIGGER trg_entity_flow_95_graph_validate AFTER INSERT OR UPDATE OR DELETE ON metadata.entity_flow DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred();
+CREATE CONSTRAINT TRIGGER trg_entity_flow_step_95_graph_validate AFTER INSERT OR UPDATE OR DELETE ON metadata.entity_flow_step DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred();
+CREATE CONSTRAINT TRIGGER trg_entity_policy_binding_95_graph_validate AFTER INSERT OR UPDATE OR DELETE ON metadata.entity_policy_binding DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred();
+CREATE CONSTRAINT TRIGGER trg_entity_field_policy_binding_95_graph_validate AFTER INSERT OR UPDATE OR DELETE ON metadata.entity_field_policy_binding DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred();
+CREATE CONSTRAINT TRIGGER trg_entity_contract_test_case_95_graph_validate AFTER INSERT OR UPDATE OR DELETE ON metadata.entity_contract_test_case DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION metadata.trg_validate_entity_graph_deferred();

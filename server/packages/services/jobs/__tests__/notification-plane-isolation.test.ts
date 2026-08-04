@@ -36,4 +36,17 @@ describe("notification plane isolation guards", () => {
       }
     }
   });
+
+  it("derives background-writer identity from the physical plane database", () => {
+    const writers = [
+      "../handlers/wf-outbox.handler.ts",
+      "../handlers/p2p-notification-outbox.handler.ts",
+      "../workers/lifecycle-timer.worker.ts",
+      "../../business/lifecycle/notification-dispatch.service.ts",
+    ];
+
+    for (const writer of writers) {
+      expect(source(writer), writer).toContain("event.current_plane_key()");
+    }
+  });
 });

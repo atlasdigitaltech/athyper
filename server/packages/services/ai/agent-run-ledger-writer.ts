@@ -161,7 +161,7 @@ export class AgentRunLedgerWriter {
         );
       }
       await this.db
-        .insertInto("log.ai_agent_run")
+        .insertInto("ai.ai_agent_run")
         .values({
           id: runId,
           tenant_id: args.tenantId,
@@ -255,7 +255,7 @@ export class AgentCallLedgerWriter {
         );
       }
       await this.db
-        .insertInto("log.ai_agent_call")
+        .insertInto("ai.ai_agent_call")
         .values({
           id: callId,
           tenant_id: args.tenantId,

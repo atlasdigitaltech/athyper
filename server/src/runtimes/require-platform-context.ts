@@ -17,7 +17,7 @@
 //   middleware adds the route-aware checks.
 
 import type { Request, Response, NextFunction } from "express";
-import { sql, type Kysely } from "kysely";
+import type { Kysely } from "kysely";
 
 import { tryGetContext } from "../kernel/request-context.js";
 import {
@@ -276,23 +276,12 @@ async function resolveRuntimeMfaTrustPolicy(
   realmKey: string | undefined,
   providerAlias: string | null,
 ): Promise<TenantMfaTrustPolicy> {
-  if (!providerAlias || !tenantId || !plane) return "never";
-  try {
-    const result = await sql<{ mfa_trust_policy: TenantMfaTrustPolicy }>`
-      SELECT mfa_trust_policy
-      FROM master.tenant_identity_provider
-      WHERE tenant_id = ${tenantId}::uuid
-        AND keycloak_alias = ${providerAlias}
-        AND realm_key = ${realmKey ?? "athyper"}
-        AND enabled = true
-        AND ${plane} = ANY(allowed_planes)
-      LIMIT 1
-    `.execute(db);
-    const policy = result.rows[0]?.mfa_trust_policy;
-    return policy === "conditional" || policy === "trusted-assurance" ? policy : "never";
-  } catch {
-    // A missing/unavailable registry must not turn external identity evidence
-    // into authorization or trusted MFA.
-    return "never";
-  }
+  void db;
+  void tenantId;
+  void plane;
+  void realmKey;
+  void providerAlias;
+  // Provider trust is Keycloak-owned. Until a verified organization/provider
+  // attribute is carried in the token contract, external MFA is never trusted.
+  return "never";
 }

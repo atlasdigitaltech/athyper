@@ -1,0 +1,19 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "party-risk-defaults",
+  "packVersion": "2.0.0",
+  "packChecksum": "15faa88e521af95d4ee00eded9ff52ab4eb366a67e1c94de40c76cdbbf57b712",
+  "plane": "neon",
+  "tenantId": null,
+  "status": "retired-demo-fixture",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [
+    {"payload":"010_party_risk_universal.sql","status":"retired-no-op-passed-twice","rowCounts":{"productionRowsApplied":0}}
+  ],
+  "assertionResults": [
+    {"assertion":"production-reference-exclusion","status":"passed","evidence":"named counterparties, supplier/customer profiles, evidence, assessments, drivers, mitigations, and review scenarios were removed"},
+    {"assertion":"legacy-ddl-exclusion","status":"passed","evidence":"retirement payload contains no writes to master.business_partner or removed columns"},
+    {"assertion":"dependency-retirement","status":"passed","evidence":"industry-packs no longer depends on party-risk-defaults"},
+    {"assertion":"retirement-marker","status":"passed","evidence":"marker completed twice on disposable Neon and applied zero rows"}
+  ]
+}

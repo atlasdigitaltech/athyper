@@ -139,8 +139,15 @@ function contract(): MetaEntityContractV21 {
       }],
     }],
     operations: [{
-      id: uuid(20), operation_code: submitOperation, permission_code: "sample.submit",
+      id: uuid(20), operation_code: submitOperation, permission_code: "neon.sample.submit",
       surface: "BOTH", placement: "PRIMARY", plane_filter: ["neon", "admin"],
+      authorization: {
+        decision_mode: "entity_resource", missing_value_behavior: "deny",
+        bindings: [{
+          scope_kind: "tenant", coordinate_source: "tenant_context",
+          coordinate_key: null, resolver_key: null,
+        }],
+      },
       handler: { kind: "api", target: "flow:default_flow" },
       execution: { target: "lifecycle:submit", timeout_ms: null, idempotency_required: true },
       record_required: true, label: "Submit", icon: null, intent: "success",
@@ -581,6 +588,12 @@ describe("Contract v2.1 application service", () => {
     expect(published.versionStatus).toBe("EFFECTIVE");
     expect(repository.publishedArtifactPlanes).toEqual(["admin", "neon", "mesh"]);
     expect(published.artifacts?.map((artifact) => artifact.plane)).toEqual(["admin", "neon", "mesh"]);
+    expect(published.artifacts?.find((artifact) => artifact.plane === "neon")
+      ?.compiledJson["operation_scope_bindings"]).toEqual([
+        expect.objectContaining({ operationKey: "entity.submit", scopeKind: "tenant" }),
+      ]);
+    expect(published.artifacts?.find((artifact) => artifact.plane === "mesh")
+      ?.compiledJson["operation_scope_bindings"]).toEqual([]);
     expect(replay.noOp).toBe(true);
   });
 });

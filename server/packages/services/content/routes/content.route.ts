@@ -1,7 +1,7 @@
 /**
  * Content Service Routes — versioned CMS content + S3-backed attachments
  *
- * Content CRUD (master.content_item):
+ * Content CRUD (document.content_item):
  *   GET    /content/items                          — list (filters: kind, status, parent_id, locale_code)
  *   POST   /content/items                          — create item + first version atomically
  *   GET    /content/items/:id                      — header + current version body
@@ -16,35 +16,35 @@
  *   GET    /content/items/:id/versions/:versionId  — specific version body
  *   POST   /content/items/:id/versions/:versionId/restore — set current_version_id
  *
- * Content Links (master.content_item_link — immutable, delete to change):
+ * Content Links (document.content_item_link — immutable, delete to change):
  *   GET    /content/items/:id/links                — outbound links
  *   POST   /content/items/:id/links                — create link
  *   DELETE /content/links/:id                      — remove link
  *
- * Content Access Grants (master.content_item_access_grant):
+ * Content Access Grants (document.content_item_access_grant):
  *   GET    /content/items/:id/grants               — list grants
  *   POST   /content/items/:id/grants               — add grant
  *   DELETE /content/grants/:id                     — revoke grant
  *
- * Attachment CRUD (master.attachment + master.entity_document_link):
+ * Attachment CRUD (document.attachment + document.attachment_link):
  *   GET    /content/items/:id/attachments                              — list for content item
  *   POST   /content/items/:id/attachments                              — upload (JSON base64 body from relay)
  *   GET    /content/attachments/:id                                    — metadata
  *   GET    /content/attachments/:id/download                           — stream file from S3
  *   DELETE /content/items/:id/attachments/:attachmentId                — unlink / soft-delete
  *
- * Entity Links (master.entity_document_link — polymorphic):
+ * Entity Links (document.attachment_link — polymorphic):
  *   GET    /content/attachments/:id/links                              — list entity links for attachment
  *   POST   /content/attachments/:id/links                              — add cross-entity link
  *   DELETE /content/attachments/links/:linkId                          — remove specific link
  *   GET    /content/entities/:entityType/:entityId/attachments         — reverse: list attachments for entity
  *
- * Attachment ACL (master.attachment_acl):
+ * Attachment ACL (document.attachment_acl):
  *   GET    /content/attachments/:id/access                             — list grants
  *   POST   /content/attachments/:id/access                             — add grant (principal XOR role)
  *   DELETE /content/attachments/:id/access/:grantId                    — revoke grant
  *
- * Attachment Versioning (master.attachment — parent_attachment_id chain):
+ * Attachment Versioning (document.attachment — parent_attachment_id chain):
  *   GET    /content/attachments/:id/versions                           — list version chain (CTE)
  *   POST   /content/items/:id/attachments/:attachmentId/versions       — upload new version + relink
  *
@@ -243,8 +243,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
     : null;
   const maxUploadBytes = (objectStorage?.maxUploadMb ?? 100) * 1024 * 1024;
 
-  /** Canonical entity-type string used in master.entity_document_link for CMS content items. */
-  const CONTENT_ENTITY_TYPE = "master.content_item";
+  /** Canonical entity-type string used in document.attachment_link for CMS content items. */
+  const CONTENT_ENTITY_TYPE = "document.content_item";
 
   async function resolveCtx(req: Parameters<RequestHandler>[0], res: Parameters<RequestHandler>[1]) {
     const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -271,7 +271,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const q = req.query as Record<string, unknown>;
 
       let query = db
-        .selectFrom("master.content_item as ci" as never)
+        .selectFrom("document.content_item as ci" as never)
         .selectAll("ci" as never)
         .where("ci.tenant_id" as never, "=", c.tenantId as never)
         .orderBy("ci.created_at" as never, "desc")
@@ -331,7 +331,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (quotaRow?.["max_items"] != null) {
         const maxItems = Number(quotaRow["max_items"]);
         const countRow = await db
-          .selectFrom("master.content_item as ci" as never)
+          .selectFrom("document.content_item as ci" as never)
           .select(db.fn.count("ci.id" as never).as("cnt") as never)
           .where("ci.tenant_id" as never, "=", c.tenantId as never)
           .where("ci.kind" as never, "=", itemKind as never)
@@ -358,7 +358,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const item = await db.transaction().execute(async (trx) => {
         // Insert item without current_version_id (deferred FK allows NULL initially)
         const ci = await trx
-          .insertInto("master.content_item" as never)
+          .insertInto("document.content_item" as never)
           .values({
             tenant_id: c.tenantId, code: body["code"], title: body["title"],
             kind: body["kind"] ?? "page", parent_id: body["parentId"] ?? null,
@@ -383,7 +383,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
         // Update current_version_id — deferred FK is resolved on transaction commit
         const updated = await trx
-          .updateTable("master.content_item" as never)
+          .updateTable("document.content_item" as never)
           .set({ current_version_id: ver["id"] } as never)
           .where("id" as never, "=", ci["id"] as never)
           .returningAll()
@@ -414,7 +414,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const row = await (db.selectFrom("master.content_item as ci") as any)
+      const row = await (db.selectFrom("document.content_item as ci") as any)
         .leftJoin("snapshot.content_item_version as civ", "civ.id", "ci.current_version_id")
         .select([
           "ci.id", "ci.tenant_id", "ci.code", "ci.title", "ci.kind",
@@ -467,7 +467,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (body["parentId"] !== undefined) updates["parent_id"] = body["parentId"];
 
       const row = await db
-        .updateTable("master.content_item" as never)
+        .updateTable("document.content_item" as never)
         .set(updates as never)
         .where("id" as never, "=", id as never)
         .where("tenant_id" as never, "=", c.tenantId as never)
@@ -492,7 +492,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
         const id = req.params["id"] as string;
         if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
         const row = await db
-          .updateTable("master.content_item" as never)
+          .updateTable("document.content_item" as never)
           .set({ status: toStatus, status_changed_at: new Date(), status_changed_by: c.principalId, updated_at: new Date(), updated_by: c.principalId } as never)
           .where("id" as never, "=", id as never)
           .where("tenant_id" as never, "=", c.tenantId as never)
@@ -585,7 +585,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
         // Advance current_version_id on the header
         await trx
-          .updateTable("master.content_item" as never)
+          .updateTable("document.content_item" as never)
           .set({ current_version_id: ver["id"], updated_at: new Date(), updated_by: c.principalId } as never)
           .where("id" as never, "=", id as never)
           .where("tenant_id" as never, "=", c.tenantId as never)
@@ -661,7 +661,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (!ver) { res.status(404).json({ error: "VERSION_NOT_FOUND" }); return; }
 
       const row = await db
-        .updateTable("master.content_item" as never)
+        .updateTable("document.content_item" as never)
         .set({ current_version_id: versionId, updated_at: new Date(), updated_by: c.principalId } as never)
         .where("id" as never, "=", id as never)
         .where("tenant_id" as never, "=", c.tenantId as never)
@@ -690,7 +690,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const relationType = req.query["relationType"] as string | undefined;
 
       let q = db
-        .selectFrom("master.content_item_link as cil" as never)
+        .selectFrom("document.content_item_link as cil" as never)
         .selectAll("cil" as never)
         .where("cil.tenant_id" as never, "=", c.tenantId as never)
         .where("cil.source_content_item_id" as never, "=", id as never)
@@ -716,7 +716,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
         res.status(400).json({ error: "MISSING_FIELDS", message: "targetContentItemId (UUID) required" }); return;
       }
       const row = await db
-        .insertInto("master.content_item_link" as never)
+        .insertInto("document.content_item_link" as never)
         .values({
           tenant_id: c.tenantId, source_content_item_id: id,
           target_content_item_id: targetContentItemId,
@@ -737,7 +737,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const { id } = req.params;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const deleted = await db
-        .deleteFrom("master.content_item_link" as never)
+        .deleteFrom("document.content_item_link" as never)
         .where("id" as never, "=", id as never)
         .where("tenant_id" as never, "=", c.tenantId as never)
         .returningAll()
@@ -758,10 +758,10 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const { id } = req.params;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const rows = await db
-        .selectFrom("master.content_item_access_grant as ciag" as never)
+        .selectFrom("master.auth_record_acl as ciag" as never)
         .selectAll("ciag" as never)
         .where("ciag.tenant_id" as never, "=", c.tenantId as never)
-        .where("ciag.content_item_id" as never, "=", id as never)
+        .where("ciag.record_id" as never, "=", id as never)
         .execute() as Record<string, unknown>[];
       res.json({ ok: true, data: rows.map(toAccessGrant) });
     } catch (err) { logger?.error("content_list_grants_error", { err: String(err) }); next(err); }
@@ -777,13 +777,33 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (!subjectType || !accessLevel) {
         res.status(400).json({ error: "MISSING_FIELDS", message: "subjectType, accessLevel required" }); return;
       }
+      if (!["principal", "group"].includes(String(subjectType)) || !isUuid(String(subjectId ?? ""))) {
+        res.status(400).json({ error: "INVALID_SUBJECT", message: "A canonical principal or group UUID is required" }); return;
+      }
+      const permission = await sql<{ permission_id: string }>`
+        SELECT permission_id_v2::text AS permission_id
+        FROM control.entity_operation
+        WHERE entity_name = 'content_item'
+          AND operation_code_v2 = ${String(accessLevel)}
+          AND v2_publication_status = 'published'
+          AND permission_id_v2 IS NOT NULL
+        LIMIT 1
+      `.execute(db);
+      const permissionId = permission.rows[0]?.permission_id;
+      if (!permissionId) {
+        res.status(400).json({ error: "EXACT_PERMISSION_REQUIRED" }); return;
+      }
       const row = await db
-        .insertInto("master.content_item_access_grant" as never)
+        .insertInto("master.auth_record_acl" as never)
         .values({
-          tenant_id: c.tenantId, content_item_id: id,
-          subject_type: subjectType, subject_id: subjectId ?? null,
-          access_level: accessLevel, expires_at: expiresAt ?? null,
-          created_by: c.principalId,
+          tenant_id: c.tenantId, plane_code: "neon", record_id: id,
+          permission_id: permissionId,
+          entity_id: sql`(SELECT id FROM control.entity WHERE code = 'content_item' LIMIT 1)`,
+          subject_kind: subjectType === "principal" ? "principal" : "group",
+          ...(subjectType === "principal" ? { principal_id: subjectId } : { group_id: subjectId }),
+          reason: `content ${String(accessLevel)} access`,
+          status: "active", effective_until: expiresAt ?? null,
+          granted_by: c.principalId, created_by: c.principalId,
         } as never)
         .returningAll().executeTakeFirstOrThrow() as Record<string, unknown>;
       res.status(201).json({ ok: true, data: toAccessGrant(row) });
@@ -797,7 +817,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const { id } = req.params;
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
       const deleted = await db
-        .deleteFrom("master.content_item_access_grant" as never)
+        .updateTable("master.auth_record_acl" as never)
+        .set({ status: "revoked", revoked_by: c.principalId, revoked_at: new Date(), revocation_reason: "revoked by content API", updated_at: new Date(), updated_by: c.principalId } as never)
         .where("id" as never, "=", id as never)
         .where("tenant_id" as never, "=", c.tenantId as never)
         .returningAll()
@@ -810,8 +831,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
   // ══════════════════════════════════════════════════════════════════════════
   // ATTACHMENT CRUD
   //
-  // Attachments are stored in master.attachment (S3-backed) and linked to
-  // content items via master.entity_document_link (entity_type = CONTENT_ENTITY_TYPE).
+  // Attachments are stored in document.attachment (S3-backed) and linked to
+  // content items via document.attachment_link (entity_type = CONTENT_ENTITY_TYPE).
   //
   // Upload path (JSON base64, converted by /api/relay BFF from multipart):
   //   POST /content/items/:id/attachments   body: { filename, content_type?, size_bytes?, data_base64 }
@@ -1019,7 +1040,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const row = await db
-        .selectFrom("master.attachment as a" as never)
+        .selectFrom("document.attachment as a" as never)
         .selectAll("a" as never)
         .where("a.id" as never, "=", id as never)
         .where("a.tenant_id" as never, "=", c.tenantId as never)
@@ -1047,7 +1068,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
       // Resolve attachment directly (not via entity join) — tenant-scoped is sufficient
       const row = await db
-        .selectFrom("master.attachment as a" as never)
+        .selectFrom("document.attachment as a" as never)
         .select(["a.id", "a.file_name", "a.content_type", "a.size_bytes", "a.storage_key", "a.status"] as never[])
         .where("a.id" as never, "=", id as never)
         .where("a.tenant_id" as never, "=", c.tenantId as never)
@@ -1101,7 +1122,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
   });
 
   // ══════════════════════════════════════════════════════════════════════════
-  // ENTITY LINKS  (master.entity_document_link)
+  // ENTITY LINKS  (document.attachment_link)
   //
   // An attachment may be linked to multiple entities (polymorphic many-to-many).
   // These routes expose the link graph for a given attachment.
@@ -1118,7 +1139,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const { limit, offset } = parsePagination(req.query as Record<string, unknown>);
 
       const rows = await db
-        .selectFrom("master.entity_document_link as edl" as never)
+        .selectFrom("document.attachment_link as edl" as never)
         .selectAll("edl" as never)
         .where("edl.tenant_id" as never, "=", c.tenantId as never)
         .where("edl.attachment_id" as never, "=", id as never)
@@ -1154,7 +1175,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       const kind = validKinds.includes(String(linkKind)) ? String(linkKind) : "related";
 
       const row = await db
-        .insertInto("master.entity_document_link" as never)
+        .insertInto("document.attachment_link" as never)
         .values({
           tenant_id:     c.tenantId,
           entity_type:   String(entityType),
@@ -1187,7 +1208,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (!isUuid(linkId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const deleted = await db
-        .deleteFrom("master.entity_document_link" as never)
+        .deleteFrom("document.attachment_link" as never)
         .where("id" as never, "=", linkId as never)
         .where("tenant_id" as never, "=", c.tenantId as never)
         .returningAll()
@@ -1213,8 +1234,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = await (db as any)
-        .selectFrom("master.entity_document_link as edl")
-        .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+        .selectFrom("document.attachment_link as edl")
+        .innerJoin("document.attachment as a", "a.id", "edl.attachment_id")
         .select([
           "edl.id as link_id",
           "edl.link_kind",
@@ -1267,7 +1288,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
   });
 
   // ══════════════════════════════════════════════════════════════════════════
-  // ATTACHMENT ACL  (master.attachment_acl)
+  // ATTACHMENT ACL  (document.attachment_acl)
   //
   // File-level access grants: principal XOR role, sealed permission set.
   // Permission values: 'read' | 'download' | 'delete' | 'share'
@@ -1283,11 +1304,11 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const rows = await db
-        .selectFrom("master.attachment_acl as acl" as never)
+        .selectFrom("master.auth_record_acl as acl" as never)
         .selectAll("acl" as never)
         .where("acl.tenant_id" as never, "=", c.tenantId as never)
-        .where("acl.attachment_id" as never, "=", id as never)
-        .orderBy("acl.granted_at" as never, "desc")
+        .where("acl.record_id" as never, "=", id as never)
+        .orderBy("acl.effective_from" as never, "desc")
         .execute() as Record<string, unknown>[];
 
       res.json({ ok: true, data: rows.map(toAclGrant) });
@@ -1323,24 +1344,43 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (hasPrincipal && hasRole) {
         res.status(400).json({ error: "AMBIGUOUS_SUBJECT", message: "Provide principalId OR roleId, not both" }); return;
       }
+      if (isGranted === false) {
+        res.status(400).json({ error: "DENY_NOT_SUPPORTED_BY_RECORD_ACL", message: "Use a canonical deny rule" }); return;
+      }
+      const permissionRow = await sql<{ permission_id: string }>`
+        SELECT permission_id_v2::text AS permission_id
+        FROM control.entity_operation
+        WHERE entity_name = 'attachment'
+          AND operation_code_v2 = ${String(permission)}
+          AND v2_publication_status = 'published'
+          AND permission_id_v2 IS NOT NULL
+        LIMIT 1
+      `.execute(db);
+      const permissionId = permissionRow.rows[0]?.permission_id;
+      if (!permissionId) {
+        res.status(400).json({ error: "EXACT_PERMISSION_REQUIRED" }); return;
+      }
 
       const row = await db
-        .insertInto("master.attachment_acl" as never)
+        .insertInto("master.auth_record_acl" as never)
         .values({
           tenant_id:     c.tenantId,
-          attachment_id: id,
+          plane_code: "neon",
+          entity_id: sql`(SELECT id FROM control.entity WHERE code = 'attachment' LIMIT 1)`,
+          record_id: id,
+          permission_id: permissionId,
+          subject_kind: hasPrincipal ? "principal" : "group",
           ...(hasPrincipal ? { principal_id: String(principalId) } : {}),
-          ...(hasRole      ? { role_id:      String(roleId)      } : {}),
-          permission:    String(permission),
-          is_granted:    isGranted !== false,
+          ...(hasRole      ? { group_id:     String(roleId)      } : {}),
+          reason: `attachment ${String(permission)} access`,
+          status: "active",
           granted_by:    c.principalId,
-          granted_at:    new Date(),
-          ...(expiresAt ? { expires_at: expiresAt } : {}),
+          effective_from: new Date(),
+          ...(expiresAt ? { effective_until: expiresAt } : {}),
           created_by:    c.principalId,
         } as never)
         .returningAll()
         .executeTakeFirstOrThrow() as Record<string, unknown>;
-
       res.status(201).json({ ok: true, data: toAclGrant(row) });
     } catch (err) {
       logger?.error("content_create_acl_error", { err: String(err) });
@@ -1358,10 +1398,11 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       if (!isUuid(id) || !isUuid(grantId)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const deleted = await db
-        .deleteFrom("master.attachment_acl" as never)
+        .updateTable("master.auth_record_acl" as never)
+        .set({ status: "revoked", revoked_by: c.principalId, revoked_at: new Date(), revocation_reason: "revoked by content API", updated_at: new Date(), updated_by: c.principalId } as never)
         .where("id" as never, "=", grantId as never)
         .where("tenant_id" as never, "=", c.tenantId as never)
-        .where("attachment_id" as never, "=", id as never)
+        .where("record_id" as never, "=", id as never)
         .returningAll()
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
@@ -1374,7 +1415,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
   });
 
   // ══════════════════════════════════════════════════════════════════════════
-  // ATTACHMENT VERSIONING  (master.attachment — parent_attachment_id chain)
+  // ATTACHMENT VERSIONING  (document.attachment — parent_attachment_id chain)
   //
   // Version history is stored as a linked list: each new version row points
   // to its predecessor via parent_attachment_id; is_current marks the head.
@@ -1407,14 +1448,14 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
         WITH RECURSIVE ver AS (
           SELECT id, file_name, content_type, size_bytes, sha256,
                  version_no, parent_attachment_id, is_current, created_at, created_by
-          FROM master.attachment
+          FROM document.attachment
           WHERE id = ${id}::uuid
             AND tenant_id = ${c.tenantId}::uuid
             AND status != 'deleted'
           UNION ALL
           SELECT a.id, a.file_name, a.content_type, a.size_bytes, a.sha256,
                  a.version_no, a.parent_attachment_id, a.is_current, a.created_at, a.created_by
-          FROM master.attachment a
+          FROM document.attachment a
           JOIN ver ON a.id = ver.parent_attachment_id
           WHERE a.tenant_id = ${c.tenantId}::uuid
             AND a.status != 'deleted'
@@ -1448,7 +1489,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
   // ── POST /content/items/:id/attachments/:attachmentId/versions ───────────
   // Uploads a new version of an attachment.
-  // Creates a new master.attachment row (version_no + 1, parent_attachment_id = current),
+  // Creates a new document.attachment row (version_no + 1, parent_attachment_id = current),
   // marks the old row is_current = false, and relinks the entity_document_link.
   // Body: { filename, content_type?, size_bytes?, data_base64, changeSummary? }
 
@@ -1488,8 +1529,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       // Confirm current attachment belongs to this tenant and content item
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const current = await (db as any)
-        .selectFrom("master.entity_document_link as edl")
-        .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+        .selectFrom("document.attachment_link as edl")
+        .innerJoin("document.attachment as a", "a.id", "edl.attachment_id")
         .select(["a.id", "a.version_no", "a.storage_bucket", "edl.link_kind", "edl.display_order"])
         .where("edl.tenant_id", "=", c.tenantId)
         .where("edl.entity_type", "=", CONTENT_ENTITY_TYPE)
@@ -1516,7 +1557,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
         const newRow = await db.transaction().execute(async (trx) => {
           // Create new version row
           const inserted = await trx
-            .insertInto("master.attachment" as never)
+            .insertInto("document.attachment" as never)
             .values({
               id:                           newAttachmentId,
               tenant_id:                    c.tenantId,
@@ -1546,7 +1587,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
           // Mark old version as not current
           await trx
-            .updateTable("master.attachment" as never)
+            .updateTable("document.attachment" as never)
             .set({ is_current: false, updated_at: new Date(), updated_by: c.principalId } as never)
             .where("id" as never, "=", attachmentId as never)
             .where("tenant_id" as never, "=", c.tenantId as never)
@@ -1554,7 +1595,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
           // Relink entity to new attachment: remove old link, insert new one
           await trx
-            .deleteFrom("master.entity_document_link" as never)
+            .deleteFrom("document.attachment_link" as never)
             .where("tenant_id" as never, "=", c.tenantId as never)
             .where("entity_type" as never, "=", CONTENT_ENTITY_TYPE as never)
             .where("entity_id" as never, "=", itemId as never)
@@ -1562,7 +1603,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
             .execute();
 
           await trx
-            .insertInto("master.entity_document_link" as never)
+            .insertInto("document.attachment_link" as never)
             .values({
               tenant_id:     c.tenantId,
               entity_type:   CONTENT_ENTITY_TYPE,
@@ -1621,7 +1662,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       // Build base query with FTS rank
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let stmt: any = (db as any)
-        .selectFrom("master.content_item as ci")
+        .selectFrom("document.content_item as ci")
         .select([
           "ci.id",
           "ci.code",
@@ -1731,7 +1772,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
       // Aggregate current item counts per kind
       const counts = await db
-        .selectFrom("master.content_item as ci" as never)
+        .selectFrom("document.content_item as ci" as never)
         .select([
           "ci.kind" as never,
           db.fn.count("ci.id" as never).as("item_count") as never,
@@ -1868,7 +1909,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
   });
 
   // ══════════════════════════════════════════════════════════════════════════
-  // QUARANTINE ADMIN  (master.attachment WHERE status = 'quarantined')
+  // QUARANTINE ADMIN  (document.attachment WHERE status = 'quarantined')
   //
   // Admin-only routes for managing attachments flagged by ClamAV.
   // All routes require a valid bearer token (resolveCtx enforces auth).
@@ -1888,8 +1929,8 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rows = await (db as any)
-        .selectFrom("master.attachment as a")
-        .leftJoin("master.entity_document_link as edl", (join: any) =>
+        .selectFrom("document.attachment as a")
+        .leftJoin("document.attachment_link as edl", (join: any) =>
           join
             .onRef("edl.attachment_id", "=", "a.id")
             .on("edl.tenant_id",        "=", c.tenantId),
@@ -1951,7 +1992,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updated = await (db as any)
-        .updateTable("master.attachment")
+        .updateTable("document.attachment")
         .set({
           status:            "active",
           is_active:         true,
@@ -1995,7 +2036,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       // Fetch storage key before deletion (needed for S3 cleanup)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const row = await (db as any)
-        .selectFrom("master.attachment")
+        .selectFrom("document.attachment")
         .select(["id", "storage_key", "status"])
         .where("id",        "=", id)
         .where("tenant_id", "=", c.tenantId)
@@ -2007,7 +2048,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       // Remove all entity links
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (db as any)
-        .deleteFrom("master.entity_document_link")
+        .deleteFrom("document.attachment_link")
         .where("attachment_id", "=", id)
         .where("tenant_id",     "=", c.tenantId)
         .execute();
@@ -2015,7 +2056,7 @@ export function createContentRoutes(router: Router, deps: ContentRouteDeps): voi
       // Logical-delete in DB
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (db as any)
-        .updateTable("master.attachment")
+        .updateTable("document.attachment")
         .set({
           status:            "deleted",
           is_active:         false,

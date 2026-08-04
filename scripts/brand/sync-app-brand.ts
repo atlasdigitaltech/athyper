@@ -3,7 +3,7 @@
  * Sync generated brand assets into each Next app's public/brand folder.
  *
  * The app folders are deployment targets only. Edit assets in:
- *   packages/apps/{product}/brand/src/products/{product}/
+ *   packages/products/{product}/brand/src/products/{product}/
  *
  * Run:
  *   pnpm brand:sync:apps
@@ -43,9 +43,9 @@ type ProductCode = keyof typeof APP_TARGETS;
 type PublicAssetKey = keyof typeof PUBLIC_OUTPUT_FILES;
 
 const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  neon:  "packages/apps/neon/brand/src",
-  mesh:  "packages/apps/mesh/brand/src",
-  admin: "packages/apps/admin/brand/src",
+  neon:  "packages/products/neon/brand/src",
+  mesh:  "packages/products/mesh/brand/src",
+  admin: "packages/products/admin/brand/src",
 };
 
 interface BrandManifest {

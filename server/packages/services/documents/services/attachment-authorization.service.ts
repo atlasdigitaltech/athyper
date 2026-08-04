@@ -72,7 +72,7 @@ export async function authorizeAttachmentAccess(input: {
   // control.entity_operation is an action/mutation registry, not the source of
   // runtime read capability. Readable entities are already resolved through
   // control.entity.read_capability by the route, and every record read uses the
-  // canonical `read` permission granted through the persona permission chain.
+  // canonical `read` permission granted through canonical role/group authority.
   const parentPermission = parentAction === "read"
     ? "read"
     : await resolveEntityOperationPermission(input.db, input.entityCode, tenantId, parentAction);
@@ -97,15 +97,16 @@ export async function authorizeAttachmentAccess(input: {
 }
 
 async function resolveEntityOperationPermission(db: AnyDb, entityCode: string, tenantId: string, action: "read" | "update"): Promise<string | null> {
-  const tokens = action === "read" ? ["read", "view"] : ["update", "edit", "write", "save", "patch"];
   const rows = await db.selectFrom("control.entity_operation as eo")
-    .innerJoin("shared.permission as p", "p.code" as never, "eo.permission_code" as never)
-    .select(["eo.permission_code", "eo.is_enabled", "eo.tenant_id"] as never[])
+    .innerJoin("control.auth_permission as p", "p.id" as never, "eo.permission_id_v2" as never)
+    .select(["p.canonical_code as permission_code", "eo.is_enabled", "eo.tenant_id"] as never[])
     .where("eo.entity_name" as never, "=", entityCode as never)
-    .where("p.status" as never, "=", "active" as never)
+    .where("eo.operation_code_v2" as never, "=", action as never)
+    .where("eo.v2_publication_status" as never, "=", "published" as never)
+    .where("p.status" as never, "=", "published" as never)
     .where((eb: any) => eb.or([eb("eo.tenant_id" as never, "is" as never, null), eb("eo.tenant_id" as never, "=" as never, tenantId as never)]))
     .execute() as Array<{ permission_code: string; is_enabled: boolean; tenant_id: string | null }>;
-  const candidates = rows.filter((row) => row.is_enabled && tokens.some((token) => row.permission_code.toLowerCase().split(/[^a-z0-9]+/).includes(token)));
+  const candidates = rows.filter((row) => row.is_enabled);
   candidates.sort((a, b) => Number(b.tenant_id === tenantId) - Number(a.tenant_id === tenantId));
   return candidates[0]?.permission_code ?? null;
 }

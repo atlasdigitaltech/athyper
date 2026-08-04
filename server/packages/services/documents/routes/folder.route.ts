@@ -67,7 +67,7 @@ export function registerFolderRoutes(router: Router, deps: FolderRouteDeps): voi
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
       const rows = await db
-        .selectFrom("master.attachment_folder as f")
+        .selectFrom("document.attachment_folder as f")
         .select(["f.id", "f.name", "f.parent_id", "f.display_order", "f.created_at"])
         .where("f.tenant_id",   "=", tenantId)
         .where("f.entity_type", "=", entity.name as string)
@@ -119,7 +119,7 @@ export function registerFolderRoutes(router: Router, deps: FolderRouteDeps): voi
       const folderId    = crypto.randomUUID();
 
       await db
-        .insertInto("master.attachment_folder" as never)
+        .insertInto("document.attachment_folder" as never)
         .values({
           id:          folderId,
           tenant_id:   tenantId,
@@ -164,7 +164,7 @@ export function registerFolderRoutes(router: Router, deps: FolderRouteDeps): voi
       const principalId = await resolvePrincipalId(db, sub, tenantId, xRealm);
 
       await db
-        .updateTable("master.attachment_folder" as never)
+        .updateTable("document.attachment_folder" as never)
         .set({ name, updated_at: new Date(), updated_by: principalId } as never)
         .where("id"          as never, "=", folderId              as never)
         .where("tenant_id"   as never, "=", tenantId              as never)
@@ -198,7 +198,7 @@ export function registerFolderRoutes(router: Router, deps: FolderRouteDeps): voi
       if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
 
       await db
-        .deleteFrom("master.attachment_folder" as never)
+        .deleteFrom("document.attachment_folder" as never)
         .where("id"          as never, "=", folderId              as never)
         .where("tenant_id"   as never, "=", tenantId              as never)
         .where("entity_type" as never, "=", entity.name as never)
@@ -239,7 +239,7 @@ export function registerFolderRoutes(router: Router, deps: FolderRouteDeps): voi
       }
 
       await db
-        .updateTable("master.entity_document_link" as never)
+        .updateTable("document.attachment_link" as never)
         .set({ folder_id: folderId } as never)
         .where("tenant_id"     as never, "=", tenantId      as never)
         .where("entity_type"   as never, "=", entity.name as never)

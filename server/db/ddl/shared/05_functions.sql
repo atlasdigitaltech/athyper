@@ -365,31 +365,6 @@ $$;
 
 -- [D] Persona protection — blocks deletion/structural mutation of system personas
 
-CREATE OR REPLACE FUNCTION shared.trg_protect_system_persona() RETURNS trigger
-    LANGUAGE plpgsql
-    SET search_path = shared
-AS $$
-begin
-  if tg_op = 'DELETE' then
-    if old.is_system = true then
-      raise exception 'Cannot delete system persona: %', old.code using errcode = 'restrict_violation';
-    end if;
-    return old;
-  end if;
-
-  if tg_op = 'UPDATE' and old.is_system = true then
-    if old.code       is distinct from new.code
-    or old.scope_mode is distinct from new.scope_mode
-    or old.priority   is distinct from new.priority
-    or old.is_system  is distinct from new.is_system then
-      raise exception 'Cannot modify structural fields of system persona: %', old.code using errcode = 'restrict_violation';
-    end if;
-  end if;
-
-  return new;
-end;
-$$;
-
 -- [E] Tenant context
 -- shared.current_tenant_id() — defined in 05_pre_constraint_functions/001_shared.sql.
 

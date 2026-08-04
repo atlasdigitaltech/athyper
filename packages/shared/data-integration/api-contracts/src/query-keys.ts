@@ -304,7 +304,6 @@ export const queryKeys = {
     // admin tier
     workspaces:           (opts?: Record<string, unknown>) => ["ref", "workspaces",           opts ?? {}] as const,
     modules:              (opts?: Record<string, unknown>) => ["ref", "modules",              opts ?? {}] as const,
-    personas:             (opts?: Record<string, unknown>) => ["ref", "personas",             opts ?? {}] as const,
     permissionCategories: (opts?: Record<string, unknown>) => ["ref", "permission-categories", opts ?? {}] as const,
     permissions:          (opts?: Record<string, unknown>) => ["ref", "permissions",          opts ?? {}] as const,
     roles:                (opts?: Record<string, unknown>) => ["ref", "roles",                opts ?? {}] as const,

@@ -18,7 +18,7 @@ credential.
 
 ## Schema prerequisite
 
-Phase 1 introduces `log.ai_agent_run` and `log.ai_agent_call` as new tables and
+Phase 1 introduces `ai.ai_agent_run` and `ai.ai_agent_call` as new tables and
 currently supports clean provisioning only. Before applying the DDL, confirm
 that neither table exists in the target database. If an earlier draft was
 provisioned, reset only a disposable developer database or stop and create a
@@ -73,8 +73,8 @@ Before enabling a tenant, confirm:
 5. The requested public model resolves to the same binding in the catalog and
    run paths.
 6. A test run records separate requested public model, binding, provider, and
-   actual upstream model values in `log.ai_agent_run` and
-   `log.ai_agent_call`.
+   actual upstream model values in `ai.ai_agent_run` and
+   `ai.ai_agent_call`.
 7. A denied principal and a disabled tenant produce no provider-call ledger
    row.
 8. The Neon panel retains the financial-information verification warning and
@@ -114,7 +114,7 @@ Initial incident questions:
 1. Set `ATLAS_AGENT_ENABLED=false` in the server runtime configuration.
 2. Deploy/restart the API service through the standard environment process.
 3. Verify both model and run endpoints fail closed.
-4. Verify no new `log.ai_agent_call` records appear after the cutoff.
+4. Verify no new `ai.ai_agent_call` records appear after the cutoff.
 5. Keep existing append-only run/call records for reconciliation.
 6. Record the incident window, configuration revision, and last accepted run.
 

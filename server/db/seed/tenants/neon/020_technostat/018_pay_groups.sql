@@ -20,7 +20,7 @@
 
 DO $tksa_pay_groups$
 DECLARE
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_su   uuid;
     v_tid  uuid;
 
     v_cc_tksa  uuid;  v_le_tksa  uuid;
@@ -36,21 +36,25 @@ BEGIN
     IF v_tid IS NULL THEN
         RAISE EXCEPTION '[018_pay_groups] Technostat tenant not found';
     END IF;
+    SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    IF v_su IS NULL THEN
+        RAISE EXCEPTION '[018_pay_groups] Tenant created_by missing for %', v_tid;
+    END IF;
 
     PERFORM set_config('app.current_principal_id', v_su::text, true);
 
     -- ── company codes & their legal entities ──────────────────────────────────
     SELECT cc.id, cc.legal_entity_id INTO v_cc_tksa, v_le_tksa
-    FROM master.company_code cc WHERE cc.tenant_id = v_tid AND cc.code = 'TKSA';
+    FROM master.company_code cc WHERE cc.tenant_id = v_tid AND lower(cc.code) = 'tksa';
 
     SELECT cc.id, cc.legal_entity_id INTO v_cc_ssk, v_le_ssk
-    FROM master.company_code cc WHERE cc.tenant_id = v_tid AND cc.code = 'SSK';
+    FROM master.company_code cc WHERE cc.tenant_id = v_tid AND lower(cc.code) = 'ssk';
 
     SELECT cc.id, cc.legal_entity_id INTO v_cc_tegy, v_le_tegy
-    FROM master.company_code cc WHERE cc.tenant_id = v_tid AND cc.code = 'TEGY';
+    FROM master.company_code cc WHERE cc.tenant_id = v_tid AND lower(cc.code) = 'tegy';
 
     SELECT cc.id, cc.legal_entity_id INTO v_cc_sdtx, v_le_sdtx
-    FROM master.company_code cc WHERE cc.tenant_id = v_tid AND cc.code = 'SDTX';
+    FROM master.company_code cc WHERE cc.tenant_id = v_tid AND lower(cc.code) = 'sdtx';
 
     -- ── TKSA — Technostat Group KSA (SAR · monthly) ───────────────────────────
     INSERT INTO master.pay_group (

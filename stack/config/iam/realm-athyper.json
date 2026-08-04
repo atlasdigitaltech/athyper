@@ -73,9 +73,6 @@
           "gate": [
             "plane"
           ],
-          "persona": [
-            "partner"
-          ],
           "principal_type": [
             "human_user"
           ]
@@ -127,9 +124,6 @@
           ],
           "gate": [
             "plane"
-          ],
-          "persona": [
-            "buyer"
           ],
           "principal_type": [
             "human_user"
@@ -2511,23 +2505,6 @@
           }
         },
         {
-          "id": "55a86041-b45c-4011-91e6-939c48833603",
-          "name": "persona",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "aggregate.attrs": "true",
-            "userinfo.token.claim": "true",
-            "multivalued": "true",
-            "user.attribute": "persona",
-            "id.token.claim": "true",
-            "access.token.claim": "false",
-            "claim.name": "athyper.persona",
-            "jsonType.label": "String"
-          }
-        },
-        {
           "id": "7f7fdf45-4758-47ed-a820-f3858a25978c",
           "name": "tenant_admin_surface",
           "protocol": "openid-connect",
@@ -2600,7 +2577,7 @@
     {
       "id": "a0e1f3f4-f586-4a7c-bee1-5bebb1dc7b21",
       "name": "athyper-admin-plane",
-      "description": "Admin plane, tenant, persona, and delegation claims consumed by the BFF.",
+      "description": "Admin plane, tenant, group, and delegation claims consumed by the BFF.",
       "protocol": "openid-connect",
       "attributes": {
         "include.in.token.scope": "true",
@@ -2693,23 +2670,6 @@
           }
         },
         {
-          "id": "a0a86041-b45c-4011-91e6-939c48833603",
-          "name": "persona",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "aggregate.attrs": "true",
-            "userinfo.token.claim": "true",
-            "multivalued": "true",
-            "user.attribute": "persona",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "athyper.persona",
-            "jsonType.label": "String"
-          }
-        },
-        {
           "id": "a07fdf45-4758-47ed-a820-f3858a25978c",
           "name": "tenant_admin_surface",
           "protocol": "openid-connect",
@@ -2782,7 +2742,7 @@
     {
       "id": "b0e1f3f4-f586-4a7c-bee1-5bebb1dc7b21",
       "name": "athyper-mesh-plane",
-      "description": "Mesh plane, tenant, persona, and delegation claims consumed by the BFF.",
+      "description": "Mesh plane, tenant, group, and delegation claims consumed by the BFF.",
       "protocol": "openid-connect",
       "attributes": {
         "include.in.token.scope": "true",
@@ -2871,23 +2831,6 @@
             "id.token.claim": "true",
             "access.token.claim": "true",
             "claim.name": "athyper.principal_type",
-            "jsonType.label": "String"
-          }
-        },
-        {
-          "id": "b0a86041-b45c-4011-91e6-939c48833603",
-          "name": "persona",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-attribute-mapper",
-          "consentRequired": false,
-          "config": {
-            "aggregate.attrs": "true",
-            "userinfo.token.claim": "true",
-            "multivalued": "true",
-            "user.attribute": "persona",
-            "id.token.claim": "true",
-            "access.token.claim": "true",
-            "claim.name": "athyper.persona",
             "jsonType.label": "String"
           }
         },

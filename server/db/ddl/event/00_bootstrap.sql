@@ -1,6 +1,5 @@
 -- ============================================================================
 -- event/00_bootstrap.sql
--- Concept: Event Bootstrap — no pre-table functions required for this schema
--- Depends on: 01_schemas/001_schemas.sql
--- Note: No bootstrap functions required for the event schema.
+-- Pre-table schema types and sequences.
+-- Generated from the live Neon database event schema. Do not hand-edit.
 -- ============================================================================

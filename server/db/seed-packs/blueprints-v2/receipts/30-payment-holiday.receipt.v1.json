@@ -1,0 +1,20 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "payment-holiday",
+  "packVersion": "2.0.0",
+  "packChecksum": "6e1138cb613495b5d54c11aa956332c3c8195e0732d825a5f45d67390c6f0065",
+  "plane": "neon",
+  "tenantId": "f5000000-0000-0000-0000-000000000001",
+  "status": "validated-disposable-neon",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [
+    {"payload":"340_holiday_calendars.sql","status":"passed-twice","rowCounts":{"calendars":15,"holidayDays":287}},
+    {"payload":"341_payment_terms.sql","status":"passed-twice","rowCounts":{"paymentTerms":28,"clauses":16,"discountTiers":4}}
+  ],
+  "assertionResults": [
+    {"assertion":"natural-key-convergence","status":"passed","evidence":"calendar days converge by tenant, calendar, and holiday date"},
+    {"assertion":"historical-preservation","status":"passed","evidence":"undeclared historical calendar days are not deleted"},
+    {"assertion":"idempotent-convergence","status":"passed","evidence":"second pass retained 15 calendars, 287 seed-owned days, 28 terms, 16 immutable clauses, and 4 immutable tiers"},
+    {"assertion":"immutable-child-contract","status":"passed","evidence":"completed payment-term child sets are skipped on convergence; structural changes require a new term code/version"}
+  ]
+}

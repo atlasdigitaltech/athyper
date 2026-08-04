@@ -122,7 +122,7 @@ interface ActivityEntryOut {
   created_at:    string;
 }
 
-interface PersonaRow {
+interface ActorRow {
   principal_id:  string;
   display_name:  string | null;
 }
@@ -404,15 +404,15 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
       }
 
       const actorIds = [...new Set(rows.map((r) => r.actor_id).filter(Boolean))] as string[];
-      const personas: PersonaRow[] = actorIds.length > 0
+      const actors: ActorRow[] = actorIds.length > 0
         ? await db
             .selectFrom("master.principal_profile as pe")
             .select(["pe.principal_id", "pe.display_name"] as never[])
             .where("pe.principal_id" as never, "in", actorIds as never)
-            .execute() as PersonaRow[]
+            .execute() as ActorRow[]
         : [];
 
-      const personaMap = new Map(personas.map((p) => [p.principal_id, p.display_name]));
+      const actorMap = new Map(actors.map((p) => [p.principal_id, p.display_name]));
 
       const data = rows.map((row) => ({
         id:            row.id,
@@ -420,7 +420,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
           ? row.domain : "system") as "document" | "workflow" | "accounting" | "payment" | "system",
         activity_type: row.activity_type,
         description:   `${row.entity_type.replace(/_/g, " ")}: ${describeActivity(row)}`,
-        actor_name:    row.actor_id ? (personaMap.get(row.actor_id) ?? null) : null,
+        actor_name:    row.actor_id ? (actorMap.get(row.actor_id) ?? null) : null,
         from_state:    (row.detail as Record<string, unknown> | null)?.["from_state"] as string | null ?? null,
         to_state:      (row.detail as Record<string, unknown> | null)?.["to_state"]   as string | null ?? null,
         detail:        (row.detail as Record<string, unknown> | null) ?? null,
@@ -767,15 +767,15 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
         journalEntryRow?.updated_by,
         journalEntryRow?.posted_by,
       ].filter(Boolean))] as string[];
-      const personas: PersonaRow[] = actorIds.length > 0
+      const actors: ActorRow[] = actorIds.length > 0
         ? await db
             .selectFrom("master.principal_profile as pe")
             .select(["pe.principal_id", "pe.display_name"] as never[])
             .where("pe.principal_id" as never, "in", actorIds as never)
-            .execute() as PersonaRow[]
+            .execute() as ActorRow[]
         : [];
 
-      const personaMap = new Map(personas.map((p) => [p.principal_id, p.display_name]));
+      const actorMap = new Map(actors.map((p) => [p.principal_id, p.display_name]));
 
       // ── Map to ActivityEntry ──────────────────────────────────────────────────
       const activityEntries: ActivityEntryOut[] = rows.map((row) => {
@@ -786,7 +786,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
             ? row.domain : "system") as "document" | "workflow" | "accounting" | "payment" | "system",
           activity_type: row.activity_type,
           description:   describeActivity(row),
-          actor_name:    row.actor_id ? (personaMap.get(row.actor_id) ?? null) : null,
+          actor_name:    row.actor_id ? (actorMap.get(row.actor_id) ?? null) : null,
           from_state:    detail?.["from_state"] as string | null ?? null,
           to_state:      detail?.["to_state"] as string | null ?? null,
           detail,
@@ -802,7 +802,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
           domain:        domainFromActivityType(activityType),
           activity_type: activityType,
           description:   describeLifecycleActivity(row),
-          actor_name:    row.actor_id ? (personaMap.get(row.actor_id) ?? null) : null,
+          actor_name:    row.actor_id ? (actorMap.get(row.actor_id) ?? null) : null,
           from_state:    row.from_status,
           to_state:      row.to_status,
           detail:        {
@@ -824,7 +824,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
           domain:        "workflow",
           activity_type: activityType,
           description:   describeWorkflowActivity(row),
-          actor_name:    row.actor_id ? (personaMap.get(row.actor_id) ?? null) : null,
+          actor_name:    row.actor_id ? (actorMap.get(row.actor_id) ?? null) : null,
           from_state:    row.from_status,
           to_state:      row.to_status,
           detail:        {
@@ -854,7 +854,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
           domain:        domainFromActivityType(activityType),
           activity_type: activityType,
           description:   describeAuditActivity(row, oldValues, newValues),
-          actor_name:    row.actor_id ? (personaMap.get(row.actor_id) ?? null) : null,
+          actor_name:    row.actor_id ? (actorMap.get(row.actor_id) ?? null) : null,
           from_state:    null,
           to_state:      null,
           detail:        {
@@ -883,7 +883,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
             domain:        "document",
             activity_type: "document.created",
             description:   "Journal entry draft created",
-            actor_name:    journalEntryRow.created_by ? (personaMap.get(journalEntryRow.created_by) ?? null) : null,
+            actor_name:    journalEntryRow.created_by ? (actorMap.get(journalEntryRow.created_by) ?? null) : null,
             from_state:    null,
             to_state:      "draft",
             detail:        {
@@ -919,7 +919,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
               domain:        domainFromActivityType(activityType),
               activity_type: activityType,
               description:   descriptionForJournalStatus(journalEntryRow.status),
-              actor_name:    actorId ? (personaMap.get(actorId) ?? null) : null,
+              actor_name:    actorId ? (actorMap.get(actorId) ?? null) : null,
               from_state:    "draft",
               to_state:      journalEntryRow.status,
               detail:        {

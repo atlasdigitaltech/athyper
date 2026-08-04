@@ -181,6 +181,8 @@ export interface CompiledMetaEntityFieldInput {
 export interface EntityOperationInput {
   id?: string;
   entity_name?: string;
+  operation_code?: string;
+  operationCode?: string;
   permission_code?: string;
   permissionCode?: string;
   surface?: string;
@@ -305,11 +307,10 @@ export interface MetaEntityCompileOptions {
   descriptorHash?: string;
   /**
    * Optional permission-code alias map (alias_code → canonical_code) from
-   * control.permission_alias. When provided, hasOperation() treats alias
+   * Exact operation codes are required for capability projection.
    * codes on entity_operation rows as equivalent to their canonical form.
    * Empty/missing map falls back to the legacy token-matching heuristic.
    */
-  permissionAliasMap?: Record<string, string>;
   relationCapabilities?: Record<string, {
     canCreate: boolean;
     canEdit: boolean;
@@ -362,7 +363,6 @@ interface ResolutionContext {
   flows: EntityFlowInput[];
   renderer: MetaEntityRenderer;
   lifecycleStateMasks: MetaEntityLifecycleStateMask[];
-  permissionAliasMap: Record<string, string>;
 }
 
 export function compileMetaEntityRuntimeDescriptor(
@@ -480,7 +480,6 @@ export function compileMetaEntityRuntimeDescriptor(
     flows: options.flows ?? [],
     renderer,
     lifecycleStateMasks: [...maskByStatus.values()],
-    permissionAliasMap: options.permissionAliasMap ?? {},
   };
 
   const capabilities = resolveCapabilities(context);
@@ -702,7 +701,6 @@ function resolveCapabilities(context: ResolutionContext): MetaEntityCapabilities
     lifecycle,
     workflow,
     renderer,
-    permissionAliasMap,
   } = context;
 
   const hardDeleteEnabled = readBoolean(featureFlags, "generic_hard_delete_enabled")
@@ -728,15 +726,15 @@ function resolveCapabilities(context: ResolutionContext): MetaEntityCapabilities
   // Each gate carries a stable DisabledReason so the UI can surface it.
   const { allow: canCreate, reason: canCreateReason } = resolveCrudCapability({
     canRead, readOnly, hidden, accessMode: policy.accessMode,
-    operations, permissionAliasMap, action: "create",
+    operations, action: "create",
   });
   const { allow: canEdit, reason: canEditReason } = resolveCrudCapability({
     canRead, readOnly, hidden, accessMode: policy.accessMode,
-    operations, permissionAliasMap, action: "edit",
+    operations, action: "edit",
   });
   const { allow: canDelete, reason: canDeleteReason } = resolveCrudCapability({
     canRead, readOnly, hidden, accessMode: policy.accessMode,
-    operations, permissionAliasMap, action: "delete",
+    operations, action: "delete",
     extraGate: compiledDeletionMode
       ? compiledDeleteEnabled ? null : { reason: "lifecycle_locked" }
       : hardDeleteEnabled ? null : { reason: "hard_delete_disabled" },
@@ -784,7 +782,6 @@ interface CrudCapabilityInput {
   hidden: boolean;
   accessMode: MetaEntityPolicySummary["accessMode"];
   operations: MetaEntityOperation[];
-  permissionAliasMap: Record<string, string>;
   action: "create" | "edit" | "delete";
   /** Extra gate for capability-specific guards (e.g. delete needs hardDelete). */
   extraGate?: { reason: DisabledReason } | null;
@@ -799,7 +796,7 @@ function resolveCrudCapability(input: CrudCapabilityInput): {
   if (!input.canRead) return { allow: false, reason: "default_deny_policy" };
   if (input.readOnly) return { allow: false, reason: "entity_readonly" };
   if (input.extraGate) return { allow: false, reason: input.extraGate.reason };
-  if (!hasOperation(input.operations, input.action, input.permissionAliasMap)) {
+  if (!hasOperation(input.operations, input.action)) {
     return { allow: false, reason: "missing_permission" };
   }
   return { allow: true, reason: null };
@@ -1550,11 +1547,12 @@ function normalizeOperations(operations: EntityOperationInput[]): MetaEntityOper
   return operations
     .map((operation, index): MetaEntityOperation => {
       const permissionCode = operation.permission_code ?? operation.permissionCode ?? operation.id ?? `operation_${index}`;
+      const operationCode = operation.operation_code ?? operation.operationCode ?? permissionCode;
       const lifecycleTransitions = normalizeLifecycleTransitions(
         operation.lifecycle_transitions ?? operation.lifecycleTransitions,
       );
       return {
-        key: operation.id ?? permissionCode,
+        key: operationCode,
         permissionCode,
         surface: normalizeOperationSurface(operation.surface),
         placement: normalizeOperationPlacement(operation.placement),
@@ -2221,9 +2219,9 @@ function resolveRouteSlug(entity: CompiledMetaEntityInput): string {
 }
 
 // Canonical permission codes per action. The alias map (loaded from
-// control.permission_alias) lets entity_operation rows that reference legacy
+// Entity-operation rows are matched by their exact canonical operation code.
 // codes (e.g. 'edit') resolve to the canonical form ('update').
-const CANONICAL_ACTION_CODES: Record<"read" | "create" | "edit" | "delete", readonly string[]> = {
+const CANONICAL_OPERATION_CODES: Record<"read" | "create" | "edit" | "delete", readonly string[]> = {
   read:   ["read"],
   create: ["create"],
   edit:   ["update"],
@@ -2233,37 +2231,25 @@ const CANONICAL_ACTION_CODES: Record<"read" | "create" | "edit" | "delete", read
 function hasOperation(
   operations: MetaEntityOperation[],
   action: "read" | "create" | "edit" | "delete",
-  aliasMap: Record<string, string>,
 ): boolean {
   return operations.some((operation) => {
     if (!operation.enabled || operation.surface === "HIDDEN") return false;
-    return permissionMatchesAction(operation.permissionCode, action, aliasMap);
+    return CANONICAL_OPERATION_CODES[action].includes(operation.key);
   });
 }
 
-function permissionMatchesAction(
-  permissionCode: string,
-  action: "read" | "create" | "edit" | "delete",
-  aliasMap: Record<string, string>,
-): boolean {
+function retiredCompatibilityMatcher(): boolean {
   // Resolve aliases first: 'edit' → 'update' when the DB carries that mapping.
-  const canonicalCode = aliasMap[permissionCode] ?? permissionCode;
+  return false;
 
-  // Match canonical codes directly. CANONICAL_ACTION_CODES enumerates the
+  // Historical matcher retained temporarily for source-map compatibility.
   // exact codes a runtime descriptor must reference for each action.
-  if (CANONICAL_ACTION_CODES[action].includes(canonicalCode)) return true;
+  /* retired compatibility implementation */
 
   // Tolerant fallback for namespaced/legacy codes that have not yet been
-  // collapsed via permission_alias. We keep the token-bag heuristic from the
+  // collapsed through older compatibility metadata.
   // pre-Phase-3 implementation here so the compiler stays drift-tolerant
   // until the alias seed migrates the remaining one-off codes.
-  const normalized = canonicalCode.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-  const tokens = new Set(normalized.split("_").filter(Boolean));
-
-  if (action === "read")   return tokens.has("read")   || tokens.has("view")   || tokens.has("open")   || tokens.has("list");
-  if (action === "create") return tokens.has("create") || tokens.has("new")    || tokens.has("insert") || tokens.has("add");
-  if (action === "edit")   return tokens.has("edit")   || tokens.has("update") || tokens.has("write")  || tokens.has("save") || tokens.has("patch");
-  return tokens.has("delete") || tokens.has("remove") || tokens.has("archive") || tokens.has("destroy");
 }
 
 function genericSurface(

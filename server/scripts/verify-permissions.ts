@@ -104,7 +104,7 @@ async function main(): Promise<void> {
             console.error(`  ${o.entity_name} → permission '${o.permission_code}' (tenant=${o.tenant_id ?? "platform"})`);
           }
         }
-        console.error(`\nHint: seed missing permissions in server/db/seed/platform/002_permission_model/017_permission.sql`);
+        console.error(`\nHint: permission source may be incomplete in server/db/ddl/planes/*/authz/12_compiled_permission_reference_seed.sql`);
       }
     }
 

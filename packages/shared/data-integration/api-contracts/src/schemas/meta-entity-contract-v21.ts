@@ -20,6 +20,66 @@ const PlaneSchema = z.enum(["neon", "admin", "mesh"]);
 const JsonObjectSchema = z.record(z.string(), z.unknown());
 const ConditionSchema = JsonObjectSchema.nullable();
 
+const EntityOperationScopeBindingV21Schema = z.object({
+  scope_kind: z.enum([
+    "tenant",
+    "workspace",
+    "module",
+    "company_code",
+    "legal_entity",
+    "operating_organization",
+    "network_account",
+    "network_relationship",
+    "resource",
+  ]),
+  coordinate_source: z.enum([
+    "tenant_context",
+    "request_field",
+    "record_field",
+    "collection_field",
+    "relation_resolver",
+  ]),
+  coordinate_key: IdentifierSchema.nullable(),
+  resolver_key: z.string().regex(/^[a-z][a-z0-9_.:-]{1,126}$/).nullable(),
+}).strict().superRefine((binding, ctx) => {
+  const fieldSource = ["request_field", "record_field", "collection_field"]
+    .includes(binding.coordinate_source);
+  if (fieldSource !== (binding.coordinate_key !== null)) {
+    ctx.addIssue({ code: "custom", path: ["coordinate_key"], message: "Field coordinate sources require exactly one coordinate_key." });
+  }
+  if ((binding.coordinate_source === "relation_resolver") !== (binding.resolver_key !== null)) {
+    ctx.addIssue({ code: "custom", path: ["resolver_key"], message: "relation_resolver requires exactly one resolver_key." });
+  }
+  if (binding.scope_kind === "tenant" && binding.coordinate_source !== "tenant_context") {
+    ctx.addIssue({ code: "custom", path: ["coordinate_source"], message: "Tenant scope must resolve from authenticated tenant context." });
+  }
+  if (binding.scope_kind !== "tenant" && binding.coordinate_source === "tenant_context") {
+    ctx.addIssue({ code: "custom", path: ["coordinate_source"], message: "Non-tenant scope requires an explicit coordinate." });
+  }
+});
+
+const EntityOperationAuthorizationV21Schema = z.object({
+  decision_mode: z.enum(["entity_resource", "collection"]),
+  missing_value_behavior: z.literal("deny"),
+  bindings: z.array(EntityOperationScopeBindingV21Schema).min(1),
+}).strict().superRefine((authorization, ctx) => {
+  const scopeKinds = new Set<string>();
+  authorization.bindings.forEach((binding, index) => {
+    if (scopeKinds.has(binding.scope_kind)) {
+      ctx.addIssue({ code: "custom", path: ["bindings", index, "scope_kind"], message: "An operation may define only one binding per scope kind." });
+    }
+    scopeKinds.add(binding.scope_kind);
+    if (authorization.decision_mode === "collection"
+        && ["request_field", "record_field"].includes(binding.coordinate_source)) {
+      ctx.addIssue({ code: "custom", path: ["bindings", index, "coordinate_source"], message: "Collection authorization cannot resolve from one request or record field." });
+    }
+    if (authorization.decision_mode === "entity_resource"
+        && binding.coordinate_source === "collection_field") {
+      ctx.addIssue({ code: "custom", path: ["bindings", index, "coordinate_source"], message: "Entity-resource authorization cannot use a collection field." });
+    }
+  });
+});
+
 const ContractOwnedRefSchema = z.object({
   id: UuidSchema,
   code: CodeSchema,
@@ -174,6 +234,8 @@ export const MetaEntityOperationV21Schema = z.object({
   surface: z.enum(["LIST", "DETAIL", "BOTH", "PALETTE_ONLY", "HIDDEN"]),
   placement: z.enum(["PRIMARY", "TOOLBAR", "OVERFLOW", "CONTEXT", "COMMAND"]),
   plane_filter: z.array(PlaneSchema).nullable(),
+  /** Explicit compiler input. Absence emits no consumer binding and therefore cannot activate. */
+  authorization: EntityOperationAuthorizationV21Schema.nullable().optional(),
   handler: OperationHandlerV21Schema,
   execution: OperationExecutionV21Schema.nullable(),
   record_required: z.boolean(),
@@ -663,6 +725,14 @@ export function canonicalizeMetaEntityContractV21(input: unknown): MetaEntityCon
       plane_filter: operation.plane_filter
         ? [...new Set(operation.plane_filter)].sort()
         : null,
+      ...(operation.authorization
+        ? {
+            authorization: {
+              ...operation.authorization,
+              bindings: by(operation.authorization.bindings, (binding) => binding.scope_kind),
+            },
+          }
+        : {}),
       action_rules: by(operation.action_rules, (rule) => `${rule.status}:${rule.action_code}`),
     })),
     numbering: {

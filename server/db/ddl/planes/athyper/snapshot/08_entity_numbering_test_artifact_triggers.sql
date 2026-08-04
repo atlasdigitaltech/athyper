@@ -1,0 +1,8 @@
+CREATE TRIGGER entity_numbering_test_artifact_10_validate
+BEFORE INSERT ON snapshot.entity_numbering_test_artifact
+FOR EACH ROW EXECUTE FUNCTION snapshot.trg_validate_entity_numbering_test_artifact();
+
+CREATE TRIGGER entity_numbering_test_artifact_90_immutable
+BEFORE UPDATE OR DELETE ON snapshot.entity_numbering_test_artifact
+FOR EACH ROW EXECUTE FUNCTION snapshot.trg_reject_entity_numbering_test_artifact_mutation();
+

@@ -74,14 +74,14 @@ async function createRunFixture(
   if (!ids) throw new Error("Unable to allocate Atlas tool fixture IDs");
 
   await sql`
-    INSERT INTO master.conversation
+    INSERT INTO document.conversation
       (id, tenant_id, type, title, status, created_by)
     VALUES
       (${ids.thread_id}, ${input.tenantId}, 'atlas_agent',
        ${input.title}, 'active', ${input.ownerId})
   `;
   await sql`
-    INSERT INTO master.atlas_thread
+    INSERT INTO ai.atlas_thread
       (conversation_id, tenant_id, plane, owner_principal_id,
        retention_policy_id, expires_at, created_by)
     VALUES
@@ -89,7 +89,7 @@ async function createRunFixture(
        'atlas-tools-rls-v1', now() + interval '1 day', ${input.ownerId})
   `;
   await sql`
-    INSERT INTO master.conversation_participant
+    INSERT INTO document.conversation_participant
       (tenant_id, conversation_id, principal_id, role, created_by)
     VALUES
       (${input.tenantId}, ${ids.thread_id}, ${input.ownerId},
@@ -97,7 +97,7 @@ async function createRunFixture(
   `;
   if (input.participantId) {
     await sql`
-      INSERT INTO master.conversation_participant
+      INSERT INTO document.conversation_participant
         (tenant_id, conversation_id, principal_id, role, created_by)
       VALUES
         (${input.tenantId}, ${ids.thread_id}, ${input.participantId},
@@ -105,7 +105,7 @@ async function createRunFixture(
     `;
   }
   await sql`
-    INSERT INTO master.atlas_message
+    INSERT INTO ai.atlas_message
       (id, tenant_id, conversation_id, plane, role, content_blocks,
        status, run_id, terminal_at, created_by)
     VALUES
@@ -114,7 +114,7 @@ async function createRunFixture(
        'completed', ${ids.run_id}, now(), ${input.ownerId})
   `;
   await sql`
-    INSERT INTO master.atlas_message
+    INSERT INTO ai.atlas_message
       (id, tenant_id, conversation_id, plane, role, content_blocks,
        status, run_id, parent_message_id, created_by)
     VALUES
@@ -123,7 +123,7 @@ async function createRunFixture(
        ${ids.input_message_id}, ${input.ownerId})
   `;
   await sql`
-    INSERT INTO event.atlas_run
+    INSERT INTO ai.atlas_run
       (id, tenant_id, conversation_id, plane, principal_id,
        client_request_id, input_message_id, output_message_id,
        status, created_by)
@@ -155,7 +155,7 @@ async function insertInvocation(
   const operationClass = input.operationClass ?? "read";
   const resolvedTool = operationClass !== "unresolved";
   const [row] = await sql<{ id: string }[]>`
-    INSERT INTO event.ai_tool_invocation (
+    INSERT INTO ai.ai_tool_invocation (
       tenant_id, thread_id, run_id, plane, principal_id,
       tool_call_id, tool_code, tool_version, action_code, input_hash,
       operation_class, risk_class, autonomy_decision,
@@ -273,7 +273,7 @@ try {
     console.log("PASS owner can persist a governed read-only proposal");
 
     await trx`
-      UPDATE event.ai_tool_invocation
+      UPDATE ai.ai_tool_invocation
          SET status = 'executing',
              execution_guard_snapshot =
                '{"auth_epoch":"matched","permission":"allowed","lifecycle":"not_applicable"}'::jsonb,
@@ -285,7 +285,7 @@ try {
          AND id = ${readInvocationId}
     `;
     await trx`
-      UPDATE event.ai_tool_invocation
+      UPDATE ai.ai_tool_invocation
          SET status = 'completed',
              result_hash = ${RESULT_HASH},
              evidence_refs =
@@ -303,7 +303,7 @@ try {
       ["55000"],
       async (savepoint) => {
         await savepoint`
-          UPDATE event.ai_tool_invocation
+          UPDATE ai.ai_tool_invocation
              SET terminal_at = now(),
                  updated_by = ${ownerA}
            WHERE id = ${readInvocationId}
@@ -327,7 +327,7 @@ try {
       ["23514"],
       async (savepoint) => {
         await savepoint`
-          UPDATE event.ai_tool_invocation
+          UPDATE ai.ai_tool_invocation
              SET status = 'confirmed',
                  updated_by = ${ownerA}
            WHERE id = ${unknownInvocationId}
@@ -336,7 +336,7 @@ try {
       trx,
     );
     await trx`
-      UPDATE event.ai_tool_invocation
+      UPDATE ai.ai_tool_invocation
          SET status = 'denied',
              autonomy_decision = 'denied',
              permission_snapshot =
@@ -362,7 +362,7 @@ try {
       toolCallId: "call-cancel-1",
     });
     await trx`
-      UPDATE event.ai_tool_invocation
+      UPDATE ai.ai_tool_invocation
          SET status = 'executing',
              execution_guard_snapshot =
                '{"auth_epoch":"matched","permission":"allowed"}'::jsonb,
@@ -373,7 +373,7 @@ try {
        WHERE id = ${cancelledInvocationId}
     `;
     await trx`
-      UPDATE event.ai_tool_invocation
+      UPDATE ai.ai_tool_invocation
          SET status = 'cancelled',
              terminal_error_class = 'request_cancelled',
              terminal_at = now(),
@@ -395,7 +395,7 @@ try {
       confirmationHash: CONFIRMATION_HASH,
     });
     await trx`
-      UPDATE event.ai_tool_invocation
+      UPDATE ai.ai_tool_invocation
          SET status = 'confirmed',
              confirmation_actor_id = ${ownerA},
              confirmation_at = now(),
@@ -407,7 +407,7 @@ try {
       ["55000"],
       async (savepoint) => {
         await savepoint`
-          UPDATE event.ai_tool_invocation
+          UPDATE ai.ai_tool_invocation
              SET confirmation_at = now(),
                  updated_by = ${ownerA}
            WHERE id = ${confirmedInvocationId}
@@ -416,7 +416,7 @@ try {
       trx,
     );
     await trx`
-      UPDATE event.ai_tool_invocation
+      UPDATE ai.ai_tool_invocation
          SET status = 'executing',
              execution_guard_snapshot =
                '{"auth_epoch":"matched","permission":"allowed","row_version":"matched"}'::jsonb,
@@ -441,7 +441,7 @@ try {
       confirmationHash: "4".repeat(64),
     });
     await trx`
-      UPDATE event.ai_tool_invocation
+      UPDATE ai.ai_tool_invocation
          SET status = 'confirmed',
              confirmation_actor_id = ${ownerA},
              confirmation_at = now(),
@@ -453,7 +453,7 @@ try {
       ["23505"],
       async (savepoint) => {
         await savepoint`
-          UPDATE event.ai_tool_invocation
+          UPDATE ai.ai_tool_invocation
              SET status = 'executing',
                  execution_guard_snapshot =
                    '{"auth_epoch":"matched","permission":"allowed","row_version":"matched"}'::jsonb,
@@ -470,7 +470,7 @@ try {
 
     const [ownerCount] = await trx<{ count: number }[]>`
       SELECT count(*)::int AS count
-        FROM event.ai_tool_invocation
+        FROM ai.ai_tool_invocation
        WHERE thread_id = ${fixtureA.threadId}
     `;
     if (Number(ownerCount?.count) !== 5) {
@@ -481,7 +481,7 @@ try {
     await setScope(trx, tenantA, participantA, "neon");
     const [participantCount] = await trx<{ count: number }[]>`
       SELECT count(*)::int AS count
-        FROM event.ai_tool_invocation
+        FROM ai.ai_tool_invocation
        WHERE thread_id = ${fixtureA.threadId}
     `;
     if (Number(participantCount?.count) !== 0) {
@@ -508,7 +508,7 @@ try {
     await setScope(trx, tenantA, ownerA, "mesh");
     const [wrongPlaneCount] = await trx<{ count: number }[]>`
       SELECT count(*)::int AS count
-        FROM event.ai_tool_invocation
+        FROM ai.ai_tool_invocation
        WHERE thread_id = ${fixtureA.threadId}
     `;
     if (Number(wrongPlaneCount?.count) !== 0) {
@@ -532,7 +532,7 @@ try {
     });
     const [tenantBCount] = await trx<{ count: number }[]>`
       SELECT count(*)::int AS count
-        FROM event.ai_tool_invocation
+        FROM ai.ai_tool_invocation
        WHERE thread_id IN (${fixtureA.threadId}, ${fixtureB.threadId})
     `;
     if (Number(tenantBCount?.count) !== 1) {
@@ -547,7 +547,7 @@ try {
       ["42501"],
       async (savepoint) => {
         await savepoint`
-          DELETE FROM event.ai_tool_invocation
+          DELETE FROM ai.ai_tool_invocation
            WHERE id = ${readInvocationId}
         `;
       },
@@ -585,13 +585,13 @@ try {
     await trx.unsafe("RESET ROLE");
     await trx.unsafe("SET CONSTRAINTS ALL IMMEDIATE");
     await trx`
-      DELETE FROM master.conversation
+      DELETE FROM document.conversation
        WHERE tenant_id = ${tenantA}
          AND id = ${purgeFixture.threadId}
     `;
     const [purged] = await trx<{ count: number }[]>`
       SELECT count(*)::int AS count
-        FROM event.ai_tool_invocation
+        FROM ai.ai_tool_invocation
        WHERE id = ${purgeInvocationId}
     `;
     if (Number(purged?.count) !== 0) {

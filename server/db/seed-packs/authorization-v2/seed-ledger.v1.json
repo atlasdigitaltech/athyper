@@ -1,0 +1,26 @@
+{
+  "contractVersion": "authorization-v2.final-seed-ledger.v1",
+  "generatedFrom": "canonical_json_sorted_keys",
+  "immutableContentDrift": "fail",
+  "packs": [
+    {
+      "target": "neon-admin",
+      "path": "seed-packs/authorization-v2/neon-admin/seed-pack.v1.json",
+      "contentSha256": "6239252658181ea65ae7beb20aca624b13ff653c4f701deaba99d4c84b3bf95c",
+      "permissionCount": 559,
+      "roleCount": 10,
+      "groupCount": 10,
+      "mappedSubjectCount": 142
+    },
+    {
+      "target": "mesh",
+      "path": "seed-packs/authorization-v2/mesh/seed-pack.v1.json",
+      "contentSha256": "77529533f4d6b1d650400f8785a05bc08bbfe7ba76b37cbf98783f65ad75e43b",
+      "permissionCount": 32,
+      "roleCount": 4,
+      "groupCount": 5,
+      "mappedSubjectCount": 47
+    }
+  ],
+  "ledgerSha256": "4dbdcaf3f411815dbd3d01cf1b25b262cc759a4f699ac2a19330ed5766c02ff5"
+}

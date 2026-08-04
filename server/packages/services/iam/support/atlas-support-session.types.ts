@@ -7,7 +7,7 @@ import type { VerifiedRequestContext } from "../permission-context/verified-requ
 export const ATLAS_SUPPORT_SESSION_PERMISSION =
   "ai.agent.admin.support_session";
 export const ATLAS_SUPPORT_SESSION_TOKEN_VERSION =
-  "atlas.support-session/v1";
+  "atlas.support-session/v2";
 
 export type AtlasSupportScope =
   | "permission_denial.explain"
@@ -26,7 +26,7 @@ export interface AtlasSupportShadowPrincipal {
   readonly targetTenantId: string;
   readonly shadowPrincipalId: string;
   readonly shadowAuthEpoch: number;
-  readonly relationshipId: string;
+  readonly membershipId: string;
 }
 
 export interface AtlasSupportSessionRecord {
@@ -39,7 +39,7 @@ export interface AtlasSupportSessionRecord {
   readonly targetTenantId: string;
   readonly shadowPrincipalId: string;
   readonly shadowAuthEpoch: number;
-  readonly shadowRelationshipId: string;
+  readonly shadowMembershipId: string;
   readonly plane: "admin";
   readonly allowedScopes: readonly AtlasSupportScope[];
   readonly ticketId: string;
@@ -97,7 +97,7 @@ export interface AtlasSupportAuthEpochRevalidator {
     readonly targetTenantId: string;
     readonly shadowPrincipalId: string;
     readonly shadowAuthEpoch: number;
-    readonly relationshipId: string;
+    readonly membershipId: string;
   }): Promise<boolean>;
 }
 

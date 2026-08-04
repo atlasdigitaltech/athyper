@@ -2,9 +2,10 @@
 
 This runbook is executable only after
 `config/governance/authorization-migration-recovery-contract.v1.json` has named
-owners, numeric or ISO-8601 RPO/RTO targets, rollback triggers, and an approved
-observation window. Its current `approval_required` state intentionally blocks
-production promotion.
+owners, human-readable objectives plus machine-checkable RPO seconds/RTO
+minutes, numeric freeze/lag/rollback limits, rollback triggers, and an approved
+observation window. Placeholder text does not satisfy the gate. Its current
+`approval_required` state intentionally blocks production promotion.
 
 ## Separate the three switches
 
@@ -32,9 +33,11 @@ Before the first snapshot:
    registered source table against writes.
 3. Verify row mutation and `TRUNCATE` capture, `ENABLE ALWAYS` trigger state,
    registered-writer matching, and append-only protections.
-4. Start a repeatable-read, read-only snapshot transaction.
-5. Record the commit-ordered authorization watermark and export the database
-   snapshot from that same transaction.
+4. Start a dedicated `REPEATABLE READ` migration transaction. It is
+   intentionally read-write only so the durable marker can be inserted; the
+   source-table portion of the transaction performs reads only.
+5. Record the commit-ordered authorization watermark durably and export the
+   database snapshot from that same transaction.
 6. Keep the exporting transaction open until every snapshot consumer has joined
    it.
 7. Capture identities, golden decisions, source-row conservation data, table
@@ -44,6 +47,25 @@ Before the first snapshot:
 Application write traffic may continue only after capture is proven installed.
 Any source or writer that cannot be captured remains frozen and blocks the
 snapshot.
+
+For a live retrofit, use the atomic installers; ordinary phase-by-phase
+provisioning is not an installation receipt:
+
+```powershell
+$env:AUTHORIZATION_CAPTURE_DATABASE_URL = "<approved Neon admin URL>"
+pnpm.cmd --dir server/db exec tsx scripts/install/install-authorization-change-capture.ts `
+  --apply --expected-database="<exact Neon database>" `
+  --approval-ticket="<change ticket>"
+
+$env:MESH_DATABASE_ADMIN_URL = "<approved Mesh admin URL>"
+pnpm.cmd --dir server/db exec tsx scripts/provision-mesh.ts --capture-only `
+  --expected-database="<exact Mesh database>" `
+  --approval-ticket="<change ticket>"
+```
+
+The Mesh and Neon receipts, source-set hashes, database identities, source
+UUIDs, contract versions, and W0 watermarks are separate restricted evidence.
+Never use one plane's receipt or connection variable as the other's fallback.
 
 ## Continuous synchronization
 
@@ -140,4 +162,3 @@ observation window.
 Production sign-off is machine-read from the recovery contract. Chat, an
 unlinked ticket, a successful local reset, or this document alone is not
 approval.
-

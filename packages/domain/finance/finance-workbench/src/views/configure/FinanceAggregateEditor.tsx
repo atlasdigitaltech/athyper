@@ -19,7 +19,7 @@ const DEFINITIONS: Record<FinanceAggregateKind, {
 }> = {
   dimensions: {
     title: "Dimension Policy Editor",
-    description: "Mandatory, optional, forbidden and derived-dimension behavior with governed allowed values.",
+    description: "Required, optional, and forbidden dimension validation with governed allowed values; derivation remains a separate accounting-profile rule.",
     entities: [
       { entityCode: "dimension_policy", label: "Policies", description: "Scope and enforcement behavior", role: "root" },
       { entityCode: "dimension_policy_allowed_value", label: "Allowed values", description: "Auditable policy value restrictions", role: "child" },

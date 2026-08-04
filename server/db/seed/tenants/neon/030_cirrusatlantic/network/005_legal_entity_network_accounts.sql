@@ -1,44 +1,39 @@
--- ============================================================================
--- CIRRUSATLANTIC - LEGAL ENTITY NETWORK ACCOUNT
--- ============================================================================
+-- seed-pack-version: 2.0.0
+-- disposition: retired-wrong-plane
+--
+-- Network accounts are Mesh-owned (`mesh.network_account`). Neon does not own
+-- a legal-entity network-account aggregate and must consume only published
+-- network references/snapshots. CirrusAtlantic Mesh onboarding is deferred.
 
-DO $catl_legal_entity_network_accounts$
+DO $seed$
 DECLARE
-    v_su  uuid := '00000000-0000-0000-0000-000000000000';
-    v_tid uuid;
+    v_tid uuid := nullif(current_setting('app.seed_tenant_id', true), '')::uuid;
+    v_actor uuid := nullif(current_setting('app.current_principal_id', true), '')::uuid;
 BEGIN
-    PERFORM set_config('app.current_principal_id', v_su::text, true);
+    IF v_tid IS NULL OR NOT EXISTS (
+        SELECT 1 FROM master.tenant t
+        WHERE t.id=v_tid
+          AND t.realm_key='athyper'
+          AND t.code='cirrusatlantic'
+          AND t.status='active'
+    ) THEN
+        RAISE EXCEPTION '[005_legal_entity_network_accounts] active CirrusAtlantic tenant scope required';
+    END IF;
 
-    SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'cirrusatlantic';
-    IF v_tid IS NULL THEN RAISE EXCEPTION '[005_legal_entity_network_accounts] cirrusatlantic tenant not found'; END IF;
+    IF v_actor IS NULL OR NOT EXISTS (
+        SELECT 1 FROM master.principal p
+        WHERE p.id=v_actor AND p.tenant_id=v_tid AND p.status='active'
+    ) THEN
+        RAISE EXCEPTION '[005_legal_entity_network_accounts] active tenant-local seed principal required';
+    END IF;
 
-    INSERT INTO master.legal_entity_network_account (
-        tenant_id, legal_entity_id,
-        provider_code, account_code, account_role,
-        is_default, sync_status, last_synced_at, status,
-        metadata, created_by
-    )
-    SELECT
-        v_tid, le.id,
-        'athyper_mesh', 'BNA-1000000022', 'both',
-        true, 'synced', now(), 'active',
-        jsonb_build_object(
-            'seed', 'athyper_phase1',
-            'tenant_code', 'cirrusatlantic',
-            'legal_entity_code', le.code
-        ),
-        v_su
-    FROM master.legal_entity le
-    WHERE le.tenant_id = v_tid
-      AND le.code = 'CATL'
-    ON CONFLICT (tenant_id, legal_entity_id, provider_code, account_code, account_role) DO UPDATE SET
-        is_default     = EXCLUDED.is_default,
-        sync_status    = EXCLUDED.sync_status,
-        last_synced_at = now(),
-        status         = EXCLUDED.status,
-        metadata       = master.legal_entity_network_account.metadata || EXCLUDED.metadata,
-        updated_at     = now(),
-        updated_by     = v_su;
+    IF NOT EXISTS (
+        SELECT 1 FROM master.legal_entity le
+        WHERE le.tenant_id=v_tid AND le.code='catl' AND le.status='active'
+    ) THEN
+        RAISE EXCEPTION '[005_legal_entity_network_accounts] active catl legal entity required';
+    END IF;
 
-    RAISE NOTICE '[005_legal_entity_network_accounts] cirrusatlantic BNA account seeded';
-END $catl_legal_entity_network_accounts$;
+    RAISE NOTICE
+        '[005_legal_entity_network_accounts] retired Neon-side BNA-1000000022; Mesh onboarding deferred';
+END $seed$;

@@ -63,7 +63,7 @@ const CATALOG_FIELD_KEYS = new Set([
 ]);
 const POLICY_KEYS = new Set(["accessMode", "companyScopeMode", "auditMode", "dataPolicy", "cachePolicy"]);
 const PROHIBITED_POLICY_KEYS = new Set([
-  "principalId", "principal_id", "personaId", "persona_id", "accountGrantId", "account_grant_id",
+  "principalId", "principal_id", "accountGrantId", "account_grant_id",
   "permissionDecision", "permission_decision", "allowedPermissions", "deniedPermissions",
 ]);
 

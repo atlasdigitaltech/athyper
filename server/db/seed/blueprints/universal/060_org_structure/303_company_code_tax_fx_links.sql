@@ -5,7 +5,6 @@
 DO $seed$
 DECLARE
     v_tid     uuid;
-    v_su      uuid := '00000000-0000-0000-0000-000000000000';
     v_missing text;
 BEGIN
     v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
@@ -13,62 +12,22 @@ BEGIN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set - run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
-    -- Company codes often omit country_code because the legal entity already
-    -- carries statutory country. Copy it only when the company code has no
-    -- explicit operational country.
-    UPDATE master.company_code cc
-    SET country_code = le.country_code,
-        updated_at   = now(),
-        updated_by   = v_su
-    FROM master.legal_entity le
-    WHERE cc.tenant_id = v_tid
-      AND le.tenant_id = cc.tenant_id
-      AND le.id = cc.legal_entity_id
-      AND cc.country_code IS NULL
-      AND le.country_code IS NOT NULL;
-
-    -- Link each company code to the tenant's matching country-level tax
-    -- jurisdiction. Identified by jurisdiction_type='country' (level_no/parent_id
-    -- columns were dropped as part of the tax-jurisdiction cleanup).
-    UPDATE master.company_code cc
-    SET tax_jurisdiction_id = tj.id,
-        updated_at          = now(),
-        updated_by          = v_su
-    FROM master.tax_jurisdiction tj
-    WHERE cc.tenant_id = v_tid
-      AND tj.tenant_id = cc.tenant_id
-      AND tj.jurisdiction_type = 'country'
-      AND tj.status = 'active'
-      AND tj.country_code = cc.country_code
-      AND cc.tax_jurisdiction_id IS DISTINCT FROM tj.id;
-
-    -- A1: Any active company code whose country has a tenant jurisdiction must
-    -- now point at a same-tenant jurisdiction for that country.
+    -- Tax jurisdiction is no longer a mutable company-code attribute. Validate
+    -- that every company has an explicit operational country and a matching
+    -- tenant-local country jurisdiction; registrations/policy link them later.
     SELECT string_agg(cc.code, ', ' ORDER BY cc.code)
     INTO v_missing
     FROM master.company_code cc
     WHERE cc.tenant_id = v_tid
       AND cc.status = 'active'
-      AND cc.country_code IS NOT NULL
-      AND EXISTS (
-          SELECT 1
-          FROM master.tax_jurisdiction tj
-          WHERE tj.tenant_id = cc.tenant_id
-            AND tj.jurisdiction_type = 'country'
-            AND tj.status = 'active'
-            AND tj.country_code = cc.country_code
-      )
-      AND NOT EXISTS (
-          SELECT 1
-          FROM master.tax_jurisdiction linked
-          WHERE linked.tenant_id = cc.tenant_id
-            AND linked.id = cc.tax_jurisdiction_id
-            AND linked.jurisdiction_type = 'country'
-            AND linked.status = 'active'
-            AND linked.country_code = cc.country_code
-      );
+      AND (cc.country_code IS NULL OR NOT EXISTS (
+          SELECT 1 FROM master.tax_jurisdiction jurisdiction
+          WHERE jurisdiction.tenant_id=cc.tenant_id
+            AND jurisdiction.jurisdiction_type='country'
+            AND jurisdiction.status='active'
+            AND jurisdiction.country_code=cc.country_code));
     IF v_missing IS NOT NULL THEN
-        RAISE EXCEPTION '303 FAIL: active company code has covered country but no matching tax_jurisdiction_id: %',
+        RAISE EXCEPTION '303 FAIL: active company code missing country or matching tax jurisdiction: %',
             v_missing;
     END IF;
 

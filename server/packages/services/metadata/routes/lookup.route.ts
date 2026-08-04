@@ -21,7 +21,7 @@
  */
 
 import type { RequestHandler, Router } from "express";
-import type { Kysely } from "kysely";
+import { sql, type Kysely } from "kysely";
 import { verifyBearer } from "@athyper/svc-shared";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────

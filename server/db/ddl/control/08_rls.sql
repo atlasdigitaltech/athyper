@@ -1,1177 +1,5882 @@
 -- ============================================================================
 -- control/08_rls.sql
--- Concept: Governance RLS — entity, policy, and field data isolation policies
--- Depends on: 04_tables/002_control.sql, 05_pre_constraint_functions/001_shared.sql
--- lookup_domain: open_read + admin_write (platform-level, no tenant_id).
--- lookup_value: scoped_read (global visible to all, tenant rows to own tenant only)
---               + tenant_write (own tenant INSERT) + admin_write (full access).
+-- Row-level security policies and explicit object grants.
+-- Generated from the live Neon control schema. Do not hand-edit.
 -- ============================================================================
 
--- lookup_domain
-ALTER TABLE control.lookup_domain ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.lookup_domain FORCE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS open_read ON control.lookup_domain;
-CREATE POLICY open_read ON control.lookup_domain FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS admin_write ON control.lookup_domain;
-CREATE POLICY admin_write ON control.lookup_domain FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
--- lookup_value
-ALTER TABLE control.lookup_value ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.lookup_value FORCE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS open_read     ON control.lookup_value;
-DROP POLICY IF EXISTS scoped_read   ON control.lookup_value;
-DROP POLICY IF EXISTS tenant_write  ON control.lookup_value;
-DROP POLICY IF EXISTS tenant_update ON control.lookup_value;
-DROP POLICY IF EXISTS admin_write   ON control.lookup_value;
-
--- Reads: global rows visible to all; tenant rows visible to own tenant only.
--- Uses current_tenant_id_soft() (returns NULL when GUC unset) instead of
--- current_tenant_id() (raises) — startup, health checks, seeding, and
--- fn_register_tenant must read lookups before a tenant session exists.
-CREATE POLICY scoped_read ON control.lookup_value
-    FOR SELECT
-    USING (
-        tenant_id IS NULL
-        OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
-    );
-
--- Tenant INSERT: own tenant_id only (extensibility trigger guards domain-level permission)
-CREATE POLICY tenant_write ON control.lookup_value
-    FOR INSERT
-    WITH CHECK (
-        tenant_id IS NOT NULL
-        AND tenant_id = shared.current_tenant_id()
-    );
-
--- Tenant UPDATE: own non-system rows only (e.g. deprecate via status change)
-CREATE POLICY tenant_update ON control.lookup_value
-    FOR UPDATE
-    USING (
-        tenant_id IS NOT NULL
-        AND tenant_id = shared.current_tenant_id()
-        AND is_system = false
-    )
-    WITH CHECK (
-        tenant_id IS NOT NULL
-        AND tenant_id = shared.current_tenant_id()
-        AND is_system = false
-    );
-
--- No tenant DELETE — tenants deprecate, not delete. System rows immutable except via athyperadmin.
-
--- Admin DML: full access for athyperadmin (seed + global row management)
-CREATE POLICY admin_write ON control.lookup_value
-    FOR ALL TO athyperadmin
-    USING (true)
-    WITH CHECK (true);
-
-
--- 11_rls_policies/002_control.sql
--- Depends on: 04_tables/002_control.sql, 05_pre_constraint_functions/001_shared (shared.current_tenant_id_soft)
--- Tenant isolation: tenant sees own rows only. Admin full access.
-
-ALTER TABLE control.mfa_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.mfa_config FORCE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS tenant_read   ON control.mfa_config;
-DROP POLICY IF EXISTS tenant_write  ON control.mfa_config;
-DROP POLICY IF EXISTS tenant_insert ON control.mfa_config;
-DROP POLICY IF EXISTS tenant_update ON control.mfa_config;
-DROP POLICY IF EXISTS tenant_delete ON control.mfa_config;
-DROP POLICY IF EXISTS admin_read    ON control.mfa_config;
-DROP POLICY IF EXISTS admin_write   ON control.mfa_config;
-
-CREATE POLICY tenant_read ON control.mfa_config FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-
--- Pattern B: split tenant DML into separate INSERT/UPDATE/DELETE
-CREATE POLICY tenant_insert ON control.mfa_config
-    FOR INSERT
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-
-CREATE POLICY tenant_update ON control.mfa_config
-    FOR UPDATE
-    USING  (tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-
-CREATE POLICY tenant_delete ON control.mfa_config
-    FOR DELETE
-    USING (tenant_id = shared.current_tenant_id());
-
-CREATE POLICY admin_read  ON control.mfa_config FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write ON control.mfa_config FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- NOTIFICATION CONFIG TABLES
--- ============================================================================
-
--- —— notification_provider (platform-level, no tenant_id) —————————————————
-ALTER TABLE control.notification_provider ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.notification_provider FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read  ON control.notification_provider;
-DROP POLICY IF EXISTS admin_read   ON control.notification_provider;
-DROP POLICY IF EXISTS admin_write  ON control.notification_provider;
-
--- All authenticated tenant sessions can read provider registry (channel capability checks)
-CREATE POLICY tenant_read  ON control.notification_provider
-    FOR SELECT USING (true);
-CREATE POLICY admin_read   ON control.notification_provider
-    FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write  ON control.notification_provider
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- —— notification_routing_rule (tenant config — global rows visible to all) ——
-ALTER TABLE control.notification_routing_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.notification_routing_rule FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.notification_routing_rule;
-DROP POLICY IF EXISTS tenant_insert ON control.notification_routing_rule;
-DROP POLICY IF EXISTS tenant_update ON control.notification_routing_rule;
-DROP POLICY IF EXISTS tenant_delete ON control.notification_routing_rule;
-DROP POLICY IF EXISTS admin_read    ON control.notification_routing_rule;
-DROP POLICY IF EXISTS admin_write   ON control.notification_routing_rule;
-
--- Tenant can read their own rules AND platform global rules (tenant_id IS NULL)
-CREATE POLICY tenant_read   ON control.notification_routing_rule
-    FOR SELECT USING (
-        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
-        OR tenant_id IS NULL
-    );
-CREATE POLICY tenant_insert ON control.notification_routing_rule
-    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.notification_routing_rule
-    FOR UPDATE USING     (tenant_id = shared.current_tenant_id())
-              WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.notification_routing_rule
-    FOR DELETE USING (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.notification_routing_rule
-    FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.notification_routing_rule
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- —— notification_template (tenant config — platform defaults visible) ————
-ALTER TABLE control.notification_template ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.notification_template FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.notification_template;
-DROP POLICY IF EXISTS tenant_insert ON control.notification_template;
-DROP POLICY IF EXISTS tenant_update ON control.notification_template;
-DROP POLICY IF EXISTS tenant_delete ON control.notification_template;
-DROP POLICY IF EXISTS admin_read    ON control.notification_template;
-DROP POLICY IF EXISTS admin_write   ON control.notification_template;
-
--- Tenant can read their own templates AND platform default templates (tenant_id IS NULL)
-CREATE POLICY tenant_read   ON control.notification_template
-    FOR SELECT USING (
-        shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
-        OR tenant_id IS NULL
-    );
-CREATE POLICY tenant_insert ON control.notification_template
-    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.notification_template
-    FOR UPDATE USING     (tenant_id = shared.current_tenant_id())
-              WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.notification_template
-    FOR DELETE USING (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.notification_template
-    FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.notification_template
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── LIFECYCLE ENGINE RLS policies ──────────────────────────────────────
--- =============================================================================
--- 11_rls_policies/014_lifecycle.sql
--- Lifecycle Engine — Row-Level Security for all 13 tables
--- Depends on: 04_tables/014_lifecycle.sql
--- =============================================================================
---
--- Pattern:
---   control.lifecycle, lifecycle_state, lifecycle_transition, lifecycle_transition_gate,
---   lifecycle_transition_hook, hook_action_registry, lifecycle_timer_policy:
---     READ: own tenant rows + platform global rows (tenant_id IS NULL)
---     WRITE: own tenant only
---
---   lifecycle_hook_override: own tenant only (always has tenant_id)
---
---   event.lifecycle_timer_schedule: own tenant only
---   master.lifecycle_instance: own tenant only
---
---   snapshot.*: own tenant + global rows; all snapshot tables are read-heavy
---               writes by recompile functions only (run as athyperadmin)
-
--- ── Step 1: Enable RLS + admin bypass on all 13 tables ──────────────────────
-DO $body$ DECLARE t text; BEGIN
-    FOR t IN SELECT unnest(ARRAY[
-        'control.lifecycle', 'control.lifecycle_state',
-        'control.lifecycle_transition', 'control.lifecycle_transition_gate',
-        'control.lifecycle_transition_hook', 'control.lifecycle_hook_override',
-        'control.hook_action_registry', 'control.lifecycle_timer_policy',
-        'event.lifecycle_timer_schedule', 'master.lifecycle_instance',
-        'snapshot.lifecycle_version', 'snapshot.lifecycle_route',
-        'snapshot.status_route'
-    ]) LOOP
-        EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
-        EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_read   ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_insert ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_update ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS admin_read    ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS admin_write   ON %s', t);
-        EXECUTE format(
-            'CREATE POLICY admin_read  ON %s FOR SELECT TO athyperadmin USING (true)', t);
-        EXECUTE format(
-            'CREATE POLICY admin_write ON %s FOR ALL TO athyperadmin USING (true) WITH CHECK (true)', t);
-    END LOOP;
-END $body$;
-
--- ── Step 2: Global + own tenant read for config tables ──────────────────────
-DO $body$ DECLARE t text; BEGIN
-    FOR t IN SELECT unnest(ARRAY[
-        'control.lifecycle', 'control.lifecycle_state',
-        'control.lifecycle_transition', 'control.lifecycle_transition_gate',
-        'control.lifecycle_transition_hook', 'control.hook_action_registry',
-        'control.lifecycle_timer_policy',
-        'snapshot.lifecycle_version', 'snapshot.lifecycle_route',
-        'snapshot.status_route'
-    ]) LOOP
-        EXECUTE format(
-            'CREATE POLICY tenant_read ON %s FOR SELECT USING ('
-            '  shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_insert ON %s FOR INSERT WITH CHECK ('
-            '  tenant_id = shared.current_tenant_id()'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_update ON %s FOR UPDATE '
-            '  USING (tenant_id = shared.current_tenant_id()) '
-            '  WITH CHECK (tenant_id = shared.current_tenant_id())', t);
-    END LOOP;
-END $body$;
-
--- ── Step 3: Own tenant only (always has tenant_id) ──────────────────────────
-DO $body$ DECLARE t text; BEGIN
-    FOR t IN SELECT unnest(ARRAY[
-        'control.lifecycle_hook_override',
-        'event.lifecycle_timer_schedule',
-        'master.lifecycle_instance'
-    ]) LOOP
-        EXECUTE format(
-            'CREATE POLICY tenant_read ON %s FOR SELECT USING ('
-            '  shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_insert ON %s FOR INSERT WITH CHECK ('
-            '  tenant_id = shared.current_tenant_id()'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_update ON %s FOR UPDATE '
-            '  USING (tenant_id = shared.current_tenant_id()) '
-            '  WITH CHECK (tenant_id = shared.current_tenant_id())', t);
-    END LOOP;
-END $body$;
-
-
--- ── WORKFLOW ENGINE RLS policies ───────────────────────────────────────
--- =============================================================================
--- 11_rls_policies/015_workflow.sql
--- Workflow Engine — Row-Level Security for all 8 tables
--- Depends on: 04_tables/015_workflow.sql
--- =============================================================================
-
--- ── Step 1: Enable RLS + admin bypass on all 8 tables ───────────────────────
-DO $body$ DECLARE t text; BEGIN
-    FOR t IN SELECT unnest(ARRAY[
-        'control.workflow_definition',
-        'control.workflow_template',
-        'control.workflow_template_stage',
-        'control.workflow_template_rule',
-        'control.workflow_sla_policy',
-        'document.workflow_request',
-        'document.workflow_stage',
-        'event.work_item'
-    ]) LOOP
-        EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
-        EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_read   ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_insert ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_update ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS admin_read    ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS admin_write   ON %s', t);
-        EXECUTE format('CREATE POLICY admin_read  ON %s FOR SELECT TO athyperadmin USING (true)', t);
-        EXECUTE format('CREATE POLICY admin_write ON %s FOR ALL TO athyperadmin USING (true) WITH CHECK (true)', t);
-    END LOOP;
-END $body$;
-
--- ── Step 2: Config tables — own tenant + global (tenant_id IS NULL) ─────────
-DO $body$ DECLARE t text; BEGIN
-    FOR t IN SELECT unnest(ARRAY[
-        'control.workflow_definition',
-        'control.workflow_template',
-        'control.workflow_template_stage',
-        'control.workflow_template_rule',
-        'control.workflow_sla_policy'
-    ]) LOOP
-        EXECUTE format(
-            'CREATE POLICY tenant_read ON %s FOR SELECT USING ('
-            '  shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_insert ON %s FOR INSERT WITH CHECK ('
-            '  tenant_id = shared.current_tenant_id()'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_update ON %s FOR UPDATE '
-            '  USING (tenant_id = shared.current_tenant_id()) '
-            '  WITH CHECK (tenant_id = shared.current_tenant_id())', t);
-    END LOOP;
-END $body$;
-
--- ── Step 3: Runtime tables — own tenant only ────────────────────────────────
-DO $body$ DECLARE t text; BEGIN
-    FOR t IN SELECT unnest(ARRAY[
-        'document.workflow_request',
-        'document.workflow_stage',
-        'event.work_item'
-    ]) LOOP
-        EXECUTE format(
-            'CREATE POLICY tenant_read ON %s FOR SELECT USING ('
-            '  shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_insert ON %s FOR INSERT WITH CHECK ('
-            '  tenant_id = shared.current_tenant_id()'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_update ON %s FOR UPDATE '
-            '  USING (tenant_id = shared.current_tenant_id()) '
-            '  WITH CHECK (tenant_id = shared.current_tenant_id())', t);
-    END LOOP;
-END $body$;
-
--- entity_class_profile: no RLS — platform constant, no tenant_id
-
--- ─── Enable RLS + admin policies on all entity engine tables ─────────────────
-
-DO $body$ DECLARE t text; BEGIN
-    FOR t IN SELECT unnest(ARRAY[
-        'control.entity','control.entity_publish_state','control.entity_version','control.entity_version_contract',
-        'control.entity_field','control.field_group','control.field_group_member',
-        'control.entity_surface','control.entity_field_surface',
-        'control.field_security_policy','control.overlay','control.overlay_change',
-        'control.entity_lifecycle','control.entity_operation',
-        'control.entity_policy','control.entity_relation',
-        'snapshot.entity_compiled','snapshot.entity_compiled_overlay'
-    ]) LOOP
-        EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
-        EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_read   ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_insert ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS tenant_update ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS admin_read    ON %s', t);
-        EXECUTE format('DROP POLICY IF EXISTS admin_write   ON %s', t);
-        EXECUTE format('CREATE POLICY admin_read  ON %s FOR SELECT TO athyperadmin USING (true)', t);
-        EXECUTE format('CREATE POLICY admin_write ON %s FOR ALL TO athyperadmin USING (true) WITH CHECK (true)', t);
-    END LOOP;
-END $body$;
-
--- ─── Tables with tenant_id nullable (system rows visible to all) ─────────────
--- entity_publish_state is 1:1 with entity; platform rows have tenant_id=NULL
--- so it belongs here, not in the NOT NULL group.
-
-DO $body$ DECLARE t text; BEGIN
-    FOR t IN SELECT unnest(ARRAY[
-        'control.entity','control.entity_publish_state','control.entity_version','control.entity_version_contract',
-        'control.entity_field','control.entity_surface','control.entity_field_surface',
-        'control.entity_lifecycle','control.entity_operation',
-        'control.entity_relation','snapshot.entity_compiled',
-        'snapshot.entity_compiled_overlay'
-    ]) LOOP
-        EXECUTE format(
-            'CREATE POLICY tenant_read ON %s FOR SELECT USING ('
-            '  shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_insert ON %s FOR INSERT WITH CHECK ('
-            '  tenant_id = shared.current_tenant_id() OR tenant_id IS NULL'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_update ON %s FOR UPDATE '
-            '  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL) '
-            '  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)', t);
-    END LOOP;
-END $body$;
-
--- ─── Tables with tenant_id NOT NULL (own tenant only) ────────────────────────
-
-DO $body$ DECLARE t text; BEGIN
-    FOR t IN SELECT unnest(ARRAY[
-        'control.field_security_policy',
-        'control.overlay','control.overlay_change','control.entity_policy'
-    ]) LOOP
-        EXECUTE format(
-            'CREATE POLICY tenant_read ON %s FOR SELECT USING ('
-            '  shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_insert ON %s FOR INSERT WITH CHECK ('
-            '  tenant_id = shared.current_tenant_id()'
-            ')', t);
-        EXECUTE format(
-            'CREATE POLICY tenant_update ON %s FOR UPDATE '
-            '  USING (tenant_id = shared.current_tenant_id()) '
-            '  WITH CHECK (tenant_id = shared.current_tenant_id())', t);
-    END LOOP;
-END $body$;
-
--- ─── field_group: no tenant_id — platform-wide, admin-managed ────────────────
-
-DROP POLICY IF EXISTS admin_read_fg  ON control.field_group;
-DROP POLICY IF EXISTS admin_write_fg ON control.field_group;
-DROP POLICY IF EXISTS public_read_fg ON control.field_group;
-CREATE POLICY admin_read_fg  ON control.field_group FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write_fg ON control.field_group FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-CREATE POLICY public_read_fg ON control.field_group FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS admin_read_fgm  ON control.field_group_member;
-DROP POLICY IF EXISTS admin_write_fgm ON control.field_group_member;
-DROP POLICY IF EXISTS public_read_fgm ON control.field_group_member;
-CREATE POLICY admin_read_fgm  ON control.field_group_member FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write_fgm ON control.field_group_member FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-CREATE POLICY public_read_fgm ON control.field_group_member FOR SELECT USING (true);
-
--- ============================================================================
--- LEDGER POSTING PATH — control tables
--- ============================================================================
-
--- ── control.book_posting_rule ────────────────────────────────────────────────
-ALTER TABLE control.book_posting_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.book_posting_rule FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.book_posting_rule;
-DROP POLICY IF EXISTS tenant_insert ON control.book_posting_rule;
-DROP POLICY IF EXISTS tenant_update ON control.book_posting_rule;
-DROP POLICY IF EXISTS tenant_delete ON control.book_posting_rule;
-DROP POLICY IF EXISTS admin_read    ON control.book_posting_rule;
-DROP POLICY IF EXISTS admin_write   ON control.book_posting_rule;
-CREATE POLICY tenant_read   ON control.book_posting_rule FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.book_posting_rule FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.book_posting_rule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.book_posting_rule FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.book_posting_rule FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.book_posting_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
--- ============================================================================
--- R5  control.outbox_routing_rule
---     Platform-global + tenant-scoped. Tenants read their own rules + globals.
---     Write restricted to athyperadmin (platform rules) or tenant admin for
---     their own rows.
--- ============================================================================
-ALTER TABLE control.outbox_routing_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.outbox_routing_rule FORCE  ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS scoped_read  ON control.outbox_routing_rule;
-DROP POLICY IF EXISTS admin_write  ON control.outbox_routing_rule;
-CREATE POLICY scoped_read ON control.outbox_routing_rule
-    FOR SELECT USING (
-        tenant_id IS NULL
-        OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
-    );
-CREATE POLICY admin_write ON control.outbox_routing_rule
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- R11  control.budget_check_config
---      Tenant-scoped. Tenants manage their own configs.
--- ============================================================================
-ALTER TABLE control.budget_check_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.budget_check_config FORCE  ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS tenant_read   ON control.budget_check_config;
-DROP POLICY IF EXISTS tenant_write  ON control.budget_check_config;
-DROP POLICY IF EXISTS admin_write   ON control.budget_check_config;
-CREATE POLICY tenant_read  ON control.budget_check_config
-    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_write ON control.budget_check_config
-    FOR ALL USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY admin_write  ON control.budget_check_config
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- R7-A  control.wht_threshold_config
---       Tenant-scoped. Tenants manage their own WHT threshold configs.
--- ============================================================================
-ALTER TABLE control.wht_threshold_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.wht_threshold_config FORCE  ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS tenant_read   ON control.wht_threshold_config;
-DROP POLICY IF EXISTS tenant_write  ON control.wht_threshold_config;
-DROP POLICY IF EXISTS admin_write   ON control.wht_threshold_config;
-CREATE POLICY tenant_read  ON control.wht_threshold_config
-    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_write ON control.wht_threshold_config
-    FOR ALL USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY admin_write  ON control.wht_threshold_config
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- R7-B  control.tax_resolution_rule
---       Tenant-scoped. Resolver rules belong to the tenant that owns them.
--- ============================================================================
-ALTER TABLE control.tax_resolution_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.tax_resolution_rule FORCE  ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS tenant_read   ON control.tax_resolution_rule;
-DROP POLICY IF EXISTS tenant_write  ON control.tax_resolution_rule;
-DROP POLICY IF EXISTS admin_write   ON control.tax_resolution_rule;
-CREATE POLICY tenant_read  ON control.tax_resolution_rule
-    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_write ON control.tax_resolution_rule
-    FOR ALL USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY admin_write  ON control.tax_resolution_rule
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- Engine 4.13: Unified Transaction Resolution Engine additions
--- ============================================================================
-
-
--- ============================================================================
--- §0  control.transaction_event_catalog
---     Platform-global lookup (no tenant_id). Open read for all authenticated
---     sessions (event-code pickers, flow template UI). Admin-only write.
--- ============================================================================
-ALTER TABLE control.transaction_event_catalog ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.transaction_event_catalog FORCE  ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS open_read   ON control.transaction_event_catalog;
-DROP POLICY IF EXISTS admin_write ON control.transaction_event_catalog;
-CREATE POLICY open_read   ON control.transaction_event_catalog FOR SELECT USING (true);
-CREATE POLICY admin_write ON control.transaction_event_catalog FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §1  control.transaction_flow_template
---     tenant_id IS NULL = platform-global (read by all, managed by admin only).
---     tenant_id = UUID  = tenant override (own tenant read + write).
--- ============================================================================
-ALTER TABLE control.transaction_flow_template ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.transaction_flow_template FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS scoped_read   ON control.transaction_flow_template;
-DROP POLICY IF EXISTS tenant_insert ON control.transaction_flow_template;
-DROP POLICY IF EXISTS tenant_update ON control.transaction_flow_template;
-DROP POLICY IF EXISTS admin_write   ON control.transaction_flow_template;
-
--- Global rows (NULL) visible to all authenticated sessions; own tenant rows visible to self.
-CREATE POLICY scoped_read ON control.transaction_flow_template
-    FOR SELECT USING (
-        tenant_id IS NULL
-        OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
-    );
-
--- Tenants can only insert their own override rows (not NULL/global rows).
-CREATE POLICY tenant_insert ON control.transaction_flow_template
-    FOR INSERT WITH CHECK (
-        tenant_id IS NOT NULL
-        AND tenant_id = shared.current_tenant_id()
-    );
-
--- Tenants can only update their own override rows.
-CREATE POLICY tenant_update ON control.transaction_flow_template
-    FOR UPDATE
-    USING     (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
-
-CREATE POLICY admin_write ON control.transaction_flow_template
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §2  control.acct_profile_config
--- ============================================================================
-ALTER TABLE control.acct_profile_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.acct_profile_config FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.acct_profile_config;
-DROP POLICY IF EXISTS tenant_insert ON control.acct_profile_config;
-DROP POLICY IF EXISTS tenant_update ON control.acct_profile_config;
-DROP POLICY IF EXISTS tenant_delete ON control.acct_profile_config;
-DROP POLICY IF EXISTS admin_read    ON control.acct_profile_config;
-DROP POLICY IF EXISTS admin_write   ON control.acct_profile_config;
-CREATE POLICY tenant_read   ON control.acct_profile_config FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.acct_profile_config FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.acct_profile_config FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.acct_profile_config FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.acct_profile_config FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.acct_profile_config FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §3  control.acct_profile_commitment_config
--- ============================================================================
-ALTER TABLE control.acct_profile_commitment_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.acct_profile_commitment_config FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.acct_profile_commitment_config;
-DROP POLICY IF EXISTS tenant_insert ON control.acct_profile_commitment_config;
-DROP POLICY IF EXISTS tenant_update ON control.acct_profile_commitment_config;
-DROP POLICY IF EXISTS tenant_delete ON control.acct_profile_commitment_config;
-DROP POLICY IF EXISTS admin_read    ON control.acct_profile_commitment_config;
-DROP POLICY IF EXISTS admin_write   ON control.acct_profile_commitment_config;
-CREATE POLICY tenant_read   ON control.acct_profile_commitment_config FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.acct_profile_commitment_config FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.acct_profile_commitment_config FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.acct_profile_commitment_config FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.acct_profile_commitment_config FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.acct_profile_commitment_config FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §4  control.acct_profile_revenue_config
--- ============================================================================
-ALTER TABLE control.acct_profile_revenue_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.acct_profile_revenue_config FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.acct_profile_revenue_config;
-DROP POLICY IF EXISTS tenant_insert ON control.acct_profile_revenue_config;
-DROP POLICY IF EXISTS tenant_update ON control.acct_profile_revenue_config;
-DROP POLICY IF EXISTS tenant_delete ON control.acct_profile_revenue_config;
-DROP POLICY IF EXISTS admin_read    ON control.acct_profile_revenue_config;
-DROP POLICY IF EXISTS admin_write   ON control.acct_profile_revenue_config;
-CREATE POLICY tenant_read   ON control.acct_profile_revenue_config FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.acct_profile_revenue_config FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.acct_profile_revenue_config FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.acct_profile_revenue_config FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.acct_profile_revenue_config FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.acct_profile_revenue_config FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §5  control.acct_profile_settlement_config
--- ============================================================================
-ALTER TABLE control.acct_profile_settlement_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.acct_profile_settlement_config FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.acct_profile_settlement_config;
-DROP POLICY IF EXISTS tenant_insert ON control.acct_profile_settlement_config;
-DROP POLICY IF EXISTS tenant_update ON control.acct_profile_settlement_config;
-DROP POLICY IF EXISTS tenant_delete ON control.acct_profile_settlement_config;
-DROP POLICY IF EXISTS admin_read    ON control.acct_profile_settlement_config;
-DROP POLICY IF EXISTS admin_write   ON control.acct_profile_settlement_config;
-CREATE POLICY tenant_read   ON control.acct_profile_settlement_config FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.acct_profile_settlement_config FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.acct_profile_settlement_config FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.acct_profile_settlement_config FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.acct_profile_settlement_config FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.acct_profile_settlement_config FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §6  control.acct_profile_event
--- ============================================================================
-ALTER TABLE control.acct_profile_event ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.acct_profile_event FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.acct_profile_event;
-DROP POLICY IF EXISTS tenant_insert ON control.acct_profile_event;
-DROP POLICY IF EXISTS tenant_update ON control.acct_profile_event;
-DROP POLICY IF EXISTS tenant_delete ON control.acct_profile_event;
-DROP POLICY IF EXISTS admin_read    ON control.acct_profile_event;
-DROP POLICY IF EXISTS admin_write   ON control.acct_profile_event;
-CREATE POLICY tenant_read   ON control.acct_profile_event FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.acct_profile_event FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.acct_profile_event FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.acct_profile_event FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.acct_profile_event FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.acct_profile_event FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §7  control.acct_profile_entry_template
--- ============================================================================
-ALTER TABLE control.acct_profile_entry_template ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.acct_profile_entry_template FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.acct_profile_entry_template;
-DROP POLICY IF EXISTS tenant_insert ON control.acct_profile_entry_template;
-DROP POLICY IF EXISTS tenant_update ON control.acct_profile_entry_template;
-DROP POLICY IF EXISTS tenant_delete ON control.acct_profile_entry_template;
-DROP POLICY IF EXISTS admin_read    ON control.acct_profile_entry_template;
-DROP POLICY IF EXISTS admin_write   ON control.acct_profile_entry_template;
-CREATE POLICY tenant_read   ON control.acct_profile_entry_template FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.acct_profile_entry_template FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.acct_profile_entry_template FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.acct_profile_entry_template FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.acct_profile_entry_template FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.acct_profile_entry_template FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §8  control.acct_profile_book_rule
--- ============================================================================
-ALTER TABLE control.acct_profile_book_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.acct_profile_book_rule FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.acct_profile_book_rule;
-DROP POLICY IF EXISTS tenant_insert ON control.acct_profile_book_rule;
-DROP POLICY IF EXISTS tenant_update ON control.acct_profile_book_rule;
-DROP POLICY IF EXISTS tenant_delete ON control.acct_profile_book_rule;
-DROP POLICY IF EXISTS admin_read    ON control.acct_profile_book_rule;
-DROP POLICY IF EXISTS admin_write   ON control.acct_profile_book_rule;
-CREATE POLICY tenant_read   ON control.acct_profile_book_rule FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.acct_profile_book_rule FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.acct_profile_book_rule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.acct_profile_book_rule FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.acct_profile_book_rule FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.acct_profile_book_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §9  control.acct_profile_dimension_rule
--- ============================================================================
-ALTER TABLE control.acct_profile_dimension_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.acct_profile_dimension_rule FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.acct_profile_dimension_rule;
-DROP POLICY IF EXISTS tenant_insert ON control.acct_profile_dimension_rule;
-DROP POLICY IF EXISTS tenant_update ON control.acct_profile_dimension_rule;
-DROP POLICY IF EXISTS tenant_delete ON control.acct_profile_dimension_rule;
-DROP POLICY IF EXISTS admin_read    ON control.acct_profile_dimension_rule;
-DROP POLICY IF EXISTS admin_write   ON control.acct_profile_dimension_rule;
-CREATE POLICY tenant_read   ON control.acct_profile_dimension_rule FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.acct_profile_dimension_rule FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.acct_profile_dimension_rule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.acct_profile_dimension_rule FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.acct_profile_dimension_rule FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.acct_profile_dimension_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §10  control.commodity_classification_to_intent_rule
--- ============================================================================
-ALTER TABLE control.commodity_classification_to_intent_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.commodity_classification_to_intent_rule FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.commodity_classification_to_intent_rule;
-DROP POLICY IF EXISTS tenant_insert ON control.commodity_classification_to_intent_rule;
-DROP POLICY IF EXISTS tenant_update ON control.commodity_classification_to_intent_rule;
-DROP POLICY IF EXISTS tenant_delete ON control.commodity_classification_to_intent_rule;
-DROP POLICY IF EXISTS admin_read    ON control.commodity_classification_to_intent_rule;
-DROP POLICY IF EXISTS admin_write   ON control.commodity_classification_to_intent_rule;
-CREATE POLICY tenant_read   ON control.commodity_classification_to_intent_rule FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.commodity_classification_to_intent_rule FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.commodity_classification_to_intent_rule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.commodity_classification_to_intent_rule FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.commodity_classification_to_intent_rule FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.commodity_classification_to_intent_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §11  control.intent_to_accounting_profile_rule
--- ============================================================================
-ALTER TABLE control.commodity_category_buy_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.commodity_category_buy_policy FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.commodity_category_buy_policy;
-DROP POLICY IF EXISTS tenant_insert ON control.commodity_category_buy_policy;
-DROP POLICY IF EXISTS tenant_update ON control.commodity_category_buy_policy;
-DROP POLICY IF EXISTS tenant_delete ON control.commodity_category_buy_policy;
-DROP POLICY IF EXISTS admin_read    ON control.commodity_category_buy_policy;
-DROP POLICY IF EXISTS admin_write   ON control.commodity_category_buy_policy;
-CREATE POLICY tenant_read   ON control.commodity_category_buy_policy FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.commodity_category_buy_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.commodity_category_buy_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.commodity_category_buy_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.commodity_category_buy_policy FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.commodity_category_buy_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-ALTER TABLE control.commodity_category_sell_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.commodity_category_sell_policy FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.commodity_category_sell_policy;
-DROP POLICY IF EXISTS tenant_insert ON control.commodity_category_sell_policy;
-DROP POLICY IF EXISTS tenant_update ON control.commodity_category_sell_policy;
-DROP POLICY IF EXISTS tenant_delete ON control.commodity_category_sell_policy;
-DROP POLICY IF EXISTS admin_read    ON control.commodity_category_sell_policy;
-DROP POLICY IF EXISTS admin_write   ON control.commodity_category_sell_policy;
-CREATE POLICY tenant_read   ON control.commodity_category_sell_policy FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.commodity_category_sell_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.commodity_category_sell_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.commodity_category_sell_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.commodity_category_sell_policy FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.commodity_category_sell_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-ALTER TABLE control.commodity_category_inventory_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.commodity_category_inventory_policy FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.commodity_category_inventory_policy;
-DROP POLICY IF EXISTS tenant_insert ON control.commodity_category_inventory_policy;
-DROP POLICY IF EXISTS tenant_update ON control.commodity_category_inventory_policy;
-DROP POLICY IF EXISTS tenant_delete ON control.commodity_category_inventory_policy;
-DROP POLICY IF EXISTS admin_read    ON control.commodity_category_inventory_policy;
-DROP POLICY IF EXISTS admin_write   ON control.commodity_category_inventory_policy;
-CREATE POLICY tenant_read   ON control.commodity_category_inventory_policy FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.commodity_category_inventory_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.commodity_category_inventory_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.commodity_category_inventory_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.commodity_category_inventory_policy FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.commodity_category_inventory_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-ALTER TABLE control.supplier_posting_override ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.supplier_posting_override FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.supplier_posting_override;
-DROP POLICY IF EXISTS tenant_insert ON control.supplier_posting_override;
-DROP POLICY IF EXISTS tenant_update ON control.supplier_posting_override;
-DROP POLICY IF EXISTS tenant_delete ON control.supplier_posting_override;
-DROP POLICY IF EXISTS admin_read    ON control.supplier_posting_override;
-DROP POLICY IF EXISTS admin_write   ON control.supplier_posting_override;
-CREATE POLICY tenant_read   ON control.supplier_posting_override FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.supplier_posting_override FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.supplier_posting_override FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.supplier_posting_override FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.supplier_posting_override FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.supplier_posting_override FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-ALTER TABLE control.intent_to_accounting_profile_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.intent_to_accounting_profile_rule FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.intent_to_accounting_profile_rule;
-DROP POLICY IF EXISTS tenant_insert ON control.intent_to_accounting_profile_rule;
-DROP POLICY IF EXISTS tenant_update ON control.intent_to_accounting_profile_rule;
-DROP POLICY IF EXISTS tenant_delete ON control.intent_to_accounting_profile_rule;
-DROP POLICY IF EXISTS admin_read    ON control.intent_to_accounting_profile_rule;
-DROP POLICY IF EXISTS admin_write   ON control.intent_to_accounting_profile_rule;
-CREATE POLICY tenant_read   ON control.intent_to_accounting_profile_rule FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.intent_to_accounting_profile_rule FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.intent_to_accounting_profile_rule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.intent_to_accounting_profile_rule FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.intent_to_accounting_profile_rule FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.intent_to_accounting_profile_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ============================================================================
--- §12  control.intent_profile_override
--- Governance-gated: tenants can submit (INSERT) and view their own overrides.
--- Tenants cannot self-approve (approved_by/approved_at set only by admin or
--- an elevated-role principal — enforced at application layer).
--- ============================================================================
-ALTER TABLE control.intent_profile_override ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.intent_profile_override FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.intent_profile_override;
-DROP POLICY IF EXISTS tenant_insert ON control.intent_profile_override;
-DROP POLICY IF EXISTS tenant_update ON control.intent_profile_override;
-DROP POLICY IF EXISTS admin_read    ON control.intent_profile_override;
-DROP POLICY IF EXISTS admin_write   ON control.intent_profile_override;
-CREATE POLICY tenant_read   ON control.intent_profile_override FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.intent_profile_override FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
--- Tenants may update own rows (e.g. withdraw a pending_approval override).
-CREATE POLICY tenant_update ON control.intent_profile_override FOR UPDATE
-    USING     (tenant_id = shared.current_tenant_id() AND status IN ('pending_approval','inactive'))
-    WITH CHECK (tenant_id = shared.current_tenant_id());
--- No tenant_delete — use status=revoked transition.
-CREATE POLICY admin_read  ON control.intent_profile_override FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write ON control.intent_profile_override FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── bank_format_rule ─────────────────────────────────────────────────────────
-ALTER TABLE control.bank_format_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.bank_format_rule FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read ON control.bank_format_rule;
-DROP POLICY IF EXISTS tenant_insert ON control.bank_format_rule;
-DROP POLICY IF EXISTS tenant_update ON control.bank_format_rule;
-DROP POLICY IF EXISTS admin_read ON control.bank_format_rule;
-DROP POLICY IF EXISTS admin_write ON control.bank_format_rule;
-CREATE POLICY tenant_read   ON control.bank_format_rule FOR SELECT USING (
-    tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.bank_format_rule FOR INSERT WITH CHECK (
-    tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.bank_format_rule FOR UPDATE
-    USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.bank_format_rule FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.bank_format_rule FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── payment_method_company_policy ────────────────────────────────────────────
-ALTER TABLE control.payment_method_company_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.payment_method_company_policy FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.payment_method_company_policy;
-DROP POLICY IF EXISTS tenant_insert ON control.payment_method_company_policy;
-DROP POLICY IF EXISTS tenant_update ON control.payment_method_company_policy;
-DROP POLICY IF EXISTS tenant_delete ON control.payment_method_company_policy;
-DROP POLICY IF EXISTS admin_read    ON control.payment_method_company_policy;
-DROP POLICY IF EXISTS admin_write   ON control.payment_method_company_policy;
-CREATE POLICY tenant_read   ON control.payment_method_company_policy FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.payment_method_company_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.payment_method_company_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.payment_method_company_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.payment_method_company_policy FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.payment_method_company_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
--- ── bank_interface_profile (SENSITIVE config — no tenant_delete) ─────────────
-ALTER TABLE control.bank_interface_profile ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.bank_interface_profile FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.bank_interface_profile;
-DROP POLICY IF EXISTS tenant_insert ON control.bank_interface_profile;
-DROP POLICY IF EXISTS tenant_update ON control.bank_interface_profile;
-DROP POLICY IF EXISTS tenant_delete ON control.bank_interface_profile;
-DROP POLICY IF EXISTS admin_read    ON control.bank_interface_profile;
-DROP POLICY IF EXISTS admin_write   ON control.bank_interface_profile;
-CREATE POLICY tenant_read   ON control.bank_interface_profile FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.bank_interface_profile FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.bank_interface_profile FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.bank_interface_profile FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.bank_interface_profile FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
--- ── payment_method_interface_binding ─────────────────────────────────────────
-ALTER TABLE control.payment_method_interface_binding ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.payment_method_interface_binding FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.payment_method_interface_binding;
-DROP POLICY IF EXISTS tenant_insert ON control.payment_method_interface_binding;
-DROP POLICY IF EXISTS tenant_update ON control.payment_method_interface_binding;
-DROP POLICY IF EXISTS admin_read    ON control.payment_method_interface_binding;
-DROP POLICY IF EXISTS admin_write   ON control.payment_method_interface_binding;
-CREATE POLICY tenant_read   ON control.payment_method_interface_binding FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.payment_method_interface_binding FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.payment_method_interface_binding FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.payment_method_interface_binding FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.payment_method_interface_binding FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
--- ── payment_settlement_rule ──────────────────────────────────────────────────
-ALTER TABLE control.payment_settlement_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.payment_settlement_rule FORCE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.payment_settlement_rule;
-DROP POLICY IF EXISTS tenant_insert ON control.payment_settlement_rule;
-DROP POLICY IF EXISTS tenant_update ON control.payment_settlement_rule;
-DROP POLICY IF EXISTS admin_read    ON control.payment_settlement_rule;
-DROP POLICY IF EXISTS admin_write   ON control.payment_settlement_rule;
-CREATE POLICY tenant_read   ON control.payment_settlement_rule FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.payment_settlement_rule FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.payment_settlement_rule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.payment_settlement_rule FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.payment_settlement_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
--- -- asset_class_book_policy_template --------------------------------------
-ALTER TABLE control.asset_class_book_policy_template ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.asset_class_book_policy_template FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS scoped_read   ON control.asset_class_book_policy_template;
-DROP POLICY IF EXISTS tenant_insert ON control.asset_class_book_policy_template;
-DROP POLICY IF EXISTS tenant_update ON control.asset_class_book_policy_template;
-DROP POLICY IF EXISTS tenant_delete ON control.asset_class_book_policy_template;
-DROP POLICY IF EXISTS admin_write   ON control.asset_class_book_policy_template;
-
-CREATE POLICY scoped_read ON control.asset_class_book_policy_template
-    FOR SELECT USING (
-        tenant_id IS NULL
-        OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft()
-    );
-CREATE POLICY tenant_insert ON control.asset_class_book_policy_template
-    FOR INSERT WITH CHECK (
-        tenant_id IS NOT NULL
-        AND tenant_id = shared.current_tenant_id()
-    );
-CREATE POLICY tenant_update ON control.asset_class_book_policy_template
-    FOR UPDATE
-    USING     (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.asset_class_book_policy_template
-    FOR DELETE USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_write ON control.asset_class_book_policy_template
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── asset_class_book_policy ────────────────────────────────────────────────
-ALTER TABLE control.asset_class_book_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.asset_class_book_policy FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON control.asset_class_book_policy;
-DROP POLICY IF EXISTS tenant_insert ON control.asset_class_book_policy;
-DROP POLICY IF EXISTS tenant_update ON control.asset_class_book_policy;
-DROP POLICY IF EXISTS tenant_delete ON control.asset_class_book_policy;
-DROP POLICY IF EXISTS admin_read    ON control.asset_class_book_policy;
-DROP POLICY IF EXISTS admin_write   ON control.asset_class_book_policy;
-CREATE POLICY tenant_read   ON control.asset_class_book_policy FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.asset_class_book_policy FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON control.asset_class_book_policy FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON control.asset_class_book_policy FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON control.asset_class_book_policy FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON control.asset_class_book_policy FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── blueprint_registry ────────────────────────────────────────────────────────
--- R6: platform-global table (no tenant_id). Open read for all authenticated
--- sessions (provisioning API, tenant wizard). Write restricted to athyperadmin.
-ALTER TABLE control.blueprint_registry ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.blueprint_registry FORCE  ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS open_read  ON control.blueprint_registry;
-DROP POLICY IF EXISTS admin_write ON control.blueprint_registry;
-CREATE POLICY open_read   ON control.blueprint_registry FOR SELECT USING (true);
-CREATE POLICY admin_write ON control.blueprint_registry FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── blueprint_tenant_application ──────────────────────────────────────────────
--- R6: tenant-scoped provisioning audit log. Tenants read their own applications.
--- athyperadmin has full cross-tenant access for provisioning operations.
-ALTER TABLE control.blueprint_tenant_application ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.blueprint_tenant_application FORCE  ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS scoped_read  ON control.blueprint_tenant_application;
-DROP POLICY IF EXISTS admin_write  ON control.blueprint_tenant_application;
-CREATE POLICY scoped_read ON control.blueprint_tenant_application
-    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY admin_write ON control.blueprint_tenant_application
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── R8  ai_action_policy ──────────────────────────────────────────────────────
--- Tenant-scoped: tenants configure their own AI policies. Admin has full access.
-ALTER TABLE control.ai_action_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.ai_action_policy FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read  ON control.ai_action_policy;
-DROP POLICY IF EXISTS tenant_write ON control.ai_action_policy;
-DROP POLICY IF EXISTS admin_write  ON control.ai_action_policy;
-CREATE POLICY tenant_read  ON control.ai_action_policy
-    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_write ON control.ai_action_policy
-    FOR ALL USING (tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_write  ON control.ai_action_policy
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── R8  ai_confidence_threshold ───────────────────────────────────────────────
-ALTER TABLE control.ai_confidence_threshold ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.ai_confidence_threshold FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read  ON control.ai_confidence_threshold;
-DROP POLICY IF EXISTS tenant_write ON control.ai_confidence_threshold;
-DROP POLICY IF EXISTS admin_write  ON control.ai_confidence_threshold;
-CREATE POLICY tenant_read  ON control.ai_confidence_threshold
-    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_write ON control.ai_confidence_threshold
-    FOR ALL USING (tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_write  ON control.ai_confidence_threshold
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── R8  ai_drift_baseline ────────────────────────────────────────────────────
--- Read: own tenant (drift baselines are tenant-specific). Write: own tenant or admin.
-ALTER TABLE control.ai_drift_baseline ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.ai_drift_baseline FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read  ON control.ai_drift_baseline;
-DROP POLICY IF EXISTS tenant_write ON control.ai_drift_baseline;
-DROP POLICY IF EXISTS admin_write  ON control.ai_drift_baseline;
-CREATE POLICY tenant_read  ON control.ai_drift_baseline
-    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_write ON control.ai_drift_baseline
-    FOR ALL USING (tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_write  ON control.ai_drift_baseline
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── H3  forecast_budget_bridge ───────────────────────────────────────────────
--- Read: own tenant. Write: own tenant (finance controller role enforced at app layer).
-ALTER TABLE control.forecast_budget_bridge ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.forecast_budget_bridge FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read  ON control.forecast_budget_bridge;
-DROP POLICY IF EXISTS tenant_write ON control.forecast_budget_bridge;
-DROP POLICY IF EXISTS admin_write  ON control.forecast_budget_bridge;
-CREATE POLICY tenant_read  ON control.forecast_budget_bridge
-    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_write ON control.forecast_budget_bridge
-    FOR ALL USING (tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_write  ON control.forecast_budget_bridge
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- ── H4  metadata_change_application_log ─────────────────────────────────────
--- Read: own tenant (finance/admin users inspect compiler run history).
--- Write: platform service account (INSERT only at application time) + admin.
-ALTER TABLE control.metadata_change_application_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.metadata_change_application_log FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read  ON control.metadata_change_application_log;
-DROP POLICY IF EXISTS tenant_insert ON control.metadata_change_application_log;
-DROP POLICY IF EXISTS admin_write  ON control.metadata_change_application_log;
-CREATE POLICY tenant_read   ON control.metadata_change_application_log
-    FOR SELECT USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON control.metadata_change_application_log
-    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_write   ON control.metadata_change_application_log
-    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-
--- =============================================================================
--- control.record_edit_lock
--- Tenant-scoped pessimistic document edit locks.
--- Principals may read, acquire, heartbeat, and release their own tenant's locks.
--- Force-release (admin) handled by permission check in the API route, not by RLS.
--- =============================================================================
-
-ALTER TABLE control.record_edit_lock ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.record_edit_lock FORCE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS tenant_read   ON control.record_edit_lock;
-DROP POLICY IF EXISTS tenant_write  ON control.record_edit_lock;
-DROP POLICY IF EXISTS tenant_update ON control.record_edit_lock;
-DROP POLICY IF EXISTS tenant_delete ON control.record_edit_lock;
-DROP POLICY IF EXISTS admin_write   ON control.record_edit_lock;
-
--- Principals can see all locks for their tenant (needed to show "Kumar is editing this")
-CREATE POLICY tenant_read ON control.record_edit_lock
-    FOR SELECT
-    USING (tenant_id = shared.current_tenant_id());
-
--- Only insert rows scoped to own tenant
-CREATE POLICY tenant_write ON control.record_edit_lock
-    FOR INSERT
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-
--- Update (heartbeat renewal) — own tenant only
-CREATE POLICY tenant_update ON control.record_edit_lock
-    FOR UPDATE
-    USING  (tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-
--- Delete (release / stale eviction) — own tenant only
-CREATE POLICY tenant_delete ON control.record_edit_lock
-    FOR DELETE
-    USING (tenant_id = shared.current_tenant_id());
-
--- Admin: full access for seeding, migrations, and force-unlock operations
-CREATE POLICY admin_write ON control.record_edit_lock
-    FOR ALL TO athyperadmin
-    USING (true) WITH CHECK (true);
-
-
--- =============================================================================
--- control.lifecycle_transition_execution
--- Tenant-scoped idempotency carrier for posting hook handlers.
--- Hook handlers INSERT on the first run (under tenant context); subsequent
--- runs hit ON CONFLICT DO NOTHING and no-op. Tenants may read their own
--- transition execution history (drives the per-record audit + replay UI).
--- =============================================================================
-
-ALTER TABLE control.lifecycle_transition_execution ENABLE ROW LEVEL SECURITY;
-ALTER TABLE control.lifecycle_transition_execution FORCE  ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS tenant_read   ON control.lifecycle_transition_execution;
-DROP POLICY IF EXISTS tenant_insert ON control.lifecycle_transition_execution;
-DROP POLICY IF EXISTS tenant_update ON control.lifecycle_transition_execution;
-DROP POLICY IF EXISTS admin_write   ON control.lifecycle_transition_execution;
-
-CREATE POLICY tenant_read   ON control.lifecycle_transition_execution
-    FOR SELECT
-    USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-
-CREATE POLICY tenant_insert ON control.lifecycle_transition_execution
-    FOR INSERT
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-
--- UPDATE allowed only for completion / failure marking by the same tenant
-CREATE POLICY tenant_update ON control.lifecycle_transition_execution
-    FOR UPDATE
-    USING (tenant_id = shared.current_tenant_id())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-
-CREATE POLICY admin_write   ON control.lifecycle_transition_execution
-    FOR ALL TO athyperadmin
-    USING (true) WITH CHECK (true);
+ALTER TABLE "control"."acct_profile_book_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_book_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_commitment_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_commitment_config" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_config" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_dimension_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_dimension_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_entry_template" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_entry_template" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_event" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_event" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_revenue_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_revenue_config" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_settlement_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."acct_profile_settlement_config" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."ai_action_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."ai_action_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."ai_confidence_threshold" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."ai_confidence_threshold" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."ai_drift_baseline" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."ai_drift_baseline" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."asset_class_book_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."asset_class_book_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."asset_class_book_policy_template" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."asset_class_book_policy_template" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."atlas_conversation_retention_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."atlas_conversation_retention_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."atlas_tenant_provider_credential" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."atlas_tenant_provider_credential" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."atlas_tenant_provider_credential_epoch" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."atlas_tenant_provider_credential_epoch" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."auth_entitlement_target_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."auth_entitlement_target_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."auth_permission" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."auth_permission" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."auth_permission_scope_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."auth_permission_scope_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."bank_format_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."bank_format_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."bank_interface_profile" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."bank_interface_profile" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."blueprint_registry" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."blueprint_registry" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."blueprint_tenant_application" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."blueprint_tenant_application" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."book_posting_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."book_posting_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."budget_check_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."budget_check_config" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."commodity_category_buy_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."commodity_category_buy_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."commodity_category_inventory_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."commodity_category_inventory_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."commodity_category_sell_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."commodity_category_sell_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."commodity_classification_to_intent_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."commodity_classification_to_intent_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."company_fiscal_calendar_assignment" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."company_fiscal_calendar_assignment" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."content_quota" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."content_quota" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_action_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_action_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_contract_transition" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_contract_transition" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_field" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_field" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_field_surface" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_field_surface" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_flow" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_flow" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_flow_field" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_flow_field" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_flow_section" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_flow_section" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_flow_step" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_flow_step" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_lifecycle" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_lifecycle" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_lifecycle_state_mask" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_lifecycle_state_mask" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_numbering_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_numbering_config" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_numbering_counter" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_numbering_counter" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_operation" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_operation" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_publish_state" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_publish_state" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_relation" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_relation" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_scope_binding" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_scope_binding" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_surface" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_surface" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_version" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_version" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_version_contract" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."entity_version_contract" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."field_group" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."field_group" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."field_group_member" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."field_group_member" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."field_security_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."field_security_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."finance_posting_rollout_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."finance_posting_rollout_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."fiscal_calendar_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."fiscal_calendar_config" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."fiscal_calendar_period_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."fiscal_calendar_period_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."forecast_budget_bridge" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."forecast_budget_bridge" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."formula_expression" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."formula_expression" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."formula_expression_version" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."formula_expression_version" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."fx_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."fx_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."hook_action_registry" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."hook_action_registry" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."intent_profile_override" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."intent_profile_override" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."intent_to_accounting_profile_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."intent_to_accounting_profile_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_hook_override" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_hook_override" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_state" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_state" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_timer_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_timer_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_transition" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_transition" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_transition_execution" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_transition_execution" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_transition_gate" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_transition_gate" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_transition_hook" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lifecycle_transition_hook" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lookup_domain" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lookup_domain" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lookup_value" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."lookup_value" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."metadata_change_application_log" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."metadata_change_application_log" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."mfa_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."mfa_config" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."notification_provider" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."notification_provider" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."notification_routing_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."notification_routing_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."notification_template" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."notification_template" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."outbox_routing_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."outbox_routing_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."overlay" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."overlay" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."overlay_change" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."overlay_change" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."payment_method_company_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."payment_method_company_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."payment_method_interface_binding" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."payment_method_interface_binding" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."payment_settlement_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."payment_settlement_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."posting_role_account_map" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."posting_role_account_map" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."posting_role_alias" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."posting_role_alias" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."rate_table" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."rate_table" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."rate_table_row" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."rate_table_row" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."record_edit_lock" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."record_edit_lock" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."setup_domain" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."setup_domain" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."setup_workspace" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."setup_workspace" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."supplier_posting_override" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."supplier_posting_override" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."tax_group_version" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."tax_group_version" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."tax_resolution_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."tax_resolution_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."transaction_event_catalog" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."transaction_event_catalog" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."transaction_flow_template" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."transaction_flow_template" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."wht_threshold_config" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."wht_threshold_config" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_definition" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_definition" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_sla_policy" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_sla_policy" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_template" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_template" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_template_rule" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_template_rule" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_template_stage" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "control"."workflow_template_stage" FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY "admin_read" ON "control"."acct_profile_book_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."acct_profile_book_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."acct_profile_book_rule"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."acct_profile_book_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."acct_profile_book_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."acct_profile_book_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."acct_profile_commitment_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."acct_profile_commitment_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."acct_profile_commitment_config"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."acct_profile_commitment_config"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."acct_profile_commitment_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."acct_profile_commitment_config"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."acct_profile_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."acct_profile_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."acct_profile_config"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."acct_profile_config"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."acct_profile_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."acct_profile_config"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."acct_profile_dimension_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."acct_profile_dimension_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."acct_profile_dimension_rule"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."acct_profile_dimension_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."acct_profile_dimension_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."acct_profile_dimension_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."acct_profile_entry_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."acct_profile_entry_template"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."acct_profile_entry_template"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."acct_profile_entry_template"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."acct_profile_entry_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."acct_profile_entry_template"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."acct_profile_event"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."acct_profile_event"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."acct_profile_event"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."acct_profile_event"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."acct_profile_event"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."acct_profile_event"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."acct_profile_revenue_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."acct_profile_revenue_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."acct_profile_revenue_config"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."acct_profile_revenue_config"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."acct_profile_revenue_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."acct_profile_revenue_config"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."acct_profile_settlement_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."acct_profile_settlement_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."acct_profile_settlement_config"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."acct_profile_settlement_config"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."acct_profile_settlement_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."acct_profile_settlement_config"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."ai_action_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "control"."ai_action_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_write" ON "control"."ai_action_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."ai_confidence_threshold"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "control"."ai_confidence_threshold"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_write" ON "control"."ai_confidence_threshold"
+  AS PERMISSIVE
+  FOR ALL
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."ai_drift_baseline"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "control"."ai_drift_baseline"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_write" ON "control"."ai_drift_baseline"
+  AS PERMISSIVE
+  FOR ALL
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."asset_class_book_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."asset_class_book_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."asset_class_book_policy"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."asset_class_book_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."asset_class_book_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."asset_class_book_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."asset_class_book_policy_template"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "scoped_read" ON "control"."asset_class_book_policy_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_delete" ON "control"."asset_class_book_policy_template"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."asset_class_book_policy_template"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_update" ON "control"."asset_class_book_policy_template"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."atlas_conversation_retention_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "control"."atlas_conversation_retention_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_write" ON "control"."atlas_conversation_retention_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "atlas_byok_tenant_scope" ON "control"."atlas_tenant_provider_credential"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperapp
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "atlas_byok_epoch_tenant_scope" ON "control"."atlas_tenant_provider_credential_epoch"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperapp
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "authorization_v2_admin" ON "control"."auth_entitlement_target_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "authorization_v2_runtime_read" ON "control"."auth_entitlement_target_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperapp
+  USING (true);
+
+CREATE POLICY "authorization_v2_admin" ON "control"."auth_permission"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "authorization_v2_runtime_read" ON "control"."auth_permission"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperapp
+  USING (true);
+
+CREATE POLICY "authorization_v2_admin" ON "control"."auth_permission_scope_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "authorization_v2_runtime_read" ON "control"."auth_permission_scope_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperapp
+  USING (true);
+
+CREATE POLICY "admin_read" ON "control"."bank_format_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."bank_format_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."bank_format_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."bank_format_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."bank_format_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."bank_interface_profile"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."bank_interface_profile"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."bank_interface_profile"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."bank_interface_profile"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."bank_interface_profile"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."blueprint_registry"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "open_read" ON "control"."blueprint_registry"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."blueprint_tenant_application"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "scoped_read" ON "control"."blueprint_tenant_application"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "admin_read" ON "control"."book_posting_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."book_posting_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."book_posting_rule"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."book_posting_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."book_posting_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."book_posting_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."budget_check_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "control"."budget_check_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_write" ON "control"."budget_check_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())
+  WITH CHECK (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "admin_read" ON "control"."commodity_category_buy_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."commodity_category_buy_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."commodity_category_buy_policy"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."commodity_category_buy_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."commodity_category_buy_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."commodity_category_buy_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."commodity_category_inventory_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."commodity_category_inventory_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."commodity_category_inventory_policy"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."commodity_category_inventory_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."commodity_category_inventory_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."commodity_category_inventory_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."commodity_category_sell_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."commodity_category_sell_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."commodity_category_sell_policy"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."commodity_category_sell_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."commodity_category_sell_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."commodity_category_sell_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."commodity_classification_to_intent_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."commodity_classification_to_intent_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."commodity_classification_to_intent_rule"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."commodity_classification_to_intent_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."commodity_classification_to_intent_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."commodity_classification_to_intent_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."company_fiscal_calendar_assignment"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."company_fiscal_calendar_assignment"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."company_fiscal_calendar_assignment"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."company_fiscal_calendar_assignment"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."company_fiscal_calendar_assignment"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."company_fiscal_calendar_assignment"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."content_quota"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."content_quota"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."content_quota"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."content_quota"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."content_quota"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."content_quota"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."entity"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "m1_admin_all" ON "control"."entity_action_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "m1_scoped_read" ON "control"."entity_action_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "m1_tenant_delete" ON "control"."entity_action_rule"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_insert" ON "control"."entity_action_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_update" ON "control"."entity_action_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m3_admin_all" ON "control"."entity_contract_transition"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "m3_scoped_read" ON "control"."entity_contract_transition"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "m3_tenant_write" ON "control"."entity_contract_transition"
+  AS PERMISSIVE
+  FOR ALL
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."entity_field"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_field"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_field"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity_field"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity_field"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "admin_read" ON "control"."entity_field_surface"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_field_surface"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_field_surface"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity_field_surface"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity_field_surface"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "m1_admin_all" ON "control"."entity_flow"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "m1_scoped_read" ON "control"."entity_flow"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "m1_tenant_delete" ON "control"."entity_flow"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_insert" ON "control"."entity_flow"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_update" ON "control"."entity_flow"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_admin_all" ON "control"."entity_flow_field"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "m1_scoped_read" ON "control"."entity_flow_field"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "m1_tenant_delete" ON "control"."entity_flow_field"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_insert" ON "control"."entity_flow_field"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_update" ON "control"."entity_flow_field"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_admin_all" ON "control"."entity_flow_section"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "m1_scoped_read" ON "control"."entity_flow_section"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "m1_tenant_delete" ON "control"."entity_flow_section"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_insert" ON "control"."entity_flow_section"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_update" ON "control"."entity_flow_section"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_admin_all" ON "control"."entity_flow_step"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "m1_scoped_read" ON "control"."entity_flow_step"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "m1_tenant_delete" ON "control"."entity_flow_step"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_insert" ON "control"."entity_flow_step"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_update" ON "control"."entity_flow_step"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."entity_lifecycle"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_lifecycle"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_lifecycle"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity_lifecycle"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity_lifecycle"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "m1_admin_all" ON "control"."entity_lifecycle_state_mask"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "m1_scoped_read" ON "control"."entity_lifecycle_state_mask"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "m1_tenant_delete" ON "control"."entity_lifecycle_state_mask"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_insert" ON "control"."entity_lifecycle_state_mask"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_update" ON "control"."entity_lifecycle_state_mask"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_admin_all" ON "control"."entity_numbering_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "m1_scoped_read" ON "control"."entity_numbering_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "m1_tenant_delete" ON "control"."entity_numbering_config"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_insert" ON "control"."entity_numbering_config"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_update" ON "control"."entity_numbering_config"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_admin_all" ON "control"."entity_numbering_counter"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "m1_scoped_read" ON "control"."entity_numbering_counter"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "m1_tenant_delete" ON "control"."entity_numbering_counter"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_insert" ON "control"."entity_numbering_counter"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "m1_tenant_update" ON "control"."entity_numbering_counter"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."entity_operation"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_operation"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_operation"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity_operation"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity_operation"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "admin_read" ON "control"."entity_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."entity_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."entity_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."entity_publish_state"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_publish_state"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_publish_state"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity_publish_state"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity_publish_state"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "admin_read" ON "control"."entity_relation"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_relation"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_relation"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity_relation"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity_relation"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "authorization_v2_admin" ON "control"."entity_scope_binding"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "authorization_v2_runtime_read" ON "control"."entity_scope_binding"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperapp
+  USING (true);
+
+CREATE POLICY "admin_read" ON "control"."entity_surface"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_surface"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_surface"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity_surface"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity_surface"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "admin_read" ON "control"."entity_version"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_version"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_version"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity_version"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity_version"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "admin_read" ON "control"."entity_version_contract"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."entity_version_contract"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."entity_version_contract"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_read" ON "control"."entity_version_contract"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."entity_version_contract"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL)
+  WITH CHECK (tenant_id = shared.current_tenant_id() OR tenant_id IS NULL);
+
+CREATE POLICY "admin_read" ON "control"."field_group"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_read_fg" ON "control"."field_group"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."field_group"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "admin_write_fg" ON "control"."field_group"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "public_read_fg" ON "control"."field_group"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (true);
+
+CREATE POLICY "admin_read" ON "control"."field_group_member"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_read_fgm" ON "control"."field_group_member"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."field_group_member"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "admin_write_fgm" ON "control"."field_group_member"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "public_read_fgm" ON "control"."field_group_member"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (true);
+
+CREATE POLICY "admin_read" ON "control"."field_security_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."field_security_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."field_security_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."field_security_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."field_security_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."finance_posting_rollout_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."finance_posting_rollout_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."finance_posting_rollout_policy"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."finance_posting_rollout_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."finance_posting_rollout_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_update" ON "control"."finance_posting_rollout_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."fiscal_calendar_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."fiscal_calendar_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."fiscal_calendar_config"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."fiscal_calendar_config"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."fiscal_calendar_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."fiscal_calendar_config"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."fiscal_calendar_period_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."fiscal_calendar_period_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."fiscal_calendar_period_rule"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."fiscal_calendar_period_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."fiscal_calendar_period_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."fiscal_calendar_period_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."forecast_budget_bridge"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "control"."forecast_budget_bridge"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_write" ON "control"."forecast_budget_bridge"
+  AS PERMISSIVE
+  FOR ALL
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."formula_expression"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."formula_expression"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."formula_expression"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."formula_expression"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."formula_expression"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."formula_expression"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."formula_expression_version"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."formula_expression_version"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."formula_expression_version"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."formula_expression_version"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."formula_expression_version"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."formula_expression_version"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."fx_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."fx_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."fx_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."fx_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."fx_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."hook_action_registry"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."hook_action_registry"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."hook_action_registry"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."hook_action_registry"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."hook_action_registry"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."intent_profile_override"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."intent_profile_override"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."intent_profile_override"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."intent_profile_override"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."intent_profile_override"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id() AND (status = ANY (ARRAY['pending_approval'::text, 'inactive'::text])))
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."intent_to_accounting_profile_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."intent_to_accounting_profile_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."intent_to_accounting_profile_rule"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."intent_to_accounting_profile_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."intent_to_accounting_profile_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."intent_to_accounting_profile_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."lifecycle"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."lifecycle"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."lifecycle"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."lifecycle"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."lifecycle"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."lifecycle_hook_override"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."lifecycle_hook_override"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."lifecycle_hook_override"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."lifecycle_hook_override"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."lifecycle_hook_override"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."lifecycle_state"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."lifecycle_state"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."lifecycle_state"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."lifecycle_state"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."lifecycle_state"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."lifecycle_timer_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."lifecycle_timer_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."lifecycle_timer_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."lifecycle_timer_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."lifecycle_timer_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."lifecycle_transition"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."lifecycle_transition"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."lifecycle_transition"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."lifecycle_transition"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."lifecycle_transition"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."lifecycle_transition_execution"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."lifecycle_transition_execution"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."lifecycle_transition_execution"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."lifecycle_transition_execution"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."lifecycle_transition_gate"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."lifecycle_transition_gate"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."lifecycle_transition_gate"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."lifecycle_transition_gate"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."lifecycle_transition_gate"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."lifecycle_transition_hook"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."lifecycle_transition_hook"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."lifecycle_transition_hook"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."lifecycle_transition_hook"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."lifecycle_transition_hook"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."lookup_domain"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "open_read" ON "control"."lookup_domain"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."lookup_value"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "scoped_read" ON "control"."lookup_value"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."lookup_value"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id() AND is_system = false)
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id() AND is_system = false);
+
+CREATE POLICY "tenant_write" ON "control"."lookup_value"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."metadata_change_application_log"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."metadata_change_application_log"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."metadata_change_application_log"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "admin_read" ON "control"."mfa_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."mfa_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."mfa_config"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."mfa_config"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."mfa_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."mfa_config"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."notification_provider"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."notification_provider"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "control"."notification_provider"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (true);
+
+CREATE POLICY "admin_read" ON "control"."notification_routing_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."notification_routing_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."notification_routing_rule"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."notification_routing_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."notification_routing_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."notification_routing_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."notification_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."notification_template"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."notification_template"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."notification_template"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."notification_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."notification_template"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."outbox_routing_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "scoped_read" ON "control"."outbox_routing_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "admin_read" ON "control"."overlay"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."overlay"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."overlay"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."overlay"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."overlay"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."overlay_change"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."overlay_change"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."overlay_change"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."overlay_change"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."overlay_change"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."payment_method_company_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."payment_method_company_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."payment_method_company_policy"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."payment_method_company_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."payment_method_company_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."payment_method_company_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."payment_method_interface_binding"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."payment_method_interface_binding"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."payment_method_interface_binding"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."payment_method_interface_binding"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."payment_method_interface_binding"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."payment_settlement_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."payment_settlement_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."payment_settlement_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."payment_settlement_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."payment_settlement_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "pram_admin" ON "control"."posting_role_account_map"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "pram_delete" ON "control"."posting_role_account_map"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "pram_insert" ON "control"."posting_role_account_map"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "pram_read" ON "control"."posting_role_account_map"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "pram_update" ON "control"."posting_role_account_map"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "posting_role_alias_admin" ON "control"."posting_role_alias"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "posting_role_alias_delete" ON "control"."posting_role_alias"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "posting_role_alias_insert" ON "control"."posting_role_alias"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "posting_role_alias_read" ON "control"."posting_role_alias"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "posting_role_alias_update" ON "control"."posting_role_alias"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."rate_table"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."rate_table"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."rate_table"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."rate_table"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."rate_table"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."rate_table"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."rate_table_row"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."rate_table_row"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."rate_table_row"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."rate_table_row"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."rate_table_row"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."rate_table_row"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."record_edit_lock"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."record_edit_lock"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."record_edit_lock"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_update" ON "control"."record_edit_lock"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_write" ON "control"."record_edit_lock"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."setup_domain"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "platform_read" ON "control"."setup_domain"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."setup_workspace"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "platform_read" ON "control"."setup_workspace"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (true);
+
+CREATE POLICY "admin_read" ON "control"."supplier_posting_override"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."supplier_posting_override"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."supplier_posting_override"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."supplier_posting_override"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."supplier_posting_override"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."supplier_posting_override"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."tax_group_version"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."tax_group_version"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "control"."tax_group_version"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "control"."tax_group_version"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."tax_group_version"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "control"."tax_group_version"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."tax_resolution_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "control"."tax_resolution_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_write" ON "control"."tax_resolution_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())
+  WITH CHECK (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "admin_write" ON "control"."transaction_event_catalog"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "open_read" ON "control"."transaction_event_catalog"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."transaction_flow_template"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "scoped_read" ON "control"."transaction_flow_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (tenant_id IS NULL OR shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_insert" ON "control"."transaction_flow_template"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_update" ON "control"."transaction_flow_template"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id IS NOT NULL AND tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "control"."wht_threshold_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "control"."wht_threshold_config"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_write" ON "control"."wht_threshold_config"
+  AS PERMISSIVE
+  FOR ALL
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft())
+  WITH CHECK (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "admin_read" ON "control"."workflow_definition"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."workflow_definition"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."workflow_definition"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."workflow_definition"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."workflow_definition"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."workflow_sla_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."workflow_sla_policy"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."workflow_sla_policy"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."workflow_sla_policy"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."workflow_sla_policy"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."workflow_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."workflow_template"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."workflow_template"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."workflow_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."workflow_template"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."workflow_template_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."workflow_template_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."workflow_template_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."workflow_template_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."workflow_template_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "control"."workflow_template_stage"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "control"."workflow_template_stage"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_insert" ON "control"."workflow_template_stage"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "control"."workflow_template_stage"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft() OR tenant_id IS NULL);
+
+CREATE POLICY "tenant_update" ON "control"."workflow_template_stage"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+GRANT EXECUTE ON FUNCTION "control".canonical_posting_role_code(p_tenant_id uuid, p_role_code text) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".canonical_posting_role_code(p_tenant_id uuid, p_role_code text) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".fiscal_calendar_year_start(p_tenant_id uuid, p_calendar_config_id uuid, p_fiscal_year integer) TO PUBLIC;
+
+GRANT EXECUTE ON FUNCTION "control".fiscal_calendar_year_start(p_tenant_id uuid, p_calendar_config_id uuid, p_fiscal_year integer) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".fiscal_calendar_year_start(p_tenant_id uuid, p_calendar_config_id uuid, p_fiscal_year integer) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".fn_valid_lookup(p_domain_code text, p_code text) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".fn_valid_lookup(p_domain_code text, p_code text) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".fn_valid_lookup_nullable(p_domain_code text, p_code text) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".fn_valid_lookup_nullable(p_domain_code text, p_code text) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".generate_fiscal_periods(p_tenant_id uuid, p_company_code_id uuid, p_fiscal_year integer, p_actor_id uuid, p_calendar_config_id uuid, p_replace_future boolean) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".generate_fiscal_periods(p_tenant_id uuid, p_company_code_id uuid, p_fiscal_year integer, p_actor_id uuid, p_calendar_config_id uuid, p_replace_future boolean) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".preview_fiscal_calendar(p_tenant_id uuid, p_calendar_config_id uuid, p_fiscal_year integer) TO PUBLIC;
+
+GRANT EXECUTE ON FUNCTION "control".preview_fiscal_calendar(p_tenant_id uuid, p_calendar_config_id uuid, p_fiscal_year integer) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".preview_fiscal_calendar(p_tenant_id uuid, p_calendar_config_id uuid, p_fiscal_year integer) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_admin_permission_entitlement(p_permission_id uuid, p_at timestamp with time zone) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_bank_format_rule(p_tenant_id uuid, p_country_code character, p_payment_network text, p_direction text, p_currency_code character) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_bank_format_rule(p_tenant_id uuid, p_country_code character, p_payment_network text, p_direction text, p_currency_code character) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_bank_interface(p_tenant_id uuid, p_payment_method_id uuid, p_direction text, p_company_code_id uuid, p_bank_account_link_id uuid, p_currency_code character, p_counterparty_country_code character, p_payment_network text) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_bank_interface(p_tenant_id uuid, p_payment_method_id uuid, p_direction text, p_company_code_id uuid, p_bank_account_link_id uuid, p_currency_code character, p_counterparty_country_code character, p_payment_network text) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_company_fiscal_calendar(p_tenant_id uuid, p_company_code_id uuid, p_fiscal_year integer) TO PUBLIC;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_company_fiscal_calendar(p_tenant_id uuid, p_company_code_id uuid, p_fiscal_year integer) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_company_fiscal_calendar(p_tenant_id uuid, p_company_code_id uuid, p_fiscal_year integer) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_posting_role_account(p_tenant_id uuid, p_role_code text, p_company_code_id uuid, p_book_code text, p_as_of_date date) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_posting_role_account(p_tenant_id uuid, p_role_code text, p_company_code_id uuid, p_book_code text, p_as_of_date date) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_posting_role_account_trace(p_tenant_id uuid, p_role_code text, p_company_code_id uuid, p_book_code text, p_as_of_date date) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "control".resolve_posting_role_account_trace(p_tenant_id uuid, p_role_code text, p_company_code_id uuid, p_book_code text, p_as_of_date date) TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."acct_profile_book_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."acct_profile_book_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."acct_profile_book_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_book_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."acct_profile_book_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."acct_profile_book_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."acct_profile_book_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_book_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."acct_profile_commitment_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."acct_profile_commitment_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."acct_profile_commitment_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_commitment_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."acct_profile_commitment_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."acct_profile_commitment_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."acct_profile_commitment_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_commitment_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."acct_profile_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."acct_profile_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."acct_profile_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."acct_profile_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."acct_profile_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."acct_profile_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."acct_profile_dimension_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."acct_profile_dimension_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."acct_profile_dimension_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_dimension_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."acct_profile_dimension_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."acct_profile_dimension_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."acct_profile_dimension_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_dimension_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."acct_profile_entry_template" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."acct_profile_entry_template" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."acct_profile_entry_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_entry_template" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."acct_profile_entry_template" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."acct_profile_entry_template" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."acct_profile_entry_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_entry_template" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."acct_profile_event" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."acct_profile_event" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."acct_profile_event" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_event" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."acct_profile_event" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."acct_profile_event" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."acct_profile_event" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_event" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."acct_profile_revenue_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."acct_profile_revenue_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."acct_profile_revenue_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_revenue_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."acct_profile_revenue_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."acct_profile_revenue_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."acct_profile_revenue_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_revenue_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."acct_profile_settlement_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."acct_profile_settlement_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."acct_profile_settlement_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_settlement_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."acct_profile_settlement_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."acct_profile_settlement_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."acct_profile_settlement_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."acct_profile_settlement_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."ai_action_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."ai_action_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."ai_action_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."ai_action_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."ai_action_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."ai_action_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."ai_action_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."ai_action_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."ai_confidence_threshold" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."ai_confidence_threshold" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."ai_confidence_threshold" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."ai_confidence_threshold" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."ai_confidence_threshold" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."ai_confidence_threshold" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."ai_confidence_threshold" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."ai_confidence_threshold" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."ai_drift_baseline" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."ai_drift_baseline" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."ai_drift_baseline" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."ai_drift_baseline" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."ai_drift_baseline" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."ai_drift_baseline" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."ai_drift_baseline" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."ai_drift_baseline" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."asset_class_book_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."asset_class_book_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."asset_class_book_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."asset_class_book_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."asset_class_book_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."asset_class_book_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."asset_class_book_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."asset_class_book_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."asset_class_book_policy_template" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."asset_class_book_policy_template" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."asset_class_book_policy_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."asset_class_book_policy_template" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."asset_class_book_policy_template" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."asset_class_book_policy_template" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."asset_class_book_policy_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."asset_class_book_policy_template" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."atlas_conversation_retention_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."atlas_conversation_retention_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."atlas_conversation_retention_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."atlas_conversation_retention_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."atlas_conversation_retention_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."atlas_conversation_retention_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."atlas_conversation_retention_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."atlas_conversation_retention_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."atlas_tenant_provider_credential" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."atlas_tenant_provider_credential" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."atlas_tenant_provider_credential" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."atlas_tenant_provider_credential" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."atlas_tenant_provider_credential" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."atlas_tenant_provider_credential" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."atlas_tenant_provider_credential" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."atlas_tenant_provider_credential" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."atlas_tenant_provider_credential" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."atlas_tenant_provider_credential" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."atlas_tenant_provider_credential_epoch" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."auth_entitlement_target_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."auth_entitlement_target_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."auth_entitlement_target_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."auth_entitlement_target_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."auth_entitlement_target_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."auth_entitlement_target_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."auth_entitlement_target_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."auth_entitlement_target_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."auth_permission" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."auth_permission" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."auth_permission" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."auth_permission" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."auth_permission" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."auth_permission" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."auth_permission" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."auth_permission" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."auth_permission_scope_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."auth_permission_scope_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."auth_permission_scope_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."auth_permission_scope_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."auth_permission_scope_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."auth_permission_scope_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."auth_permission_scope_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."auth_permission_scope_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."bank_format_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."bank_format_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."bank_format_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."bank_format_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."bank_format_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."bank_format_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."bank_format_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."bank_format_rule" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."bank_format_rule" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."bank_format_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."bank_interface_profile" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."bank_interface_profile" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."bank_interface_profile" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."bank_interface_profile" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."bank_interface_profile" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."bank_interface_profile" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."bank_interface_profile" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."bank_interface_profile" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."bank_interface_profile" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."bank_interface_profile" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."blueprint_registry" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."blueprint_registry" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."blueprint_registry" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."blueprint_registry" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."blueprint_registry" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."blueprint_registry" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."blueprint_registry" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."blueprint_registry" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."blueprint_tenant_application" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."blueprint_tenant_application" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."blueprint_tenant_application" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."blueprint_tenant_application" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."blueprint_tenant_application" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."blueprint_tenant_application" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."blueprint_tenant_application" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."blueprint_tenant_application" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."book_posting_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."book_posting_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."book_posting_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."book_posting_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."book_posting_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."book_posting_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."book_posting_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."book_posting_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."budget_check_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."budget_check_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."budget_check_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."budget_check_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."budget_check_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."budget_check_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."budget_check_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."budget_check_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."commodity_category_buy_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."commodity_category_buy_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."commodity_category_buy_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_category_buy_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."commodity_category_buy_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."commodity_category_buy_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."commodity_category_buy_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_category_buy_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."commodity_category_inventory_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."commodity_category_inventory_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."commodity_category_inventory_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_category_inventory_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."commodity_category_inventory_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."commodity_category_inventory_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."commodity_category_inventory_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_category_inventory_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."commodity_category_sell_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."commodity_category_sell_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."commodity_category_sell_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_category_sell_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."commodity_category_sell_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."commodity_category_sell_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."commodity_category_sell_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_category_sell_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."commodity_classification_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."commodity_classification_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."commodity_classification_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_classification_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."commodity_classification_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."commodity_classification_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."commodity_classification_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_classification_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."commodity_classification_to_intent_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."commodity_classification_to_intent_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."commodity_classification_to_intent_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_classification_to_intent_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."commodity_classification_to_intent_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."commodity_classification_to_intent_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."commodity_classification_to_intent_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_classification_to_intent_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."commodity_code_to_category_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."commodity_code_to_category_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."commodity_code_to_category_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_code_to_category_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."commodity_code_to_category_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."commodity_code_to_category_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."commodity_code_to_category_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."commodity_code_to_category_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperadmin;
+
+GRANT DELETE ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperapp;
+
+GRANT INSERT ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."company_fiscal_calendar_assignment" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."connector_type" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."connector_type" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."connector_type" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."connector_type" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."connector_type" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."connector_type" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."connector_type" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."connector_type" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."content_quota" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."content_quota" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."content_quota" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."content_quota" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."content_quota" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."content_quota" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."content_quota" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."content_quota" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."cron_schedule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."cron_schedule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."cron_schedule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."cron_schedule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."cron_schedule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."cron_schedule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."cron_schedule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."cron_schedule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."dimension_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."dimension_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."dimension_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."dimension_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."dimension_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."dimension_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."dimension_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."dimension_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."dimension_policy_allowed_value" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."dimension_policy_allowed_value" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."dimension_policy_allowed_value" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."dimension_policy_allowed_value" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."dimension_policy_allowed_value" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."dimension_policy_allowed_value" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."dimension_policy_allowed_value" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."dimension_policy_allowed_value" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."document_lookup" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."document_lookup" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."document_lookup" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."document_lookup" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."document_lookup" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."document_lookup" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."document_lookup" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."document_lookup" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_action_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_action_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_action_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_action_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_action_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_action_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_action_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_action_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_class_profile" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_class_profile" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_class_profile" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_class_profile" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_class_profile" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_class_profile" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_class_profile" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_class_profile" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_contract_transition" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_contract_transition" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_contract_transition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_contract_transition" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_contract_transition" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_contract_transition" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_contract_transition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_contract_transition" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_field" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_field" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_field" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_field" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_field" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_field" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_field" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_field" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_field_surface" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_field_surface" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_field_surface" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_field_surface" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_field_surface" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_field_surface" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_field_surface" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_field_surface" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_flow" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_flow" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_flow" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_flow" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_flow" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_flow" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_flow" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_flow" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_flow_field" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_flow_field" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_flow_field" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_flow_field" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_flow_field" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_flow_field" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_flow_field" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_flow_field" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_flow_section" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_flow_section" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_flow_section" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_flow_section" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_flow_section" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_flow_section" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_flow_section" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_flow_section" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_flow_step" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_flow_step" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_flow_step" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_flow_step" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_flow_step" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_flow_step" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_flow_step" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_flow_step" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_lifecycle" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_lifecycle" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_lifecycle" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_lifecycle" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_lifecycle" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_lifecycle" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_lifecycle" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_lifecycle" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_lifecycle_state_mask" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_lifecycle_state_mask" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_lifecycle_state_mask" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_lifecycle_state_mask" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_lifecycle_state_mask" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_lifecycle_state_mask" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_lifecycle_state_mask" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_lifecycle_state_mask" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_numbering_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_numbering_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_numbering_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_numbering_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_numbering_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_numbering_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_numbering_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_numbering_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_numbering_counter" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_numbering_counter" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_numbering_counter" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_numbering_counter" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_numbering_counter" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_numbering_counter" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_numbering_counter" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_numbering_counter" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_operation" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_operation" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_operation" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_operation" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_operation" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_operation" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_operation" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_operation" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_publish_state" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_publish_state" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_publish_state" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_publish_state" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_publish_state" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_publish_state" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_publish_state" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_publish_state" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_relation" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_relation" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_relation" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_relation" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_relation" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_relation" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_relation" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_relation" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_scope_binding" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_scope_binding" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_scope_binding" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_scope_binding" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_scope_binding" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_scope_binding" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_scope_binding" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_scope_binding" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_surface" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_surface" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_surface" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_surface" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_surface" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_surface" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_surface" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_surface" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_version" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_version" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_version" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_version" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_version" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_version" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."entity_version_contract" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."entity_version_contract" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."entity_version_contract" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_version_contract" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."entity_version_contract" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."entity_version_contract" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."entity_version_contract" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."entity_version_contract" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."feature_flag" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."feature_flag" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."feature_flag" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."feature_flag" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."feature_flag" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."feature_flag" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."feature_flag" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."feature_flag" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."field_group" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."field_group" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."field_group" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."field_group" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."field_group" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."field_group" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."field_group" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."field_group" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."field_group_member" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."field_group_member" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."field_group_member" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."field_group_member" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."field_group_member" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."field_group_member" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."field_group_member" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."field_group_member" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."field_security_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."field_security_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."field_security_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."field_security_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."field_security_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."field_security_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."field_security_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."field_security_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."finance_posting_rollout_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."finance_posting_rollout_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."finance_posting_rollout_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."finance_posting_rollout_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."finance_posting_rollout_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."finance_posting_rollout_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."finance_posting_rollout_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."finance_posting_rollout_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."fiscal_calendar_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."fiscal_calendar_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."fiscal_calendar_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."fiscal_calendar_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."fiscal_calendar_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."fiscal_calendar_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."fiscal_calendar_config" TO athyperadmin;
+
+GRANT DELETE ON TABLE "control"."fiscal_calendar_config" TO athyperapp;
+
+GRANT INSERT ON TABLE "control"."fiscal_calendar_config" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."fiscal_calendar_config" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."fiscal_calendar_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."fiscal_calendar_period_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."fiscal_calendar_period_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."fiscal_calendar_period_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."fiscal_calendar_period_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."fiscal_calendar_period_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."fiscal_calendar_period_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."fiscal_calendar_period_rule" TO athyperadmin;
+
+GRANT DELETE ON TABLE "control"."fiscal_calendar_period_rule" TO athyperapp;
+
+GRANT INSERT ON TABLE "control"."fiscal_calendar_period_rule" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."fiscal_calendar_period_rule" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."fiscal_calendar_period_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."forecast_budget_bridge" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."forecast_budget_bridge" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."forecast_budget_bridge" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."forecast_budget_bridge" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."forecast_budget_bridge" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."forecast_budget_bridge" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."forecast_budget_bridge" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."forecast_budget_bridge" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."forecast_line" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."forecast_line" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."forecast_line" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."forecast_line" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."forecast_line" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."forecast_line" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."forecast_line" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."forecast_line" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."formula_expression" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."formula_expression" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."formula_expression" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."formula_expression" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."formula_expression" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."formula_expression" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."formula_expression" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."formula_expression" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."formula_expression_version" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."formula_expression_version" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."formula_expression_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."formula_expression_version" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."formula_expression_version" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."formula_expression_version" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."formula_expression_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."formula_expression_version" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."fx_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."fx_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."fx_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."fx_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."fx_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."fx_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."fx_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."fx_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."hook_action_registry" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."hook_action_registry" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."hook_action_registry" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."hook_action_registry" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."hook_action_registry" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."hook_action_registry" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."hook_action_registry" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."hook_action_registry" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."intake_idempotency" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."intake_idempotency" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."intake_idempotency" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."intake_idempotency" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."intake_idempotency" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."intake_idempotency" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."intake_idempotency" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."intake_idempotency" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."intent_profile_override" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."intent_profile_override" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."intent_profile_override" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."intent_profile_override" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."intent_profile_override" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."intent_profile_override" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."intent_profile_override" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."intent_profile_override" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."intent_to_accounting_profile_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."intent_to_accounting_profile_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."intent_to_accounting_profile_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."intent_to_accounting_profile_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."intent_to_accounting_profile_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."intent_to_accounting_profile_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."intent_to_accounting_profile_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."intent_to_accounting_profile_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lifecycle" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lifecycle" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lifecycle" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lifecycle" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lifecycle" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lifecycle" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lifecycle_hook_override" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lifecycle_hook_override" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lifecycle_hook_override" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_hook_override" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lifecycle_hook_override" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lifecycle_hook_override" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lifecycle_hook_override" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_hook_override" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lifecycle_state" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lifecycle_state" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lifecycle_state" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_state" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lifecycle_state" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lifecycle_state" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lifecycle_state" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_state" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lifecycle_timer_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lifecycle_timer_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lifecycle_timer_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_timer_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lifecycle_timer_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lifecycle_timer_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lifecycle_timer_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_timer_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lifecycle_transition" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lifecycle_transition" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lifecycle_transition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_transition" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lifecycle_transition" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lifecycle_transition" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lifecycle_transition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_transition" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lifecycle_transition_execution" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lifecycle_transition_execution" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lifecycle_transition_execution" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_transition_execution" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lifecycle_transition_execution" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lifecycle_transition_execution" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lifecycle_transition_execution" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_transition_execution" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lifecycle_transition_gate" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lifecycle_transition_gate" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lifecycle_transition_gate" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_transition_gate" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lifecycle_transition_gate" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lifecycle_transition_gate" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lifecycle_transition_gate" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_transition_gate" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lifecycle_transition_hook" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lifecycle_transition_hook" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lifecycle_transition_hook" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_transition_hook" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lifecycle_transition_hook" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lifecycle_transition_hook" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lifecycle_transition_hook" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lifecycle_transition_hook" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lookup_domain" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lookup_domain" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lookup_domain" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lookup_domain" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lookup_domain" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lookup_domain" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lookup_domain" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lookup_domain" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."lookup_value" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."lookup_value" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."lookup_value" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."lookup_value" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."lookup_value" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."lookup_value" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."lookup_value" TO athyperadmin;
+
+GRANT DELETE ON TABLE "control"."lookup_value" TO athyperapp;
+
+GRANT INSERT ON TABLE "control"."lookup_value" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."lookup_value" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."lookup_value" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."match_tolerance_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."match_tolerance_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."match_tolerance_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."match_tolerance_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."match_tolerance_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."match_tolerance_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."match_tolerance_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."match_tolerance_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."metadata_change_application_log" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."metadata_change_application_log" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."metadata_change_application_log" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."metadata_change_application_log" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."metadata_change_application_log" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."metadata_change_application_log" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."metadata_change_application_log" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."metadata_change_application_log" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."metadata_change_request" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."metadata_change_request" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."metadata_change_request" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."metadata_change_request" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."metadata_change_request" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."metadata_change_request" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."metadata_change_request" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."metadata_change_request" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."mfa_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."mfa_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."mfa_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."mfa_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."mfa_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."mfa_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."mfa_config" TO athyperadmin;
+
+GRANT DELETE ON TABLE "control"."mfa_config" TO athyperapp;
+
+GRANT INSERT ON TABLE "control"."mfa_config" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."mfa_config" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."mfa_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."notification_provider" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."notification_provider" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."notification_provider" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."notification_provider" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."notification_provider" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."notification_provider" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."notification_provider" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."notification_provider" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."notification_routing_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."notification_routing_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."notification_routing_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."notification_routing_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."notification_routing_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."notification_routing_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."notification_routing_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."notification_routing_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."notification_template" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."notification_template" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."notification_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."notification_template" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."notification_template" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."notification_template" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."notification_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."notification_template" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."outbox_routing_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."outbox_routing_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."outbox_routing_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."outbox_routing_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."outbox_routing_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."outbox_routing_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."outbox_routing_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."outbox_routing_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."overlay" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."overlay" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."overlay" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."overlay" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."overlay" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."overlay" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."overlay" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."overlay" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."overlay_change" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."overlay_change" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."overlay_change" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."overlay_change" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."overlay_change" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."overlay_change" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."overlay_change" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."overlay_change" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."parameter_definition" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."parameter_definition" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."parameter_definition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."parameter_definition" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."parameter_definition" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."parameter_definition" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."parameter_definition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."parameter_definition" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."payment_method_company_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."payment_method_company_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."payment_method_company_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."payment_method_company_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."payment_method_company_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."payment_method_company_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."payment_method_company_policy" TO athyperadmin;
+
+GRANT DELETE ON TABLE "control"."payment_method_company_policy" TO athyperapp;
+
+GRANT INSERT ON TABLE "control"."payment_method_company_policy" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."payment_method_company_policy" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."payment_method_company_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."payment_method_interface_binding" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."payment_method_interface_binding" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."payment_method_interface_binding" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."payment_method_interface_binding" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."payment_method_interface_binding" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."payment_method_interface_binding" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."payment_method_interface_binding" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."payment_method_interface_binding" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."payment_method_interface_binding" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."payment_method_interface_binding" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."payment_settlement_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."payment_settlement_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."payment_settlement_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."payment_settlement_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."payment_settlement_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."payment_settlement_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."payment_settlement_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."payment_settlement_rule" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."payment_settlement_rule" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."payment_settlement_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."planning_driver" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."planning_driver" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."planning_driver" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."planning_driver" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."planning_driver" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."planning_driver" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."planning_driver" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."planning_driver" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."planning_driver_assumption" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."planning_driver_assumption" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."planning_driver_assumption" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."planning_driver_assumption" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."planning_driver_assumption" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."planning_driver_assumption" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."planning_driver_assumption" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."planning_driver_assumption" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."planning_driver_formula" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."planning_driver_formula" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."planning_driver_formula" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."planning_driver_formula" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."planning_driver_formula" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."planning_driver_formula" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."planning_driver_formula" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."planning_driver_formula" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."planning_driver_version" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."planning_driver_version" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."planning_driver_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."planning_driver_version" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."planning_driver_version" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."planning_driver_version" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."planning_driver_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."planning_driver_version" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."policy_definition" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."policy_definition" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."policy_definition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."policy_definition" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."policy_definition" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."policy_definition" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."policy_definition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."policy_definition" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."policy_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."policy_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."policy_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."policy_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."policy_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."policy_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."policy_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."policy_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."policy_rule_version" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."policy_rule_version" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."policy_rule_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."policy_rule_version" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."policy_rule_version" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."policy_rule_version" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."policy_rule_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."policy_rule_version" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."policy_test_case" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."policy_test_case" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."policy_test_case" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."policy_test_case" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."policy_test_case" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."policy_test_case" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."policy_test_case" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."policy_test_case" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."polymorphic_child_binding" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."polymorphic_child_binding" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."polymorphic_child_binding" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."polymorphic_child_binding" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."polymorphic_child_binding" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."polymorphic_child_binding" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."polymorphic_child_binding" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."polymorphic_child_binding" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."posting_role_account_map" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."posting_role_account_map" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."posting_role_account_map" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."posting_role_account_map" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."posting_role_account_map" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."posting_role_account_map" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."posting_role_account_map" TO athyperadmin;
+
+GRANT DELETE ON TABLE "control"."posting_role_account_map" TO athyperapp;
+
+GRANT INSERT ON TABLE "control"."posting_role_account_map" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."posting_role_account_map" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."posting_role_account_map" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."posting_role_alias" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."posting_role_alias" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."posting_role_alias" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."posting_role_alias" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."posting_role_alias" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."posting_role_alias" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."posting_role_alias" TO athyperadmin;
+
+GRANT DELETE ON TABLE "control"."posting_role_alias" TO athyperapp;
+
+GRANT INSERT ON TABLE "control"."posting_role_alias" TO athyperapp;
+
+GRANT SELECT ON TABLE "control"."posting_role_alias" TO athyperapp;
+
+GRANT UPDATE ON TABLE "control"."posting_role_alias" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."rate_table" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."rate_table" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."rate_table" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."rate_table" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."rate_table" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."rate_table" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."rate_table" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."rate_table" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."rate_table_row" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."rate_table_row" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."rate_table_row" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."rate_table_row" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."rate_table_row" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."rate_table_row" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."rate_table_row" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."rate_table_row" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."record_edit_lock" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."record_edit_lock" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."record_edit_lock" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."record_edit_lock" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."record_edit_lock" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."record_edit_lock" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."record_edit_lock" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."record_edit_lock" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."rounding_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."rounding_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."rounding_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."rounding_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."rounding_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."rounding_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."rounding_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."rounding_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."setup_domain" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."setup_domain" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."setup_domain" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."setup_domain" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."setup_domain" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."setup_domain" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."setup_domain" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."setup_domain" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."setup_workspace" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."setup_workspace" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."setup_workspace" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."setup_workspace" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."setup_workspace" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."setup_workspace" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."setup_workspace" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."setup_workspace" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."supplier_posting_override" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."supplier_posting_override" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."supplier_posting_override" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."supplier_posting_override" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."supplier_posting_override" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."supplier_posting_override" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."supplier_posting_override" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."supplier_posting_override" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."tax_group" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."tax_group" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."tax_group" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_group" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."tax_group" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."tax_group" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."tax_group" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_group" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."tax_group_component" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."tax_group_component" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."tax_group_component" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_group_component" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."tax_group_component" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."tax_group_component" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."tax_group_component" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_group_component" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."tax_group_version" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."tax_group_version" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."tax_group_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_group_version" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."tax_group_version" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."tax_group_version" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."tax_group_version" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_group_version" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."tax_rate_schedule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."tax_rate_schedule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."tax_rate_schedule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_rate_schedule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."tax_rate_schedule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."tax_rate_schedule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."tax_rate_schedule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_rate_schedule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."tax_resolution_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."tax_resolution_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."tax_resolution_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_resolution_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."tax_resolution_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."tax_resolution_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."tax_resolution_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."tax_resolution_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."transaction_event_catalog" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."transaction_event_catalog" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."transaction_event_catalog" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."transaction_event_catalog" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."transaction_event_catalog" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."transaction_event_catalog" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."transaction_event_catalog" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."transaction_event_catalog" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."transaction_flow_template" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."transaction_flow_template" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."transaction_flow_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."transaction_flow_template" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."transaction_flow_template" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."transaction_flow_template" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."transaction_flow_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."transaction_flow_template" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."v_acct_profile_full" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."v_acct_profile_full" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."v_acct_profile_full" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_acct_profile_full" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."v_acct_profile_full" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."v_acct_profile_full" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."v_acct_profile_full" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_acct_profile_full" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."v_active_flow_templates" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."v_active_flow_templates" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."v_active_flow_templates" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_active_flow_templates" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."v_active_flow_templates" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."v_active_flow_templates" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."v_active_flow_templates" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_active_flow_templates" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."v_authorization_v2_deferred_constraints" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."v_authorization_v2_deferred_constraints" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."v_authorization_v2_deferred_constraints" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_authorization_v2_deferred_constraints" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."v_authorization_v2_deferred_constraints" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."v_authorization_v2_deferred_constraints" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."v_authorization_v2_deferred_constraints" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_authorization_v2_deferred_constraints" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."v_authorization_v2_operation_publication" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."v_authorization_v2_operation_publication" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."v_authorization_v2_operation_publication" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_authorization_v2_operation_publication" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."v_authorization_v2_operation_publication" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."v_authorization_v2_operation_publication" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."v_authorization_v2_operation_publication" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_authorization_v2_operation_publication" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."v_blueprint_catalogue" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."v_blueprint_catalogue" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."v_blueprint_catalogue" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_blueprint_catalogue" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."v_blueprint_catalogue" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."v_blueprint_catalogue" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."v_blueprint_catalogue" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_blueprint_catalogue" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."v_entity_field_contract_audit" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."v_entity_field_contract_audit" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."v_entity_field_contract_audit" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_entity_field_contract_audit" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."v_entity_field_contract_audit" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."v_entity_field_contract_audit" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."v_entity_field_contract_audit" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_entity_field_contract_audit" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."v_entity_field_rule_coverage" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."v_entity_field_rule_coverage" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."v_entity_field_rule_coverage" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_entity_field_rule_coverage" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."v_entity_field_rule_coverage" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."v_entity_field_rule_coverage" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."v_entity_field_rule_coverage" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_entity_field_rule_coverage" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."v_entity_surface_contract_audit" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."v_entity_surface_contract_audit" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."v_entity_surface_contract_audit" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_entity_surface_contract_audit" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."v_entity_surface_contract_audit" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."v_entity_surface_contract_audit" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."v_entity_surface_contract_audit" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_entity_surface_contract_audit" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."v_meta_entity_contract_audit" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."v_meta_entity_contract_audit" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."v_meta_entity_contract_audit" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_meta_entity_contract_audit" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."v_meta_entity_contract_audit" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."v_meta_entity_contract_audit" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."v_meta_entity_contract_audit" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."v_meta_entity_contract_audit" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."wht_threshold_config" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."wht_threshold_config" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."wht_threshold_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."wht_threshold_config" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."wht_threshold_config" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."wht_threshold_config" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."wht_threshold_config" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."wht_threshold_config" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."workflow_definition" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."workflow_definition" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."workflow_definition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_definition" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."workflow_definition" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."workflow_definition" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."workflow_definition" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_definition" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."workflow_sla_policy" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."workflow_sla_policy" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."workflow_sla_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_sla_policy" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."workflow_sla_policy" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."workflow_sla_policy" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."workflow_sla_policy" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_sla_policy" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."workflow_template" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."workflow_template" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."workflow_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_template" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."workflow_template" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."workflow_template" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."workflow_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_template" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."workflow_template_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."workflow_template_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."workflow_template_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_template_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."workflow_template_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."workflow_template_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."workflow_template_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_template_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "control"."workflow_template_stage" TO athyperadmin;
+
+GRANT INSERT ON TABLE "control"."workflow_template_stage" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "control"."workflow_template_stage" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_template_stage" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "control"."workflow_template_stage" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "control"."workflow_template_stage" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "control"."workflow_template_stage" TO athyperadmin;
+
+GRANT SELECT ON TABLE "control"."workflow_template_stage" TO athyperapp;

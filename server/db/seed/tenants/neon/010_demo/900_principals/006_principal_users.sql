@@ -35,14 +35,15 @@ DECLARE
 BEGIN
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- STAGE 0: Remove any JIT principals that conflict with our stable UUIDs
+    -- STAGE 0: Fail on any JIT principal conflict; never delete an identity
     -- ══════════════════════════════════════════════════════════════════════
 
-    DELETE FROM master.principal p
-    USING master.principal_profile pp
-    WHERE pp.principal_id = p.id
-      AND p.principal_source = 'oidc_jit'
-      AND pp.keycloak_id::uuid IN (
+    IF EXISTS (
+      SELECT 1
+      FROM master.principal p
+      JOIN master.principal_profile pp ON pp.principal_id = p.id
+      WHERE p.principal_source = 'oidc_jit'
+        AND pp.keycloak_id::uuid IN (
           -- Tenant-level UUIDs
           'bb001000-0000-0000-0000-000000000001'::uuid,
           'bb001000-0000-0000-0000-000000000002'::uuid,
@@ -79,8 +80,12 @@ BEGIN
           'bb002000-0000-0000-0000-000000000020'::uuid,
           'bb002000-0000-0000-0000-000000000021'::uuid,
           'bb002000-0000-0000-0000-000000000022'::uuid
-      )
-      AND p.id <> pp.keycloak_id::uuid;
+        )
+        AND p.id <> pp.keycloak_id::uuid
+    ) THEN
+      RAISE EXCEPTION
+        '[006_principal_users] stable identity conflict; run the reviewed one-time identity migration executor';
+    END IF;
 
     -- ══════════════════════════════════════════════════════════════════════
     -- STAGE A: master.principal — tenant-level principal users (2)
@@ -278,47 +283,18 @@ BEGIN
     ON CONFLICT (tenant_id, principal_id, realm_key, provider_code) DO NOTHING;
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- STAGE E: master.principal_persona — assign default persona per user
+    -- STAGE E: master.principal_legacy_profile — assign default legacy_profile per user
     -- ══════════════════════════════════════════════════════════════════════
     --
-    -- Without a persona, checkPermissionBatch falls through with
-    -- persona_id=ZERO_UUID — every permission returns 'not_found' and the
-    -- ActionBar renders empty. 002_demo_principal_personas.sql only seeds
+    -- Without a legacy_profile, checkPermissionBatch falls through with
+    -- legacy_profile_id=ZERO_UUID — every permission returns 'not_found' and the
+    -- ActionBar renders empty. 002_demo_principal_legacy_profiles.sql only seeds
     -- the aa001000-* demo users; the bb001000/bb002000 system principals
     -- created above need their own assignment.
     --
-    --   *.owner  → 'owner' persona (full operational access)
-    --   *.admin  → 'admin' persona (administrative access)
-
-    ALTER TABLE master.principal_persona
-        DISABLE TRIGGER trg_principal_persona_iam_outbox;
-
-    INSERT INTO master.principal_persona (
-        tenant_id, principal_id, persona_id,
-        assigned_by, created_by
-    )
-    SELECT
-        p.tenant_id,
-        p.id,
-        per.id,
-        v_su,
-        v_su
-    FROM master.principal p
-    JOIN master.tenant t ON t.id = p.tenant_id AND t.code = 'athyper' AND t.realm_key = 'athyper'
-    JOIN shared.persona per
-      ON per.code = CASE
-                      WHEN lower(p.code) LIKE '%.owner' THEN 'owner'
-                      WHEN lower(p.code) LIKE '%.admin' THEN 'admin'
-                   END
-    WHERE p.principal_source = 'internal'
-      AND (lower(p.code) LIKE '%.owner' OR lower(p.code) LIKE '%.admin')
-    ON CONFLICT (tenant_id, principal_id) DO UPDATE
-        SET persona_id = excluded.persona_id;
-
-    ALTER TABLE master.principal_persona
-        ENABLE TRIGGER trg_principal_persona_iam_outbox;
+    --   *.owner  → 'owner' legacy_profile (full operational access)
+    --   *.admin  → 'admin' legacy_profile (administrative access)
 
     RAISE NOTICE '[003_principal_users] 34 principal users seeded (2 tenant-level + 32 CC-level)';
-    RAISE NOTICE '[003_principal_users] 34 principal_persona assignments seeded (owner/admin)';
 
 END $principal_users$;

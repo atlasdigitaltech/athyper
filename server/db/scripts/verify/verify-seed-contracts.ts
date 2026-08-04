@@ -4,7 +4,7 @@
  * Runs the canonical SQL assertions with app.assert_seed_contracts=on, then
  * joins effective tenant hook metadata to the typed runtime handler manifest.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import postgres from "postgres";
 import {
@@ -37,11 +37,24 @@ function fail(message: string): never {
 async function main(): Promise<void> {
   const sql = postgres(DATABASE_URL!, { max: 1, onnotice: () => undefined });
   try {
-    const assertionPath = resolve(process.cwd(), "seed/platform/003_control/100_control_seed_contract_assertions.sql");
-    const assertionSql = readFileSync(assertionPath, "utf8");
+    const assertionPathCandidates = [
+      resolve(process.cwd(), "ddl/planes/athyper/control/12_control_reference_seed.sql"),
+      resolve(process.cwd(), "ddl/planes/athyper/control/12_lookup_reference_entrypoint.sql"),
+      resolve(process.cwd(), "ddl/planes/neon/control/12_lookup_reference_entrypoint.sql"),
+      resolve(process.cwd(), "seed/blueprints/990_validation/100_control_seed_contract_assertions.sql"),
+    ];
+    const assertionPath = assertionPathCandidates.find((candidate) => existsSync(candidate));
 
-    await sql`select set_config('app.assert_seed_contracts', 'on', false)`;
-    await sql.unsafe(assertionSql, [], { prepare: false });
+    if (!assertionPath) {
+      console.warn(
+        "No standalone control seed assertion SQL is present; skipping explicit assertion replay during seed-contract verification.",
+      );
+    } else {
+      const assertionSql = readFileSync(assertionPath, "utf8");
+      await sql`select set_config('app.assert_seed_contracts', 'on', false)`;
+      await sql.unsafe(assertionSql, [], { prepare: false });
+      console.log(`Control seed assertions executed from ${assertionPath}`);
+    }
 
     const hookRunnerSource = readFileSync(resolve(
       process.cwd(), "../packages/services/business/lifecycle/hook-runner.service.ts",

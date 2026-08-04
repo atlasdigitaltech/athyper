@@ -993,7 +993,7 @@ export interface ToggleHouseBankInput {
   tenantId:       string;
   actorId:        string;
   configId:       string;
-  activate:       boolean;         // true → status='active', false → status='inactive'
+  activate:       boolean;         // true → active, false → suspended
   correlationId?: string;
 }
 
@@ -1018,7 +1018,7 @@ export async function toggleHouseBank(
     if (!current) {
       throw new ResourceNotFoundError("HOUSE_BANK_CONFIG_NOT_FOUND", `No house bank config with id=${input.configId}.`);
     }
-    const nextStatus = input.activate ? "active" : "inactive";
+    const nextStatus = input.activate ? "active" : "suspended";
     if (current.status === nextStatus) {
       return { configId: input.configId, status: current.status };
     }

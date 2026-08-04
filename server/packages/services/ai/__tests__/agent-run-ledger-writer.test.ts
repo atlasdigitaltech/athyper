@@ -161,7 +161,7 @@ describe("AgentRunLedgerWriter", () => {
 
     await expect(writer.write(args)).resolves.toBe(IDS.run);
 
-    expect(target.table).toBe("log.ai_agent_run");
+    expect(target.table).toBe("ai.ai_agent_run");
     expect(target.row).toMatchObject({
       id: IDS.run,
       tenant_id: IDS.tenant,
@@ -233,7 +233,7 @@ describe("AgentCallLedgerWriter", () => {
 
     await expect(writer.write(callArgs())).resolves.toBe(IDS.call);
 
-    expect(target.table).toBe("log.ai_agent_call");
+    expect(target.table).toBe("ai.ai_agent_call");
     expect(target.row).toMatchObject({
       run_id: IDS.run,
       sequence_no: 0,

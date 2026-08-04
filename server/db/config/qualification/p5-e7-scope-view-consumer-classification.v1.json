@@ -1,0 +1,26 @@
+{
+  "contractVersion": "p5-e7.scope-view-consumer-classification.v1",
+  "views": [
+    {
+      "view": "master.auth_scope_target_resolved_v",
+      "decision": "retain",
+      "operationScopeRetirementTarget": false,
+      "consumers": [
+        { "path": "server/packages/services/iam/authorization-runtime/sql-repository.ts", "ownership": "registered capabilities and sessions" },
+        { "path": "server/packages/services/policy/policy-facts-provider.ts", "ownership": "policy fact resolution" },
+        { "path": "server/packages/services/platform/routes/platform.route.ts", "ownership": "platform administration" },
+        { "path": "server/packages/services/finance/routes/finance.route.ts", "ownership": "finance authorization scope" }
+      ],
+      "retirementRule": "Do not drop or rename during P5-E7. Remove only Entity-operation call sites after normalized activation."
+    },
+    {
+      "view": "mesh.auth_scope_target_resolved_v",
+      "decision": "retain",
+      "operationScopeRetirementTarget": false,
+      "consumers": [
+        { "path": "server/packages/services/iam/authorization-runtime/sql-repository.ts", "ownership": "Mesh registered capabilities and sessions" }
+      ],
+      "retirementRule": "Do not drop or rename during P5-E7. Retain until the separate capability/session authorization program replaces it."
+    }
+  ]
+}

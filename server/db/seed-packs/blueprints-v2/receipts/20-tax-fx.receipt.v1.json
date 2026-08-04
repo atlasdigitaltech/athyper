@@ -1,0 +1,52 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "tax-fx",
+  "packVersion": "2.0.0",
+  "packChecksum": "2c8349a8e45b42f0729f778094c3367d5b20553bf8c702a46643abc1cc5928ab",
+  "plane": "neon",
+  "tenantId": "f5000000-0000-0000-0000-000000000001",
+  "status": "validated-disposable-neon",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [
+    {
+      "payload": "320_tax_jurisdictions.sql",
+      "status": "passed-twice",
+      "rowCounts": {"jurisdictions": 17}
+    },
+    {
+      "payload": "321_tax_types.sql",
+      "status": "passed-twice",
+      "rowCounts": {"taxTypes": 39}
+    },
+    {
+      "payload": "322_tax_rate_schedules.sql",
+      "status": "passed-twice",
+      "rowCounts": {"rateSchedules": 77, "saleSchedules": 56, "purchaseSchedules": 21}
+    },
+    {
+      "payload": "323_tax_groups.sql",
+      "status": "passed-twice",
+      "rowCounts": {"effectiveTaxGroups": 53, "taxGroupComponents": 53}
+    },
+    {
+      "payload": "324_tax_resolution_rules.sql",
+      "status": "passed-twice",
+      "rowCounts": {"effectiveResolutionRules": 24}
+    },
+    {
+      "payload": "330_fx_rates.sql",
+      "status": "passed-twice",
+      "rowCounts": {"fxObservations": 1115, "periodEnd": 965, "spot": 150}
+    }
+  ],
+  "assertionResults": [
+    {"assertion":"component-cardinality","status":"passed","evidence":"53 active groups each resolve to one same-jurisdiction rate schedule"},
+    {"assertion":"orphan","status":"passed","evidence":"no missing group or rate-schedule endpoints"},
+    {"assertion":"idempotent-convergence","status":"passed","evidence":"group count and max(updated_at) unchanged on pass two"},
+    {"assertion":"legacy-retirement","status":"passed","evidence":"no destructive deletes or supplier/invoice relation writes remain"}
+    ,{"assertion":"same-jurisdiction-resolution","status":"passed","evidence":"24 rules resolve to active groups covering the complete effective period"}
+    ,{"assertion":"retired-invalid-rules","status":"passed","evidence":"Qatar no-tax and India cross-jurisdiction compound rules are not active"}
+    ,{"assertion":"transaction-history-preserved","status":"passed","evidence":"322 contains no writes to ledger.tax_calculation"}
+    ,{"assertion":"append-only-fx","status":"passed","evidence":"1,115 version-1 observations matched desired values; second pass inserted zero"}
+  ]
+}

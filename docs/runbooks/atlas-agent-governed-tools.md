@@ -42,7 +42,7 @@ execution:
 11. A canonical proposal is defined as a bounded
    `tool_call_complete` event with a call ID, tool name, and complete argument
    object. Its `proposed` row is durably inserted into
-    `event.ai_tool_invocation`.
+    `ai.ai_tool_invocation`.
 12. Immediately before dispatch, Atlas rebuilds the plane IAM context, compares
     identity/profile/schema/fingerprint and authorization scopes, rechecks the
     exact permissions, rereads all feature gates, and resolves strict policy
@@ -71,7 +71,7 @@ until a canonical actor mapping and cross-plane RLS/FK tests are approved.
 
 ## Durable ledger
 
-`event.ai_tool_invocation` stores identifiers, bounded policy/profile/
+`ai.ai_tool_invocation` stores identifiers, bounded policy/profile/
 permission snapshots, lifecycle timestamps, auth epochs, hashes, and safe
 evidence references. It intentionally has no columns for raw prompts,
 arguments, results, provider secrets, confirmation tokens, or chain-of-thought.

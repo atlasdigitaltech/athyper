@@ -9,7 +9,7 @@
  * Upload body (JSON — BFF relay converts multipart/form-data → base64 JSON):
  *   { filename, content_type?, size_bytes?, data_base64 }
  *
- * Storage: bytes in MinIO/S3 (master.attachment + master.entity_document_link).
+ * Storage: bytes in MinIO/S3 (document.attachment + document.attachment_link).
  * Requires objectStorage adapter injected via deps.
  * When adapter is absent routes return 503 with STORAGE_UNAVAILABLE.
  */
@@ -466,7 +466,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
 
       // Fetch folder_id per link row (not on the attachment itself)
       const folderMap = await db
-        .selectFrom("master.entity_document_link as edl")
+        .selectFrom("document.attachment_link as edl")
         .select(["edl.attachment_id", "edl.folder_id"])
         .where("edl.tenant_id",  "=", tenantId)
         .where("edl.entity_type","=", entity.name as string)
@@ -526,14 +526,14 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       const [items, links, folders] = await Promise.all([
         svc.list({ tenantId, entityType: entity.name as string, entityId: id }),
         db
-          .selectFrom("master.entity_document_link as edl")
+          .selectFrom("document.attachment_link as edl")
           .select(["edl.attachment_id", "edl.folder_id"])
           .where("edl.tenant_id", "=", tenantId)
           .where("edl.entity_type", "=", entity.name as string)
           .where("edl.entity_id", "=", id)
           .execute() as Promise<Array<{ attachment_id: string; folder_id: string | null }>>,
         db
-          .selectFrom("master.attachment_folder as f")
+          .selectFrom("document.attachment_folder as f")
           .select(["f.id", "f.name", "f.parent_id", "f.display_order", "f.created_at"])
           .where("f.tenant_id", "=", tenantId)
           .where("f.entity_type", "=", entity.name as string)
@@ -996,7 +996,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
 
       if (!file) {
         const attachment = await db
-          .selectFrom("master.attachment as a")
+          .selectFrom("document.attachment as a")
           .select("status")
           .where("a.id", "=", attachmentId)
           .where("a.tenant_id", "=", tenantId)
@@ -1121,8 +1121,8 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       // Verify attachment exists, belongs to this tenant, AND is linked to
       // the (entity_type, entity_id) pair the caller is authorised against.
       const link = await db
-        .selectFrom("master.entity_document_link as edl")
-        .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+        .selectFrom("document.attachment_link as edl")
+        .innerJoin("document.attachment as a", "a.id", "edl.attachment_id")
         .select(["a.id" as never, "a.version_no" as never, "a.sha256" as never])
         .where("edl.tenant_id" as never,  "=", tenantId as never)
         .where("edl.entity_type" as never,"=", (entity.name as string) as never)
@@ -1139,7 +1139,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       // Reset extraction + PII state so the worker doesn't short-circuit on
       // the "already extracted" check.
       await db
-        .updateTable("master.attachment" as never)
+        .updateTable("document.attachment" as never)
         .set({
           text_extraction_status: null,
           text_extraction_error:  null,
@@ -1216,8 +1216,8 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
 
       // Verify attachment belongs to this entity before renaming
       const link = await db
-        .selectFrom("master.entity_document_link as edl")
-        .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+        .selectFrom("document.attachment_link as edl")
+        .innerJoin("document.attachment as a", "a.id", "edl.attachment_id")
         .select(["a.id"] as never[])
         .where("edl.tenant_id"  as never, "=", tenantId              as never)
         .where("edl.entity_type" as never, "=", (entity.name as string) as never)
@@ -1232,7 +1232,7 @@ export function registerAttachmentRoutes(router: Router, deps: AttachmentsRouteD
       }
 
       await db
-        .updateTable("master.attachment" as never)
+        .updateTable("document.attachment" as never)
         .set({
           file_name:  newFilename as never,
           updated_at: new Date()  as never,

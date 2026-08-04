@@ -147,73 +147,60 @@ export interface RuntimePartner {
   linked_code: string;
 }
 
-export interface DelegationAvailable {
-  delegation_id: string;
-  delegator_name: string;
-  delegator_persona: string;
-  permissions: string[];
-  expires_at: string;
-  scope_type: string;
-  scope_ref: string | null;
-}
-
-export interface ActiveDelegation {
-  delegation_id: string;
-  delegator_name: string;
-  merged_permissions: string[];
+export interface RuntimeSessionDecision {
+  permissionId: string;
+  canonicalCode: string;
+  entityOperationId?: string;
+  available: boolean;
+  decision: "allow" | "deny";
+  reason: string;
 }
 
 export interface RuntimeSession {
-  persona: string;
-  workbench: RuntimeWorkbench;
-  entity: { code: string; name: string; country: string };
-  modules: RuntimeModule[];
-  platform: { code: string }[];
-  permissions: Record<string, boolean>;
-  scope: RuntimeScope;
-  partner?: RuntimePartner;
-  delegations_available: DelegationAvailable[];
-  active_delegation?: ActiveDelegation;
+  contractVersion: "wave5.authorization-session.v2";
+  evaluatorContractVersion: string;
+  plane: "neon" | "admin" | "mesh";
+  tenantOrAccountId: string;
+  principalId: string;
+  catalogVersion: string;
+  authorizationFingerprint: string;
+  decisions: RuntimeSessionDecision[];
+  resolvedAt: string;
+  expiresAt: string;
 }
 
 export function checkPermission(
-  permissions: Record<string, boolean> | undefined,
+  decisions: readonly RuntimeSessionDecision[] | undefined,
   permissionCode: string,
 ): boolean {
-  return permissions?.[permissionCode] === true;
+  return decisions?.some((entry) =>
+    entry.canonicalCode === permissionCode && entry.available
+  ) === true;
 }
 
 export function checkPermissions(
-  permissions: Record<string, boolean> | undefined,
+  decisions: readonly RuntimeSessionDecision[] | undefined,
   permissionCodes: readonly string[],
 ): boolean {
-  return permissionCodes.every((code) => checkPermission(permissions, code));
+  return permissionCodes.every((code) => checkPermission(decisions, code));
 }
 
 export function checkAnyPermission(
-  permissions: Record<string, boolean> | undefined,
+  decisions: readonly RuntimeSessionDecision[] | undefined,
   permissionCodes: readonly string[],
 ): boolean {
-  return permissionCodes.some((code) => checkPermission(permissions, code));
+  return permissionCodes.some((code) => checkPermission(decisions, code));
 }
 
 export function checkPermissionForEntity(
-  permissions: Record<string, boolean> | undefined,
+  decisions: readonly RuntimeSessionDecision[] | undefined,
   permissionCode: string,
   scope: RuntimeScope,
   entityCode: string,
 ): boolean {
-  if (!checkPermission(permissions, permissionCode)) return false;
+  if (!checkPermission(decisions, permissionCode)) return false;
   return scope.all || scope.company_codes.includes(entityCode);
 }
-
-export function checkDelegationPermission(
-  activeDelegation: ActiveDelegation | undefined,
-  permissionCode: string,
-): boolean {
-  return activeDelegation?.merged_permissions.includes(permissionCode) === true;
-}
-
 
 // Support staff log in through the "platform-control" Keycloak realm rather than
 // the tenant "athyper" realm. Keeping them in a separate namespace ("platform")

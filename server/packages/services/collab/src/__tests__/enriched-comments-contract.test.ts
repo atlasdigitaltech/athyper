@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 
 const routeSource = readFileSync(new URL("../../routes/collab.route.ts", import.meta.url), "utf8");
 const commentSchemaSource = readFileSync(
-  new URL("../../../../../db/ddl/master/01k_comment_entity_id_text.sql", import.meta.url),
+  new URL("../../../../../db/ddl/planes/athyper/document/03_tables.sql", import.meta.url),
   "utf8",
 );
 const cursorSchemaSource = readFileSync(
-  new URL("../../../../../db/ddl/master/01f_tables_cms.sql", import.meta.url),
+  new URL("../../../../../db/ddl/planes/athyper/document/03_tables.sql", import.meta.url),
   "utf8",
 );
 
@@ -27,7 +27,9 @@ describe("enriched comments list contract", () => {
   });
 
   it("treats polymorphic entity references as text in schema and enriched counts", () => {
-    expect(commentSchemaSource).toContain("ALTER COLUMN entity_id TYPE text");
+    expect(commentSchemaSource).toMatch(
+      /CREATE TABLE document\.comment \([\s\S]*?entity_id\s+text\s+NOT NULL/,
+    );
     expect(cursorSchemaSource).toMatch(/entity_id\s+text\s+NOT NULL/);
     expect(routeSource).toContain("AND entity_id = ${entityId}");
     expect(routeSource).toContain("AND c.entity_id = ${entityId}");

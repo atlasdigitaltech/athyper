@@ -50,7 +50,7 @@ describe("Mesh published runtime M6 wiring", () => {
   });
 
   it("keeps Mesh generic create/write disabled and filters handler authority", () => {
-    const adapter = source("packages/apps/mesh/src/list/meshAdapter.ts");
+    const adapter = source("packages/products/mesh/app/src/list/meshAdapter.ts");
     const bootstrap = source("server/packages/services/metadata/routes/runtime-bootstrap.route.ts");
     expect(adapter).toContain("bulkActions:         false");
     expect(adapter).toContain("import:              false");
@@ -62,7 +62,7 @@ describe("Mesh published runtime M6 wiring", () => {
 
   it("builds shell entity navigation from the authorized catalog", () => {
     const layout = source("apps/mesh/app/(shell)/layout.tsx");
-    const shell = source("packages/apps/mesh/shell/src/index.tsx");
+    const shell = source("packages/products/mesh/shell/src/index.tsx");
     expect(layout).toContain("getMeshRuntimeCatalog()");
     expect(shell).toMatch(/runtimeCatalog\s*\.filter\(\(item\) => item\.list\)/);
     expect(shell).toContain("href: `/app/${item.entityCode}`");

@@ -1,0 +1,201 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "ap-non-po",
+  "version": "2.0.0",
+  "executionOrder": 120,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [
+    "spend-taxonomy-business-intents",
+    "tax-fx",
+    "payment-holiday",
+    "coa-frameworks",
+    "governance"
+  ],
+  "checksumAlgorithm": "sha256",
+  "checksum": "e71e84179a4422572b47130af6daf32d33fcd814f2c3ecb5b9a81fafd4e0dd0c",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/010_posting_roles.sql",
+      "sha256": "54f276d669f81f2b095a5b34844519bb386aba9fb6968de20f93906dda1386be",
+      "bytes": 281,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/020_accounting_profiles.sql",
+      "sha256": "992ac7b5bae96d08bb25a0d369ed31f058e640d082265d6b817fba1ea14d0d1d",
+      "bytes": 4028,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 3,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/025_accounting_policy_aggregate.sql",
+      "sha256": "4f08f2575673a3a72f33b8fa8e4cd2e8704513cd46a1e8a99e10cd5b602cf103",
+      "bytes": 10267,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 4,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/030_acct_profile_configs.sql",
+      "sha256": "2dc14b94a186ab6f6e1fe3d4c1e44713f78698792e40e1aa957d568fefaf3e08",
+      "bytes": 345,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 5,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/040_acct_profile_events.sql",
+      "sha256": "1bc1176cd6a87652a4a8cf1ec3a47bf6e7f9d53e6767d0ee133b488c6076ec94",
+      "bytes": 344,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 6,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/050_acct_profile_entry_templates.sql",
+      "sha256": "6a1407ae95ed66cd9d8697920bc37332554b5297a0643702ebfff8229a82e86a",
+      "bytes": 353,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 7,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/055_acct_profile_settlement_config.sql",
+      "sha256": "51d255cb9dd92b2bbe5f953a885c790a9845ee81467920c80341f30786cd652b",
+      "bytes": 355,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 8,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/056_acct_profile_commitment_config.sql",
+      "sha256": "9ebccfd42c89288daf6b7df678766adea88836937e0c5b9608965f47f3885f68",
+      "bytes": 355,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 9,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/057_acct_profile_book_rule.sql",
+      "sha256": "f0500115a280b83651bb4ead7fe5c7cb64c3af2bfee6192ee200cbbed5dd6279",
+      "bytes": 347,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 10,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/058_acct_profile_dimension_rule.sql",
+      "sha256": "85f3d385e169d27f250b627007ea776a2c266ea221c4727b0fb0f905b7983987",
+      "bytes": 352,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 11,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/060_category_intent_rules.sql",
+      "sha256": "62285922ece6d4d43adef2863ac4b13ddf7fcbc68e5f2171cc59b7920face460",
+      "bytes": 346,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 12,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/061_min_intake_rules.sql",
+      "sha256": "fef569ab2390e93db1fc6f89180e6adb82cbca64d76c79adfcf931fecd1a196e",
+      "bytes": 341,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 13,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/062_full_coverage_rules.sql",
+      "sha256": "03e97c84648ec2a85828f6ffbb747e855f32bdb576570eaaed2ba763afb71492",
+      "bytes": 344,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 14,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/070_intent_profile_rules.sql",
+      "sha256": "62ace426db1a778ada86541674844e56af2fddd8fe54d7de9118d24d4e42e398",
+      "bytes": 345,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 15,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/072_profile_domain_fallbacks.sql",
+      "sha256": "a650360b74afcd79caa0493d479d5bdfd06e56d7021b8aaca020e508a9da1906",
+      "bytes": 349,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 16,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/080_payment_settlement_rules.sql",
+      "sha256": "4a6fd8ef32659cc928324178ec8b1e1c6ef99cb282c862a30b03989b9cd332bb",
+      "bytes": 231,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 17,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/090_entity_operations_delta.sql",
+      "sha256": "2d838f4394cda7091ce771ad43b27cac62ce4e367ce6dd373a85beaaac888cae",
+      "bytes": 234,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 18,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/099_apply.sql",
+      "sha256": "f5041f87336d03444c95831ae75d86564d06427205ad953bb8dbb8d4fc711ef5",
+      "bytes": 330,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 19,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/verify.sql",
+      "sha256": "ef619739e3f1302c324c00746d12c2b62096289830efb5550849bf93f1836850",
+      "bytes": 327,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "master.accounting_profile",
+      "control.accounting_profile_policy",
+      "authz.permission"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed-packs/blueprints-v2/receipts/120-ap-non-po.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

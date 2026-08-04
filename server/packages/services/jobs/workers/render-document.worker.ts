@@ -11,14 +11,14 @@
  *     is `render:{outputId}` so duplicate sweeps do not double-enqueue.
  *
  *   JOB_NAME.RENDER — processes one render_output row:
- *     1. Claim: render_output → RENDERING, render_job → PROCESSING.
+ *     1. Claim: render_output → RENDERING.
  *     2. Fetch snapshot.template_version, substitute {{vars}} from manifest_json.
  *     3. POST to Gotenberg /forms/chromium/convert/html with manifest-derived
  *        paper/margin/header/footer overrides (master.print_profile defaults
  *        should already be merged into manifest_json by the producer — this
  *        worker treats manifest_json as authoritative).
  *     4. Upload PDF to object storage at renders/{tenantId}/{outputId}.pdf.
- *     5. Mark render_output RENDERED, render_job COMPLETED.
+ *     5. Mark render_output RENDERED.
  *
  * Failure mapping (stack/compose/render/README.md — binding contract):
  *   transient → status reset to QUEUED, throw to let BullMQ retry
@@ -50,10 +50,6 @@ import {
   type SweepJobData,
   type JobLogger,
 } from "../jobs.types.js";
-import {
-  insertRenderDlq,
-  type RenderDlqCategory,
-} from "../render-dlq.js";
 import type {
   PdfRenderOptions,
   SyncPdfRenderer,
@@ -69,6 +65,7 @@ interface GotenbergErrorLike {
   message:  string;
   responseBody?: string | null;
 }
+type RenderDlqCategory = "transient" | "timeout" | "permanent" | "crash";
 const VALID_CATEGORIES: ReadonlySet<RenderDlqCategory> = new Set([
   "transient", "timeout", "permanent", "crash",
 ]);
@@ -224,13 +221,9 @@ async function sweep(
   queue:  Queue<RenderDocumentJobData | SweepJobData>,
   logger?: JobLogger,
 ): Promise<void> {
-  const rows = await sql<{ id: string; tenant_id: string; job_id: string }>`
-    SELECT ro.id, ro.tenant_id, rj.id AS job_id
+  const rows = await sql<{ id: string; tenant_id: string }>`
+    SELECT ro.id, ro.tenant_id
     FROM   document.render_output ro
-    JOIN   document.render_job    rj
-           ON  rj.output_id  = ro.id
-           AND rj.tenant_id  = ro.tenant_id
-           AND rj.status     IN ('PENDING', 'RETRYING')
     WHERE  ro.status = 'QUEUED'
     ORDER  BY ro.created_at ASC
     LIMIT  ${SWEEP_BATCH}
@@ -242,7 +235,7 @@ async function sweep(
   await queue.addBulk(
     rows.rows.map((r) => ({
       name: JOB_NAME.RENDER,
-      data: { outputId: r.id, tenantId: r.tenant_id, jobId: r.job_id } satisfies RenderDocumentJobData,
+      data: { outputId: r.id, tenantId: r.tenant_id } satisfies RenderDocumentJobData,
       opts: {
         jobId:            `render:${r.id}`,
         attempts:         MAX_ATTEMPTS,
@@ -270,11 +263,10 @@ interface RenderOutputRow {
 }
 
 interface TemplateVersionRow {
-  id:          string;
-  body_html:   string | null;
-  body_json:   string | null;
-  body_format: string | null;
-  locale:      string | null;
+  id:           string;
+  content_html: string | null;
+  content_json: unknown | null;
+  locale_code:  string;
 }
 
 interface RenderDeps {
@@ -290,28 +282,19 @@ async function markFinalFailure(
   db:           AnyDb,
   tenantId:     string,
   outputId:     string,
-  jobId:        string,
   errorCode:    string,
   errorDetail:  string,
+  category:     RenderDlqCategory,
 ): Promise<void> {
   await sql`
     UPDATE document.render_output
     SET    status       = 'FAILED',
            error_code   = ${errorCode},
            error_message = ${errorDetail.slice(0, 4096)},
+           failure_category = ${category},
            updated_at   = now(),
            updated_by   = ${SYSTEM_ACTOR_ID}::uuid
     WHERE  id = ${outputId}::uuid AND tenant_id = ${tenantId}::uuid
-  `.execute(db).catch(() => undefined);
-
-  await sql`
-    UPDATE document.render_job
-    SET    status       = 'FAILED',
-           error_code   = ${errorCode},
-           error_detail = ${errorDetail.slice(0, 1024)},
-           completed_at = now(),
-           updated_at   = now()
-    WHERE  id = ${jobId}::uuid AND tenant_id = ${tenantId}::uuid
   `.execute(db).catch(() => undefined);
 }
 
@@ -319,38 +302,36 @@ async function markRetryable(
   db:           AnyDb,
   tenantId:     string,
   outputId:     string,
-  jobId:        string,
   errorCode:    string,
   errorDetail:  string,
+  category:     RenderDlqCategory,
 ): Promise<void> {
   // Reset render_output → QUEUED so the retried BullMQ job's claim succeeds.
   await sql`
     UPDATE document.render_output
-    SET    status     = 'QUEUED',
-           updated_at = now(),
-           updated_by = ${SYSTEM_ACTOR_ID}::uuid
+    SET    status           = 'QUEUED',
+           error_code       = ${errorCode},
+           error_message    = ${errorDetail.slice(0, 4096)},
+           failure_category = ${category},
+           updated_at       = now(),
+           updated_by       = ${SYSTEM_ACTOR_ID}::uuid
     WHERE  id = ${outputId}::uuid AND tenant_id = ${tenantId}::uuid
-  `.execute(db).catch(() => undefined);
-
-  await sql`
-    UPDATE document.render_job
-    SET    status       = 'RETRYING',
-           error_code   = ${errorCode},
-           error_detail = ${errorDetail.slice(0, 1024)},
-           updated_at   = now()
-    WHERE  id = ${jobId}::uuid AND tenant_id = ${tenantId}::uuid
   `.execute(db).catch(() => undefined);
 }
 
 async function render(deps: RenderDeps): Promise<void> {
   const { db, data, attemptsMade, gotenberg, objectStorage, logger } = deps;
   const startedAt = Date.now();
-  const { outputId, tenantId, jobId } = data;
+  const { outputId, tenantId } = data;
 
   // ── 1. Claim render_output ─────────────────────────────────────────────────
   const claimResult = await sql<RenderOutputRow>`
     UPDATE document.render_output
-    SET    status = 'RENDERING', updated_at = now(), updated_by = ${SYSTEM_ACTOR_ID}::uuid
+    SET    status = 'RENDERING',
+           attempt_count = attempt_count + 1,
+           last_attempt_at = now(),
+           updated_at = now(),
+           updated_by = ${SYSTEM_ACTOR_ID}::uuid
     WHERE  id        = ${outputId}::uuid
       AND  tenant_id = ${tenantId}::uuid
       AND  status    = 'QUEUED'
@@ -364,29 +345,12 @@ async function render(deps: RenderDeps): Promise<void> {
     return;
   }
 
-  // ── 2. Claim render_job ────────────────────────────────────────────────────
-  await sql`
-    UPDATE document.render_job
-    SET    status     = 'PROCESSING',
-           attempts   = attempts + 1,
-           started_at = COALESCE(started_at, now()),
-           updated_at = now()
-    WHERE  id        = ${jobId}::uuid
-      AND  tenant_id = ${tenantId}::uuid
-  `.execute(db);
-
+  // ── 2. Claim render_output ─────────────────────────────────────────────────
   // ── Configuration guards (permanent failure, alert ops) ────────────────────
   if (!gotenberg) {
     const detail = "DOCRENDER_BASE_URL is unset; no Gotenberg client available";
     logger?.error("render_no_gotenberg", { outputId, tenantId });
-    await insertRenderDlq(db, {
-      tenantId, outputId, renderJobId: jobId,
-      errorCode: "MISSING_RENDERER", errorDetail: detail,
-      errorCategory: "permanent",
-      attemptCount: attemptsMade + 1,
-      payload: { jobData: data },
-    });
-    await markFinalFailure(db, tenantId, outputId, jobId, "MISSING_RENDERER", detail);
+    await markFinalFailure(db, tenantId, outputId, "MISSING_RENDERER", detail, "permanent");
     await emitOpsAlert(db, tenantId, outputId, "permanent", "MISSING_RENDERER", detail);
     return;
   }
@@ -394,14 +358,7 @@ async function render(deps: RenderDeps): Promise<void> {
   if (!objectStorage) {
     const detail = "Object storage adapter not configured; cannot persist rendered PDF";
     logger?.error("render_no_storage", { outputId, tenantId });
-    await insertRenderDlq(db, {
-      tenantId, outputId, renderJobId: jobId,
-      errorCode: "MISSING_STORAGE", errorDetail: detail,
-      errorCategory: "permanent",
-      attemptCount: attemptsMade + 1,
-      payload: { jobData: data },
-    });
-    await markFinalFailure(db, tenantId, outputId, jobId, "MISSING_STORAGE", detail);
+    await markFinalFailure(db, tenantId, outputId, "MISSING_STORAGE", detail, "permanent");
     await emitOpsAlert(db, tenantId, outputId, "permanent", "MISSING_STORAGE", detail);
     return;
   }
@@ -412,18 +369,19 @@ async function render(deps: RenderDeps): Promise<void> {
 
     if (output.template_version_id) {
       const tvResult = await sql<TemplateVersionRow>`
-        SELECT id, body_html, body_json, body_format, locale
+        SELECT id, content_html, content_json, locale_code
         FROM   snapshot.template_version
-        WHERE  id = ${output.template_version_id}::uuid
+        WHERE  tenant_id = ${output.tenant_id}::uuid
+          AND  id = ${output.template_version_id}::uuid
         LIMIT 1
       `.execute(db);
 
       const tv = tvResult.rows[0];
       if (tv) {
-        if (tv.body_html) {
-          htmlTemplate = tv.body_html;
-        } else if (tv.body_json) {
-          const content = typeof tv.body_json === "string" ? tv.body_json : JSON.stringify(tv.body_json, null, 2);
+        if (tv.content_html) {
+          htmlTemplate = tv.content_html;
+        } else if (tv.content_json) {
+          const content = typeof tv.content_json === "string" ? tv.content_json : JSON.stringify(tv.content_json, null, 2);
           htmlTemplate = `<!DOCTYPE html><html><body><pre>${content}</pre></body></html>`;
         }
       }
@@ -466,6 +424,9 @@ async function render(deps: RenderDeps): Promise<void> {
              mime_type    = 'application/pdf',
              size_bytes   = ${sizeBytes},
              checksum     = ${checksum},
+             error_code   = NULL,
+             error_message = NULL,
+             failure_category = NULL,
              rendered_at  = now(),
              updated_at   = now(),
              updated_by   = ${SYSTEM_ACTOR_ID}::uuid
@@ -474,15 +435,6 @@ async function render(deps: RenderDeps): Promise<void> {
     `.execute(db);
 
     const durationMs = Date.now() - startedAt;
-    await sql`
-      UPDATE document.render_job
-      SET    status       = 'COMPLETED',
-             completed_at = now(),
-             duration_ms  = ${durationMs},
-             updated_at   = now()
-      WHERE  id        = ${jobId}::uuid
-        AND  tenant_id = ${tenantId}::uuid
-    `.execute(db);
 
     logger?.info("render_complete", {
       outputId, tenantId, sizeBytes, durationMs, attemptsMade,
@@ -518,14 +470,7 @@ async function render(deps: RenderDeps): Promise<void> {
     }
 
     if (terminal) {
-      await insertRenderDlq(db, {
-        tenantId, outputId, renderJobId: jobId,
-        errorCode: code, errorDetail: detail,
-        errorCategory: category,
-        attemptCount,
-        payload: { jobData: data },
-      });
-      await markFinalFailure(db, tenantId, outputId, jobId, code, detail);
+      await markFinalFailure(db, tenantId, outputId, code, detail, category);
       if (category === "crash") {
         await emitOpsAlert(db, tenantId, outputId, category, code, detail);
       }
@@ -534,7 +479,7 @@ async function render(deps: RenderDeps): Promise<void> {
     }
 
     // Retryable: reset state for next attempt and rethrow so BullMQ retries.
-    await markRetryable(db, tenantId, outputId, jobId, code, detail);
+    await markRetryable(db, tenantId, outputId, code, detail, category);
     throw err;
   }
 }

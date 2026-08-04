@@ -38,7 +38,10 @@ import {
   resolveVerifiedRequestContext,
   getLifecycleStatesWithFlag,
 } from "@athyper/svc-shared";
-import { createCompanyCodeScopeService } from "@athyper/svc-iam";
+import {
+  readEffectivePermissionContext,
+  resolveCompanyCodeScope,
+} from "@athyper/svc-iam";
 import {
   createCommitmentFromRequisition,
   createReceiptFromCommitment,
@@ -243,6 +246,7 @@ async function requireTenantAuth(
   req:  Parameters<RequestHandler>[0],
   res:  Parameters<RequestHandler>[1],
   deps: LineSourceRouteDeps,
+  permissionCode: string,
 ): Promise<{
   tenantId: string;
   principalId: string;
@@ -264,8 +268,15 @@ async function requireTenantAuth(
   }
 
   const context = verified.context;
-  const scope = await createCompanyCodeScopeService(deps.db)
-    .resolveScope(context.principalId, context.tenantId);
+  const permissions = readEffectivePermissionContext(res);
+  if (!permissions) {
+    res.status(403).json({
+      error: "AUTHORIZATION_CONTEXT_REQUIRED",
+      message: "Canonical authorization context is required.",
+    });
+    return null;
+  }
+  const scope = resolveCompanyCodeScope(permissions, permissionCode);
 
   // An active company is a routing selection, never an authorization grant.
   // It must also lie inside the principal's resolved company scope.
@@ -279,7 +290,7 @@ async function requireTenantAuth(
 
   let readableCompanyCodeIds: string[] | null = scope.isUnrestricted
     ? null
-    : scope.companyCodeIds;
+    : [...scope.companyCodeIds];
   if (context.companyCodeId) {
     readableCompanyCodeIds = [context.companyCodeId];
   }
@@ -314,7 +325,9 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
   // Query: ?supplierId=<uuid>&q=<search>&limit=&offset=
   const openPoLinesHandler: RequestHandler = async (req, res, next) => {
     try {
-      const auth = await requireTenantAuth(req, res, deps);
+      const auth = await requireTenantAuth(
+        req, res, deps, "neon.catalog.receipt.receipt_from_commitment",
+      );
       if (!auth) return;
       const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
@@ -381,7 +394,9 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
   // Query: ?supplierId=<uuid>&commitmentId=<uuid>&q=&limit=&offset=
   const openReceiptLinesHandler: RequestHandler = async (req, res, next) => {
     try {
-      const auth = await requireTenantAuth(req, res, deps);
+      const auth = await requireTenantAuth(
+        req, res, deps, "neon.catalog.purchase_invoice.invoice_from_receipt",
+      );
       if (!auth) return;
       const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
@@ -446,7 +461,10 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
   // Query: ?supplierId=<uuid>&commitmentId=<uuid>&q=&limit=&offset=
   const openServiceSheetLinesHandler: RequestHandler = async (req, res, next) => {
     try {
-      const auth = await requireTenantAuth(req, res, deps);
+      const auth = await requireTenantAuth(
+        req, res, deps,
+        "neon.catalog.purchase_invoice.invoice_from_service_sheet",
+      );
       if (!auth) return;
       const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
@@ -530,7 +548,9 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
 
   const openInvoicesHandler: RequestHandler = async (req, res, next) => {
     try {
-      const auth = await requireTenantAuth(req, res, deps);
+      const auth = await requireTenantAuth(
+        req, res, deps, "neon.catalog.purchase_invoice.create_payment",
+      );
       if (!auth) return;
       const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
@@ -621,7 +641,10 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
   // Query: ?requisitionId=<uuid>&q=<search>&limit=&offset=
   const openRequisitionLinesHandler: RequestHandler = async (req, res, next) => {
     try {
-      const auth = await requireTenantAuth(req, res, deps);
+      const auth = await requireTenantAuth(
+        req, res, deps,
+        "neon.catalog.purchase_requisition.create_commitment",
+      );
       if (!auth) return;
       const { tenantId, readableCompanyCodeIds } = auth;
       const { limit, offset, q } = parsePageParams(req);
@@ -673,7 +696,9 @@ export function createLineSourceRoute(router: Router, deps: LineSourceRouteDeps)
   // swap this handler for a real query against master.catalog_item +
   // master.catalog_price.
   const catalogItemsHandler: RequestHandler = async (req, res) => {
-    const auth = await requireTenantAuth(req, res, deps);
+    const auth = await requireTenantAuth(
+      req, res, deps, "neon.catalog.commitment.create",
+    );
     if (!auth) return;
     const body: PageOut<Record<string, unknown>> = { items: [], total: 0 };
     res.json(body);

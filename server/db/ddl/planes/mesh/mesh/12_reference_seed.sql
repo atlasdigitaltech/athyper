@@ -1,0 +1,2 @@
+-- No global Mesh network rows are seeded. Network accounts and relationships
+-- are tenant-owned operational data provisioned after tenant/principal setup.

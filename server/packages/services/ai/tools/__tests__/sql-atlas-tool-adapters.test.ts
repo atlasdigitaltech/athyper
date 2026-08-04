@@ -330,7 +330,7 @@ describe("SqlAtlasToolExecutionRecorder", () => {
     const target = database();
     target.connection.queue([], [{ state: "inserted" }]);
     const recorder = new SqlAtlasToolExecutionRecorder(target.db);
-    const hostileCallId = "call-1'; DROP TABLE event.ai_tool_invocation; --";
+    const hostileCallId = "call-1'; DROP TABLE ai.ai_tool_invocation; --";
 
     await recorder.propose(proposal({ callId: hostileCallId }));
 
@@ -343,7 +343,7 @@ describe("SqlAtlasToolExecutionRecorder", () => {
       expect.arrayContaining([TENANT_ID, PRINCIPAL_ID, "neon", "1500"]),
     );
     const insert = target.connection.queries[1]!;
-    expect(insert.sql).toContain("INSERT INTO event.ai_tool_invocation");
+    expect(insert.sql).toContain("INSERT INTO ai.ai_tool_invocation");
     expect(insert.sql).toContain(
       "ON CONFLICT (tenant_id, run_id, tool_call_id) DO NOTHING",
     );
@@ -383,7 +383,7 @@ describe("SqlAtlasToolExecutionRecorder", () => {
     await recorder.markExecuting(executingTransition());
 
     const update = target.connection.queries[1]!;
-    expect(update.sql).toContain("UPDATE event.ai_tool_invocation");
+    expect(update.sql).toContain("UPDATE ai.ai_tool_invocation");
     for (const predicate of [
       "id =",
       "tenant_id =",
@@ -397,7 +397,7 @@ describe("SqlAtlasToolExecutionRecorder", () => {
     ]) {
       expect(update.sql).toContain(predicate);
     }
-    expect(update.sql).toContain("FROM event.atlas_run r");
+    expect(update.sql).toContain("FROM ai.atlas_run r");
     expect(update.sql).toContain("r.status = 'started'");
     expect(update.parameters).toEqual(expect.arrayContaining([
       EXECUTION_ID,

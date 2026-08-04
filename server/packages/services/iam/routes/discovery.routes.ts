@@ -2,14 +2,12 @@ import type { RequestHandler, Router } from "express";
 
 import {
   createTenantDiscoveryService,
+  type KeycloakDiscoveryConfig,
   type PlaneKey,
 } from "../discovery/discovery.service.js";
 
 export interface DiscoveryRoutesDeps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: import("kysely").Kysely<any>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  meshDb?: import("kysely").Kysely<any>;
+  keycloak: KeycloakDiscoveryConfig;
   logger?: {
     error(event: string, fields?: Record<string, unknown>): void;
     warn(event: string, fields?: Record<string, unknown>): void;
@@ -59,7 +57,7 @@ async function minimumDelay(startedAt: number): Promise<void> {
 }
 
 export function createDiscoveryRoutes(router: Router, deps: DiscoveryRoutesDeps): Router {
-  const discovery = createTenantDiscoveryService(deps.db, deps.meshDb);
+  const discovery = createTenantDiscoveryService(deps.keycloak);
 
   const postDiscovery: RequestHandler = async (req, res, next) => {
     const startedAt = Date.now();

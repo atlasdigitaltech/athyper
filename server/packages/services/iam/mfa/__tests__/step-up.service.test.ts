@@ -46,6 +46,7 @@ describe("Keycloak session-bound step-up elevations", () => {
     await expect(service.isElevated(binding({ tenantId: "tenant-b" }))).resolves.toBe(false);
     await expect(service.isElevated(binding({ actionClass: "payment_release" }))).resolves.toBe(false);
     await expect(service.isElevated(binding({ actionClass: "atlas_support" }))).resolves.toBe(false);
+    await expect(service.isElevated(binding({ actionClass: "metadata_release" }))).resolves.toBe(false);
   });
 
   it("requires an issuer-controlled session claim when creating a binding", () => {

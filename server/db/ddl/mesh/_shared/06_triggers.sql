@@ -41,12 +41,6 @@ CREATE TRIGGER trg_workspace_updated_at BEFORE UPDATE ON shared.workspace FOR EA
 DROP TRIGGER IF EXISTS trg_module_updated_at ON shared.module;
 CREATE TRIGGER trg_module_updated_at BEFORE UPDATE ON shared.module FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_persona_updated_at ON shared.persona;
-CREATE TRIGGER trg_persona_updated_at BEFORE UPDATE ON shared.persona FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
-DROP TRIGGER IF EXISTS trg_role_updated_at ON shared.role;
-CREATE TRIGGER trg_role_updated_at BEFORE UPDATE ON shared.role FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
 -- status_changed_at
 DROP TRIGGER IF EXISTS trg_country_status_changed ON shared.country;
 CREATE TRIGGER trg_country_status_changed BEFORE UPDATE ON shared.country FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
@@ -80,12 +74,6 @@ CREATE TRIGGER trg_workspace_status_changed BEFORE UPDATE ON shared.workspace FO
 
 DROP TRIGGER IF EXISTS trg_module_status_changed ON shared.module;
 CREATE TRIGGER trg_module_status_changed BEFORE UPDATE ON shared.module FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_persona_status_changed ON shared.persona;
-CREATE TRIGGER trg_persona_status_changed BEFORE UPDATE ON shared.persona FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_role_status_changed ON shared.role;
-CREATE TRIGGER trg_role_status_changed BEFORE UPDATE ON shared.role FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 -- Immutability guards
 DROP TRIGGER IF EXISTS trg_country_immutable_code ON shared.country;
@@ -146,10 +134,6 @@ CREATE TRIGGER trg_locale_consistency BEFORE INSERT OR UPDATE ON shared.locale F
 
 DROP TRIGGER IF EXISTS trg_state_region_code_check ON shared.state_region;
 CREATE TRIGGER trg_state_region_code_check BEFORE INSERT OR UPDATE ON shared.state_region FOR EACH ROW EXECUTE FUNCTION shared.trg_state_region_code_consistency();
-
--- Persona protection
-DROP TRIGGER IF EXISTS trg_persona_protect_system ON shared.persona;
-CREATE TRIGGER trg_persona_protect_system BEFORE DELETE OR UPDATE ON shared.persona FOR EACH ROW EXECUTE FUNCTION shared.trg_protect_system_persona();
 
 -- Plan version gate
 CREATE OR REPLACE FUNCTION shared.fn_close_prior_plan_version()

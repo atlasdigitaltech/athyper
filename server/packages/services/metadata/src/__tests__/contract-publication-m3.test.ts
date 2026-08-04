@@ -21,7 +21,7 @@ describe("Contract M3 atomic publication wiring", () => {
     expect(repository).toContain("snapshot.entity_plane_compiled");
     expect(repository).toContain("readiness_status='READY'");
     expect(repository).toContain("control.entity_contract_transition");
-    expect(repository).toContain("log.descriptor_cache_invalidation");
+    expect(repository).toContain("event.descriptor_invalidation_outbox");
     expect(repository).toContain("pg_notify('desc_invalidate'");
 
     const compile = application.indexOf("await transaction.compileVersion(request.versionId)");

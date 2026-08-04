@@ -6,7 +6,40 @@ generator kysely {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["aggregate", "control", "document", "event", "governance", "ledger", "log", "master", "mesh", "public", "shared", "snapshot"]
+  schemas  = ["aggregate", "ai", "audit", "control", "document", "event", "governance", "ledger", "log", "master", "mesh", "public", "shared", "snapshot"]
+}
+
+/// Canonical, append-only and range-partitioned audit evidence shared by all planes.
+model canonical_audit_log {
+  id                         String   @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                  String   @db.Uuid
+  event_code                 String
+  operation                  String
+  entity_type                String
+  entity_id                  String   @db.Uuid
+  scope_type                 String?
+  scope_id                   String?  @db.Uuid
+  actor_principal_id         String?  @db.Uuid
+  actor_type                 String
+  audit_reason_code_id       String?  @db.Uuid
+  audit_reason_code_snapshot String?
+  reason_comment             String?
+  old_values                 Json?
+  new_values                 Json?
+  changed_fields             String[]
+  context                    Json     @default("{}")
+  correlation_id             String?  @db.Uuid
+  request_id                 String?
+  ip_address                 String?  @db.Inet
+  user_agent                 String?
+  occurred_at                DateTime @default(now()) @db.Timestamptz(6)
+  recorded_at                DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([occurred_at, id], map: "audit_log_pkey")
+  @@index([tenant_id, entity_type, entity_id, occurred_at(sort: Desc)], map: "audit_log_entity_idx")
+  @@index([tenant_id, event_code, occurred_at(sort: Desc)], map: "audit_log_event_idx")
+  @@map("audit_log")
+  @@schema("audit")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -1147,7 +1180,7 @@ model bank_party {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model certification {
-  id                     String        @id(map: "cert_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id                     String        @id(map: "mesh_certification_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id              String        @db.Uuid
   owner_type             String
   owner_id               String        @db.Uuid
@@ -1169,23 +1202,20 @@ model certification {
   created_by             String        @db.Uuid
   updated_at             DateTime?     @db.Timestamptz(6)
   updated_by             String?       @db.Uuid
-  company_code_id        String?       @db.Uuid
-  site_id                String?       @db.Uuid
-  company_code           company_code? @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cert_company_code_fk")
-  site                   site?         @relation(fields: [tenant_id, site_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cert_site_fk")
+  certification_type     certification_type? @relation(fields: [certification_type_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "mesh_certification_type_fk")
 
-  @@unique([tenant_id, id], map: "cert_tenant_uq")
-  @@index([tenant_id, effective_until], map: "cert_expiry_idx", where: raw("((effective_until IS NOT NULL) AND (status = 'active'::text))"))
-  @@index([tenant_id, owner_type, owner_id], map: "cert_owner_idx")
-  @@index([tenant_id, certification_type_id], map: "cert_type_idx", where: raw("(certification_type_id IS NOT NULL)"))
-  @@schema("master")
+  @@unique([tenant_id, id], map: "mesh_certification_tenant_id_uq")
+  @@index([tenant_id, effective_until], map: "mesh_certification_expiry_idx", where: raw("((effective_until IS NOT NULL) AND (status = 'active'::text))"))
+  @@index([tenant_id, owner_type, owner_id], map: "mesh_certification_owner_idx")
+  @@index([tenant_id, certification_type_id], map: "mesh_certification_type_idx", where: raw("(certification_type_id IS NOT NULL)"))
+  @@schema("mesh")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model certification_type {
-  id           String    @id(map: "ctype_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id           String    @id(map: "mesh_certification_type_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id    String?   @db.Uuid
   code         String
   name         String
@@ -1200,10 +1230,11 @@ model certification_type {
   created_by   String    @db.Uuid
   updated_at   DateTime? @db.Timestamptz(6)
   updated_by   String?   @db.Uuid
+  certification certification[]
 
-  @@index([category], map: "ctype_category_idx", where: raw("(category IS NOT NULL)"))
-  @@index([tenant_id], map: "ctype_tenant_idx", where: raw("(tenant_id IS NOT NULL)"))
-  @@schema("master")
+  @@index([category], map: "mesh_certification_type_category_idx", where: raw("(category IS NOT NULL)"))
+  @@index([tenant_id], map: "mesh_certification_type_tenant_idx", where: raw("(tenant_id IS NOT NULL)"))
+  @@schema("mesh")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -1401,10 +1432,9 @@ model contact_link {
   updated_at        DateTime?      @db.Timestamptz(6)
   updated_by        String?        @db.Uuid
   mfa_config        mfa_config[]
-  contact_email     contact_email?
+  contact_email     contact_email[]
   tenant            tenant         @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "contact_link_tenant_fk")
-  contact_phone     contact_phone?
-
+  contact_phone     contact_phone[]
   @@unique([tenant_id, id], map: "contact_link_tenant_id_uq")
   @@unique([tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier], map: "contact_link_value_uq")
   @@unique([tenant_id, owner_type, owner_id, channel_type, purpose, role_qualifier], map: "ux_contact_link_one_primary", where: raw("(is_primary = true)"))
@@ -1560,7 +1590,7 @@ model conversation {
   @@unique([tenant_id, id], map: "conv_tenant_id_uq")
   @@index([tenant_id, entity_type, entity_id], map: "conv_entity_pidx", where: raw("((entity_id IS NOT NULL) AND (status = 'active'::text))"))
   @@index([tenant_id, created_at(sort: Desc)], map: "conv_tenant_active_idx", where: raw("((status = 'active'::text) AND (deleted_at IS NULL))"))
-  @@schema("master")
+  @@schema("document")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -1590,7 +1620,7 @@ model conversation_participant {
   @@index([tenant_id, conversation_id], map: "cp_conversation_idx", where: raw("(left_at IS NULL)"))
   @@index([tenant_id, principal_id, joined_at(sort: Desc)], map: "cp_principal_active_idx", where: raw("(left_at IS NULL)"))
   @@index([tenant_id, conversation_id, last_read_at(sort: Desc)], map: "cp_read_cursor_pidx", where: raw("(left_at IS NULL)"))
-  @@schema("master")
+  @@schema("document")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -1789,12 +1819,9 @@ model principal {
   blueprint_tenant_application_blueprint_tenant_application_created_byToprincipal                       blueprint_tenant_application[]        @relation("blueprint_tenant_application_created_byToprincipal")
   blueprint_tenant_application_blueprint_tenant_application_updated_byToprincipal                       blueprint_tenant_application[]        @relation("blueprint_tenant_application_updated_byToprincipal")
   book_posting_rule                                                                                     book_posting_rule[]
-  budget_check_config_budget_check_config_created_byToprincipal                                         budget_check_config[]                 @relation("budget_check_config_created_byToprincipal")
-  budget_check_config_budget_check_config_updated_byToprincipal                                         budget_check_config[]                 @relation("budget_check_config_updated_byToprincipal")
   commodity_category_buy_policy                                                                         commodity_category_buy_policy[]
   commodity_category_inventory_policy                                                                   commodity_category_inventory_policy[]
   commodity_category_sell_policy                                                                        commodity_category_sell_policy[]
-  company_fiscal_calendar_assignment                                                                    company_fiscal_calendar_assignment[]
   entity                                                                                                entity[]
   entity_contract_transition                                                                            entity_contract_transition[]
   entity_field_surface                                                                                  entity_field_surface[]
@@ -1806,13 +1833,6 @@ model principal {
   entity_version_entity_version_validated_byToprincipal                                                 entity_version[]                      @relation("entity_version_validated_byToprincipal")
   entity_version_contract_entity_version_contract_created_byToprincipal                                 entity_version_contract[]             @relation("entity_version_contract_created_byToprincipal")
   entity_version_contract_entity_version_contract_updated_byToprincipal                                 entity_version_contract[]             @relation("entity_version_contract_updated_byToprincipal")
-  fiscal_calendar_config_fiscal_calendar_config_created_byToprincipal                                   fiscal_calendar_config[]              @relation("fiscal_calendar_config_created_byToprincipal")
-  fiscal_calendar_config_fiscal_calendar_config_updated_byToprincipal                                   fiscal_calendar_config[]              @relation("fiscal_calendar_config_updated_byToprincipal")
-  fiscal_calendar_period_rule                                                                           fiscal_calendar_period_rule[]
-  forecast_budget_bridge_forecast_budget_bridge_approved_byToprincipal                                  forecast_budget_bridge[]              @relation("forecast_budget_bridge_approved_byToprincipal")
-  forecast_budget_bridge_forecast_budget_bridge_created_byToprincipal                                   forecast_budget_bridge[]              @relation("forecast_budget_bridge_created_byToprincipal")
-  forecast_budget_bridge_forecast_budget_bridge_locked_byToprincipal                                    forecast_budget_bridge[]              @relation("forecast_budget_bridge_locked_byToprincipal")
-  forecast_budget_bridge_forecast_budget_bridge_updated_byToprincipal                                   forecast_budget_bridge[]              @relation("forecast_budget_bridge_updated_byToprincipal")
   fx_policy                                                                                             fx_policy[]
   hook_action_registry                                                                                  hook_action_registry[]
   lifecycle                                                                                             lifecycle[]
@@ -2680,7 +2700,7 @@ model acct_profile_settlement_config {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model ai_action_policy {
-  id                                               String             @id(map: "aap_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id                                               String             @id(map: "ai_action_policy_aap_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                        String             @db.Uuid
   action_code                                      String
   doc_class                                        String?
@@ -2695,21 +2715,21 @@ model ai_action_policy {
   created_by                                       String             @db.Uuid
   updated_at                                       DateTime?          @db.Timestamptz(6)
   updated_by                                       String?            @db.Uuid
-  principal_ai_action_policy_created_byToprincipal principal          @relation("ai_action_policy_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "aap_created_by_fk")
-  policy_definition                                policy_definition? @relation(fields: [override_policy_definition_id], references: [id], onUpdate: NoAction, map: "aap_override_policy_fk")
-  tenant                                           tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "aap_tenant_fk")
-  principal_ai_action_policy_updated_byToprincipal principal?         @relation("ai_action_policy_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "aap_updated_by_fk")
+  principal_ai_action_policy_created_byToprincipal principal          @relation("ai_action_policy_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "ai_action_policy_aap_created_by_fk")
+  policy_definition                                policy_definition? @relation(fields: [override_policy_definition_id], references: [id], onUpdate: NoAction, map: "ai_action_policy_aap_override_policy_fk")
+  tenant                                           tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_action_policy_aap_tenant_fk")
+  principal_ai_action_policy_updated_byToprincipal principal?         @relation("ai_action_policy_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "ai_action_policy_aap_updated_by_fk")
 
-  @@unique([tenant_id, action_code, doc_class], map: "aap_natural_uq")
-  @@index([tenant_id, action_code, doc_class], map: "aap_tenant_action_idx", where: raw("(is_active = true)"))
-  @@schema("control")
+  @@unique([tenant_id, action_code, doc_class], map: "ai_action_policy_aap_natural_uq")
+  @@index([tenant_id, action_code, doc_class], map: "ai_action_policy_aap_tenant_action_idx", where: raw("(is_active = true)"))
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model ai_confidence_threshold {
-  id                                                      String     @id(map: "act_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id                                                      String     @id(map: "ai_confidence_threshold_act_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                               String     @db.Uuid
   action_code                                             String
   doc_class                                               String?
@@ -2724,13 +2744,13 @@ model ai_confidence_threshold {
   created_by                                              String     @db.Uuid
   updated_at                                              DateTime?  @db.Timestamptz(6)
   updated_by                                              String?    @db.Uuid
-  principal_ai_confidence_threshold_created_byToprincipal principal  @relation("ai_confidence_threshold_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "act_created_by_fk")
-  tenant                                                  tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "act_tenant_fk")
-  principal_ai_confidence_threshold_updated_byToprincipal principal? @relation("ai_confidence_threshold_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "act_updated_by_fk")
+  principal_ai_confidence_threshold_created_byToprincipal principal  @relation("ai_confidence_threshold_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "ai_confidence_threshold_act_created_by_fk")
+  tenant                                                  tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_confidence_threshold_act_tenant_fk")
+  principal_ai_confidence_threshold_updated_byToprincipal principal? @relation("ai_confidence_threshold_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "ai_confidence_threshold_act_updated_by_fk")
 
-  @@unique([tenant_id, action_code, doc_class, model_id], map: "act_natural_uq")
-  @@index([tenant_id, action_code, doc_class, model_id], map: "act_tenant_action_idx", where: raw("(is_active = true)"))
-  @@schema("control")
+  @@unique([tenant_id, action_code, doc_class, model_id], map: "ai_confidence_threshold_act_natural_uq")
+  @@index([tenant_id, action_code, doc_class, model_id], map: "ai_confidence_threshold_act_tenant_action_idx", where: raw("(is_active = true)"))
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -2738,7 +2758,7 @@ model ai_confidence_threshold {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model ai_drift_baseline {
-  id                                                String              @id(map: "adb_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id                                                String              @id(map: "ai_drift_baseline_adb_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                         String              @db.Uuid
   action_code                                       String
   doc_class                                         String?
@@ -2757,14 +2777,14 @@ model ai_drift_baseline {
   created_by                                        String              @db.Uuid
   updated_at                                        DateTime?           @db.Timestamptz(6)
   updated_by                                        String?             @db.Uuid
-  principal_ai_drift_baseline_created_byToprincipal principal           @relation("ai_drift_baseline_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "adb_created_by_fk")
-  ai_drift_baseline                                 ai_drift_baseline?  @relation("ai_drift_baselineToai_drift_baseline", fields: [superseded_by_id], references: [id], onUpdate: NoAction, map: "adb_superseded_by_fk")
+  principal_ai_drift_baseline_created_byToprincipal principal           @relation("ai_drift_baseline_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "ai_drift_baseline_adb_created_by_fk")
+  ai_drift_baseline                                 ai_drift_baseline?  @relation("ai_drift_baselineToai_drift_baseline", fields: [superseded_by_id], references: [id], onUpdate: NoAction, map: "ai_drift_baseline_adb_superseded_by_fk")
   other_ai_drift_baseline                           ai_drift_baseline[] @relation("ai_drift_baselineToai_drift_baseline")
-  tenant                                            tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "adb_tenant_fk")
-  principal_ai_drift_baseline_updated_byToprincipal principal?          @relation("ai_drift_baseline_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "adb_updated_by_fk")
+  tenant                                            tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_drift_baseline_adb_tenant_fk")
+  principal_ai_drift_baseline_updated_byToprincipal principal?          @relation("ai_drift_baseline_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "ai_drift_baseline_adb_updated_by_fk")
 
-  @@index([tenant_id, action_code, model_id, baseline_date(sort: Desc)], map: "adb_scope_history_idx")
-  @@schema("control")
+  @@index([tenant_id, action_code, model_id, baseline_date(sort: Desc)], map: "ai_drift_baseline_adb_scope_history_idx")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -2828,7 +2848,7 @@ model asset_class_book_policy {
   @@unique([tenant_id, id], map: "acbp_tenant_id_uq")
   @@index([tenant_id, company_code_id], map: "acbp_company_idx", where: raw("(is_active = true)"))
   @@index([tenant_id, company_code_id, asset_class_id, book_code, effective_from(sort: Desc)], map: "acbp_resolution_idx", where: raw("(is_active = true)"))
-  @@schema("control")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -2891,7 +2911,7 @@ model asset_class_book_policy_template {
   @@index([template_code, asset_class_code, book_category, effective_from(sort: Desc), priority(sort: Desc)], map: "acbpt_global_resolution_idx", where: raw("((tenant_id IS NULL) AND (is_active = true))"))
   @@index([template_code, book_category], map: "acbpt_template_category_idx", where: raw("(is_active = true)"))
   @@index([tenant_id, template_code, asset_class_code, book_category, effective_from(sort: Desc), priority(sort: Desc)], map: "acbpt_tenant_resolution_idx", where: raw("((tenant_id IS NOT NULL) AND (is_active = true))"))
-  @@schema("control")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -2909,8 +2929,8 @@ model atlas_conversation_retention_policy {
   updated_at     DateTime? @db.Timestamptz(6)
   updated_by     String?   @db.Uuid
 
-  @@index([tenant_id, revision(sort: Desc)], map: "atlas_conversation_retention_active_idx", where: raw("(status = 'active'::text)"))
-  @@schema("control")
+  @@index([tenant_id, revision(sort: Desc)], map: "atlas_conversation_retention_policy_atlas_conversation_9d986858", where: raw("(status = 'active'::text)"))
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -2935,7 +2955,7 @@ model atlas_tenant_provider_credential {
   @@unique([tenant_id, provider_id], map: "atlas_tenant_provider_credential_active_uq", where: raw("(status = 'active'::text)"))
   @@unique([tenant_id, provider_id, rotation_epoch], map: "atlas_tenant_provider_credential_scope_uq")
   @@index([tenant_id, key_version, status], map: "atlas_tenant_provider_credential_rotation_idx")
-  @@schema("control")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -2949,7 +2969,7 @@ model atlas_tenant_provider_credential_epoch {
   tenant         tenant   @relation(fields: [tenant_id], references: [id], onUpdate: NoAction)
 
   @@id([tenant_id, provider_id])
-  @@schema("control")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -2995,7 +3015,7 @@ model bank_format_rule {
   tenant                         tenant?   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bfr_tenant_fk")
 
   @@index([country_code, payment_network, direction, priority(sort: Desc)], map: "bfr_resolve_idx", where: raw("(status = 'active'::text)"))
-  @@schema("control")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -3042,7 +3062,7 @@ model bank_interface_profile {
   @@unique([tenant_id, code], map: "bip_tenant_code_uq")
   @@unique([tenant_id, id], map: "bip_tenant_id_uq")
   @@index([tenant_id, credential_status, last_connection_test_status, status], map: "ix_bip_connection_readiness")
-  @@schema("control")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -3070,7 +3090,7 @@ model blueprint_registry {
   blueprint_tenant_application                       blueprint_tenant_application[]
 
   @@index([category, code], map: "br_status_active_pidx", where: raw("(status = 'active'::text)"))
-  @@schema("control")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -3099,7 +3119,7 @@ model blueprint_tenant_application {
   @@unique([tenant_id, blueprint_code], map: "tba_tenant_bp_uq")
   @@index([tenant_id, status], map: "tba_status_pidx", where: raw("(status <> 'applied'::text)"))
   @@index([tenant_id], map: "tba_tenant_idx")
-  @@schema("control")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -3156,34 +3176,6 @@ model book_posting_rule {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model budget_check_config {
-  id                                                  String             @id(map: "bcc_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                           String             @db.Uuid
-  name                                                String
-  description                                         String?
-  book_id                                             String?            @db.Uuid
-  account_pattern                                     String?
-  period_scope                                        String             @default("fiscal_year")
-  ou_scope                                            String             @default("exact")
-  commitment_netting                                  String             @default("actuals_plus_committed")
-  warn_at_pct                                         Decimal            @default(80) @db.Decimal(5, 2)
-  block_at_pct                                        Decimal            @default(100) @db.Decimal(5, 2)
-  override_policy_definition_id                       String?            @db.Uuid
-  created_at                                          DateTime           @default(now()) @db.Timestamptz(6)
-  created_by                                          String             @db.Uuid
-  updated_at                                          DateTime?          @db.Timestamptz(6)
-  updated_by                                          String?            @db.Uuid
-  ledger_book                                         ledger_book?       @relation(fields: [book_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "bcc_book_fk")
-  principal_budget_check_config_created_byToprincipal principal          @relation("budget_check_config_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "bcc_created_by_fk")
-  policy_definition                                   policy_definition? @relation(fields: [override_policy_definition_id], references: [id], onUpdate: NoAction, map: "bcc_override_policy_fk")
-  tenant                                              tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bcc_tenant_fk")
-  principal_budget_check_config_updated_byToprincipal principal?         @relation("budget_check_config_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "bcc_updated_by_fk")
-  policy_rule                                         policy_rule[]
-
-  @@index([tenant_id], map: "bcc_tenant_idx")
-  @@schema("control")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -3229,7 +3221,6 @@ model commodity_category_buy_policy {
   company_code                        company_code?      @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ccbpol_company_fk")
   principal                           principal          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ccbpol_created_by_fk")
   gl_account                          gl_account?        @relation(fields: [tenant_id, default_gl_account_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ccbpol_gl_fk")
-  business_intent                     business_intent    @relation(fields: [tenant_id, business_intent_id], references: [tenant_id, id], onUpdate: NoAction, map: "ccbpol_intent_fk")
   tax_group                           tax_group?         @relation(fields: [tenant_id, default_tax_group_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ccbpol_tax_group_fk")
   tenant                              tenant             @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ccbpol_tenant_fk")
 
@@ -3329,7 +3320,6 @@ model commodity_category_sell_policy {
   company_code                                                                                                  company_code?       @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ccselpol_company_fk")
   principal                                                                                                     principal           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ccselpol_created_by_fk")
   gl_account_commodity_category_sell_policy_tenant_id_default_deferred_revenue_gl_account_idTogl_account        gl_account?         @relation("commodity_category_sell_policy_tenant_id_default_deferred_revenue_gl_account_idTogl_account", fields: [tenant_id, default_deferred_revenue_gl_account_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ccselpol_defrev_gl_fk")
-  business_intent                                                                                               business_intent     @relation(fields: [tenant_id, business_intent_id], references: [tenant_id, id], onUpdate: NoAction, map: "ccselpol_intent_fk")
   gl_account_commodity_category_sell_policy_tenant_id_default_revenue_gl_account_idTogl_account                 gl_account?         @relation("commodity_category_sell_policy_tenant_id_default_revenue_gl_account_idTogl_account", fields: [tenant_id, default_revenue_gl_account_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ccselpol_revenue_gl_fk")
   tax_group                                                                                                     tax_group?          @relation(fields: [tenant_id, default_tax_group_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ccselpol_tax_group_fk")
   tenant                                                                                                        tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ccselpol_tenant_fk")
@@ -3396,7 +3386,6 @@ model commodity_classification_to_intent_rule {
   created_by            String          @db.Uuid
   updated_at            DateTime?       @db.Timestamptz(6)
   updated_by            String?         @db.Uuid
-  business_intent       business_intent @relation(fields: [resolved_intent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cir_intent_fk")
   tenant                tenant          @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cir_tenant_fk")
 
   @@index([classification_source, classification_id], map: "cir_class_idx")
@@ -3441,33 +3430,6 @@ model commodity_code_to_category_rule {
 /// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model company_fiscal_calendar_assignment {
-  id                         String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                  String                 @db.Uuid
-  company_code_id            String                 @db.Uuid
-  fiscal_calendar_config_id  String                 @db.Uuid
-  effective_fiscal_year_from Int                    @db.SmallInt
-  effective_fiscal_year_to   Int?                   @db.SmallInt
-  priority                   Int                    @default(0) @db.SmallInt
-  metadata                   Json                   @default("{}")
-  status                     String                 @default("active")
-  is_active                  Boolean?               @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at          DateTime?              @db.Timestamptz(6)
-  status_changed_by          String?                @db.Uuid
-  created_at                 DateTime               @default(now()) @db.Timestamptz(6)
-  created_by                 String                 @db.Uuid
-  updated_at                 DateTime?              @db.Timestamptz(6)
-  updated_by                 String?                @db.Uuid
-  company_code               company_code           @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "cfca_company_fk")
-  fiscal_calendar_config     fiscal_calendar_config @relation(fields: [tenant_id, fiscal_calendar_config_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cfca_config_fk")
-  principal                  principal              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cfca_created_by_fk")
-  tenant                     tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "cfca_tenant_fk")
-
-  @@unique([tenant_id, id], map: "company_fiscal_calendar_assignment_tenant_id_uq")
-  @@index([tenant_id, company_code_id, effective_fiscal_year_from, effective_fiscal_year_to], map: "cfca_company_year_idx", where: raw("(status = 'active'::text)"))
-  @@schema("control")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model connector_type {
@@ -4650,181 +4612,14 @@ model finance_posting_rollout_policy {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model fiscal_calendar_config {
-  id                                                     String                               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                              String                               @db.Uuid
-  code                                                   String
-  name                                                   String
-  description                                            String?
-  calendar_type                                          String                               @default("monthly")
-  version_no                                             Int                                  @default(1)
-  fiscal_year_label_rule                                 String                               @default("start_year")
-  year_start_rule                                        String                               @default("fixed_date")
-  anchor_month                                           Int                                  @default(1) @db.SmallInt
-  anchor_day                                             Int                                  @default(1) @db.SmallInt
-  week_start_day                                         Int                                  @default(1) @db.SmallInt
-  periods_per_year                                       Int                                  @default(12) @db.SmallInt
-  leap_week_rule                                         String                               @default("none")
-  effective_from                                         DateTime?                            @db.Date
-  effective_to                                           DateTime?                            @db.Date
-  supersedes_id                                          String?                              @db.Uuid
-  metadata                                               Json                                 @default("{}")
-  status                                                 String                               @default("draft")
-  is_active                                              Boolean?                             @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                      DateTime?                            @db.Timestamptz(6)
-  status_changed_by                                      String?                              @db.Uuid
-  created_at                                             DateTime                             @default(now()) @db.Timestamptz(6)
-  created_by                                             String                               @db.Uuid
-  updated_at                                             DateTime?                            @db.Timestamptz(6)
-  updated_by                                             String?                              @db.Uuid
-  company_fiscal_calendar_assignment                     company_fiscal_calendar_assignment[]
-  principal_fiscal_calendar_config_created_byToprincipal principal                            @relation("fiscal_calendar_config_created_byToprincipal", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fcc_created_by_fk")
-  fiscal_calendar_config                                 fiscal_calendar_config?              @relation("fiscal_calendar_configTofiscal_calendar_config", fields: [tenant_id, supersedes_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "fcc_supersedes_fk")
-  other_fiscal_calendar_config                           fiscal_calendar_config[]             @relation("fiscal_calendar_configTofiscal_calendar_config")
-  tenant                                                 tenant                               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fcc_tenant_fk")
-  principal_fiscal_calendar_config_updated_byToprincipal principal?                           @relation("fiscal_calendar_config_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fcc_updated_by_fk")
-  fiscal_calendar_period_rule                            fiscal_calendar_period_rule[]
-  fiscal_period                                          fiscal_period[]
-
-  @@unique([tenant_id, code, version_no], map: "fiscal_calendar_config_code_version_uq")
-  @@unique([tenant_id, id], map: "fiscal_calendar_config_tenant_id_uq")
-  @@index([tenant_id, status, code, version_no(sort: Desc)], map: "fcc_tenant_status_idx")
-  @@schema("control")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model fiscal_calendar_period_rule {
-  id                        String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                 String                 @db.Uuid
-  fiscal_calendar_config_id String                 @db.Uuid
-  sequence_no               Int                    @db.SmallInt
-  period_number             Int                    @db.SmallInt
-  period_type               String                 @default("normal")
-  name_template             String                 @default("Period {period}")
-  duration_unit             String                 @default("month")
-  duration_value            Int                    @default(1) @db.SmallInt
-  anchor                    String                 @default("sequence")
-  quarter_number            Int?                   @db.SmallInt
-  absorbs_leap_week         Boolean                @default(false)
-  sort_order                Int                    @default(0) @db.SmallInt
-  metadata                  Json                   @default("{}")
-  status                    String                 @default("active")
-  is_active                 Boolean?               @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at         DateTime?              @db.Timestamptz(6)
-  status_changed_by         String?                @db.Uuid
-  created_at                DateTime               @default(now()) @db.Timestamptz(6)
-  created_by                String                 @db.Uuid
-  updated_at                DateTime?              @db.Timestamptz(6)
-  updated_by                String?                @db.Uuid
-  fiscal_calendar_config    fiscal_calendar_config @relation(fields: [tenant_id, fiscal_calendar_config_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "fcpr_config_fk")
-  principal                 principal              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fcpr_created_by_fk")
-  tenant                    tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fcpr_tenant_fk")
-
-  @@unique([tenant_id, fiscal_calendar_config_id, period_number], map: "fiscal_calendar_period_rule_number_uq")
-  @@unique([tenant_id, fiscal_calendar_config_id, sequence_no], map: "fiscal_calendar_period_rule_sequence_uq")
-  @@unique([tenant_id, id], map: "fiscal_calendar_period_rule_tenant_id_uq")
-  @@index([tenant_id, fiscal_calendar_config_id, sequence_no], map: "fcpr_config_order_idx", where: raw("(status = 'active'::text)"))
-  @@schema("control")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model forecast_budget_bridge {
-  id                                                      String                   @id(map: "fbb_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                               String                   @db.Uuid
-  name                                                    String
-  fiscal_year                                             Int                      @db.SmallInt
-  budget_period_type                                      String                   @default("annual")
-  planning_driver_version_id                              String?                  @db.Uuid
-  status                                                  String                   @default("draft")
-  locked_at                                               DateTime?                @db.Timestamptz(6)
-  locked_by                                               String?                  @db.Uuid
-  approved_at                                             DateTime?                @db.Timestamptz(6)
-  approved_by                                             String?                  @db.Uuid
-  superseded_by_id                                        String?                  @db.Uuid
-  superseded_at                                           DateTime?                @db.Timestamptz(6)
-  metadata                                                Json                     @default("{}")
-  created_at                                              DateTime                 @default(now()) @db.Timestamptz(6)
-  created_by                                              String                   @db.Uuid
-  updated_at                                              DateTime?                @db.Timestamptz(6)
-  updated_by                                              String?                  @db.Uuid
-  principal_forecast_budget_bridge_approved_byToprincipal principal?               @relation("forecast_budget_bridge_approved_byToprincipal", fields: [approved_by], references: [id], onUpdate: NoAction, map: "fbb_approved_by_fk")
-  principal_forecast_budget_bridge_created_byToprincipal  principal                @relation("forecast_budget_bridge_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "fbb_created_by_fk")
-  principal_forecast_budget_bridge_locked_byToprincipal   principal?               @relation("forecast_budget_bridge_locked_byToprincipal", fields: [locked_by], references: [id], onUpdate: NoAction, map: "fbb_locked_by_fk")
-  planning_driver_version                                 planning_driver_version? @relation(fields: [planning_driver_version_id], references: [id], onUpdate: NoAction, map: "fbb_planning_driver_version_fk")
-  forecast_budget_bridge                                  forecast_budget_bridge?  @relation("forecast_budget_bridgeToforecast_budget_bridge", fields: [superseded_by_id], references: [id], onUpdate: NoAction, map: "fbb_superseded_by_fk")
-  other_forecast_budget_bridge                            forecast_budget_bridge[] @relation("forecast_budget_bridgeToforecast_budget_bridge")
-  tenant                                                  tenant                   @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fbb_tenant_fk")
-  principal_forecast_budget_bridge_updated_byToprincipal  principal?               @relation("forecast_budget_bridge_updated_byToprincipal", fields: [updated_by], references: [id], onUpdate: NoAction, map: "fbb_updated_by_fk")
-
-  @@unique([tenant_id, name, fiscal_year], map: "fbb_name_year_uq")
-  @@unique([tenant_id, id], map: "fbb_tenant_id_uq")
-  @@index([planning_driver_version_id], map: "fbb_driver_version_idx", where: raw("(planning_driver_version_id IS NOT NULL)"))
-  @@index([tenant_id, fiscal_year, status], map: "fbb_tenant_year_status_idx")
-  @@schema("control")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model forecast_line {
-  id                            String              @id(map: "fl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                     String              @db.Uuid
-  scenario_id                   String              @db.Uuid
-  line_no                       Int                 @db.SmallInt
-  gl_account_id                 String?             @db.Uuid
-  commodity_category_id         String?             @db.Uuid
-  intent_id                     String?             @db.Uuid
-  cost_center_id                String?             @db.Uuid
-  profit_center_id              String?             @db.Uuid
-  project_id                    String?             @db.Uuid
-  budget_allocation_id          String?             @db.Uuid
-  dimension_set_id              String?             @db.Uuid
-  company_code_id               String?             @db.Uuid
-  fiscal_year                   Int                 @db.SmallInt
-  period_from                   Int                 @default(1) @db.SmallInt
-  period_to                     Int                 @default(12) @db.SmallInt
-  currency_code                 String              @db.Char(3)
-  total_amount                  Decimal             @default(0) @db.Decimal(18, 4)
-  period_amounts                Json?
-  spread_method                 String              @default("EVEN")
-  driver_id                     String?             @db.Uuid
-  planning_driver_assumption_id String?             @db.Uuid
-  is_driver_calculated          Boolean             @default(false)
-  prior_year_amount             Decimal?            @db.Decimal(18, 4)
-  variance_amount               Decimal?            @default(dbgenerated("(total_amount - COALESCE(prior_year_amount, (0)::numeric))")) @db.Decimal(18, 4)
-  variance_pct                  Decimal?            @db.Decimal(8, 4)
-  confidence                    Decimal             @default(1.00) @db.Decimal(3, 2)
-  probability_weight            Decimal             @default(1.0000) @db.Decimal(5, 4)
-  description                   String?
-  justification                 String?
-  metadata                      Json                @default("{}")
-  status                        String              @default("active")
-  is_active                     Boolean?            @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at             DateTime?           @db.Timestamptz(6)
-  status_changed_by             String?             @db.Uuid
-  created_at                    DateTime            @default(now()) @db.Timestamptz(6)
-  created_by                    String              @db.Uuid
-  updated_at                    DateTime?           @db.Timestamptz(6)
-  updated_by                    String?             @db.Uuid
-  budget_allocation             budget_allocation?  @relation(fields: [tenant_id, budget_allocation_id], references: [tenant_id, id], onDelete: SetNull, map: "fk_fl_allocation")
-  commodity_category            commodity_category? @relation(fields: [tenant_id, commodity_category_id], references: [tenant_id, id], onDelete: SetNull, map: "fk_fl_commodity_category")
-  company_code                  company_code?       @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: SetNull, map: "fk_fl_company_code")
-  forecast_scenario             forecast_scenario   @relation(fields: [tenant_id, scenario_id], references: [tenant_id, id], onDelete: Cascade, map: "fk_fl_scenario")
-
-  @@unique([tenant_id, scenario_id, line_no], map: "fl_scenario_line_uq")
-  @@index([gl_account_id, fiscal_year], map: "idx_fl_account", where: raw("(gl_account_id IS NOT NULL)"))
-  @@index([budget_allocation_id], map: "idx_fl_allocation", where: raw("(budget_allocation_id IS NOT NULL)"))
-  @@index([tenant_id, commodity_category_id, fiscal_year], map: "idx_fl_commodity_category", where: raw("(commodity_category_id IS NOT NULL)"))
-  @@index([company_code_id], map: "idx_fl_company_code", where: raw("(company_code_id IS NOT NULL)"))
-  @@index([cost_center_id], map: "idx_fl_cost_center", where: raw("(cost_center_id IS NOT NULL)"))
-  @@index([driver_id], map: "idx_fl_driver", where: raw("(driver_id IS NOT NULL)"))
-  @@index([scenario_id], map: "idx_fl_scenario")
-  @@schema("control")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -5013,7 +4808,6 @@ model intent_profile_override {
   updated_at                 DateTime?           @db.Timestamptz(6)
   updated_by                 String?             @db.Uuid
   company_code               company_code?       @relation(fields: [company_code_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ipo_cc_fk")
-  business_intent            business_intent     @relation(fields: [intent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ipo_intent_fk")
   acct_profile_config        acct_profile_config @relation(fields: [override_profile_config_id, tenant_id], references: [id, tenant_id], onDelete: NoAction, onUpdate: NoAction, map: "ipo_profile_fk")
   tenant                     tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ipo_tenant_fk")
 
@@ -5061,7 +4855,6 @@ model intent_to_accounting_profile_rule {
   updated_at                 DateTime?           @db.Timestamptz(6)
   updated_by                 String?             @db.Uuid
   company_code               company_code?       @relation(fields: [company_code_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "iprr_cc_fk")
-  business_intent            business_intent?    @relation(fields: [intent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "iprr_intent_fk")
   acct_profile_config        acct_profile_config @relation(fields: [resolved_profile_config_id, tenant_id], references: [id, tenant_id], onDelete: NoAction, onUpdate: NoAction, map: "iprr_profile_fk")
   tenant                     tenant              @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "iprr_tenant_fk")
 
@@ -5964,7 +5757,6 @@ model planning_driver_version {
   metadata               Json                     @default("{}")
   created_at             DateTime                 @default(now()) @db.Timestamptz(6)
   created_by             String                   @db.Uuid
-  forecast_budget_bridge forecast_budget_bridge[]
   planning_driver        planning_driver          @relation(fields: [driver_id], references: [id], onDelete: Cascade, map: "fk_pdv_driver")
 
   @@unique([driver_id, version_number], map: "pdv_driver_version_uq")
@@ -5993,7 +5785,6 @@ model policy_definition {
   updated_at          DateTime?             @db.Timestamptz(6)
   updated_by          String?               @db.Uuid
   ai_action_policy    ai_action_policy[]
-  budget_check_config budget_check_config[]
   principal           principal             @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "pdef_created_by_fk")
   module              module?               @relation(fields: [module_id], references: [id], onUpdate: NoAction, map: "pdef_module_fk")
   tenant              tenant?               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "pdef_tenant_fk")
@@ -6020,18 +5811,15 @@ model policy_rule {
   explanation               String?
   approvers                 Json?
   sla_hours                 Int?                        @db.SmallInt
-  budget_check_config_id    String?                     @db.Uuid
   created_at                DateTime                    @default(now()) @db.Timestamptz(6)
   created_by                String                      @db.Uuid
   updated_at                DateTime?                   @db.Timestamptz(6)
   updated_by                String?                     @db.Uuid
   lifecycle_transition_gate lifecycle_transition_gate[]
-  budget_check_config       budget_check_config?        @relation(fields: [budget_check_config_id], references: [id], onUpdate: NoAction, map: "prule_budget_check_fk")
   principal                 principal                   @relation(fields: [created_by], references: [id], onUpdate: NoAction, map: "prule_created_by_fk")
   policy_definition         policy_definition           @relation(fields: [policy_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "prule_policy_fk")
 
   @@unique([policy_id, priority], map: "prule_priority_uq")
-  @@index([budget_check_config_id], map: "prule_bcc_idx", where: raw("(budget_check_config_id IS NOT NULL)"))
   @@index([policy_id, priority], map: "prule_policy_priority_idx")
   @@schema("control")
 }
@@ -7792,7 +7580,6 @@ model forecast_scenario {
   created_by                 String                       @db.Uuid
   updated_at                 DateTime?                    @db.Timestamptz(6)
   updated_by                 String?                      @db.Uuid
-  forecast_line              forecast_line[]
   planning_driver_assumption planning_driver_assumption[]
 
   @@unique([tenant_id, company_code_id, code, version], map: "fs_tenant_code_ver_uq")
@@ -10725,7 +10512,7 @@ model ai_tool_invocation {
   @@index([tenant_id, plane, principal_id, created_at(sort: Desc)], map: "ai_tool_invocation_principal_history_idx")
   @@index([tenant_id, run_id, created_at, id], map: "ai_tool_invocation_run_history_idx")
   @@index([tenant_id, thread_id, created_at(sort: Desc), id], map: "ai_tool_invocation_thread_history_idx")
-  @@schema("event")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -10774,7 +10561,7 @@ model atlas_run {
   @@index([cancellation_requested_at], map: "atlas_run_cancel_requested_idx", where: raw("((status = 'started'::text) AND (cancellation_requested_at IS NOT NULL))"))
   @@index([tenant_id, plane, principal_id, started_at(sort: Desc)], map: "atlas_run_principal_history_idx")
   @@index([tenant_id, conversation_id, started_at(sort: Desc), id], map: "atlas_run_thread_history_idx")
-  @@schema("event")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -10804,7 +10591,7 @@ model comment_flag {
   @@index([tenant_id, context_type, comment_id, created_at(sort: Desc)], map: "cf_comment_idx")
   @@index([tenant_id, flagged_by, created_at(sort: Desc)], map: "cf_flagged_by_idx")
   @@index([tenant_id, created_at(sort: Desc)], map: "cf_pending_idx", where: raw("(status = 'pending'::text)"))
-  @@schema("event")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -10833,7 +10620,7 @@ model connector_instance {
   @@index([tenant_id, health_status], map: "idx_connector_instance_health", where: raw("(health_status = ANY (ARRAY['degraded'::text, 'down'::text]))"))
   @@index([tenant_id, is_active, created_at(sort: Desc)], map: "idx_connector_instance_tenant")
   @@index([connector_type_id, tenant_id], map: "idx_connector_instance_type")
-  @@schema("event")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -12659,7 +12446,7 @@ model tax_credit_movement {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model ai_agent_call {
-  id                        String       @id(map: "aac_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id                        String       @id(map: "ai_agent_call_aac_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                 String       @db.Uuid
   log_type                  String       @default("system")
   run_id                    String       @db.Uuid
@@ -12705,23 +12492,23 @@ model ai_agent_call {
   completed_at              DateTime     @db.Timestamptz(6)
   created_at                DateTime     @default(now()) @db.Timestamptz(6)
   created_by                String       @db.Uuid
-  ai_agent_run              ai_agent_run @relation(fields: [tenant_id, run_id], references: [tenant_id, id], onUpdate: NoAction, map: "aac_run_fk")
-  tenant                    tenant       @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "aac_tenant_fk")
+  ai_agent_run              ai_agent_run @relation(fields: [tenant_id, run_id], references: [tenant_id, id], onUpdate: NoAction, map: "ai_agent_call_aac_run_fk")
+  tenant                    tenant       @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "ai_agent_call_aac_tenant_fk")
 
-  @@unique([tenant_id, run_id, sequence_no], map: "aac_run_sequence_uq")
-  @@index([tenant_id, credential_fingerprint, created_at(sort: Desc)], map: "aac_credential_pidx", where: raw("(credential_fingerprint IS NOT NULL)"))
-  @@index([tenant_id, credential_reference_hash, created_at(sort: Desc)], map: "aac_credential_reference_pidx", where: raw("(credential_reference_hash IS NOT NULL)"))
-  @@index([tenant_id, call_kind, operation_id, created_at(sort: Desc)], map: "aac_operation_pidx", where: raw("(operation_id IS NOT NULL)"))
-  @@index([tenant_id, provider_id, actual_model_id, created_at(sort: Desc)], map: "aac_provider_model_idx", where: raw("(provider_id IS NOT NULL)"))
-  @@index([provider_id, provider_request_id], map: "aac_provider_request_pidx", where: raw("(provider_request_id IS NOT NULL)"))
-  @@schema("log")
+  @@unique([tenant_id, run_id, sequence_no], map: "ai_agent_call_aac_run_sequence_uq")
+  @@index([tenant_id, credential_fingerprint, created_at(sort: Desc)], map: "ai_agent_call_aac_credential_pidx", where: raw("(credential_fingerprint IS NOT NULL)"))
+  @@index([tenant_id, credential_reference_hash, created_at(sort: Desc)], map: "ai_agent_call_aac_credential_reference_pidx", where: raw("(credential_reference_hash IS NOT NULL)"))
+  @@index([tenant_id, call_kind, operation_id, created_at(sort: Desc)], map: "ai_agent_call_aac_operation_pidx", where: raw("(operation_id IS NOT NULL)"))
+  @@index([tenant_id, provider_id, actual_model_id, created_at(sort: Desc)], map: "ai_agent_call_aac_provider_model_idx", where: raw("(provider_id IS NOT NULL)"))
+  @@index([provider_id, provider_request_id], map: "ai_agent_call_aac_provider_request_pidx", where: raw("(provider_request_id IS NOT NULL)"))
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model ai_agent_run {
-  id                       String          @id(map: "aar_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id                       String          @id(map: "ai_agent_run_aar_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                String          @db.Uuid
   log_type                 String          @default("system")
   principal_id             String          @db.Uuid
@@ -12770,21 +12557,21 @@ model ai_agent_run {
   created_by               String          @db.Uuid
   atlas_run                atlas_run[]
   ai_agent_call            ai_agent_call[]
-  principal                principal       @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "aar_principal_fk")
-  tenant                   tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "aar_tenant_fk")
+  principal                principal       @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "ai_agent_run_aar_principal_fk")
+  tenant                   tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "ai_agent_run_aar_tenant_fk")
 
-  @@unique([tenant_id, id], map: "aar_tenant_id_uq")
-  @@index([tenant_id, client_request_id, created_at(sort: Desc)], map: "aar_client_request_idx")
-  @@index([tenant_id, error_category, created_at(sort: Desc)], map: "aar_failure_pidx", where: raw("(outcome = 'failed'::text)"))
-  @@index([tenant_id, resolved_provider_id, actual_model_id, created_at(sort: Desc)], map: "aar_model_idx", where: raw("(resolved_provider_id IS NOT NULL)"))
-  @@index([tenant_id, principal_id, thread_id, created_at(sort: Desc)], map: "aar_thread_idx")
-  @@schema("log")
+  @@unique([tenant_id, id], map: "ai_agent_run_aar_tenant_id_uq")
+  @@index([tenant_id, client_request_id, created_at(sort: Desc)], map: "ai_agent_run_aar_client_request_idx")
+  @@index([tenant_id, error_category, created_at(sort: Desc)], map: "ai_agent_run_aar_failure_pidx", where: raw("(outcome = 'failed'::text)"))
+  @@index([tenant_id, resolved_provider_id, actual_model_id, created_at(sort: Desc)], map: "ai_agent_run_aar_model_idx", where: raw("(resolved_provider_id IS NOT NULL)"))
+  @@index([tenant_id, principal_id, thread_id, created_at(sort: Desc)], map: "ai_agent_run_aar_thread_idx")
+  @@schema("ai")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model ai_calibration_log {
-  id                  String     @id(map: "acl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id                  String     @id(map: "ai_calibration_log_acl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id           String     @db.Uuid
   log_type            String     @default("system")
   model_id            String?    @db.Uuid
@@ -12799,11 +12586,11 @@ model ai_calibration_log {
   calibrated_by       String?    @db.Uuid
   created_at          DateTime   @default(now()) @db.Timestamptz(6)
   created_by          String     @db.Uuid
-  principal           principal? @relation(fields: [calibrated_by], references: [id], onUpdate: NoAction, map: "acl_calibrated_by_fk")
-  tenant              tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "acl_tenant_fk")
+  principal           principal? @relation(fields: [calibrated_by], references: [id], onUpdate: NoAction, map: "ai_calibration_log_acl_calibrated_by_fk")
+  tenant              tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_calibration_log_acl_tenant_fk")
 
-  @@index([tenant_id, model_id, created_at(sort: Desc)], map: "acl_model_idx", where: raw("(model_id IS NOT NULL)"))
-  @@schema("log")
+  @@index([tenant_id, model_id, created_at(sort: Desc)], map: "ai_calibration_log_acl_model_idx", where: raw("(model_id IS NOT NULL)"))
+  @@schema("ai")
 }
 
 /// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
@@ -12826,19 +12613,19 @@ model ai_call_transcript {
   segments          Json?
   created_at        DateTime   @default(now()) @db.Timestamptz(6)
   created_by        String     @db.Uuid
-  principal         principal? @relation(fields: [principal_id], references: [id], onUpdate: NoAction, map: "act_principal_fk")
-  tenant            tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "act_tenant_fk")
+  principal         principal? @relation(fields: [principal_id], references: [id], onUpdate: NoAction, map: "ai_call_transcript_act_principal_fk")
+  tenant            tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_call_transcript_act_tenant_fk")
 
-  @@id([id, created_at], map: "act_pkey")
-  @@index([tenant_id, entity_type, entity_id], map: "act_entity_pidx", where: raw("(entity_id IS NOT NULL)"))
-  @@index([tenant_id, session_id, created_at(sort: Desc)], map: "act_session_idx")
-  @@schema("log")
+  @@id([id, created_at], map: "ai_call_transcript_act_pkey")
+  @@index([tenant_id, entity_type, entity_id], map: "ai_call_transcript_act_entity_pidx", where: raw("(entity_id IS NOT NULL)"))
+  @@index([tenant_id, session_id, created_at(sort: Desc)], map: "ai_call_transcript_act_session_idx")
+  @@schema("ai")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model ai_feedback_log {
-  id                  String    @id(map: "afl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id                  String    @id(map: "ai_feedback_log_afl_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id           String    @db.Uuid
   log_type            String    @default("business")
   feedback_type       String
@@ -12856,19 +12643,19 @@ model ai_feedback_log {
   submitted_at        DateTime  @default(now()) @db.Timestamptz(6)
   created_at          DateTime  @default(now()) @db.Timestamptz(6)
   created_by          String    @db.Uuid
-  principal           principal @relation(fields: [submitted_by], references: [id], onUpdate: NoAction, map: "afl_submitted_by_fk")
-  tenant              tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "afl_tenant_fk")
+  principal           principal @relation(fields: [submitted_by], references: [id], onUpdate: NoAction, map: "ai_feedback_log_afl_submitted_by_fk")
+  tenant              tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_feedback_log_afl_tenant_fk")
 
-  @@index([tenant_id, entity_type, entity_id], map: "afl_entity_idx", where: raw("(entity_id IS NOT NULL)"))
-  @@index([tenant_id, feedback_type, created_at(sort: Desc)], map: "afl_unverified_pidx", where: raw("(is_outcome_verified = false)"))
-  @@schema("log")
+  @@index([tenant_id, entity_type, entity_id], map: "ai_feedback_log_afl_entity_idx", where: raw("(entity_id IS NOT NULL)"))
+  @@index([tenant_id, feedback_type, created_at(sort: Desc)], map: "ai_feedback_log_afl_unverified_pidx", where: raw("(is_outcome_verified = false)"))
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model ai_inference_log {
-  id                                                String     @id(map: "ail_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id                                                String     @id(map: "ai_inference_log_ail_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                         String     @db.Uuid
   log_type                                          String     @default("system")
   inference_type                                    String
@@ -12891,22 +12678,22 @@ model ai_inference_log {
   correlation_id                                    String?    @db.Uuid
   created_at                                        DateTime   @default(now()) @db.Timestamptz(6)
   created_by                                        String     @db.Uuid
-  principal_ai_inference_log_accepted_byToprincipal principal? @relation("ai_inference_log_accepted_byToprincipal", fields: [accepted_by], references: [id], onUpdate: NoAction, map: "ail_accepted_by_fk")
-  principal_ai_inference_log_reversed_byToprincipal principal? @relation("ai_inference_log_reversed_byToprincipal", fields: [reversed_by], references: [id], onUpdate: NoAction, map: "ail_reversed_by_fk")
-  tenant                                            tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ail_tenant_fk")
+  principal_ai_inference_log_accepted_byToprincipal principal? @relation("ai_inference_log_accepted_byToprincipal", fields: [accepted_by], references: [id], onUpdate: NoAction, map: "ai_inference_log_ail_accepted_by_fk")
+  principal_ai_inference_log_reversed_byToprincipal principal? @relation("ai_inference_log_reversed_byToprincipal", fields: [reversed_by], references: [id], onUpdate: NoAction, map: "ai_inference_log_ail_reversed_by_fk")
+  tenant                                            tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_inference_log_ail_tenant_fk")
 
-  @@index([tenant_id, model_id, created_at(sort: Desc)], map: "ail_model_idx")
-  @@index([tenant_id, reversal_window_expires_at], map: "ail_reversal_pidx", where: raw("((inference_type = 'action'::text) AND (reversed_at IS NULL) AND (reversal_window_expires_at IS NOT NULL))"))
-  @@index([tenant_id, txn_id], map: "ail_txn_pidx", where: raw("(txn_id IS NOT NULL)"))
-  @@index([tenant_id, created_at(sort: Desc)], map: "ail_unreviewed_pidx", where: raw("((inference_type = 'prediction'::text) AND (is_accepted IS NULL))"))
-  @@schema("log")
+  @@index([tenant_id, model_id, created_at(sort: Desc)], map: "ai_inference_log_ail_model_idx")
+  @@index([tenant_id, reversal_window_expires_at], map: "ai_inference_log_ail_reversal_pidx", where: raw("((inference_type = 'action'::text) AND (reversed_at IS NULL) AND (reversal_window_expires_at IS NOT NULL))"))
+  @@index([tenant_id, txn_id], map: "ai_inference_log_ail_txn_pidx", where: raw("(txn_id IS NOT NULL)"))
+  @@index([tenant_id, created_at(sort: Desc)], map: "ai_inference_log_ail_unreviewed_pidx", where: raw("((inference_type = 'prediction'::text) AND (is_accepted IS NULL))"))
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model ai_monitoring_log {
-  id             String    @id(map: "aml_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  id             String    @id(map: "ai_monitoring_log_aml_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id      String    @db.Uuid
   log_type       String    @default("system")
   monitor_type   String
@@ -12923,28 +12710,11 @@ model ai_monitoring_log {
   detail         Json?
   created_at     DateTime  @default(now()) @db.Timestamptz(6)
   created_by     String    @db.Uuid
-  tenant         tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "aml_tenant_fk")
+  tenant         tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_monitoring_log_aml_tenant_fk")
 
-  @@index([tenant_id, monitor_type, created_at(sort: Desc)], map: "aml_alert_pidx", where: raw("((is_alert = true) AND (is_alert_sent = false))"))
-  @@index([tenant_id, model_id, created_at(sort: Desc)], map: "aml_model_idx", where: raw("(model_id IS NOT NULL)"))
-  @@schema("log")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model atlas_byok_audit {
-  id                    String   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id             String   @db.Uuid
-  provider_id           String
-  event                 String
-  rotation_epoch        Int?
-  reference_fingerprint String?
-  actor_principal_id    String?  @db.Uuid
-  correlation_id        String?
-  occurred_at           DateTime @default(now()) @db.Timestamptz(6)
-
-  @@index([tenant_id, provider_id, occurred_at(sort: Desc)], map: "atlas_byok_audit_scope_idx")
-  @@schema("log")
+  @@index([tenant_id, monitor_type, created_at(sort: Desc)], map: "ai_monitoring_log_aml_alert_pidx", where: raw("((is_alert = true) AND (is_alert_sent = false))"))
+  @@index([tenant_id, model_id, created_at(sort: Desc)], map: "ai_monitoring_log_aml_model_idx", where: raw("(model_id IS NOT NULL)"))
+  @@schema("ai")
 }
 
 /// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
@@ -12981,7 +12751,7 @@ model attachment_access_log {
   @@index([tenant_id, created_at(sort: Desc)], map: "aal_denied_pidx", where: raw("(outcome = 'denied'::text)"))
   @@index([tenant_id, parent_entity_type, parent_entity_id], map: "aal_parent_pidx", where: raw("(parent_entity_id IS NOT NULL)"))
   @@index([tenant_id, principal_id, created_at(sort: Desc)], map: "aal_principal_idx")
-  @@schema("log")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -12999,7 +12769,7 @@ model audit_dlq {
   retried_job_id    String?
   created_at        DateTime  @default(now()) @db.Timestamptz(6)
 
-  @@schema("log")
+  @@schema("ai")
 }
 
 /// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
@@ -13037,7 +12807,7 @@ model audit_log {
   @@index([correlation_id], map: "al_correlation_pidx", where: raw("(correlation_id IS NOT NULL)"))
   @@index([tenant_id, operation, created_at(sort: Desc)], map: "al_destructive_pidx", where: raw("(operation = ANY (ARRAY['delete'::text, 'bulk_delete'::text, 'purge'::text, 'archive'::text]))"))
   @@index([tenant_id, entity_type, entity_id], map: "al_entity_idx")
-  @@schema("log")
+  @@schema("ai")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -13067,7 +12837,7 @@ model close_activity_log {
   @@index([tenant_id, company_code_id, fiscal_year, period_number, activity_type], map: "cal_company_period_idx")
   @@index([tenant_id, created_at(sort: Desc)], map: "cal_release_pidx", where: raw("(activity_type = 'release_decision'::text)"))
   @@index([tenant_id, activity_type, created_at(sort: Desc)], map: "cal_type_idx")
-  @@schema("log")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -13101,7 +12871,7 @@ model close_override_log {
 
   @@index([tenant_id, actor_id, created_at(sort: Desc)], map: "col_actor_idx")
   @@index([tenant_id, company_code_id, fiscal_year, period_number], map: "col_company_period_idx")
-  @@schema("log")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -13125,7 +12895,7 @@ model comment_retention_log {
 
   @@index([tenant_id, comment_id, created_at(sort: Desc)], map: "crl_comment_idx")
   @@index([tenant_id, created_at(sort: Desc)], map: "crl_deleted_pidx", where: raw("(action = 'deleted'::text)"))
-  @@schema("log")
+  @@schema("ai")
 }
 
 /// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
@@ -13156,7 +12926,7 @@ model cycle_audit_log {
   @@index([tenant_id, created_at], map: "cal_tenant_created_idx")
   @@index([tenant_id, cycle_run_id, created_at], map: "cal_tenant_run_idx", where: raw("(cycle_run_id IS NOT NULL)"))
   @@index([tenant_id, target_id, created_at], map: "cal_tenant_target_idx", where: raw("(target_id IS NOT NULL)"))
-  @@schema("log")
+  @@schema("ai")
 }
 
 /// This table is a partition table and requires additional setup for migrations. Visit https://pris.ly/d/partition-tables for more info.
@@ -13180,7 +12950,7 @@ model descriptor_cache_invalidation {
   @@id([id, created_at], map: "dci_pkey")
   @@index([tenant_id, entity_code, created_at(sort: Desc)], map: "dci_tenant_entity_idx")
   @@index([created_at], map: "dci_unprocessed_idx", where: raw("(processed_at IS NULL)"))
-  @@schema("log")
+  @@schema("ai")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -14253,7 +14023,7 @@ model atlas_knowledge_chunk {
 
   @@unique([tenant_id, revision_id, ordinal], map: "atlas_knowledge_chunk_ordinal_uq")
   @@index([tenant_id, revision_id, ordinal], map: "atlas_knowledge_chunk_ready_idx", where: raw("(index_status = 'ready'::text)"))
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14274,7 +14044,7 @@ model atlas_knowledge_revision {
 
   @@unique([tenant_id, source_id, source_version_id], map: "atlas_knowledge_revision_source_version_uq")
   @@index([tenant_id, source_id, id], map: "atlas_knowledge_revision_ready_idx", where: raw("(status = 'ready'::text)"))
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14296,7 +14066,7 @@ model atlas_knowledge_source {
 
   @@unique([tenant_id, source_kind, source_id], map: "atlas_knowledge_source_tenant_uq")
   @@index([tenant_id, id], map: "atlas_knowledge_source_active_idx", where: raw("(status = 'active'::text)"))
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14339,7 +14109,7 @@ model atlas_message {
   @@index([tenant_id, conversation_id, sequence(sort: Desc)], map: "atlas_message_page_idx")
   @@index([tenant_id, conversation_id, parent_message_id], map: "atlas_message_parent_idx", where: raw("(parent_message_id IS NOT NULL)"))
   @@index([tenant_id, run_id, sequence], map: "atlas_message_run_idx", where: raw("(run_id IS NOT NULL)"))
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14370,33 +14140,11 @@ model atlas_support_session {
   principal_atlas_support_session_origin_tenant_id_origin_principal_idToprincipal principal                     @relation("atlas_support_session_origin_tenant_id_origin_principal_idToprincipal", fields: [origin_tenant_id, origin_principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_support_session_origin_fk")
   principal_relationship                                                          principal_relationship        @relation(fields: [shadow_relationship_id], references: [id], onUpdate: NoAction, map: "atlas_support_session_relationship_fk")
   principal_atlas_support_session_target_tenant_id_shadow_principal_idToprincipal principal                     @relation("atlas_support_session_target_tenant_id_shadow_principal_idToprincipal", fields: [target_tenant_id, shadow_principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_support_session_shadow_fk")
-  atlas_support_session_audit                                                     atlas_support_session_audit[]
 
   @@index([expires_at], map: "atlas_support_session_expiry_idx", where: raw("(status = 'active'::text)"))
   @@index([origin_principal_id, status, expires_at], map: "atlas_support_session_origin_idx")
   @@index([target_tenant_id, status, expires_at], map: "atlas_support_session_target_idx")
-  @@schema("master")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model atlas_support_session_audit {
-  id                    String                @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  session_id            String                @db.Uuid
-  event                 String
-  occurred_at           DateTime              @db.Timestamptz(6)
-  origin_principal_id   String                @db.Uuid
-  target_tenant_id      String                @db.Uuid
-  shadow_principal_id   String                @db.Uuid
-  scope                 String?
-  resource_hash         String?
-  safe_reason_code      String?
-  created_at            DateTime              @default(now()) @db.Timestamptz(6)
-  atlas_support_session atlas_support_session @relation(fields: [session_id], references: [id], onUpdate: NoAction)
-
-  @@index([session_id, occurred_at], map: "atlas_support_audit_session_idx")
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14436,7 +14184,7 @@ model atlas_thread {
   @@index([expires_at], map: "atlas_thread_expiry_idx", where: raw("((expires_at IS NOT NULL) AND (legal_hold = false))"))
   @@index([tenant_id, plane, owner_principal_id, updated_at(sort: Desc), conversation_id], map: "atlas_thread_owner_history_idx")
   @@index([purge_after], map: "atlas_thread_purge_idx", where: raw("((purge_after IS NOT NULL) AND (legal_hold = false))"))
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14473,7 +14221,7 @@ model auth_group {
   @@unique([tenant_id, id], map: "auth_group_tenant_id_uq")
   @@index([tenant_id], map: "aug_tenant_active_pidx", where: raw("(status = 'active'::text)"))
   @@index([tenant_id], map: "ix_aug_self_service_eligible", where: raw("((is_self_service_eligible = true) AND (status = 'active'::text))"))
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -14494,7 +14242,7 @@ model auth_group_member {
   @@unique([tenant_id, principal_id, group_id], map: "auth_group_member_uq")
   @@index([tenant_id, group_id], map: "agm_group_idx")
   @@index([tenant_id, principal_id], map: "agm_principal_idx")
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14529,7 +14277,7 @@ model auth_group_role {
   @@index([tenant_id, assignment_scope_type, assignment_scope_ref_id], map: "agr_assignment_scope_idx", where: raw("(status = 'active'::text)"))
   @@index([tenant_id, group_id], map: "agr_group_active_pidx", where: raw("(status = 'active'::text)"))
   @@index([tenant_id, role_id], map: "agr_role_idx")
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14568,7 +14316,7 @@ model bank_account_house_config {
   @@unique([tenant_id, id], map: "bahc_tenant_id_uq")
   @@index([tenant_id, gl_account_id], map: "bahc_gl_account_idx")
   @@index([tenant_id, bank_account_link_id, priority(sort: Desc)], map: "ix_house_bank_payment_eligibility", where: raw("(status = 'active'::text)"))
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14602,7 +14350,7 @@ model brand_profile {
   @@unique([tenant_id, code], map: "brand_profile_tenant_code_uq")
   @@unique([tenant_id, id], map: "brand_profile_tenant_id_uq")
   @@index([tenant_id], map: "brand_profile_active_pidx", where: raw("(is_active = true)"))
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14645,7 +14393,6 @@ model budget_allocation {
   created_by                                                                      String                @db.Uuid
   updated_at                                                                      DateTime?             @db.Timestamptz(6)
   updated_by                                                                      String?               @db.Uuid
-  forecast_line                                                                   forecast_line[]
   budget_balance                                                                  budget_balance[]
   budget_transaction                                                              budget_transaction[]
   budget_transfer_budget_transfer_tenant_id_from_allocation_idTobudget_allocation budget_transfer[]     @relation("budget_transfer_tenant_id_from_allocation_idTobudget_allocation")
@@ -14666,7 +14413,7 @@ model budget_allocation {
   @@index([project_id], map: "idx_ba_project", where: raw("(project_id IS NOT NULL)"))
   @@index([tenant_id, status], map: "idx_ba_status", where: raw("(status <> ALL (ARRAY['closed'::text, 'cancelled'::text, 'exhausted'::text]))"))
   @@index([tenant_id], map: "idx_ba_tenant")
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -14725,51 +14472,12 @@ model budget_profile {
   @@index([parent_profile_id], map: "idx_bp_parent", where: raw("(parent_profile_id IS NOT NULL)"))
   @@index([tenant_id, status], map: "idx_bp_status", where: raw("(status <> ALL (ARRAY['closed'::text, 'cancelled'::text]))"))
   @@index([tenant_id], map: "idx_bp_tenant")
-  @@schema("master")
+  @@schema("ai")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
-model business_intent {
-  id                                      String                                    @id(map: "bi_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                               String                                    @db.Uuid
-  code                                    String
-  name                                    String
-  description                             String?
-  domain                                  String
-  subtype                                 String?
-  parent_id                               String?                                   @db.Uuid
-  path                                    String?
-  depth                                   Int                                       @default(0) @db.SmallInt
-  visibility                              String                                    @default("STANDARD")
-  sort_order                              Int                                       @default(0) @db.SmallInt
-  metadata                                Json                                      @default("{}")
-  status                                  String                                    @default("active")
-  is_active                               Boolean?                                  @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                       DateTime?                                 @db.Timestamptz(6)
-  status_changed_by                       String?                                   @db.Uuid
-  created_at                              DateTime                                  @default(now()) @db.Timestamptz(6)
-  created_by                              String                                    @db.Uuid
-  updated_at                              DateTime?                                 @db.Timestamptz(6)
-  updated_by                              String?                                   @db.Uuid
-  commodity_category_buy_policy           commodity_category_buy_policy[]
-  commodity_category_sell_policy          commodity_category_sell_policy[]
-  commodity_classification_to_intent_rule commodity_classification_to_intent_rule[]
-  intent_profile_override                 intent_profile_override[]
-  intent_to_accounting_profile_rule       intent_to_accounting_profile_rule[]
-  business_intent                         business_intent?                          @relation("business_intentTobusiness_intent", fields: [tenant_id, parent_id], references: [tenant_id, id], onUpdate: NoAction, map: "bi_parent_fk")
-  other_business_intent                   business_intent[]                         @relation("business_intentTobusiness_intent")
-  tenant                                  tenant                                    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "bi_tenant_fk")
-
-  @@unique([tenant_id, code], map: "bi_code_uq")
-  @@unique([tenant_id, id], map: "bi_tenant_id_uq")
-  @@index([tenant_id, parent_id], map: "bi_parent_pidx", where: raw("(parent_id IS NOT NULL)"))
-  @@index([tenant_id, domain], map: "bi_tenant_domain_pidx", where: raw("(is_active = true)"))
-  @@index([tenant_id, visibility], map: "bi_visibility_pidx", where: raw("(is_active = true)"))
-  @@schema("master")
-}
-
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
@@ -15218,7 +14926,6 @@ model commodity_category {
   commodity_category_inventory_policy                                                        commodity_category_inventory_policy[]
   commodity_category_sell_policy                                                             commodity_category_sell_policy?
   commodity_code_to_category_rule                                                            commodity_code_to_category_rule[]
-  forecast_line                                                                              forecast_line[]
   tax_resolution_rule                                                                        tax_resolution_rule[]
   principal                                                                                  principal                             @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ccat_created_by_fk")
   commodity_category_commodity_category_tenant_id_parent_idTocommodity_category              commodity_category?                   @relation("commodity_category_tenant_id_parent_idTocommodity_category", fields: [tenant_id, parent_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "ccat_parent_fk")
@@ -15330,12 +15037,10 @@ model company_code {
   commodity_category_buy_policy                                                                                                     commodity_category_buy_policy[]
   commodity_category_inventory_policy                                                                                               commodity_category_inventory_policy[]
   commodity_category_sell_policy                                                                                                    commodity_category_sell_policy[]
-  company_fiscal_calendar_assignment                                                                                                company_fiscal_calendar_assignment[]
   dimension_policy                                                                                                                  dimension_policy[]
   entity_numbering_config                                                                                                           entity_numbering_config[]
   entity_numbering_counter                                                                                                          entity_numbering_counter[]
   finance_posting_rollout_policy                                                                                                    finance_posting_rollout_policy?
-  forecast_line                                                                                                                     forecast_line[]
   fx_policy                                                                                                                         fx_policy[]
   intent_profile_override                                                                                                           intent_profile_override[]
   intent_to_accounting_profile_rule                                                                                                 intent_to_accounting_profile_rule[]
@@ -15395,7 +15100,6 @@ model company_code {
   bank_account_link                                                                                                                 bank_account_link[]
   budget_allocation                                                                                                                 budget_allocation[]
   budget_profile                                                                                                                    budget_profile[]
-  certification                                                                                                                     certification[]
   principal                                                                                                                         principal                                 @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cc_created_by_fk")
   currency                                                                                                                          currency                                  @relation(fields: [functional_currency], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "cc_currency_fk")
   legal_entity                                                                                                                      legal_entity                              @relation(fields: [tenant_id, legal_entity_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cc_legal_entity_fk")
@@ -16578,7 +16282,6 @@ model fiscal_period {
   updated_at                DateTime?               @db.Timestamptz(6)
   updated_by                String?                 @db.Uuid
   tax_calculation           tax_calculation[]
-  fiscal_calendar_config    fiscal_calendar_config? @relation(fields: [tenant_id, fiscal_calendar_config_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fp_calendar_config_fk")
   company_code              company_code            @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "fp_company_fk")
   principal                 principal               @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fp_created_by_fk")
   tenant                    tenant                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fp_tenant_fk")
@@ -17051,7 +16754,6 @@ model ledger_book {
   tax_credit_summary                                                        tax_credit_summary[]
   book_posting_rule_book_posting_rule_tenant_id_source_book_idToledger_book book_posting_rule[]            @relation("book_posting_rule_tenant_id_source_book_idToledger_book")
   book_posting_rule_book_posting_rule_tenant_id_target_book_idToledger_book book_posting_rule[]            @relation("book_posting_rule_tenant_id_target_book_idToledger_book")
-  budget_check_config                                                       budget_check_config[]
   fx_policy                                                                 fx_policy[]
   posting_role_account_map                                                  posting_role_account_map[]
   book_period_status                                                        book_period_status[]
@@ -19169,7 +18871,6 @@ model site {
   purchase_invoice_line                purchase_invoice_line[]
   service_sheet_line                   service_sheet_line[]
   asset                                asset[]
-  certification                        certification[]
   company_code_gl_account              company_code_gl_account[]
   cost_center                          cost_center[]
   holiday_calendar                     holiday_calendar[]
@@ -19676,14 +19377,12 @@ model tenant {
   bank_interface_profile                                         bank_interface_profile[]
   blueprint_tenant_application                                   blueprint_tenant_application[]
   book_posting_rule                                              book_posting_rule[]
-  budget_check_config                                            budget_check_config[]
   commodity_category_buy_policy                                  commodity_category_buy_policy[]
   commodity_category_inventory_policy                            commodity_category_inventory_policy[]
   commodity_category_sell_policy                                 commodity_category_sell_policy[]
   commodity_classification_config                                commodity_classification_config?
   commodity_classification_to_intent_rule                        commodity_classification_to_intent_rule[]
   commodity_code_to_category_rule                                commodity_code_to_category_rule[]
-  company_fiscal_calendar_assignment                             company_fiscal_calendar_assignment[]
   content_quota                                                  content_quota[]
   dimension_policy                                               dimension_policy[]
   entity                                                         entity[]
@@ -19698,9 +19397,6 @@ model tenant {
   entity_version_contract                                        entity_version_contract[]
   field_security_policy                                          field_security_policy[]
   finance_posting_rollout_policy                                 finance_posting_rollout_policy[]
-  fiscal_calendar_config                                         fiscal_calendar_config[]
-  fiscal_calendar_period_rule                                    fiscal_calendar_period_rule[]
-  forecast_budget_bridge                                         forecast_budget_bridge[]
   fx_policy                                                      fx_policy[]
   hook_action_registry                                           hook_action_registry[]
   intent_profile_override                                        intent_profile_override[]
@@ -19842,10 +19538,9 @@ model tenant {
   bank_account_house_config                                      bank_account_house_config[]
   bank_account_link                                              bank_account_link[]
   bank_party                                                     bank_party[]
-  brand_profile                                                  brand_profile?
+  brand_profile                                                  brand_profile[]
   budget_allocation                                              budget_allocation[]
   budget_profile                                                 budget_profile[]
-  business_intent                                                business_intent[]
   business_network                                               business_network[]
   business_network_membership                                    business_network_membership[]
   business_partner                                               business_partner[]
@@ -19894,12 +19589,12 @@ model tenant {
   intercompany_trading_pair                                      intercompany_trading_pair[]
   item                                                           item[]
   label                                                          label[]
-  ledger_book                                                    ledger_book?
+  ledger_book                                                    ledger_book[]
   legal_entity                                                   legal_entity[]
   legal_entity_business_partner_link                             legal_entity_business_partner_link[]
   legal_entity_identity_binding                                  legal_entity_identity_binding[]
   legal_entity_network_account                                   legal_entity_network_account[]
-  letterhead                                                     letterhead?
+  letterhead                                                     letterhead[]
   lifecycle_instance                                             lifecycle_instance[]
   multipart_upload                                               multipart_upload[]
   notification                                                   notification[]

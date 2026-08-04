@@ -20,24 +20,25 @@
  */
 
 import type { RequestHandler, Router } from "express";
-import type { Kysely } from "kysely";
+import { sql } from "kysely";
 
 import type { CacheClient } from "../session/session.service.js";
-import { createSessionService } from "../session/session.service.js";
 import { createBootstrapService } from "../bootstrap/bootstrap.service.js";
 import { terminateFrontendSessions } from "../session/termination.service.js";
+import type {
+  PlaneDatabaseRegistry,
+  RuntimeDatabase,
+  RuntimePlaneKey,
+} from "../runtime/plane-database-registry.js";
 
 // Key helpers mirrored from @athyper/session-plane — keep in sync.
 const sessKey = (ns: string, sid: string) => `sess:${ns}:${sid}`;
 const userSessionsKey = (ns: string, userId: string) => `user_sessions:${ns}:${userId}`;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyDb = Record<string, any>;
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface LogoutRoutesDeps {
-  db: Kysely<AnyDb>;
+  planeDatabases: PlaneDatabaseRegistry;
   cache: CacheClient;
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
@@ -53,10 +54,12 @@ export interface LogoutRoutesDeps {
 // ─── Route factory ────────────────────────────────────────────────────────────
 
 export function createLogoutRoutes(router: Router, deps: LogoutRoutesDeps): Router {
-  const { db, cache, auth, logger, terminationMetrics } = deps;
+  const { cache, auth, logger, terminationMetrics } = deps;
 
-  const sessionService = createSessionService({ db, cache });
-  const bootstrapService = createBootstrapService({ db, cache });
+  const bootstrapService = createBootstrapService({
+    planeDatabases: deps.planeDatabases,
+    cache,
+  });
 
   /**
    * DELETE /api/session
@@ -92,16 +95,22 @@ export function createLogoutRoutes(router: Router, deps: LogoutRoutesDeps): Rout
         return;
       }
 
-      // Capture active act-as/delegation context before the cache entries are
-      // removed. A subject can have multiple tenant/entity/workbench caches,
-      // each with a different delegator, so audit the complete set rather than
-      // only the current request's tenant.
-      const activeDelegations = await collectActiveDelegations(cache, sub);
+      const planeKey = normalizePlaneKey(req.headers["x-plane-key"]);
+      const realmKey = normalizeRealmKey(req.headers["x-realm-key"]);
+      const issuerRealm = typeof claims.iss === "string" ? claims.iss.split("/").pop() : undefined;
+      if (!planeKey || !realmKey || issuerRealm !== realmKey) {
+        res.status(400).json({
+          error: "INVALID_LOGOUT_CONTEXT",
+          message: "A verified plane and issuer-matching realm are required.",
+        });
+        return;
+      }
+      const logoutContext = parseLogoutContext(req.headers["x-logout-context"] as string | undefined);
 
       // ── Invalidate all backend session + bootstrap caches ─────────────────
       // Both calls are fire-safe: if smembers/scan finds nothing, it's a no-op.
       await Promise.all([
-        sessionService.invalidateAll(sub),
+        invalidateCanonicalSessionCache(cache, sub),
         bootstrapService.invalidate(sub),
       ]);
 
@@ -124,7 +133,7 @@ export function createLogoutRoutes(router: Router, deps: LogoutRoutesDeps): Rout
       // ── Cross-plane Redis session wipe ────────────────────────────────────
       // Clear auth sessions on all planes so a logout from any surface
       // invalidates every concurrent session for the same principal.
-      await terminateFrontendSessions(cache, sub);
+      await terminateFrontendSessions(cache, sub, realmKey);
       terminationMetrics?.(
         typeof req.headers["x-logout-reason"] === "string" ? req.headers["x-logout-reason"] : "manual_logout",
         "success",
@@ -133,20 +142,34 @@ export function createLogoutRoutes(router: Router, deps: LogoutRoutesDeps): Rout
       // ── Write security audit event ────────────────────────────────────────
       // Fire-and-forget — never fail the logout because of audit write.
       writeLogoutEvent(
-        db,
+        deps.planeDatabases.forPlane(planeKey).db,
+        planeKey,
+        realmKey,
         sub,
+        logoutTenantId(logoutContext),
+        typeof req.headers["x-session-id"] === "string" ? req.headers["x-session-id"] : undefined,
         req.headers["x-forwarded-for"] as string | undefined,
-        parseLogoutContext(req.headers["x-logout-context"] as string | undefined),
+        logoutContext,
         typeof req.headers["x-logout-reason"] === "string" ? req.headers["x-logout-reason"] : undefined,
-        activeDelegations,
-      ).catch(
-        (err) => {
+      ).catch(async (err) => {
+          await enqueueLogoutAuditRetry(
+            deps.planeDatabases.forPlane(planeKey).db,
+            planeKey,
+            realmKey,
+            sub,
+            logoutTenantId(logoutContext),
+            typeof req.headers["x-session-id"] === "string" ? req.headers["x-session-id"] : undefined,
+            logoutContext,
+            typeof req.headers["x-logout-reason"] === "string" ? req.headers["x-logout-reason"] : undefined,
+          ).catch((outboxError) => logger?.error("logout_audit_outbox_failed", {
+            sub,
+            err: outboxError instanceof Error ? outboxError.message : String(outboxError),
+          }));
           logger?.warn("logout_audit_write_failed", {
             sub,
             err: err instanceof Error ? err.message : String(err),
           });
-        },
-      );
+        });
 
       res.status(204).end();
     } catch (err) {
@@ -163,73 +186,165 @@ export function createLogoutRoutes(router: Router, deps: LogoutRoutesDeps): Rout
   return router;
 }
 
+async function invalidateCanonicalSessionCache(
+  cache: CacheClient,
+  sub: string,
+): Promise<void> {
+  if (!cache.scan) return;
+  let cursor = "0";
+  do {
+    const [next, keys] = await cache.scan(
+      cursor,
+      "MATCH",
+      `session:${sub}:*`,
+      "COUNT",
+      200,
+    );
+    cursor = next;
+    if (keys.length > 0) await cache.del(keys);
+  } while (cursor !== "0");
+}
+
 // ─── Audit helper ─────────────────────────────────────────────────────────────
 
 async function writeLogoutEvent(
-  db: Kysely<AnyDb>,
+  db: RuntimeDatabase,
+  planeKey: RuntimePlaneKey,
+  realmKey: string,
   sub: string,
+  tenantId?: string,
+  sessionId?: string,
   forwardedFor?: string,
   logoutContext?: Record<string, unknown>,
   reason?: string,
-  activeDelegations: Array<Record<string, unknown>> = [],
 ): Promise<void> {
-  // Resolve principal_id + tenant_id from the sub for the audit row.
-  // Use the first binding found — logout applies globally (all tenants).
-  const binding = await db
-    .selectFrom("master.principal_identity_binding as pib")
-    .select(["pib.principal_id", "pib.tenant_id"])
-    .where("pib.subject_id", "=", sub)
-    .where("pib.provider_code", "=", "keycloak")
-    .limit(1)
-    .executeTakeFirst();
-
-  if (!binding) return; // no binding = user never resolved; nothing to audit
-
+  if (!tenantId || !isUuid(tenantId)) return;
   const ip = forwardedFor ? forwardedFor.split(",")[0]!.trim() : null;
-
-  await db
-    .insertInto("log.security_event_log")
-    .values({
-      tenant_id: binding.tenant_id,
-      event_category: "session",
-      event_type: "logout_signal",
-      outcome: "success",
-      principal_id: binding.principal_id,
-      actor_type: "user",
-      ip_address: ip as unknown as string,
-      detail: {
-        sub,
-        source: "backend_logout_route",
-        reason: reason ?? "unknown",
-        ...(logoutContext ? { logout_context: logoutContext } : {}),
-        ...(activeDelegations.length > 0 ? { active_act_as: activeDelegations } : {}),
-      } as unknown as string,
-      created_by: binding.principal_id,
-    })
-    .execute();
+  await db.transaction().execute(async (trx) => {
+    await sql`
+      SELECT
+        set_config('app.current_tenant_id', ${tenantId}, true),
+        set_config('app.database_plane', ${planeKey === "admin" ? "athyper" : planeKey}, true)
+    `.execute(trx);
+    const binding = await sql<{ principal_id: string }>`
+      SELECT principal_id::text
+      FROM master.principal_identity_binding
+      WHERE tenant_id = ${tenantId}::uuid
+        AND provider_code = 'keycloak'
+        AND realm_key = lower(btrim(${realmKey}))
+        AND subject_id = btrim(${sub})
+      ORDER BY is_primary DESC, created_at
+      LIMIT 1
+    `.execute(trx);
+    const principalId = binding.rows[0]?.principal_id;
+    if (!principalId) return;
+    await sql`SELECT set_config('app.current_principal_id', ${principalId}, true)`.execute(trx);
+    await sql`
+      INSERT INTO audit.security_event (
+        tenant_id, event_code, category, severity, outcome, principal_id,
+        session_id, source_ip, source_service, request_id, context
+      ) VALUES (
+        ${tenantId}::uuid,
+        'auth.logout',
+        'authentication',
+        'info',
+        'success',
+        ${principalId}::uuid,
+        ${sessionId ?? null},
+        ${ip}::inet,
+        'svc-iam',
+        null,
+        ${JSON.stringify({
+          source: "backend_logout_route",
+          reason: reason ?? "unknown",
+          ...(logoutContext ? { logout_context: logoutContext } : {}),
+        })}::jsonb
+      )
+    `.execute(trx);
+  });
 }
 
-async function collectActiveDelegations(cache: CacheClient, sub: string): Promise<Array<Record<string, unknown>>> {
-  if (typeof cache.smembers !== "function") return [];
-  const keys = await cache.smembers(`principal_sessions:${sub}`).catch(() => [] as string[]);
-  const found = new Map<string, Record<string, unknown>>();
-  for (const key of keys) {
-    const raw = await cache.get(key).catch(() => null);
-    if (!raw) continue;
-    try {
-      const parsed = JSON.parse(raw) as { response?: { active_delegation?: Record<string, unknown> } };
-      const delegation = parsed.response?.active_delegation;
-      if (!delegation?.delegation_id) continue;
-      found.set(String(delegation.delegation_id), {
-        delegation_id: delegation.delegation_id,
-        delegator_name: delegation.delegator_name,
-        merged_permissions: delegation.merged_permissions,
-      });
-    } catch {
-      // A malformed cache entry must not prevent logout or audit completion.
-    }
-  }
-  return [...found.values()];
+async function enqueueLogoutAuditRetry(
+  db: RuntimeDatabase,
+  planeKey: RuntimePlaneKey,
+  realmKey: string,
+  sub: string,
+  tenantId?: string,
+  sessionId?: string,
+  logoutContext?: Record<string, unknown>,
+  reason?: string,
+): Promise<void> {
+  if (!tenantId || !isUuid(tenantId)) return;
+  await db.transaction().execute(async (trx) => {
+    await sql`
+      SELECT
+        set_config('app.current_tenant_id', ${tenantId}, true),
+        set_config('app.database_plane', ${planeKey === "admin" ? "athyper" : planeKey}, true)
+    `.execute(trx);
+    const binding = await sql<{ principal_id: string }>`
+      SELECT principal_id::text
+        FROM master.principal_identity_binding
+       WHERE tenant_id = ${tenantId}::uuid
+         AND provider_code = 'keycloak'
+         AND realm_key = ${realmKey}
+         AND subject_id = ${sub}
+       LIMIT 1
+    `.execute(trx);
+    const principalId = binding.rows[0]?.principal_id;
+    if (!principalId) return;
+    await sql`SELECT set_config('app.current_principal_id', ${principalId}, true)`.execute(trx);
+    await sql`
+      INSERT INTO event.outbox (
+        tenant_id, topic, event_type, event_key, entity_type, actor_id,
+        source, partition_key, payload, headers, created_by
+      ) VALUES (
+        ${tenantId}::uuid,
+        'audit.security-event.retry',
+        'auth.logout',
+        ${`${realmKey}:${sessionId ?? sub}`},
+        'principal',
+        ${principalId}::uuid,
+        'svc-iam',
+        ${tenantId},
+        ${JSON.stringify({
+          event_code: "auth.logout",
+          plane: planeKey,
+          realm: realmKey,
+          subject_id: sub,
+          principal_id: principalId,
+          session_id: sessionId ?? null,
+          reason: reason ?? "unknown",
+          logout_context: logoutContext ?? null,
+        })}::jsonb,
+        '{"retry_kind":"audit_security_event"}'::jsonb,
+        ${principalId}::uuid
+      )
+    `.execute(trx);
+  });
+}
+
+function normalizePlaneKey(value: unknown): RuntimePlaneKey | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === "admin" || raw === "neon" || raw === "mesh" ? raw : null;
+}
+
+function normalizeRealmKey(value: unknown): string | null {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") return null;
+  const normalized = raw.trim().toLowerCase();
+  return /^[a-z][a-z0-9_.-]{1,126}$/.test(normalized) ? normalized : null;
+}
+
+function logoutTenantId(context: Record<string, unknown> | undefined): string | undefined {
+  if (!context) return undefined;
+  const tenant = context.tenant;
+  if (!tenant || typeof tenant !== "object" || Array.isArray(tenant)) return undefined;
+  const id = (tenant as Record<string, unknown>).id;
+  return typeof id === "string" ? id : undefined;
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function parseLogoutContext(value: string | undefined): Record<string, unknown> | undefined {

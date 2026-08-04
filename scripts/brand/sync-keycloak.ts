@@ -16,9 +16,9 @@ const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
 const kcImg = path.join(kcLogin, "resources/img");
 
 const brandSources = {
-  neon: path.join(repoRoot, "packages/apps/neon/brand/src"),
-  mesh: path.join(repoRoot, "packages/apps/mesh/brand/src"),
-  admin: path.join(repoRoot, "packages/apps/admin/brand/src"),
+  neon: path.join(repoRoot, "packages/products/neon/brand/src"),
+  mesh: path.join(repoRoot, "packages/products/mesh/brand/src"),
+  admin: path.join(repoRoot, "packages/products/admin/brand/src"),
 } as const;
 
 interface BrandManifest {

@@ -369,26 +369,42 @@ export async function resolveVerifiedRequestContext(
   // recognised only when the verified JWT client id matches the service client
   // bound to an active service-account principal in the same tenant. It then
   // traverses normal IAM permissions and company scope just like a user.
-  const principal = await db
-    .selectFrom("master.principal_identity_binding as pab")
-    .innerJoin("master.principal as p", (join) => join
-      .onRef("p.id", "=", "pab.principal_id")
-      .onRef("p.tenant_id", "=", "pab.tenant_id"))
-    .leftJoin("master.principal_profile as pp", (join) => join
-      .onRef("pp.principal_id", "=", "p.id")
-      .onRef("pp.tenant_id", "=", "p.tenant_id"))
-    .select(["p.id", "p.auth_epoch", "p.is_service_account", "p.status", "pp.keycloak_service_client_id"])
-    .where("pab.subject_id", "=", subject)
-    .where("pab.realm_key", "=", realmKey)
-    .where("pab.tenant_id", "=", tenantId)
-    .executeTakeFirst() as {
-      id?: string;
-      auth_epoch?: number;
-      is_service_account?: boolean;
-      status?: string;
-      keycloak_service_client_id?: string | null;
-    } | undefined;
-  if (!principal || principal.status !== "active") {
+  const principal = await db.transaction().execute(async (trx) => {
+    await sql`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`.execute(trx);
+    const result = await sql<{
+      id: string;
+      auth_epoch: number;
+      principal_type: string;
+      service_client_id: string | null;
+    }>`
+      SELECT resolved.principal_id::text AS id,
+             resolved.auth_epoch,
+             resolved.principal_type::text,
+             binding.service_client_id
+      FROM master.fn_resolve_principal_identity(
+        ${tenantId}::uuid,
+        'keycloak'::master.identity_provider_d,
+        ${realmKey},
+        ${subject}
+      ) AS resolved
+      JOIN master.principal_identity_binding AS binding
+        ON binding.tenant_id = ${tenantId}::uuid
+       AND binding.principal_id = resolved.principal_id
+       AND binding.provider_code = 'keycloak'
+       AND binding.realm_key = lower(btrim(${realmKey}))
+       AND binding.subject_id = btrim(${subject})
+       AND binding.status = 'active'
+      JOIN authz.plane_membership AS membership
+        ON membership.tenant_id = binding.tenant_id
+       AND membership.principal_id = resolved.principal_id
+       AND membership.status = 'active'
+       AND membership.effective_from <= statement_timestamp()
+       AND (membership.effective_until IS NULL OR membership.effective_until > statement_timestamp())
+      LIMIT 1
+    `.execute(trx);
+    return result.rows[0];
+  });
+  if (!principal) {
     return { ok: false, error: "PRINCIPAL_NOT_FOUND", message: "The bound principal is not active in the verified tenant.", status: 403 };
   }
   const principalId = principal.id;
@@ -396,8 +412,9 @@ export async function resolveVerifiedRequestContext(
     return { ok: false, error: "PRINCIPAL_NOT_FOUND", message: "No principal is bound to this verified identity in the active tenant.", status: 403 };
   }
   const serviceClientId = parseServiceClientId(claims);
-  const isServicePrincipal = principal.is_service_account === true;
-  if (isServicePrincipal && (!serviceClientId || serviceClientId !== principal.keycloak_service_client_id)) {
+  const isServicePrincipal = principal.principal_type === "service_account"
+    || principal.principal_type === "integration";
+  if (isServicePrincipal && (!serviceClientId || serviceClientId !== principal.service_client_id)) {
     return {
       ok: false,
       error: "SERVICE_PRINCIPAL_DENIED",
@@ -550,20 +567,32 @@ export async function resolveTenantId(db: Kysely<any>, xOrg: string, xRealm: str
 export async function resolvePrincipalIdOrNull(db: Kysely<any>, sub: string, tenantId: string, realmKey: string): Promise<string | null> {
   if (!sub) return null;
   if (!realmKey) return null;
-  const row = await db
-    .selectFrom("master.principal_identity_binding as pab")
-    .select("pab.principal_id")
-    .where("pab.subject_id", "=", sub)
-    .where("pab.realm_key", "=", realmKey)
-    .where("pab.tenant_id", "=", tenantId)
-    .executeTakeFirst();
-  return row ? (row.principal_id as string) : null;
+  return db.transaction().execute(async (trx) => {
+    await sql`SELECT set_config('app.current_tenant_id', ${tenantId}, true)`.execute(trx);
+    const result = await sql<{ principal_id: string }>`
+      SELECT resolved.principal_id::text
+      FROM master.fn_resolve_principal_identity(
+        ${tenantId}::uuid,
+        'keycloak'::master.identity_provider_d,
+        ${realmKey},
+        ${sub}
+      ) AS resolved
+      JOIN authz.plane_membership AS membership
+        ON membership.tenant_id = ${tenantId}::uuid
+       AND membership.principal_id = resolved.principal_id
+       AND membership.status = 'active'
+       AND membership.effective_from <= statement_timestamp()
+       AND (membership.effective_until IS NULL OR membership.effective_until > statement_timestamp())
+      LIMIT 1
+    `.execute(trx);
+    return result.rows[0]?.principal_id ?? null;
+  });
 }
 
 /**
  * Resolves the master.principal UUID for a KC sub + tenant + realm.
- * JIT-provisions a new principal on first use.
- * Falls back to SYSTEM_PRINCIPAL_UUID on any provisioning failure.
+ * Compatibility name retained for downstream callers. Request handlers no
+ * longer provision identities; login/session admission owns the JIT boundary.
  *
  * `realmKey` is mandatory and positioned before `claims` (which is optional
  * because the JIT path only consumes it for username/displayName hints).
@@ -576,91 +605,15 @@ export async function resolvePrincipalIdWithJit(
   realmKey: string,
   claims?: Record<string, unknown>,
 ): Promise<string> {
-  const realm = realmKey;
-  const existing = await db
-    .selectFrom("master.principal_identity_binding as pab")
-    .select("pab.principal_id")
-    .where("pab.subject_id", "=", sub)
-    .where("pab.realm_key", "=", realm)
-    .where("pab.tenant_id", "=", tenantId)
-    .executeTakeFirst();
-  if (existing) {
-    const principalId = existing.principal_id as string;
-    // Backfill persona for principals provisioned before this fix was in place.
-    // Wrap in a transaction so the GUC set below stays in scope through the
-    // INSERT — the audit trigger trg_set_updated_at() reads
-    // app.current_principal_id and fails the audit-pair check if it's NULL,
-    // silently rolling back the persona row and leaving the user with no
-    // operations in the ActionBar.
-    try {
-      await db.transaction().execute(async (trx) => {
-        const hasPersona = await trx
-          .selectFrom("master.principal_persona as pp")
-          .select("pp.id")
-          .where("pp.principal_id", "=", principalId)
-          .where("pp.tenant_id", "=", tenantId)
-          .executeTakeFirst();
-        if (hasPersona) return;
-        const persona = await trx
-          .selectFrom("shared.persona" as never)
-          .select("id" as never)
-          .where("code" as never, "=", "owner" as never)
-          .executeTakeFirst() as Record<string, unknown> | undefined;
-        if (!persona) return;
-        await sql`SELECT set_config('app.current_principal_id', ${SYSTEM_PRINCIPAL_UUID}, true)`.execute(trx);
-        await trx.insertInto("master.principal_persona" as never)
-          .values({ tenant_id: tenantId, principal_id: principalId, persona_id: persona["id"], assigned_by: SYSTEM_PRINCIPAL_UUID, created_by: SYSTEM_PRINCIPAL_UUID } as never)
-          .execute();
-      });
-    } catch (err) {
-      // Don't bubble — the user can still authenticate. But warn so the
-      // failure is visible in logs instead of silently producing a
-      // permissionless principal.
-      // eslint-disable-next-line no-console
-      console.warn("[jit] principal_persona backfill failed", err);
-    }
-    return principalId;
-  }
-
-  try {
-    const username =
-      (typeof claims?.preferred_username === "string" ? claims.preferred_username : null) ??
-      (typeof claims?.email === "string" ? (claims.email as string).split("@")[0] : null) ??
-      sub.slice(0, 30);
-    const displayName = (typeof claims?.name === "string" ? claims.name : null) ?? username;
-
-    const principalId = await db.transaction().execute(async (trx) => {
-      // Audit trigger trg_set_updated_at() reads app.current_principal_id.
-      // Without this, the persona INSERT below fails the audit-pair check
-      // and rolls back the entire JIT transaction.
-      await sql`SELECT set_config('app.current_principal_id', ${SYSTEM_PRINCIPAL_UUID}, true)`.execute(trx);
-      const p = await trx
-        .insertInto("master.principal" as never)
-        .values({ tenant_id: tenantId, code: username.slice(0, 50), name: displayName, principal_type: "user", is_locked: false, is_service_account: false, principal_source: "oidc_jit", status: "active", created_by: SYSTEM_PRINCIPAL_UUID } as never)
-        .returning("id" as never).executeTakeFirstOrThrow();
-      const newId = (p as Record<string, unknown>).id as string;
-      await trx.insertInto("master.principal_identity_binding" as never)
-        .values({ tenant_id: tenantId, principal_id: newId, realm_key: realm, provider_code: "keycloak", subject_id: sub, username, sync_status: "synced", idp_enabled: true, idp_email_verified: true, synced_at: new Date(), created_by: SYSTEM_PRINCIPAL_UUID } as never)
-        .execute();
-      // Assign the default 'owner' persona so the JIT user has full operational access.
-      // Without this, checkPermissionBatch falls back to ZERO_UUID → returns not_found for
-      // every permission and entity operations (including 'create') are hidden.
-      const persona = await trx
-        .selectFrom("shared.persona" as never)
-        .select("id" as never)
-        .where("code" as never, "=", "owner" as never)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
-      if (persona) {
-        await trx.insertInto("master.principal_persona" as never)
-          .values({ tenant_id: tenantId, principal_id: newId, persona_id: persona["id"], assigned_by: SYSTEM_PRINCIPAL_UUID, created_by: SYSTEM_PRINCIPAL_UUID } as never)
-          .execute();
-      }
-      return newId;
+  void claims;
+  const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, realmKey);
+  if (!principalId) {
+    throw Object.assign(new Error("No active admitted principal exists for this identity."), {
+      code: "PRINCIPAL_NOT_ADMITTED",
+      status: 403,
     });
-    return principalId;
-  } catch {
-    return SYSTEM_PRINCIPAL_UUID;
   }
+  return principalId;
 }
 
 // ── Pagination ────────────────────────────────────────────────────────────────

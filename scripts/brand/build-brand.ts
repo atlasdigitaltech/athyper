@@ -3,9 +3,9 @@
  * Build canonical brand assets into packages/shared/ui-platform/brand/dist.
  *
  * Sources (per-product after brand split):
- *   packages/apps/neon/brand/src/
- *   packages/apps/mesh/brand/src/
- *   packages/apps/admin/brand/src/
+ *   packages/products/neon/brand/src/
+ *   packages/products/mesh/brand/src/
+ *   packages/products/admin/brand/src/
  *
  * Output:
  *   packages/shared/ui-platform/brand/dist/{product}/
@@ -27,9 +27,9 @@ const PRODUCTS = ["neon", "mesh", "admin"] as const;
 type ProductCode = (typeof PRODUCTS)[number];
 
 const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  neon:    path.join(repoRoot, "packages/apps/neon/brand/src"),
-  mesh:    path.join(repoRoot, "packages/apps/mesh/brand/src"),
-  admin:   path.join(repoRoot, "packages/apps/admin/brand/src"),
+  neon:    path.join(repoRoot, "packages/products/neon/brand/src"),
+  mesh:    path.join(repoRoot, "packages/products/mesh/brand/src"),
+  admin:   path.join(repoRoot, "packages/products/admin/brand/src"),
 };
 const REQUIRED_PUBLIC_ASSET_KEYS = [
   "wordmarkBlack",

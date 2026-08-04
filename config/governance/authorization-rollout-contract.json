@@ -13,7 +13,8 @@
     "cohort",
     "permission",
     "tenant",
-    "principal"
+    "principal",
+    "certificationBoundary"
   ],
   "percentageRolloutAllowed": false,
   "decisionComposition": "select_one_never_union",
@@ -41,6 +42,8 @@
     "invalidPolicy": "legacy",
     "providerMismatch": "legacy",
     "revisionMismatch": "legacy",
+    "missingOrMismatchedCohort": "legacy",
+    "missingOrMismatchedCertification": "legacy",
     "ambiguousMatch": "legacy",
     "shadowV2Error": "return_legacy_and_report",
     "enforceV2Error": "fail_closed_without_legacy_fallback"
@@ -50,7 +53,10 @@
     "approvedAt",
     "ticket",
     "rollbackOwner",
-    "observationWindowEndsAt"
+    "observationWindowEndsAt",
+    "goldenCorpusSha256",
+    "sourceDatabaseId",
+    "minimumAppliedWatermark"
   ],
   "initialSnapshots": {
     "neon": {

@@ -4,7 +4,7 @@
 -- File:     000_athyper_tenant.sql
 -- Schema:   master.tenant
 -- Purpose:  Ensure the ATHYPER blueprint tenant exists before any Tier 2/3 seed
--- Depends:  000_public/000_bootstrap.sql (system principal)
+-- Depends:  ddl/common/master/12_system_authority_reference_seed.sql (system principal)
 -- Idempotent: Yes — ON CONFLICT DO UPDATE
 -- ============================================================================
 
@@ -16,14 +16,13 @@ BEGIN
     PERFORM set_config('app.current_principal_id', v_su::text, true);
 
     INSERT INTO master.tenant (
-        code, name, display_name, realm_key, tenant_type, region, subscription,
+        code, name, display_name, realm_key, region, subscription,
         status, metadata, created_by
     ) VALUES (
         'athyper',
         'Athyper Group',
         'Athyper Group Holdings',
         'athyper',
-        'platform_owner',
         'GCC',
         'enterprise',
         'active',
@@ -48,7 +47,6 @@ BEGIN
     ON CONFLICT (realm_key, code) DO UPDATE SET
         name         = EXCLUDED.name,
         display_name = EXCLUDED.display_name,
-        tenant_type  = EXCLUDED.tenant_type,
         region       = EXCLUDED.region,
         subscription = EXCLUDED.subscription,
         status       = EXCLUDED.status,
@@ -60,11 +58,11 @@ BEGIN
                           )),
         updated_at   = now(),
         updated_by   = v_su
-    WHERE (master.tenant.realm_key, master.tenant.tenant_type, master.tenant.name, master.tenant.display_name,
+    WHERE (master.tenant.realm_key, master.tenant.name, master.tenant.display_name,
            master.tenant.region, master.tenant.subscription,
            master.tenant.status)
        IS DISTINCT FROM
-          (EXCLUDED.realm_key, EXCLUDED.tenant_type, EXCLUDED.name, EXCLUDED.display_name,
+          (EXCLUDED.realm_key, EXCLUDED.name, EXCLUDED.display_name,
            EXCLUDED.region, EXCLUDED.subscription,
            EXCLUDED.status);
 

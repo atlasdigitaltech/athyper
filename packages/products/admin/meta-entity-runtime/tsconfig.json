@@ -1,0 +1,12 @@
+{
+  "extends": "../../../shared/data-integration/config/tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "lib": ["DOM", "ES2022"],
+    "paths": {
+      "@athyper/meta-entity-authoring-contracts": ["../../../shared/data-integration/meta-entity-authoring-contracts/src/index.ts"],
+      "vitest": ["../../../../apps/admin/node_modules/vitest"]
+    }
+  },
+  "include": ["src"]
+}

@@ -28,6 +28,7 @@
     "@athyper/api-contracts": "workspace:*",
     "@athyper/entity-print": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
+    "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-shared": "workspace:*"
   },
   "devDependencies": {
@@ -42,4 +43,3 @@
     "vitest": "^4.1.4"
   }
 }
-

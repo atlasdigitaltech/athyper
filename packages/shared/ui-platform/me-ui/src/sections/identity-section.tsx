@@ -1,6 +1,6 @@
 "use client";
 
-import { Layers, RefreshCw, ShieldCheck, UserCheck, Users } from "lucide-react";
+import { Layers, RefreshCw, ShieldCheck, Users } from "lucide-react";
 import { Badge } from "@athyper/ui/primitives";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@athyper/ui/primitives";
 import type {
@@ -30,7 +30,7 @@ export interface IdentitySectionProps {
 
 /**
  * Identity view sourced from the canonical /api/me/identity contract. Renders
- * the principal's persona, groups, teams, accessible companies, and
+ * the principal's groups, teams, accessible companies, and
  * delegations.
  */
 export function IdentitySection({ active, enableDelegationMutations = false }: IdentitySectionProps) {
@@ -48,7 +48,6 @@ export function IdentitySection({ active, enableDelegationMutations = false }: I
     </div>
   );
 
-  const persona  = data?.persona ?? null;
   const groups   = data?.groups ?? [];
   const teams    = data?.teams ?? [];
   const received = data?.delegations_received ?? [];
@@ -64,13 +63,12 @@ export function IdentitySection({ active, enableDelegationMutations = false }: I
   return (
     <div className="w-full">
       <Banner>
-        <strong>Your access profile</strong> is computed at runtime from groups, personas, delegations, and feature grants.
+        <strong>Your access profile</strong> is computed from canonical groups, scoped assignments, and delegations.
       </Banner>
 
       <Tabs defaultValue="summary">
         <TabsList className="mb-4 h-auto flex-wrap gap-1 bg-muted p-1">
           <TabsTrigger value="summary"     className="text-xs">Summary</TabsTrigger>
-          <TabsTrigger value="persona"     className="text-xs">Persona</TabsTrigger>
           <TabsTrigger value="groups"      className="text-xs">Groups & Roles</TabsTrigger>
           <TabsTrigger value="teams"       className="text-xs">Teams</TabsTrigger>
           <TabsTrigger value="delegations" className="text-xs">Delegations</TabsTrigger>
@@ -82,13 +80,12 @@ export function IdentitySection({ active, enableDelegationMutations = false }: I
             icon={ShieldCheck}
             managedBy={{
               manager:  "Runtime RBAC Engine",
-              source:   "Runtime: check_permission → derive_effective_roles → access_grant evaluation",
-              editPath: "Role assignments managed via groups and personas",
+              source:   "Canonical decision service and scoped assignments",
+              editPath: "Role assignments are managed through canonical groups",
             }}
           >
             <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {[
-                { label: "Current Persona",       value: persona ? str(persona.persona_name) : "None" },
                 { label: "Active Groups",          value: String(groups.length) },
                 { label: "Delegations Received",   value: String(received.length) },
                 { label: "Legal Entities",         value: companies.length === 0 ? "—" : String(legalEntityCount) },
@@ -129,33 +126,6 @@ export function IdentitySection({ active, enableDelegationMutations = false }: I
                   <code className="rounded bg-muted px-1 font-mono text-xs">company_code</code> at runtime.
                 </p>
               </>
-            )}
-          </SectionCard>
-        </TabsContent>
-
-        <TabsContent value="persona" className="mt-4">
-          <SectionCard
-            title="Active Persona"
-            icon={UserCheck}
-            managedBy={{ manager: "Tenant Admin / System", source: "master.principal_persona", editPath: "Contact your admin to change persona" }}
-          >
-            {persona ? (
-              <>
-                <InfoRow label="Name"        value={str(persona.persona_name)} />
-                <InfoRow label="Code"        value={str(persona.persona_code)} mono copyable />
-                <InfoRow label="Assigned By" value={str(persona.assigned_by, "System")} />
-                <InfoRow label="Assigned On" value={fmtDate(persona.created_at)} />
-                <InfoRow
-                  label="Expires"
-                  value={persona.expires_at ? fmtDate(persona.expires_at) : "Never"}
-                  hint="After this date the persona becomes inactive"
-                />
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Personas provide a temporary role overlay for special contexts.
-                </p>
-              </>
-            ) : (
-              <p className="text-xs text-muted-foreground">No persona assigned.</p>
             )}
           </SectionCard>
         </TabsContent>
@@ -219,7 +189,7 @@ export function IdentitySection({ active, enableDelegationMutations = false }: I
                   <span key="code" className="font-mono text-xs">{str(t.code)}</span>,
                   <StatusBadge key="type" status={str(t.team_type, "functional")}>{str(t.team_type, "functional")}</StatusBadge>,
                   <StatusBadge key="role" status={str(t.role_in_team, "member")}>{str(t.role_in_team, "member")}</StatusBadge>,
-                  fmtDate(t.effective_from),
+                  fmtDate(t.joined_at),
                 ])}
               />
             ) : (
@@ -273,5 +243,3 @@ export function IdentitySection({ active, enableDelegationMutations = false }: I
     </div>
   );
 }
-
-

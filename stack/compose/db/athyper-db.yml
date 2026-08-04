@@ -6,8 +6,8 @@
 # Compose     : athyper-db-config
 #
 # Description :
-#   PostgreSQL database server. All seven canonical databases are created
-#   by init-databases.sh: athyper_neon, athyper_mesh, athyper_iam,
+#   PostgreSQL database server. All eight canonical databases are created
+#   by init-databases.sh: athyper_platform, athyper_neon, athyper_mesh, athyper_iam,
 #   athyper_health, athyper_errors, athyper_secrets, athyper_analytics.
 #
 # =======================================================================

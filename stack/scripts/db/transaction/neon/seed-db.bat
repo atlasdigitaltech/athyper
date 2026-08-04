@@ -15,6 +15,9 @@ REM                               #   blueprints/modules and tenant data are ski
 REM   seed-db.bat --demo-only     # Stages 1+2+3 - same as default; alias for clarity
 REM   seed-db.bat --no-mesh       # Explicitly exclude Mesh/Mesh-log/Mesh-control DDL and Mesh plane seeds (default)
 REM   seed-db.bat --reset         # DROP all app schemas + tracking tables, then re-seed
+REM   seed-db.bat --reset --confirm LOCAL-AUTH-V2-RESET
+REM                               # Local shorthand for the guarded athyper_neon reset.
+REM                               # The disposable DB marker/fingerprint must already match.
 REM                               #   Drops: shared control master mesh mesh_log mesh_control
 REM                               #          document ledger log event governance snapshot aggregate
 REM                               #          schemas, plus
@@ -72,7 +75,7 @@ REM                          */01_tables -> 02_pre_constraint -> 03_constraints 
 REM                          05_functions -> 06_triggers -> 07_views -> 08_rls -> security/
 REM   Stage 2 - Platform   : server/db/seed/platform/
 REM                          Seed order: 000_bootstrap -> 000_lookups ->
-REM                          001_global_reference -> 002_permission_model -> 003_control ->
+REM                          common layer-12 reference data -> 002_permission_model -> 003_control ->
 REM                          003_master -> 006_system_tenant
 REM   Stage 3 - Blueprint  : server/db/seed/blueprints/universal/  (TIER 1 foundation + TIER 2a COA)
 REM                        : server/db/seed/blueprints/industry/   (TIER 2b industry packs)
@@ -220,6 +223,7 @@ REM   --reset [--ddl-only | --no-demo] / --drop-only / --status / --force
 REM   --stage=N  (repeatable, N = 1 | 2 | 3)
 REM   --industry-pack=pack_transport  (repeatable; numeric prefix optional)
 REM   --tenant-id=UUID  (sets app.seed_tenant_id for Stage 3; overrides SEED_TENANT_ID)
+REM   --confirm LOCAL-AUTH-V2-RESET  (only with --reset or --drop-only)
 REM   Mesh DDL/seeds are excluded by default. Use transaction\mesh\seed-db.bat for athyper_mesh.
 REM ---------------------------------------------------------------------------
 set "MIGRATE_ARGS=%*"

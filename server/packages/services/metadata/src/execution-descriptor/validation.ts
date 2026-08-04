@@ -25,7 +25,7 @@ export class ExecutionDescriptorActivationError extends Error {
 }
 
 const PROHIBITED_SHARED_KEYS = new Set([
-  "principalId", "principal_id", "personaId", "persona_id", "accountGrantId", "account_grant_id",
+  "principalId", "principal_id", "accountGrantId", "account_grant_id",
   "profileHash", "profile_hash", "authEpoch", "auth_epoch", "permissionDecision", "permission_decision",
   "allowedPermissions", "deniedPermissions",
 ]);

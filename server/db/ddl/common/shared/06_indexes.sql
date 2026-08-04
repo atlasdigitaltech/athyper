@@ -1,0 +1,69 @@
+-- ============================================================================
+-- shared/04_indexes.sql
+-- Concept: Reference Indexes — shared schema lookup and cross-schema performance indexes
+-- Depends on: 04_tables/001_shared.sql
+-- Naming: <table>_<cols>_idx | _uq (unique) | _pidx (partial WHERE).
+-- ============================================================================
+
+-- country
+CREATE UNIQUE INDEX IF NOT EXISTS country_code3_uq ON shared.country (code3) WHERE code3 IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS country_numeric3_uq ON shared.country (numeric3) WHERE numeric3 IS NOT NULL;
+CREATE INDEX IF NOT EXISTS country_active_pidx ON shared.country (code) WHERE status = 'active';
+
+-- currency
+CREATE UNIQUE INDEX IF NOT EXISTS currency_numeric3_uq ON shared.currency (numeric3) WHERE numeric3 IS NOT NULL;
+CREATE INDEX IF NOT EXISTS currency_active_pidx ON shared.currency (code) WHERE status = 'active';
+
+-- language
+CREATE UNIQUE INDEX IF NOT EXISTS language_iso639_2_uq ON shared.language (iso639_2) WHERE iso639_2 IS NOT NULL;
+CREATE INDEX IF NOT EXISTS language_active_pidx ON shared.language (code) WHERE status = 'active';
+
+-- locale
+CREATE INDEX IF NOT EXISTS locale_language_code_idx ON shared.locale (language_code);
+CREATE INDEX IF NOT EXISTS locale_active_pidx ON shared.locale (code) WHERE status = 'active';
+
+-- timezone
+CREATE INDEX IF NOT EXISTS timezone_canonical_idx ON shared.timezone (canonical_code) WHERE canonical_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS timezone_active_pidx ON shared.timezone (code) WHERE status = 'active';
+
+-- uom
+CREATE INDEX IF NOT EXISTS uom_active_pidx ON shared.uom (code) WHERE status = 'active';
+
+-- state_region
+CREATE INDEX IF NOT EXISTS state_region_parent_idx ON shared.state_region (country_code, parent_code) WHERE parent_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS state_region_active_pidx ON shared.state_region (country_code, code) WHERE status = 'active';
+
+CREATE INDEX IF NOT EXISTS classification_scheme_kind_idx
+    ON shared.classification_scheme (scheme_kind, code)
+    WHERE status = 'active';
+
+-- commodity_code
+CREATE INDEX IF NOT EXISTS commodity_code_parent_idx ON shared.commodity_code (domain_code, parent_code) WHERE parent_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS commodity_code_leaf_pidx ON shared.commodity_code (domain_code, code) WHERE is_leaf = true AND is_active = true;
+CREATE INDEX IF NOT EXISTS commodity_code_active_pidx ON shared.commodity_code (domain_code, code) WHERE status = 'active';
+-- GIN on keywords: powers term = ANY(keywords) in taxonomy search (UNSPSC 77K rows)
+CREATE INDEX IF NOT EXISTS commodity_code_keywords_gin ON shared.commodity_code USING GIN (keywords);
+
+-- industry_code
+CREATE INDEX IF NOT EXISTS industry_code_parent_idx ON shared.industry_code (domain_code, parent_code) WHERE parent_code IS NOT NULL;
+CREATE INDEX IF NOT EXISTS industry_code_leaf_pidx ON shared.industry_code (domain_code, code) WHERE is_leaf = true AND is_active = true;
+CREATE INDEX IF NOT EXISTS industry_code_active_pidx ON shared.industry_code (domain_code, code) WHERE status = 'active';
+-- GIN on keywords: powers term = ANY(keywords) in taxonomy search
+CREATE INDEX IF NOT EXISTS industry_code_keywords_gin ON shared.industry_code USING GIN (keywords);
+
+-- ── §CCW  shared.commodity_crosswalk ─────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS ccw_target_idx
+    ON shared.commodity_crosswalk (target_domain_code, target_code);
+
+CREATE INDEX IF NOT EXISTS ccw_active_pidx
+    ON shared.commodity_crosswalk (source_domain_code, source_code)
+    WHERE is_active = true;
+
+
+-- ── §ICW  shared.industry_crosswalk ──────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS icw_target_idx
+    ON shared.industry_crosswalk (target_domain_code, target_code);
+
+CREATE INDEX IF NOT EXISTS icw_active_pidx
+    ON shared.industry_crosswalk (source_domain_code, source_code)
+    WHERE is_active = true;

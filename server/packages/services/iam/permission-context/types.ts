@@ -84,22 +84,12 @@ export interface EffectivePermissionContext {
   readonly planeKey: PlaneKey;
   /** Tenant whose `entity` / `entity_operation` rows this context governs. */
   readonly tenantId: string;
-  /** Active principal — neon/admin uses master.principal; mesh uses mesh.principal. */
+  /** Active plane-local master.principal. */
   readonly principalId: string;
   /**
-   * Active persona for neon/admin contexts. Undefined for mesh
-   * (mesh authorization flows through account_grant, not persona_permission).
-   */
-  readonly personaId?: string;
-  /**
-   * Active mesh.account_grant id when planeKey === 'mesh'. Undefined for
-   * neon/admin. Pairs with `bindingFingerprint` for cache keying.
-   */
-  readonly accountGrantId?: string;
-  /**
-   * Stable fingerprint identifying the binding/persona for cache key v4.
-   * Neon/admin: persona fingerprint (hash of persona+roles+groups).
-   * Mesh: `mesh.account_grant.fingerprint` (computed by trigger).
+   * Stable fingerprint identifying the canonical authority binding for cache key v4.
+   * Neon/Admin: canonical membership, role, and group fingerprint.
+   * Mesh: plane-local membership and authority fingerprint.
    */
   readonly principalFingerprint: string;
   /**
@@ -126,7 +116,7 @@ export interface EffectivePermissionContext {
 
   /**
    * Composite SHA256 of (principalFingerprint, sorted allowed codes,
-   * planVersionId). Goes into descriptor cache key so persona/plan/grant
+   * planVersionId). Goes into descriptor cache key so authority/plan
    * changes invalidate the cache automatically.
    */
   readonly profileHash: string;
@@ -152,8 +142,6 @@ export interface ResolverInput {
   readonly planeKey: PlaneKey;
   readonly tenantId: string;
   readonly principalId: string;
-  /** Mesh only: which account_grant the partner is acting through. */
-  readonly accountGrantId?: string;
   /** Optional schema-fingerprint override (defaults to env-driven). */
   readonly schemaHash?: string;
 }

@@ -1,0 +1,32 @@
+{
+  "contractVersion": "seed-migration.wave2-shared-reference-receipt.v1",
+  "validatedAt": "2026-08-03",
+  "source": "server/db/seed/platform/001_global_reference/*.sql",
+  "target": "server/db/ddl/common/shared/reference-data/*.sql",
+  "entrypoint": "server/db/ddl/common/shared/12_reference_seed.sql",
+  "payloadFiles": 15,
+  "payloadContentPreserved": true,
+  "validationFunction": "shared.validate_reference_seed()",
+  "planes": {
+    "athyper": { "database": "athyper_platform", "freshBuild": "passed", "validation": "passed" },
+    "neon": { "database": "athyper_neon", "freshBuild": "passed", "validation": "passed" },
+    "mesh": { "database": "athyper_mesh", "freshBuild": "passed", "validation": "passed" }
+  },
+  "counts": {
+    "country": 247,
+    "state_region": 301,
+    "currency": 158,
+    "language": 183,
+    "locale": 230,
+    "timezone": 395,
+    "uom": 178,
+    "commodity_code": 84277,
+    "commodity_code.unspsc": 77337,
+    "commodity_code.hs": 6940,
+    "commodity_crosswalk": 72396,
+    "industry_code": 1192,
+    "industry_code.isic": 766,
+    "industry_code.naics": 426,
+    "industry_crosswalk": 1946
+  }
+}

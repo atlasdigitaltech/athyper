@@ -4,7 +4,12 @@
     "baseUrl": ".",
     "ignoreDeprecations": "6.0",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@athyper/ui": ["../../packages/shared/ui-platform/ui/src/index.ts"],
+      "@athyper/meta-entity-authoring-contracts": ["../../packages/shared/data-integration/meta-entity-authoring-contracts/src/index.ts"],
+      "@athyper/meta-entity-runtime": ["../../packages/products/admin/meta-entity-runtime/src/index.ts"],
+      "@athyper/meta-entity-studio-ui": ["../../packages/products/admin/meta-entity-studio-ui/src/index.ts"],
+      "lucide-react": ["./node_modules/lucide-react"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],

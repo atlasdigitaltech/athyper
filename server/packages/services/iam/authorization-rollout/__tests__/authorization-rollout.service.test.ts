@@ -15,6 +15,8 @@ import type {
 } from "../authorization-rollout.types.js";
 
 const NOW = Date.parse("2026-08-01T00:00:00.000Z");
+const SOURCE_DATABASE_ID = "0198f2f2-4ec8-7abc-8f5c-9c789b62c904";
+const GOLDEN_CORPUS_SHA256 = "a".repeat(64);
 
 function approval() {
   return {
@@ -23,6 +25,17 @@ function approval() {
     ticket: "AUTH-100",
     rollbackOwner: "iam-on-call",
     observationWindowEndsAt: "2026-08-14T00:00:00.000Z",
+    goldenCorpusSha256: GOLDEN_CORPUS_SHA256,
+    sourceDatabaseId: SOURCE_DATABASE_ID,
+    minimumAppliedWatermark: "40",
+  };
+}
+
+function certification(appliedWatermark = "42") {
+  return {
+    goldenCorpusSha256: GOLDEN_CORPUS_SHA256,
+    sourceDatabaseId: SOURCE_DATABASE_ID,
+    appliedWatermark,
   };
 }
 
@@ -114,11 +127,13 @@ describe("AuthorizationRolloutService", () => {
       cohortCode: "high-risk",
       tenantId: "tenant-a",
       principalId: "principal-a",
+      certification: certification(),
     })).resolves.toEqual(expect.objectContaining({
       mode: "shadow",
       reason: "matched_rule",
       ruleId: "neon-high-risk-shadow",
       policyRevision: "rev-1",
+      certification: certification(),
     }));
 
     await expect(service.select({
@@ -126,6 +141,36 @@ describe("AuthorizationRolloutService", () => {
       permissionCode: "finance.journal.read",
       cohortCode: "high-risk",
       tenantId: "tenant-a",
+    })).resolves.toEqual(expect.objectContaining({
+      mode: "legacy",
+      reason: "default_legacy",
+    }));
+
+    await expect(service.select({
+      planeKey: "neon",
+      permissionCode: "finance.journal.post",
+      tenantId: "tenant-a",
+    })).resolves.toEqual(expect.objectContaining({
+      mode: "legacy",
+      reason: "default_legacy",
+    }));
+
+    await expect(service.select({
+      planeKey: "neon",
+      permissionCode: "finance.journal.post",
+      cohortCode: "high-risk",
+      tenantId: "tenant-a",
+    })).resolves.toEqual(expect.objectContaining({
+      mode: "legacy",
+      reason: "default_legacy",
+    }));
+
+    await expect(service.select({
+      planeKey: "neon",
+      permissionCode: "finance.journal.post",
+      cohortCode: "high-risk",
+      tenantId: "tenant-a",
+      certification: certification("39"),
     })).resolves.toEqual(expect.objectContaining({
       mode: "legacy",
       reason: "default_legacy",
@@ -183,6 +228,17 @@ describe("AuthorizationRolloutService", () => {
         permissionCodes: ["finance.*"],
       }],
     })).toThrow(/non-exact permission/);
+
+    expect(() => parseAuthorizationRolloutSnapshot({
+      ...snapshot(),
+      rules: [{
+        ...snapshot().rules[0],
+        approval: {
+          ...approval(),
+          minimumAppliedWatermark: "-1",
+        },
+      }],
+    })).toThrow(/non-negative integer string/);
   });
 
   it("selects legacy for ambiguous overlaps and pinned revision drift", async () => {
@@ -192,7 +248,6 @@ describe("AuthorizationRolloutService", () => {
         {
           ...snapshot().rules[0]!,
           id: "second-shadow-rule",
-          cohortCode: "finance-risk",
         },
       ],
     });
@@ -204,7 +259,9 @@ describe("AuthorizationRolloutService", () => {
     const context = {
       planeKey: "neon" as const,
       permissionCode: "finance.journal.post",
+      cohortCode: "high-risk",
       tenantId: "tenant-a",
+      certification: certification(),
     };
 
     await expect(service.select(context)).resolves.toEqual(
@@ -265,6 +322,7 @@ describe("AuthorizationRolloutService", () => {
       planeKey: "mesh",
       permissionCode: "mesh.exchange.accept",
       cohortCode: "mesh-exchange",
+      certification: certification(),
     })).resolves.toEqual(expect.objectContaining({
       mode: "enforce",
       reason: "matched_rule",
@@ -294,7 +352,9 @@ describe("AuthorizationRolloutService", () => {
       await expect(service.select({
         planeKey: "neon",
         permissionCode: "finance.journal.post",
+        cohortCode: "high-risk",
         tenantId: "tenant-a",
+        certification: certification(),
       })).resolves.toEqual(expect.objectContaining({
         mode: "legacy",
         reason: "default_legacy",

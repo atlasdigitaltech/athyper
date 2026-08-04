@@ -7,6 +7,7 @@ import {
   canonicalizeMetaEntityContractV21,
   type MetaEntityContractV21,
 } from "@athyper/api-contracts/meta-entity-contract-v21";
+import { compileOperationScopeBindingBlueprints } from "@athyper/entity-operation-scope-contracts";
 
 export type ContractApplicationMode =
   | "get"
@@ -260,7 +261,7 @@ function canonicalUnknownJson(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function compilePlaneArtifacts(
+export function compilePlaneArtifacts(
   compiled: unknown,
   contract: MetaEntityContractV21,
   contractHash: string,
@@ -286,6 +287,13 @@ function compilePlaneArtifacts(
       contract_hash: contractHash,
       contract_v21: planeContract,
       operations: planeContract.operations,
+      operation_scope_bindings: plane === "admin"
+        ? []
+        : compileOperationScopeBindingBlueprints({
+            targetPlane: plane,
+            entityCode: contract.catalog.entity_code,
+            operations: planeContract.operations,
+          }),
     };
     delete descriptor["compiled_hash"];
     const compiledHash = hashCanonicalJson(canonicalUnknownJson(descriptor));

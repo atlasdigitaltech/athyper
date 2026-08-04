@@ -2,7 +2,7 @@
  * IAM Outbox Worker
  *
  * Polls event.outbox (topic = 'iam') and invalidates Redis session cache
- * when principal or persona state changes.
+ * when principal or canonical membership state changes.
  *
  * Pattern: transactional outbox with claim-based polling.
  *   - Batch claim via:  UPDATE ... WHERE id IN (SELECT ... FOR UPDATE SKIP LOCKED)
@@ -11,7 +11,7 @@
  *
  * Relevant IAM event_types (entity_id = principalId):
  *   principal.deactivated     principal.locked      principal.unlocked
- *   persona.changed           org_membership.added  org_membership.removed
+ *   authority.changed           org_membership.added  org_membership.removed
  *   (any other iam event with entity_id set → broad invalidation)
  *
  * Polling interval: 10 s (configurable via POLL_INTERVAL_MS)
@@ -161,7 +161,7 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
   async function principalIdsForGroups(tenantId: string, groupIds: string[]): Promise<string[]> {
     if (groupIds.length === 0) return [];
     const rows = await db
-      .selectFrom("master.auth_group_member")
+      .selectFrom("authz.current_group_member")
       .select("principal_id")
       .where("tenant_id", "=", tenantId)
       .where("group_id", "in", [...new Set(groupIds)])
@@ -175,11 +175,10 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
   async function groupIdsForRoles(tenantId: string, roleIds: string[]): Promise<string[]> {
     if (roleIds.length === 0) return [];
     const rows = await db
-      .selectFrom("master.auth_group_role")
+      .selectFrom("authz.current_group_role")
       .select("group_id")
       .where("tenant_id", "=", tenantId)
       .where("role_id", "in", [...new Set(roleIds)])
-      .where("is_active", "=", true)
       .execute() as Array<{ group_id: string | null }>;
 
     return rows
@@ -325,20 +324,16 @@ export function createIamOutboxWorker(deps: IamOutboxWorkerDeps) {
     reason: string,
   ): Promise<number> {
     try {
-      const result = await db
-        .updateTable("master.trusted_device")
-        .set({
-          is_revoked:  true,
-          revoked_at:  new Date() as unknown as string,
-          updated_at:  new Date() as unknown as string,
-          updated_by:  null, // system action — no user principal
-        })
-        .where("tenant_id",    "=", tenantId)
-        .where("principal_id", "=", principalId)
-        .where("is_revoked",   "=", false)
-        .executeTakeFirst() as { numUpdatedRows?: bigint } | undefined;
+      const result = await sql<{ revoked_count: number }>`
+        SELECT authz.fn_revoke_principal_trusted_devices(
+          ${tenantId}::uuid,
+          ${principalId}::uuid,
+          NULL::uuid,
+          ${reason.slice(0, 240)}
+        ) AS revoked_count
+      `.execute(db);
 
-      const n = Number(result?.numUpdatedRows ?? 0);
+      const n = Number(result.rows[0]?.revoked_count ?? 0);
       if (n > 0) {
         logger?.info("iam_trusted_devices_revoked", {
           principal_id: principalId,

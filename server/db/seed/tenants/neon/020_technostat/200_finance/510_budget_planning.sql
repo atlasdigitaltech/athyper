@@ -1,34 +1,34 @@
 -- ============================================================================
--- TECHNOSTAT GROUP — BUDGET PROFILES, ALLOCATIONS & PLANNING MODELS
+-- TECHNOSTAT GROUP â€” BUDGET PROFILES, ALLOCATIONS & PLANNING MODELS
 -- ============================================================================
 -- File:     020_technostat/200_finance/510_budget_planning.sql
 -- Tenant:   technostat
--- Coverage: TKSA (SAR · Jan-Dec) · SSK (SAR · Jan-Dec)
---           TEGY (EGP · Jul-Jun) · SDTX (EGP · Jan-Dec)
+-- Coverage: TKSA (SAR Â· Jan-Dec) Â· SSK (SAR Â· Jan-Dec)
+--           TEGY (EGP Â· Jul-Jun) Â· SDTX (EGP Â· Jan-Dec)
 --
 -- Scenarios:
---   TKSA — Group HQ (Riyadh, ICT/holding)
---     Planning Models:  FY2025 HYBRID (locked) · FY2026 DRIVER_BASED (active)
---     Budget Profiles:  FY2025 Op (closed) · FY2026 Op (active) ·
---                       Capital FY2025-2026 ERP+SOC (active) ·
+--   TKSA â€” Group HQ (Riyadh, ICT/holding)
+--     Planning Models:  FY2025 HYBRID (locked) Â· FY2026 DRIVER_BASED (active)
+--     Budget Profiles:  FY2025 Op (closed) Â· FY2026 Op (active) Â·
+--                       Capital FY2025-2026 ERP+SOC (active) Â·
 --                       FY2026 Contingency (active)
 --
---   SSK — Construction Subsidiary (Riyadh, SAR)
---     Planning Models:  FY2025 BOTTOM_UP (locked) · FY2026 DRIVER_BASED (active)
---     Budget Profiles:  FY2025 Op (closed) · FY2026 Op (active) ·
---                       FY2025 Project Budget — Metro Segment (active) ·
+--   SSK â€” Construction Subsidiary (Riyadh, SAR)
+--     Planning Models:  FY2025 BOTTOM_UP (locked) Â· FY2026 DRIVER_BASED (active)
+--     Budget Profiles:  FY2025 Op (closed) Â· FY2026 Op (active) Â·
+--                       FY2025 Project Budget â€” Metro Segment (active) Â·
 --                       FY2026 Contingency (active)
 --
---   TEGY — Egypt Ops (Cairo, EGP · Jul-Jun)
---     Planning Models:  FY2025 BOTTOM_UP (locked) · FY2026 DRIVER_BASED (active)
---     Budget Profiles:  FY2025 Op (closed) · FY2026 Op (active) ·
+--   TEGY â€” Egypt Ops (Cairo, EGP Â· Jul-Jun)
+--     Planning Models:  FY2025 BOTTOM_UP (locked) Â· FY2026 DRIVER_BASED (active)
+--     Budget Profiles:  FY2025 Op (closed) Â· FY2026 Op (active) Â·
 --                       FY2026 Contingency (active)
---     Note: FY2025 = Jul-2025 → Jun-2026 (fiscal_year_start_month = 7)
+--     Note: FY2025 = Jul-2025 â†’ Jun-2026 (fiscal_year_start_month = 7)
 --
---   SDTX — Satellites for Digital Transformation (Cairo, EGP · Jan-Dec)
---     Planning Models:  FY2025 DRIVER_BASED (locked) · FY2026 ROLLING (in_review)
---     Budget Profiles:  FY2025 Op (closed) · FY2026 Op (active) ·
---                       IT Capital FY2025-2026 (active) ·
+--   SDTX â€” Satellites for Digital Transformation (Cairo, EGP Â· Jan-Dec)
+--     Planning Models:  FY2025 DRIVER_BASED (locked) Â· FY2026 ROLLING (in_review)
+--     Budget Profiles:  FY2025 Op (closed) Â· FY2026 Op (active) Â·
+--                       IT Capital FY2025-2026 (active) Â·
 --                       FY2026 R&D Reserve (PROJECT / active)
 --
 -- Idempotent: Skips if metadata._seed_pack = '510_technostat_budget' exists
@@ -40,7 +40,7 @@
 DO $tksa_budget$
 DECLARE
     v_tid        uuid;
-    v_su         uuid  := '00000000-0000-0000-0000-000000000000';
+    v_su         uuid;
     v_pack       text  := '510_technostat_budget';
     v_meta       jsonb;
     -- company code IDs
@@ -54,120 +54,53 @@ DECLARE
     v_ctr_id     uuid;
     -- project IDs
     v_proj_id    uuid;
-    -- planning model IDs
-    v_pm_id      uuid;
 BEGIN
-
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
     IF v_tid IS NULL THEN
         RAISE EXCEPTION '[510_technostat_budget] technostat tenant not found';
     END IF;
 
+    -- Resolve seed user context
+    v_su := NULL;
+    IF current_setting('app.current_principal_id', true) ~* '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' THEN
+        v_su := current_setting('app.current_principal_id', true)::uuid;
+    END IF;
+    IF v_su IS NULL THEN
+        SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    END IF;
+    IF v_su IS NULL THEN
+        RAISE EXCEPTION '[510_technostat_budget] app.current_principal_id is required for audit columns';
+    END IF;
+
     IF EXISTS (
-        SELECT 1 FROM master.planning_model
+        SELECT 1 FROM master.budget_profile
         WHERE  tenant_id = v_tid
           AND  metadata->>'_seed_pack' = v_pack
     ) THEN
-        RAISE NOTICE '[510_technostat_budget] already seeded — skipping';
+        RAISE NOTICE '[510_technostat_budget] already seeded â€” skipping';
         RETURN;
     END IF;
 
     v_meta := jsonb_build_object('_seed_pack', v_pack, '_seeded_at', now()::text);
 
     -- Resolve company code IDs
-    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND code = 'TKSA';
-    SELECT id INTO v_cc_ssk  FROM master.company_code WHERE tenant_id = v_tid AND code = 'SSK';
-    SELECT id INTO v_cc_tegy FROM master.company_code WHERE tenant_id = v_tid AND code = 'TEGY';
-    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND code = 'SDTX';
+    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = lower('TKSA');
+    SELECT id INTO v_cc_ssk  FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = lower('SSK');
+    SELECT id INTO v_cc_tegy FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = lower('TEGY');
+    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = lower('SDTX');
 
     IF v_cc_tksa IS NULL THEN RAISE EXCEPTION '[510_technostat_budget] TKSA company code not found'; END IF;
     IF v_cc_ssk  IS NULL THEN RAISE EXCEPTION '[510_technostat_budget] SSK company code not found';  END IF;
     IF v_cc_tegy IS NULL THEN RAISE EXCEPTION '[510_technostat_budget] TEGY company code not found'; END IF;
     IF v_cc_sdtx IS NULL THEN RAISE EXCEPTION '[510_technostat_budget] SDTX company code not found'; END IF;
 
-    -- ══════════════════════════════════════════════════════════════════════════
-    -- TKSA — TECHNOSTAT GROUP HQ  (SAR · Jan-Dec · ICT/holding)
-    --   Operating budget: SAR 15M (FY25) · SAR 17M (FY26)
-    --   Capital budget:   SAR 5M (ERP + SOC — FY2025-2026)
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    -- TKSA â€” TECHNOSTAT GROUP HQ  (SAR Â· Jan-Dec Â· ICT/holding)
+    --   Operating budget: SAR 15M (FY25) Â· SAR 17M (FY26)
+    --   Capital budget:   SAR 5M (ERP + SOC â€” FY2025-2026)
     --   Contingency:      SAR 750K
-    -- ══════════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-    -- Planning Model: FY2025 Hybrid (locked)
-    INSERT INTO master.planning_model (
-        tenant_id, code, name, company_code_id,
-        description, model_type, planning_horizon, granularity,
-        base_currency_code, fiscal_year_from, fiscal_year_to,
-        version, is_current, auto_recalculate, lock_on_approval, allows_overrides,
-        approved_at, approved_by,
-        status, status_changed_at, status_changed_by,
-        sort_order, tags, metadata, created_by
-    ) VALUES (
-        v_tid, 'TKSA-PLN-FY25-OP', 'TKSA FY2025 Annual Operating Plan', v_cc_tksa,
-        'Hybrid operating plan for FY2025. Top-down envelope set by Group CFO; bottom-up submissions '
-            'from each business unit reconciled at consolidated level. Approved at January 2025 board.',
-        'HYBRID', 'ANNUAL', 'MONTHLY',
-        'SAR', 2025, 2025,
-        1, false, false, true, false,
-        '2025-01-18 09:00:00+00', v_su,
-        'locked', '2025-01-18 09:30:00+00', v_su,
-        10, jsonb_build_array('fy2025', 'hybrid', 'locked'), v_meta, v_su
-    )
-    ON CONFLICT (tenant_id, code, version) DO UPDATE SET
-        status = EXCLUDED.status, approved_at = EXCLUDED.approved_at,
-        metadata = master.planning_model.metadata || v_meta,
-        updated_at = now(), updated_by = v_su
-    WHERE master.planning_model.status IS DISTINCT FROM EXCLUDED.status;
-
-    -- Planning Model: FY2026 Driver-Based (active)
-    INSERT INTO master.planning_model (
-        tenant_id, code, name, company_code_id,
-        description, model_type, planning_horizon, granularity,
-        base_currency_code, fiscal_year_from, fiscal_year_to,
-        version, is_current, auto_recalculate, lock_on_approval, allows_overrides,
-        status, status_changed_at, status_changed_by,
-        sort_order, tags, metadata, created_by
-    ) VALUES (
-        v_tid, 'TKSA-PLN-FY26-OP', 'TKSA FY2026 Annual Operating Plan', v_cc_tksa,
-        'Driver-based operating plan for FY2026. Headcount plan and technology investment drivers '
-            'cascade to cost lines via pre-built allocation rules. Monthly board pack with '
-            'actuals vs plan variance and rolling full-year estimate.',
-        'DRIVER_BASED', 'ANNUAL', 'MONTHLY',
-        'SAR', 2026, 2026,
-        1, true, false, true, true,
-        'active', '2026-01-12 09:00:00+00', v_su,
-        20, jsonb_build_array('fy2026', 'driver_based', 'active'), v_meta, v_su
-    )
-    ON CONFLICT (tenant_id, code, version) DO UPDATE SET
-        status = EXCLUDED.status, metadata = master.planning_model.metadata || v_meta,
-        updated_at = now(), updated_by = v_su
-    WHERE master.planning_model.status IS DISTINCT FROM EXCLUDED.status;
-
-    -- Planning Model: FY2025-2026 Capital Plan (approved)
-    INSERT INTO master.planning_model (
-        tenant_id, code, name, company_code_id,
-        description, model_type, planning_horizon, granularity,
-        base_currency_code, fiscal_year_from, fiscal_year_to,
-        version, is_current, auto_recalculate, lock_on_approval, allows_overrides,
-        approved_at, approved_by,
-        status, status_changed_at, status_changed_by,
-        sort_order, tags, metadata, created_by
-    ) VALUES (
-        v_tid, 'TKSA-PLN-CAP-FY25', 'TKSA FY2025–2026 Capital Expenditure Plan', v_cc_tksa,
-        'Board-approved capital expenditure plan covering Group ERP Platform Consolidation '
-            '(TKSA-P001, SAR 3.2M) and Cybersecurity Operations Centre Build-out (TKSA-P002, SAR 1.5M). '
-            'Quarterly milestone-gated disbursement reviewed by the Investment Committee.',
-        'TOP_DOWN', 'MULTI_YEAR', 'QUARTERLY',
-        'SAR', 2025, 2026,
-        1, true, false, true, false,
-        '2025-02-05 10:00:00+00', v_su,
-        'approved', '2025-02-05 10:30:00+00', v_su,
-        30, jsonb_build_array('capital', 'fy2025_2026', 'approved'), v_meta, v_su
-    )
-    ON CONFLICT (tenant_id, code, version) DO UPDATE SET
-        status = EXCLUDED.status, approved_at = EXCLUDED.approved_at,
-        metadata = master.planning_model.metadata || v_meta,
-        updated_at = now(), updated_by = v_su
-    WHERE master.planning_model.status IS DISTINCT FROM EXCLUDED.status;
 
     -- Budget Profile: FY2025 Operating (closed)
     INSERT INTO master.budget_profile (
@@ -242,7 +175,7 @@ BEGIN
         sort_order, tags, metadata,
         status, status_changed_at, status_changed_by, created_by
     ) VALUES (
-        v_tid, 'TKSA-BUDG-CAP-FY25', 'TKSA Capital Expenditure Budget FY2025–2026', v_cc_tksa,
+        v_tid, 'TKSA-BUDG-CAP-FY25', 'TKSA Capital Expenditure Budget FY2025â€“2026', v_cc_tksa,
         'Board-approved capital budget for Group ERP Platform Consolidation (TKSA-P001) and '
             'Cybersecurity Operations Centre Build-out (TKSA-P002). Horizon-spread across two '
             'fiscal years. Milestone gate required before each tranche release.',
@@ -353,7 +286,7 @@ BEGIN
     IF v_bp_id IS NOT NULL THEN
         SELECT id INTO v_proj_id FROM master.project WHERE tenant_id = v_tid AND code = 'TKSA-P001';
         IF v_proj_id IS NOT NULL THEN
-            INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,project_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,approval_threshold,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-PROJ-ERP','Group ERP Platform Consolidation — Main Allocation',v_bp_id,v_cc_tksa,2025,'SAR',v_proj_id,3200000.00,704000.00,1536000.00,0,'ESCALATE',5.00,true,32000.00,false,10,jsonb_build_array('capital','erp','project'),v_meta,'active','2025-02-05 10:30:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
+            INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,project_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,approval_threshold,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-PROJ-ERP','Group ERP Platform Consolidation â€” Main Allocation',v_bp_id,v_cc_tksa,2025,'SAR',v_proj_id,3200000.00,704000.00,1536000.00,0,'ESCALATE',5.00,true,32000.00,false,10,jsonb_build_array('capital','erp','project'),v_meta,'active','2025-02-05 10:30:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
         END IF;
         SELECT id INTO v_proj_id FROM master.project WHERE tenant_id = v_tid AND code = 'TKSA-P002';
         IF v_proj_id IS NOT NULL THEN
@@ -365,38 +298,18 @@ BEGIN
     SELECT id INTO v_bp_id FROM master.budget_profile WHERE tenant_id = v_tid AND code = 'TKSA-BUDG-FY26-CONT';
     SELECT id INTO v_ctr_id FROM master.cost_center WHERE tenant_id = v_tid AND code = 'TKSA-CC-OPS-GEN';
     IF v_bp_id IS NOT NULL AND v_ctr_id IS NOT NULL THEN
-        INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-CONT-RESERVE','Contingency Reserve — Unallocated Pool',v_bp_id,v_cc_tksa,2026,'SAR',v_ctr_id,750000.00,0,112500.00,0,'WARN',0.00,true,false,10,jsonb_build_array('fy2026','contingency'),v_meta,'active','2026-01-12 11:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
+        INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-CONT-RESERVE','Contingency Reserve â€” Unallocated Pool',v_bp_id,v_cc_tksa,2026,'SAR',v_ctr_id,750000.00,0,112500.00,0,'WARN',0.00,true,false,10,jsonb_build_array('fy2026','contingency'),v_meta,'active','2026-01-12 11:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
     END IF;
 
-    RAISE NOTICE '[510] TKSA planning_model + budget_profile + budget_allocation seeded';
+    RAISE NOTICE '[510] budget_profile + budget_allocation seeded';
 
-    -- ══════════════════════════════════════════════════════════════════════════
-    -- SSK — SAUDI CONSTRUCTION SUBSIDIARY  (SAR · Jan-Dec)
-    --   Operating budget: SAR 48M (FY25) · SAR 52M (FY26)
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    -- SSK â€” SAUDI CONSTRUCTION SUBSIDIARY  (SAR Â· Jan-Dec)
+    --   Operating budget: SAR 48M (FY25) Â· SAR 52M (FY26)
     --   Project budget:   SAR 18M (Metro Segment construction, FY25)
     --   Contingency:      SAR 2.5M
-    -- ══════════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-    -- Planning Model: FY2025 Bottom-Up (locked)
-    INSERT INTO master.planning_model (tenant_id,code,name,company_code_id,description,model_type,planning_horizon,granularity,base_currency_code,fiscal_year_from,fiscal_year_to,version,is_current,auto_recalculate,lock_on_approval,allows_overrides,approved_at,approved_by,status,status_changed_at,status_changed_by,sort_order,tags,metadata,created_by)
-    VALUES (v_tid,'SSK-PLN-FY25-OP','SSK FY2025 Annual Operating Plan',v_cc_ssk,
-        'Bottom-up operating plan for SSK Saudi FY2025. Site managers and department heads '
-            'submitted activity-based estimates consolidated into the company budget. '
-            'Approved and locked at the January 2025 TKSA board meeting.',
-        'BOTTOM_UP','ANNUAL','MONTHLY','SAR',2025,2025,1,false,false,true,false,
-        '2025-01-18 09:00:00+00',v_su,'locked','2025-01-18 10:00:00+00',v_su,
-        10,jsonb_build_array('fy2025','bottom_up','locked'),v_meta,v_su)
-    ON CONFLICT (tenant_id,code,version) DO UPDATE SET status=EXCLUDED.status,approved_at=EXCLUDED.approved_at,metadata=master.planning_model.metadata||v_meta,updated_at=now(),updated_by=v_su WHERE master.planning_model.status IS DISTINCT FROM EXCLUDED.status;
-
-    -- Planning Model: FY2026 Driver-Based (active)
-    INSERT INTO master.planning_model (tenant_id,code,name,company_code_id,description,model_type,planning_horizon,granularity,base_currency_code,fiscal_year_from,fiscal_year_to,version,is_current,auto_recalculate,lock_on_approval,allows_overrides,status,status_changed_at,status_changed_by,sort_order,tags,metadata,created_by)
-    VALUES (v_tid,'SSK-PLN-FY26-OP','SSK FY2026 Annual Operating Plan',v_cc_ssk,
-        'Driver-based operating plan for SSK Saudi FY2026. Revenue driven by contract backlog '
-            'and bid pipeline; cost lines modelled on headcount and direct-cost-per-SAR-revenue ratios.',
-        'DRIVER_BASED','ANNUAL','MONTHLY','SAR',2026,2026,1,true,false,true,true,
-        'active','2026-01-12 09:00:00+00',v_su,
-        20,jsonb_build_array('fy2026','driver_based','active'),v_meta,v_su)
-    ON CONFLICT (tenant_id,code,version) DO UPDATE SET status=EXCLUDED.status,metadata=master.planning_model.metadata||v_meta,updated_at=now(),updated_by=v_su WHERE master.planning_model.status IS DISTINCT FROM EXCLUDED.status;
 
     -- Budget Profile: FY2025 Operating (closed)
     INSERT INTO master.budget_profile (tenant_id,code,name,company_code_id,description,fund_type,fund_source,currency_code,total_amount,reserved_amount,consumed_amount,fiscal_year,is_multi_year,valid_from,valid_to,multi_year_strategy,is_replenishable,overspend_policy,tolerance_pct,requires_approval,approval_threshold,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by)
@@ -412,18 +325,18 @@ BEGIN
     INSERT INTO master.budget_profile (tenant_id,code,name,company_code_id,description,fund_type,fund_source,currency_code,total_amount,reserved_amount,consumed_amount,fiscal_year,is_multi_year,valid_from,valid_to,multi_year_strategy,is_replenishable,overspend_policy,tolerance_pct,requires_approval,approval_threshold,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by)
     VALUES (v_tid,'SSK-BUDG-FY26-OP','SSK FY2026 Operating Budget',v_cc_ssk,
         'Board-approved operating budget for SSK Saudi FY2026. Includes provision for ramp-up '
-            'of two new site contracts won in Q4 FY2025. Active — monthly variance monitoring.',
+            'of two new site contracts won in Q4 FY2025. Active â€” monthly variance monitoring.',
         'OPERATING','INTERNAL','SAR',52000000.00,5200000.00,19760000.00,2026,false,'2026-01-01','2026-12-31',
         'CURRENT_YEAR_ONLY',false,'BLOCK',3.00,true,2600000.00,20,jsonb_build_array('fy2026','operating','active'),v_meta,
         'active','2026-01-12 10:00:00+00',v_su,v_su)
     ON CONFLICT (tenant_id,code) DO UPDATE SET total_amount=EXCLUDED.total_amount,consumed_amount=EXCLUDED.consumed_amount,reserved_amount=EXCLUDED.reserved_amount,status=EXCLUDED.status,status_changed_at=EXCLUDED.status_changed_at,metadata=master.budget_profile.metadata||v_meta,updated_at=now(),updated_by=v_su WHERE (master.budget_profile.total_amount,master.budget_profile.status) IS DISTINCT FROM (EXCLUDED.total_amount,EXCLUDED.status);
 
-    -- Budget Profile: FY2025 Project Budget — Metro Segment (PROJECT type)
+    -- Budget Profile: FY2025 Project Budget â€” Metro Segment (PROJECT type)
     INSERT INTO master.budget_profile (tenant_id,code,name,company_code_id,description,fund_type,fund_source,fund_category,currency_code,total_amount,reserved_amount,consumed_amount,fiscal_year,is_multi_year,valid_from,valid_to,multi_year_strategy,is_replenishable,overspend_policy,tolerance_pct,requires_approval,approval_threshold,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by)
     VALUES (v_tid,'SSK-BUDG-FY25-PROJ','SSK FY2025 Metro Segment Project Budget',v_cc_ssk,
         'Project-ring-fenced budget for the Riyadh Metro Segment civil works contract (ASAC-P001 upstream). '
             'Covers direct labour, sub-contractors, materials and equipment on-site. '
-            'Strictly BLOCK policy — any variation requires formal contract variation order.',
+            'Strictly BLOCK policy â€” any variation requires formal contract variation order.',
         'PROJECT','INTERNAL','CONSTRUCTION','SAR',18000000.00,3600000.00,10800000.00,2025,false,'2025-03-01','2026-02-28',
         'CURRENT_YEAR_ONLY',false,'BLOCK',0.00,true,0,30,jsonb_build_array('fy2025','project','construction','metro'),v_meta,
         'active','2025-03-01 08:00:00+00',v_su,v_su)
@@ -467,11 +380,11 @@ BEGIN
         SELECT id INTO v_ctr_id FROM master.cost_center WHERE tenant_id = v_tid AND code = 'SSK-CC-OPS-GEN';      IF v_ctr_id IS NOT NULL THEN INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-OPS-GEN','Site & Construction Operations',v_bp_id,v_cc_ssk,2026,'SAR',v_ctr_id,20800000.00,2080000.00,7904000.00,0,'BLOCK',3.00,true,false,90,jsonb_build_array('fy2026','construction'),v_meta,'active','2026-01-12 10:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING; END IF;
     END IF;
 
-    -- SSK Project Budget Allocation (Metro Segment — Ops CC + Procurement CC)
+    -- SSK Project Budget Allocation (Metro Segment â€” Ops CC + Procurement CC)
     SELECT id INTO v_bp_id FROM master.budget_profile WHERE tenant_id = v_tid AND code = 'SSK-BUDG-FY25-PROJ';
     IF v_bp_id IS NOT NULL THEN
         SELECT id INTO v_ctr_id FROM master.cost_center WHERE tenant_id = v_tid AND code = 'SSK-CC-OPS-GEN';
-        IF v_ctr_id IS NOT NULL THEN INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,approval_threshold,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-OPS-SITE','Direct Site Works — Labour, Plant & Sub-contractors',v_bp_id,v_cc_ssk,2025,'SAR',v_ctr_id,13500000.00,2700000.00,8100000.00,0,'BLOCK',0.00,true,0,false,10,jsonb_build_array('project','construction','direct_cost'),v_meta,'active','2025-03-01 08:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING; END IF;
+        IF v_ctr_id IS NOT NULL THEN INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,approval_threshold,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-OPS-SITE','Direct Site Works â€” Labour, Plant & Sub-contractors',v_bp_id,v_cc_ssk,2025,'SAR',v_ctr_id,13500000.00,2700000.00,8100000.00,0,'BLOCK',0.00,true,0,false,10,jsonb_build_array('project','construction','direct_cost'),v_meta,'active','2025-03-01 08:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING; END IF;
         SELECT id INTO v_ctr_id FROM master.cost_center WHERE tenant_id = v_tid AND code = 'SSK-CC-SUPPORT-PROC';
         IF v_ctr_id IS NOT NULL THEN INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,approval_threshold,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-PROC-MATL','Materials & Equipment Procurement',v_bp_id,v_cc_ssk,2025,'SAR',v_ctr_id,4500000.00,900000.00,2700000.00,0,'BLOCK',0.00,true,0,false,20,jsonb_build_array('project','construction','materials'),v_meta,'active','2025-03-01 08:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING; END IF;
     END IF;
@@ -480,44 +393,23 @@ BEGIN
     SELECT id INTO v_bp_id FROM master.budget_profile WHERE tenant_id = v_tid AND code = 'SSK-BUDG-FY26-CONT';
     SELECT id INTO v_ctr_id FROM master.cost_center WHERE tenant_id = v_tid AND code = 'SSK-CC-OPS-GEN';
     IF v_bp_id IS NOT NULL AND v_ctr_id IS NOT NULL THEN
-        INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-CONT-RESERVE','Contingency Reserve — Unallocated Pool',v_bp_id,v_cc_ssk,2026,'SAR',v_ctr_id,2500000.00,0,375000.00,0,'WARN',0.00,true,false,10,jsonb_build_array('fy2026','contingency','construction'),v_meta,'active','2026-01-12 11:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
+        INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-CONT-RESERVE','Contingency Reserve â€” Unallocated Pool',v_bp_id,v_cc_ssk,2026,'SAR',v_ctr_id,2500000.00,0,375000.00,0,'WARN',0.00,true,false,10,jsonb_build_array('fy2026','contingency','construction'),v_meta,'active','2026-01-12 11:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
     END IF;
 
-    RAISE NOTICE '[510] SSK planning_model + budget_profile + budget_allocation seeded';
+    RAISE NOTICE '[510] budget_profile + budget_allocation seeded';
 
-    -- ══════════════════════════════════════════════════════════════════════════
-    -- TEGY — TECHNOSTAT EGYPT OPS  (EGP · Jul-Jun)
-    --   Note: FY2025 = July 2025 → June 2026 (fiscal_year_start_month = 7)
-    --   Operating budget: EGP 85M (FY2025) · EGP 95M (FY2026)
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    -- TEGY â€” TECHNOSTAT EGYPT OPS  (EGP Â· Jul-Jun)
+    --   Note: FY2025 = July 2025 â†’ June 2026 (fiscal_year_start_month = 7)
+    --   Operating budget: EGP 85M (FY2025) Â· EGP 95M (FY2026)
     --   Contingency:      EGP 4M
-    -- ══════════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-    -- Planning Model: FY2025 Bottom-Up (locked) — Jul-Jun year
-    INSERT INTO master.planning_model (tenant_id,code,name,company_code_id,description,model_type,planning_horizon,granularity,base_currency_code,fiscal_year_from,fiscal_year_to,version,is_current,auto_recalculate,lock_on_approval,allows_overrides,approved_at,approved_by,status,status_changed_at,status_changed_by,sort_order,tags,metadata,created_by)
-    VALUES (v_tid,'TEGY-PLN-FY25-OP','TEGY FY2025 Annual Operating Plan',v_cc_tegy,
-        'Bottom-up annual operating plan for Technostat Egypt FY2025 (July 2025 – June 2026). '
-            'Submitted by New Cairo office department heads; consolidated by TEGY Finance team. '
-            'Approved by TKSA Board in July 2025 with locked budget lines.',
-        'BOTTOM_UP','ANNUAL','MONTHLY','EGP',2025,2025,1,false,false,true,false,
-        '2025-07-10 09:00:00+00',v_su,'locked','2025-07-10 09:30:00+00',v_su,
-        10,jsonb_build_array('fy2025','jul_jun','bottom_up','locked'),v_meta,v_su)
-    ON CONFLICT (tenant_id,code,version) DO UPDATE SET status=EXCLUDED.status,approved_at=EXCLUDED.approved_at,metadata=master.planning_model.metadata||v_meta,updated_at=now(),updated_by=v_su WHERE master.planning_model.status IS DISTINCT FROM EXCLUDED.status;
 
-    -- Planning Model: FY2026 Driver-Based (active) — next Jul-Jun year
-    INSERT INTO master.planning_model (tenant_id,code,name,company_code_id,description,model_type,planning_horizon,granularity,base_currency_code,fiscal_year_from,fiscal_year_to,version,is_current,auto_recalculate,lock_on_approval,allows_overrides,status,status_changed_at,status_changed_by,sort_order,tags,metadata,created_by)
-    VALUES (v_tid,'TEGY-PLN-FY26-OP','TEGY FY2026 Annual Operating Plan',v_cc_tegy,
-        'Driver-based operating plan for Technostat Egypt FY2026 (July 2026 – June 2027). '
-            'Revenue driven by ICT project pipeline and service contract renewals. '
-            'Cost modelled on headcount and project delivery capacity ratios.',
-        'DRIVER_BASED','ANNUAL','MONTHLY','EGP',2026,2026,1,true,false,true,true,
-        'draft',now(),v_su,
-        20,jsonb_build_array('fy2026','jul_jun','driver_based','draft'),v_meta,v_su)
-    ON CONFLICT (tenant_id,code,version) DO UPDATE SET status=EXCLUDED.status,metadata=master.planning_model.metadata||v_meta,updated_at=now(),updated_by=v_su WHERE master.planning_model.status IS DISTINCT FROM EXCLUDED.status;
-
-    -- Budget Profile: FY2025 Operating — Jul 2025 – Jun 2026 (partially consumed)
+    -- Budget Profile: FY2025 Operating â€” Jul 2025 â€“ Jun 2026 (partially consumed)
     INSERT INTO master.budget_profile (tenant_id,code,name,company_code_id,description,fund_type,fund_source,currency_code,total_amount,reserved_amount,consumed_amount,fiscal_year,is_multi_year,valid_from,valid_to,multi_year_strategy,is_replenishable,overspend_policy,tolerance_pct,requires_approval,approval_threshold,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by)
-    VALUES (v_tid,'TEGY-BUDG-FY25-OP','TEGY FY2025 Operating Budget (Jul 2025–Jun 2026)',v_cc_tegy,
-        'Annual operating budget for Technostat Egypt FY2025 (July–June fiscal year). '
+    VALUES (v_tid,'TEGY-BUDG-FY25-OP','TEGY FY2025 Operating Budget (Jul 2025â€“Jun 2026)',v_cc_tegy,
+        'Annual operating budget for Technostat Egypt FY2025 (Julyâ€“June fiscal year). '
             'Covers ICT delivery teams, New Cairo office operations, HR and client services. '
             'Currently ~38 % consumed through mid-year (active).',
         'OPERATING','INTERNAL','EGP',85000000.00,8500000.00,32300000.00,2025,false,'2025-07-01','2026-06-30',
@@ -525,10 +417,10 @@ BEGIN
         'active','2025-07-10 10:00:00+00',v_su,v_su)
     ON CONFLICT (tenant_id,code) DO UPDATE SET total_amount=EXCLUDED.total_amount,consumed_amount=EXCLUDED.consumed_amount,reserved_amount=EXCLUDED.reserved_amount,status=EXCLUDED.status,status_changed_at=EXCLUDED.status_changed_at,metadata=master.budget_profile.metadata||v_meta,updated_at=now(),updated_by=v_su WHERE (master.budget_profile.total_amount,master.budget_profile.status) IS DISTINCT FROM (EXCLUDED.total_amount,EXCLUDED.status);
 
-    -- Budget Profile: FY2026 Operating — Jul 2026 – Jun 2027 (draft / future)
+    -- Budget Profile: FY2026 Operating â€” Jul 2026 â€“ Jun 2027 (draft / future)
     INSERT INTO master.budget_profile (tenant_id,code,name,company_code_id,description,fund_type,fund_source,currency_code,total_amount,reserved_amount,consumed_amount,fiscal_year,is_multi_year,valid_from,valid_to,multi_year_strategy,is_replenishable,overspend_policy,tolerance_pct,requires_approval,approval_threshold,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by)
-    VALUES (v_tid,'TEGY-BUDG-FY26-OP','TEGY FY2026 Operating Budget (Jul 2026–Jun 2027)',v_cc_tegy,
-        'Draft annual operating budget for Technostat Egypt FY2026 (July–June). '
+    VALUES (v_tid,'TEGY-BUDG-FY26-OP','TEGY FY2026 Operating Budget (Jul 2026â€“Jun 2027)',v_cc_tegy,
+        'Draft annual operating budget for Technostat Egypt FY2026 (Julyâ€“June). '
             'Includes planned expansion of delivery headcount by 12 FTEs and new Cairo West office.',
         'OPERATING','INTERNAL','EGP',95000000.00,0,0,2026,false,'2026-07-01','2027-06-30',
         'CURRENT_YEAR_ONLY',false,'BLOCK',3.00,true,4750000.00,20,jsonb_build_array('fy2026','jul_jun','operating','draft'),v_meta,
@@ -564,39 +456,18 @@ BEGIN
     SELECT id INTO v_bp_id FROM master.budget_profile WHERE tenant_id = v_tid AND code = 'TEGY-BUDG-FY25-CONT';
     SELECT id INTO v_ctr_id FROM master.cost_center WHERE tenant_id = v_tid AND code = 'TEGY-CC-OPS-GEN';
     IF v_bp_id IS NOT NULL AND v_ctr_id IS NOT NULL THEN
-        INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-CONT-RESERVE','Contingency Reserve — Unallocated Pool',v_bp_id,v_cc_tegy,2025,'EGP',v_ctr_id,4000000.00,0,600000.00,0,'WARN',0.00,true,false,10,jsonb_build_array('fy2025','contingency','egypt'),v_meta,'active','2025-07-10 11:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
+        INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-CONT-RESERVE','Contingency Reserve â€” Unallocated Pool',v_bp_id,v_cc_tegy,2025,'EGP',v_ctr_id,4000000.00,0,600000.00,0,'WARN',0.00,true,false,10,jsonb_build_array('fy2025','contingency','egypt'),v_meta,'active','2025-07-10 11:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
     END IF;
 
-    RAISE NOTICE '[510] TEGY planning_model + budget_profile + budget_allocation seeded';
+    RAISE NOTICE '[510] budget_profile + budget_allocation seeded';
 
-    -- ══════════════════════════════════════════════════════════════════════════
-    -- SDTX — SATELLITES FOR DIGITAL TRANSFORMATION  (EGP · Jan-Dec)
-    --   Operating budget: EGP 38M (FY2025) · EGP 44M (FY2026)
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    -- SDTX â€” SATELLITES FOR DIGITAL TRANSFORMATION  (EGP Â· Jan-Dec)
+    --   Operating budget: EGP 38M (FY2025) Â· EGP 44M (FY2026)
     --   IT Capital:       EGP 8M (FY2025-2026 digital infrastructure)
     --   R&D Reserve:      EGP 2M (PROJECT type)
-    -- ══════════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-    -- Planning Model: FY2025 Driver-Based (locked)
-    INSERT INTO master.planning_model (tenant_id,code,name,company_code_id,description,model_type,planning_horizon,granularity,base_currency_code,fiscal_year_from,fiscal_year_to,version,is_current,auto_recalculate,lock_on_approval,allows_overrides,approved_at,approved_by,status,status_changed_at,status_changed_by,sort_order,tags,metadata,created_by)
-    VALUES (v_tid,'SDTX-PLN-FY25-OP','SDTX FY2025 Annual Operating Plan',v_cc_sdtx,
-        'Driver-based annual plan for Satellites for Digital Transformation FY2025. '
-            'Revenue driven by number of active digital transformation project engagements. '
-            'Approved by TEGY Board and locked in January 2025.',
-        'DRIVER_BASED','ANNUAL','MONTHLY','EGP',2025,2025,1,false,false,true,false,
-        '2025-01-20 09:00:00+00',v_su,'locked','2025-01-20 09:30:00+00',v_su,
-        10,jsonb_build_array('fy2025','driver_based','locked'),v_meta,v_su)
-    ON CONFLICT (tenant_id,code,version) DO UPDATE SET status=EXCLUDED.status,approved_at=EXCLUDED.approved_at,metadata=master.planning_model.metadata||v_meta,updated_at=now(),updated_by=v_su WHERE master.planning_model.status IS DISTINCT FROM EXCLUDED.status;
-
-    -- Planning Model: FY2026 Rolling 12M (in_review)
-    INSERT INTO master.planning_model (tenant_id,code,name,company_code_id,description,model_type,planning_horizon,granularity,base_currency_code,fiscal_year_from,fiscal_year_to,version,is_current,auto_recalculate,lock_on_approval,allows_overrides,status,status_changed_at,status_changed_by,sort_order,tags,metadata,created_by)
-    VALUES (v_tid,'SDTX-PLN-R12-FY26','SDTX Rolling 12-Month Forecast FY2026',v_cc_sdtx,
-        'Rolling 12-month forecast maintained from January 2026. Auto-recalculates monthly — '
-            'actuals locked for closed periods, forward months reprojected using latest backlog data. '
-            'In review by TEGY CFO. Will supersede a traditional annual plan for SDTX going forward.',
-        'ROLLING','ROLLING_12','MONTHLY','EGP',2026,2026,1,true,true,false,true,
-        'in_review','2026-04-01 09:00:00+00',v_su,
-        20,jsonb_build_array('fy2026','rolling','in_review'),v_meta,v_su)
-    ON CONFLICT (tenant_id,code,version) DO UPDATE SET status=EXCLUDED.status,status_changed_at=EXCLUDED.status_changed_at,metadata=master.planning_model.metadata||v_meta,updated_at=now(),updated_by=v_su WHERE master.planning_model.status IS DISTINCT FROM EXCLUDED.status;
 
     -- Budget Profile: FY2025 Operating (closed)
     INSERT INTO master.budget_profile (tenant_id,code,name,company_code_id,description,fund_type,fund_source,currency_code,total_amount,reserved_amount,consumed_amount,fiscal_year,is_multi_year,valid_from,valid_to,multi_year_strategy,is_replenishable,overspend_policy,tolerance_pct,requires_approval,approval_threshold,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by)
@@ -612,7 +483,7 @@ BEGIN
     INSERT INTO master.budget_profile (tenant_id,code,name,company_code_id,description,fund_type,fund_source,currency_code,total_amount,reserved_amount,consumed_amount,fiscal_year,is_multi_year,valid_from,valid_to,multi_year_strategy,is_replenishable,overspend_policy,tolerance_pct,requires_approval,approval_threshold,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by)
     VALUES (v_tid,'SDTX-BUDG-FY26-OP','SDTX FY2026 Operating Budget',v_cc_sdtx,
         'Operating budget for Satellites for Digital Transformation FY2026. '
-            'Growth budget — includes 6 new delivery engineers and expanded cloud platform spend.',
+            'Growth budget â€” includes 6 new delivery engineers and expanded cloud platform spend.',
         'OPERATING','INTERNAL','EGP',44000000.00,4400000.00,16720000.00,2026,false,'2026-01-01','2026-12-31',
         'CURRENT_YEAR_ONLY',false,'BLOCK',3.00,true,2200000.00,20,jsonb_build_array('fy2026','operating','active'),v_meta,
         'active','2026-01-15 10:00:00+00',v_su,v_su)
@@ -620,7 +491,7 @@ BEGIN
 
     -- Budget Profile: IT Capital FY2025-2026 (active, multi-year)
     INSERT INTO master.budget_profile (tenant_id,code,name,company_code_id,description,fund_type,fund_source,currency_code,total_amount,reserved_amount,consumed_amount,fiscal_year,is_multi_year,valid_from,valid_to,multi_year_strategy,is_replenishable,overspend_policy,tolerance_pct,requires_approval,approval_threshold,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by)
-    VALUES (v_tid,'SDTX-BUDG-CAP-IT','SDTX Digital Infrastructure Capital FY2025–2026',v_cc_sdtx,
+    VALUES (v_tid,'SDTX-BUDG-CAP-IT','SDTX Digital Infrastructure Capital FY2025â€“2026',v_cc_sdtx,
         'Board-approved capital budget for SDTX digital infrastructure modernisation. '
             'Covers cloud platform build-out, DevSecOps toolchain, and enterprise data platform. '
             'Horizon-spread across FY2025 and FY2026.',
@@ -682,10 +553,13 @@ BEGIN
     SELECT id INTO v_bp_id FROM master.budget_profile WHERE tenant_id = v_tid AND code = 'SDTX-BUDG-FY26-RD';
     SELECT id INTO v_ctr_id FROM master.cost_center WHERE tenant_id = v_tid AND code = 'SDTX-CC-OPS-GEN';
     IF v_bp_id IS NOT NULL AND v_ctr_id IS NOT NULL THEN
-        INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-RD-POOL','R&D Innovation Pool — AI & Edge Computing',v_bp_id,v_cc_sdtx,2026,'EGP',v_ctr_id,2000000.00,0,300000.00,0,'WARN',5.00,true,false,10,jsonb_build_array('fy2026','rnd','ai','edge'),v_meta,'active','2026-01-15 11:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
+        INSERT INTO master.budget_allocation (tenant_id,code,name,budget_profile_id,company_code_id,fiscal_year,currency_code,cost_center_id,allocated_amount,reserved_amount,consumed_amount,released_amount,overspend_policy,tolerance_pct,requires_approval,is_carry_forward,sort_order,tags,metadata,status,status_changed_at,status_changed_by,created_by) VALUES (v_tid,'ALLOC-RD-POOL','R&D Innovation Pool â€” AI & Edge Computing',v_bp_id,v_cc_sdtx,2026,'EGP',v_ctr_id,2000000.00,0,300000.00,0,'WARN',5.00,true,false,10,jsonb_build_array('fy2026','rnd','ai','edge'),v_meta,'active','2026-01-15 11:00:00+00',v_su,v_su) ON CONFLICT (tenant_id,budget_profile_id,code) DO NOTHING;
     END IF;
 
-    RAISE NOTICE '[510] SDTX planning_model + budget_profile + budget_allocation seeded';
-    RAISE NOTICE '[510_technostat_budget] complete — TKSA, SSK, TEGY, SDTX';
+    RAISE NOTICE '[510] budget_profile + budget_allocation seeded';
+    RAISE NOTICE '[510_technostat_budget] complete â€” TKSA, SSK, TEGY, SDTX';
 
 END $tksa_budget$;
+
+
+

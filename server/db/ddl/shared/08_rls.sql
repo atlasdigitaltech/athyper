@@ -19,7 +19,6 @@ ALTER TABLE shared.commodity_code  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.industry_code   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.workspace       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.module          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shared.persona         ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE shared.country         FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.currency        FORCE ROW LEVEL SECURITY;
@@ -32,7 +31,6 @@ ALTER TABLE shared.commodity_code  FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.industry_code   FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.workspace       FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.module          FORCE ROW LEVEL SECURITY;
-ALTER TABLE shared.persona         FORCE ROW LEVEL SECURITY;
 
 -- open_read: SELECT for all
 
@@ -69,9 +67,6 @@ CREATE POLICY open_read ON shared.workspace       FOR SELECT USING (true);
 DROP POLICY IF EXISTS open_read ON shared.module;
 CREATE POLICY open_read ON shared.module          FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS open_read ON shared.persona;
-CREATE POLICY open_read ON shared.persona         FOR SELECT USING (true);
-
 -- seed_write: full DML restricted to athyperadmin role (Pattern A: FOR ALL)
 
 DROP POLICY IF EXISTS seed_write ON shared.country;
@@ -106,84 +101,11 @@ CREATE POLICY seed_write ON shared.workspace FOR ALL TO athyperadmin USING (true
 
 DROP POLICY IF EXISTS seed_write ON shared.module;
 CREATE POLICY seed_write ON shared.module FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS seed_write ON shared.persona;
-CREATE POLICY seed_write ON shared.persona FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
--- ── RBAC Phase 1 tables ─────────────────────────────────────
-
-ALTER TABLE shared.enterprise_feature    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shared.subscription_plan     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shared.permission_category   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shared.permission            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shared.permission_scope_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shared.persona_permission    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shared.plan_module_access    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shared.plan_permission_access ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shared.plan_feature_access   ENABLE ROW LEVEL SECURITY;
-
-ALTER TABLE shared.enterprise_feature    FORCE ROW LEVEL SECURITY;
 ALTER TABLE shared.subscription_plan     FORCE ROW LEVEL SECURITY;
-ALTER TABLE shared.permission_category   FORCE ROW LEVEL SECURITY;
-ALTER TABLE shared.permission            FORCE ROW LEVEL SECURITY;
-ALTER TABLE shared.permission_scope_policy FORCE ROW LEVEL SECURITY;
-ALTER TABLE shared.persona_permission    FORCE ROW LEVEL SECURITY;
-ALTER TABLE shared.plan_module_access    FORCE ROW LEVEL SECURITY;
-ALTER TABLE shared.plan_permission_access FORCE ROW LEVEL SECURITY;
-ALTER TABLE shared.plan_feature_access   FORCE ROW LEVEL SECURITY;
-
--- open_read
-DROP POLICY IF EXISTS open_read ON shared.enterprise_feature;
-CREATE POLICY open_read ON shared.enterprise_feature    FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS open_read ON shared.subscription_plan;
 CREATE POLICY open_read ON shared.subscription_plan     FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS open_read ON shared.permission_category;
-CREATE POLICY open_read ON shared.permission_category   FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS open_read ON shared.permission;
-CREATE POLICY open_read ON shared.permission            FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS open_read ON shared.permission_scope_policy;
-CREATE POLICY open_read ON shared.permission_scope_policy FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS open_read ON shared.persona_permission;
-CREATE POLICY open_read ON shared.persona_permission    FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS open_read ON shared.plan_module_access;
-CREATE POLICY open_read ON shared.plan_module_access    FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS open_read ON shared.plan_permission_access;
-CREATE POLICY open_read ON shared.plan_permission_access FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS open_read ON shared.plan_feature_access;
-CREATE POLICY open_read ON shared.plan_feature_access   FOR SELECT USING (true);
-
--- seed_write
-DROP POLICY IF EXISTS seed_write ON shared.enterprise_feature;
-CREATE POLICY seed_write ON shared.enterprise_feature FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
 DROP POLICY IF EXISTS seed_write ON shared.subscription_plan;
 CREATE POLICY seed_write ON shared.subscription_plan FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS seed_write ON shared.permission_category;
-CREATE POLICY seed_write ON shared.permission_category FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS seed_write ON shared.permission;
-CREATE POLICY seed_write ON shared.permission FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS seed_write ON shared.permission_scope_policy;
-CREATE POLICY seed_write ON shared.permission_scope_policy FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS seed_write ON shared.persona_permission;
-CREATE POLICY seed_write ON shared.persona_permission FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS seed_write ON shared.plan_module_access;
-CREATE POLICY seed_write ON shared.plan_module_access FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS seed_write ON shared.plan_permission_access;
-CREATE POLICY seed_write ON shared.plan_permission_access FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS seed_write ON shared.plan_feature_access;
-CREATE POLICY seed_write ON shared.plan_feature_access FOR ALL TO athyperadmin USING (true) WITH CHECK (true);

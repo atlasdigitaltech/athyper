@@ -1,0 +1,3 @@
+-- Database-wide settings contract shared by every Athyper application database.
+-- Concrete ALTER DATABASE statements live in each plane's guarded settings file
+-- because PostgreSQL requires a database identifier rather than an expression.

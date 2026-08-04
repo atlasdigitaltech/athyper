@@ -92,51 +92,6 @@ CREATE INDEX IF NOT EXISTS mesh_attachment_status_idx
 COMMENT ON TABLE mesh.attachment IS
     'Mesh-owned file/blob metadata for participant evidence, profile content, and network collaboration.';
 
-CREATE TABLE IF NOT EXISTS mesh.attachment_acl (
-    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
-    account_code        text        NOT NULL,
-    attachment_id       uuid        NOT NULL,
-    grantee_account_code text,
-    grantee_principal_id uuid,
-    role_code           text,
-    permission          text        NOT NULL,
-    is_granted          boolean     NOT NULL DEFAULT true,
-    granted_by_principal_id uuid,
-    granted_at          timestamptz NOT NULL DEFAULT now(),
-    expires_at          timestamptz,
-    created_at          timestamptz NOT NULL DEFAULT now(),
-    created_by          text        NOT NULL DEFAULT 'system',
-
-    CONSTRAINT mesh_attachment_acl_pkey PRIMARY KEY (id),
-    CONSTRAINT mesh_attachment_acl_subject_chk CHECK (
-        num_nonnulls(grantee_account_code, grantee_principal_id, role_code) = 1
-    ),
-    CONSTRAINT mesh_attachment_acl_permission_chk CHECK (permission IN ('read', 'download', 'delete', 'share')),
-    CONSTRAINT mesh_attachment_acl_expiry_chk CHECK (expires_at IS NULL OR expires_at > granted_at),
-    CONSTRAINT mesh_attachment_acl_attachment_fk FOREIGN KEY (account_code, attachment_id)
-        REFERENCES mesh.attachment (account_code, id) ON DELETE CASCADE,
-    CONSTRAINT mesh_attachment_acl_grantee_account_fk FOREIGN KEY (grantee_account_code)
-        REFERENCES mesh.network_account (account_code) ON DELETE CASCADE,
-    CONSTRAINT mesh_attachment_acl_grantee_principal_fk FOREIGN KEY (grantee_principal_id)
-        REFERENCES mesh.principal (id) ON DELETE CASCADE,
-    CONSTRAINT mesh_attachment_acl_granted_by_fk FOREIGN KEY (granted_by_principal_id)
-        REFERENCES mesh.principal (id) ON DELETE SET NULL
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS mesh_attachment_acl_uq
-    ON mesh.attachment_acl (
-        account_code,
-        attachment_id,
-        permission,
-        COALESCE(grantee_account_code, ''),
-        COALESCE(grantee_principal_id, '00000000-0000-0000-0000-000000000000'::uuid),
-        COALESCE(role_code, '')
-    )
-    WHERE is_granted = true;
-CREATE INDEX IF NOT EXISTS mesh_attachment_acl_grantee_account_idx
-    ON mesh.attachment_acl (grantee_account_code)
-    WHERE grantee_account_code IS NOT NULL;
-
 CREATE TABLE IF NOT EXISTS mesh.attachment_folder (
     id              uuid        NOT NULL DEFAULT shared.uuidv7(),
     account_code    text        NOT NULL,
@@ -548,45 +503,3 @@ CREATE TABLE IF NOT EXISTS mesh.content_item_link (
     CONSTRAINT mesh_content_item_link_target_fk FOREIGN KEY (account_code, target_content_item_id)
         REFERENCES mesh.content_item (account_code, id) ON DELETE CASCADE
 );
-
-CREATE TABLE IF NOT EXISTS mesh.content_item_access_grant (
-    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
-    account_code        text        NOT NULL,
-    content_item_id     uuid        NOT NULL,
-    subject_type        text        NOT NULL,
-    subject_account_code text,
-    subject_principal_id uuid,
-    role_code           text,
-    access_level        text        NOT NULL,
-    expires_at          timestamptz,
-    created_at          timestamptz NOT NULL DEFAULT now(),
-    created_by          text        NOT NULL DEFAULT 'system',
-
-    CONSTRAINT mesh_content_item_access_grant_pkey PRIMARY KEY (id),
-    CONSTRAINT mesh_content_item_access_grant_subject_type_chk CHECK (subject_type IN ('account', 'principal', 'role', 'public')),
-    CONSTRAINT mesh_content_item_access_grant_level_chk CHECK (access_level IN ('read', 'write', 'publish', 'admin')),
-    CONSTRAINT mesh_content_item_access_grant_subject_chk CHECK (
-        (subject_type = 'public' AND subject_account_code IS NULL AND subject_principal_id IS NULL AND role_code IS NULL)
-        OR (subject_type = 'account' AND subject_account_code IS NOT NULL AND subject_principal_id IS NULL AND role_code IS NULL)
-        OR (subject_type = 'principal' AND subject_account_code IS NULL AND subject_principal_id IS NOT NULL AND role_code IS NULL)
-        OR (subject_type = 'role' AND subject_account_code IS NULL AND subject_principal_id IS NULL AND role_code IS NOT NULL)
-    ),
-    CONSTRAINT mesh_content_item_access_grant_expiry_chk CHECK (expires_at IS NULL OR expires_at > created_at),
-    CONSTRAINT mesh_content_item_access_grant_item_fk FOREIGN KEY (account_code, content_item_id)
-        REFERENCES mesh.content_item (account_code, id) ON DELETE CASCADE,
-    CONSTRAINT mesh_content_item_access_grant_subject_account_fk FOREIGN KEY (subject_account_code)
-        REFERENCES mesh.network_account (account_code) ON DELETE CASCADE,
-    CONSTRAINT mesh_content_item_access_grant_subject_principal_fk FOREIGN KEY (subject_principal_id)
-        REFERENCES mesh.principal (id) ON DELETE CASCADE
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS mesh_content_item_access_grant_uq
-    ON mesh.content_item_access_grant (
-        account_code,
-        content_item_id,
-        subject_type,
-        COALESCE(subject_account_code, ''),
-        COALESCE(subject_principal_id, '00000000-0000-0000-0000-000000000000'::uuid),
-        COALESCE(role_code, ''),
-        access_level
-    );

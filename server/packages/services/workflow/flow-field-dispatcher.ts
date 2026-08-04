@@ -7,8 +7,8 @@
  *
  *   metadata.target = {
  *     kind:           'comment',
- *     context_type:   <master.comment_type code>,        // default 'entity'
- *     comment_intent: <master.comment_intent code>,      // default 'general'
+ *     context_type:   <document.comment_type code>,        // default 'entity'
+ *     comment_intent: <document.comment_intent code>,      // default 'general'
  *     scope:          'entity' | 'workflow_request' | 'lifecycle_event',
  *     visibility:     'public' | 'internal' | 'private', // default 'internal'
  *   }
@@ -180,7 +180,7 @@ export async function dispatchFlowFieldBindings(
     const commenterId = input.principalId ?? V_NIL;
 
     await sql`
-      INSERT INTO master.comment (
+      INSERT INTO document.comment (
         tenant_id, context_type, entity_type, entity_id,
         commenter_id, comment_text, content_format, content_json, content_html,
         visibility, comment_intent, created_by

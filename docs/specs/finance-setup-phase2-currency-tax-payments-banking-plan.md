@@ -149,7 +149,7 @@ The Tenant Definition pages are curated launchpads. Simple records open canonica
 | Interface routing | `control.payment_method_interface_binding` | Tenant/Company | Payments/Banking shared editor |
 | Bank statement/line | `document.bank_statement`, `bank_statement_line` | Operational | Bank Statement Workbench |
 | Reconciliation case/line | `document.bank_recon_case`, `bank_recon_case_line` | Operational | Reconciliation Workbench |
-| Cash forecast scenario/line | `document.forecast_scenario`, `control.forecast_line` | Operational/planning | Treasury Operations, later slice |
+| Planning scenario/line | `document.planning_scenario`, `document.planning_scenario_line` | Versioned planning document | Treasury Operations, later slice |
 
 ## 6. Confirmed gaps and required decisions
 

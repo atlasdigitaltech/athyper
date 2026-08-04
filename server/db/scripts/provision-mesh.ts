@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // Standalone Mesh database provisioner.
+// Guarded local reset shorthand:
+//   tsx scripts/provision-mesh.ts --reset --confirm LOCAL-AUTH-V2-RESET
 //
 // This runner is intentionally narrower than provision.ts:
 //   - target database: athyper_mesh
@@ -10,16 +12,29 @@
 //   - DDL: Mesh commerce tables for supplier coverage, catalog, and logistics rates
 //   - DDL: Mesh-native mesh_log audit/telemetry schema
 //   - DDL: Mesh-native mesh_control runtime controls schema
+//   - DDL: Mesh-local Wave 0 authorization controls and durable capture
 //   - seed: shared global reference data + server/db/seed/tenants/mesh/000_exchange
 //   - DDL-only: shared entitlement/RBAC tables such as module, permission, persona, plan, role
 //
 // Mesh account fixtures live only under server/db/seed/tenants/mesh/000_exchange.
+// Use --capture-only to install/reconcile only the additive Wave 0 capture
+// foundation on an already provisioned Mesh database. A live install also
+// requires --expected-database and --approval-ticket.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import pg from "pg";
+import {
+  acquireProvisionLock,
+  assertDestructiveResetAllowed,
+  assertPlaneFileBoundary,
+  recordSeedExecution,
+  registerSeedPack,
+  resolveDestructiveResetCliApproval,
+  seedReceipt,
+} from "./safe-provision.js";
 
 const { Client } = pg;
 
@@ -42,6 +57,30 @@ type MeshOptions = {
   force: boolean;
   skipShared?: boolean;
 };
+
+const AUTHORIZATION_CAPTURE_DDL = new Set([
+  "ddl/mesh_control/01z_authorization_migration_controls.sql",
+  "ddl/mesh_log/01z_authorization_change_capture.sql",
+  "ddl/mesh_log/03z_authorization_change_capture_constraints.sql",
+  "ddl/mesh_control/04z_authorization_migration_controls_indexes.sql",
+  "ddl/mesh_log/04z_authorization_change_capture_indexes.sql",
+  "ddl/mesh_log/05z_authorization_change_capture_functions.sql",
+  "ddl/mesh_log/06z_authorization_change_capture_triggers.sql",
+  "ddl/mesh_log/07z_authorization_change_capture_views.sql",
+  "ddl/mesh_control/08z_authorization_migration_controls_rls.sql",
+  "ddl/mesh_log/08z_authorization_change_capture_rls.sql",
+]);
+
+const AUTHORIZATION_CAPTURE_SOURCES = [
+  "mesh.principal",
+  "mesh.principal_identity_binding",
+  "mesh.network_account",
+  "mesh.account_grant",
+  "mesh.network_relationship",
+  "mesh.attachment_acl",
+  "mesh.content_item_access_grant",
+  "mesh.conversation_participant",
+] as const;
 
 function log(data: Record<string, unknown>): void {
   console.log(JSON.stringify(data));
@@ -82,18 +121,6 @@ function loadProvisionEnvDefaults(): void {
   const secretsRoot = process.env.ATHYPER_SECRETS_ROOT;
   if (secretsRoot) {
     loadEnvDefaults(join(secretsRoot, ".env"));
-  }
-}
-
-function toMeshDatabaseUrl(connectionString: string): string {
-  try {
-    const url = new URL(connectionString);
-    url.pathname = "/athyper_mesh";
-    return url.toString();
-  } catch {
-    return connectionString
-      .replace(/\/athyper_neon(?=\?|$)/, "/athyper_mesh")
-      .replace(/\/athyper_dev1(?=\?|$)/, "/athyper_mesh");
   }
 }
 
@@ -160,7 +187,7 @@ function collectSqlFiles(dir: string): string[] {
   return results;
 }
 
-function discoverMeshSqlFiles(): MeshSqlFile[] {
+export function discoverMeshSqlFiles(): MeshSqlFile[] {
   const ddlRelPaths = [
     "ddl/mesh/00_bootstrap.sql",
     "ddl/mesh_log/00_bootstrap.sql",
@@ -181,22 +208,77 @@ function discoverMeshSqlFiles(): MeshSqlFile[] {
     "ddl/mesh/01c_content_collaboration_tables.sql",
     "ddl/mesh/01d_utility_tables.sql",
     "ddl/mesh/01e_commerce_tables.sql",
-    "ddl/mesh/01z_account_grant_fingerprint.sql",
     "ddl/mesh_log/01_tables.sql",
     "ddl/mesh_control/01_tables.sql",
+    "ddl/mesh_control/01z_authorization_migration_controls.sql",
+    "ddl/mesh_log/01z_authorization_change_capture.sql",
+    "ddl/mesh_control/01zz_authorization_v2_catalog.sql",
+    "ddl/mesh_control/01zzz_authorization_v2_migration_state.sql",
+    "ddl/mesh/01zz_authorization_v2_authority.sql",
+    "ddl/mesh_control/01zzu_authorization_v3_subject_scope_migration.sql",
+    "ddl/mesh/01zza_authorization_v4_account_entitlement.sql",
+    "ddl/mesh_control/01zzv_authorization_v4_entitlement_migration.sql",
+    "ddl/mesh_control/01zzw_authorization_v5_runtime.sql",
+    "ddl/mesh_control/01zzx_preserved_identity_migration_receipt.sql",
+    "ddl/mesh_control/01zzy_authorization_v7_shadow_cutover.sql",
+    "ddl/mesh_log/01zz_authorization_v2_runtime.sql",
+    "ddl/mesh_log/01zzy_authorization_v7_shadow_cutover.sql",
     "ddl/mesh/03_constraints.sql",
+    "ddl/mesh_control/03_authorization_v2_catalog_constraints.sql",
+    "ddl/mesh/03_authorization_v2_authority_constraints.sql",
+    "ddl/mesh_control/03zu_authorization_v3_subject_scope_constraints.sql",
+    "ddl/mesh_control/03_authorization_v7_shadow_cutover_constraints.sql",
+    "ddl/mesh/03za_authorization_v4_account_entitlement_constraints.sql",
+    "ddl/mesh_log/03z_authorization_change_capture_constraints.sql",
+    "ddl/mesh_log/03_authorization_v2_runtime_constraints.sql",
     "ddl/mesh/04_indexes.sql",
+    "ddl/mesh/04_authorization_v2_authority_indexes.sql",
     "ddl/mesh_log/04_indexes.sql",
     "ddl/mesh_control/04_indexes.sql",
+    "ddl/mesh_control/04_authorization_v2_catalog_indexes.sql",
+    "ddl/mesh_control/04z_authorization_migration_controls_indexes.sql",
+    "ddl/mesh_log/04z_authorization_change_capture_indexes.sql",
+    "ddl/mesh_log/04_authorization_v2_runtime_indexes.sql",
     "ddl/mesh/05_functions.sql",
     "ddl/mesh_log/05_functions.sql",
     "ddl/mesh_control/05_functions.sql",
+    "ddl/mesh_control/05_authorization_v2_catalog_functions.sql",
+    "ddl/mesh_control/05_authorization_v5_runtime_functions.sql",
+    "ddl/mesh_control/05zu_authorization_v3_mapping_functions.sql",
+    "ddl/mesh_control/05_authorization_v7_shadow_cutover_functions.sql",
+    "ddl/mesh/05_authorization_v2_authority_functions.sql",
+    "ddl/mesh/05za_authorization_v4_entitlement_functions.sql",
+    "ddl/mesh_log/05z_authorization_change_capture_functions.sql",
+    "ddl/mesh_log/05_authorization_v2_invalidation_functions.sql",
+    "ddl/mesh_log/05_authorization_v2_replay_functions.sql",
+    "ddl/mesh_log/05_authorization_v2_evidence_functions.sql",
     "ddl/mesh/06_triggers.sql",
     "ddl/mesh_log/06_triggers.sql",
     "ddl/mesh_control/06_triggers.sql",
+    "ddl/mesh_control/06_authorization_v2_catalog_triggers.sql",
+    "ddl/mesh_control/06_authorization_v5_runtime_triggers.sql",
+    "ddl/mesh_control/06zu_authorization_v3_mapping_triggers.sql",
+    "ddl/mesh_control/06_authorization_v7_shadow_cutover_triggers.sql",
+    "ddl/mesh/06_authorization_v2_authority_triggers.sql",
+    "ddl/mesh_log/06z_authorization_change_capture_triggers.sql",
+    "ddl/mesh_log/06_authorization_v2_runtime_triggers.sql",
+    "ddl/mesh_control/07_authorization_v2_catalog_views.sql",
+    "ddl/mesh/07_authorization_v2_authority_views.sql",
+    "ddl/mesh_log/07z_authorization_change_capture_views.sql",
+    "ddl/mesh_log/07_authorization_v2_runtime_views.sql",
+    "ddl/mesh_log/07_authorization_v7_shadow_cutover_views.sql",
     "ddl/mesh/08_rls.sql",
+    "ddl/mesh/08_authorization_v2_authority_rls.sql",
     "ddl/mesh_log/08_rls.sql",
     "ddl/mesh_control/08_rls.sql",
+    "ddl/mesh_control/08_authorization_v2_catalog_rls.sql",
+    "ddl/mesh_control/08z_authorization_migration_controls_rls.sql",
+    "ddl/mesh_control/08_authorization_v2_migration_state_rls.sql",
+    "ddl/mesh_log/08z_authorization_change_capture_rls.sql",
+    "ddl/mesh_control/08_authorization_v5_runtime_rls.sql",
+    "ddl/mesh_control/08_authorization_v7_shadow_cutover_rls.sql",
+    "ddl/mesh_log/08_authorization_v2_runtime_rls.sql",
+    "ddl/planes/mesh/master/12_platform_catalog_reference_seed.sql",
   ];
 
   const ddlFiles = ddlRelPaths.map((relPath) => {
@@ -210,41 +292,24 @@ function discoverMeshSqlFiles(): MeshSqlFile[] {
   });
 
   const referenceSeedRelPaths = [
-    "seed/platform/001_global_reference/001_country.sql",
-    "seed/platform/001_global_reference/002_state_region.sql",
-    "seed/platform/001_global_reference/003_currency.sql",
-    "seed/platform/001_global_reference/004_language.sql",
-    "seed/platform/001_global_reference/005_locale.sql",
-    "seed/platform/001_global_reference/006_timezone.sql",
-    "seed/platform/001_global_reference/007_uom.sql",
-    "seed/platform/001_global_reference/008a_commodity_code_unspsc.sql",
-    "seed/platform/001_global_reference/008b_commodity_code_hs.sql",
-    "seed/platform/001_global_reference/008c_commodity_crosswalk.sql",
-    "seed/platform/001_global_reference/008d_commodity_code_keywords.sql",
-    "seed/platform/001_global_reference/009b_industry_code_isic_groups_classes.sql",
-    "seed/platform/001_global_reference/009c_industry_code_naics_subsectors.sql",
-    "seed/platform/001_global_reference/009d_industry_crosswalk.sql",
-    "seed/platform/001_global_reference/009e_industry_code_keywords.sql",
+    "ddl/common/shared/reference-data/001_country.sql",
+    "ddl/common/shared/reference-data/002_state_region.sql",
+    "ddl/common/shared/reference-data/003_currency.sql",
+    "ddl/common/shared/reference-data/004_language.sql",
+    "ddl/common/shared/reference-data/005_locale.sql",
+    "ddl/common/shared/reference-data/006_timezone.sql",
+    "ddl/common/shared/reference-data/007_uom.sql",
+    "ddl/common/shared/reference-data/008a_commodity_code_unspsc.sql",
+    "ddl/common/shared/reference-data/008b_commodity_code_hs.sql",
+    "ddl/common/shared/reference-data/008c_commodity_crosswalk.sql",
+    "ddl/common/shared/reference-data/008d_commodity_code_keywords.sql",
+    "ddl/common/shared/reference-data/009b_industry_code_isic_groups_classes.sql",
+    "ddl/common/shared/reference-data/009c_industry_code_naics_subsectors.sql",
+    "ddl/common/shared/reference-data/009d_industry_crosswalk.sql",
+    "ddl/common/shared/reference-data/009e_industry_code_keywords.sql",
   ];
 
   const referenceSeedFiles = referenceSeedRelPaths.map((relPath) => {
-    const absPath = join(DB_ROOT, ...relPath.split("/"));
-    return {
-      relPath,
-      key: relPath.replace(/\.sql$/, ""),
-      absPath,
-      phase: "Seed" as const,
-    };
-  });
-
-  // Mesh-only platform catalog: workspace + module rows scoped to the mesh app
-  // (CORE + PTR only). Parked under `_mesh/` so provision.ts's directory walker
-  // skips it; loaded here by explicit path.
-  const meshPlatformSeedRelPaths = [
-    "seed/platform/002_permission_model/_mesh/workspace_module.sql",
-  ];
-
-  const meshPlatformSeedFiles = meshPlatformSeedRelPaths.map((relPath) => {
     const absPath = join(DB_ROOT, ...relPath.split("/"));
     return {
       relPath,
@@ -278,14 +343,7 @@ function discoverMeshSqlFiles(): MeshSqlFile[] {
     );
   }
 
-  const missingMeshPlatformSeeds = meshPlatformSeedFiles.filter((file) => !existsSync(file.absPath));
-  if (missingMeshPlatformSeeds.length > 0) {
-    throw new Error(
-      `Missing required Mesh platform seed file(s): ${missingMeshPlatformSeeds.map((f) => f.relPath).join(", ")}`,
-    );
-  }
-
-  return [...ddlFiles, ...referenceSeedFiles, ...meshPlatformSeedFiles, ...seedFiles];
+  return [...ddlFiles, ...referenceSeedFiles, ...seedFiles];
 }
 
 function checksum(sql: string): string {
@@ -299,8 +357,12 @@ function checksum(sql: string): string {
 function isSharedProvisionFile(file: MeshSqlFile): boolean {
   return (
     file.relPath.startsWith("ddl/shared/")
-    || file.relPath.startsWith("seed/platform/001_global_reference/")
+    || file.relPath.startsWith("ddl/common/shared/reference-data/")
   );
+}
+
+function isAuthorizationCaptureFile(file: MeshSqlFile): boolean {
+  return AUTHORIZATION_CAPTURE_DDL.has(file.relPath);
 }
 
 async function ensureTrackingTable(client: pg.Client): Promise<void> {
@@ -335,8 +397,25 @@ async function markExecuted(client: pg.Client, key: string, hash: string): Promi
 
 async function resetMeshDatabase(
   client: pg.Client,
-  options: { keepSharedSchema?: boolean } = {},
+  options: {
+    keepSharedSchema?: boolean;
+    expectedDatabase: string;
+    acknowledgement: string;
+    disposableEnvironmentMarker: string;
+    executionProfile: string;
+    approvalLabel: string;
+    refreshDisposableFingerprint?: boolean;
+  },
 ): Promise<void> {
+  await assertDestructiveResetAllowed(client, {
+    plane: "mesh",
+    expectedDatabase: options.expectedDatabase,
+    acknowledgement: options.acknowledgement,
+    disposableEnvironmentMarker: options.disposableEnvironmentMarker,
+    executionProfile: options.executionProfile,
+    approvalLabel: options.approvalLabel,
+    refreshDisposableFingerprint: options.refreshDisposableFingerprint,
+  });
   log({ msg: "mesh_reset_start" });
   await client.query("DROP SCHEMA IF EXISTS mesh CASCADE");
   log({ msg: "mesh_reset_drop_schema", schema: "mesh" });
@@ -351,6 +430,8 @@ async function resetMeshDatabase(
     log({ msg: "mesh_reset_drop_schema", schema: "shared" });
   }
   await client.query("DROP TABLE IF EXISTS public.mesh_schema_provisions CASCADE");
+  await client.query("DROP TABLE IF EXISTS public.seed_pack_execution_v2 CASCADE");
+  await client.query("DROP TABLE IF EXISTS public.seed_pack_ledger_v2 CASCADE");
   log({ msg: "mesh_reset_complete" });
 }
 
@@ -387,6 +468,23 @@ async function runFiles(client: pg.Client, files: MeshSqlFile[], opts: MeshOptio
     opts.phases.includes(file.phase)
     && !(opts.skipShared && isSharedProvisionFile(file))
   ));
+  const seedReceipts = new Map(
+    selectedFiles
+      .filter((file) => file.phase === "Seed")
+      .map((file) => {
+        const source = readFileSync(file.absPath, "utf8");
+        const receipt = seedReceipt({
+          plane: "mesh",
+          packKey: file.key,
+          sourcePath: file.relPath,
+          source,
+        });
+        return [file.key, receipt] as const;
+      }),
+  );
+  for (const receipt of seedReceipts.values()) {
+    await registerSeedPack(client, receipt);
+  }
 
   if (selectedFiles.length === 0) {
     log({ msg: "mesh_provision_noop", reason: "no matching SQL files" });
@@ -419,6 +517,16 @@ async function runFiles(client: pg.Client, files: MeshSqlFile[], opts: MeshOptio
       }
       await client.query(sql);
       await markExecuted(client, file.key, hash);
+      const receipt = seedReceipts.get(file.key);
+      if (receipt) {
+        await recordSeedExecution(
+          client,
+          receipt,
+          opts.force ? "forced_reseed" : previousHash === undefined
+            ? "clean"
+            : "upgrade",
+        );
+      }
       await client.query("COMMIT");
       log({
         msg: "mesh_provision_success",
@@ -439,6 +547,266 @@ async function runFiles(client: pg.Client, files: MeshSqlFile[], opts: MeshOptio
   log({ msg: "mesh_provision_complete", phases: opts.phases });
 }
 
+async function runAuthorizationCaptureFiles(
+  client: pg.Client,
+  files: MeshSqlFile[],
+  force: boolean,
+  expectedDatabase: string,
+  approvalTicket: string,
+): Promise<void> {
+  const captureFiles = files.filter(isAuthorizationCaptureFile);
+  if (captureFiles.length !== AUTHORIZATION_CAPTURE_DDL.size) {
+    throw new Error(
+      `Capture-only file set is incomplete: expected `
+        + `${AUTHORIZATION_CAPTURE_DDL.size}, found ${captureFiles.length}.`,
+    );
+  }
+
+  await ensureTrackingTable(client);
+  const executed = await getExecuted(client);
+  const pending = captureFiles.filter((file) => {
+    const sql = readFileSync(file.absPath, "utf8");
+    return force || executed.get(file.key) !== checksum(sql);
+  });
+
+  log({
+    msg: "mesh_authorization_capture_install_start",
+    plane: "mesh",
+    transactionAtomic: true,
+    sourceCount: AUTHORIZATION_CAPTURE_SOURCES.length,
+    fileCount: captureFiles.length,
+    pendingFileCount: pending.length,
+    force,
+  });
+
+  await client.query("BEGIN");
+  try {
+    await client.query("SET LOCAL lock_timeout = '30s'");
+    await client.query("SET LOCAL statement_timeout = '5min'");
+    await client.query(
+      "SELECT set_config('app.authorization_migration_approval_ticket', $1, true)",
+      [approvalTicket],
+    );
+
+    const boundary = await client.query<{
+      database_name: string;
+      forbidden_neon_schemas: string[];
+    }>(`
+      SELECT
+        current_database() AS database_name,
+        ARRAY(
+          SELECT namespace_name
+          FROM unnest(ARRAY[
+            'master', 'control', 'event', 'document', 'audit'
+          ]::text[]) AS forbidden(namespace_name)
+          WHERE to_regnamespace(namespace_name) IS NOT NULL
+          ORDER BY namespace_name
+        ) AS forbidden_neon_schemas
+    `);
+    const boundaryRow = boundary.rows[0];
+    if (!boundaryRow || boundaryRow.database_name !== expectedDatabase) {
+      throw new Error(
+        "Capture-only database identity mismatch: "
+          + `expected ${expectedDatabase}, got `
+          + `${boundaryRow?.database_name ?? "unreported"}.`,
+      );
+    }
+    const forbiddenSchemas = boundaryRow.forbidden_neon_schemas;
+    if (forbiddenSchemas.length > 0) {
+      throw new Error(
+        `Capture-only target violates the Mesh boundary; Neon schemas present: `
+          + forbiddenSchemas.join(", "),
+      );
+    }
+
+    // One lock statement acquires all source locks before any capture DDL.
+    // SHARE ROW EXCLUSIVE blocks INSERT/UPDATE/DELETE/TRUNCATE and is held
+    // through trigger creation, receipt verification, and commit.
+    await client.query(
+      `LOCK TABLE ${AUTHORIZATION_CAPTURE_SOURCES.join(", ")}
+       IN SHARE ROW EXCLUSIVE MODE`,
+    );
+
+    for (const file of captureFiles) {
+      const sql = readFileSync(file.absPath, "utf8");
+      const hash = checksum(sql);
+      if (!force && executed.get(file.key) === hash) {
+        log({
+          msg: "mesh_authorization_capture_install_skip",
+          file: file.key,
+          reason: "already_executed",
+        });
+        continue;
+      }
+
+      const started = Date.now();
+      log({
+        msg: "mesh_authorization_capture_install_executing",
+        file: file.key,
+      });
+      await client.query(sql);
+      await markExecuted(client, file.key, hash);
+      log({
+        msg: "mesh_authorization_capture_install_file_success",
+        file: file.key,
+        durationMs: Date.now() - started,
+      });
+    }
+
+    const receiptResult = await client.query<{
+      database_name: string;
+      database_oid: string;
+      plane: string;
+      source_database_id: string;
+      capture_contract_version: string;
+      source_watermark: string;
+      registered_source_count: string;
+      total_source_count: string;
+      enabled_source_count: string;
+      source_set_sha256: string;
+      expected_source_set_sha256: string;
+      always_row_trigger_count: string;
+      always_truncate_trigger_count: string;
+      installation_txid: string;
+      transaction_snapshot: string;
+      receipt_observed_at: Date;
+    }>(`
+      WITH expected_source(source_schema, source_table) AS (
+        VALUES
+          ('mesh', 'principal'),
+          ('mesh', 'principal_identity_binding'),
+          ('mesh', 'network_account'),
+          ('mesh', 'account_grant'),
+          ('mesh', 'network_relationship'),
+          ('mesh', 'attachment_acl'),
+          ('mesh', 'content_item_access_grant'),
+          ('mesh', 'conversation_participant')
+      ),
+      source_health AS (
+        SELECT
+          count(*) FILTER (
+            WHERE capture_source.capture_enabled
+          )::text AS registered_source_count,
+          count(*) FILTER (
+            WHERE capture_source.capture_enabled
+              AND row_trigger.tgenabled = 'A'
+          )::text AS always_row_trigger_count,
+          count(*) FILTER (
+            WHERE capture_source.capture_enabled
+              AND truncate_trigger.tgenabled = 'A'
+          )::text AS always_truncate_trigger_count
+        FROM expected_source AS expected
+        JOIN mesh_control.authorization_capture_source AS capture_source
+          USING (source_schema, source_table)
+        JOIN pg_namespace AS namespace
+          ON namespace.nspname = capture_source.source_schema
+        JOIN pg_class AS relation
+          ON relation.relnamespace = namespace.oid
+         AND relation.relname = capture_source.source_table
+        LEFT JOIN pg_trigger AS row_trigger
+          ON row_trigger.tgrelid = relation.oid
+         AND row_trigger.tgname = 'trg_mesh_authz_wave0_capture_row'
+         AND NOT row_trigger.tgisinternal
+        LEFT JOIN pg_trigger AS truncate_trigger
+          ON truncate_trigger.tgrelid = relation.oid
+         AND truncate_trigger.tgname =
+             'trg_mesh_authz_wave0_capture_truncate'
+         AND NOT truncate_trigger.tgisinternal
+      ),
+      registry_health AS (
+        SELECT
+          count(*)::text AS total_source_count,
+          count(*) FILTER (WHERE capture_enabled)::text
+            AS enabled_source_count,
+          encode(
+            public.digest(
+              string_agg(
+                source_schema || '.' || source_table,
+                ',' ORDER BY source_schema, source_table
+              ),
+              'sha256'
+            ),
+            'hex'
+          ) AS source_set_sha256
+        FROM mesh_control.authorization_capture_source
+      ),
+      expected_health AS (
+        SELECT encode(
+          public.digest(
+            string_agg(
+              source_schema || '.' || source_table,
+              ',' ORDER BY source_schema, source_table
+            ),
+            'sha256'
+          ),
+          'hex'
+        ) AS expected_source_set_sha256
+        FROM expected_source
+      )
+      SELECT
+        current_database() AS database_name,
+        (
+          SELECT oid::text
+          FROM pg_database
+          WHERE datname = current_database()
+        ) AS database_oid,
+        clock.plane_key AS plane,
+        clock.source_database_id,
+        clock.capture_contract_version,
+        clock.current_watermark AS source_watermark,
+        health.registered_source_count,
+        registry.total_source_count,
+        registry.enabled_source_count,
+        registry.source_set_sha256,
+        expected.expected_source_set_sha256,
+        health.always_row_trigger_count,
+        health.always_truncate_trigger_count,
+        txid_current()::text AS installation_txid,
+        txid_current_snapshot()::text AS transaction_snapshot,
+        clock_timestamp() AS receipt_observed_at
+      FROM mesh_log.authorization_capture_clock AS clock
+      CROSS JOIN source_health AS health
+      CROSS JOIN registry_health AS registry
+      CROSS JOIN expected_health AS expected
+      WHERE clock.singleton_id = 1
+    `);
+    const receipt = receiptResult.rows[0];
+    const expectedCount = String(AUTHORIZATION_CAPTURE_SOURCES.length);
+    if (
+      !receipt
+      || receipt.plane !== "mesh"
+      || receipt.registered_source_count !== expectedCount
+      || receipt.total_source_count !== expectedCount
+      || receipt.enabled_source_count !== expectedCount
+      || receipt.source_set_sha256 !== receipt.expected_source_set_sha256
+      || receipt.always_row_trigger_count !== expectedCount
+      || receipt.always_truncate_trigger_count !== expectedCount
+    ) {
+      throw new Error(
+        `Capture receipt verification failed: ${JSON.stringify(receipt ?? null)}`,
+      );
+    }
+
+    await client.query("COMMIT");
+    log({
+      msg: "mesh_authorization_capture_install_receipt",
+      schemaVersion: "wave0.mesh-authorization-capture-install-receipt.v1",
+      transactionAtomic: true,
+      approvalTicket,
+      ...receipt,
+      committedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    log({
+      msg: "mesh_authorization_capture_install_failed",
+      transactionAtomic: true,
+      error: String(err),
+    });
+    throw err;
+  }
+}
+
 function printDiscoveredFiles(files: MeshSqlFile[]): void {
   console.log("");
   console.log("Mesh DB provision file set");
@@ -448,12 +816,18 @@ function printDiscoveredFiles(files: MeshSqlFile[]): void {
   }
 }
 
-function resolveConnectionString(): string {
+function resolveConnectionString(captureOnly = false): string {
   const meshUrl = process.env.MESH_DATABASE_ADMIN_URL;
   if (meshUrl) return meshUrl;
 
-  const baseAdminUrl = process.env.DATABASE_ADMIN_URL;
-  if (baseAdminUrl) return toMeshDatabaseUrl(baseAdminUrl);
+  if (captureOnly) {
+    const meshRuntimeUrl = process.env.MESH_DATABASE_URL;
+    if (meshRuntimeUrl) return meshRuntimeUrl;
+    throw new Error(
+      "--capture-only requires MESH_DATABASE_ADMIN_URL or MESH_DATABASE_URL; "
+        + "it never falls back to DATABASE_ADMIN_URL or DATABASE_URL.",
+    );
+  }
 
   const user = process.env.DB_ADMIN_USER ?? process.env.DB_USER;
   const password = process.env.DB_ADMIN_PASSWORD ?? process.env.DB_PASSWORD;
@@ -464,7 +838,7 @@ function resolveConnectionString(): string {
   }
 
   throw new Error(
-    "Cannot determine Mesh database credentials. Set MESH_DATABASE_ADMIN_URL, DATABASE_ADMIN_URL, or DB_ADMIN_USER/DB_ADMIN_PASSWORD.",
+    "Cannot determine Mesh database credentials. Set MESH_DATABASE_ADMIN_URL or explicit DB_ADMIN_USER/DB_ADMIN_PASSWORD; Neon database URLs are never a fallback.",
   );
 }
 
@@ -474,9 +848,22 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const keepShared = args.includes("--keep-shared");
   const skipShared = args.includes("--skip-shared") || keepShared;
+  const captureOnly = args.includes("--capture-only");
+  const destructiveApproval = resolveDestructiveResetCliApproval(
+    args,
+    "mesh",
+    process.env.ATHYPER_DISPOSABLE_ENVIRONMENT,
+  );
+  const expectedDatabase = destructiveApproval.expectedDatabase || undefined;
+  const approvalTicket = args.find(
+    (arg) => arg.startsWith("--approval-ticket="),
+  )?.slice("--approval-ticket=".length).trim();
   const files = discoverMeshSqlFiles().filter((file) => (
     !skipShared || !isSharedProvisionFile(file)
+  )).filter((file) => (
+    !captureOnly || isAuthorizationCaptureFile(file)
   ));
+  assertPlaneFileBoundary("mesh", files.map((file) => file.relPath));
 
   if (args.includes("--discover")) {
     printDiscoveredFiles(files);
@@ -494,9 +881,24 @@ async function main(): Promise<void> {
   if (ddlOnly && seedOnly) {
     throw new Error("--ddl-only and --seed-only cannot be combined.");
   }
+  if (captureOnly && (reset || dropOnly || seedOnly)) {
+    throw new Error(
+      "--capture-only cannot be combined with --reset, --drop-only, or --seed-only.",
+    );
+  }
+  if (captureOnly && (!expectedDatabase || !approvalTicket)) {
+    throw new Error(
+      "--capture-only requires --expected-database=<exact name> "
+        + "and --approval-ticket=<ticket>.",
+    );
+  }
 
-  const phases: MeshPhase[] = ddlOnly ? ["DDL"] : seedOnly ? ["Seed"] : ["DDL", "Seed"];
-  const connectionString = resolveConnectionString();
+  const phases: MeshPhase[] = captureOnly || ddlOnly
+    ? ["DDL"]
+    : seedOnly
+      ? ["Seed"]
+      : ["DDL", "Seed"];
+  const connectionString = resolveConnectionString(captureOnly);
   const target = (() => {
     try {
       const url = new URL(connectionString);
@@ -510,6 +912,7 @@ async function main(): Promise<void> {
   const client = await connectClient(connectionString);
 
   try {
+    await acquireProvisionLock(client, "mesh");
     if (invalidateArg) {
       await invalidateTracking(client, invalidateArg.split("=")[1] ?? "");
       return;
@@ -521,11 +924,31 @@ async function main(): Promise<void> {
     }
 
     if (reset || dropOnly) {
-      await resetMeshDatabase(client, { keepSharedSchema: keepShared });
+      await resetMeshDatabase(client, {
+        keepSharedSchema: keepShared,
+        expectedDatabase: destructiveApproval.expectedDatabase,
+        acknowledgement: destructiveApproval.acknowledgement,
+        disposableEnvironmentMarker:
+          destructiveApproval.disposableEnvironmentMarker,
+        executionProfile: destructiveApproval.executionProfile,
+        approvalLabel: destructiveApproval.approvalLabel,
+        refreshDisposableFingerprint:
+          destructiveApproval.confirmationShorthandUsed,
+      });
       if (dropOnly) return;
     }
 
-    await runFiles(client, files, { phases, force, skipShared });
+    if (captureOnly) {
+      await runAuthorizationCaptureFiles(
+        client,
+        files,
+        force,
+        expectedDatabase!,
+        approvalTicket!,
+      );
+    } else {
+      await runFiles(client, files, { phases, force, skipShared });
+    }
   } finally {
     await client.end();
   }

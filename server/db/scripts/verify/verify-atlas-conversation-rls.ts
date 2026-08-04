@@ -72,14 +72,14 @@ async function createFixture(
   if (!allocated) throw new Error("Unable to allocate Atlas fixture IDs");
 
   await sql`
-    INSERT INTO master.conversation
+    INSERT INTO document.conversation
       (id, tenant_id, type, title, status, created_by)
     VALUES
       (${allocated.conversation_id}, ${input.tenantId}, 'atlas_agent',
        ${input.title}, 'active', ${input.ownerId})
   `;
   await sql`
-    INSERT INTO master.atlas_thread
+    INSERT INTO ai.atlas_thread
       (conversation_id, tenant_id, plane, owner_principal_id,
        retention_policy_id, expires_at, created_by)
     VALUES
@@ -88,7 +88,7 @@ async function createFixture(
        now() + interval '1 day', ${input.ownerId})
   `;
   await sql`
-    INSERT INTO master.conversation_participant
+    INSERT INTO document.conversation_participant
       (tenant_id, conversation_id, principal_id, role, created_by)
     VALUES
       (${input.tenantId}, ${allocated.conversation_id},
@@ -96,7 +96,7 @@ async function createFixture(
   `;
   for (const participant of input.extraParticipants ?? []) {
     await sql`
-      INSERT INTO master.conversation_participant
+      INSERT INTO document.conversation_participant
         (tenant_id, conversation_id, principal_id, role, left_at, created_by)
       VALUES
         (${input.tenantId}, ${allocated.conversation_id},
@@ -105,7 +105,7 @@ async function createFixture(
     `;
   }
   await sql`
-    INSERT INTO master.atlas_message
+    INSERT INTO ai.atlas_message
       (id, tenant_id, conversation_id, plane, role, content_blocks,
        status, run_id, terminal_at, created_by)
     VALUES
@@ -115,7 +115,7 @@ async function createFixture(
        'completed', ${allocated.run_id}, now(), ${input.ownerId})
   `;
   await sql`
-    INSERT INTO master.atlas_message
+    INSERT INTO ai.atlas_message
       (id, tenant_id, conversation_id, plane, role, content_blocks,
        status, run_id, parent_message_id, created_by)
     VALUES
@@ -125,7 +125,7 @@ async function createFixture(
        ${input.ownerId})
   `;
   await sql`
-    INSERT INTO event.atlas_run
+    INSERT INTO ai.atlas_run
       (id, tenant_id, conversation_id, plane, principal_id,
        client_request_id, input_message_id, output_message_id,
        status, created_by)
@@ -155,13 +155,13 @@ async function visibleCounts(
     runs: number;
   }[]>`
     SELECT
-      (SELECT count(*)::int FROM master.conversation
+      (SELECT count(*)::int FROM document.conversation
         WHERE id = ANY(${conversationIds}::uuid[])) AS conversations,
-      (SELECT count(*)::int FROM master.atlas_thread
+      (SELECT count(*)::int FROM ai.atlas_thread
         WHERE conversation_id = ANY(${conversationIds}::uuid[])) AS threads,
-      (SELECT count(*)::int FROM master.atlas_message
+      (SELECT count(*)::int FROM ai.atlas_message
         WHERE conversation_id = ANY(${conversationIds}::uuid[])) AS messages,
-      (SELECT count(*)::int FROM event.atlas_run
+      (SELECT count(*)::int FROM ai.atlas_run
         WHERE conversation_id = ANY(${conversationIds}::uuid[])) AS runs
   `;
   if (!row) throw new Error("RLS count query returned no row");
@@ -276,7 +276,7 @@ try {
 
     await trx.unsafe("SET CONSTRAINTS ALL IMMEDIATE");
     await trx`
-      DELETE FROM master.conversation
+      DELETE FROM document.conversation
        WHERE tenant_id = ${tenantA}
          AND id = ${purgeCandidate.conversationId}
     `;
@@ -289,15 +289,15 @@ try {
       runs: number;
     }[]>`
       SELECT
-        (SELECT count(*)::int FROM master.conversation
+        (SELECT count(*)::int FROM document.conversation
           WHERE id = ${purgeCandidate.conversationId}) AS conversations,
-        (SELECT count(*)::int FROM master.conversation_participant
+        (SELECT count(*)::int FROM document.conversation_participant
           WHERE conversation_id = ${purgeCandidate.conversationId}) AS participants,
-        (SELECT count(*)::int FROM master.atlas_thread
+        (SELECT count(*)::int FROM ai.atlas_thread
           WHERE conversation_id = ${purgeCandidate.conversationId}) AS threads,
-        (SELECT count(*)::int FROM master.atlas_message
+        (SELECT count(*)::int FROM ai.atlas_message
           WHERE conversation_id = ${purgeCandidate.conversationId}) AS messages,
-        (SELECT count(*)::int FROM event.atlas_run
+        (SELECT count(*)::int FROM ai.atlas_run
           WHERE conversation_id = ${purgeCandidate.conversationId}) AS runs
     `;
     if (
@@ -320,7 +320,7 @@ try {
 
     await setScope(trx, tenantA, ownerA, "neon");
     const finalizedMessages = await trx<{ id: string }[]>`
-      UPDATE master.atlas_message
+      UPDATE ai.atlas_message
          SET content_blocks =
                '[{"type":"text","text":"synthetic terminal response"}]'::jsonb,
              status = 'completed',
@@ -331,7 +331,7 @@ try {
       RETURNING id
     `;
     const finalizedRuns = await trx<{ id: string }[]>`
-      UPDATE event.atlas_run
+      UPDATE ai.atlas_run
          SET status = 'completed',
              terminal_at = now(),
              updated_by = ${ownerA}
@@ -361,7 +361,7 @@ try {
       trx,
       async (savepoint) => {
         await savepoint`
-          INSERT INTO master.atlas_message
+          INSERT INTO ai.atlas_message
             (tenant_id, conversation_id, plane, role, content_blocks,
              status, terminal_at, created_by)
           VALUES

@@ -1,0 +1,17 @@
+{
+  "authorityVersion": "wave3.mesh.authority.v1",
+  "approval": {
+    "status": "policy_approved",
+    "basis": "Mesh local account-grant reconciliation with zero-grant quarantine."
+  },
+  "mappingPolicy": {
+    "principalSource": "mesh.principal",
+    "accountSource": "mesh.network_account",
+    "legacyGrantSource": "mesh.account_grant",
+    "identitySource": "mesh.principal_identity_binding",
+    "activeGrant": "explicit mesh.auth_plane_membership plus local group membership",
+    "missingOrInvalidGrant": "quarantined_zero_grant"
+  },
+  "deliberateFallback": "quarantined_zero_grant",
+  "liveSnapshotRows": "generated_during_watermarked_backfill"
+}

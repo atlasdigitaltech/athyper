@@ -4,9 +4,9 @@
 
 | Product | Canonical package | Filesystem authority |
 | --- | --- | --- |
-| Neon | `@athyper/neon-runtime` | `packages/product/neon` |
-| Admin | `@athyper/admin-studio` | `packages/product/admin` |
-| Mesh | `@athyper/mesh-runtime` | `packages/product/mesh` |
+| Neon | `@athyper/neon-runtime` | `packages/products/neon/runtime` |
+| Admin | `@athyper/admin-studio` | `packages/products/admin/runtime` |
+| Mesh | `@athyper/mesh-runtime` | `packages/products/mesh/runtime` |
 
 These packages are separate from `@athyper/app-neon`, `@athyper/app-admin`, and
 `@athyper/app-mesh`. The `app-*` packages remain application composition authorities for

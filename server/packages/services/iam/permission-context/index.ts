@@ -13,11 +13,10 @@ export type {
 } from "./types.js";
 
 export {
-  computePersonaFingerprint,
+  createCanonicalResolver,
   computeProfileHash,
   computeSchemaHash,
-  loadPlaneEligiblePermissions,
-  loadPermissionAliasMap,
+  type CanonicalResolverDeps,
 } from "./resolvers/base.js";
 
 export {

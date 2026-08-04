@@ -705,7 +705,7 @@ async function handlePostInvoiceInner(
             )
             SELECT
               ${tenantId}, ${companyId},
-              ad.asset_id, ab.id, ab.book_type, 'capitalize',
+              ad.asset_id, ab.id, lb.category::text, 'capitalize',
               ${Number(line.net_amount)}, ${currencyCode},
               ${postingDate}, ${fp.fiscal_year}, ${fp.period_number},
               ${jeId},
@@ -714,6 +714,7 @@ async function handlePostInvoiceInner(
               ${pId}, ${now}
             FROM document.accounting_distribution ad
             JOIN master.asset_book ab ON ab.asset_id = ad.asset_id AND ab.tenant_id = ${tenantId}
+            JOIN master.ledger_book lb ON lb.id = ab.ledger_book_id AND lb.tenant_id = ab.tenant_id
             WHERE ad.tenant_id        = ${tenantId}
               AND ad.source_doc_type  = 'purchase_invoice_line'
               AND ad.source_line_id   = ${line.id}
@@ -844,7 +845,7 @@ async function handlePostInvoiceInner(
             )
             SELECT
               ${tenantId}, ${companyId},
-              ad.asset_id, ab.id, ab.book_type, 'capitalize',
+              ad.asset_id, ab.id, lb.category::text, 'capitalize',
               ${Number(line.net_amount)}, ${currencyCode},
               ${postingDate}, ${fp.fiscal_year}, ${fp.period_number},
               ${jeId},
@@ -853,6 +854,7 @@ async function handlePostInvoiceInner(
               ${pId}, ${now}
             FROM document.accounting_distribution ad
             JOIN master.asset_book ab ON ab.asset_id = ad.asset_id AND ab.tenant_id = ${tenantId}
+            JOIN master.ledger_book lb ON lb.id = ab.ledger_book_id AND lb.tenant_id = ab.tenant_id
             WHERE ad.tenant_id        = ${tenantId}
               AND ad.source_doc_type  = 'purchase_invoice_line'
               AND ad.source_line_id   = ${line.id}

@@ -1,0 +1,28 @@
+{
+  "contractVersion": "seed-migration.wave3-lookup-review.v1",
+  "waveReceipt": {
+    "path": "server/db/seed-migration/wave3-lookup-receipt.v1.json",
+    "validationStatus": "passed",
+    "deletionEligible": true
+  },
+  "entries": {
+    "server/db/seed/platform/000_lookups/LookupDomain/000_lookup_domains.sql": {
+      "plane": "common",
+      "pack": "split-plane/lookup-domain-registry",
+      "disposition": "rewrite",
+      "rationale": "legacy cross-plane registry must be decomposed using the consumer classification ledger"
+    },
+    "server/db/seed/platform/000_lookups/LookupDomain/010_ai_lookup_domains.sql": {
+      "plane": "athyper",
+      "pack": "athyper/platform-ai",
+      "disposition": "rewrite",
+      "rationale": "AI administration vocabulary is owned by the Athyper platform plane"
+    },
+    "server/db/seed/platform/000_lookups/LookupDomain/master/ou_type.sql": {
+      "plane": "neon",
+      "pack": "neon/retired",
+      "disposition": "retire",
+      "rationale": "existing tombstone removes the retired operating-unit lookup"
+    }
+  }
+}

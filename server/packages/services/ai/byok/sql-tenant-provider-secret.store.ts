@@ -17,7 +17,7 @@ export class SqlTenantProviderSecretStore implements TenantProviderSecretStore {
   async readActive(input: { tenantId: string; providerId: string }) {
     const result = await sql<Row>`
       SELECT id,tenant_id,provider_id,encrypted_secret,key_version,rotation_epoch
-      FROM control.atlas_tenant_provider_credential
+      FROM ai.atlas_tenant_provider_credential
       WHERE tenant_id=${input.tenantId}::uuid AND provider_id=${input.providerId}
         AND status='active' LIMIT 1
     `.execute(this.db);
@@ -33,7 +33,7 @@ export class SqlTenantProviderSecretStore implements TenantProviderSecretStore {
 
   async currentEpoch(input: { tenantId: string; providerId: string }): Promise<number> {
     const result = await sql<{ rotation_epoch: number; revoked: boolean }>`
-      SELECT rotation_epoch,revoked FROM control.atlas_tenant_provider_credential_epoch
+      SELECT rotation_epoch,revoked FROM ai.atlas_tenant_provider_credential_epoch
       WHERE tenant_id=${input.tenantId}::uuid AND provider_id=${input.providerId}
     `.execute(this.db);
     return result.rows[0]?.revoked ? Number(result.rows[0].rotation_epoch) : Number(result.rows[0]?.rotation_epoch ?? 0);

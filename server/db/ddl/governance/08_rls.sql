@@ -1,231 +1,1015 @@
 -- ============================================================================
 -- governance/08_rls.sql
--- Concept: Governance RLS — period close and compliance isolation policies
--- Depends on: 04_tables/008_governance.sql, 05_pre_constraint_functions/001_shared.sql
+-- Row-level security policies and explicit object grants.
+-- Generated from the live Neon database governance schema. Do not hand-edit.
 -- ============================================================================
 
--- ============================================================================
--- LEDGER POSTING PATH — governance tables
--- ============================================================================
+ALTER TABLE "governance"."book_period_status" ENABLE ROW LEVEL SECURITY;
 
--- ── governance.book_period_status ────────────────────────────────────────────
-ALTER TABLE governance.book_period_status ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.book_period_status FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.book_period_status;
-DROP POLICY IF EXISTS tenant_insert ON governance.book_period_status;
-DROP POLICY IF EXISTS tenant_update ON governance.book_period_status;
-DROP POLICY IF EXISTS tenant_delete ON governance.book_period_status;
-DROP POLICY IF EXISTS admin_read    ON governance.book_period_status;
-DROP POLICY IF EXISTS admin_write   ON governance.book_period_status;
-CREATE POLICY tenant_read   ON governance.book_period_status FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.book_period_status FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.book_period_status FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.book_period_status FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.book_period_status FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.book_period_status FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."book_period_status" FORCE ROW LEVEL SECURITY;
 
+ALTER TABLE "governance"."comment_moderation" ENABLE ROW LEVEL SECURITY;
 
--- ============================================================================
--- GOVERNANCE CYCLE MODEL — RLS policies
--- ============================================================================
--- Standard 6-policy pattern per table:
---   tenant_read   — rows for calling tenant (current_tenant_id_soft)
---   tenant_insert — calling tenant only    (current_tenant_id)
---   tenant_update — calling tenant only
---   tenant_delete — calling tenant only
---   admin_read    — cross-tenant           (athyperadmin)
---   admin_write   — full DML               (athyperadmin)
+ALTER TABLE "governance"."comment_moderation" FORCE ROW LEVEL SECURITY;
 
--- ── governance.cycle_type ───────────────────────────────────────────────────
-ALTER TABLE governance.cycle_type ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_type FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_type;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_type;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_type;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_type;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_type;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_type;
-CREATE POLICY tenant_read   ON governance.cycle_type FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_type FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_type FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_type FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_type FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_type FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_carryforward_rule" ENABLE ROW LEVEL SECURITY;
 
--- ── governance.cycle_phase ──────────────────────────────────────────────────
-ALTER TABLE governance.cycle_phase ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_phase FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_phase;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_phase;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_phase;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_phase;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_phase;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_phase;
-CREATE POLICY tenant_read   ON governance.cycle_phase FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_phase FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_phase FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_phase FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_phase FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_phase FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_carryforward_rule" FORCE ROW LEVEL SECURITY;
 
--- ── governance.cycle_task_category ──────────────────────────────────────────
-ALTER TABLE governance.cycle_task_category ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_task_category FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_task_category;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_task_category;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_task_category;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_task_category;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_task_category;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_task_category;
-CREATE POLICY tenant_read   ON governance.cycle_task_category FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_task_category FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_task_category FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_task_category FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_task_category FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_task_category FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_certification" ENABLE ROW LEVEL SECURITY;
 
--- ── governance.cycle_task_template ──────────────────────────────────────────
-ALTER TABLE governance.cycle_task_template ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_task_template FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_task_template;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_task_template;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_task_template;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_task_template;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_task_template;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_task_template;
-CREATE POLICY tenant_read   ON governance.cycle_task_template FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_task_template FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_task_template FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_task_template FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_task_template FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_task_template FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_certification" FORCE ROW LEVEL SECURITY;
 
--- ── governance.cycle_task_dependency ────────────────────────────────────────
-ALTER TABLE governance.cycle_task_dependency ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_task_dependency FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_task_dependency;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_task_dependency;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_task_dependency;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_task_dependency;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_task_dependency;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_task_dependency;
-CREATE POLICY tenant_read   ON governance.cycle_task_dependency FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_task_dependency FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_task_dependency FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_task_dependency FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_task_dependency FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_task_dependency FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_cross_dependency" ENABLE ROW LEVEL SECURITY;
 
--- ── governance.cycle_run ────────────────────────────────────────────────────
-ALTER TABLE governance.cycle_run ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_run FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_run;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_run;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_run;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_run;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_run;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_run;
-CREATE POLICY tenant_read   ON governance.cycle_run FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_run FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_run FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_run FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_run FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_run FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_cross_dependency" FORCE ROW LEVEL SECURITY;
 
--- ── governance.cycle_task ───────────────────────────────────────────────────
-ALTER TABLE governance.cycle_task ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_task FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_task;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_task;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_task;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_task;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_task;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_task;
-CREATE POLICY tenant_read   ON governance.cycle_task FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_task FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_task FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_task FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_task FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_task FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_deviation" ENABLE ROW LEVEL SECURITY;
 
--- ── governance.cycle_deviation ──────────────────────────────────────────────
-ALTER TABLE governance.cycle_deviation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_deviation FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_deviation;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_deviation;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_deviation;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_deviation;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_deviation;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_deviation;
-CREATE POLICY tenant_read   ON governance.cycle_deviation FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_deviation FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_deviation FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_deviation FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_deviation FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_deviation FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_deviation" FORCE ROW LEVEL SECURITY;
 
--- ── governance.cycle_certification ──────────────────────────────────────────
-ALTER TABLE governance.cycle_certification ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_certification FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_certification;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_certification;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_certification;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_certification;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_certification;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_certification;
-CREATE POLICY tenant_read   ON governance.cycle_certification FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_certification FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_certification FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_certification FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_certification FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_certification FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_phase" ENABLE ROW LEVEL SECURITY;
 
--- ── governance.cycle_cross_dependency ───────────────────────────────────────
-ALTER TABLE governance.cycle_cross_dependency ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_cross_dependency FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_cross_dependency;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_cross_dependency;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_cross_dependency;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_cross_dependency;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_cross_dependency;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_cross_dependency;
-CREATE POLICY tenant_read   ON governance.cycle_cross_dependency FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_cross_dependency FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_cross_dependency FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_cross_dependency FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_cross_dependency FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_cross_dependency FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_phase" FORCE ROW LEVEL SECURITY;
 
--- ── governance.cycle_carryforward_rule ──────────────────────────────────────
-ALTER TABLE governance.cycle_carryforward_rule ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.cycle_carryforward_rule FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.cycle_carryforward_rule;
-DROP POLICY IF EXISTS tenant_insert ON governance.cycle_carryforward_rule;
-DROP POLICY IF EXISTS tenant_update ON governance.cycle_carryforward_rule;
-DROP POLICY IF EXISTS tenant_delete ON governance.cycle_carryforward_rule;
-DROP POLICY IF EXISTS admin_read    ON governance.cycle_carryforward_rule;
-DROP POLICY IF EXISTS admin_write   ON governance.cycle_carryforward_rule;
-CREATE POLICY tenant_read   ON governance.cycle_carryforward_rule FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.cycle_carryforward_rule FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.cycle_carryforward_rule FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.cycle_carryforward_rule FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.cycle_carryforward_rule FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.cycle_carryforward_rule FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_run" ENABLE ROW LEVEL SECURITY;
 
--- governance.report_pack
--- Report packs contain cycle evidence and inherit the same tenant boundary as
--- their parent cycle run. Storage access is authorized separately by the API.
-ALTER TABLE governance.report_pack ENABLE ROW LEVEL SECURITY;
-ALTER TABLE governance.report_pack FORCE  ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_read   ON governance.report_pack;
-DROP POLICY IF EXISTS tenant_insert ON governance.report_pack;
-DROP POLICY IF EXISTS tenant_update ON governance.report_pack;
-DROP POLICY IF EXISTS tenant_delete ON governance.report_pack;
-DROP POLICY IF EXISTS admin_read    ON governance.report_pack;
-DROP POLICY IF EXISTS admin_write   ON governance.report_pack;
-CREATE POLICY tenant_read   ON governance.report_pack FOR SELECT USING     (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
-CREATE POLICY tenant_insert ON governance.report_pack FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_update ON governance.report_pack FOR UPDATE USING     (tenant_id = shared.current_tenant_id()) WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY tenant_delete ON governance.report_pack FOR DELETE USING     (tenant_id = shared.current_tenant_id());
-CREATE POLICY admin_read    ON governance.report_pack FOR SELECT TO athyperadmin USING (true);
-CREATE POLICY admin_write   ON governance.report_pack FOR ALL    TO athyperadmin USING (true) WITH CHECK (true);
+ALTER TABLE "governance"."cycle_run" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_task" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_task" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_task_category" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_task_category" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_task_dependency" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_task_dependency" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_task_template" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_task_template" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_type" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."cycle_type" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."legal_hold" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."legal_hold" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."legal_hold_manifest" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."legal_hold_manifest" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."preserved_identity_migration_receipt_v2" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."preserved_identity_migration_receipt_v2" FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."report_pack" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "governance"."report_pack" FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY "admin_read" ON "governance"."book_period_status"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."book_period_status"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."book_period_status"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."book_period_status"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."book_period_status"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."book_period_status"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."comment_moderation"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."comment_moderation"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_read" ON "governance"."comment_moderation"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_carryforward_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_carryforward_rule"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_carryforward_rule"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_carryforward_rule"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_carryforward_rule"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_carryforward_rule"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_certification"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_certification"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_certification"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_certification"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_certification"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_certification"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_cross_dependency"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_cross_dependency"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_cross_dependency"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_cross_dependency"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_cross_dependency"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_cross_dependency"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_deviation"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_deviation"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_deviation"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_deviation"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_deviation"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_deviation"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_phase"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_phase"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_phase"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_phase"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_phase"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_phase"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_run"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_run"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_run"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_run"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_run"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_run"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_task"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_task"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_task"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_task"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_task"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_task"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_task_category"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_task_category"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_task_category"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_task_category"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_task_category"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_task_category"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_task_dependency"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_task_dependency"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_task_dependency"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_task_dependency"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_task_dependency"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_task_dependency"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_task_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_task_template"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_task_template"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_task_template"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_task_template"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_task_template"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."cycle_type"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."cycle_type"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."cycle_type"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."cycle_type"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."cycle_type"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."cycle_type"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."legal_hold"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."legal_hold"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."legal_hold"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."legal_hold"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."legal_hold"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."legal_hold"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_read" ON "governance"."legal_hold_manifest"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."legal_hold_manifest"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."legal_hold_manifest"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."legal_hold_manifest"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."legal_hold_manifest"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."legal_hold_manifest"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "preserved_identity_migration_receipt_v2_admin" ON "governance"."preserved_identity_migration_receipt_v2"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "admin_read" ON "governance"."report_pack"
+  AS PERMISSIVE
+  FOR SELECT
+  TO athyperadmin
+  USING (true);
+
+CREATE POLICY "admin_write" ON "governance"."report_pack"
+  AS PERMISSIVE
+  FOR ALL
+  TO athyperadmin
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "tenant_delete" ON "governance"."report_pack"
+  AS PERMISSIVE
+  FOR DELETE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_insert" ON "governance"."report_pack"
+  AS PERMISSIVE
+  FOR INSERT
+  TO PUBLIC
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "tenant_read" ON "governance"."report_pack"
+  AS PERMISSIVE
+  FOR SELECT
+  TO PUBLIC
+  USING (shared.current_tenant_id_soft() IS NOT NULL AND tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY "tenant_update" ON "governance"."report_pack"
+  AS PERMISSIVE
+  FOR UPDATE
+  TO PUBLIC
+  USING (tenant_id = shared.current_tenant_id())
+  WITH CHECK (tenant_id = shared.current_tenant_id());
+
+GRANT EXECUTE ON FUNCTION "governance".execute_carryforward(p_closing_run_id uuid, p_next_run_id uuid) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "governance".execute_carryforward(p_closing_run_id uuid, p_next_run_id uuid) TO athyperapp;
+
+GRANT EXECUTE ON FUNCTION "governance".materialize_cycle_tasks(p_cycle_run_id uuid, p_blueprint character varying) TO athyperadmin;
+
+GRANT EXECUTE ON FUNCTION "governance".materialize_cycle_tasks(p_cycle_run_id uuid, p_blueprint character varying) TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."book_period_status" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."book_period_status" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."book_period_status" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."book_period_status" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."book_period_status" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."book_period_status" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."book_period_status" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."book_period_status" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."comment_moderation" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."comment_moderation" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."comment_moderation" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."comment_moderation" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."comment_moderation" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."comment_moderation" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."comment_moderation" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."comment_moderation" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_carryforward_rule" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_carryforward_rule" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_carryforward_rule" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_carryforward_rule" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_carryforward_rule" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_carryforward_rule" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_carryforward_rule" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_carryforward_rule" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_carryforward_rule" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_carryforward_rule" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_carryforward_rule" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_certification" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_certification" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_certification" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_certification" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_certification" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_certification" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_certification" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_certification" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_certification" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_certification" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_certification" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_cross_dependency" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_cross_dependency" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_cross_dependency" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_cross_dependency" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_cross_dependency" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_cross_dependency" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_cross_dependency" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_cross_dependency" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_cross_dependency" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_cross_dependency" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_cross_dependency" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_deviation" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_deviation" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_deviation" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_deviation" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_deviation" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_deviation" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_deviation" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_deviation" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_deviation" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_deviation" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_deviation" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_phase" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_phase" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_phase" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_phase" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_phase" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_phase" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_phase" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_phase" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_phase" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_phase" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_phase" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_run" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_run" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_run" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_run" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_run" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_run" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_run" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_run" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_run" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_run" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_run" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_task" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_task" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_task" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_task" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_task" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_task" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_task" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_task" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_task" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_task" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_task" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_task_category" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_task_category" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_task_category" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_task_category" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_task_category" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_task_category" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_task_category" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_task_category" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_task_category" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_task_category" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_task_category" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_task_dependency" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_task_dependency" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_task_dependency" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_task_dependency" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_task_dependency" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_task_dependency" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_task_dependency" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_task_dependency" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_task_dependency" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_task_dependency" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_task_dependency" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_task_template" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_task_template" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_task_template" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_task_template" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_task_template" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_task_template" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_task_template" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_task_template" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_task_template" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_task_template" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_task_template" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."cycle_type" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."cycle_type" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."cycle_type" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."cycle_type" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."cycle_type" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."cycle_type" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."cycle_type" TO athyperadmin;
+
+GRANT DELETE ON TABLE "governance"."cycle_type" TO athyperapp;
+
+GRANT INSERT ON TABLE "governance"."cycle_type" TO athyperapp;
+
+GRANT SELECT ON TABLE "governance"."cycle_type" TO athyperapp;
+
+GRANT UPDATE ON TABLE "governance"."cycle_type" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."legal_hold" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."legal_hold" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."legal_hold" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."legal_hold" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."legal_hold" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."legal_hold" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."legal_hold" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."legal_hold" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."legal_hold_manifest" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."legal_hold_manifest" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."legal_hold_manifest" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."legal_hold_manifest" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."legal_hold_manifest" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."legal_hold_manifest" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."legal_hold_manifest" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."legal_hold_manifest" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."preserved_identity_migration_receipt_v2" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."preserved_identity_migration_receipt_v2" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."preserved_identity_migration_receipt_v2" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."preserved_identity_migration_receipt_v2" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."preserved_identity_migration_receipt_v2" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."preserved_identity_migration_receipt_v2" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."preserved_identity_migration_receipt_v2" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."preserved_identity_migration_receipt_v2" TO athyperapp;
+
+GRANT DELETE ON TABLE "governance"."report_pack" TO athyperadmin;
+
+GRANT INSERT ON TABLE "governance"."report_pack" TO athyperadmin;
+
+GRANT REFERENCES ON TABLE "governance"."report_pack" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."report_pack" TO athyperadmin;
+
+GRANT TRIGGER ON TABLE "governance"."report_pack" TO athyperadmin;
+
+GRANT TRUNCATE ON TABLE "governance"."report_pack" TO athyperadmin;
+
+GRANT UPDATE ON TABLE "governance"."report_pack" TO athyperadmin;
+
+GRANT SELECT ON TABLE "governance"."report_pack" TO athyperapp;

@@ -7,15 +7,15 @@
  *   - Parses @mention syntax from comment text:
  *       @[Display Name](userId)  — structured mention (preferred)
  *       @username                — plain mention (resolved from principal lookup)
- *   - Persists to master.comment_mention (one row per mentioned principal)
+ *   - Persists to document.comment_mention (one row per mentioned principal)
  *   - Dispatches mention notifications via NotificationOrchestrator (Phase 5.2)
  *
  * Integration:
  *   - Called from comment create/update routes AFTER the comment row is persisted.
- *   - The master.comment.mentions JSONB column stores the parsed mention objects
+ *   - The document.comment.mentions JSONB column stores the parsed mention objects
  *     ({user_id, display_name}) for denormalized display — written by the route,
  *     not by this service.
- *   - master.comment_mention rows are written by this service (or the DB trigger
+ *   - document.comment_mention rows are written by this service (or the DB trigger
  *     trg_validate_comment_mentions). The service is the authoritative path for
  *     notification dispatch; the DB trigger is the fallback for data integrity.
  *
@@ -60,7 +60,7 @@ export interface MentionParseResult {
 
 export interface ProcessMentionsInput {
   commentId:   string;
-  contextType: string;   // mirror of master.comment.context_type
+  contextType: string;   // mirror of document.comment.context_type
   tenantId:    string;
   authorId:    string;
   commentText: string;
@@ -200,7 +200,7 @@ export class MentionService {
    * On create (previousMentions=undefined): inserts all mentions + notifies all.
    * On update (previousMentions provided): diffs — inserts new, removes stale, notifies only new.
    *
-   * Returns the diff so the caller can update master.comment.mentions JSONB.
+   * Returns the diff for notification and caller telemetry.
    */
   async processMentions(input: ProcessMentionsInput): Promise<ProcessMentionsResult> {
     const { mentions, unresolved } = await this.parseMentions(
@@ -224,10 +224,9 @@ export class MentionService {
     // Persist new mention rows
     for (const mention of added) {
       await this.db
-        .insertInto("master.comment_mention" as never)
+        .insertInto("document.comment_mention" as never)
         .values({
           tenant_id:    input.tenantId,
-          context_type: input.contextType,
           comment_id:   input.commentId,
           mentioned_id: mention.userId,
           created_by:   input.authorId,
@@ -239,7 +238,7 @@ export class MentionService {
     // Remove stale mention rows
     for (const mention of removed) {
       await this.db
-        .deleteFrom("master.comment_mention" as never)
+        .deleteFrom("document.comment_mention" as never)
         .where("tenant_id" as never, "=", input.tenantId as never)
         .where("comment_id" as never, "=", input.commentId as never)
         .where("mentioned_id" as never, "=", mention.userId as never)
@@ -279,7 +278,7 @@ export class MentionService {
 
   /**
    * Get all principals mentioned in a comment.
-   * Uses master.comment_mention as the authoritative source (not the JSONB blob).
+   * Uses document.comment_mention as the authoritative source (not the JSONB blob).
    */
   async getMentionsForComment(
     commentId:   string,
@@ -288,12 +287,19 @@ export class MentionService {
   ): Promise<MentionObject[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = await (this.db as any)
-      .selectFrom("master.comment_mention as cm")
-      .innerJoin("master.principal as p", "p.id", "cm.mentioned_id")
+      .selectFrom("document.comment_mention as cm")
+      .innerJoin("document.comment as c", (join: any) =>
+        join
+          .onRef("c.tenant_id", "=", "cm.tenant_id")
+          .onRef("c.id", "=", "cm.comment_id"))
+      .innerJoin("master.principal as p", (join: any) =>
+        join
+          .onRef("p.tenant_id", "=", "cm.tenant_id")
+          .onRef("p.id", "=", "cm.mentioned_id"))
       .select(["cm.mentioned_id as user_id", "p.name as display_name"])
       .where("cm.tenant_id", "=", tenantId)
       .where("cm.comment_id", "=", commentId)
-      .where("cm.context_type", "=", contextType)
+      .where("c.context_type", "=", contextType)
       .execute() as Array<{ user_id: string; display_name: string }>;
 
     return rows.map((r) => ({ userId: r.user_id, displayName: r.display_name }));
@@ -320,12 +326,15 @@ export class MentionService {
   }>> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rows = await (this.db as any)
-      .selectFrom("master.comment_mention as cm")
-      .innerJoin("master.comment as c", "c.id", "cm.comment_id")
+      .selectFrom("document.comment_mention as cm")
+      .innerJoin("document.comment as c", (join: any) =>
+        join
+          .onRef("c.tenant_id", "=", "cm.tenant_id")
+          .onRef("c.id", "=", "cm.comment_id"))
       .select([
         "cm.id as mention_id",
         "cm.comment_id",
-        "cm.context_type",
+        "c.context_type",
         "c.entity_type",
         "c.entity_id",
         "c.commenter_id as author_id",

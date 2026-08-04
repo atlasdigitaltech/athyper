@@ -45,7 +45,7 @@ interface ScheduleRow {
   tax_group_id:        string;
   jurisdiction_id:     string;
   tax_type_id:         string;
-  condition_term_type: string | null;  // from master.condition_type.term_type via tax_type.condition_type_id
+  tax_class:           string;
   component_code:      string | null;
   rate_kind:           string;
   rate_value:          string;
@@ -391,15 +391,15 @@ async function loadGroupSchedules(
   currencyCode: string | null,
 ): Promise<ScheduleRow[]> {
   // WHT detection: prefer trs.wht_basis (per-rate flag) and fall back to the
-  // condition_type kind classification (term_type='withholding'), reached via
-  // tax_type → condition_type bridge.
+  // Tax-kind classification is intrinsic to master.tax_type. The optional
+  // condition-type bridge is only for pricing-component defaulting.
   const result = await sql<ScheduleRow>`
     SELECT
       trs.id                        AS schedule_id,
       tgc.tax_group_id,
       trs.jurisdiction_id,
       trs.tax_type_id,
-      ct.term_type                  AS condition_term_type,
+      tt.tax_class,
       trs.component_code,
       trs.rate_kind,
       trs.rate_value,
@@ -431,15 +431,17 @@ async function loadGroupSchedules(
     JOIN master.tax_type tt
       ON  tt.id        = trs.tax_type_id
       AND tt.tenant_id = trs.tenant_id
-    LEFT JOIN master.condition_type ct
-      ON  ct.id = tt.condition_type_id
     WHERE tgc.tenant_id    = ${tenantId}
       AND tgc.tax_group_id = ${taxGroupId}
       AND tgc.is_active    = true
       AND ((tgv.id IS NOT NULL AND tgc.tax_group_version_id=tgv.id)
         OR (tgv.id IS NULL AND tgc.tax_group_version_id IS NULL))
       AND trs.is_active    = true
-      AND (trs.tax_direction IN ('PURCHASE', 'BOTH') OR trs.wht_basis IS NOT NULL OR ct.term_type = 'withholding')
+      AND (
+        trs.tax_direction IN ('PURCHASE', 'BOTH')
+        OR trs.wht_basis IS NOT NULL
+        OR tt.tax_class = 'withholding'
+      )
       AND trs.effective_from <= ${invoiceDate}::date
       AND (trs.effective_to IS NULL OR trs.effective_to >= ${invoiceDate}::date)
     ORDER BY tgc.calculation_seq
@@ -525,7 +527,7 @@ export async function computeLineTax(
     let compoundBase = base;
     for (const row of rows) {
       const effectiveRate = Number(row.rate_override ?? row.rate_value);
-      const isWht         = row.wht_basis != null || row.condition_term_type === "withholding";
+      const isWht         = row.wht_basis != null || row.tax_class === "withholding";
       const componentBase = row.is_compound ? compoundBase : base;
       const { taxAmount, roundingAdj } = await callCalculateTax(db, componentBase, effectiveRate, row.rate_kind,
         rounding.rounding_method, rounding.rounding_precision,

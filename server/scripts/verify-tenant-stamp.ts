@@ -125,7 +125,7 @@ async function setup(): Promise<void> {
   // Fixtures use a table that exists in the RLS suite and has a
   // current_tenant_id_soft() policy.
   await basePool.query(`
-    INSERT INTO master.comment
+    INSERT INTO document.comment
       (tenant_id, entity_type, entity_id, commenter_id, comment_text, visibility, created_by)
     VALUES
       ($1, 'tenant_stamp_test', $2, $2, 'A', 'public', $2),
@@ -136,7 +136,7 @@ async function setup(): Promise<void> {
 
 async function teardown(): Promise<void> {
   await basePool.query(
-    `DELETE FROM master.comment WHERE entity_type = 'tenant_stamp_test'`,
+    `DELETE FROM document.comment WHERE entity_type = 'tenant_stamp_test'`,
   );
 }
 
@@ -170,13 +170,13 @@ async function checkConcurrentInterleave(): Promise<void> {
   const [rowsA, rowsB] = await Promise.all([
     runAs(TENANT_A, async () =>
       basePool.query({
-        text: "SELECT comment_text FROM master.comment WHERE entity_type = 'tenant_stamp_test' ORDER BY comment_text",
+        text: "SELECT comment_text FROM document.comment WHERE entity_type = 'tenant_stamp_test' ORDER BY comment_text",
       }),
     ).then(() =>
       runAs(TENANT_A, async () => {
         // Use the stamped Kysely to exercise the driver path.
         const r = await kysely.executeQuery({
-          sql: "SELECT comment_text FROM master.comment WHERE entity_type = 'tenant_stamp_test'",
+          sql: "SELECT comment_text FROM document.comment WHERE entity_type = 'tenant_stamp_test'",
           parameters: [],
           query: { kind: "RawNode" } as never,
           queryId: { queryId: "concurrent-a" } as never,
@@ -186,7 +186,7 @@ async function checkConcurrentInterleave(): Promise<void> {
     ),
     runAs(TENANT_B, async () => {
       const r = await kysely.executeQuery({
-        sql: "SELECT comment_text FROM master.comment WHERE entity_type = 'tenant_stamp_test'",
+        sql: "SELECT comment_text FROM document.comment WHERE entity_type = 'tenant_stamp_test'",
         parameters: [],
         query: { kind: "RawNode" } as never,
         queryId: { queryId: "concurrent-b" } as never,

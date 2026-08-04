@@ -1,36 +1,15 @@
 -- ============================================================================
 -- governance/00_bootstrap.sql
--- Concept: Governance Bootstrap — validate_domain_data() JSONB schema validator
--- Depends on: 01_schemas/001_schemas.sql
--- Functions here must exist BEFORE tables (04_tables) because trigger
--- functions in 05_pre_constraint_functions call them.
+-- Pre-table schema types and sequences.
+-- Generated from the live Neon database governance schema. Do not hand-edit.
 -- ============================================================================
 
--- ============================================================================
--- governance.validate_domain_data(jsonb, jsonb)
--- ============================================================================
--- Validates JSONB domain_data against a lightweight schema definition.
--- Checks required keys, basic JSON types, and enum membership.
--- NOT full JSON Schema (draft-07/2020-12) — intentionally practical subset.
---
--- Schema format:
---   {
---     "required": ["book_statuses"],
---     "properties": {
---       "book_statuses": {"type": "array"},
---       "count_method":  {"type": "string", "enum": ["FULL","CYCLE_COUNT","ABC"]},
---       "headcount":     {"type": "number"},
---       "is_clean":      {"type": "boolean"}
---     }
---   }
-
-CREATE OR REPLACE FUNCTION governance.validate_domain_data(
-    p_data   jsonb,
-    p_schema jsonb
-) RETURNS void
-    LANGUAGE plpgsql IMMUTABLE
-    SET search_path = governance, pg_catalog
-AS $$
+CREATE OR REPLACE FUNCTION governance.validate_domain_data(p_data jsonb, p_schema jsonb)
+ RETURNS void
+ LANGUAGE plpgsql
+ IMMUTABLE
+ SET search_path TO 'governance', 'pg_catalog'
+AS $function$
 DECLARE
     v_key      text;
     v_prop_def jsonb;
@@ -92,4 +71,4 @@ BEGIN
         END LOOP;
     END IF;
 END;
-$$;
+$function$;

@@ -1,95 +1,49 @@
 -- ============================================================================
 -- event/06_triggers.sql
--- Concept: Event Triggers — outbox-to-webhook routing and orchestration triggers
--- Depends on: 04_tables/007_event.sql and sub-tables, 08_functions/007_event.sql
--- Convention: trg_<table>_<purpose>. DROP IF EXISTS before CREATE for idempotency.
+-- Non-internal triggers reconstructed from the live catalog.
+-- Generated from the live Neon database event schema. Do not hand-edit.
 -- ============================================================================
 
+CREATE TRIGGER trg_ai_tool_invocation_insert_guard BEFORE INSERT ON event.ai_tool_invocation FOR EACH ROW EXECUTE FUNCTION event.trg_validate_ai_tool_invocation_insert();
 
--- ============================================================================
--- A. UPDATED_AT STAMPS (mutable tables only)
--- ============================================================================
+CREATE TRIGGER trg_ai_tool_invocation_mutation_guard BEFORE UPDATE ON event.ai_tool_invocation FOR EACH ROW EXECUTE FUNCTION event.trg_guard_ai_tool_invocation_mutation();
 
--- notification_message
-DROP TRIGGER IF EXISTS trg_nmsg_updated_at ON event.notification_message;
-CREATE TRIGGER trg_nmsg_updated_at
-    BEFORE UPDATE ON event.notification_message
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_ai_tool_invocation_updated_at BEFORE UPDATE ON event.ai_tool_invocation FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
--- notification_delivery (partitioned — fires on all children via parent trigger)
-DROP TRIGGER IF EXISTS trg_ndlv_updated_at ON event.notification_delivery;
-CREATE TRIGGER trg_ndlv_updated_at
-    BEFORE UPDATE ON event.notification_delivery
-    FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE CONSTRAINT TRIGGER trg_atlas_run_message_check AFTER INSERT OR UPDATE ON event.atlas_run DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION event.trg_validate_atlas_run_messages();
 
--- digest_staging: no updated_at column — simple work queue, no trigger needed.
+CREATE TRIGGER trg_atlas_run_mutation_guard BEFORE UPDATE ON event.atlas_run FOR EACH ROW EXECUTE FUNCTION event.trg_guard_atlas_run_mutation();
 
+CREATE TRIGGER trg_atlas_run_updated_at BEFORE UPDATE ON event.atlas_run FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
--- ============================================================================
--- B. LOOKUP VALIDATION TRIGGERS
--- ============================================================================
+CREATE TRIGGER trg_authorization_invalidation_immutable_v2 BEFORE DELETE OR UPDATE ON event.authorization_invalidation_outbox_v2 FOR EACH ROW EXECUTE FUNCTION event.trg_authorization_invalidation_immutable_v2();
 
--- notification_message.priority
-DROP TRIGGER IF EXISTS trg_nmsg_priority_lookup ON event.notification_message;
-CREATE TRIGGER trg_nmsg_priority_lookup
-    BEFORE INSERT OR UPDATE OF priority ON event.notification_message
-    FOR EACH ROW EXECUTE FUNCTION
-    control.trg_validate_lookup_columns('notification.priority', 'priority');
+ALTER TABLE "event"."authorization_invalidation_outbox_v2" ENABLE ALWAYS TRIGGER "trg_authorization_invalidation_immutable_v2";
 
--- notification_delivery.channel
-DROP TRIGGER IF EXISTS trg_ndlv_channel_lookup ON event.notification_delivery;
-CREATE TRIGGER trg_ndlv_channel_lookup
-    BEFORE INSERT OR UPDATE OF channel ON event.notification_delivery
-    FOR EACH ROW EXECUTE FUNCTION
-    control.trg_validate_lookup_columns('notification.channel', 'channel');
+CREATE TRIGGER trg_cf_context_type_lookup BEFORE INSERT OR UPDATE OF context_type ON event.comment_flag FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('document.comment_type', 'context_type');
 
--- digest_staging.channel
-DROP TRIGGER IF EXISTS trg_ds_channel_lookup ON event.digest_staging;
-CREATE TRIGGER trg_ds_channel_lookup
-    BEFORE INSERT OR UPDATE OF channel ON event.digest_staging
-    FOR EACH ROW EXECUTE FUNCTION
-    control.trg_validate_lookup_columns('notification.channel', 'channel');
+CREATE TRIGGER trg_cf_flag_reason_lookup BEFORE INSERT OR UPDATE OF flag_reason ON event.comment_flag FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('master.flag_reason', 'flag_reason');
 
--- digest_staging.priority
-DROP TRIGGER IF EXISTS trg_ds_priority_lookup ON event.digest_staging;
-CREATE TRIGGER trg_ds_priority_lookup
-    BEFORE INSERT OR UPDATE OF priority ON event.digest_staging
-    FOR EACH ROW EXECUTE FUNCTION
-    control.trg_validate_lookup_columns('notification.priority', 'priority');
+CREATE TRIGGER trg_cf_sync_moderation AFTER INSERT OR UPDATE OF status ON event.comment_flag FOR EACH ROW EXECUTE FUNCTION event.trg_sync_comment_moderation();
 
--- digest_staging.frequency
-DROP TRIGGER IF EXISTS trg_ds_frequency_lookup ON event.digest_staging;
-CREATE TRIGGER trg_ds_frequency_lookup
-    BEFORE INSERT OR UPDATE OF frequency ON event.digest_staging
-    FOR EACH ROW EXECUTE FUNCTION
-    control.trg_validate_lookup_columns('notification.digest_frequency', 'frequency');
+CREATE TRIGGER trg_cf_updated_at BEFORE UPDATE ON event.comment_flag FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
+CREATE TRIGGER trg_ds_channel_lookup BEFORE INSERT OR UPDATE OF channel ON event.digest_staging FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('notification.channel', 'channel');
 
--- ============================================================================
--- C. MESSAGE COUNTER CONSISTENCY GUARD
--- ============================================================================
--- Prevents delivered_count + failed_count from exceeding recipient_count.
--- Runs on UPDATE only (counters are incremented by delivery worker).
+CREATE TRIGGER trg_ds_frequency_lookup BEFORE INSERT OR UPDATE OF frequency ON event.digest_staging FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('notification.digest_frequency', 'frequency');
 
-CREATE OR REPLACE FUNCTION event.trg_guard_notification_message_counts()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = event
-AS $$
-BEGIN
-    IF NEW.delivered_count + NEW.failed_count > NEW.recipient_count THEN
-        RAISE EXCEPTION
-            'event.notification_message: delivered_count (%) + failed_count (%) '
-            'cannot exceed recipient_count (%).',
-            NEW.delivered_count, NEW.failed_count, NEW.recipient_count
-            USING ERRCODE = 'check_violation';
-    END IF;
-    RETURN NEW;
-END;
-$$;
+CREATE TRIGGER trg_ds_priority_lookup BEFORE INSERT OR UPDATE OF priority ON event.digest_staging FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('notification.priority', 'priority');
 
-DROP TRIGGER IF EXISTS trg_nmsg_counts_guard ON event.notification_message;
-CREATE TRIGGER trg_nmsg_counts_guard
-    BEFORE UPDATE OF delivered_count, failed_count, recipient_count
-    ON event.notification_message
-    FOR EACH ROW EXECUTE FUNCTION event.trg_guard_notification_message_counts();
+CREATE TRIGGER trg_ndlv_channel_lookup BEFORE INSERT OR UPDATE OF channel ON event.notification_delivery FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('notification.channel', 'channel');
+
+CREATE TRIGGER trg_ndlv_updated_at BEFORE UPDATE ON event.notification_delivery FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_ndlv_channel_lookup BEFORE INSERT OR UPDATE OF channel ON event.notification_delivery_default FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('notification.channel', 'channel');
+
+CREATE TRIGGER trg_ndlv_updated_at BEFORE UPDATE ON event.notification_delivery_default FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_nmsg_counts_guard BEFORE UPDATE OF delivered_count, failed_count, recipient_count ON event.notification_message FOR EACH ROW EXECUTE FUNCTION event.trg_guard_notification_message_counts();
+
+CREATE TRIGGER trg_nmsg_priority_lookup BEFORE INSERT OR UPDATE OF priority ON event.notification_message FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('notification.priority', 'priority');
+
+CREATE TRIGGER trg_nmsg_updated_at BEFORE UPDATE ON event.notification_message FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

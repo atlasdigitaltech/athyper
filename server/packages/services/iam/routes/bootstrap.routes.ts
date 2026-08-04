@@ -20,6 +20,7 @@ import type { RequestHandler, Router } from "express";
 import { createBootstrapService } from "../bootstrap/bootstrap.service.js";
 import type { CacheClient, CacheMetrics } from "../session/session.service.js";
 import type { BootstrapQuery } from "../session/session.types.js";
+import type { PlaneDatabaseRegistry } from "../runtime/plane-database-registry.js";
 
 type PlaneKey = "neon" | "mesh" | "admin";
 const PLANE_KEYS = new Set(["neon", "mesh", "admin"]);
@@ -34,8 +35,10 @@ function normalizePlaneKey(value: unknown): PlaneKey {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface BootstrapRoutesDeps {
+  planeDatabases: PlaneDatabaseRegistry;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: import("kysely").Kysely<any>;
+  meshDb: import("kysely").Kysely<any>;
   cache: CacheClient;
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
@@ -56,11 +59,15 @@ function extractOrgAliases(orgClaim: unknown): string[] {
   }
   if (typeof orgClaim === "object") {
     const aliases: string[] = [];
-    for (const entry of Object.values(orgClaim as Record<string, unknown>)) {
+    for (const [key, entry] of Object.entries(orgClaim as Record<string, unknown>)) {
       if (entry && typeof entry === "object" && !Array.isArray(entry)) {
         const e = entry as Record<string, unknown>;
-        if (typeof e.alias === "string" && e.alias) aliases.push(e.alias);
+        if (typeof e.alias === "string" && e.alias) {
+          aliases.push(e.alias);
+          continue;
+        }
       }
+      aliases.push(key);
     }
     return aliases;
   }
@@ -82,7 +89,8 @@ function realmRoles(realmAccess: unknown): string[] {
 }
 
 function hasAccess(resourceAccess: unknown, planeKey: PlaneKey): boolean {
-  return clientRoles(resourceAccess, `${planeKey}-web`).includes("AUTHORIZED");
+  const clientIds = planeKey === "admin" ? ["admin-web", "athyper-admin"] : [`${planeKey}-web`];
+  return clientIds.some((clientId) => clientRoles(resourceAccess, clientId).includes("AUTHORIZED"));
 }
 
 function extractWorkbenches(realmAccess: unknown, planeKey: PlaneKey): string[] {
@@ -99,7 +107,11 @@ function extractWorkbenches(realmAccess: unknown, planeKey: PlaneKey): string[] 
 
 export function createBootstrapRoutes(router: Router, deps: BootstrapRoutesDeps): Router {
   const { auth, logger } = deps;
-  const bootstrapService = createBootstrapService({ db: deps.db, cache: deps.cache, metrics: deps.metrics });
+  const bootstrapService = createBootstrapService({
+    planeDatabases: deps.planeDatabases,
+    cache: deps.cache,
+    metrics: deps.metrics,
+  });
 
   /**
    * GET /api/session/bootstrap
@@ -167,7 +179,6 @@ export function createBootstrapRoutes(router: Router, deps: BootstrapRoutesDeps)
         res.status(200).json({
           principal: { id: sub, name, email },
           tenants: [],
-          delegation_count: 0,
         });
         return;
       }

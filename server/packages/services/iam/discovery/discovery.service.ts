@@ -1,14 +1,9 @@
 import { createHash } from "node:crypto";
-import { sql, type Kysely, type RawBuilder } from "kysely";
-import {
-  defaultProviderLabel,
-  isTenantIdentityProviderEligibleForPlane,
-  isWindowsKerberosEnabled,
-  type TenantIdpFeatureGate,
-  type TenantIdpProviderType,
-} from "../providers/tenant-identity-provider.js";
 
-type AnyDb = Record<string, any>;
+import type {
+  TenantIdpFeatureGate,
+  TenantIdpProviderType,
+} from "../providers/tenant-identity-provider.js";
 
 export type PlaneKey = "neon" | "mesh" | "admin";
 
@@ -34,17 +29,12 @@ export interface DiscoveryCandidate {
   authMethodLabel: string;
   hostname: string | null;
   deliveryEmail: string | null;
-  /**
-   * Safe pre-authentication label returned only for an exact principal match.
-   * The BFF keeps this server-side and never exposes it in discovery responses.
-   */
   principalDisplayName?: string | null;
   networkAccountId?: string | null;
   networkAccountCode?: string | null;
   networkAccountName?: string | null;
   networkAccountRole?: string | null;
   networkRelationshipType?: string | null;
-  /** Routing evidence is never an authorization grant. */
   resolutionKind: "identity" | "verified-domain";
   providerType: TenantIdpProviderType;
   featureGate: TenantIdpFeatureGate;
@@ -59,747 +49,178 @@ export interface TenantDiscoveryService {
   discover(query: DiscoveryQuery): Promise<DiscoveryResponse>;
 }
 
-export type DiscoveryStage1VerificationMode = "required" | "disabled";
+export interface KeycloakDiscoveryConfig {
+  baseUrl: string;
+  realm: string;
+  getAdminToken(): Promise<string>;
+}
 
 export interface DiscoveryPolicy {
-  stage1VerificationMode: DiscoveryStage1VerificationMode;
+  stage1VerificationMode: "required" | "disabled";
   tokenTtlSeconds: number;
   resendCooldownSeconds: number;
   verifiedTrustTtlDays: number;
 }
 
-const DEFAULT_AUTH_LABEL: Record<PlaneKey, string> = {
-  neon: "Organization sign-in",
-  mesh: "Partner sign-in",
-  admin: "Admin sign-in",
-};
+interface KeycloakUser {
+  id?: string;
+  username?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  enabled?: boolean;
+}
 
-const ORGANIZATION_SUBTITLE: Record<PlaneKey, string> = {
+interface KeycloakOrganization {
+  id?: string;
+  alias?: string;
+  name?: string;
+  enabled?: boolean;
+  domains?: Array<{ name?: string; verified?: boolean }>;
+  attributes?: Record<string, string[] | string>;
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SUBTITLE: Record<PlaneKey, string> = {
+  admin: "Admin organization",
   neon: "Neon organization",
   mesh: "Mesh organization",
-  admin: "Admin organization",
 };
-const NATIVE_IAM_REALM_KEY = "athyper";
-
-const GLOBAL_STAGE1_MODE_PARAM = "auth.discovery.stage1_verification_mode";
-const TOKEN_TTL_PARAM = "auth.discovery.token_ttl_seconds";
-const RESEND_COOLDOWN_PARAM = "auth.discovery.resend_cooldown_seconds";
-const VERIFIED_TRUST_TTL_PARAM = "auth.discovery.verified_trust_ttl_days";
 
 export function createTenantDiscoveryService(
-  db: Kysely<AnyDb>,
-  meshDb?: Kysely<AnyDb>,
-  options: { windowsKerberosEnabled?: boolean } = {},
+  keycloak: KeycloakDiscoveryConfig,
 ): TenantDiscoveryService {
-  async function discover(query: DiscoveryQuery): Promise<DiscoveryResponse> {
-    const identifier = normalizeDiscoveryIdentifier(query.identifier ?? query.email);
-    if (!identifier) return { candidates: [], policy: defaultDiscoveryPolicy(query.planeKey) };
-
-    const [rows, policy] = await Promise.all([
-      resolveCandidates(db, query.planeKey, identifier, meshDb),
-      resolveDiscoveryPolicy(db, query.planeKey).catch(() => defaultDiscoveryPolicy(query.planeKey)),
-    ]);
-    const candidates = rows.map((row) => {
-      const realmKey = row.identity_realm_key || NATIVE_IAM_REALM_KEY;
-      const providerType = normalizeProviderType(row.provider_type);
-      const featureGate = normalizeFeatureGate(row.feature_gate);
-      return {
-        id: stableCandidateId(query.planeKey, row.tenant_id, row.workspace_id, realmKey, row.provider_hint),
-        planeKey: query.planeKey,
-        tenantId: row.tenant_id,
-        tenantCode: row.tenant_code,
-        tenantName: row.tenant_name,
-        workspaceId: row.workspace_id,
-        workspaceCode: row.workspace_code,
-        workspaceName: row.workspace_name,
-        workspaceType: row.workspace_type,
-        workspaceSubtitle: row.workspace_subtitle,
-        realmKey,
-        providerHint: row.provider_hint,
-        authMethodLabel: row.auth_method_label || defaultProviderLabel(providerType) || DEFAULT_AUTH_LABEL[query.planeKey],
-        hostname: row.hostname,
-        deliveryEmail: row.delivery_email,
-        principalDisplayName: row.principal_display_name,
-        networkAccountId: row.network_account_id,
-        networkAccountCode: row.network_account_code,
-        networkAccountName: row.network_account_name,
-        networkAccountRole: row.network_account_role,
-        networkRelationshipType: row.network_relationship_type,
-        resolutionKind: row.resolution_kind,
-        providerType,
-        featureGate,
-      };
-    }).filter((candidate) => isTenantIdentityProviderEligibleForPlane(
-      candidate.providerType,
-      query.planeKey,
-      candidate.featureGate,
-      options.windowsKerberosEnabled ?? isWindowsKerberosEnabled(),
-    ));
-    const deduped = new Map<string, DiscoveryCandidate>();
-    for (const candidate of candidates) {
-      if (!deduped.has(candidate.id)) deduped.set(candidate.id, candidate);
-    }
-    return { candidates: [...deduped.values()].slice(0, 10), policy };
-  }
-
-  return { discover };
-}
-
-async function resolveDiscoveryPolicy(db: Kysely<AnyDb>, planeKey: PlaneKey): Promise<DiscoveryPolicy> {
-  const planeStage1ModeParam = `auth.discovery.${planeKey}.stage1_verification_mode`;
-  const result = await sql<{ code: string; value: unknown }>`
-    SELECT
-      code,
-      COALESCE(product_value, default_value) AS value
-    FROM control.parameter_definition
-    WHERE status = 'active'
-      AND is_enabled = true
-      AND code IN (
-        ${GLOBAL_STAGE1_MODE_PARAM},
-        ${planeStage1ModeParam},
-        ${TOKEN_TTL_PARAM},
-        ${RESEND_COOLDOWN_PARAM},
-        ${VERIFIED_TRUST_TTL_PARAM}
-      )
-  `.execute(db);
-
-  const values = new Map(result.rows.map((row) => [row.code, normalizeJsonValue(row.value)]));
-  const defaults = defaultDiscoveryPolicy(planeKey);
   return {
-    stage1VerificationMode: normalizeStage1Mode(
-      values.get(planeStage1ModeParam) ?? values.get(GLOBAL_STAGE1_MODE_PARAM),
-      defaults.stage1VerificationMode,
-    ),
-    tokenTtlSeconds: normalizeInteger(values.get(TOKEN_TTL_PARAM), defaults.tokenTtlSeconds, 60, 3600),
-    resendCooldownSeconds: normalizeInteger(
-      values.get(RESEND_COOLDOWN_PARAM),
-      defaults.resendCooldownSeconds,
-      0,
-      300,
-    ),
-    verifiedTrustTtlDays: normalizeInteger(values.get(VERIFIED_TRUST_TTL_PARAM), defaults.verifiedTrustTtlDays, 0, 90),
+    async discover(query): Promise<DiscoveryResponse> {
+      const identifier = normalizeIdentifier(query.identifier ?? query.email);
+      if (!identifier) return { candidates: [], policy: discoveryPolicy() };
+      const token = await keycloak.getAdminToken();
+      const users = await exactUsers(keycloak, token, identifier);
+      const exactUser = users.length === 1 ? users[0] : undefined;
+      const organizations = exactUser?.id
+        ? await organizationsForMember(keycloak, token, exactUser.id)
+        : await organizationsForVerifiedDomain(keycloak, token, identifier);
+      const resolutionKind = exactUser ? "identity" as const : "verified-domain" as const;
+      const hostname = identifier.includes("@") ? identifier.split("@")[1] ?? null : null;
+      const candidates = organizations
+        .filter((organization) => organization.enabled !== false && isUuid(organization.alias))
+        .slice(0, 25)
+        .map((organization): DiscoveryCandidate => {
+          const tenantId = organization.alias!.toLowerCase();
+          const name = organization.name?.trim() || tenantId;
+          return {
+            id: stableId(query.planeKey, keycloak.realm, tenantId),
+            planeKey: query.planeKey,
+            tenantId,
+            tenantCode: tenantId,
+            tenantName: name,
+            workspaceId: tenantId,
+            workspaceCode: tenantId,
+            workspaceName: name,
+            workspaceType: query.planeKey === "mesh" ? "network" : "tenant",
+            workspaceSubtitle: SUBTITLE[query.planeKey],
+            realmKey: keycloak.realm,
+            providerHint: firstAttribute(organization.attributes?.identity_provider_alias) ?? null,
+            authMethodLabel: "Organization sign-in",
+            hostname,
+            deliveryEmail: resolutionKind === "identity" ? exactUser?.email ?? null : identifier,
+            principalDisplayName: resolutionKind === "identity" ? displayName(exactUser!) : null,
+            resolutionKind,
+            providerType: "generic",
+            featureGate: "core",
+          };
+        });
+      return { candidates, policy: discoveryPolicy() };
+    },
   };
 }
 
-function defaultDiscoveryPolicy(planeKey: PlaneKey): DiscoveryPolicy {
-  return {
-    stage1VerificationMode: normalizeStage1Mode(
-      process.env[`AUTH_DISCOVERY_STAGE1_VERIFICATION_MODE_${planeKey.toUpperCase()}`]
-        ?? process.env.AUTH_DISCOVERY_STAGE1_VERIFICATION_MODE,
-      "required",
-    ),
-    tokenTtlSeconds: normalizeInteger(process.env.AUTH_DISCOVERY_TOKEN_TTL_SECONDS, 900, 60, 3600),
-    resendCooldownSeconds: normalizeInteger(
-      process.env.AUTH_DISCOVERY_RESEND_COOLDOWN_SECONDS
-        ?? process.env.NEXT_PUBLIC_AUTH_DISCOVERY_RESEND_COOLDOWN_SECONDS,
-      30,
-      0,
-      300,
-    ),
-    verifiedTrustTtlDays: normalizeInteger(process.env.AUTH_DISCOVERY_VERIFIED_TRUST_TTL_DAYS, 30, 0, 90),
-  };
+async function exactUsers(
+  config: KeycloakDiscoveryConfig,
+  token: string,
+  identifier: string,
+): Promise<KeycloakUser[]> {
+  const parameter = identifier.includes("@") ? "email" : "username";
+  const url = adminUrl(config, `/users?${parameter}=${encodeURIComponent(identifier)}&exact=true&max=2`);
+  const users = await getJson<KeycloakUser[]>(url, token);
+  return users.filter((user) => user.enabled !== false && (
+    parameter === "email"
+      ? user.email?.toLowerCase() === identifier
+      : user.username?.toLowerCase() === identifier
+  ));
 }
 
-function normalizeStage1Mode(value: unknown, fallback: DiscoveryStage1VerificationMode): DiscoveryStage1VerificationMode {
-  if (typeof value !== "string") return fallback;
-  const normalized = value.trim().toLowerCase();
-  if (["disabled", "optional", "off", "false", "none"].includes(normalized)) return "disabled";
-  if (normalized === "required") return "required";
-  return fallback;
+async function organizationsForMember(
+  config: KeycloakDiscoveryConfig,
+  token: string,
+  memberId: string,
+): Promise<KeycloakOrganization[]> {
+  return getJson<KeycloakOrganization[]>(
+    adminUrl(config, `/organizations/members/${encodeURIComponent(memberId)}/organizations?briefRepresentation=false`),
+    token,
+  );
 }
 
-function normalizeInteger(value: unknown, fallback: number, min: number, max: number): number {
-  const parsed = typeof value === "number" || typeof value === "string" ? Number(value) : Number.NaN;
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(parsed)));
+async function organizationsForVerifiedDomain(
+  config: KeycloakDiscoveryConfig,
+  token: string,
+  identifier: string,
+): Promise<KeycloakOrganization[]> {
+  if (!identifier.includes("@")) return [];
+  const domain = identifier.split("@")[1];
+  if (!domain) return [];
+  const organizations = await getJson<KeycloakOrganization[]>(
+    adminUrl(config, `/organizations?search=${encodeURIComponent(domain)}&exact=true&briefRepresentation=false&max=25`),
+    token,
+  );
+  return organizations.filter((organization) =>
+    organization.domains?.some((entry) => entry.verified === true && entry.name?.toLowerCase() === domain),
+  );
 }
 
-function normalizeJsonValue(value: unknown): unknown {
-  if (typeof value !== "string") return value;
-  const trimmed = value.trim();
-  if (!trimmed) return value;
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    return value;
-  }
+async function getJson<T>(url: string, token: string): Promise<T> {
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    signal: AbortSignal.timeout(3_000),
+  });
+  if (!response.ok) throw new Error(`KEYCLOAK_DISCOVERY_FAILED:${response.status}`);
+  return response.json() as Promise<T>;
 }
 
-function normalizeProviderType(value: unknown): TenantIdpProviderType {
-  if (typeof value !== "string") return "generic";
-  const normalized = value.trim().toLowerCase();
-  return [
-    "generic", "entra-id", "google-workspace", "linkedin", "okta", "adfs",
-    "ping", "sap-identity", "windows-kerberos",
-  ].includes(normalized)
-    ? normalized as TenantIdpProviderType
-    : "generic";
+function adminUrl(config: KeycloakDiscoveryConfig, path: string): string {
+  return `${config.baseUrl.replace(/\/+$/, "")}/admin/realms/${encodeURIComponent(config.realm)}${path}`;
 }
 
-function normalizeFeatureGate(value: unknown): TenantIdpFeatureGate {
-  return value === "windows-kerberos" ? "windows-kerberos" : "core";
-}
-
-function stableCandidateId(
-  planeKey: PlaneKey,
-  tenantId: string,
-  workspaceId: string,
-  realmKey: string,
-  providerHint: string | null,
-): string {
-  return createHash("sha256")
-    .update(`${planeKey}:${tenantId}:${workspaceId}:${realmKey}:${providerHint ?? ""}`)
-    .digest("base64url")
-    .slice(0, 22);
-}
-
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 320;
-}
-
-interface DiscoveryIdentifier {
-  kind: "email" | "username";
-  value: string;
-  localPart?: string;
-  domain?: string;
-}
-
-function normalizeDiscoveryIdentifier(value: unknown): DiscoveryIdentifier | null {
+function normalizeIdentifier(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const normalized = value.trim().toLowerCase();
-  if (!normalized || /\s/.test(normalized) || normalized.length > 320) return null;
-  if (isValidEmail(normalized)) {
-    const [localPart = "", domain = ""] = normalized.split("@");
-    return { kind: "email", value: normalized, localPart, domain };
-  }
-  if (normalized.includes("@") || normalized.length > 128) return null;
-  if (!/^[a-z0-9._-]+$/.test(normalized)) return null;
-  return { kind: "username", value: normalized };
+  const identifier = value.trim().toLowerCase();
+  if (!identifier || /\s/.test(identifier) || identifier.length > 320) return null;
+  if (/^[^@]+@[^@]+\.[^@]+$/.test(identifier)) return identifier;
+  return /^[a-z0-9._-]{2,128}$/.test(identifier) ? identifier : null;
 }
 
-function identityPredicate(identifier: DiscoveryIdentifier): RawBuilder<unknown> {
-  if (identifier.kind === "email") {
-    const allowUsernameAlias = localUsernameAliasDomains().has(identifier.domain ?? "");
-    return sql`
-      (
-        lower(NULLIF(p.login_email, '')) = ${identifier.value}
-        OR lower(NULLIF(pib.idp_snapshot #>> '{email}', '')) = ${identifier.value}
-        OR lower(NULLIF(pib.provider_attributes #>> '{email}', '')) = ${identifier.value}
-        OR lower(NULLIF(pib.metadata #>> '{email}', '')) = ${identifier.value}
-        OR (${allowUsernameAlias} AND lower(COALESCE(NULLIF(pib.username, ''), p.code)) = ${identifier.localPart ?? ""})
-      )
-    `;
-  }
-
-  return sql`
-    (
-      lower(p.code) = ${identifier.value}
-      OR lower(NULLIF(pib.username, '')) = ${identifier.value}
-      OR lower(NULLIF(pib.subject_id, '')) = ${identifier.value}
-      OR lower(NULLIF(pib.idp_snapshot #>> '{preferred_username}', '')) = ${identifier.value}
-      OR lower(NULLIF(pib.provider_attributes #>> '{preferred_username}', '')) = ${identifier.value}
-      OR lower(NULLIF(pib.metadata #>> '{preferred_username}', '')) = ${identifier.value}
-      OR lower(NULLIF(pib.idp_snapshot #>> '{username}', '')) = ${identifier.value}
-      OR lower(NULLIF(pib.provider_attributes #>> '{username}', '')) = ${identifier.value}
-      OR lower(NULLIF(pib.metadata #>> '{username}', '')) = ${identifier.value}
-    )
-  `;
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value);
 }
 
-function meshIdentityPredicate(identifier: DiscoveryIdentifier): RawBuilder<unknown> {
-  if (identifier.kind === "email") {
-    return sql`
-      (
-        lower(NULLIF(pib.idp_snapshot #>> '{email}', '')) = ${identifier.value}
-        OR lower(NULLIF(pib.metadata #>> '{email}', '')) = ${identifier.value}
-      )
-    `;
-  }
-  return sql`
-    (
-      lower(p.principal_code) = ${identifier.value}
-      OR lower(NULLIF(pib.username, '')) = ${identifier.value}
-      OR lower(NULLIF(pib.subject_id, '')) = ${identifier.value}
-      OR lower(NULLIF(pib.idp_snapshot #>> '{preferred_username}', '')) = ${identifier.value}
-      OR lower(NULLIF(pib.metadata #>> '{preferred_username}', '')) = ${identifier.value}
-    )
-  `;
+function stableId(plane: PlaneKey, realm: string, tenantId: string): string {
+  return createHash("sha256").update(`${plane}|${realm}|${tenantId}`).digest("hex").slice(0, 32);
 }
 
-function localUsernameAliasDomains(): Set<string> {
-  const configured = process.env.AUTH_DISCOVERY_USERNAME_EMAIL_DOMAINS;
-  if (configured) {
-    return new Set(
-      configured
-        .split(",")
-        .map((item) => item.trim().toLowerCase())
-        .filter(Boolean),
-    );
-  }
-  return (process.env.ENVIRONMENT ?? "local") === "local" ? new Set(["athyper.demo"]) : new Set();
+function displayName(user: KeycloakUser): string {
+  return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || "";
 }
 
-async function resolveCandidates(
-  db: Kysely<AnyDb>,
-  planeKey: PlaneKey,
-  identifier: DiscoveryIdentifier,
-  meshDb?: Kysely<AnyDb>,
-): Promise<Array<{
-  tenant_id: string;
-  tenant_code: string;
-  tenant_name: string;
-  workspace_id: string;
-  workspace_code: string;
-  workspace_name: string;
-  workspace_type: string;
-  workspace_subtitle: string;
-  identity_realm_key: string;
-  provider_hint: string | null;
-  auth_method_label: string | null;
-  hostname: string | null;
-  delivery_email: string | null;
-  principal_display_name: string | null;
-  network_account_id?: string | null;
-  network_account_code?: string | null;
-  network_account_name?: string | null;
-  network_account_role?: string | null;
-  network_relationship_type?: string | null;
-  resolution_kind: "identity" | "verified-domain";
-  provider_type: string | null;
-  feature_gate: string | null;
-}>> {
-  if (planeKey === "mesh") {
-    const meshCandidates = await resolveMeshCandidates(meshDb ?? db, identifier);
-    if (meshCandidates.length > 0 || identifier.kind !== "email") return meshCandidates;
-    return resolveVerifiedDomainCandidates(db, "mesh", identifier.domain ?? "");
-  }
-  if (planeKey === "admin") return resolveAdminCandidates(db, identifier);
-  return resolveNeonCandidates(db, identifier);
+function firstAttribute(value: string[] | string | undefined): string | undefined {
+  if (typeof value === "string") return value.trim() || undefined;
+  return value?.find((entry) => entry.trim())?.trim();
 }
 
-async function resolveNeonCandidates(
-  db: Kysely<AnyDb>,
-  identifier: DiscoveryIdentifier,
-) {
-  const result = await sql<{
-    tenant_id: string;
-    tenant_code: string;
-    tenant_name: string;
-    workspace_id: string;
-    workspace_code: string;
-    workspace_name: string;
-    workspace_type: string;
-    workspace_subtitle: string;
-    identity_realm_key: string;
-    provider_hint: string | null;
-    auth_method_label: string | null;
-    hostname: string | null;
-    delivery_email: string | null;
-    principal_display_name: string | null;
-    resolution_kind: "identity";
-    provider_type: string | null;
-    feature_gate: string | null;
-  }>`
-    WITH principal_bindings AS (
-      SELECT
-        t.id                                             AS tenant_id,
-        t.code                                           AS tenant_code,
-        COALESCE(t.display_name, t.name)                 AS tenant_name,
-        p.id                                             AS principal_id,
-        COALESCE(
-          NULLIF(btrim(pp.preferred_name), ''),
-          NULLIF(btrim(pp.display_name), ''),
-          NULLIF(btrim(p.name), '')
-        )                                                AS principal_display_name,
-        p.login_email,
-        pib.realm_key                                    AS identity_realm_key,
-        pib.idp_snapshot,
-        pib.provider_attributes,
-        pib.metadata
-      FROM master.principal p
-      JOIN master.principal_identity_binding pib
-        ON  pib.tenant_id = p.tenant_id
-        AND pib.principal_id = p.id
-      JOIN master.tenant t
-        ON t.id = p.tenant_id
-      LEFT JOIN master.principal_profile pp
-        ON pp.tenant_id = p.tenant_id
-        AND pp.principal_id = p.id
-      WHERE ${identityPredicate(identifier)}
-        AND p.is_active = true
-        AND p.is_locked = false
-        AND t.status = 'active'
-        AND pib.provider_code = 'keycloak'
-        AND pib.idp_enabled = true
-        AND pib.sync_status <> 'disabled'
-    ),
-    principal_roles AS (
-      SELECT
-        pb.*,
-        gr.id AS auth_group_role_id,
-        gr.assignment_scope_type,
-        gr.assignment_scope_ref_id,
-        gr.include_descendants
-      FROM principal_bindings pb
-      JOIN master.auth_group_member gm
-        ON  gm.tenant_id = pb.tenant_id
-        AND gm.principal_id = pb.principal_id
-      JOIN master.auth_group_role gr
-        ON  gr.tenant_id = gm.tenant_id
-        AND gr.group_id = gm.group_id
-        AND gr.is_active = true
-        AND (gr.expires_at IS NULL OR gr.expires_at > now())
-      WHERE gr.assignment_scope_type IN ('tenant', 'company_code', 'legal_entity')
-    ),
-    role_cc_map AS (
-      SELECT pr.*, cc.id AS company_code_id
-      FROM principal_roles pr
-      CROSS JOIN master.company_code cc
-      WHERE pr.assignment_scope_type = 'tenant'
-        AND cc.tenant_id = pr.tenant_id
-        AND cc.is_active = true
-
-      UNION
-
-      SELECT pr.*, pr.assignment_scope_ref_id AS company_code_id
-      FROM principal_roles pr
-      WHERE pr.assignment_scope_type = 'company_code'
-
-      UNION
-
-      SELECT pr.*, sub.company_code_id
-      FROM principal_roles pr
-      CROSS JOIN LATERAL master.fn_resolve_le_subtree_companies(pr.tenant_id, pr.assignment_scope_ref_id) sub
-      WHERE pr.assignment_scope_type = 'legal_entity'
-        AND pr.include_descendants = true
-
-      UNION
-
-      SELECT pr.*, cc.id AS company_code_id
-      FROM principal_roles pr
-      JOIN master.company_code cc
-        ON  cc.legal_entity_id = pr.assignment_scope_ref_id
-        AND cc.tenant_id = pr.tenant_id
-        AND cc.is_active = true
-      WHERE pr.assignment_scope_type = 'legal_entity'
-        AND pr.include_descendants = false
-    )
-    SELECT
-      rcm.tenant_id::text                              AS tenant_id,
-      rcm.tenant_code                                  AS tenant_code,
-      rcm.tenant_name                                  AS tenant_name,
-      COALESCE(le.id::text, cc.id::text)               AS workspace_id,
-      COALESCE(le.code, cc.code)                       AS workspace_code,
-      COALESCE(le.display_name, le.name, cc.name)      AS workspace_name,
-      'organization'                                   AS workspace_type,
-      ${ORGANIZATION_SUBTITLE.neon}                    AS workspace_subtitle,
-      rcm.identity_realm_key                           AS identity_realm_key,
-      NULLIF(rcm.metadata #>> '{auth,idpHint}', '')    AS provider_hint,
-      NULLIF(rcm.metadata #>> '{auth,label}', '')      AS auth_method_label,
-      NULLIF(rcm.metadata #>> '{auth,hostname}', '')   AS hostname,
-      COALESCE(
-        lower(NULLIF(rcm.login_email, '')),
-        lower(NULLIF(rcm.idp_snapshot #>> '{email}', '')),
-        lower(NULLIF(rcm.provider_attributes #>> '{email}', '')),
-        lower(NULLIF(rcm.metadata #>> '{email}', ''))
-      )                                                AS delivery_email,
-      rcm.principal_display_name                       AS principal_display_name,
-      'identity'                                       AS resolution_kind,
-      NULLIF(rcm.metadata #>> '{auth,providerType}', '') AS provider_type,
-      NULLIF(rcm.metadata #>> '{auth,featureGate}', '') AS feature_gate
-    FROM role_cc_map rcm
-    JOIN master.company_code cc
-      ON  cc.id = rcm.company_code_id
-      AND cc.is_active = true
-    LEFT JOIN master.legal_entity le
-      ON  le.tenant_id = cc.tenant_id
-      AND le.id = cc.legal_entity_id
-      AND le.is_active = true
-    GROUP BY
-      rcm.tenant_id, rcm.tenant_code, rcm.tenant_name,
-      le.id, le.code, le.display_name, le.name,
-      cc.id, cc.code, cc.name,
-      rcm.identity_realm_key,
-      rcm.principal_display_name,
-      rcm.login_email, rcm.idp_snapshot, rcm.provider_attributes, rcm.metadata
-    ORDER BY workspace_name, tenant_name, tenant_code
-    LIMIT 50
-  `.execute(db);
-
-  if (result.rows.length > 0 || identifier.kind !== "email") return result.rows;
-  return resolveVerifiedDomainCandidates(db, "neon", identifier.domain ?? "");
-}
-
-/**
- * Resolve a verified organization domain only when no exact principal match
- * exists. This is routing evidence for an enabled tenant provider, not proof
- * of membership. The callback still resolves the authenticated subject and
- * applies the normal tenant/plane authorization boundary.
- */
-async function resolveVerifiedDomainCandidates(
-  db: Kysely<AnyDb>,
-  planeKey: PlaneKey,
-  domain: string,
-) {
-  if (!domain || !(await discoveryRegistryTablesExist(db))) return [];
-
-  const result = await sql<{
-    tenant_id: string;
-    tenant_code: string;
-    tenant_name: string;
-    workspace_id: string;
-    workspace_code: string;
-    workspace_name: string;
-    workspace_type: string;
-    workspace_subtitle: string;
-    identity_realm_key: string;
-    provider_hint: string | null;
-    auth_method_label: string | null;
-    hostname: string | null;
-    delivery_email: string | null;
-    principal_display_name: string | null;
-    resolution_kind: "verified-domain";
-    provider_type: string;
-    feature_gate: string;
-  }>`
-    SELECT
-      t.id::text                                      AS tenant_id,
-      t.code                                          AS tenant_code,
-      COALESCE(t.display_name, t.name)                AS tenant_name,
-      t.id::text                                      AS workspace_id,
-      t.code                                          AS workspace_code,
-      COALESCE(t.display_name, t.name)                AS workspace_name,
-      'tenant'                                        AS workspace_type,
-      ${ORGANIZATION_SUBTITLE[planeKey]}              AS workspace_subtitle,
-      COALESCE(NULLIF(ip.realm_key, ''), ${NATIVE_IAM_REALM_KEY}) AS identity_realm_key,
-      NULLIF(ip.keycloak_alias, '')                   AS provider_hint,
-      NULLIF(ip.display_name, '')                     AS auth_method_label,
-      NULLIF(ip.metadata #>> '{hostname}', '')        AS hostname,
-      NULL::text                                      AS delivery_email,
-      NULL::text                                      AS principal_display_name,
-      'verified-domain'                               AS resolution_kind,
-      ip.provider_type                                AS provider_type,
-      ip.feature_gate                                 AS feature_gate
-    FROM master.tenant_identity_domain tid
-    JOIN master.tenant_identity_provider ip
-      ON ip.id = tid.provider_id
-      AND ip.tenant_id = tid.tenant_id
-    JOIN master.tenant t
-      ON t.id = tid.tenant_id
-    WHERE lower(tid.domain) = ${domain}
-      AND tid.verification_status = 'verified'
-      AND tid.enabled = true
-      AND ip.enabled = true
-      AND ip.activated_at IS NOT NULL
-      AND ${planeKey} = ANY(ip.allowed_planes)
-      AND t.status = 'active'
-    ORDER BY tenant_name, tenant_code, ip.display_name
-    LIMIT 10
-  `.execute(db);
-
-  return result.rows;
-}
-
-async function discoveryRegistryTablesExist(db: Kysely<AnyDb>): Promise<boolean> {
-  const result = await sql<{ exists: boolean }>`
-    SELECT to_regclass('master.tenant_identity_domain') IS NOT NULL
-      AND to_regclass('master.tenant_identity_provider') IS NOT NULL AS exists
-  `.execute(db);
-  return result.rows[0]?.exists === true;
-}
-
-async function resolveMeshCandidates(
-  db: Kysely<AnyDb>,
-  identifier: DiscoveryIdentifier,
-) {
-  const hasRequiredTables = await Promise.all([
-    meshTableExists(db, "principal"),
-    meshTableExists(db, "principal_identity_binding"),
-    meshTableExists(db, "account_grant"),
-    meshTableExists(db, "network_account"),
-  ]);
-  if (hasRequiredTables.some((exists) => !exists)) return [];
-
-  const hasNetworkRole = await meshColumnExists(db, "network_account", "network_role");
-  if (hasNetworkRole) return resolveMeshCandidatesFromNetworkRole(db, identifier);
-  return [];
-}
-
-async function resolveMeshCandidatesFromNetworkRole(
-  db: Kysely<AnyDb>,
-  identifier: DiscoveryIdentifier,
-) {
-  const result = await sql<MeshCandidateRow>`
-    SELECT
-      na.id::text                                    AS tenant_id,
-      na.account_code                                AS tenant_code,
-      na.display_name                                AS tenant_name,
-      na.id::text                                    AS workspace_id,
-      na.account_code                                AS workspace_code,
-      na.display_name                                AS workspace_name,
-      'network_account'                              AS workspace_type,
-      ${ORGANIZATION_SUBTITLE.mesh}                  AS workspace_subtitle,
-      pib.realm_key                                  AS identity_realm_key,
-      NULLIF(pib.metadata #>> '{auth,idpHint}', '')  AS provider_hint,
-      NULLIF(pib.metadata #>> '{auth,label}', '')    AS auth_method_label,
-      NULLIF(pib.metadata #>> '{auth,hostname}', '') AS hostname,
-      NULL::text                                     AS delivery_email,
-      NULLIF(btrim(p.display_name), '')              AS principal_display_name,
-      na.id::text                                    AS network_account_id,
-      na.account_code                                AS network_account_code,
-      na.display_name                                AS network_account_name,
-      na.network_role                                AS network_account_role,
-      na.network_role                                AS network_relationship_type,
-      'identity'                                     AS resolution_kind,
-      NULLIF(pib.metadata #>> '{auth,providerType}', '') AS provider_type,
-      NULLIF(pib.metadata #>> '{auth,featureGate}', '') AS feature_gate
-    FROM mesh.principal p
-    JOIN mesh.principal_identity_binding pib
-      ON  pib.principal_id = p.id
-    JOIN mesh.account_grant ag
-      ON  ag.principal_id = p.id
-      AND ag.status = 'active'
-    JOIN mesh.network_account na
-      ON  na.id = ag.account_id
-      AND na.status = 'active'
-    WHERE ${meshIdentityPredicate(identifier)}
-      AND p.status = 'active'
-      AND pib.provider_code = 'keycloak'
-      AND pib.realm_key = ${NATIVE_IAM_REALM_KEY}
-      AND pib.sync_status = 'synced'
-    GROUP BY
-      na.id, na.account_code, na.display_name, na.network_role,
-      pib.realm_key, pib.metadata, p.display_name
-    ORDER BY na.display_name
-    LIMIT 10
-  `.execute(db);
-
-  return result.rows;
-}
-
-type MeshCandidateRow = {
-    tenant_id: string;
-    tenant_code: string;
-    tenant_name: string;
-    workspace_id: string;
-    workspace_code: string;
-    workspace_name: string;
-    workspace_type: string;
-    workspace_subtitle: string;
-    identity_realm_key: string;
-    provider_hint: string | null;
-    auth_method_label: string | null;
-    hostname: string | null;
-    delivery_email: string | null;
-    principal_display_name: string | null;
-    network_account_id: string | null;
-    network_account_code: string | null;
-    network_account_name: string | null;
-    network_account_role: string | null;
-    network_relationship_type: string | null;
-    resolution_kind: "identity";
-    provider_type: string | null;
-    feature_gate: string | null;
-};
-
-async function meshTableExists(db: Kysely<AnyDb>, tableName: string): Promise<boolean> {
-  const result = await sql<{ exists: boolean }>`
-    SELECT to_regclass(${'mesh.' + tableName}) IS NOT NULL AS exists
-  `.execute(db);
-  return result.rows[0]?.exists === true;
-}
-
-async function meshColumnExists(db: Kysely<AnyDb>, tableName: string, columnName: string): Promise<boolean> {
-  const result = await sql<{ exists: boolean }>`
-    SELECT EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema = 'mesh'
-        AND table_name = ${tableName}
-        AND column_name = ${columnName}
-    ) AS exists
-  `.execute(db);
-  return result.rows[0]?.exists === true;
-}
-
-async function resolveAdminCandidates(
-  db: Kysely<AnyDb>,
-  identifier: DiscoveryIdentifier,
-) {
-  const result = await sql<{
-    tenant_id: string;
-    tenant_code: string;
-    tenant_name: string;
-    workspace_id: string;
-    workspace_code: string;
-    workspace_name: string;
-    workspace_type: string;
-    workspace_subtitle: string;
-    identity_realm_key: string;
-    provider_hint: string | null;
-    auth_method_label: string | null;
-    hostname: string | null;
-    delivery_email: string | null;
-    principal_display_name: string | null;
-    resolution_kind: "identity";
-    provider_type: string | null;
-    feature_gate: string | null;
-  }>`
-    SELECT DISTINCT
-      t.id::text                                      AS tenant_id,
-      t.code                                         AS tenant_code,
-      COALESCE(t.display_name, t.name)               AS tenant_name,
-      t.id::text                                     AS workspace_id,
-      t.code                                         AS workspace_code,
-      COALESCE(t.display_name, t.name)               AS workspace_name,
-      'organization'                                 AS workspace_type,
-      ${ORGANIZATION_SUBTITLE.admin}                 AS workspace_subtitle,
-      pib.realm_key                                  AS identity_realm_key,
-      NULLIF(pib.metadata #>> '{auth,idpHint}', '')  AS provider_hint,
-      NULLIF(pib.metadata #>> '{auth,label}', '')    AS auth_method_label,
-      NULLIF(pib.metadata #>> '{auth,hostname}', '') AS hostname,
-      COALESCE(
-        lower(NULLIF(p.login_email, '')),
-        lower(NULLIF(pib.idp_snapshot #>> '{email}', '')),
-        lower(NULLIF(pib.provider_attributes #>> '{email}', '')),
-        lower(NULLIF(pib.metadata #>> '{email}', ''))
-      )                                              AS delivery_email,
-      COALESCE(
-        NULLIF(btrim(pp.preferred_name), ''),
-        NULLIF(btrim(pp.display_name), ''),
-        NULLIF(btrim(p.name), '')
-      )                                              AS principal_display_name,
-      'identity'                                     AS resolution_kind,
-      NULLIF(pib.metadata #>> '{auth,providerType}', '') AS provider_type,
-      NULLIF(pib.metadata #>> '{auth,featureGate}', '') AS feature_gate
-    FROM master.principal p
-    JOIN master.principal_identity_binding pib
-      ON  pib.tenant_id = p.tenant_id
-      AND pib.principal_id = p.id
-    JOIN master.tenant t
-      ON t.id = p.tenant_id
-    LEFT JOIN master.principal_profile pp
-      ON pp.tenant_id = p.tenant_id
-      AND pp.principal_id = p.id
-    WHERE ${identityPredicate(identifier)}
-      AND p.is_active = true
-      AND p.is_locked = false
-      AND t.status = 'active'
-      AND pib.provider_code = 'keycloak'
-      AND pib.idp_enabled = true
-      AND pib.sync_status <> 'disabled'
-      AND EXISTS (
-        SELECT 1
-        FROM master.tenant_admin_grant tag
-        WHERE tag.tenant_id = p.tenant_id
-          AND tag.principal_id = p.id
-          AND tag.is_active = true
-          AND (tag.effective_until IS NULL OR tag.effective_until > now())
-      )
-    ORDER BY tenant_name, tenant_code
-    LIMIT 50
-  `.execute(db);
-
-  if (result.rows.length > 0 || identifier.kind !== "email") return result.rows;
-  return resolveVerifiedDomainCandidates(db, "admin", identifier.domain ?? "");
+function discoveryPolicy(): DiscoveryPolicy {
+  return {
+    stage1VerificationMode: "required",
+    tokenTtlSeconds: 600,
+    resendCooldownSeconds: 60,
+    verifiedTrustTtlDays: 30,
+  };
 }

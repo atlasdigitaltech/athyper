@@ -21,14 +21,18 @@
       "targetWritable": false,
       "rpo": {
         "target": "0 authorization decisions lost",
+        "maximumDataLossSeconds": 0,
         "basis": "Read selection only; source authority is unchanged"
       },
       "rto": {
         "target": null,
+        "maximumRecoveryMinutes": null,
         "approvalStatus": "pending"
       },
       "freezeMaximum": null,
+      "freezeMaximumSeconds": null,
       "maximumCaptureLag": "0 committed authorization source transactions at promotion",
+      "maximumCaptureLagTransactions": 0,
       "promotionEvidence": [
         "golden corpus complete",
         "zero unexplained high-risk mismatch",
@@ -40,10 +44,12 @@
         "trigger": null,
         "owner": null,
         "deadline": null,
+        "deadlineMinutes": null,
         "reverseReplayRequired": false
       },
       "observationWindow": {
         "duration": null,
+        "durationMinutes": null,
         "startsAt": null,
         "endsAt": null,
         "approvalStatus": "pending"
@@ -63,14 +69,18 @@
       "targetWritable": false,
       "rpo": {
         "target": "0 accepted authorization writes",
+        "maximumDataLossSeconds": 0,
         "basis": "Commit-ordered source journal and idempotent transaction-atomic replay"
       },
       "rto": {
         "target": null,
+        "maximumRecoveryMinutes": null,
         "approvalStatus": "pending"
       },
       "freezeMaximum": null,
+      "freezeMaximumSeconds": null,
       "maximumCaptureLag": "0 committed authorization source transactions",
+      "maximumCaptureLagTransactions": 0,
       "promotionEvidence": [
         "legacy write freeze active",
         "capture triggers enabled on every registered source",
@@ -84,10 +94,12 @@
         "trigger": null,
         "owner": null,
         "deadline": null,
+        "deadlineMinutes": null,
         "reverseReplayRequired": true
       },
       "observationWindow": {
         "duration": null,
+        "durationMinutes": null,
         "startsAt": null,
         "endsAt": null,
         "approvalStatus": "pending"
@@ -111,14 +123,18 @@
       "targetWritable": false,
       "rpo": {
         "target": null,
+        "maximumDataLossSeconds": null,
         "basis": null
       },
       "rto": {
         "target": null,
+        "maximumRecoveryMinutes": null,
         "approvalStatus": "pending"
       },
       "freezeMaximum": null,
+      "freezeMaximumSeconds": null,
       "maximumCaptureLag": null,
+      "maximumCaptureLagTransactions": null,
       "promotionEvidence": [
         "source and target database identity verified",
         "table and object disposition fully approved",
@@ -133,10 +149,12 @@
         "trigger": null,
         "owner": null,
         "deadline": null,
+        "deadlineMinutes": null,
         "reverseReplayRequired": null
       },
       "observationWindow": {
         "duration": null,
+        "durationMinutes": null,
         "startsAt": null,
         "endsAt": null,
         "approvalStatus": "pending"
@@ -160,14 +178,18 @@
       "targetWritable": false,
       "rpo": {
         "target": null,
+        "maximumDataLossSeconds": null,
         "basis": null
       },
       "rto": {
         "target": null,
+        "maximumRecoveryMinutes": null,
         "approvalStatus": "pending"
       },
       "freezeMaximum": null,
+      "freezeMaximumSeconds": null,
       "maximumCaptureLag": null,
+      "maximumCaptureLagTransactions": null,
       "promotionEvidence": [
         "Neon is unavailable during independent Mesh acceptance",
         "source and target database identity verified",
@@ -182,10 +204,12 @@
         "trigger": null,
         "owner": null,
         "deadline": null,
+        "deadlineMinutes": null,
         "reverseReplayRequired": null
       },
       "observationWindow": {
         "duration": null,
+        "durationMinutes": null,
         "startsAt": null,
         "endsAt": null,
         "approvalStatus": "pending"

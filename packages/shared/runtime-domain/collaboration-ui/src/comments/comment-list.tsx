@@ -172,7 +172,7 @@ export function CommentList({ entityType, entityId, className, onCountChange, se
         </div>
       )}
 
-      {/* Intent chip strip — driven by master.comment_intent lookup. Hidden when
+      {/* Intent chip strip — driven by document.comment_intent lookup. Hidden when
           only 'general' is available so non-workflow surfaces stay clean. */}
       {showFilters !== false && intentOptions.length > 1 && (
         <div className="flex flex-wrap items-center gap-1.5">

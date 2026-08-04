@@ -1,0 +1,51 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "bank-formats",
+  "version": "2.0.0",
+  "executionOrder": 50,
+  "plane": "athyper",
+  "tenantScope": "global",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [],
+  "checksumAlgorithm": "sha256",
+  "checksum": "3215bdeefd42f3ceedf2acbf6ec30f6f4e00998b720f090c67eeda23330607f9",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/ddl/planes/athyper/control/12_bank_format_rule_reference_seed.sql",
+      "sha256": "0a1dcd297c39c9fd4e9e1ff0dfbca6437c7dc5924da8845b51bb73a43a0b3877",
+      "bytes": 5657,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.current_principal_id",
+    "requiredRelations": [
+      "control.bank_format_rule",
+      "shared.country",
+      "master.principal"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed-packs/blueprints-v2/receipts/50-bank-formats.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

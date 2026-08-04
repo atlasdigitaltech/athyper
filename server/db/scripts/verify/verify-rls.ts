@@ -66,7 +66,7 @@ let ACTOR_ID = "";
 // ── Table descriptors ─────────────────────────────────────────────────────────
 
 interface TableUnderTest {
-  /** Fully-qualified table name, e.g. "master.content_item" */
+  /** Fully-qualified table name, e.g. "document.content_item" */
   table:           string;
   /** Minimal INSERT values. Must include tenant_id, id, created_by. */
   values: (tenantId: string) => Record<string, unknown>;
@@ -80,7 +80,7 @@ interface TableUnderTest {
 const TABLES_UNDER_TEST: TableUnderTest[] = [
   // ── CMS ──────────────────────────────────────────────────────────────────────
   {
-    table: "master.content_item",
+    table: "document.content_item",
     values: (t) => ({
       tenant_id: t, code: `rls-test-${t.slice(0, 8)}`,
       title: "RLS Test Item", kind: "page",
@@ -90,7 +90,7 @@ const TABLES_UNDER_TEST: TableUnderTest[] = [
   },
   // ── Comments ─────────────────────────────────────────────────────────────────
   {
-    table: "master.comment",
+    table: "document.comment",
     values: (t) => ({
       tenant_id: t, entity_type: "rls_test", entity_id: ACTOR_ID,
       commenter_id: ACTOR_ID, comment_text: "RLS test comment",

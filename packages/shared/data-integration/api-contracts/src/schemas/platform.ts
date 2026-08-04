@@ -13,7 +13,6 @@ import { EntityListQueryStateSchema } from "./entity-list";
 export const SessionSchema = z.object({
   user_id: UuidSchema,
   tenant_id: UuidSchema,
-  persona_code: z.string(),
   workbench: z.enum(["user", "partner", "admin"]),
   locale: z.string(),
   timezone: z.string(),

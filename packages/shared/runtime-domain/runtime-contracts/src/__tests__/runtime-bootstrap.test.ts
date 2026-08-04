@@ -15,7 +15,6 @@ describe("runtime bootstrap contracts", () => {
       operations: [],
       policy: null,
       lifecycleStateMasks: [],
-      permissionAliases: {},
       childProjections: [{
         relationName: "lines",
         entityCode: "purchase_order_line",

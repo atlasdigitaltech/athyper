@@ -139,7 +139,7 @@ export class AutonomyResolver {
       }>`
         SELECT autonomy_level, min_confidence_for_auto, requires_human_confirmation,
                is_active, doc_class
-        FROM   control.ai_action_policy
+        FROM   ai.ai_action_policy
         WHERE  tenant_id   = ${tenantId}::uuid
           AND  action_code = ${actionCode}
           ${activeRowFilter}

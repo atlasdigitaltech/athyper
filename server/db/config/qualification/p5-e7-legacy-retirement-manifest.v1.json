@@ -1,0 +1,28 @@
+{
+  "contractVersion": "p5-e7.legacy-operation-scope-retirement.v1",
+  "minimumStableActiveHours": 168,
+  "requiredPlanes": ["neon", "mesh"],
+  "requiredConditions": [
+    "all_published_operations_manifested",
+    "all_manifested_operations_qualified",
+    "all_manifested_operations_active",
+    "exact_release_and_artifact_coordinates",
+    "stable_active_observation_window",
+    "zero_post_activation_fallbacks",
+    "rollback_drill_passed"
+  ],
+  "runtimeBlockers": [
+    {
+      "code": "legacy_factory_default",
+      "path": "server/packages/services/iam/authorization-runtime/runtime-factory.ts",
+      "symbol": "withRetiredLegacyOperationScope",
+      "requiredResolution": "Wire the post-retirement factory only after every operation is certified, active, rollback-drilled, and stable for the required observation window."
+    }
+  ],
+  "retirementPolicy": {
+    "legacyAuthoritativeUntilReady": true,
+    "automaticDropAllowed": false,
+    "rollbackMode": "legacy",
+    "requireExplicitRetirementTicket": true
+  }
+}

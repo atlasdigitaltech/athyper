@@ -443,7 +443,7 @@ export function createStudioVersionRoutes(router: Router, deps: StudioVersionRou
       // Run the supersede + promote inside a single transaction so the
       // (entity_id, EFFECTIVE) invariant is never violated mid-flight.
       // Phase 5 (R-P4-1): we also write a `version_publish` row into
-      // log.descriptor_cache_invalidation so the cache listener (worker.ts
+      // event.descriptor_invalidation_outbox so the cache listener (worker.ts
       // → createDescriptorCacheListener) picks it up via the 30s poller and
       // purges Redis. We can't pg_notify directly here because the api
       // process runs on PgBouncer transaction mode; the listener subscribes
@@ -479,30 +479,38 @@ export function createStudioVersionRoutes(router: Router, deps: StudioVersionRou
         `.execute(trx);
 
         await sql`
-          INSERT INTO log.descriptor_cache_invalidation
-              (tenant_id, entity_code, plane_key, reason,
-               triggered_by_table, triggered_by_id, created_by)
-          VALUES (
-              NULL,
-              (SELECT entity_code FROM control.entity WHERE id = ${row.entity_id}::uuid),
-              NULL,  -- broad invalidation: any plane that compiled this entity is now stale
-              'version_publish',
-              'control.entity_version',
-              ${id}::uuid,
-              ${ctx.pId}::uuid
+          WITH queued AS (
+            INSERT INTO event.descriptor_invalidation_outbox
+                (tenant_id, entity_code, plane_key, reason,
+                 source_table, source_id, event_key, created_by)
+            VALUES (
+                NULL,
+                (SELECT entity_code FROM control.entity WHERE id = ${row.entity_id}::uuid),
+                NULL,
+                'version_publish',
+                'control.entity_version',
+                ${id}::uuid,
+                ${`metadata.entity_version:${id}`},
+                ${ctx.pId}::uuid
+            )
+            ON CONFLICT (event_key) DO UPDATE
+              SET status = 'pending', available_at = now(), last_error = NULL,
+                  attempts = 0, locked_at = NULL, locked_by = NULL, locked_until = NULL,
+                  processed_at = NULL, processed_by = NULL
+            RETURNING id
           )
-        `.execute(trx);
-
-        await sql`
           SELECT pg_notify(
             'desc_invalidate',
             json_build_object(
+              'outbox_id', queued.id,
               'tenant_id', NULL,
               'entity_code', (SELECT entity_code FROM control.entity WHERE id = ${row.entity_id}::uuid),
               'reason', 'version_publish',
-              'source', 'control.entity_version'
+              'source', 'control.entity_version',
+              'at', extract(epoch from clock_timestamp())
             )::text
           )
+          FROM queued
         `.execute(trx);
       });
 

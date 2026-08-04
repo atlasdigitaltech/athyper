@@ -2,18 +2,18 @@
  * ContentAttachmentService
  *
  * Application service for S3-backed document attachments.
- * All file bytes live in object storage; metadata lives in master.attachment;
- * entity ownership lives in master.entity_document_link.
+ * All file bytes live in object storage; metadata lives in document.attachment;
+ * entity ownership lives in document.attachment_link.
  *
  * Transaction boundary (upload):
  *   1. PUT bytes → S3 first
- *   2. DB transaction: INSERT master.attachment + master.entity_document_link
+ *   2. DB transaction: INSERT document.attachment + document.attachment_link
  *   3. On DB failure → compensating S3 delete
  *
  * Download: resolve link → check status → S3 GET → write access audit (best-effort)
  *
  * Delete: remove entity_document_link row; if no remaining links, set
- *   master.attachment.status = 'deleted' (logical-only; physical S3 cleanup deferred).
+ *   document.attachment.status = 'deleted' (logical-only; physical S3 cleanup deferred).
  */
 
 import { createHash, randomUUID } from "node:crypto";
@@ -312,7 +312,7 @@ export class ContentAttachmentService {
     try {
       const attachment = await this.db.transaction().execute(async (trx) => {
         const row = await trx
-          .insertInto("master.attachment" as never)
+          .insertInto("document.attachment" as never)
           .values({
             id:                        attachmentId,
             tenant_id:                 tenantId,
@@ -347,7 +347,7 @@ export class ContentAttachmentService {
           .executeTakeFirstOrThrow();
 
         await trx
-          .insertInto("master.entity_document_link" as never)
+          .insertInto("document.attachment_link" as never)
           .values({
             tenant_id:     tenantId,
             entity_type:   entityType,
@@ -457,7 +457,7 @@ export class ContentAttachmentService {
       throw new Error("ATTACHMENT_CHECKSUM_MISMATCH");
     }
     const row = await this.db.transaction().execute(async (trx) => {
-      const attachment = await trx.insertInto("master.attachment" as never).values({
+      const attachment = await trx.insertInto("document.attachment" as never).values({
         id: params.attachmentId,
         tenant_id: params.tenantId,
         file_name: params.fileName.slice(0, 500),
@@ -481,7 +481,7 @@ export class ContentAttachmentService {
         created_by: params.principalId,
         metadata: { upload_mode: "presigned", etag: metadata.etag ?? null },
       } as never).returning(["id", "file_name", "content_type", "size_bytes", "created_at", "status", "version_no", "storage_key"] as never[]).executeTakeFirstOrThrow();
-      await trx.insertInto("master.entity_document_link" as never).values({
+      await trx.insertInto("document.attachment_link" as never).values({
         tenant_id: params.tenantId,
         entity_type: params.entityType,
         entity_id: params.entityId,
@@ -564,7 +564,7 @@ export class ContentAttachmentService {
     try {
       const attachment = await this.db.transaction().execute(async (trx) => {
         const row = await trx
-          .insertInto("master.attachment" as never)
+          .insertInto("document.attachment" as never)
           .values({
             id:                           attachmentId,
             tenant_id:                    tenantId,
@@ -598,7 +598,7 @@ export class ContentAttachmentService {
           .executeTakeFirstOrThrow();
 
         await trx
-          .insertInto("master.entity_document_link" as never)
+          .insertInto("document.attachment_link" as never)
           .values({
             tenant_id:     tenantId,
             entity_type:   entityType,
@@ -667,8 +667,8 @@ export class ContentAttachmentService {
     const { tenantId, entityType, entityId } = params;
 
     const rows = await this.db
-      .selectFrom("master.entity_document_link as edl")
-      .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+      .selectFrom("document.attachment_link as edl")
+      .innerJoin("document.attachment as a", "a.id", "edl.attachment_id")
       .leftJoin("master.principal as p", "p.id", "a.uploaded_by")
       .select([
         "a.id",
@@ -706,7 +706,7 @@ export class ContentAttachmentService {
 
   async findReplayAttachment(params: FindAttachmentReplayParams): Promise<UploadReplayResult | null> {
     let query = this.db
-      .selectFrom("master.attachment as a")
+      .selectFrom("document.attachment as a")
       .select([
         "a.id",
         "a.file_name",
@@ -760,8 +760,8 @@ export class ContentAttachmentService {
     const { tenantId, entityType, entityId, attachmentId, principalId, requestId, userAgent } = params;
 
     const row = await this.db
-      .selectFrom("master.entity_document_link as edl")
-      .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+      .selectFrom("document.attachment_link as edl")
+      .innerJoin("document.attachment as a", "a.id", "edl.attachment_id")
       .select([
         "a.id",
         "a.file_name",
@@ -821,8 +821,8 @@ export class ContentAttachmentService {
     const { tenantId, entityType, entityId, attachmentId, principalId, requestId, userAgent } = params;
 
     const row = await this.db
-      .selectFrom("master.entity_document_link as edl")
-      .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+      .selectFrom("document.attachment_link as edl")
+      .innerJoin("document.attachment as a", "a.id", "edl.attachment_id")
       .select([
         "a.id",
         "a.file_name",
@@ -886,7 +886,7 @@ export class ContentAttachmentService {
 
     // Remove the specific link first
     await this.db
-      .deleteFrom("master.entity_document_link" as never)
+      .deleteFrom("document.attachment_link" as never)
       .where("tenant_id"    as never, "=", tenantId    as never)
       .where("entity_type"  as never, "=", entityType  as never)
       .where("entity_id"    as never, "=", entityId    as never)
@@ -895,7 +895,7 @@ export class ContentAttachmentService {
 
     // Count remaining links across all entities for this attachment
     const countRow = await this.db
-      .selectFrom("master.entity_document_link" as never)
+      .selectFrom("document.attachment_link" as never)
       .select(sql<string>`COUNT(*)`.as("count") as never)
       .where("attachment_id" as never, "=", attachmentId as never)
       .where("tenant_id"     as never, "=", tenantId     as never)
@@ -913,7 +913,7 @@ export class ContentAttachmentService {
     } else {
       // Decrement reference_count (floor at 0)
       await this.db
-        .updateTable("master.attachment" as never)
+        .updateTable("document.attachment" as never)
         .set({
           reference_count: sql`GREATEST(reference_count - 1, 0)`,
           updated_at:      new Date(),
@@ -1015,7 +1015,7 @@ export class ContentAttachmentService {
     } = params;
 
     const before = await this.db
-      .selectFrom("master.attachment" as never)
+      .selectFrom("document.attachment" as never)
       .select(["status" as never, "reference_count" as never])
       .where("id"        as never, "=", attachmentId as never)
       .where("tenant_id" as never, "=", tenantId     as never)
@@ -1032,7 +1032,7 @@ export class ContentAttachmentService {
     }
 
     await this.db
-      .updateTable("master.attachment" as never)
+      .updateTable("document.attachment" as never)
       .set({
         status:            toStatus,
         status_changed_at:  new Date(),

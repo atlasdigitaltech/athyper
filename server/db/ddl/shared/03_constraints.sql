@@ -60,22 +60,9 @@ ALTER TABLE shared.uom DROP CONSTRAINT IF EXISTS fk_uom_quantity_type;
 ALTER TABLE shared.uom DROP CONSTRAINT IF EXISTS uom_quantity_type_chk;
 
 -- DEFERRABLE: domain codes seeded before commodity/industry codes in same transaction
-DO $$ BEGIN
-    ALTER TABLE shared.commodity_code
-        ADD CONSTRAINT fk_commodity_code_domain
-        FOREIGN KEY (domain_code) REFERENCES control.lookup_domain (code)
-        ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
+-- (moved to late phase in common/shared/99_lookup_domain_reference_constraints.sql)
 
 -- DEFERRABLE: same rationale as commodity_code
-DO $$ BEGIN
-    ALTER TABLE shared.industry_code
-        ADD CONSTRAINT fk_industry_code_domain
-        FOREIGN KEY (domain_code) REFERENCES control.lookup_domain (code)
-        ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
 
 -- persona.scope_mode — session-dependent CHECK removed, trigger-based validation added.
 ALTER TABLE shared.persona DROP CONSTRAINT IF EXISTS persona_scope_mode_chk;
@@ -172,8 +159,7 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
--- UNIQUE constraints on access tables (may be missing when the table existed
--- before the plan_id → plan_version_id migration and was altered in-place).
+-- UNIQUE constraints on access tables (legacy indexes → constraints)
 DO $$ BEGIN
     IF NOT EXISTS (
         SELECT 1
@@ -212,10 +198,6 @@ DO $$ BEGIN
 END $$;
 
 -- Enforce NOT NULL on plan_version_id across all three access tables.
--- On fresh DBs the column is already NOT NULL from CREATE TABLE IF NOT EXISTS.
--- On migrated DBs the ALTER TABLE migration path adds it as nullable; this
--- block enforces NOT NULL after the FK is in place (no rows exist yet at
--- DDL time, so the constraint is safe to add immediately).
 DO $$ BEGIN
     ALTER TABLE shared.plan_module_access     ALTER COLUMN plan_version_id SET NOT NULL;
 EXCEPTION WHEN others THEN NULL;

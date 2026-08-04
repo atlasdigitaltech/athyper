@@ -2124,11 +2124,11 @@ export class EntityCompilerService {
   private async loadMutationOperations(entityCode: string): Promise<CapabilityOperationInput[]> {
     const rows = await (this.db as any)
       .selectFrom("control.entity_operation as eo")
-      .leftJoin("shared.permission as p", "p.code", "eo.permission_code")
+      .leftJoin("control.auth_permission as p", "p.id", "eo.permission_id_v2")
       .select([
         "eo.permission_code",
         "eo.is_enabled",
-        sql<boolean>`p.code IS NOT NULL AND p.status = 'active'`.as("permission_registered"),
+        sql<boolean>`p.id IS NOT NULL AND p.status = 'published'`.as("permission_registered"),
       ] as never[])
       .where("eo.entity_name" as never, "=" as never, entityCode as never)
       .where("eo.tenant_id" as never, "is" as never, null as never)

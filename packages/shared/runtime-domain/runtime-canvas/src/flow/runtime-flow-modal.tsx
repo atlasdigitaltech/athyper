@@ -38,7 +38,7 @@ export interface FlowModalProps {
  * Metadata-driven target descriptor on a flow field binding.
  * Mirrors entity_flow_field.metadata.target — when kind='comment', the
  * field renders as a rich comment composer and the backend dispatcher
- * persists the value into master.comment instead of a doc column.
+ * persists the value into document.comment instead of a doc column.
  */
 interface CommentTargetMeta {
   kind: "comment";

@@ -27,8 +27,6 @@ type AnyDb = Kysely<any>;
 
 const ACTIVE_WORK_ITEM_STATUSES = ["pending", "assigned", "in_progress"] as const;
 const ACTIVE_REQUEST_STATUSES   = ["pending", "in_progress"] as const;
-const DELEGATION_SCOPES         = ["workflow", "entity", "task"] as const;
-
 export interface IsActiveApproverForParams {
   db: AnyDb;
   tenantId: string;
@@ -80,7 +78,7 @@ export async function isActiveApproverFor(params: IsActiveApproverForParams): Pr
     .filter((id): id is string => typeof id === "string" && id.length > 0);
   if (groupIds.length > 0) {
     const groupHit = await db
-      .selectFrom("master.auth_group_member as agm")
+      .selectFrom("master.auth_current_group_member_v as agm")
       .select("agm.group_id")
       .where("agm.tenant_id", "=", tenantId)
       .where("agm.principal_id", "=", principalId)
@@ -96,14 +94,14 @@ export async function isActiveApproverFor(params: IsActiveApproverForParams): Pr
     .filter((id): id is string => typeof id === "string" && id.length > 0);
   if (assigneeIds.length > 0) {
     const delegationHit = await db
-      .selectFrom("master.delegation_grant as dg")
+      .selectFrom("master.auth_delegation as dg")
       .select("dg.id")
       .where("dg.tenant_id", "=", tenantId)
       .where("dg.delegate_id", "=", principalId)
       .where("dg.delegator_id", "in", assigneeIds)
-      .where("dg.is_revoked", "=", false)
-      .where("dg.expires_at", ">", new Date())
-      .where("dg.scope_type", "in", DELEGATION_SCOPES)
+      .where("dg.status", "=", "active")
+      .where("dg.effective_from", "<=", new Date())
+      .where("dg.effective_until", ">", new Date())
       .limit(1)
       .executeTakeFirst();
     if (delegationHit) return true;

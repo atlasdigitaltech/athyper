@@ -61,7 +61,7 @@ Individual rules within a policy definition.
 | `explanation` | `text` | Human-readable explanation returned to the UI on deny/warn |
 | `approvers` | `jsonb[]` | `[{type, value}]` — override approver list when action = `require_workflow` |
 | `sla_hours` | `smallint` | Override SLA for triggered workflow |
-| `budget_check_config_id` | `uuid FK` | → budget config table when action = `budget_check` |
+| Budget-check policy | resolved reference | `control.resolve_budget_control_policy(...)` selects the typed policy when action = `budget_check`; no legacy config FK is stored |
 
 **Actions:**
 

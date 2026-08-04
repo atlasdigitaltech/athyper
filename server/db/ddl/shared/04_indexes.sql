@@ -47,48 +47,8 @@ CREATE INDEX IF NOT EXISTS industry_code_keywords_gin ON shared.industry_code US
 -- module
 CREATE INDEX IF NOT EXISTS module_workspace_idx ON shared.module (workspace_id) WHERE workspace_id IS NOT NULL;
 
--- persona
-CREATE INDEX IF NOT EXISTS persona_scope_mode_idx ON shared.persona (scope_mode);
-CREATE INDEX IF NOT EXISTS persona_system_pidx ON shared.persona (is_system) WHERE is_system = true;
-
--- enterprise_feature
-CREATE INDEX IF NOT EXISTS enterprise_feature_active_pidx ON shared.enterprise_feature (code) WHERE status = 'active';
-
 -- subscription_plan
 CREATE INDEX IF NOT EXISTS subscription_plan_active_pidx ON shared.subscription_plan (code) WHERE status = 'active';
-
--- permission_category
-CREATE INDEX IF NOT EXISTS permission_category_active_pidx ON shared.permission_category (code) WHERE status = 'active';
-
--- permission
-CREATE INDEX IF NOT EXISTS permission_category_idx ON shared.permission (category_id);
-CREATE INDEX IF NOT EXISTS permission_active_pidx ON shared.permission (code) WHERE status = 'active';
-CREATE INDEX IF NOT EXISTS permission_plan_restricted_pidx ON shared.permission (id) WHERE is_plan_restricted = true;
-
--- permission_scope_policy
-CREATE INDEX IF NOT EXISTS permission_scope_policy_permission_pidx
-    ON shared.permission_scope_policy (permission_id) WHERE status = 'active';
-CREATE INDEX IF NOT EXISTS permission_scope_policy_lookup_pidx
-    ON shared.permission_scope_policy (assignment_scope_type, organization_domain, permission_id)
-    WHERE status = 'active';
-
--- persona_permission
-CREATE INDEX IF NOT EXISTS persona_permission_persona_idx ON shared.persona_permission (persona_id);
-CREATE INDEX IF NOT EXISTS persona_permission_granted_pidx ON shared.persona_permission (persona_id, permission_id) WHERE is_granted = true;
-
--- ou_type — REMOVED: migrated to control.lookup_domain / control.lookup_value
-
--- plan_module_access
-CREATE INDEX IF NOT EXISTS pma_plan_ver_idx ON shared.plan_module_access (plan_version_id);
-CREATE INDEX IF NOT EXISTS pma_included_pidx ON shared.plan_module_access (plan_version_id, module_id) WHERE is_included = true;
-
--- plan_permission_access
-CREATE INDEX IF NOT EXISTS ppa_plan_ver_idx ON shared.plan_permission_access (plan_version_id);
-CREATE INDEX IF NOT EXISTS ppa_included_pidx ON shared.plan_permission_access (plan_version_id, permission_id) WHERE is_included = true;
-
--- plan_feature_access
-CREATE INDEX IF NOT EXISTS pfa_plan_ver_idx ON shared.plan_feature_access (plan_version_id);
-CREATE INDEX IF NOT EXISTS pfa_included_pidx ON shared.plan_feature_access (plan_version_id, feature_id) WHERE is_included = true;
 
 
 -- ── §CCW  shared.commodity_crosswalk ─────────────────────────────────────────

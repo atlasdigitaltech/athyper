@@ -156,7 +156,7 @@ implements AtlasToolExecutionRecorder {
     await this.withScope(proposal, async (trx) => {
       const result = await sql<ProposalStateRow>`
         WITH inserted AS (
-          INSERT INTO event.ai_tool_invocation (
+          INSERT INTO ai.ai_tool_invocation (
             id,
             tenant_id,
             thread_id,
@@ -213,7 +213,7 @@ implements AtlasToolExecutionRecorder {
         ),
         matching_existing AS (
           SELECT i.id
-          FROM event.ai_tool_invocation i
+          FROM ai.ai_tool_invocation i
           WHERE NOT EXISTS (SELECT 1 FROM inserted)
             AND i.id = ${proposal.executionId}::uuid
             AND i.tenant_id = ${proposal.tenantId}::uuid
@@ -261,7 +261,7 @@ implements AtlasToolExecutionRecorder {
 
     await this.withScope(scope, async (trx) => {
       const result = await sql<MutationRow>`
-        UPDATE event.ai_tool_invocation
+        UPDATE ai.ai_tool_invocation
         SET tool_version = ${resolution.toolVersion},
             action_code = ${resolution.actionCode},
             operation_class = ${resolution.operationClass},
@@ -291,7 +291,7 @@ implements AtlasToolExecutionRecorder {
           AND status = 'proposed'
           AND EXISTS (
             SELECT 1
-            FROM event.atlas_run r
+            FROM ai.atlas_run r
             WHERE r.tenant_id = ${scope.tenantId}::uuid
               AND r.conversation_id = ${scope.threadId}::uuid
               AND r.plane = ${scope.plane}
@@ -337,7 +337,7 @@ implements AtlasToolExecutionRecorder {
             ? sql`('proposed', 'executing')`
             : sql`('proposed')`;
       const result = await sql<MutationRow>`
-        UPDATE event.ai_tool_invocation
+        UPDATE ai.ai_tool_invocation
         SET ${resolutionWrite}
             status = ${terminalRecord.status},
             terminal_error_class = ${terminalRecord.errorCode},

@@ -1,8 +1,8 @@
 -- Universal HR job classification: job_family / job_function / career_band /
--- career_level / pay_grade / designation / job. Industry-agnostic templates —
--- 15 families × ~66 functions, 9 bands × 19 levels, 15 pay grades (G01–G15),
+-- career_level / pay_grade / designation / job. Industry-agnostic templates â€”
+-- 15 families Ã— ~66 functions, 9 bands Ã— 19 levels, 15 pay grades (G01â€“G15),
 -- ~48 designations, ~80 representative jobs.
--- Pay-grade min/midpoint/max amounts are intentionally omitted — tenants set
+-- Pay-grade min/midpoint/max amounts are intentionally omitted â€” tenants set
 -- those per currency + market benchmark separately.
 
 DO $seed$
@@ -13,9 +13,11 @@ DECLARE
     v_ver  text := '1.0.0';
     v_n    int;
 BEGIN
+    CREATE TEMP SEQUENCE IF NOT EXISTS wave5_people_job_seq START WITH 1 INCREMENT BY 1;
+    ALTER SEQUENCE pg_temp.wave5_people_job_seq RESTART WITH 1;
     v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
     IF v_tid IS NULL THEN
-        RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
+        RAISE EXCEPTION '[seed] app.seed_tenant_id not set â€” run: SET app.seed_tenant_id = ''<uuid>''';
     END IF;
 
     RAISE NOTICE '[%] Starting job classification seed for tenant %', v_pack, v_tid;
@@ -25,35 +27,35 @@ BEGIN
     -- ========================================================================
     INSERT INTO master.job_family (id, tenant_id, code, name, description, status, created_by)
     VALUES
-        (shared.uuidv7(), v_tid, 'tech_engineering',   'Technology & Engineering',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'tech_engineering',   'Technology & Engineering',
          'Software, infrastructure, data, hardware, and platform engineering.',             'active', v_su),
-        (shared.uuidv7(), v_tid, 'finance_accounting', 'Finance & Accounting',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'finance_accounting', 'Finance & Accounting',
          'Financial planning, accounting, treasury, tax, audit, and procurement.',          'active', v_su),
-        (shared.uuidv7(), v_tid, 'human_resources',    'Human Resources & People',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'human_resources',    'Human Resources & People',
          'Talent acquisition, HR business partnering, compensation, and L&D.',             'active', v_su),
-        (shared.uuidv7(), v_tid, 'sales_growth',       'Sales & Business Development',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'sales_growth',       'Sales & Business Development',
          'Revenue generation via direct sales, partnerships, and account management.',      'active', v_su),
-        (shared.uuidv7(), v_tid, 'marketing_comms',    'Marketing & Communications',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'marketing_comms',    'Marketing & Communications',
          'Brand, digital marketing, product marketing, content, and PR.',                  'active', v_su),
-        (shared.uuidv7(), v_tid, 'operations_sc',      'Operations & Supply Chain',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'operations_sc',      'Operations & Supply Chain',
          'Supply chain, logistics, manufacturing, facilities, and quality management.',     'active', v_su),
-        (shared.uuidv7(), v_tid, 'legal_compliance',   'Legal & Compliance',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'legal_compliance',   'Legal & Compliance',
          'Corporate legal, contracts, IP, regulatory compliance, and data privacy.',        'active', v_su),
-        (shared.uuidv7(), v_tid, 'customer_success',   'Customer Success & Support',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'customer_success',   'Customer Success & Support',
          'Customer onboarding, support, success management, and community.',               'active', v_su),
-        (shared.uuidv7(), v_tid, 'research_dev',       'Research & Development',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'research_dev',       'Research & Development',
          'Applied research, product development, and innovation.',                         'active', v_su),
-        (shared.uuidv7(), v_tid, 'data_analytics',     'Data & Analytics',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'data_analytics',     'Data & Analytics',
          'Data science, BI, ML engineering, and data governance.',                         'active', v_su),
-        (shared.uuidv7(), v_tid, 'admin_facilities',   'Administration & Facilities',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'admin_facilities',   'Administration & Facilities',
          'Executive support, records management, facility services, and travel.',           'active', v_su),
-        (shared.uuidv7(), v_tid, 'healthcare_medical', 'Healthcare & Medical',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'healthcare_medical', 'Healthcare & Medical',
          'Clinical, nursing, pharmacy, diagnostics, and allied health roles.',             'active', v_su),
-        (shared.uuidv7(), v_tid, 'creative_design',    'Creative & Design',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'creative_design',    'Creative & Design',
          'UX, visual design, video production, and architecture.',                         'active', v_su),
-        (shared.uuidv7(), v_tid, 'security_risk',      'Risk, Security & Audit',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'security_risk',      'Risk, Security & Audit',
          'Enterprise risk, internal controls, business continuity, and fraud.',            'active', v_su),
-        (shared.uuidv7(), v_tid, 'executive_mgmt',     'Executive & General Management',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'executive_mgmt',     'Executive & General Management',
          'C-suite leadership and cross-functional general management.',                    'active', v_su)
     ON CONFLICT (tenant_id, code) DO UPDATE
         SET name       = EXCLUDED.name,
@@ -70,7 +72,7 @@ BEGIN
     -- JOB FUNCTIONS  (~66 functions spanning all 15 families)
     -- ========================================================================
     INSERT INTO master.job_function (id, tenant_id, code, name, job_family_id, description, status, created_by)
-    SELECT shared.uuidv7(), v_tid, x.code, x.name,
+    SELECT md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, x.code, x.name,
            (SELECT id FROM master.job_family WHERE tenant_id = v_tid AND code = x.family),
            x.description, 'active', v_su
     FROM (VALUES
@@ -249,15 +251,15 @@ BEGIN
     -- ========================================================================
     INSERT INTO master.career_band (id, tenant_id, code, name, sort_order, status, created_by)
     VALUES
-        (shared.uuidv7(), v_tid, 'ENTRY',      'Entry Level',       10, 'active', v_su),
-        (shared.uuidv7(), v_tid, 'DEVELOPING', 'Developing',        20, 'active', v_su),
-        (shared.uuidv7(), v_tid, 'PROFESSIONAL','Professional',     30, 'active', v_su),
-        (shared.uuidv7(), v_tid, 'SENIOR',     'Senior',            40, 'active', v_su),
-        (shared.uuidv7(), v_tid, 'LEAD',       'Lead / Principal',  50, 'active', v_su),
-        (shared.uuidv7(), v_tid, 'MANAGEMENT', 'Management',        60, 'active', v_su),
-        (shared.uuidv7(), v_tid, 'SR_MGMT',    'Senior Management', 70, 'active', v_su),
-        (shared.uuidv7(), v_tid, 'EXECUTIVE',  'Executive',         80, 'active', v_su),
-        (shared.uuidv7(), v_tid, 'C_SUITE',    'C-Suite',           90, 'active', v_su)
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'ENTRY',      'Entry Level',       10, 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'DEVELOPING', 'Developing',        20, 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'PROFESSIONAL','Professional',     30, 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'SENIOR',     'Senior',            40, 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'LEAD',       'Lead / Principal',  50, 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'MANAGEMENT', 'Management',        60, 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'SR_MGMT',    'Senior Management', 70, 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'EXECUTIVE',  'Executive',         80, 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'C_SUITE',    'C-Suite',           90, 'active', v_su)
     ON CONFLICT (tenant_id, code) DO UPDATE
         SET name       = EXCLUDED.name,
             sort_order = EXCLUDED.sort_order,
@@ -273,7 +275,7 @@ BEGIN
     -- CAREER LEVELS  (19 levels spanning all bands)
     -- ========================================================================
     INSERT INTO master.career_level (id, tenant_id, code, name, career_band_id, level_no, sort_order, status, created_by)
-    SELECT shared.uuidv7(), v_tid, x.code, x.name,
+    SELECT md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, x.code, x.name,
            (SELECT id FROM master.career_band WHERE tenant_id = v_tid AND code = x.band),
            x.lvl_no, x.sort_order, 'active', v_su
     FROM (VALUES
@@ -310,28 +312,28 @@ BEGIN
     RAISE NOTICE '[%] career_level: % rows upserted', v_pack, v_n;
 
     -- ========================================================================
-    -- PAY GRADES  (G01–G15)
-    -- Amounts are intentionally NULL — configure min/midpoint/max per
+    -- PAY GRADES  (G01â€“G15)
+    -- Amounts are intentionally NULL â€” configure min/midpoint/max per
     -- currency/country/market benchmark in a separate localisation seed.
     -- grade_set='universal' groups all grades from this pack.
     -- ========================================================================
     INSERT INTO master.pay_grade (id, tenant_id, code, name, grade_set, status, created_by)
     VALUES
-        (shared.uuidv7(), v_tid, 'G01', 'Grade 01 — Intern / Trainee',          'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G02', 'Grade 02 — Junior Entry',               'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G03', 'Grade 03 — Associate / Analyst I',      'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G04', 'Grade 04 — Associate / Analyst II',     'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G05', 'Grade 05 — Professional I',             'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G06', 'Grade 06 — Professional II',            'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G07', 'Grade 07 — Professional III',           'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G08', 'Grade 08 — Senior I',                   'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G09', 'Grade 09 — Senior II',                  'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G10', 'Grade 10 — Lead / Principal',           'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G11', 'Grade 11 — Staff / Distinguished',      'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G12', 'Grade 12 — Manager',                    'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G13', 'Grade 13 — Senior Manager',             'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G14', 'Grade 14 — Director / VP',              'universal', 'active', v_su),
-        (shared.uuidv7(), v_tid, 'G15', 'Grade 15 — Executive / C-Suite',        'universal', 'active', v_su)
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G01', 'Grade 01 â€” Intern / Trainee',          'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G02', 'Grade 02 â€” Junior Entry',               'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G03', 'Grade 03 â€” Associate / Analyst I',      'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G04', 'Grade 04 â€” Associate / Analyst II',     'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G05', 'Grade 05 â€” Professional I',             'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G06', 'Grade 06 â€” Professional II',            'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G07', 'Grade 07 â€” Professional III',           'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G08', 'Grade 08 â€” Senior I',                   'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G09', 'Grade 09 â€” Senior II',                  'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G10', 'Grade 10 â€” Lead / Principal',           'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G11', 'Grade 11 â€” Staff / Distinguished',      'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G12', 'Grade 12 â€” Manager',                    'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G13', 'Grade 13 â€” Senior Manager',             'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G14', 'Grade 14 â€” Director / VP',              'universal', 'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'G15', 'Grade 15 â€” Executive / C-Suite',        'universal', 'active', v_su)
     ON CONFLICT (tenant_id, code) DO UPDATE
         SET name       = EXCLUDED.name,
             grade_set  = EXCLUDED.grade_set,
@@ -348,112 +350,112 @@ BEGIN
     -- ========================================================================
     INSERT INTO master.designation (id, tenant_id, code, name, description, status, created_by)
     VALUES
-        -- ── Entry / Intern tier ───────────────────────────────────────────
-        (shared.uuidv7(), v_tid, 'intern',             'Intern',
+        -- â”€â”€ Entry / Intern tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'intern',             'Intern',
          'Short-term industry placement for students or recent graduates.',                                'active', v_su),
-        (shared.uuidv7(), v_tid, 'trainee',            'Trainee',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'trainee',            'Trainee',
          'Structured programme participant building foundational functional skills.',                     'active', v_su),
-        (shared.uuidv7(), v_tid, 'apprentice',         'Apprentice',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'apprentice',         'Apprentice',
          'Work-based learner combining on-the-job training with formal qualification.',                   'active', v_su),
-        (shared.uuidv7(), v_tid, 'graduate_associate', 'Graduate Associate',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'graduate_associate', 'Graduate Associate',
          'Recent graduate in a rotational or early-career development programme.',                        'active', v_su),
-        -- ── Developing tier ──────────────────────────────────────────────
-        (shared.uuidv7(), v_tid, 'junior_associate',   'Junior Associate',
+        -- â”€â”€ Developing tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'junior_associate',   'Junior Associate',
          'Early-career professional developing core competencies.',                                       'active', v_su),
-        (shared.uuidv7(), v_tid, 'associate',          'Associate',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'associate',          'Associate',
          'Foundation-level professional contributing to team deliverables.',                              'active', v_su),
-        (shared.uuidv7(), v_tid, 'analyst',            'Analyst',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'analyst',            'Analyst',
          'Analytical professional supporting data-driven business decisions.',                            'active', v_su),
-        (shared.uuidv7(), v_tid, 'coordinator',        'Coordinator',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'coordinator',        'Coordinator',
          'Coordinates activities, schedules, and process workflows.',                                     'active', v_su),
-        (shared.uuidv7(), v_tid, 'assistant',          'Assistant',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'assistant',          'Assistant',
          'Provides administrative or functional support to a team or executive.',                         'active', v_su),
-        -- ── Professional tier ─────────────────────────────────────────────
-        (shared.uuidv7(), v_tid, 'specialist',         'Specialist',
+        -- â”€â”€ Professional tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'specialist',         'Specialist',
          'Subject-matter professional applying expertise to complex problems.',                           'active', v_su),
-        (shared.uuidv7(), v_tid, 'consultant',         'Consultant',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'consultant',         'Consultant',
          'Advisory professional delivering analysis, recommendations, and solutions.',                    'active', v_su),
-        (shared.uuidv7(), v_tid, 'engineer',           'Engineer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'engineer',           'Engineer',
          'Technical professional designing, building, or maintaining systems.',                           'active', v_su),
-        (shared.uuidv7(), v_tid, 'officer',            'Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'officer',            'Officer',
          'Professional with defined ownership and accountability in a domain.',                           'active', v_su),
-        -- ── Senior tier ───────────────────────────────────────────────────
-        (shared.uuidv7(), v_tid, 'senior_analyst',     'Senior Analyst',
+        -- â”€â”€ Senior tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'senior_analyst',     'Senior Analyst',
          'Experienced analyst independently leading analysis and mentoring juniors.',                     'active', v_su),
-        (shared.uuidv7(), v_tid, 'senior_specialist',  'Senior Specialist',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'senior_specialist',  'Senior Specialist',
          'Deep-domain specialist with broad impact and informal peer leadership.',                        'active', v_su),
-        (shared.uuidv7(), v_tid, 'senior_consultant',  'Senior Consultant',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'senior_consultant',  'Senior Consultant',
          'Experienced advisor managing complex engagements and client relationships.',                    'active', v_su),
-        (shared.uuidv7(), v_tid, 'senior_engineer',    'Senior Engineer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'senior_engineer',    'Senior Engineer',
          'Experienced engineer contributing to architecture decisions and mentoring.',                     'active', v_su),
-        (shared.uuidv7(), v_tid, 'senior_associate',   'Senior Associate',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'senior_associate',   'Senior Associate',
          'Experienced associate leading workstreams with increasing independence.',                       'active', v_su),
-        -- ── Lead / Principal tier ─────────────────────────────────────────
-        (shared.uuidv7(), v_tid, 'lead',               'Lead',
+        -- â”€â”€ Lead / Principal tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'lead',               'Lead',
          'Technical or functional lead guiding a team or work stream.',                                  'active', v_su),
-        (shared.uuidv7(), v_tid, 'technical_lead',     'Technical Lead',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'technical_lead',     'Technical Lead',
          'Engineering lead setting technical direction for a squad or service area.',                    'active', v_su),
-        (shared.uuidv7(), v_tid, 'principal',          'Principal',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'principal',          'Principal',
          'Senior IC with significant influence on architecture and strategy.',                           'active', v_su),
-        (shared.uuidv7(), v_tid, 'staff_engineer',     'Staff Engineer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'staff_engineer',     'Staff Engineer',
          'Distinguished IC driving cross-team engineering standards and platforms.',                     'active', v_su),
-        (shared.uuidv7(), v_tid, 'subject_matter_expert','Subject Matter Expert',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'subject_matter_expert','Subject Matter Expert',
          'Recognised deep expert consulted for critical decisions in a domain.',                         'active', v_su),
-        (shared.uuidv7(), v_tid, 'architect',          'Architect',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'architect',          'Architect',
          'Designs complex system or solution architectures at enterprise scale.',                        'active', v_su),
-        -- ── Management tier ───────────────────────────────────────────────
-        (shared.uuidv7(), v_tid, 'team_leader',        'Team Leader',
-         'First-line supervisor of a small team (typically 3–8 people).',                               'active', v_su),
-        (shared.uuidv7(), v_tid, 'supervisor',         'Supervisor',
+        -- â”€â”€ Management tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'team_leader',        'Team Leader',
+         'First-line supervisor of a small team (typically 3â€“8 people).',                               'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'supervisor',         'Supervisor',
          'Operational supervisor ensuring day-to-day team performance and compliance.',                  'active', v_su),
-        (shared.uuidv7(), v_tid, 'manager',            'Manager',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'manager',            'Manager',
          'People manager owning team objectives, performance, and career development.',                  'active', v_su),
-        (shared.uuidv7(), v_tid, 'senior_manager',     'Senior Manager',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'senior_manager',     'Senior Manager',
          'Experienced manager overseeing multiple teams or a broad functional sub-area.',               'active', v_su),
-        (shared.uuidv7(), v_tid, 'department_head',    'Department Head',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'department_head',    'Department Head',
          'Owner of a defined department with full functional and budgetary accountability.',            'active', v_su),
-        -- ── Senior Management tier ────────────────────────────────────────
-        (shared.uuidv7(), v_tid, 'director',           'Director',
+        -- â”€â”€ Senior Management tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'director',           'Director',
          'Functional director with budget ownership and multi-team leadership.',                        'active', v_su),
-        (shared.uuidv7(), v_tid, 'senior_director',    'Senior Director',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'senior_director',    'Senior Director',
          'Senior functional director with broader strategic scope or multiple sub-functions.',          'active', v_su),
-        (shared.uuidv7(), v_tid, 'head_of',            'Head of [Function]',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'head_of',            'Head of [Function]',
          'Senior functional owner equivalent to Director; used in specialist domains.',                 'active', v_su),
-        -- ── Executive tier ────────────────────────────────────────────────
-        (shared.uuidv7(), v_tid, 'vice_president',     'Vice President',
+        -- â”€â”€ Executive tier â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'vice_president',     'Vice President',
          'Cross-functional leader with P&L or major programme accountability.',                         'active', v_su),
-        (shared.uuidv7(), v_tid, 'senior_vp',          'Senior Vice President',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'senior_vp',          'Senior Vice President',
          'SVP with wide regional, divisional, or multi-function responsibility.',                       'active', v_su),
-        (shared.uuidv7(), v_tid, 'executive_vp',       'Executive Vice President',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'executive_vp',       'Executive Vice President',
          'EVP with enterprise-level strategic and operational authority.',                              'active', v_su),
-        (shared.uuidv7(), v_tid, 'general_manager',    'General Manager',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'general_manager',    'General Manager',
          'P&L owner of a discrete business unit, market, or geography.',                              'active', v_su),
-        (shared.uuidv7(), v_tid, 'managing_director',  'Managing Director',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'managing_director',  'Managing Director',
          'Legal entity head or senior market leader with full operational control.',                    'active', v_su),
-        -- ── C-Suite ───────────────────────────────────────────────────────
-        (shared.uuidv7(), v_tid, 'ceo',  'Chief Executive Officer',
+        -- â”€â”€ C-Suite â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'ceo',  'Chief Executive Officer',
          'Highest executive accountable for overall strategy, performance, and stakeholders.',          'active', v_su),
-        (shared.uuidv7(), v_tid, 'coo',  'Chief Operating Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'coo',  'Chief Operating Officer',
          'Responsible for day-to-day operational execution of the enterprise.',                        'active', v_su),
-        (shared.uuidv7(), v_tid, 'cfo',  'Chief Financial Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'cfo',  'Chief Financial Officer',
          'Accountable for financial strategy, controls, reporting, and capital allocation.',            'active', v_su),
-        (shared.uuidv7(), v_tid, 'cto',  'Chief Technology Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'cto',  'Chief Technology Officer',
          'Owns technology vision, engineering excellence, and product engineering delivery.',           'active', v_su),
-        (shared.uuidv7(), v_tid, 'chro', 'Chief Human Resources Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'chro', 'Chief Human Resources Officer',
          'Leads people strategy, talent, culture, and organisational effectiveness.',                  'active', v_su),
-        (shared.uuidv7(), v_tid, 'cmo',  'Chief Marketing Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'cmo',  'Chief Marketing Officer',
          'Sets marketing vision; drives brand, demand generation, and GTM strategy.',                  'active', v_su),
-        (shared.uuidv7(), v_tid, 'cio',  'Chief Information Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'cio',  'Chief Information Officer',
          'Accountable for IT strategy, enterprise systems, and digital transformation.',               'active', v_su),
-        (shared.uuidv7(), v_tid, 'cro',  'Chief Revenue Officer',
-         'Owns end-to-end revenue — sales, partnerships, and customer success.',                       'active', v_su),
-        (shared.uuidv7(), v_tid, 'cpo',  'Chief Product Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'cro',  'Chief Revenue Officer',
+         'Owns end-to-end revenue â€” sales, partnerships, and customer success.',                       'active', v_su),
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'cpo',  'Chief Product Officer',
          'Leads product strategy, roadmap, and product management function.',                          'active', v_su),
-        (shared.uuidv7(), v_tid, 'clo',  'Chief Legal Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'clo',  'Chief Legal Officer',
          'Heads legal, compliance, governance, and enterprise risk functions.',                        'active', v_su),
-        (shared.uuidv7(), v_tid, 'cdo',  'Chief Data Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'cdo',  'Chief Data Officer',
          'Responsible for enterprise data strategy, governance, and analytics.',                       'active', v_su),
-        (shared.uuidv7(), v_tid, 'ciso', 'Chief Information Security Officer',
+        (md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, 'ciso', 'Chief Information Security Officer',
          'Owns cybersecurity strategy, incident response, and information risk management.',           'active', v_su)
     ON CONFLICT (tenant_id, code) DO UPDATE
         SET name        = EXCLUDED.name,
@@ -467,8 +469,8 @@ BEGIN
     RAISE NOTICE '[%] designation: % rows upserted', v_pack, v_n;
 
     -- ========================================================================
-    -- JOBS  (80 composite profiles — family → function → band → level →
-    --        grade → designation)
+    -- JOBS  (80 composite profiles â€” family â†’ function â†’ band â†’ level â†’
+    --        grade â†’ designation)
     -- Each row uses subqueries to resolve FK IDs, keeping codes readable
     -- and eliminating brittle UUID literals.
     -- ========================================================================
@@ -479,7 +481,7 @@ BEGIN
         description, status, created_by
     )
     SELECT
-        shared.uuidv7(), v_tid, x.code, x.name,
+        md5('wave5:people-payroll:job-classification:' || v_tid || ':' || nextval('pg_temp.wave5_people_job_seq'))::uuid, v_tid, x.code, x.name,
         (SELECT id FROM master.job_family   WHERE tenant_id = v_tid AND code = x.fam),
         (SELECT id FROM master.job_function WHERE tenant_id = v_tid AND code = x.fn),
         (SELECT id FROM master.career_band  WHERE tenant_id = v_tid AND code = x.band),
@@ -489,7 +491,7 @@ BEGIN
         x.description, 'active', v_su
     FROM (VALUES
 
-        -- ── Technology & Engineering (21 jobs) ───────────────────────────
+        -- â”€â”€ Technology & Engineering (21 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('jr_software_engineer',        'Junior Software Engineer',
          'tech_engineering','sw_engineering',  'ENTRY',      'E2', 'G02','engineer',
          'Entry-level developer working on feature development and bug fixes under guidance.'),
@@ -516,7 +518,7 @@ BEGIN
 
         ('engineering_manager',         'Engineering Manager',
          'tech_engineering','sw_engineering',  'MANAGEMENT', 'M1', 'G12','manager',
-         'People manager for 5–10 engineers; owns team delivery, growth, and culture.'),
+         'People manager for 5â€“10 engineers; owns team delivery, growth, and culture.'),
 
         ('sr_engineering_manager',      'Senior Engineering Manager',
          'tech_engineering','sw_engineering',  'MANAGEMENT', 'M3', 'G13','senior_manager',
@@ -574,7 +576,7 @@ BEGIN
          'tech_engineering','it_support',      'DEVELOPING', 'D1', 'G03','specialist',
          'Provides end-user hardware, software, and network troubleshooting support.'),
 
-        -- ── Finance & Accounting (10 jobs) ───────────────────────────────
+        -- â”€â”€ Finance & Accounting (10 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('financial_analyst',           'Financial Analyst',
          'finance_accounting','fin_planning',  'DEVELOPING', 'D2', 'G04','analyst',
          'Supports budgeting, forecasting, and variance analysis cycles.'),
@@ -615,7 +617,7 @@ BEGIN
          'finance_accounting','procurement',   'PROFESSIONAL','P1','G05','specialist',
          'Manages vendor relationships, sourcing, and contract negotiation.'),
 
-        -- ── Human Resources (9 jobs) ─────────────────────────────────────
+        -- â”€â”€ Human Resources (9 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('hr_coordinator',              'HR Coordinator',
          'human_resources','hr_ops',           'DEVELOPING', 'D1', 'G03','coordinator',
          'Handles employee lifecycle admin, onboarding coordination, and HRIS data entry.'),
@@ -652,7 +654,7 @@ BEGIN
          'human_resources','learning_dev',     'PROFESSIONAL','P1','G05','specialist',
          'Designs and delivers training programmes and digital learning content.'),
 
-        -- ── Sales & Business Development (8 jobs) ────────────────────────
+        -- â”€â”€ Sales & Business Development (8 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('sales_development_rep',       'Sales Development Representative',
          'sales_growth','enterprise_sales',    'ENTRY',      'E2', 'G02','associate',
          'Qualifies inbound and outbound leads to build the commercial sales pipeline.'),
@@ -679,13 +681,13 @@ BEGIN
 
         ('cro',                         'Chief Revenue Officer',
          'executive_mgmt','executive_leadership','C_SUITE',  'C1', 'G15','cro',
-         'Accountable for end-to-end revenue — sales, partnerships, and customer success.'),
+         'Accountable for end-to-end revenue â€” sales, partnerships, and customer success.'),
 
         ('partnerships_manager',        'Partnerships Manager',
          'sales_growth','partnerships',        'MANAGEMENT', 'M1', 'G12','manager',
          'Develops and manages strategic channel and alliance partnerships.'),
 
-        -- ── Marketing & Communications (6 jobs) ──────────────────────────
+        -- â”€â”€ Marketing & Communications (6 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('marketing_coordinator',       'Marketing Coordinator',
          'marketing_comms','brand_comms',      'DEVELOPING', 'D1', 'G03','coordinator',
          'Supports campaign execution, events, content production, and reporting.'),
@@ -710,7 +712,7 @@ BEGIN
          'executive_mgmt','executive_leadership','C_SUITE',  'C1', 'G15','cmo',
          'Sets marketing vision; drives brand equity, demand, and customer acquisition.'),
 
-        -- ── Operations & Supply Chain (6 jobs) ───────────────────────────
+        -- â”€â”€ Operations & Supply Chain (6 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('operations_analyst',          'Operations Analyst',
          'operations_sc','supply_chain_mgmt',  'PROFESSIONAL','P1','G05','analyst',
          'Analyses operations data to identify process improvement opportunities.'),
@@ -735,7 +737,7 @@ BEGIN
          'operations_sc','logistics',          'DEVELOPING', 'D1', 'G03','coordinator',
          'Coordinates shipments, carrier relationships, and delivery schedules.'),
 
-        -- ── Legal & Compliance (5 jobs) ───────────────────────────────────
+        -- â”€â”€ Legal & Compliance (5 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('legal_counsel',               'Legal Counsel',
          'legal_compliance','corporate_legal', 'SENIOR',     'S1', 'G08','officer',
          'Provides legal advice, drafts and reviews contracts, and manages regulatory matters.'),
@@ -756,7 +758,7 @@ BEGIN
          'legal_compliance','corporate_legal', 'SR_MGMT',    'SM2','G14','senior_director',
          'Heads the legal department; serves as chief legal advisor to the board.'),
 
-        -- ── Customer Success & Support (5 jobs) ──────────────────────────
+        -- â”€â”€ Customer Success & Support (5 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('customer_support_specialist', 'Customer Support Specialist',
          'customer_success','cust_support',    'DEVELOPING', 'D1', 'G03','specialist',
          'Resolves customer queries across chat, email, and phone channels.'),
@@ -777,7 +779,7 @@ BEGIN
          'customer_success','implementation',  'PROFESSIONAL','P1','G05','consultant',
          'Configures and deploys products at customer sites; manages go-live readiness.'),
 
-        -- ── Data & Analytics (5 jobs) ─────────────────────────────────────
+        -- â”€â”€ Data & Analytics (5 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('data_analyst',                'Data Analyst',
          'data_analytics','bi_reporting',      'PROFESSIONAL','P1','G05','analyst',
          'Transforms raw data into actionable insights via analysis and dashboards.'),
@@ -798,7 +800,7 @@ BEGIN
          'data_analytics','ai_ml_eng',         'SENIOR',     'S1', 'G08','engineer',
          'Develops, trains, and deploys production ML models and MLOps pipelines.'),
 
-        -- ── Research & Development (2 jobs) ───────────────────────────────
+        -- â”€â”€ Research & Development (2 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('research_associate',          'Research Associate',
          'research_dev','applied_research',    'PROFESSIONAL','P1','G05','associate',
          'Conducts experiments, literature reviews, and data collection for R&D projects.'),
@@ -807,7 +809,7 @@ BEGIN
          'research_dev','applied_research',    'SENIOR',     'S1', 'G08','specialist',
          'Leads research programmes; designs experiments and publishes findings.'),
 
-        -- ── Administration & Facilities (2 jobs) ─────────────────────────
+        -- â”€â”€ Administration & Facilities (2 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('executive_assistant',         'Executive Assistant',
          'admin_facilities','exec_support',    'PROFESSIONAL','P1','G05','assistant',
          'Provides high-level EA support: calendars, travel, board prep, and correspondence.'),
@@ -816,7 +818,7 @@ BEGIN
          'admin_facilities','facilities',      'MANAGEMENT', 'M1', 'G12','manager',
          'Manages day-to-day office operations, vendor relationships, and facilities.'),
 
-        -- ── Healthcare & Medical (3 jobs) ─────────────────────────────────
+        -- â”€â”€ Healthcare & Medical (3 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('registered_nurse',            'Registered Nurse',
          'healthcare_medical','nursing',       'PROFESSIONAL','P1','G05','specialist',
          'Delivers evidence-based patient care; coordinates with clinical teams.'),
@@ -829,7 +831,7 @@ BEGIN
          'healthcare_medical','clinical_medicine','SENIOR',  'S1', 'G08','officer',
          'Provides clinical assessment, diagnosis, and treatment within a healthcare setting.'),
 
-        -- ── Creative & Design (2 jobs) ────────────────────────────────────
+        -- â”€â”€ Creative & Design (2 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('ux_designer',                 'UX Designer',
          'creative_design','ux_design',        'PROFESSIONAL','P1','G05','specialist',
          'Conducts user research; creates wireframes, prototypes, and interaction designs.'),
@@ -838,7 +840,7 @@ BEGIN
          'creative_design','ux_design',        'SENIOR',     'S1', 'G08','senior_specialist',
          'Leads UX strategy for product areas; mentors designers and drives design systems.'),
 
-        -- ── Executive & General Management (3 jobs) ───────────────────────
+        -- â”€â”€ Executive & General Management (3 jobs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('general_manager',             'General Manager',
          'executive_mgmt','general_management','EXECUTIVE',  'EX1','G15','general_manager',
          'Owns P&L and full operational leadership of a discrete business unit.'),
@@ -918,7 +920,7 @@ BEGIN
     FROM master.job
     WHERE tenant_id = v_tid AND job_function_id IS NULL;
     IF v_n > 0 THEN
-        RAISE EXCEPTION '[%] Assertion failed: % jobs have NULL job_function_id — check function codes', v_pack, v_n;
+        RAISE EXCEPTION '[%] Assertion failed: % jobs have NULL job_function_id â€” check function codes', v_pack, v_n;
     END IF;
 
     -- Validate: no job has a broken job_function FK (catches stale / orphaned UUIDs)
@@ -938,7 +940,7 @@ BEGIN
     FROM master.job
     WHERE tenant_id = v_tid AND career_level_id IS NULL;
     IF v_n > 0 THEN
-        RAISE EXCEPTION '[%] Assertion failed: % jobs have NULL career_level_id — check level codes', v_pack, v_n;
+        RAISE EXCEPTION '[%] Assertion failed: % jobs have NULL career_level_id â€” check level codes', v_pack, v_n;
     END IF;
 
     -- Validate: no job has a broken career_level FK
@@ -954,7 +956,7 @@ BEGIN
     END IF;
 
     RAISE NOTICE '[%] All assertions passed', v_pack;
-    RAISE NOTICE '[%] Summary — families: %, functions: %, bands: %, levels: %, grades: %, designations: %, jobs: %',
+    RAISE NOTICE '[%] Summary â€” families: %, functions: %, bands: %, levels: %, grades: %, designations: %, jobs: %',
         v_pack,
         (SELECT COUNT(*) FROM master.job_family  WHERE tenant_id = v_tid),
         (SELECT COUNT(*) FROM master.job_function WHERE tenant_id = v_tid),

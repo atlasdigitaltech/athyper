@@ -42,7 +42,8 @@ export interface MeshRuntimeRoutesDeps {
  * account binding and record grant before touching tenant business data.
  */
 export function createMeshRuntimeRoutes(router: Router, deps: MeshRuntimeRoutesDeps): Router {
-  const meshDb = deps.meshDb ?? deps.db;
+  if (!deps.meshDb) throw new Error("MESH_DATABASE_CONFIGURATION_REQUIRED");
+  const meshDb = deps.meshDb;
 
   const catalogHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -230,11 +231,11 @@ async function requireMeshContext(
   // grant is re-read for catalog, list, detail and operation bootstrap calls.
   const binding = await sql<{ present: boolean }>`
     SELECT true AS present
-      FROM mesh.account_grant
+      FROM mesh.auth_current_plane_membership_v
      WHERE id=${raw.accountGrantId}::uuid
        AND principal_id=${raw.principalId}::uuid
        AND account_id=${raw.networkAccountId}::uuid
-       AND status='active'
+       AND plane_code='mesh'
      LIMIT 1
   `.execute(meshDb);
   if (!binding.rows[0]?.present) {
@@ -404,23 +405,16 @@ function recordGrantPredicate(
 ) {
   const key = sql.ref(`t.${primaryKey}`);
   return sql`EXISTS (
-    SELECT 1 FROM master.access_grant allow_grant
-     WHERE allow_grant.tenant_id=${context.tenantId}::uuid
-       AND allow_grant.principal_id=${context.principalId}::uuid
-       AND allow_grant.status='active'
-       AND (allow_grant.expires_at IS NULL OR allow_grant.expires_at > now())
-       AND allow_grant.effect='allow'
-       AND allow_grant.resource_type=${entityCode}
-       AND allow_grant.resource_id::text=${key}::text
-  ) AND NOT EXISTS (
-    SELECT 1 FROM master.access_grant deny_grant
-     WHERE deny_grant.tenant_id=${context.tenantId}::uuid
-       AND deny_grant.principal_id=${context.principalId}::uuid
-       AND deny_grant.status='active'
-       AND (deny_grant.expires_at IS NULL OR deny_grant.expires_at > now())
-       AND deny_grant.effect='deny'
-       AND deny_grant.resource_type=${entityCode}
-       AND deny_grant.resource_id::text=${key}::text
+    SELECT 1
+      FROM master.auth_record_acl acl
+      JOIN control.entity entity_row ON entity_row.id = acl.entity_id
+     WHERE acl.tenant_id=${context.tenantId}::uuid
+       AND acl.principal_id=${context.principalId}::uuid
+       AND acl.subject_kind='principal'
+       AND acl.status='active'
+       AND (acl.effective_until IS NULL OR acl.effective_until > now())
+       AND entity_row.code=${entityCode}
+       AND acl.record_id::text=${key}::text
   )`;
 }
 

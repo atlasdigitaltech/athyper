@@ -44,19 +44,15 @@ type AnyDb = Kysely<Record<string, any>>;
 
 // ── Table allowlist (safe guard against injection via URL param) ───────────────
 const ALLOWED_DLQ_TABLES = new Set([
-  "log.audit_dlq",
   "log.notification_dlq",
-  "log.render_dlq",
 ]);
 
 const TABLE_ALIAS: Record<string, string> = {
-  audit:        DLQ_TABLE.AUDIT,
   notification: DLQ_TABLE.NOTIFICATION,
-  render:       DLQ_TABLE.RENDER,
 };
 
 function resolveTable(alias: string): string | undefined {
-  // Accept both "audit" shorthand and "log.audit_dlq" full name
+  // Accept both "notification" shorthand and the allowlisted full name.
   return TABLE_ALIAS[alias] ?? (ALLOWED_DLQ_TABLES.has(alias) ? alias : undefined);
 }
 
@@ -664,7 +660,7 @@ export function registerJobsAdminRoutes(router: Router, deps: JobsAdminRouteDeps
           effective_until:  body.effective_until ? new Date(body.effective_until) : null,
           lock_key:         body.lock_key ?? null,
           is_enabled:       true,
-          created_by:       tenantId, // use tenantId as placeholder; Phase 5: real principalId
+          created_by:       SYSTEM_ACTOR_ID,
         })
         .returning(["id", "code", "created_at"])
         .executeTakeFirstOrThrow() as { id: string; code: string; created_at: unknown };
@@ -741,6 +737,7 @@ export function registerJobsAdminRoutes(router: Router, deps: JobsAdminRouteDeps
       if ("effective_until"   in body)         updates["effective_until"]   = body.effective_until ? new Date(body.effective_until) : null;
       if ("lock_key"          in body)         updates["lock_key"]          = body.lock_key ?? null;
       if (body.is_enabled       !== undefined) updates["is_enabled"]        = body.is_enabled;
+      updates["updated_by"] = SYSTEM_ACTOR_ID;
 
       await db
         .updateTable("control.cron_schedule")

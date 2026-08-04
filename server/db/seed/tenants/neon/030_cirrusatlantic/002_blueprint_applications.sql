@@ -1,48 +1,60 @@
 -- ============================================================================
--- CIRRUSATLANTIC — BLUEPRINT APPLICATION TRACKING
+-- CIRRUSATLANTIC — BLUEPRINT APPLICATION RECEIPT BRIDGE
 -- ============================================================================
--- File:     002_blueprint_applications.sql
--- Schema:   control.blueprint_tenant_application
--- Purpose:  Record the 7 blueprint tiers applied to CirrusAtlantic.
---           Note: pack_ap_non_po is recorded by its own 099_apply.sql.
--- Depends:  000_tenant.sql, seed/platform/007_blueprint_registry/
--- Idempotent: Yes — ON CONFLICT (tenant_id, blueprint_code) DO UPDATE
+-- seed-pack-version: 2.0.0
+-- Dataset:  cirrusatlantic.blueprint-application-receipt
+-- Plane:    neon
+-- Scope:    tenant onboarding validation
+-- Storage:  public.seed_pack_ledger_v2 / public.seed_pack_execution_v2
+-- Retires:  control.blueprint_tenant_application mutable application rows
+-- Writes:   none; the provisioner records this file's immutable receipt
 -- ============================================================================
 
-DO $catl_blueprints$
+DO $catl_blueprint_receipt_bridge$
 DECLARE
-    v_su  uuid := '00000000-0000-0000-0000-000000000000';
-    v_tid uuid;
+    v_tid uuid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    v_actor uuid := nullif(trim(current_setting('app.current_principal_id', true)), '')::uuid;
+    v_industry_packs text[] := string_to_array(
+        nullif(trim(current_setting('app.seed_industry_pack_codes', true)), ''),
+        ','
+    );
 BEGIN
-
-    SELECT id INTO v_tid
-    FROM master.tenant
-    WHERE realm_key = 'athyper' AND code = 'cirrusatlantic';
-
-    IF v_tid IS NULL THEN
-        RAISE EXCEPTION '[002_blueprint_applications] CirrusAtlantic tenant not found';
+    IF current_setting('app.database_plane', true) <> 'neon' THEN
+        RAISE EXCEPTION '[002_blueprint_applications] Neon plane required';
     END IF;
 
-    INSERT INTO control.blueprint_tenant_application
-        (tenant_id, blueprint_code, status, applied_version, applied_by, created_by)
-    VALUES
-        (v_tid, 'base',             'applied', '1.0.0', v_su, v_su),
-        (v_tid, 'foundation_tax',   'applied', '1.0.0', v_su, v_su),
-        (v_tid, 'foundation_pay',   'applied', '1.0.0', v_su, v_su),
-        (v_tid, 'foundation_assets','applied', '1.0.0', v_su, v_su),
-        (v_tid, 'foundation_bank',  'applied', '1.0.0', v_su, v_su),
-        (v_tid, 'coa_ifrs',         'applied', '1.0.0', v_su, v_su),
-        (v_tid, 'pack_infocomm',    'applied', '1.0.0', v_su, v_su)
-    ON CONFLICT (tenant_id, blueprint_code) DO UPDATE SET
-        status          = EXCLUDED.status,
-        applied_version = EXCLUDED.applied_version,
-        applied_at      = now(),
-        applied_by      = EXCLUDED.applied_by,
-        updated_at      = now(),
-        updated_by      = EXCLUDED.applied_by
-    WHERE control.blueprint_tenant_application.status
-       IS DISTINCT FROM EXCLUDED.status;
+    IF v_tid IS NULL OR NOT EXISTS (
+        SELECT 1
+          FROM master.tenant
+         WHERE id = v_tid
+           AND realm_key = 'athyper'
+           AND code = 'cirrusatlantic'
+           AND status = 'active'
+    ) THEN
+        RAISE EXCEPTION '[002_blueprint_applications] active CirrusAtlantic tenant scope required';
+    END IF;
 
-    RAISE NOTICE '[002_blueprint_applications] 7 blueprint tiers recorded for CirrusAtlantic';
+    IF v_actor IS NULL OR NOT EXISTS (
+        SELECT 1
+          FROM master.principal
+         WHERE tenant_id = v_tid
+           AND id = v_actor
+           AND status = 'active'
+    ) THEN
+        RAISE EXCEPTION '[002_blueprint_applications] active tenant-local actor required';
+    END IF;
 
-END $catl_blueprints$;
+    IF v_industry_packs IS NULL OR NOT ('pack_infocomm' = ANY(v_industry_packs)) THEN
+        RAISE EXCEPTION
+            '[002_blueprint_applications] explicit pack_infocomm selection required';
+    END IF;
+
+    IF to_regclass('public.seed_pack_ledger_v2') IS NULL
+       OR to_regclass('public.seed_pack_execution_v2') IS NULL THEN
+        RAISE EXCEPTION '[002_blueprint_applications] immutable receipt infrastructure required';
+    END IF;
+
+    RAISE NOTICE
+        '[002_blueprint_applications] legacy mutable rows retired; provisioner receipt will record onboarding';
+END
+$catl_blueprint_receipt_bridge$;

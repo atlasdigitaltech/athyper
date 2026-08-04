@@ -151,7 +151,7 @@ export interface AgentCallLedgerSink {
 
 /**
  * Records the parent run before its optional provider call because
- * log.ai_agent_call has a foreign key to log.ai_agent_run.
+ * ai.ai_agent_call has a foreign key to ai.ai_agent_run.
  *
  * Failures intentionally propagate. A caller must never interpret a failed
  * ledger write as successful metering.

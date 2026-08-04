@@ -21,7 +21,7 @@ The maintenance connection uses its own pool (maximum one connection) and is
 closed through the normal server lifecycle. The application DB connection is
 never promoted or relabelled as maintenance authority. The maintenance role
 has Atlas-envelope select/update and parent-conversation delete only. It has no
-direct `master.atlas_message` or `event.atlas_run` privilege and is not a
+direct `ai.atlas_message` or `ai.atlas_run` privilege and is not a
 support-access path.
 
 ## Schedule and safety model

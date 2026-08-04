@@ -1,59 +1,138 @@
--- ============================================================================
--- CIRRUSATLANTIC — BOOK PERIOD STATUS
--- ============================================================================
--- File:     312_book_period_status.sql
--- Schema:   governance.book_period_status
--- Purpose:  Open all book-periods FY2026 + FY2027, periods 0-13, for CATL.
---           Without these rows the period-gate trigger blocks all JE inserts.
--- Depends:  311_ledger_books.sql, 310_fiscal_periods.sql
--- Idempotent: Yes — ON CONFLICT DO UPDATE (future → open only)
--- ============================================================================
+-- seed-pack-version: 2.1.0
+-- CirrusAtlantic statutory ledger-book posting gates for FY2026-FY2027.
+-- Target: ledger.book_period_status (current Neon accounting model).
 
-DO $catl_bps$
+DO $seed$
 DECLARE
-    v_tid  uuid;
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
-    v_meta jsonb := '{"_seed": {"pack": "312_catl_bps", "version": "1.0.0"}}'::jsonb;
-    v_row  record;
-    v_fy   int;
-    v_pnum int;
+    v_tid      uuid;
+    v_actor    uuid := nullif(current_setting('app.current_principal_id', true), '')::uuid;
+    v_expected integer;
+    v_actual   integer;
 BEGIN
-    SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'cirrusatlantic';
-    IF v_tid IS NULL THEN RAISE EXCEPTION '[312_book_period_status] CirrusAtlantic tenant not found'; END IF;
+    SELECT t.id
+      INTO v_tid
+      FROM master.tenant AS t
+     WHERE t.realm_key = 'athyper'
+       AND t.code = 'cirrusatlantic'
+       AND t.status = 'active';
 
-    FOR v_row IN
-        SELECT ba.company_code_id, ba.book_id
-        FROM   master.company_code_book_assignment ba
-        JOIN   master.ledger_book lb ON lb.id = ba.book_id AND lb.tenant_id = ba.tenant_id
-        WHERE  ba.tenant_id = v_tid
-          AND  ba.status    = 'active'
-          AND  lb.category  = 'statutory'
-    LOOP
-        FOR v_fy IN 2026..2027 LOOP
-            FOR v_pnum IN 0..13 LOOP
-                INSERT INTO governance.book_period_status
-                    (tenant_id, company_code_id, book_id,
-                     fiscal_year, period_number,
-                     status, opened_at, opened_by,
-                     created_by, metadata)
-                VALUES
-                    (v_tid, v_row.company_code_id, v_row.book_id,
-                     v_fy, v_pnum,
-                     'open', now(), v_su,
-                     v_su, v_meta)
-                ON CONFLICT (tenant_id, company_code_id, book_id, fiscal_year, period_number)
-                DO UPDATE SET
-                    status    = CASE WHEN governance.book_period_status.status = 'future'
-                                     THEN 'open'
-                                     ELSE governance.book_period_status.status END,
-                    opened_at = COALESCE(governance.book_period_status.opened_at, now()),
-                    opened_by = COALESCE(governance.book_period_status.opened_by, v_su),
-                    updated_at = now(),
-                    updated_by = v_su;
-            END LOOP;
-        END LOOP;
-    END LOOP;
+    IF v_tid IS NULL THEN
+        RAISE EXCEPTION '[312_book_period_status] active CirrusAtlantic tenant not found';
+    END IF;
 
-    RAISE NOTICE '[312_book_period_status] Book-period status opened (FY2026-FY2027, P0-P13) for CATL';
+    IF v_actor IS NULL OR NOT EXISTS (
+        SELECT 1
+          FROM master.principal AS p
+         WHERE p.id = v_actor
+           AND p.tenant_id = v_tid
+           AND p.status = 'active'
+    ) THEN
+        RAISE EXCEPTION '[312_book_period_status] app.current_principal_id must identify an active tenant-local principal';
+    END IF;
 
-END $catl_bps$;
+    WITH desired AS (
+        SELECT DISTINCT
+               assignment.book_id AS ledger_book_id,
+               period.id AS fiscal_period_id
+          FROM master.company_code_book_assignment AS assignment
+          JOIN master.ledger_book AS book
+            ON book.tenant_id = assignment.tenant_id
+           AND book.id = assignment.book_id
+          JOIN master.fiscal_period AS period
+            ON period.tenant_id = assignment.tenant_id
+           AND period.company_code_id = assignment.company_code_id
+           AND period.fiscal_year BETWEEN 2026 AND 2027
+           AND period.period_number BETWEEN 0 AND 13
+         WHERE assignment.tenant_id = v_tid
+           AND assignment.status = 'active'
+           AND book.status = 'active'
+           AND book.category = 'statutory'
+    )
+    INSERT INTO ledger.book_period_status (
+        id,
+        tenant_id,
+        ledger_book_id,
+        fiscal_period_id,
+        created_by
+    )
+    SELECT md5(format(
+               'neon:cirrusatlantic:book-period-status:%s:%s:%s',
+               v_tid,
+               desired.ledger_book_id,
+               desired.fiscal_period_id
+           ))::uuid,
+           v_tid,
+           desired.ledger_book_id,
+           desired.fiscal_period_id,
+           v_actor
+      FROM desired
+    ON CONFLICT ON CONSTRAINT book_period_status_coordinate_uq DO NOTHING;
+
+    UPDATE ledger.book_period_status AS gate
+       SET status     = 'open'::ledger.book_period_status_d,
+           opened_at  = now(),
+           opened_by  = v_actor,
+           updated_at = now(),
+           updated_by = v_actor
+      FROM master.ledger_book AS book,
+           master.fiscal_period AS period
+     WHERE gate.tenant_id = v_tid
+       AND gate.status = 'future'
+       AND book.tenant_id = gate.tenant_id
+       AND book.id = gate.ledger_book_id
+       AND book.status = 'active'
+       AND book.category = 'statutory'
+       AND period.tenant_id = gate.tenant_id
+       AND period.id = gate.fiscal_period_id
+       AND period.fiscal_year BETWEEN 2026 AND 2027
+       AND period.period_number BETWEEN 0 AND 13;
+
+    SELECT count(*)
+      INTO v_expected
+      FROM (
+          SELECT DISTINCT assignment.book_id, period.id
+            FROM master.company_code_book_assignment AS assignment
+            JOIN master.ledger_book AS book
+              ON book.tenant_id = assignment.tenant_id
+             AND book.id = assignment.book_id
+            JOIN master.fiscal_period AS period
+              ON period.tenant_id = assignment.tenant_id
+             AND period.company_code_id = assignment.company_code_id
+             AND period.fiscal_year BETWEEN 2026 AND 2027
+             AND period.period_number BETWEEN 0 AND 13
+           WHERE assignment.tenant_id = v_tid
+             AND assignment.status = 'active'
+             AND book.status = 'active'
+             AND book.category = 'statutory'
+      ) AS desired;
+
+    IF v_expected = 0 THEN
+        RAISE EXCEPTION '[312_book_period_status] no statutory book/fiscal-period coordinates found';
+    END IF;
+
+    SELECT count(*)
+      INTO v_actual
+      FROM ledger.book_period_status AS gate
+      JOIN master.ledger_book AS book
+        ON book.tenant_id = gate.tenant_id
+       AND book.id = gate.ledger_book_id
+      JOIN master.fiscal_period AS period
+        ON period.tenant_id = gate.tenant_id
+       AND period.id = gate.fiscal_period_id
+     WHERE gate.tenant_id = v_tid
+       AND book.category = 'statutory'
+       AND period.fiscal_year BETWEEN 2026 AND 2027
+       AND period.period_number BETWEEN 0 AND 13
+       AND gate.status = 'open';
+
+    IF v_actual <> v_expected THEN
+        RAISE EXCEPTION
+            '[312_book_period_status] open gate count mismatch: expected %, found %',
+            v_expected,
+            v_actual;
+    END IF;
+
+    RAISE NOTICE
+        '[312_book_period_status] % statutory book-period gates are open',
+        v_actual;
+END $seed$;

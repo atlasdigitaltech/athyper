@@ -37,7 +37,7 @@ interface SupportTokenPayload {
   readonly target_tenant_id: string;
   readonly shadow_principal_id: string;
   readonly shadow_auth_epoch: number;
-  readonly relationship_id: string;
+  readonly membership_id: string;
   readonly plane: "admin";
   readonly scopes: readonly AtlasSupportScope[];
   readonly ticket_id: string;
@@ -135,7 +135,7 @@ export class AtlasSupportSessionService {
       target_tenant_id: request.targetTenantId,
       shadow_principal_id: shadow.shadowPrincipalId,
       shadow_auth_epoch: shadow.shadowAuthEpoch,
-      relationship_id: shadow.relationshipId,
+      membership_id: shadow.membershipId,
       plane: "admin",
       scopes: Object.freeze([...new Set(request.requestedScopes)].sort()),
       ticket_id: request.ticketId.trim(),
@@ -160,7 +160,7 @@ export class AtlasSupportSessionService {
       targetTenantId: request.targetTenantId,
       shadowPrincipalId: shadow.shadowPrincipalId,
       shadowAuthEpoch: shadow.shadowAuthEpoch,
-      shadowRelationshipId: shadow.relationshipId,
+      shadowMembershipId: shadow.membershipId,
       plane: "admin",
       allowedScopes: payload.scopes,
       ticketId: payload.ticket_id,
@@ -247,7 +247,7 @@ export class AtlasSupportSessionService {
       targetTenantId: record.targetTenantId,
       shadowPrincipalId: record.shadowPrincipalId,
       shadowAuthEpoch: record.shadowAuthEpoch,
-      relationshipId: record.shadowRelationshipId,
+      membershipId: record.shadowMembershipId,
     })) {
       throw new AtlasSupportSessionError(
         "AUTHORIZATION_STALE",
@@ -417,7 +417,7 @@ function isPayload(value: unknown): value is SupportTokenPayload {
     "origin_subject",
     "origin_tenant_id",
     "plane",
-    "relationship_id",
+    "membership_id",
     "scopes",
     "session_binding_hash",
     "session_id",
@@ -438,7 +438,7 @@ function isPayload(value: unknown): value is SupportTokenPayload {
     && UUID_RE.test(String(value["target_tenant_id"]))
     && UUID_RE.test(String(value["shadow_principal_id"]))
     && Number.isInteger(value["shadow_auth_epoch"])
-    && UUID_RE.test(String(value["relationship_id"]))
+    && UUID_RE.test(String(value["membership_id"]))
     && value["plane"] === "admin"
     && Array.isArray(value["scopes"])
     && value["scopes"].every(isSupportScope)
@@ -467,7 +467,7 @@ function recordMatchesPayload(
     && record.targetTenantId === payload.target_tenant_id
     && record.shadowPrincipalId === payload.shadow_principal_id
     && record.shadowAuthEpoch === payload.shadow_auth_epoch
-    && record.shadowRelationshipId === payload.relationship_id
+    && record.shadowMembershipId === payload.membership_id
     && record.plane === payload.plane
     && record.ticketId === payload.ticket_id
     && record.sessionBindingHash === payload.session_binding_hash

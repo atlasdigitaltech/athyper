@@ -83,7 +83,8 @@ export function createAdminPartnerBindingsRoutes(
   deps: AdminPartnerBindingsRoutesDeps,
 ): Router {
   const { db, meshDb: _meshDb, auth, logger } = deps;
-  const meshDb = _meshDb ?? db;
+  if (!_meshDb) throw new Error("MESH_DATABASE_CONFIGURATION_REQUIRED");
+  const meshDb = _meshDb;
 
   async function adminGuard(req: any, res: any): Promise<{ tenantId: string; principalId: string } | null> {
     const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
@@ -127,17 +128,17 @@ export function createAdminPartnerBindingsRoutes(
             na.account_code,
             ag.principal_id::text AS principal_id,
             p.display_name        AS principal_display_name,
-            ag.role_code,
+            COALESCE(ag.metadata #>> '{role_code}', 'account_user') AS role_code,
             ag.status,
-            ag.fingerprint,
-            ag.granted_at::text  AS granted_at,
+            NULL::text AS fingerprint,
+            ag.effective_from::text AS granted_at,
             ag.revoked_at::text  AS revoked_at
-          FROM mesh.account_grant ag
+          FROM mesh.auth_plane_membership ag
           JOIN mesh.network_account na ON na.id = ag.account_id
           JOIN mesh.principal p ON p.id = ag.principal_id
          WHERE ag.status = ${status}
            ${accountCode ? sql`AND na.account_code = ${accountCode}` : sql``}
-         ORDER BY ag.granted_at DESC
+         ORDER BY ag.effective_from DESC
          LIMIT 500
       `.execute(meshDb);
 
@@ -185,10 +186,9 @@ export function createAdminPartnerBindingsRoutes(
 
       // Reject when an active binding already exists with this exact role.
       const existing = await sql<{ id: string }>`
-        SELECT id::text AS id FROM mesh.account_grant
+        SELECT id::text AS id FROM mesh.auth_plane_membership
          WHERE account_id   = ${accountId}::uuid
            AND principal_id = ${principalId}::uuid
-           AND role_code    = ${roleCode}
            AND status       = 'active'
          LIMIT 1
       `.execute(meshDb);
@@ -208,16 +208,18 @@ export function createAdminPartnerBindingsRoutes(
         fingerprint: string;
         granted_at: string;
       }>`
-        INSERT INTO mesh.account_grant
-            (account_id, principal_id, role_code, status,
-             granted_by, metadata, created_by, created_at)
+        INSERT INTO mesh.auth_plane_membership
+            (account_id, plane_code, principal_id, status, source_type,
+             source_ref, provenance, metadata, created_by, created_at)
         VALUES (
             ${accountId}::uuid,
             ${principalId}::uuid,
-            ${roleCode},
+            'mesh',
             'active',
+            'migration',
             ${`admin:${ctx.principalId}`},
-            ${JSON.stringify({ notes, granted_by_tenant: ctx.tenantId })}::jsonb,
+            ${JSON.stringify({ admitted_by_tenant: ctx.tenantId })}::jsonb,
+            ${JSON.stringify({ role_code: roleCode, notes })}::jsonb,
             ${`admin:${ctx.principalId}`},
             now()
         )
@@ -225,10 +227,10 @@ export function createAdminPartnerBindingsRoutes(
             id::text          AS id,
             account_id::text  AS account_id,
             principal_id::text AS principal_id,
-            role_code,
+            COALESCE(metadata #>> '{role_code}', 'account_user') AS role_code,
             status,
-            fingerprint,
-            granted_at::text  AS granted_at
+            NULL::text AS fingerprint,
+            effective_from::text AS granted_at
       `.execute(meshDb);
 
       res.status(201).json(created.rows[0]);
@@ -253,7 +255,7 @@ export function createAdminPartnerBindingsRoutes(
 
       // Verify the binding exists and is active.
       const current = await sql<{ id: string; status: string }>`
-        SELECT id::text AS id, status FROM mesh.account_grant WHERE id = ${id}::uuid LIMIT 1
+        SELECT id::text AS id, status FROM mesh.auth_plane_membership WHERE id = ${id}::uuid LIMIT 1
       `.execute(meshDb);
       const row = current.rows[0];
       if (!row)             return notFound(res, `binding '${id}' not found`);
@@ -261,13 +263,14 @@ export function createAdminPartnerBindingsRoutes(
         return conflict(res, `binding is in status '${row.status}'; only active can be revoked`);
       }
 
-      // Flip to revoked. The AFTER UPDATE trigger writes log.descriptor_cache_invalidation
+      // Flip to revoked. The AFTER UPDATE trigger queues descriptor invalidation.
       // and emits pg_notify('grant_revoke') so the listener purges Redis.
       const updated = await sql<{ id: string; status: string }>`
-        UPDATE mesh.account_grant
+        UPDATE mesh.auth_plane_membership
            SET status      = 'revoked',
                revoked_at  = now(),
-               revoked_by  = ${`admin:${ctx.principalId}`},
+               revoked_by  = principal_id,
+               revocation_reason = ${reason},
                metadata    = COALESCE(metadata, '{}'::jsonb)
                              || jsonb_build_object(
                                   'revoke_reason', ${reason},

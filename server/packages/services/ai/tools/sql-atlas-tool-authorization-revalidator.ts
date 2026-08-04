@@ -104,9 +104,6 @@ implements AtlasToolAuthorizationRevalidator {
         planeKey: context.planeKey,
         tenantId: context.tenantId,
         principalId: context.principalId,
-        ...(context.planeKey === "mesh"
-          ? { accountGrantId: context.permissions.accountGrantId! }
-          : {}),
       });
       return liveContextMatches(context, live, request.requiredPermissions);
     } catch {
@@ -157,14 +154,7 @@ function originalContextIsConsistent(
     && permissions.planeKey === context.planeKey
     && permissions.profileHash === context.profileHash
     && permissions.profileHash.length > 0
-    && permissions.schemaHash.length > 0
-    && (
-      context.planeKey !== "mesh"
-      || (
-        typeof permissions.accountGrantId === "string"
-        && permissions.accountGrantId.length > 0
-      )
-    );
+    && permissions.schemaHash.length > 0;
 }
 
 function liveContextMatches(
@@ -181,8 +171,6 @@ function liveContextMatches(
     || live.profileHash !== snapshot.profileHash
     || live.schemaHash !== snapshot.schemaHash
     || live.principalFingerprint !== snapshot.principalFingerprint
-    || live.personaId !== snapshot.personaId
-    || live.accountGrantId !== snapshot.accountGrantId
     || live.planVersionId !== snapshot.planVersionId
     || live.networkAccountId !== snapshot.networkAccountId
   ) {

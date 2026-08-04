@@ -1,0 +1,29 @@
+{
+  "authorityVersion": "wave3.neon-admin.authority.v1",
+  "approval": {
+    "status": "policy_approved",
+    "basis": "Preserve existing users and assign explicit groups; zero-grant quarantine is fail-closed.",
+    "requiresNamedBusinessOwnerBeforePublication": true
+  },
+  "mappingPolicy": {
+    "source": "all active master.principal rows at the captured watermark",
+    "existingActiveMembership": "copy exact groups and create explicit plane membership",
+    "legacyAdminGrant": "map to admin plane membership and admin migration group",
+    "legacyTierInput": "map once to the matching canonical neon.access group",
+    "noAuthoritySource": "quarantined_zero_grant",
+    "servicePrincipal": "excluded_non_human with signed reason",
+    "requiredEvidence": [
+      "principal_id",
+      "tenant_id",
+      "plane_code",
+      "source_rows",
+      "target_group_ids",
+      "target_membership_id",
+      "disposition",
+      "approval_ticket",
+      "definition_sha256"
+    ]
+  },
+  "deliberateFallback": "quarantined_zero_grant",
+  "liveSnapshotRows": "generated_during_watermarked_backfill"
+}

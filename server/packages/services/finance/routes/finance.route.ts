@@ -1162,7 +1162,7 @@ async function resolveUserCompanyAccess(
   keycloakSub: string | null,
   realmKey = "athyper",
 ): Promise<{ allCompanies: boolean; allowedIds: string[] }> {
-  if (!keycloakSub) return { allCompanies: true, allowedIds: [] };
+  if (!keycloakSub) return { allCompanies: false, allowedIds: [] };
 
   // Single CTE resolves both dimensions in one round-trip:
   //   has_wide  → any 'tenant'-scoped active role
@@ -1170,18 +1170,24 @@ async function resolveUserCompanyAccess(
   const scopeResult = await sql<{ has_wide: boolean; cc_ids: string[] | null }>`
     WITH principal_roles AS (
       SELECT
-        gr.assignment_scope_type,
-        gr.assignment_scope_ref_id,
-        gr.include_descendants
+        scope.scope_kind AS assignment_scope_type,
+        scope.resource_id AS assignment_scope_ref_id,
+        true AS include_descendants
       FROM   master.principal_identity_binding pib
       JOIN   master.principal           p  ON p.id = pib.principal_id AND p.tenant_id = ${tenantId}::uuid
-      JOIN   master.auth_group_member   gm ON gm.principal_id = p.id AND gm.tenant_id = ${tenantId}::uuid
-      JOIN   master.auth_group_role     gr ON gr.group_id = gm.group_id AND gr.tenant_id = ${tenantId}::uuid
+      JOIN master.auth_current_group_member_v gm
+        ON gm.principal_id = p.id AND gm.tenant_id = ${tenantId}::uuid AND gm.plane_code = 'neon'
+      JOIN master.auth_current_group_role_v gr
+        ON gr.group_id = gm.group_id AND gr.tenant_id = gm.tenant_id AND gr.plane_code = gm.plane_code
+      JOIN master.auth_scope_target_resolved_v scope
+        ON scope.scope_target_id = gr.scope_target_id
+       AND scope.tenant_id = gr.tenant_id
+       AND scope.plane_code = gr.plane_code
+       AND scope.status = 'active'
       WHERE  pib.subject_id    = ${keycloakSub}
         AND  pib.realm_key     = ${realmKey}
         AND  pib.provider_code = 'keycloak'
         AND  pib.tenant_id     = ${tenantId}::uuid
-        AND  gr.status         = 'active'
     ),
     scoped_ccs AS (
       -- Direct company_code scope
@@ -1696,7 +1702,11 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
           tg.code,
           tg.name,
           tg.description,
-          ct.term_type,
+          CASE tt.tax_class
+            WHEN 'withholding' THEN 'withholding'
+            WHEN 'customs' THEN 'charge'
+            ELSE 'tax'
+          END AS term_type,
           trs.rate_value,
           tt.code AS tax_type_code
         FROM control.tax_group tg
@@ -1712,14 +1722,19 @@ export function createFinanceRoutes(router: Router, deps: FinanceRouteDeps): Rou
           ON  tt.id        = trs.tax_type_id
           AND tt.tenant_id = trs.tenant_id
           AND tt.status    = 'active'
-        LEFT JOIN master.condition_type ct
-          ON  ct.id = tt.condition_type_id
         WHERE tg.tenant_id = ${tenantId}::uuid
           AND tg.status    = 'active'
           AND (${idFilter}::uuid IS NULL OR tg.id = ${idFilter}::uuid)
-          AND (${termType} = '' OR ct.term_type = ${termType})
           AND (
-            ct.term_type = 'withholding'
+            ${termType} = ''
+            OR CASE tt.tax_class
+                 WHEN 'withholding' THEN 'withholding'
+                 WHEN 'customs' THEN 'charge'
+                 ELSE 'tax'
+               END = ${termType}
+          )
+          AND (
+            tt.tax_class = 'withholding'
             OR trs.tax_direction IN ('PURCHASE', 'BOTH')
             OR trs.wht_basis IS NOT NULL
           )

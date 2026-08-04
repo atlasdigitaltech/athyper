@@ -8,7 +8,7 @@
  *   1. Reads the version body_json from snapshot.content_item_version
  *   2. Extracts plain text via a recursive JSON tree walker
  *   3. Renders a lightweight HTML snippet (first N block nodes)
- *   4. Writes preview_text, preview_html, preview_generated_at to master.content_item
+ *   4. Writes preview_text, preview_html, preview_generated_at to document.content_item
  *
  * Body formats supported:
  *   slate   — { type, children: [{text}, ...], ... } recursive tree
@@ -188,9 +188,9 @@ export function createCmsPreviewWorker(deps: CmsPreviewWorkerDeps): Worker<Previ
         version.body_format ?? "slate",
       );
 
-      // Write preview columns back to master.content_item
+      // Write preview columns back to document.content_item
       await db
-        .updateTable("master.content_item" as never)
+        .updateTable("document.content_item" as never)
         .set({
           preview_text:          previewText  || null,
           preview_html:          previewHtml  || null,

@@ -124,21 +124,27 @@ done
 phase 7 "Functions (all schemas)"
 
 for schema in "${SCHEMAS[@]}"; do
-    run_file "$SQL_DIR/${schema}/05_functions.sql"
+    for f in "$SQL_DIR/${schema}"/05_*.sql; do
+        run_file "$f"
+    done
 done
 
 # ─── Phase 8: Triggers — ALL schemas ──────────────────────────────────────────
 phase 8 "Triggers (all schemas)"
 
 for schema in "${SCHEMAS[@]}"; do
-    run_file "$SQL_DIR/${schema}/06_triggers.sql"
+    for f in "$SQL_DIR/${schema}"/06_*.sql; do
+        run_file "$f"
+    done
 done
 
 # ─── Phase 9: Views — ALL schemas ─────────────────────────────────────────────
 phase 9 "Views (all schemas)"
 
 for schema in "${SCHEMAS[@]}"; do
-    run_file "$SQL_DIR/${schema}/07_views.sql"
+    for f in "$SQL_DIR/${schema}"/07_*.sql; do
+        run_file "$f"
+    done
 done
 
 # ─── Phase 10: RLS policies — ALL schemas ─────────────────────────────────────
@@ -155,7 +161,9 @@ done
 # Must run last — references all functions/views defined above.
 phase 11 "Security hardening"
 
-run_file "$SQL_DIR/security/800_security_hardening.sql"
+for f in "$SQL_DIR/security"/*.sql; do
+    run_file "$f"
+done
 
 # ─── Done ─────────────────────────────────────────────────────────────────────
 echo ""

@@ -8,7 +8,7 @@
  *   without any middleware and evaluated no permissions. Mounting the UI
  *   inside the API runtime routes it through the same verifyBearer chain as
  *   every other admin endpoint and lets us authorise it through the existing
- *   persona → group → role → permission evaluator — no phantom isAdmin
+ *   canonical group → role → permission evaluator — no phantom isAdmin
  *   flag, no hardcoded role claim.
  *
  * Permissions (seeded in 020_permission_platform_admin.sql):
@@ -19,10 +19,10 @@
  * Split between view and manage is deliberate: SRE read-only can inspect DLQ
  * depth and job state without holding authority to drain or retry.
  *
- * Persona bindings (seeded in 021_persona_permission_platform_admin.sql):
- *   - persona `admin`  → JOBS.BOARD.VIEW
- *   - persona `owner`  → JOBS.BOARD.VIEW + JOBS.QUEUE.MANAGE
- * Any other persona (viewer/reporter/requester/agent/manager) gets 403. This
+ * Canonical role and group bindings:
+ *   - role `admin`  → JOBS.BOARD.VIEW
+ *   - role `owner`  → JOBS.BOARD.VIEW + JOBS.QUEUE.MANAGE
+ * Any other role (viewer/reporter/requester/agent/manager) gets 403. This
  * matches Athyper's tier model where `admin` owns platform configuration and
  * `owner` owns the full-access tier that includes destructive queue ops.
  *

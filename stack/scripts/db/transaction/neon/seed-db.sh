@@ -14,6 +14,9 @@
 #                                #   blueprints and tenant data are skipped
 #   ./seed-db.sh --demo-only     # Phase 1+2+3  — same as default; alias for clarity
 #   ./seed-db.sh --reset         # DROP all app schemas + tracking tables, then re-seed
+#   ./seed-db.sh --reset --confirm LOCAL-AUTH-V2-RESET
+#                                # Local shorthand for the guarded athyper_neon reset.
+#                                # The disposable DB marker/fingerprint must already match.
 #                                #   can combine: --reset --ddl-only  (drop + DDL only)
 #                                #                --reset --no-demo   (drop + Phase 1+2 only)
 #   ./seed-db.sh --drop-only     # DROP all app schemas + tracking tables only (no re-seed)
@@ -252,6 +255,7 @@ fi
 #   --phase=N  (repeatable, N = 1 | 2 | 3)
 #   --industry-pack=pack_transport  (repeatable; numeric prefix optional)
 #   --tenant-id=UUID  (sets app.seed_tenant_id for Phase 3; overrides SEED_TENANT_ID)
+#   --confirm LOCAL-AUTH-V2-RESET  (only with --reset or --drop-only)
 # ---------------------------------------------------------------------------
 MIGRATE_ARGS="${*:---all} --no-mesh"
 

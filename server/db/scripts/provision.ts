@@ -16,7 +16,7 @@
 //
 // Phase 3 – Blueprint + Tenant Seed
 //   Directories: 900_seed_data/blueprints/universal/**   (TIER 1 foundation + TIER 2a COA)
-//                900_seed_data/blueprints/industry/**    (TIER 2b industry packs)
+//                900_seed_data/blueprints/100_industry_packs/**    (TIER 2b industry packs)
 //                900_seed_data/blueprints/modules/**     (TIER 3 module packs)
 //                900_seed_data/tenants/**         (per-client onboarding)
 //
@@ -30,6 +30,8 @@
 //   tsx db/seed/migrate.ts --with-mesh       # Legacy combined-DB mode; normally use scripts/provision-mesh.ts instead
 //   tsx db/seed/migrate.ts --no-mesh         # Explicitly keep Mesh/Mesh-log/Mesh-control out of NEON provisioning (default)
 //   tsx db/seed/migrate.ts --reset           # Drop all schemas then re-run all stages
+//   tsx db/seed/migrate.ts --reset --confirm LOCAL-AUTH-V2-RESET
+//                                             # Guarded local athyper_neon shorthand
 //   tsx db/seed/migrate.ts --drop-only       # Drop all schemas only (no re-seed)
 //   tsx db/seed/migrate.ts --keep-shared      # Use with --reset/--drop-only to keep `shared`
 //   tsx db/seed/migrate.ts --skip-shared      # Skip reseeding shared DDL (`ddl/shared/*`) during seed runs
@@ -46,7 +48,7 @@
 //   tsx db/seed/migrate.ts --phase=1         # Alias for --stage=1
 //   tsx db/seed/migrate.ts --stage=1 --stage=2  # Multiple stages
 //
-// Industry pack selection (blueprints/industry/100_industry_packs/ files are OPT-IN):
+// Industry pack selection (blueprints/100_industry_packs/ files are OPT-IN):
 //   Industry packs are excluded by default — they must be explicitly requested.
 //   Without --industry-pack the provisioner runs foundation + COA only (no TIER 2b).
 //
@@ -65,6 +67,15 @@ import { fileURLToPath } from "node:url";
 
 import pg from "pg";
 import { validateMetadataGraph } from "../../packages/services/metadata/src/metadata-graph-validator.js";
+import {
+  acquireProvisionLock,
+  assertDestructiveResetAllowed,
+  assertPlaneFileBoundary,
+  recordSeedExecution,
+  registerSeedPack,
+  resolveDestructiveResetCliApproval,
+  seedReceipt,
+} from "./safe-provision.js";
 
 const { Client } = pg;
 
@@ -78,7 +89,6 @@ const __dirname = dirname(__filename);
 const DDL_DIR     = join(__dirname, "../ddl");
 const SEED_DIR    = join(__dirname, "../seed");
 const TENANTS_DIR = join(__dirname, "../seed/tenants/neon");
-const ADMIN_DIR   = join(__dirname, "../seed/tenants/admin");
 const MESH_DIR    = join(__dirname, "../seed/tenants/mesh");
 const REPO_ROOT   = join(__dirname, "../../..");
 
@@ -283,13 +293,14 @@ function isTenantPreOrgFile(file: SqlFile): boolean {
     || tenantRelative === "002_demo_tenants.sql"
     || tenantRelative === "003_technostat_production_seed.sql"
     || tenantRelative.startsWith("100_org_structure/1")
-    || tenantRelative.startsWith("100_org_structure/2");
+    || tenantRelative.startsWith("100_org_structure/2")
+    || tenantRelative === "100_org_structure/311_ledger_books.sql";
 }
 
 function postCompanyBlueprintOrder(file: SqlFile): number {
   const relPath = file.relPath;
   if (relPath.startsWith("seed/blueprints/universal/060_org_structure/")) return 0;
-  if (relPath.startsWith("seed/blueprints/industry/200_org_structure/")) return 10;
+  if (relPath.startsWith("seed/blueprints/200_industry_org_structure/")) return 10;
   return 50;
 }
 
@@ -323,7 +334,7 @@ function cleanIndustryPackArg(value: string): string {
 }
 
 function buildIndustryPackIndex(): Map<string, string> {
-  const packDir = join(SEED_DIR, "blueprints/industry", "100_industry_packs");
+  const packDir = join(SEED_DIR, "blueprints", "100_industry_packs");
   const index = new Map<string, string>();
   if (!existsSync(packDir)) return index;
 
@@ -380,12 +391,9 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
       const relPath = `ddl/${relative(DDL_DIR, absPath).replace(/\\/g, "/")}`;
       if (opts.skipShared && relPath.startsWith("ddl/shared/")) continue;
       if (
-        opts.skipMesh
-        && (
-          relPath.startsWith("ddl/mesh/")
-          || relPath.startsWith("ddl/mesh_log/")
-          || relPath.startsWith("ddl/mesh_control/")
-        )
+        relPath.startsWith("ddl/mesh/")
+        || relPath.startsWith("ddl/mesh_log/")
+        || relPath.startsWith("ddl/mesh_control/")
       ) continue;
       ddlFiles.push({
         relPath,
@@ -407,7 +415,8 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
     }> = [
       { relPath: "platform", phase: 2, phaseLabel: "System Seed" },
       { relPath: "blueprints/universal", phase: 3, phaseLabel: "Blueprint Seed" },
-      { relPath: "blueprints/industry", phase: 3, phaseLabel: "Blueprint Seed" },
+      { relPath: "blueprints/100_industry_packs", phase: 3, phaseLabel: "Blueprint Seed" },
+      { relPath: "blueprints/200_industry_org_structure", phase: 3, phaseLabel: "Blueprint Seed" },
       { relPath: "blueprints/modules", phase: 3, phaseLabel: "Module Seed", isModuleSeed: true },
     ];
 
@@ -420,16 +429,15 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
       for (const absPath of collectSqlFiles(dirPath)) {
         const relFromSeed = relative(SEED_DIR, absPath).replace(/\\/g, "/");
         const relPath = `seed/${relFromSeed}`;
-        if (opts.skipShared && relPath.startsWith("seed/platform/001_global_reference/")) continue;
         const isFinalTenantSeed =
           relFromSeed === "blueprints/universal/060_org_structure/303_company_code_tax_fx_links.sql"
           || relFromSeed.startsWith("blueprints/universal/990_validation/");
         const isPostCompanySeed =
           !isFinalTenantSeed
           && (relFromSeed.startsWith("blueprints/universal/060_org_structure/")
-            || relFromSeed.startsWith("blueprints/industry/200_org_structure/"));
+            || relFromSeed.startsWith("blueprints/200_industry_org_structure/"));
 
-        // Industry pack filter: files under blueprints/industry/100_industry_packs/ are
+        // Industry pack filter: files under blueprints/100_industry_packs/ are
         // excluded by default and must be explicitly opted-in via --industry-pack.
         // Matching supports both "103_pack_transport" and "pack_transport" forms.
         if (phase === 3 && relFromSeed.includes("/100_industry_packs/")) {
@@ -606,15 +614,16 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
     ? tenantScopedPhase3Files
     : [...blueprintSeedFiles, ...postCompanySeedFiles, ...moduleSeedFiles, ...tenantPostOrgFiles, ...finalTenantSeedFiles];
 
-  // ── Plane seeds: admin/ and mesh/ ─────────────────────────────────────────
-  // These directories contain self-contained SQL files for ADMIN and optional
-  // combined-DB MESH plane data. Standalone Mesh uses provision-mesh.ts.
+  // ── Optional legacy combined-database Mesh seeds ──────────────────────────
+  // Athyper admin-plane identities/authority must never execute in Neon. They
+  // are consumed by the Athyper plane's own foundation/authority workflow.
+  // Standalone Mesh uses provision-mesh.ts.
   const planeSeedFiles: SqlFile[] = [];
-  for (const [label, dir] of [["Admin Plane Seed", ADMIN_DIR], ["Mesh Plane Seed", MESH_DIR]] as const) {
-    if (opts.skipMesh && dir === MESH_DIR) continue;
+  for (const [label, dir] of [["Mesh Plane Seed", MESH_DIR]] as const) {
+    if (opts.skipMesh) continue;
     if (!existsSync(dir)) continue;
     for (const absPath of collectSqlFiles(dir)) {
-      const relPath = `${dir === ADMIN_DIR ? "admin" : "mesh"}/${relative(dir, absPath).replace(/\\/g, "/")}`;
+      const relPath = `mesh/${relative(dir, absPath).replace(/\\/g, "/")}`;
       planeSeedFiles.push({
         relPath,
         key: relPath.replace(/\.sql$/, ""),
@@ -776,7 +785,44 @@ function schemaFromProvisionError(errStr: string, file: SqlFile): string {
 }
 
 async function setSeedTenant(client: pg.Client, tenantId: string): Promise<void> {
-  await client.query(`SELECT set_config('app.seed_tenant_id', $1, false)`, [tenantId]);
+  const actor = await client.query<{ id: string }>(`
+    SELECT id::text
+      FROM master.principal
+     WHERE tenant_id = $1::uuid
+       AND status = 'active'
+       AND principal_type = 'service_account'
+     ORDER BY (code = 'seed-service') DESC, code, id
+     LIMIT 1
+  `, [tenantId]);
+  const actorId = actor.rows[0]?.id;
+  if (!actorId) {
+    throw new Error(
+      `No active tenant-local service-account principal exists for seed tenant ${tenantId}`,
+    );
+  }
+
+  const currencies = await client.query<{ currency_code: string }>(`
+    SELECT DISTINCT functional_currency::text AS currency_code
+      FROM master.company_code
+     WHERE tenant_id = $1::uuid
+       AND status = 'active'
+     ORDER BY functional_currency::text
+  `, [tenantId]);
+  if (currencies.rows.length !== 1 || !currencies.rows[0]?.currency_code) {
+    const found = currencies.rows.map((row) => row.currency_code).join(", ") || "none";
+    throw new Error(
+      `Seed tenant ${tenantId} requires exactly one active company functional currency; found: ${found}`,
+    );
+  }
+  const currencyCode = currencies.rows[0].currency_code;
+
+  await client.query(`
+    SELECT
+      set_config('app.seed_tenant_id', $1, false),
+      set_config('app.current_tenant_id', $1, false),
+      set_config('app.current_principal_id', $2, false),
+      set_config('app.seed_currency_code', $3, false)
+  `, [tenantId, actorId, currencyCode]);
 }
 
 async function teardownSeedPhaseSetup(client: pg.Client): Promise<void> {
@@ -785,7 +831,7 @@ async function teardownSeedPhaseSetup(client: pg.Client): Promise<void> {
     BEGIN
       IF EXISTS (
         SELECT 1 FROM pg_trigger
-        WHERE tgrelid = 'control.entity_lifecycle'::regclass
+        WHERE tgrelid = to_regclass('control.entity_lifecycle')
           AND tgname = 'trg_el_validate_entity_binding'
       ) THEN
         ALTER TABLE control.entity_lifecycle ENABLE TRIGGER trg_el_validate_entity_binding;
@@ -793,7 +839,7 @@ async function teardownSeedPhaseSetup(client: pg.Client): Promise<void> {
 
       IF EXISTS (
         SELECT 1 FROM pg_trigger
-        WHERE tgrelid = 'control.entity_operation'::regclass
+        WHERE tgrelid = to_regclass('control.entity_operation')
           AND tgname = 'trg_eo_validate_entity_binding'
       ) THEN
         ALTER TABLE control.entity_operation ENABLE TRIGGER trg_eo_validate_entity_binding;
@@ -801,7 +847,7 @@ async function teardownSeedPhaseSetup(client: pg.Client): Promise<void> {
 
       IF EXISTS (
         SELECT 1 FROM pg_trigger
-        WHERE tgrelid = 'control.entity_relation'::regclass
+        WHERE tgrelid = to_regclass('control.entity_relation')
           AND tgname = 'trg_er_validate_target_entity'
       ) THEN
         ALTER TABLE control.entity_relation ENABLE TRIGGER trg_er_validate_target_entity;
@@ -809,7 +855,14 @@ async function teardownSeedPhaseSetup(client: pg.Client): Promise<void> {
     END
     $seed_trigger_teardown$;
 
-    DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity;
+    DO $seed_entity_trigger_teardown$
+    BEGIN
+      IF to_regclass('control.entity') IS NOT NULL THEN
+        EXECUTE 'DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity';
+      END IF;
+    END
+    $seed_entity_trigger_teardown$;
+
     DROP FUNCTION IF EXISTS control.trg_fn_seed_entity_code_default();
   `);
 }
@@ -851,6 +904,16 @@ async function runPhases(
   opts: { force: boolean; rebuildEntityMetadata?: boolean; tenantId?: string; discovery?: DiscoveryOptions },
 ): Promise<void> {
   const discoveredFiles = discoverSqlFiles(opts.discovery ?? {});
+  const selectedIndustryPacks = resolveIndustryPacks(opts.discovery?.industryPacks);
+  const selectedIndustryPackCodes = selectedIndustryPacks
+    ? [...selectedIndustryPacks]
+        .map((packFileName) => packFileName.replace(/^\d+_/, ""))
+        .sort()
+    : [];
+  assertPlaneFileBoundary(
+    "neon",
+    discoveredFiles.map((file) => file.relPath),
+  );
   const files = discoveredFiles.filter((f) => phases.includes(f.phase));
   const tenantFolders = [
     ...new Set(files.map((file) => file.tenantFolder).filter((folder): folder is string => !!folder)),
@@ -870,14 +933,25 @@ async function runPhases(
   const client = await connectClient(connectionString);
 
   try {
+    await acquireProvisionLock(client, "neon");
     await ensureTrackingTable(client);
 
     // Set system tenant context so triggers that call shared.current_tenant_id()
     // do not raise during seed execution. The system tenant UUID is the well-known
-    // zero UUID established in 900_seed_data/platform/000_bootstrap/000_bootstrap.sql.
+    // zero UUID established by ddl/common/master/12_system_authority_reference_seed.sql.
     await client.query(
       `SET app.current_tenant_id = '00000000-0000-0000-0000-000000000000'`,
     );
+    if (selectedIndustryPackCodes.length > 0) {
+      await client.query(
+        `SELECT set_config('app.seed_industry_pack_codes', $1, false)`,
+        [selectedIndustryPackCodes.join(",")],
+      );
+      log({
+        msg: "migrate_seed_industry_packs_set",
+        industryPackCodes: selectedIndustryPackCodes,
+      });
+    }
 
     // Bypass control.entity_version EFFECTIVE-mutation lock during provisioning.
     // The trigger fn_block_effective_version_mutation respects this GUC so the
@@ -909,7 +983,8 @@ async function runPhases(
     }
 
     // Set seed tenant for Phase 3 blueprint/tenant provisioning.
-    // SQL files under blueprints/universal/ and blueprints/industry/ call
+    // SQL files under blueprints/universal/, blueprints/100_industry_packs/,
+    // and blueprints/200_industry_org_structure/ call
     // current_setting('app.seed_tenant_id', true)::uuid to scope their inserts.
     // When --tenant-id / SEED_TENANT_ID is supplied, set the session variable
     // once here so every Phase 3 file in this connection inherits it.
@@ -939,6 +1014,23 @@ async function runPhases(
     let activeTenantId: string | undefined = tenantFolders.length === 0 ? opts.tenantId : undefined;
 
     const executed = await getExecuted(client);
+    const seedReceipts = new Map(
+      files
+        .filter((file) => file.phase >= 2)
+        .map((file) => {
+          const source = readFileSync(file.absPath, "utf-8");
+          const receipt = seedReceipt({
+            plane: "neon",
+            packKey: scopedTrackingKey(file, opts.tenantId),
+            sourcePath: file.relPath,
+            source,
+          });
+          return [scopedTrackingKey(file, opts.tenantId), receipt] as const;
+        }),
+    );
+    for (const receipt of seedReceipts.values()) {
+      await registerSeedPack(client, receipt);
+    }
     const results: ExecutionResult[] = [];
 
     log({
@@ -1006,7 +1098,7 @@ async function runPhases(
           BEGIN
             IF EXISTS (
               SELECT 1 FROM pg_trigger
-              WHERE tgrelid = 'control.entity_lifecycle'::regclass
+              WHERE tgrelid = to_regclass('control.entity_lifecycle')
                 AND tgname = 'trg_el_validate_entity_binding'
             ) THEN
               ALTER TABLE control.entity_lifecycle DISABLE TRIGGER trg_el_validate_entity_binding;
@@ -1014,7 +1106,7 @@ async function runPhases(
 
             IF EXISTS (
               SELECT 1 FROM pg_trigger
-              WHERE tgrelid = 'control.entity_operation'::regclass
+              WHERE tgrelid = to_regclass('control.entity_operation')
                 AND tgname = 'trg_eo_validate_entity_binding'
             ) THEN
               ALTER TABLE control.entity_operation DISABLE TRIGGER trg_eo_validate_entity_binding;
@@ -1022,7 +1114,7 @@ async function runPhases(
 
             IF EXISTS (
               SELECT 1 FROM pg_trigger
-              WHERE tgrelid = 'control.entity_relation'::regclass
+              WHERE tgrelid = to_regclass('control.entity_relation')
                 AND tgname = 'trg_er_validate_target_entity'
             ) THEN
               ALTER TABLE control.entity_relation DISABLE TRIGGER trg_er_validate_target_entity;
@@ -1050,10 +1142,16 @@ async function runPhases(
           END;
           $$;
 
-          DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity;
-          CREATE TRIGGER trg_seed_entity_code_default
-              BEFORE INSERT ON control.entity
-              FOR EACH ROW EXECUTE FUNCTION control.trg_fn_seed_entity_code_default();
+          DO $seed_entity_trigger_setup$
+          BEGIN
+            IF to_regclass('control.entity') IS NOT NULL THEN
+              EXECUTE 'DROP TRIGGER IF EXISTS trg_seed_entity_code_default ON control.entity';
+              EXECUTE 'CREATE TRIGGER trg_seed_entity_code_default
+                         BEFORE INSERT ON control.entity
+                         FOR EACH ROW EXECUTE FUNCTION control.trg_fn_seed_entity_code_default()';
+            END IF;
+          END
+          $seed_entity_trigger_setup$;
         `);
       }
 
@@ -1087,6 +1185,16 @@ async function runPhases(
       try {
         await client.query(sql);
         await markExecuted(client, fileKey, hash);
+        const receipt = seedReceipts.get(fileKey);
+        if (receipt) {
+          await recordSeedExecution(
+            client,
+            receipt,
+            forceFile ? "forced_reseed" : prev === undefined
+              ? "clean"
+              : "upgrade",
+          );
+        }
 
         const durationMs = Date.now() - startTime;
         results.push({ key: fileKey, durationMs });
@@ -1248,11 +1356,29 @@ async function runPhases(
 
 async function runReset(
   connectionString: string,
-  options: { keepSharedSchema?: boolean } = {},
+  options: {
+    keepSharedSchema?: boolean;
+    expectedDatabase: string;
+    acknowledgement: string;
+    disposableEnvironmentMarker: string;
+    executionProfile: string;
+    approvalLabel: string;
+    refreshDisposableFingerprint?: boolean;
+  },
 ): Promise<void> {
   const client = await connectClient(connectionString);
 
   try {
+    await acquireProvisionLock(client, "neon");
+    await assertDestructiveResetAllowed(client, {
+      plane: "neon",
+      expectedDatabase: options.expectedDatabase,
+      acknowledgement: options.acknowledgement,
+      disposableEnvironmentMarker: options.disposableEnvironmentMarker,
+      executionProfile: options.executionProfile,
+      approvalLabel: options.approvalLabel,
+      refreshDisposableFingerprint: options.refreshDisposableFingerprint,
+    });
     log({ msg: "reset_start" });
     await prepareResetConnection(client);
 
@@ -1260,9 +1386,6 @@ async function runReset(
       "shared",
       "control",
       "master",
-      "mesh",
-      "mesh_log",
-      "mesh_control",
       "document",
       "ledger",
       "log",
@@ -1283,6 +1406,8 @@ async function runReset(
 
     await client.query("DROP TABLE IF EXISTS public.schema_provisions CASCADE");
     await client.query("DROP TABLE IF EXISTS public.migrations CASCADE");
+    await client.query("DROP TABLE IF EXISTS public.seed_pack_execution_v2 CASCADE");
+    await client.query("DROP TABLE IF EXISTS public.seed_pack_ledger_v2 CASCADE");
 
     log({ msg: "reset_complete" });
   } finally {
@@ -1457,6 +1582,11 @@ async function main(): Promise<void> {
   const dropOnly = args.includes("--drop-only");
   const keepShared = args.includes("--keep-shared");
   const status = args.includes("--status");
+  const destructiveApproval = resolveDestructiveResetCliApproval(
+    args,
+    "neon",
+    process.env.ATHYPER_DISPOSABLE_ENVIRONMENT,
+  );
 
   // --invalidate=<substring>  Remove matching schema_provisions rows so the
   // next run re-executes those files. Solves the stale-tracking/missing-table
@@ -1532,7 +1662,17 @@ async function main(): Promise<void> {
     }
 
     if (dropOnly) {
-      await runReset(connectionString, { keepSharedSchema: keepShared });
+      await runReset(connectionString, {
+        keepSharedSchema: keepShared,
+        expectedDatabase: destructiveApproval.expectedDatabase,
+        acknowledgement: destructiveApproval.acknowledgement,
+        disposableEnvironmentMarker:
+          destructiveApproval.disposableEnvironmentMarker,
+        executionProfile: destructiveApproval.executionProfile,
+        approvalLabel: destructiveApproval.approvalLabel,
+        refreshDisposableFingerprint:
+          destructiveApproval.confirmationShorthandUsed,
+      });
       return;
     }
 
@@ -1542,7 +1682,17 @@ async function main(): Promise<void> {
     }
 
     if (reset) {
-      await runReset(connectionString, { keepSharedSchema: keepShared });
+      await runReset(connectionString, {
+        keepSharedSchema: keepShared,
+        expectedDatabase: destructiveApproval.expectedDatabase,
+        acknowledgement: destructiveApproval.acknowledgement,
+        disposableEnvironmentMarker:
+          destructiveApproval.disposableEnvironmentMarker,
+        executionProfile: destructiveApproval.executionProfile,
+        approvalLabel: destructiveApproval.approvalLabel,
+        refreshDisposableFingerprint:
+          destructiveApproval.confirmationShorthandUsed,
+      });
       // After reset, always fall through to re-run all stages from scratch
     }
 
@@ -1586,7 +1736,22 @@ async function main(): Promise<void> {
       err instanceof AggregateError
         ? `AggregateError(${err.errors.map((e: unknown) => String(e)).join(" | ")})`
         : String(err);
-    logError({ msg: "migrate_fatal", error: errStr });
+    const databaseError = err as {
+      code?: string;
+      detail?: string;
+      where?: string;
+      position?: string;
+      routine?: string;
+    };
+    logError({
+      msg: "migrate_fatal",
+      error: errStr,
+      code: databaseError.code,
+      detail: databaseError.detail,
+      where: databaseError.where,
+      position: databaseError.position,
+      routine: databaseError.routine,
+    });
     process.exit(1);
   }
 }

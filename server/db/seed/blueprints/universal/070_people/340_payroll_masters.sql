@@ -1,34 +1,49 @@
+-- seed-pack-version: 2.1.0
 -- Universal payroll master data (tenant-scoped, idempotent). Contents:
---   formula_expression(14) + versions, rate_table(7) + ~70 rows (IN×3, SG, GB, US×2),
+--   formula_expression(14) + versions, rate_table(7) + ~70 rows (INÃ—3, SG, GB, USÃ—2),
 --   pay_component(58), pay_structure(3 tenant templates), pay_structure_line(~50),
 --   statutory_scheme(18 across IN/SG/MY/GB/US/AE).
 --
--- VERIFY BEFORE EACH FINANCIAL YEAR — these rates expire/change:
---   SG CPF — 55-60 / 60-65 age-band rates follow CPF Board phased-increase schedule.
---   IN IT  — new-regime slabs match FY2025-26 (Budget 2025); add FY2026-27 after Budget 2026.
---   UK NI  — 2025-26 rates (15% employer from Apr 2025); update on next Autumn Statement.
---   US SS  — wage base $176,100 (2025); update annually per IRS announcement.
+-- VERIFY BEFORE EACH FINANCIAL YEAR â€” these rates expire/change:
+--   SG CPF â€” 55-60 / 60-65 age-band rates follow CPF Board phased-increase schedule.
+--   IN IT  â€” new-regime slabs match FY2025-26 (Budget 2025); add FY2026-27 after Budget 2026.
+--   UK NI  â€” 2025-26 rates (15% employer from Apr 2025); update on next Autumn Statement.
+--   US SS  â€” wage base $176,100 (2025); update annually per IRS announcement.
 --
 -- Intentionally NOT seeded:
---   master.pay_group — requires NOT NULL company_code_id; seed per-company elsewhere.
---   master.employee_statutory_enrollment — needs live employee_id; enrol post-hire.
+--   master.pay_group â€” requires NOT NULL company_code_id; seed per-company elsewhere.
+--   master.employee_statutory_enrollment â€” needs live employee_id; enrol post-hire.
 
 DO $seed$
 DECLARE
     v_tid  uuid;
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_su   uuid := nullif(trim(current_setting('app.current_principal_id', true)), '')::uuid;
     v_pack text := 'universal_payroll_masters';
+    v_currency character(3) := nullif(upper(trim(current_setting('app.seed_currency_code', true))), '')::character(3);
     v_n    int;
 BEGIN
+    CREATE TEMP SEQUENCE IF NOT EXISTS wave5_people_payroll_seq START WITH 1 INCREMENT BY 1;
+    ALTER SEQUENCE pg_temp.wave5_people_payroll_seq RESTART WITH 1;
     v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
     IF v_tid IS NULL THEN
-        RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
+        RAISE EXCEPTION '[seed] app.seed_tenant_id not set â€” run: SET app.seed_tenant_id = ''<uuid>''';
+    END IF;
+    IF v_currency IS NULL OR NOT EXISTS (
+        SELECT 1 FROM shared.currency WHERE code=v_currency AND status='active'
+    ) THEN
+        RAISE EXCEPTION '[seed] app.seed_currency_code must identify an active ISO currency';
+    END IF;
+    IF v_su IS NULL OR NOT EXISTS (
+        SELECT 1 FROM master.principal
+         WHERE tenant_id=v_tid AND id=v_su AND status='active'
+    ) THEN
+        RAISE EXCEPTION '[seed] app.current_principal_id must identify an active tenant-local principal';
     END IF;
 
     RAISE NOTICE '[%] Starting payroll masters seed for tenant %', v_pack, v_tid;
 
     -- ========================================================================
-    -- § 1  FORMULA EXPRESSIONS
+    -- Â§ 1  FORMULA EXPRESSIONS
     -- Named formulas covering core payroll arithmetic, statutory contributions,
     -- and Indian statutory provisions. Additional country packs can add more.
     -- ========================================================================
@@ -41,7 +56,7 @@ BEGIN
 
         -- Passthrough: returns the amount input as-is (used for BASIC, SA, bonuses
         -- where the amount is set directly on the compensation assignment).
-        (shared.uuidv7(), v_tid,
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
          'basic_salary_passthrough', 'Basic Salary Passthrough',
          'PAYROLL', 'payroll',
          'Returns the input basic_salary amount unchanged. Used for fixed-amount components where the value comes from the compensation record.',
@@ -50,9 +65,9 @@ BEGIN
          '{"mode": "half_up", "precision": 2}'::jsonb,
          'active', v_su),
 
-        -- HRA = basic_salary × hra_pct / 100
-        (shared.uuidv7(), v_tid,
-         'hra_pct_of_basic', 'HRA — Percentage of Basic',
+        -- HRA = basic_salary Ã— hra_pct / 100
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'hra_pct_of_basic', 'HRA â€” Percentage of Basic',
          'PAYROLL', 'payroll',
          'House Rent Allowance computed as a percentage of basic salary. Standard: 40% for non-metro, 50% for metro cities.',
          '{"basic_salary": "number", "hra_pct": "number"}'::jsonb,
@@ -60,9 +75,9 @@ BEGIN
          '{"mode": "half_up", "precision": 2}'::jsonb,
          'active', v_su),
 
-        -- Pro-rate by calendar days: full_month × paid_days / calendar_days
-        (shared.uuidv7(), v_tid,
-         'pro_rate_calendar', 'Pro-Rata — Calendar Days',
+        -- Pro-rate by calendar days: full_month Ã— paid_days / calendar_days
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'pro_rate_calendar', 'Pro-Rata â€” Calendar Days',
          'PAYROLL', 'payroll',
          'Reduces a full-month salary component proportionally for partial attendance based on calendar days.',
          '{"full_month_amount": "number", "paid_days": "number", "calendar_days": "number"}'::jsonb,
@@ -70,9 +85,9 @@ BEGIN
          '{"mode": "half_up", "precision": 2}'::jsonb,
          'active', v_su),
 
-        -- Pro-rate by working days: full_month × days_worked / working_days
-        (shared.uuidv7(), v_tid,
-         'pro_rate_working', 'Pro-Rata — Working Days',
+        -- Pro-rate by working days: full_month Ã— days_worked / working_days
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'pro_rate_working', 'Pro-Rata â€” Working Days',
          'PAYROLL', 'payroll',
          'Reduces a full-month salary component proportionally based on actual working days attended vs. scheduled working days.',
          '{"full_month_amount": "number", "days_worked": "number", "working_days": "number"}'::jsonb,
@@ -80,39 +95,39 @@ BEGIN
          '{"mode": "half_up", "precision": 2}'::jsonb,
          'active', v_su),
 
-        -- Regular OT: (basic / working_days / hours_per_day) × ot_hours
-        (shared.uuidv7(), v_tid,
-         'overtime_regular', 'Overtime Pay — Regular Rate (1×)',
+        -- Regular OT: (basic / working_days / hours_per_day) Ã— ot_hours
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'overtime_regular', 'Overtime Pay â€” Regular Rate (1Ã—)',
          'PAYROLL', 'payroll',
-         'Overtime at regular hourly rate: (basic ÷ working_days ÷ hours_per_day) × ot_hours. Applicable where no premium multiplier is mandated.',
+         'Overtime at regular hourly rate: (basic Ã· working_days Ã· hours_per_day) Ã— ot_hours. Applicable where no premium multiplier is mandated.',
          '{"basic_salary": "number", "working_days": "number", "hours_per_day": "number", "ot_hours": "number"}'::jsonb,
          '{"amount": "number"}'::jsonb,
          '{"mode": "half_up", "precision": 2}'::jsonb,
          'active', v_su),
 
-        -- Premium OT: same as regular but × 1.5 or 2 (multiplier input)
-        (shared.uuidv7(), v_tid,
-         'overtime_premium', 'Overtime Pay — Premium Rate (configurable multiplier)',
+        -- Premium OT: same as regular but Ã— 1.5 or 2 (multiplier input)
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'overtime_premium', 'Overtime Pay â€” Premium Rate (configurable multiplier)',
          'PAYROLL', 'payroll',
-         'Overtime at configurable premium rate: (basic ÷ working_days ÷ hours_per_day) × ot_hours × ot_multiplier. Set multiplier=1.5 for standard OT or 2.0 for holiday OT.',
+         'Overtime at configurable premium rate: (basic Ã· working_days Ã· hours_per_day) Ã— ot_hours Ã— ot_multiplier. Set multiplier=1.5 for standard OT or 2.0 for holiday OT.',
          '{"basic_salary": "number", "working_days": "number", "hours_per_day": "number", "ot_hours": "number", "ot_multiplier": "number"}'::jsonb,
          '{"amount": "number"}'::jsonb,
          '{"mode": "half_up", "precision": 2}'::jsonb,
          'active', v_su),
 
-        -- India PF Employee: min(basic+DA, pf_wage_ceiling) × pf_employee_rate / 100
-        (shared.uuidv7(), v_tid,
-         'pf_employee_in', 'PF — Employee Contribution (India)',
+        -- India PF Employee: min(basic+DA, pf_wage_ceiling) Ã— pf_employee_rate / 100
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'pf_employee_in', 'PF â€” Employee Contribution (India)',
          'PAYROLL', 'payroll',
-         'India EPF Act 1952: 12% of (basic+DA) capped at PF wage ceiling (₹15,000/month). employee contribution goes to PF account.',
+         'India EPF Act 1952: 12% of (basic+DA) capped at PF wage ceiling (â‚¹15,000/month). employee contribution goes to PF account.',
          '{"basic_salary": "number", "da_amount": "number", "pf_wage_ceiling": "number", "pf_employee_rate": "number"}'::jsonb,
          '{"amount": "number"}'::jsonb,
          '{"mode": "round", "precision": 0}'::jsonb,
          'active', v_su),
 
         -- India PF Employer: split into 3.67% PF + 8.33% EPS on capped wage
-        (shared.uuidv7(), v_tid,
-         'pf_employer_in', 'PF — Employer Contribution (India)',
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'pf_employer_in', 'PF â€” Employer Contribution (India)',
          'PAYROLL', 'payroll',
          'India EPF Act 1952: employer contributes 3.67% to PF + 8.33% to EPS on capped wage. Total employer PF outgo = 12% of capped wage + EDLI + admin charges.',
          '{"basic_salary": "number", "da_amount": "number", "pf_wage_ceiling": "number", "pf_employer_rate": "number"}'::jsonb,
@@ -120,29 +135,29 @@ BEGIN
          '{"mode": "round", "precision": 0}'::jsonb,
          'active', v_su),
 
-        -- India ESI Employee: gross × 0.75% if gross ≤ ESI ceiling
-        (shared.uuidv7(), v_tid,
-         'esi_employee_in', 'ESI — Employee Contribution (India)',
+        -- India ESI Employee: gross Ã— 0.75% if gross â‰¤ ESI ceiling
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'esi_employee_in', 'ESI â€” Employee Contribution (India)',
          'PAYROLL', 'payroll',
-         'India ESI Act 1948: employee contributes 0.75% of gross salary if gross ≤ ESI wage ceiling (₹21,000/month). Zero for exempt employees.',
+         'India ESI Act 1948: employee contributes 0.75% of gross salary if gross â‰¤ ESI wage ceiling (â‚¹21,000/month). Zero for exempt employees.',
          '{"gross_salary": "number", "esi_wage_ceiling": "number", "esi_employee_rate": "number"}'::jsonb,
          '{"amount": "number", "is_exempt": "boolean"}'::jsonb,
          '{"mode": "round", "precision": 0}'::jsonb,
          'active', v_su),
 
-        -- India ESI Employer: gross × 3.25% if gross ≤ ESI ceiling
-        (shared.uuidv7(), v_tid,
-         'esi_employer_in', 'ESI — Employer Contribution (India)',
+        -- India ESI Employer: gross Ã— 3.25% if gross â‰¤ ESI ceiling
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'esi_employer_in', 'ESI â€” Employer Contribution (India)',
          'PAYROLL', 'payroll',
-         'India ESI Act 1948: employer contributes 3.25% of gross salary if gross ≤ ESI wage ceiling (₹21,000/month). Zero for exempt employees.',
+         'India ESI Act 1948: employer contributes 3.25% of gross salary if gross â‰¤ ESI wage ceiling (â‚¹21,000/month). Zero for exempt employees.',
          '{"gross_salary": "number", "esi_wage_ceiling": "number", "esi_employer_rate": "number"}'::jsonb,
          '{"amount": "number", "is_exempt": "boolean"}'::jsonb,
          '{"mode": "round", "precision": 0}'::jsonb,
          'active', v_su),
 
         -- Monthly TDS: annual_income_tax / 12 (arrears and advance TDS handled separately)
-        (shared.uuidv7(), v_tid,
-         'income_tax_tds_monthly', 'Income Tax TDS — Monthly Instalment',
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'income_tax_tds_monthly', 'Income Tax TDS â€” Monthly Instalment',
          'PAYROLL', 'tax',
          'Monthly tax deduction at source (TDS): annual estimated income tax divided equally across remaining pay periods in the financial year.',
          '{"annual_income_tax": "number", "periods_remaining": "number"}'::jsonb,
@@ -150,31 +165,31 @@ BEGIN
          '{"mode": "round", "precision": 0}'::jsonb,
          'active', v_su),
 
-        -- India Gratuity monthly accrual: (basic+DA) × 15 / 26 / 12
-        (shared.uuidv7(), v_tid,
-         'gratuity_accrual_in', 'Gratuity Accrual — Monthly Provision (India)',
+        -- India Gratuity monthly accrual: (basic+DA) Ã— 15 / 26 / 12
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'gratuity_accrual_in', 'Gratuity Accrual â€” Monthly Provision (India)',
          'PAYROLL', 'accrual',
-         'Payment of Gratuity Act 1972: monthly accrual = (basic+DA) × 15 ÷ 26 ÷ 12. Crystallises on exit after 5 years of continuous service.',
+         'Payment of Gratuity Act 1972: monthly accrual = (basic+DA) Ã— 15 Ã· 26 Ã· 12. Crystallises on exit after 5 years of continuous service.',
          '{"basic_salary": "number", "da_amount": "number"}'::jsonb,
          '{"amount": "number"}'::jsonb,
          '{"mode": "half_up", "precision": 2}'::jsonb,
          'active', v_su),
 
         -- India Statutory Bonus: 8.33% of basic capped at monthly ceiling
-        (shared.uuidv7(), v_tid,
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
          'stat_bonus_in', 'Statutory Bonus Accrual (India)',
          'PAYROLL', 'accrual',
-         'Payment of Bonus Act 1965: monthly accrual = min(basic × 8.33%, bonus_ceiling_monthly). Allocable surplus determines final payout rate (8.33%–20%).',
+         'Payment of Bonus Act 1965: monthly accrual = min(basic Ã— 8.33%, bonus_ceiling_monthly). Allocable surplus determines final payout rate (8.33%â€“20%).',
          '{"basic_salary": "number", "bonus_ceiling_monthly": "number"}'::jsonb,
          '{"amount": "number"}'::jsonb,
          '{"mode": "round", "precision": 0}'::jsonb,
          'active', v_su),
 
-        -- Leave encashment: (basic / 26) × encashable_days
-        (shared.uuidv7(), v_tid,
-         'leave_encashment_in', 'Leave Encashment (India — 26-day basis)',
+        -- Leave encashment: (basic / 26) Ã— encashable_days
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'leave_encashment_in', 'Leave Encashment (India â€” 26-day basis)',
          'PAYROLL', 'leave',
-         'Leave encashment value = (basic ÷ 26) × encashable_days. Per-day rate uses 26 working days. Tax exempt on exit up to 10 lakh (Sec 10(10AA)).',
+         'Leave encashment value = (basic Ã· 26) Ã— encashable_days. Per-day rate uses 26 working days. Tax exempt on exit up to 10 lakh (Sec 10(10AA)).',
          '{"basic_salary": "number", "encashable_days": "number"}'::jsonb,
          '{"amount": "number"}'::jsonb,
          '{"mode": "half_up", "precision": 2}'::jsonb,
@@ -195,9 +210,9 @@ BEGIN
     RAISE NOTICE '[%] formula_expression: % rows upserted', v_pack, v_n;
 
     -- ========================================================================
-    -- § 2  FORMULA EXPRESSION VERSIONS
+    -- Â§ 2  FORMULA EXPRESSION VERSIONS
     -- Version 1 (effective) for every formula above.
-    -- expression_body is JSONLogic — safe, portable, evaluator-agnostic.
+    -- expression_body is JSONLogic â€” safe, portable, evaluator-agnostic.
     -- ========================================================================
     INSERT INTO control.formula_expression_version (
         id, tenant_id, formula_expression_id, version_no, expression_language,
@@ -206,7 +221,7 @@ BEGIN
         created_at, created_by
     )
     SELECT
-        shared.uuidv7(), v_tid, fe.id, x.version_no, x.lang,
+        md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid, fe.id, x.version_no, x.lang,
         x.body::jsonb,
         x.defaults::jsonb,
         x.mapping::jsonb,
@@ -323,7 +338,7 @@ BEGIN
     RAISE NOTICE '[%] formula_expression_version: % rows inserted', v_pack, v_n;
 
     -- ========================================================================
-    -- § 3  RATE TABLES
+    -- Â§ 3  RATE TABLES
     -- Five statutory / bracket tables covering India (PF, ESI, income tax),
     -- Singapore (CPF), and UK (National Insurance).
     -- ========================================================================
@@ -333,44 +348,44 @@ BEGIN
     )
     VALUES
 
-        (shared.uuidv7(), v_tid,
-         'PF_RATE_IN', 'India — Employees Provident Fund Rate',
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'PF_RATE_IN', 'India â€” Employees Provident Fund Rate',
          'statutory', 'IN', 'INR',
-         'EPF Act 1952: employee 12% + employer 3.67% PF + 8.33% EPS on PF wage ceiling ₹15,000. Single flat rate entry per party.',
+         'EPF Act 1952: employee 12% + employer 3.67% PF + 8.33% EPS on PF wage ceiling â‚¹15,000. Single flat rate entry per party.',
          'active', v_su),
 
-        (shared.uuidv7(), v_tid,
-         'ESI_RATE_IN', 'India — Employees State Insurance Rate',
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'ESI_RATE_IN', 'India â€” Employees State Insurance Rate',
          'statutory', 'IN', 'INR',
-         'ESI Act 1948: employee 0.75% + employer 3.25% on gross salary, applicable only if gross ≤ ₹21,000/month.',
+         'ESI Act 1948: employee 0.75% + employer 3.25% on gross salary, applicable only if gross â‰¤ â‚¹21,000/month.',
          'active', v_su),
 
-        (shared.uuidv7(), v_tid,
-         'INCOME_TAX_IN_NEW', 'India — Income Tax New Regime (FY 2024-25)',
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'INCOME_TAX_IN_NEW', 'India â€” Income Tax New Regime (FY 2024-25)',
          'bracket', 'IN', 'INR',
-         'Budget 2024 new tax regime (Sec 115BAC): zero tax to 3 lakh, 5%-30% slabs thereafter. Standard deduction ₹75,000.',
+         'Budget 2024 new tax regime (Sec 115BAC): zero tax to 3 lakh, 5%-30% slabs thereafter. Standard deduction â‚¹75,000.',
          'active', v_su),
 
-        (shared.uuidv7(), v_tid,
-         'CPF_RATE_SG', 'Singapore — CPF Contribution Rates (All Age Bands)',
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'CPF_RATE_SG', 'Singapore â€” CPF Contribution Rates (All Age Bands)',
          'lookup', 'SG', 'SGD',
-         'CPF Act: age-banded rates on ordinary wages capped at SGD 6,000/month. Keys: party + age_band. Phase-in schedule increases rates for 55+ workers — verify against CPF Board for latest effective dates.',
+         'CPF Act: age-banded rates on ordinary wages capped at SGD 6,000/month. Keys: party + age_band. Phase-in schedule increases rates for 55+ workers â€” verify against CPF Board for latest effective dates.',
          'active', v_su),
 
-        (shared.uuidv7(), v_tid,
-         'NI_RATE_GB', 'United Kingdom — National Insurance (2024-25 / 2025-26)',
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'NI_RATE_GB', 'United Kingdom â€” National Insurance (2024-25 / 2025-26)',
          'bracket', 'GB', 'GBP',
-         'Class 1 NI. Employee: 8% on £12,571–£50,270, 2% above (unchanged 2024-26). Employer 2024-25: 13.8% above £9,100. Employer 2025-26 (from 6 Apr 2025): 15% above £5,000.',
+         'Class 1 NI. Employee: 8% on Â£12,571â€“Â£50,270, 2% above (unchanged 2024-26). Employer 2024-25: 13.8% above Â£9,100. Employer 2025-26 (from 6 Apr 2025): 15% above Â£5,000.',
          'active', v_su),
 
-        (shared.uuidv7(), v_tid,
-         'US_SS_RATE', 'United States — Social Security FICA (2025)',
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'US_SS_RATE', 'United States â€” Social Security FICA (2025)',
          'bracket', 'US', 'USD',
          'FICA Social Security: 6.2% employee + 6.2% employer on annual wages up to $176,100 (2025 wage base). Zero above wage base for both parties.',
          'active', v_su),
 
-        (shared.uuidv7(), v_tid,
-         'US_MEDICARE_RATE', 'United States — Medicare FICA',
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
+         'US_MEDICARE_RATE', 'United States â€” Medicare FICA',
          'statutory', 'US', 'USD',
          'FICA Medicare: 1.45% employee + 1.45% employer on all wages (no ceiling). Additional 0.9% employee-only surcharge (no employer match) on wages above $200,000/year.',
          'active', v_su)
@@ -387,7 +402,7 @@ BEGIN
     RAISE NOTICE '[%] rate_table: % rows upserted', v_pack, v_n;
 
     -- ========================================================================
-    -- § 4  RATE TABLE ROWS
+    -- Â§ 4  RATE TABLE ROWS
     -- key_values JSONB: {"party":"employee"|"employer", "age_band":"...", etc.}
     -- range_from/range_until: annual income thresholds (INR/SGD/GBP)
     -- rate_value: contribution rate as decimal (0.12 = 12%)
@@ -401,7 +416,7 @@ BEGIN
         created_by
     )
     SELECT
-        shared.uuidv7(), v_tid, rt.id,
+        md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid, rt.id,
         x.row_key, x.seq,
         x.eff_from::date, NULL::date,
         x.range_from::numeric,  x.range_until::numeric,
@@ -410,7 +425,7 @@ BEGIN
         v_su
     FROM (VALUES
 
-        -- ── India PF (statutory flat) ─────────────────────────────────────
+        -- â”€â”€ India PF (statutory flat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- Employee: 12% on min(basic+DA, 15000). Monthly cap = 1800.
         ('PF_RATE_IN', 'ee_pf',        1,  '2024-04-01',
          NULL, NULL, '{"party":"employee","component":"pf"}',
@@ -426,17 +441,17 @@ BEGIN
          NULL, NULL, '{"party":"employer","component":"eps"}',
          0.0833, NULL, 1249.5, NULL),
 
-        -- Employer EDLI premium (0.5% capped at ₹75)
+        -- Employer EDLI premium (0.5% capped at â‚¹75)
         ('PF_RATE_IN', 'er_edli',      4,  '2024-04-01',
          NULL, NULL, '{"party":"employer","component":"edli"}',
          0.005, NULL, 75, NULL),
 
-        -- Employer PF admin charges (0.5% capped at ₹75 minimum ₹500 flat)
+        -- Employer PF admin charges (0.5% capped at â‚¹75 minimum â‚¹500 flat)
         ('PF_RATE_IN', 'er_admin',     5,  '2024-04-01',
          NULL, NULL, '{"party":"employer","component":"admin"}',
          0.005, NULL, 75, NULL),
 
-        -- ── India ESI (statutory flat with gross ceiling) ─────────────────
+        -- â”€â”€ India ESI (statutory flat with gross ceiling) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('ESI_RATE_IN', 'ee_esi',      1,  '2024-04-01',
          NULL, NULL, '{"party":"employee","gross_ceiling":21000}',
          0.0075, NULL, NULL, NULL),
@@ -445,39 +460,39 @@ BEGIN
          NULL, NULL, '{"party":"employer","gross_ceiling":21000}',
          0.0325, NULL, NULL, NULL),
 
-        -- ── India Income Tax New Regime FY2024-25 (annual income brackets) ─
-        -- Slab 1: ₹0–₹3,00,000 — NIL
+        -- â”€â”€ India Income Tax New Regime FY2024-25 (annual income brackets) â”€
+        -- Slab 1: â‚¹0â€“â‚¹3,00,000 â€” NIL
         ('INCOME_TAX_IN_NEW', 'slab_1', 1, '2024-04-01',
          0, 300000, '{"regime":"new","slab":1}',
          0.00, NULL, NULL, NULL),
 
-        -- Slab 2: ₹3,00,001–₹6,00,000 — 5%
+        -- Slab 2: â‚¹3,00,001â€“â‚¹6,00,000 â€” 5%
         ('INCOME_TAX_IN_NEW', 'slab_2', 2, '2024-04-01',
          300001, 600000, '{"regime":"new","slab":2}',
          0.05, NULL, NULL, NULL),
 
-        -- Slab 3: ₹6,00,001–₹9,00,000 — 10%
+        -- Slab 3: â‚¹6,00,001â€“â‚¹9,00,000 â€” 10%
         ('INCOME_TAX_IN_NEW', 'slab_3', 3, '2024-04-01',
          600001, 900000, '{"regime":"new","slab":3}',
          0.10, NULL, NULL, NULL),
 
-        -- Slab 4: ₹9,00,001–₹12,00,000 — 15%
+        -- Slab 4: â‚¹9,00,001â€“â‚¹12,00,000 â€” 15%
         ('INCOME_TAX_IN_NEW', 'slab_4', 4, '2024-04-01',
          900001, 1200000, '{"regime":"new","slab":4}',
          0.15, NULL, NULL, NULL),
 
-        -- Slab 5: ₹12,00,001–₹15,00,000 — 20%
+        -- Slab 5: â‚¹12,00,001â€“â‚¹15,00,000 â€” 20%
         ('INCOME_TAX_IN_NEW', 'slab_5', 5, '2024-04-01',
          1200001, 1500000, '{"regime":"new","slab":5}',
          0.20, NULL, NULL, NULL),
 
-        -- Slab 6: above ₹15,00,000 — 30%
+        -- Slab 6: above â‚¹15,00,000 â€” 30%
         ('INCOME_TAX_IN_NEW', 'slab_6', 6, '2024-04-01',
          1500001, NULL, '{"regime":"new","slab":6}',
          0.30, NULL, NULL, NULL),
 
-        -- ── India Income Tax Surcharge thresholds ─────────────────────────
-        -- Income 50L–1Cr: 10% surcharge | 1Cr–2Cr: 15% | 2Cr–5Cr: 25% | >5Cr: 37% (old) / 25% (new)
+        -- â”€â”€ India Income Tax Surcharge thresholds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        -- Income 50Lâ€“1Cr: 10% surcharge | 1Crâ€“2Cr: 15% | 2Crâ€“5Cr: 25% | >5Cr: 37% (old) / 25% (new)
         -- Represented as separate key_values rows in the same table.
         ('INCOME_TAX_IN_NEW', 'surcharge_10pct', 7, '2024-04-01',
          5000000, 10000000, '{"regime":"new","charge_type":"surcharge"}',
@@ -491,12 +506,12 @@ BEGIN
          20000001, NULL, '{"regime":"new","charge_type":"surcharge"}',
          0.25, NULL, NULL, NULL),
 
-        -- Health & Education Cess: 4% on (tax + surcharge) — flat rate, no range
+        -- Health & Education Cess: 4% on (tax + surcharge) â€” flat rate, no range
         ('INCOME_TAX_IN_NEW', 'cess_4pct', 10, '2024-04-01',
          NULL, NULL, '{"regime":"new","charge_type":"cess"}',
          0.04, NULL, NULL, NULL),
 
-        -- ── Singapore CPF (lookup by age_band) ────────────────────────────
+        -- â”€â”€ Singapore CPF (lookup by age_band) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- Ordinary wage ceiling SGD 6,000/month; Annual wage ceiling SGD 102,000.
         ('CPF_RATE_SG', 'below_55_ee',      1,  '2024-01-01',
          NULL, NULL, '{"party":"employee","age_band":"below_55"}',
@@ -506,7 +521,7 @@ BEGIN
          NULL, NULL, '{"party":"employer","age_band":"below_55"}',
          0.17, NULL, NULL, NULL),
 
-        -- Age 55–60: employee 15%, employer 15%
+        -- Age 55â€“60: employee 15%, employer 15%
         ('CPF_RATE_SG', 'age_55_60_ee',     3,  '2024-01-01',
          NULL, NULL, '{"party":"employee","age_band":"55_to_60"}',
          0.15, NULL, NULL, NULL),
@@ -515,7 +530,7 @@ BEGIN
          NULL, NULL, '{"party":"employer","age_band":"55_to_60"}',
          0.15, NULL, NULL, NULL),
 
-        -- Age 60–65: employee 10.5%, employer 11.5%
+        -- Age 60â€“65: employee 10.5%, employer 11.5%
         ('CPF_RATE_SG', 'age_60_65_ee',     5,  '2024-01-01',
          NULL, NULL, '{"party":"employee","age_band":"60_to_65"}',
          0.105, NULL, NULL, NULL),
@@ -524,7 +539,7 @@ BEGIN
          NULL, NULL, '{"party":"employer","age_band":"60_to_65"}',
          0.115, NULL, NULL, NULL),
 
-        -- Age 65–70: employee 7.5%, employer 9%
+        -- Age 65â€“70: employee 7.5%, employer 9%
         ('CPF_RATE_SG', 'age_65_70_ee',     7,  '2024-01-01',
          NULL, NULL, '{"party":"employee","age_band":"65_to_70"}',
          0.075, NULL, NULL, NULL),
@@ -542,8 +557,8 @@ BEGIN
          NULL, NULL, '{"party":"employer","age_band":"70_and_above"}',
          0.075, NULL, NULL, NULL),
 
-        -- ── UK National Insurance 2024-25 (annual earnings brackets) ──────
-        -- Primary threshold: £12,570. Upper earnings limit: £50,270.
+        -- â”€â”€ UK National Insurance 2024-25 (annual earnings brackets) â”€â”€â”€â”€â”€â”€
+        -- Primary threshold: Â£12,570. Upper earnings limit: Â£50,270.
         -- Employee Class 1 primary contributions.
         ('NI_RATE_GB', 'ee_band_zero',      1,  '2024-04-06',
          0, 12570, '{"party":"employee","class":"1_primary"}',
@@ -557,7 +572,7 @@ BEGIN
          50271, NULL, '{"party":"employee","class":"1_primary"}',
          0.02, NULL, NULL, NULL),
 
-        -- Employer Class 1 secondary: 13.8% above secondary threshold £9,100
+        -- Employer Class 1 secondary: 13.8% above secondary threshold Â£9,100
         ('NI_RATE_GB', 'er_band_zero',      4,  '2024-04-06',
          0, 9100, '{"party":"employer","class":"1_secondary"}',
          0.00, NULL, NULL, NULL),
@@ -566,9 +581,9 @@ BEGIN
          9101, NULL, '{"party":"employer","class":"1_secondary","fy":"2024-25"}',
          0.138, NULL, NULL, NULL),
 
-        -- ── UK NI 2025-26 (from 6 April 2025) ────────────────────────────
-        -- Employer NI only changed: secondary threshold cut £9,100→£5,000;
-        -- rate raised 13.8%→15%. Employee bands (ee_band_*) are unchanged.
+        -- â”€â”€ UK NI 2025-26 (from 6 April 2025) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        -- Employer NI only changed: secondary threshold cut Â£9,100â†’Â£5,000;
+        -- rate raised 13.8%â†’15%. Employee bands (ee_band_*) are unchanged.
         ('NI_RATE_GB', 'er_band_zero_25',   6,  '2025-04-06',
          0, 5000, '{"party":"employer","class":"1_secondary","fy":"2025-26"}',
          0.00, NULL, NULL, NULL),
@@ -577,10 +592,10 @@ BEGIN
          5001, NULL, '{"party":"employer","class":"1_secondary","fy":"2025-26"}',
          0.15, NULL, NULL, NULL),
 
-        -- ── India Income Tax New Regime FY 2025-26 (Budget 2025) ─────────
+        -- â”€â”€ India Income Tax New Regime FY 2025-26 (Budget 2025) â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- Finance Act 2025 revised slabs: 7 bands vs 6 in FY 2024-25.
-        -- Sec 87A full rebate on income up to ₹12,00,000 (zero tax for most salaried).
-        -- Standard deduction ₹75,000 unchanged. Eff 1 April 2025.
+        -- Sec 87A full rebate on income up to â‚¹12,00,000 (zero tax for most salaried).
+        -- Standard deduction â‚¹75,000 unchanged. Eff 1 April 2025.
         ('INCOME_TAX_IN_NEW', 'slab_fy26_1',  11, '2025-04-01',
          0, 400000, '{"regime":"new","slab":1,"fy":"2025-26"}',
          0.00, NULL, NULL, NULL),
@@ -626,7 +641,7 @@ BEGIN
          NULL, NULL, '{"regime":"new","charge_type":"cess","fy":"2025-26"}',
          0.04, NULL, NULL, NULL),
 
-        -- ── United States FICA — Social Security (2025 wage base) ────────
+        -- â”€â”€ United States FICA â€” Social Security (2025 wage base) â”€â”€â”€â”€â”€â”€â”€â”€
         -- Annual wage base $176,100. Rate 6.2% EE + 6.2% ER on wages up to base.
         ('US_SS_RATE', 'ee_ss_2025',        1, '2025-01-01',
          0, 176100, '{"party":"employee","year":2025}',
@@ -644,7 +659,7 @@ BEGIN
          176101, NULL, '{"party":"employer","year":2025}',
          0.00, NULL, NULL, NULL),
 
-        -- ── United States FICA — Medicare (no wage ceiling) ───────────────
+        -- â”€â”€ United States FICA â€” Medicare (no wage ceiling) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- EE 1.45% on all wages; additional 0.9% EE-only surcharge above $200k.
         -- ER 1.45% on all wages (no ceiling, no additional tax for employer).
         ('US_MEDICARE_RATE', 'ee_medicare_base',  1, '2013-01-01',
@@ -668,9 +683,9 @@ BEGIN
     GET DIAGNOSTICS v_n = ROW_COUNT;
     RAISE NOTICE '[%] rate_table_row: % rows inserted', v_pack, v_n;
 
-    -- ── Post-insert corrections ──────────────────────────────────────────────
-    -- PF admin charges have NO ₹75 cap; minimum floor is ₹500/month.
-    -- ON CONFLICT DO NOTHING above won't fix existing rows — use UPDATE.
+    -- â”€â”€ Post-insert corrections â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    -- PF admin charges have NO â‚¹75 cap; minimum floor is â‚¹500/month.
+    -- ON CONFLICT DO NOTHING above won't fix existing rows â€” use UPDATE.
     UPDATE control.rate_table_row rtr
        SET cap_amount   = NULL,
            floor_amount = 500,
@@ -696,9 +711,9 @@ BEGIN
        AND rtr.effective_until IS NULL;
 
     -- ========================================================================
-    -- § 5  PAY COMPONENTS
+    -- Â§ 5  PAY COMPONENTS
     -- 58 components covering the full payroll spectrum across all 6 jurisdictions.
-    -- formula_expression_id links to formulas seeded in § 1.
+    -- formula_expression_id links to formulas seeded in Â§ 1.
     -- default_gl_role uses canonical posting-role codes from the AP/payroll pack.
     -- ========================================================================
     INSERT INTO master.pay_component (
@@ -709,7 +724,7 @@ BEGIN
         status, created_by
     )
     SELECT
-        shared.uuidv7(), v_tid, x.code, x.name,
+        md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid, x.code, x.name,
         x.comp_type, x.val_type, x.tax_behavior,
         x.is_recurring::boolean, x.is_er_cost::boolean,
         (SELECT id FROM control.formula_expression
@@ -718,26 +733,26 @@ BEGIN
         'active', v_su
     FROM (VALUES
 
-        -- ── EARNINGS ─────────────────────────────────────────────────────────
+        -- â”€â”€ EARNINGS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- Basic Salary: the foundational component; all other % components derive from it.
         ('BASIC',        'Basic Salary',                 'earning', 'amount',  'taxable',          true,  false, 'basic_salary_passthrough', 'PAYROLL_WAGE'),
         -- Dearness Allowance: cost-of-living supplement, typically a % of basic.
         ('DA',           'Dearness Allowance',           'earning', 'rate',    'taxable',          true,  false, NULL::text,                 'PAYROLL_WAGE'),
         -- House Rent Allowance: partially exempt under Sec 10(13A) India.
         ('HRA',          'House Rent Allowance',         'earning', 'rate',    'partially_taxable',true,  false, 'hra_pct_of_basic',         'PAYROLL_ALLOWANCE'),
-        -- Transport Allowance: exempt up to ₹3,200/month for disabled, ₹1,600 others.
+        -- Transport Allowance: exempt up to â‚¹3,200/month for disabled, â‚¹1,600 others.
         ('TA',           'Transport Allowance',          'earning', 'amount',  'non_taxable',      true,  false, NULL::text,                 'PAYROLL_ALLOWANCE'),
-        -- Medical Allowance: exempt up to ₹15,000/year with medical bills.
+        -- Medical Allowance: exempt up to â‚¹15,000/year with medical bills.
         ('MA',           'Medical Allowance',            'earning', 'amount',  'non_taxable',      true,  false, NULL::text,                 'PAYROLL_ALLOWANCE'),
         -- Special Allowance: fully taxable balancing component.
         ('SA',           'Special Allowance',            'earning', 'amount',  'taxable',          true,  false, NULL::text,                 'PAYROLL_ALLOWANCE'),
-        -- Children Education Allowance: exempt ₹100/child/month up to 2 children.
+        -- Children Education Allowance: exempt â‚¹100/child/month up to 2 children.
         ('CEA',          'Children Education Allowance', 'earning', 'amount',  'non_taxable',      true,  false, NULL::text,                 'PAYROLL_ALLOWANCE'),
         -- Leave Travel Allowance: exempt for 2 journeys in 4-year block.
         ('LTA',          'Leave Travel Allowance',       'earning', 'amount',  'non_taxable',      false, false, NULL::text,                 'PAYROLL_ALLOWANCE'),
-        -- Meal Allowance: exempt up to ₹50/meal for meals in office hours.
+        -- Meal Allowance: exempt up to â‚¹50/meal for meals in office hours.
         ('MEALS',        'Meal Allowance',               'earning', 'amount',  'non_taxable',      true,  false, NULL::text,                 'PAYROLL_ALLOWANCE'),
-        -- Telephone/Mobile: exempt ₹1,000/month with billing proof.
+        -- Telephone/Mobile: exempt â‚¹1,000/month with billing proof.
         ('PHONE',        'Telephone / Mobile Allowance', 'earning', 'amount',  'non_taxable',      true,  false, NULL::text,                 'PAYROLL_ALLOWANCE'),
         -- Shift Allowance: taxable premium for non-standard hours.
         ('SHIFT',        'Shift Allowance',              'earning', 'amount',  'taxable',          true,  false, NULL::text,                 'PAYROLL_ALLOWANCE'),
@@ -747,10 +762,10 @@ BEGIN
         ('PROJ_ALLOW',   'Project Allowance',            'earning', 'amount',  'taxable',          false, false, NULL::text,                 'PAYROLL_ALLOWANCE'),
         -- Relocation Allowance: one-time, may be partially exempt.
         ('RELOCATION',   'Relocation Allowance',         'earning', 'amount',  'taxable',          false, false, NULL::text,                 'PAYROLL_ALLOWANCE'),
-        -- Overtime Pay — regular 1× rate.
-        ('OT_REGULAR',   'Overtime Pay — Regular Rate',  'earning', 'formula', 'taxable',          false, false, 'overtime_regular',         'PAYROLL_OT'),
-        -- Overtime Pay — premium rate (1.5×, 2×).
-        ('OT_PREMIUM',   'Overtime Pay — Premium Rate',  'earning', 'formula', 'taxable',          false, false, 'overtime_premium',         'PAYROLL_OT'),
+        -- Overtime Pay â€” regular 1Ã— rate.
+        ('OT_REGULAR',   'Overtime Pay â€” Regular Rate',  'earning', 'formula', 'taxable',          false, false, 'overtime_regular',         'PAYROLL_OT'),
+        -- Overtime Pay â€” premium rate (1.5Ã—, 2Ã—).
+        ('OT_PREMIUM',   'Overtime Pay â€” Premium Rate',  'earning', 'formula', 'taxable',          false, false, 'overtime_premium',         'PAYROLL_OT'),
         -- Performance Bonus: discretionary, assessed periodically.
         ('PERF_BONUS',   'Performance Bonus',            'earning', 'amount',  'taxable',          false, false, NULL::text,                 'PAYROLL_BONUS'),
         -- Annual Bonus: contractual annual payment.
@@ -772,14 +787,14 @@ BEGIN
         -- Leave Encashment: paid on exit or during employment per policy.
         ('LEAVE_ENCASH', 'Leave Encashment',             'earning', 'formula', 'non_taxable',      false, false, 'leave_encashment_in',      'PAYROLL_LEAVE'),
 
-        -- ── DEDUCTIONS ───────────────────────────────────────────────────────
+        -- â”€â”€ DEDUCTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- PF Employee: statutory 12% of capped basic+DA. Tax-exempt (Sec 80C).
-        ('PF_EE',        'Provident Fund — Employee',    'deduction','formula','statutory_exempt', true,  false, 'pf_employee_in',           'PF_PAYABLE'),
+        ('PF_EE',        'Provident Fund â€” Employee',    'deduction','formula','statutory_exempt', true,  false, 'pf_employee_in',           'PF_PAYABLE'),
         -- ESI Employee: 0.75% of gross if eligible. Tax-exempt.
-        ('ESI_EE',       'ESI — Employee Contribution',  'deduction','formula','statutory_exempt', true,  false, 'esi_employee_in',          'ESI_PAYABLE'),
+        ('ESI_EE',       'ESI â€” Employee Contribution',  'deduction','formula','statutory_exempt', true,  false, 'esi_employee_in',          'ESI_PAYABLE'),
         -- Income Tax TDS: monthly TDS computed on projected annual income.
         ('INCOME_TAX',   'Income Tax (TDS)',             'deduction','formula','taxable',          true,  false, 'income_tax_tds_monthly',   'TDS_PAYABLE'),
-        -- Professional Tax: state-level levy (Max ₹2,500/yr in India).
+        -- Professional Tax: state-level levy (Max â‚¹2,500/yr in India).
         ('PROF_TAX',     'Professional Tax',             'deduction','amount', 'statutory_exempt', true,  false, NULL::text,                 'PROF_TAX_PAYABLE'),
         -- Loan Recovery: installment against salary advance / personal loan.
         ('LOAN_RECOV',   'Loan / Advance Recovery',      'deduction','amount', 'non_taxable',      false, false, NULL::text,                 'ADVANCE_RECOVERABLE'),
@@ -788,59 +803,59 @@ BEGIN
         -- Absent Deduction: loss-of-pay for unauthorised absence.
         ('ABSENT_DED',   'Absent / Loss of Pay Deduction','deduction','formula','taxable',         false, false, 'pro_rate_calendar',        'PAYROLL_WAGE'),
         -- Group Health Insurance: employee's share of premium.
-        ('HEALTH_INS_EE','Group Health Insurance — Employee Share','deduction','amount','non_taxable',true, false, NULL::text,               'INS_PAYABLE'),
+        ('HEALTH_INS_EE','Group Health Insurance â€” Employee Share','deduction','amount','non_taxable',true, false, NULL::text,               'INS_PAYABLE'),
         -- Life Insurance: employee's share of group term life premium.
-        ('LIFE_INS_EE',  'Group Life Insurance — Employee Share', 'deduction','amount','non_taxable',true, false, NULL::text,               'INS_PAYABLE'),
+        ('LIFE_INS_EE',  'Group Life Insurance â€” Employee Share', 'deduction','amount','non_taxable',true, false, NULL::text,               'INS_PAYABLE'),
         -- NPS Employee: up to 10% of basic+DA, exempt under Sec 80CCD(1).
-        ('NPS_EE',       'NPS — Employee Contribution',  'deduction','formula','statutory_exempt', true,  false, NULL::text,                 'NPS_PAYABLE'),
+        ('NPS_EE',       'NPS â€” Employee Contribution',  'deduction','formula','statutory_exempt', true,  false, NULL::text,                 'NPS_PAYABLE'),
         -- Union Dues: trade union membership fee.
         ('UNION_DUES',   'Trade Union Dues',             'deduction','amount', 'non_taxable',      true,  false, NULL::text,                 'PAYROLL_PAYABLE'),
-        -- CPF Employee: SG CPF, age-banded rates — no India PF formula applies.
-        ('CPF_EE',       'CPF — Employee Contribution (SG)','deduction','formula','statutory_exempt',true,false, NULL::text,                'CPF_PAYABLE'),
+        -- CPF Employee: SG CPF, age-banded rates â€” no India PF formula applies.
+        ('CPF_EE',       'CPF â€” Employee Contribution (SG)','deduction','formula','statutory_exempt',true,false, NULL::text,                'CPF_PAYABLE'),
 
-        -- ── STATUTORY (EMPLOYER COST) ─────────────────────────────────────
+        -- â”€â”€ STATUTORY (EMPLOYER COST) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- PF Employer: 3.67% PF + 8.33% EPS + 0.5% EDLI + 0.5% admin.
-        ('PF_ER',        'Provident Fund — Employer Contribution','statutory','formula','statutory_exempt',true,true,'pf_employer_in',       'PF_EXPENSE'),
+        ('PF_ER',        'Provident Fund â€” Employer Contribution','statutory','formula','statutory_exempt',true,true,'pf_employer_in',       'PF_EXPENSE'),
         -- ESI Employer: 3.25% of gross if employee is eligible.
-        ('ESI_ER',       'ESI — Employer Contribution',  'statutory','formula','statutory_exempt', true,  true,  'esi_employer_in',          'ESI_EXPENSE'),
-        -- Gratuity monthly accrual: (basic+DA)×15/26/12. Crystallises on exit.
+        ('ESI_ER',       'ESI â€” Employer Contribution',  'statutory','formula','statutory_exempt', true,  true,  'esi_employer_in',          'ESI_EXPENSE'),
+        -- Gratuity monthly accrual: (basic+DA)Ã—15/26/12. Crystallises on exit.
         ('GRATUITY_ACCR','Gratuity Accrual',             'statutory','formula','statutory_exempt', true,  true,  'gratuity_accrual_in',      'GRATUITY_PAYABLE'),
         -- Statutory Bonus: 8.33% monthly accrual; pay-out per Bonus Act.
         ('STAT_BONUS',   'Statutory Bonus Accrual',      'statutory','formula','statutory_exempt', true,  true,  'stat_bonus_in',            'STAT_BONUS_PAYABLE'),
         -- NPS Employer: 10% of basic+DA, deductible under Sec 36(1)(iva).
-        ('NPS_ER',       'NPS — Employer Contribution',  'statutory','formula','statutory_exempt', true,  true,  NULL::text,                 'NPS_EXPENSE'),
-        -- CPF Employer Singapore: age-banded rates — no India PF formula applies.
-        ('CPF_ER',       'CPF — Employer Contribution (SG)','statutory','formula','statutory_exempt',true,true,  NULL::text,                'CPF_EXPENSE'),
-        -- EPF Employer Malaysia: 12% / 13% on basic capped — no India PF formula.
-        ('EPF_ER',       'EPF — Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,  NULL::text,                'EPF_EXPENSE'),
+        ('NPS_ER',       'NPS â€” Employer Contribution',  'statutory','formula','statutory_exempt', true,  true,  NULL::text,                 'NPS_EXPENSE'),
+        -- CPF Employer Singapore: age-banded rates â€” no India PF formula applies.
+        ('CPF_ER',       'CPF â€” Employer Contribution (SG)','statutory','formula','statutory_exempt',true,true,  NULL::text,                'CPF_EXPENSE'),
+        -- EPF Employer Malaysia: 12% / 13% on basic capped â€” no India PF formula.
+        ('EPF_ER',       'EPF â€” Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,  NULL::text,                'EPF_EXPENSE'),
         -- SOCSO Employer Malaysia: ~1.75% on insured salary.
-        ('SOCSO_ER',     'SOCSO — Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,NULL::text,                 'SOCSO_EXPENSE'),
+        ('SOCSO_ER',     'SOCSO â€” Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,NULL::text,                 'SOCSO_EXPENSE'),
         -- UK National Insurance Employer: 13.8% (2024-25) / 15% (2025-26) above secondary threshold.
-        ('NI_ER',        'National Insurance — Employer (GB)','statutory','formula','statutory_exempt',true,true,NULL::text,                 'NI_EXPENSE'),
+        ('NI_ER',        'National Insurance â€” Employer (GB)','statutory','formula','statutory_exempt',true,true,NULL::text,                 'NI_EXPENSE'),
         -- US Social Security Employer: 6.2% up to annual wage base ($176,100 in 2025).
-        ('SS_ER',        'Social Security — Employer (US)','statutory','formula','statutory_exempt',true,true,NULL::text,                   'SS_EXPENSE'),
+        ('SS_ER',        'Social Security â€” Employer (US)','statutory','formula','statutory_exempt',true,true,NULL::text,                   'SS_EXPENSE'),
         -- US Medicare Employer: 1.45% on all wages, no ceiling, no additional tax.
-        ('MEDICARE_ER',  'Medicare — Employer (US)',      'statutory','formula','statutory_exempt', true,  true,  NULL::text,                 'MEDICARE_EXPENSE'),
+        ('MEDICARE_ER',  'Medicare â€” Employer (US)',      'statutory','formula','statutory_exempt', true,  true,  NULL::text,                 'MEDICARE_EXPENSE'),
         -- EIS Employer Malaysia: 0.4% under Employment Insurance System Act 2017.
-        ('EIS_ER',       'EIS — Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,  NULL::text,                'EIS_EXPENSE'),
+        ('EIS_ER',       'EIS â€” Employer Contribution (MY)','statutory','formula','statutory_exempt',true,true,  NULL::text,                'EIS_EXPENSE'),
         -- Singapore Skills Development Levy: employer 0.25% of total wages (min $2, max $11.25).
         ('SDL_ER',       'Skills Development Levy (SG)',  'statutory','formula','statutory_exempt', true,  true,  NULL::text,                 'SDL_EXPENSE'),
 
-        -- ── DEDUCTIONS (additional countries) ─────────────────────────────
-        -- UK NI Employee: Class 1 primary — 8% on £12,571–£50,270, 2% above (2024-26).
-        ('NI_EE',        'National Insurance — Employee (GB)','deduction','formula','statutory_exempt',true,false,NULL::text,               'NI_PAYABLE'),
+        -- â”€â”€ DEDUCTIONS (additional countries) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        -- UK NI Employee: Class 1 primary â€” 8% on Â£12,571â€“Â£50,270, 2% above (2024-26).
+        ('NI_EE',        'National Insurance â€” Employee (GB)','deduction','formula','statutory_exempt',true,false,NULL::text,               'NI_PAYABLE'),
         -- US Social Security Employee: FICA 6.2% up to annual wage base.
-        ('SS_EE',        'Social Security — Employee (US)','deduction','formula','statutory_exempt', true,  false, NULL::text,               'SS_PAYABLE'),
+        ('SS_EE',        'Social Security â€” Employee (US)','deduction','formula','statutory_exempt', true,  false, NULL::text,               'SS_PAYABLE'),
         -- US Medicare Employee: FICA 1.45% base + 0.9% surcharge above $200k.
-        ('MEDICARE_EE',  'Medicare — Employee (US)',      'deduction','formula','statutory_exempt', true,  false, NULL::text,                 'MEDICARE_PAYABLE'),
+        ('MEDICARE_EE',  'Medicare â€” Employee (US)',      'deduction','formula','statutory_exempt', true,  false, NULL::text,                 'MEDICARE_PAYABLE'),
         -- Malaysia SOCSO Employee: ~0.5% under Employees Social Security Act (categories 1 & 2).
-        ('SOCSO_EE',     'SOCSO — Employee Contribution (MY)','deduction','formula','statutory_exempt',true,false,NULL::text,               'SOCSO_PAYABLE'),
+        ('SOCSO_EE',     'SOCSO â€” Employee Contribution (MY)','deduction','formula','statutory_exempt',true,false,NULL::text,               'SOCSO_PAYABLE'),
         -- Malaysia EIS Employee: 0.2% under Employment Insurance System Act 2017.
-        ('EIS_EE',       'EIS — Employee Contribution (MY)','deduction','formula','statutory_exempt', true,  false, NULL::text,               'EIS_PAYABLE'),
-        -- Singapore SHG: CDAC / ECF / MBMF / SINDA — fixed amounts by ethnicity, employer remits.
+        ('EIS_EE',       'EIS â€” Employee Contribution (MY)','deduction','formula','statutory_exempt', true,  false, NULL::text,               'EIS_PAYABLE'),
+        -- Singapore SHG: CDAC / ECF / MBMF / SINDA â€” fixed amounts by ethnicity, employer remits.
         ('SHG_EE',       'Self-Help Group Contribution (SG)','deduction','amount','non_taxable',    true,  false, NULL::text,                 'SHG_PAYABLE'),
 
-        -- ── MEMO (computed summaries, not posted to GL) ─────────────────────
+        -- â”€â”€ MEMO (computed summaries, not posted to GL) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         ('GROSS_SAL',    'Gross Salary',                 'memo',    'formula', 'non_taxable',      true,  false, NULL::text,                 NULL::text),
         ('NET_SAL',      'Net Pay',                      'memo',    'formula', 'non_taxable',      true,  false, NULL::text,                 NULL::text),
         ('TOTAL_DED',    'Total Deductions',             'memo',    'formula', 'non_taxable',      true,  false, NULL::text,                 NULL::text),
@@ -872,11 +887,11 @@ BEGIN
     RAISE NOTICE '[%] pay_component: % rows upserted', v_pack, v_n;
 
     -- ========================================================================
-    -- § 6  PAY STRUCTURES (tenant-level templates, no pay_group_id)
+    -- Â§ 6  PAY STRUCTURES (tenant-level templates, no pay_group_id)
     -- These structures act as blueprints. Assign to a pay_group after creating
     -- pay groups via the admin UI or a company-specific seed.
-    -- currency_code = 'XXX' (ISO 4217 "no currency") signals a template;
-    -- override with the pay group's currency_code when activating.
+    -- Templates use the explicitly asserted onboarding currency. The lean DDL
+    -- requires every currency FK to resolve even while the structure is draft.
     -- ========================================================================
     INSERT INTO master.pay_structure (
         id, tenant_id, code, name, pay_group_id, currency_code,
@@ -885,19 +900,19 @@ BEGIN
     VALUES
 
         -- Standard Monthly: suitable for salaried employees up to mid-career.
-        (shared.uuidv7(), v_tid,
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
          'PAYSTR_STANDARD', 'Standard Monthly Structure',
-         NULL, 'XXX', '2024-01-01'::date, NULL::date, 'draft', v_su),
+         NULL, v_currency, '2024-01-01'::date, NULL::date, 'draft', v_su),
 
         -- Senior Monthly: for senior professionals and managers.
-        (shared.uuidv7(), v_tid,
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
          'PAYSTR_SENIOR', 'Senior / Managerial Monthly Structure',
-         NULL, 'XXX', '2024-01-01'::date, NULL::date, 'draft', v_su),
+         NULL, v_currency, '2024-01-01'::date, NULL::date, 'draft', v_su),
 
         -- Executive Monthly: for C-suite and director-level employees.
-        (shared.uuidv7(), v_tid,
+        (md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid,
          'PAYSTR_EXECUTIVE', 'Executive Monthly Structure',
-         NULL, 'XXX', '2024-01-01'::date, NULL::date, 'draft', v_su)
+         NULL, v_currency, '2024-01-01'::date, NULL::date, 'draft', v_su)
 
     ON CONFLICT (tenant_id, code) DO UPDATE
         SET name       = EXCLUDED.name,
@@ -909,7 +924,7 @@ BEGIN
     RAISE NOTICE '[%] pay_structure: % rows upserted', v_pack, v_n;
 
     -- ========================================================================
-    -- § 7  PAY STRUCTURE LINES
+    -- Â§ 7  PAY STRUCTURE LINES
     -- Line numbers in multiples of 10 leave room for local insertions.
     -- default_amount NULL = amount set per compensation assignment.
     -- default_rate: where non-NULL, expresses the component's default %.
@@ -919,7 +934,7 @@ BEGIN
         default_amount, default_rate, formula_expression_id, created_by
     )
     SELECT
-        shared.uuidv7(), v_tid, ps.id, pc.id, x.line_no::smallint,
+        md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid, ps.id, pc.id, x.line_no::smallint,
         x.default_amount::numeric,
         x.default_rate::numeric,
         (SELECT fe.id FROM control.formula_expression fe
@@ -927,7 +942,7 @@ BEGIN
         v_su
     FROM (VALUES
 
-        -- ── PAYSTR_STANDARD ─────────────────────────────────────────────────
+        -- â”€â”€ PAYSTR_STANDARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- Earnings
         ('PAYSTR_STANDARD', 'BASIC',        10, NULL::numeric, NULL::numeric,    NULL::text),
         ('PAYSTR_STANDARD', 'DA',           20, NULL,           0.12,             NULL::text),
@@ -953,7 +968,7 @@ BEGIN
         ('PAYSTR_STANDARD', 'TOTAL_DED',   920, NULL,           NULL,             NULL::text),
         ('PAYSTR_STANDARD', 'CTC',         930, NULL,           NULL,             NULL::text),
 
-        -- ── PAYSTR_SENIOR ────────────────────────────────────────────────────
+        -- â”€â”€ PAYSTR_SENIOR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- Earnings
         ('PAYSTR_SENIOR', 'BASIC',          10, NULL,           NULL,             NULL::text),
         ('PAYSTR_SENIOR', 'DA',             20, NULL,           0.12,             NULL::text),
@@ -977,7 +992,7 @@ BEGIN
         ('PAYSTR_SENIOR', 'NET_SAL',       910, NULL,           NULL,             NULL::text),
         ('PAYSTR_SENIOR', 'CTC',           930, NULL,           NULL,             NULL::text),
 
-        -- ── PAYSTR_EXECUTIVE ─────────────────────────────────────────────────
+        -- â”€â”€ PAYSTR_EXECUTIVE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- Earnings
         ('PAYSTR_EXECUTIVE', 'BASIC',       10, NULL,           NULL,             NULL::text),
         ('PAYSTR_EXECUTIVE', 'HRA',         20, NULL,           0.50,             'hra_pct_of_basic'),
@@ -1007,7 +1022,7 @@ BEGIN
     RAISE NOTICE '[%] pay_structure_line: % rows inserted', v_pack, v_n;
 
     -- ========================================================================
-    -- § 8  STATUTORY SCHEMES  (18 schemes across 6 jurisdictions)
+    -- Â§ 8  STATUTORY SCHEMES  (18 schemes across 6 jurisdictions)
     -- ========================================================================
     INSERT INTO master.statutory_scheme (
         id, tenant_id, code, name, country_code, scheme_type,
@@ -1016,7 +1031,7 @@ BEGIN
         status, created_by
     )
     SELECT
-        shared.uuidv7(), v_tid, x.code, x.name, x.country, x.scheme_type,
+        md5('wave5:people-payroll:payroll-masters:' || v_tid || ':' || nextval('pg_temp.wave5_people_payroll_seq'))::uuid, v_tid, x.code, x.name, x.country, x.scheme_type,
         (SELECT id FROM master.pay_component WHERE tenant_id = v_tid AND code = x.ee_comp),
         (SELECT id FROM master.pay_component WHERE tenant_id = v_tid AND code = x.er_comp),
         (SELECT id FROM control.rate_table WHERE tenant_id = v_tid AND code = x.rate_tbl),
@@ -1024,115 +1039,115 @@ BEGIN
         'active', v_su
     FROM (VALUES
 
-        -- ── INDIA ─────────────────────────────────────────────────────────
+        -- â”€â”€ INDIA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- EPF: Employees' Provident Funds and Miscellaneous Provisions Act, 1952
         -- Applicable to establishments with 20+ employees.
-        ('IN_PF',          'India — Employees Provident Fund (EPF)',
+        ('IN_PF',          'India â€” Employees Provident Fund (EPF)',
          'IN', 'pension',
          'PF_EE', 'PF_ER', 'PF_RATE_IN', 'pf_employee_in'),
 
         -- ESIC: Employees' State Insurance Act, 1948
-        -- Applies to employees with gross ≤ ₹21,000/month in covered regions.
-        ('IN_ESI',         'India — Employees State Insurance (ESIC)',
+        -- Applies to employees with gross â‰¤ â‚¹21,000/month in covered regions.
+        ('IN_ESI',         'India â€” Employees State Insurance (ESIC)',
          'IN', 'healthcare',
          'ESI_EE', 'ESI_ER', 'ESI_RATE_IN', 'esi_employee_in'),
 
         -- Gratuity: Payment of Gratuity Act, 1972
         -- Employer obligation; no employee deduction.
-        ('IN_GRATUITY',    'India — Gratuity (Payment of Gratuity Act, 1972)',
+        ('IN_GRATUITY',    'India â€” Gratuity (Payment of Gratuity Act, 1972)',
          'IN', 'other',
          NULL::text, 'GRATUITY_ACCR', NULL::text, 'gratuity_accrual_in'),
 
         -- Statutory Bonus: Payment of Bonus Act, 1965
-        -- Employer obligation on eligible employees (salary ≤ ₹21,000/month).
-        ('IN_STAT_BONUS',  'India — Statutory Bonus (Payment of Bonus Act, 1965)',
+        -- Employer obligation on eligible employees (salary â‰¤ â‚¹21,000/month).
+        ('IN_STAT_BONUS',  'India â€” Statutory Bonus (Payment of Bonus Act, 1965)',
          'IN', 'other',
          NULL::text, 'STAT_BONUS', NULL::text, 'stat_bonus_in'),
 
-        -- Income Tax TDS: Income Tax Act, 1961 — Sec 192
+        -- Income Tax TDS: Income Tax Act, 1961 â€” Sec 192
         -- Employer deducts TDS on salary and remits to government.
-        ('IN_INCOME_TAX',  'India — Income Tax (TDS u/s 192)',
+        ('IN_INCOME_TAX',  'India â€” Income Tax (TDS u/s 192)',
          'IN', 'income_tax',
          'INCOME_TAX', NULL::text, 'INCOME_TAX_IN_NEW', 'income_tax_tds_monthly'),
 
         -- Professional Tax: charged by states (Maharashtra, Karnataka, etc.)
-        -- Max ₹2,500/year. Rate varies by state salary slab.
-        ('IN_PROF_TAX',    'India — Professional Tax (State Levy)',
+        -- Max â‚¹2,500/year. Rate varies by state salary slab.
+        ('IN_PROF_TAX',    'India â€” Professional Tax (State Levy)',
          'IN', 'social_security',
          'PROF_TAX', NULL::text, NULL::text, NULL::text),
 
-        -- NPS: National Pension System — employer 10% voluntary (recommended)
-        ('IN_NPS',         'India — National Pension System (NPS)',
+        -- NPS: National Pension System â€” employer 10% voluntary (recommended)
+        ('IN_NPS',         'India â€” National Pension System (NPS)',
          'IN', 'pension',
          'NPS_EE', 'NPS_ER', NULL::text, NULL::text),
 
-        -- ── SINGAPORE ─────────────────────────────────────────────────────
+        -- â”€â”€ SINGAPORE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- CPF: Central Provident Fund Act
         -- Mandatory for Singapore Citizens and Permanent Residents.
-        ('SG_CPF',         'Singapore — Central Provident Fund (CPF)',
+        ('SG_CPF',         'Singapore â€” Central Provident Fund (CPF)',
          'SG', 'pension',
          'CPF_EE', 'CPF_ER', 'CPF_RATE_SG', NULL::text),
 
-        -- SDL: Skills Development Levy — employer 0.25% of gross (min $2, max $11.25).
+        -- SDL: Skills Development Levy â€” employer 0.25% of gross (min $2, max $11.25).
         -- Funds SkillsFuture Singapore. Employee has no contribution.
-        ('SG_SDL',         'Singapore — Skills Development Levy (SDL)',
+        ('SG_SDL',         'Singapore â€” Skills Development Levy (SDL)',
          'SG', 'other',
          NULL::text, 'SDL_ER', NULL::text, NULL::text),
 
-        -- SHG: Self-Help Group contributions — CDAC / ECF / MBMF / SINDA.
+        -- SHG: Self-Help Group contributions â€” CDAC / ECF / MBMF / SINDA.
         -- Deducted from employee salary by employer, remitted monthly.
-        ('SG_SHG',         'Singapore — Self-Help Group Contributions',
+        ('SG_SHG',         'Singapore â€” Self-Help Group Contributions',
          'SG', 'social_security',
          'SHG_EE', NULL::text, NULL::text, NULL::text),
 
-        -- ── MALAYSIA ──────────────────────────────────────────────────────
+        -- â”€â”€ MALAYSIA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- EPF: Employees Provident Fund Act, 1991
-        -- Employee 11%, Employer 12% (or 13% for salary ≤ MYR 5,000).
-        ('MY_EPF',         'Malaysia — Employees Provident Fund (EPF)',
+        -- Employee 11%, Employer 12% (or 13% for salary â‰¤ MYR 5,000).
+        ('MY_EPF',         'Malaysia â€” Employees Provident Fund (EPF)',
          'MY', 'pension',
          'PF_EE', 'EPF_ER', NULL::text, NULL::text),
 
         -- SOCSO: Employees Social Security Act, 1969 (Perkeso)
         -- Employment Injury & Invalidity Scheme. Employer ~1.75%, Employee ~0.5%.
-        ('MY_SOCSO',       'Malaysia — SOCSO / Perkeso',
+        ('MY_SOCSO',       'Malaysia â€” SOCSO / Perkeso',
          'MY', 'social_security',
          'SOCSO_EE', 'SOCSO_ER', NULL::text, NULL::text),
 
-        -- EIS: Employment Insurance System — Employment Insurance System Act, 2017
+        -- EIS: Employment Insurance System â€” Employment Insurance System Act, 2017
         -- Employee 0.2%, Employer 0.4% on insured salary.
-        ('MY_EIS',         'Malaysia — Employment Insurance System (EIS)',
+        ('MY_EIS',         'Malaysia â€” Employment Insurance System (EIS)',
          'MY', 'other',
          'EIS_EE', 'EIS_ER', NULL::text, NULL::text),
 
-        -- ── UNITED KINGDOM ────────────────────────────────────────────────
+        -- â”€â”€ UNITED KINGDOM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- NI: Class 1 National Insurance (Social Security Contributions Act, 1992)
         -- Employee 8% (2024-26) / Employer 13.8% (2024-25) or 15% (2025-26) above respective thresholds.
-        ('GB_NI',          'United Kingdom — National Insurance (Class 1)',
+        ('GB_NI',          'United Kingdom â€” National Insurance (Class 1)',
          'GB', 'social_security',
          'NI_EE', 'NI_ER', 'NI_RATE_GB', NULL::text),
 
         -- Auto-Enrolment Pension: Pensions Act, 2008
         -- Minimum 5% employee + 3% employer on qualifying earnings.
-        ('GB_AE_PENSION',  'United Kingdom — Auto-Enrolment Pension',
+        ('GB_AE_PENSION',  'United Kingdom â€” Auto-Enrolment Pension',
          'GB', 'pension',
          NULL::text, NULL::text, NULL::text, NULL::text),
 
-        -- ── UNITED STATES ─────────────────────────────────────────────────
+        -- â”€â”€ UNITED STATES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- FICA Social Security: 6.2% EE + 6.2% ER; 2025 wage base $176,100.
-        ('US_SOC_SEC',     'United States — Social Security (FICA)',
+        ('US_SOC_SEC',     'United States â€” Social Security (FICA)',
          'US', 'social_security',
          'SS_EE', 'SS_ER', 'US_SS_RATE', NULL::text),
 
         -- Medicare: 1.45% EE + 1.45% ER; additional 0.9% EE surcharge above $200k.
-        ('US_MEDICARE',    'United States — Medicare (FICA)',
+        ('US_MEDICARE',    'United States â€” Medicare (FICA)',
          'US', 'healthcare',
          'MEDICARE_EE', 'MEDICARE_ER', 'US_MEDICARE_RATE', NULL::text),
 
-        -- ── UAE ───────────────────────────────────────────────────────────
+        -- â”€â”€ UAE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- GPSSA: General Pension & Social Security Authority
         -- Applicable to UAE national employees only.
         -- Expatriates have no statutory pension contribution.
-        ('AE_GPSSA',       'UAE — GPSSA (UAE Nationals Only)',
+        ('AE_GPSSA',       'UAE â€” GPSSA (UAE Nationals Only)',
          'AE', 'pension',
          NULL::text, NULL::text, NULL::text, NULL::text)
 
@@ -1225,7 +1240,7 @@ BEGIN
     END IF;
 
     RAISE NOTICE '[%] All assertions passed', v_pack;
-    RAISE NOTICE '[%] Summary — formulas: %, formula_versions: %, rate_tables: %, rate_rows: %, components: %, structures: %, lines: %, schemes: %',
+    RAISE NOTICE '[%] Summary â€” formulas: %, formula_versions: %, rate_tables: %, rate_rows: %, components: %, structures: %, lines: %, schemes: %',
         v_pack,
         (SELECT COUNT(*) FROM control.formula_expression      WHERE tenant_id = v_tid),
         (SELECT COUNT(*) FROM control.formula_expression_version WHERE tenant_id = v_tid),

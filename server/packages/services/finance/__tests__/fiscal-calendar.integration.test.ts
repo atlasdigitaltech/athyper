@@ -47,7 +47,7 @@ integrationDescribe("fiscal calendar preview, generation, and posting-date resol
             periods_per_year, leap_week_rule, status, created_by
           ) VALUES (
             ${fixture.tenant_id}::uuid, 'INTEGRATION_MONTHLY', 'Integration Monthly',
-            'monthly', 1, 'start_year', 'fixed_date', 1, 1, 1, 12, 'none', 'active',
+            'monthly', 1, 'start_year', 'fixed_date', 1, 1, 1, 12, 'none', 'draft',
             ${fixture.actor_id}::uuid
           ) RETURNING id
         `.execute(trx);
@@ -77,13 +77,18 @@ integrationDescribe("fiscal calendar preview, generation, and posting-date resol
             ) rule
         `.execute(trx);
 
+        await sql`UPDATE control.fiscal_calendar_config
+                     SET status = 'active', updated_by = ${fixture.actor_id}::uuid
+                   WHERE tenant_id = ${fixture.tenant_id}::uuid
+                     AND id = ${calendarId}::uuid`.execute(trx);
+
         await sql`
           INSERT INTO control.company_fiscal_calendar_assignment (
             tenant_id, company_code_id, fiscal_calendar_config_id,
-            effective_fiscal_year_from, priority, status, created_by
+            effective_fiscal_year_from, status, created_by
           ) VALUES (
             ${fixture.tenant_id}::uuid, ${fixture.company_code_id}::uuid, ${calendarId}::uuid,
-            2199, 100, 'active', ${fixture.actor_id}::uuid
+            2199, 'active', ${fixture.actor_id}::uuid
           )
         `.execute(trx);
 

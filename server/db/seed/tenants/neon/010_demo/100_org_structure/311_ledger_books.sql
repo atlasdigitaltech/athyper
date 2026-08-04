@@ -1,5 +1,5 @@
--- ============================================================================
--- 311_ledger_books.sql — Ledger books + company-book assignments
+﻿-- ============================================================================
+-- 311_ledger_books.sql â€” Ledger books + company-book assignments
 -- ============================================================================
 -- Design: One statutory book per company (correct currency + framework)
 --         One shared group management book (MYR, IFRS, for consolidation)
@@ -24,10 +24,10 @@ BEGIN
     SELECT count(*) INTO v_active_cos FROM master.company_code
     WHERE tenant_id = v_tid AND status = 'active';
 
-    -- ══════════════════════════════════════════════════════════════════════
-    -- PREREQUISITE: Verify lookup values exist (hard fail — triggers will
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    -- PREREQUISITE: Verify lookup values exist (hard fail â€” triggers will
     -- reject the INSERT anyway, so fail early with a clear message)
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     IF NOT EXISTS (SELECT 1 FROM control.lookup_value
         WHERE domain_code = 'master.ledger_book_category' AND code = 'statutory')
     THEN RAISE EXCEPTION '311 FAIL: ledger_book_category "statutory" missing from lookup'; END IF;
@@ -43,26 +43,26 @@ BEGIN
     -- Verify every company's regulatory_framework is accepted by
     -- the ledger_book_standard lookup before we use it as reporting_standard
     IF EXISTS (
-        SELECT cc.code, COALESCE(cc.regulatory_framework, 'ifrs') AS fw
+        SELECT cc.code, (CASE WHEN cc.country_code = 'US' THEN 'gaap' ELSE 'ifrs' END) AS fw
         FROM master.company_code cc
         WHERE cc.tenant_id = v_tid AND cc.status = 'active'
           AND NOT EXISTS (
               SELECT 1 FROM control.lookup_value lv
               WHERE lv.domain_code = 'master.ledger_book_standard'
-                AND lv.code = COALESCE(cc.regulatory_framework, 'ifrs'))
+                AND lv.code = (CASE WHEN cc.country_code = 'US' THEN 'gaap' ELSE 'ifrs' END))
     ) THEN RAISE EXCEPTION '311 FAIL: company regulatory_framework value not in ledger_book_standard lookup: %',
-        (SELECT string_agg(DISTINCT COALESCE(cc.regulatory_framework, 'ifrs'), ', ')
+        (SELECT string_agg(DISTINCT (CASE WHEN cc.country_code = 'US' THEN 'gaap' ELSE 'ifrs' END), ', ')
          FROM master.company_code cc
          WHERE cc.tenant_id = v_tid AND cc.status = 'active'
            AND NOT EXISTS (
                SELECT 1 FROM control.lookup_value lv
                WHERE lv.domain_code = 'master.ledger_book_standard'
-                 AND lv.code = COALESCE(cc.regulatory_framework, 'ifrs')));
+                 AND lv.code = (CASE WHEN cc.country_code = 'US' THEN 'gaap' ELSE 'ifrs' END)));
     END IF;
 
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     -- STAGE A: Group management book (shared, MYR, IFRS)
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     INSERT INTO master.ledger_book
         (tenant_id, code, name, description, category, reporting_standard,
          base_currency_code, is_primary, is_auto_post, is_manual_je_allowed,
@@ -81,14 +81,14 @@ BEGIN
     SELECT id INTO v_mgmt FROM master.ledger_book
     WHERE tenant_id = v_tid AND code = 'BOOK-MGMT-GROUP';
 
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     -- STAGE B: Per-company statutory books
     -- One book per company, using company's functional_currency and framework
     -- Code: {COMPANY}-BOOK-STAT
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     FOR v_cc IN
         SELECT id, code, name, functional_currency,
-               COALESCE(regulatory_framework, 'ifrs') AS framework
+               (CASE WHEN country_code = 'US' THEN 'gaap' ELSE 'ifrs' END) AS framework
         FROM master.company_code
         WHERE tenant_id = v_tid AND status = 'active'
         ORDER BY code
@@ -157,9 +157,9 @@ BEGIN
            IS DISTINCT FROM EXCLUDED.priority;
     END LOOP;
 
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     -- ASSERTIONS
-    -- ══════════════════════════════════════════════════════════════════════
+    -- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     -- A1: Statutory book count = active companies (one per company)
     IF (SELECT count(*) FROM master.ledger_book
@@ -224,3 +224,4 @@ BEGIN
         v_active_cos,
         (SELECT count(*) FROM master.company_code_book_assignment WHERE tenant_id = v_tid);
 END $seed$;
+

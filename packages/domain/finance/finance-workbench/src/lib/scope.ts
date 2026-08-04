@@ -33,7 +33,7 @@ export interface FinanceScope {
 
   /**
    * Ledger book ID (master.ledger_book.id).
-   * When absent the API falls back to the company's default_ledger_book_id.
+   * When absent the API falls back to the company's primary Ledger Book.
    */
   bookId?: string;
 

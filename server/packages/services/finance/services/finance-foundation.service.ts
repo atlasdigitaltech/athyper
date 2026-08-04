@@ -120,7 +120,7 @@ export async function loadCompanyFoundation(
     book_assignment_count: number; default_book_valid: boolean; book_currencies_valid: boolean;
     calendar_assignment_count: number; current_period_count: number; next_period_count: number;
     normal_period_openable: boolean; period_sequence_valid: boolean;
-    book_period_coverage_valid: boolean; legacy_calendar_consistent: boolean;
+    book_period_coverage_valid: boolean; calendar_definition_valid: boolean;
   }>`
     SELECT
       t.id AS tenant_id, t.code AS tenant_code, COALESCE(t.display_name, t.name) AS tenant_name,
@@ -146,7 +146,7 @@ export async function loadCompanyFoundation(
       stats.book_assignment_count, stats.default_book_valid, stats.book_currencies_valid,
       stats.calendar_assignment_count, stats.current_period_count, stats.next_period_count,
       stats.normal_period_openable, stats.period_sequence_valid,
-      stats.book_period_coverage_valid, stats.legacy_calendar_consistent
+      stats.book_period_coverage_valid, stats.calendar_definition_valid
     FROM master.company_code cc
     JOIN master.legal_entity le ON le.tenant_id = cc.tenant_id AND le.id = cc.legal_entity_id
     JOIN master.tenant t ON t.id = cc.tenant_id
@@ -207,7 +207,7 @@ export async function loadCompanyFoundation(
             AND ba.effective_from <= CURRENT_DATE AND (ba.effective_to IS NULL OR ba.effective_to >= CURRENT_DATE)) AS book_assignment_count,
         EXISTS (SELECT 1 FROM master.company_code_book_assignment ba
           JOIN master.ledger_book lb ON lb.tenant_id = ba.tenant_id AND lb.id = ba.book_id
-          WHERE ba.tenant_id = cc.tenant_id AND ba.company_code_id = cc.id AND ba.book_id = cc.default_ledger_book_id
+          WHERE ba.tenant_id = cc.tenant_id AND ba.company_code_id = cc.id AND lb.is_primary
             AND ba.status = 'active' AND lb.status = 'active' AND ba.effective_from <= CURRENT_DATE
             AND (ba.effective_to IS NULL OR ba.effective_to >= CURRENT_DATE)) AS default_book_valid,
         NOT EXISTS (SELECT 1 FROM master.company_code_book_assignment ba
@@ -223,17 +223,15 @@ export async function loadCompanyFoundation(
           WHERE ca.tenant_id = cc.tenant_id AND ca.company_code_id = cc.id AND ca.status = 'active' AND fc.status = 'active'
             AND ca.effective_fiscal_year_from <= EXTRACT(YEAR FROM CURRENT_DATE)::int
             AND (ca.effective_fiscal_year_to IS NULL OR ca.effective_fiscal_year_to >= EXTRACT(YEAR FROM CURRENT_DATE)::int)) AS calendar_assignment_count,
-        NOT EXISTS (SELECT 1 FROM control.company_fiscal_calendar_assignment ca
+        EXISTS (SELECT 1 FROM control.company_fiscal_calendar_assignment ca
           JOIN control.fiscal_calendar_config fc ON fc.tenant_id = ca.tenant_id AND fc.id = ca.fiscal_calendar_config_id
           WHERE ca.tenant_id = cc.tenant_id AND ca.company_code_id = cc.id AND ca.status = 'active' AND fc.status = 'active'
             AND ca.effective_fiscal_year_from <= EXTRACT(YEAR FROM CURRENT_DATE)::int
             AND (ca.effective_fiscal_year_to IS NULL OR ca.effective_fiscal_year_to >= EXTRACT(YEAR FROM CURRENT_DATE)::int)
-            AND (cc.fiscal_year_start_month IS DISTINCT FROM fc.anchor_month
-              OR cc.fiscal_year_variant IS DISTINCT FROM CASE fc.calendar_type
-                WHEN 'four_four_five' THEN 'fy_445' WHEN 'four_five_four' THEN 'fy_454'
-                WHEN 'five_four_four' THEN 'fy_544'
-                WHEN 'monthly' THEN CASE WHEN fc.anchor_month = 1 THEN 'calendar' ELSE 'custom' END
-                ELSE 'custom' END)) AS legacy_calendar_consistent,
+            AND (SELECT count(*) FROM control.fiscal_calendar_period_rule rule
+                  WHERE rule.tenant_id = fc.tenant_id
+                    AND rule.fiscal_calendar_config_id = fc.id
+                    AND rule.period_type = 'normal') = fc.periods_per_year) AS calendar_definition_valid,
         (SELECT count(*)::int FROM master.fiscal_period fp
           WHERE fp.tenant_id = cc.tenant_id AND fp.company_code_id = cc.id
             AND fp.fiscal_year = EXTRACT(YEAR FROM CURRENT_DATE)::int) AS current_period_count,
@@ -259,9 +257,9 @@ export async function loadCompanyFoundation(
         NOT EXISTS (
           SELECT 1 FROM master.company_code_book_assignment ba
           CROSS JOIN master.fiscal_period fp
-          LEFT JOIN governance.book_period_status bps
-            ON bps.tenant_id = ba.tenant_id AND bps.company_code_id = ba.company_code_id
-           AND bps.book_id = ba.book_id AND bps.fiscal_year = fp.fiscal_year AND bps.period_number = fp.period_number
+          LEFT JOIN ledger.book_period_status bps
+            ON bps.tenant_id = ba.tenant_id AND bps.ledger_book_id = ba.book_id
+           AND bps.fiscal_period_id = fp.id
           WHERE ba.tenant_id = cc.tenant_id AND ba.company_code_id = cc.id AND ba.status = 'active'
             AND ba.effective_from <= CURRENT_DATE AND (ba.effective_to IS NULL OR ba.effective_to >= CURRENT_DATE)
             AND fp.tenant_id = cc.tenant_id AND fp.company_code_id = cc.id
@@ -313,12 +311,12 @@ export async function loadCompanyFoundation(
   ];
   const bookChecks: FoundationCheck[] = [
     { key: "book_assignment", label: "An active Ledger Book is assigned", passed: row.book_assignment_count > 0 },
-    { key: "default_book", label: "Company default Book is active and effective", passed: row.default_book_valid },
+    { key: "default_book", label: "A primary Ledger Book is active and effective", passed: row.default_book_valid },
     { key: "book_currencies", label: "Assigned Book currencies are active", passed: row.book_assignment_count > 0 && row.book_currencies_valid },
   ];
   const calendarChecks: FoundationCheck[] = [
     { key: "calendar_assignment", label: "An active calendar covers the current year", passed: row.calendar_assignment_count === 1 },
-    { key: "legacy_calendar_consistency", label: "Legacy fiscal fields match the assigned Calendar", passed: row.calendar_assignment_count === 1 && row.legacy_calendar_consistent },
+    { key: "calendar_definition", label: "Assigned Calendar definition is structurally valid", passed: row.calendar_assignment_count === 1 && row.calendar_definition_valid },
     { key: "fiscal_periods", label: "Current-year fiscal periods are generated", passed: row.current_period_count > 0 },
     { key: "forward_periods", label: "Next-year fiscal periods are generated", passed: row.next_period_count > 0 },
     { key: "period_sequence", label: "Generated normal periods have no gaps or overlaps", passed: row.current_period_count > 0 && row.next_period_count > 0 && row.period_sequence_valid },

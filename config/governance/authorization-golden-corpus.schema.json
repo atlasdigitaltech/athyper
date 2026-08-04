@@ -8,8 +8,11 @@
     "readOnly",
     "capture",
     "identityInventory",
+    "identityAuthorityEvidence",
+    "supplementalDecisionEvidence",
     "actions",
     "cases",
+    "engineDisagreements",
     "coverage",
     "hashes"
   ],
@@ -25,18 +28,136 @@
       "required": [
         "generatedAt",
         "repositoryRevision",
-        "neon"
-      ]
+        "repositoryStateClean",
+        "catalogPath",
+        "neon",
+        "mesh"
+      ],
+      "properties": {
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "repositoryRevision": {
+          "type": "string",
+          "pattern": "^(unavailable|[0-9a-f]{40,64})$"
+        },
+        "repositoryStateClean": {
+          "type": "boolean"
+        },
+        "catalogPath": {
+          "type": "string",
+          "pattern": "^(?!.*(?:^|/)\\.\\.(?:/|$)).+\\.json$"
+        },
+        "neon": {
+          "$ref": "#/$defs/capturedBoundary"
+        },
+        "mesh": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/capturedBoundary"
+            },
+            {
+              "$ref": "#/$defs/missingBoundary"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
     },
     "identityInventory": {
       "type": "object",
       "required": [
         "neonActivePrincipals",
         "meshActivePrincipals"
+      ],
+      "properties": {
+        "neonActivePrincipals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/neonPrincipal"
+          }
+        },
+        "meshActivePrincipals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/meshPrincipal"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "identityAuthorityEvidence": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/capturedIdentityAuthorityEvidence"
+        },
+        {
+          "$ref": "#/$defs/missingIdentityAuthorityEvidence"
+        }
+      ]
+    },
+    "supplementalDecisionEvidence": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/capturedSupplementalDecisionEvidence"
+        },
+        {
+          "$ref": "#/$defs/missingSupplementalDecisionEvidence"
+        }
       ]
     },
     "actions": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "risk_level",
+          "scope_type",
+          "is_plan_restricted",
+          "plane_eligibility",
+          "operations"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/uuid"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "risk_level": {
+            "enum": [
+              "high",
+              "critical"
+            ]
+          },
+          "scope_type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "is_plan_restricted": {
+            "type": "boolean"
+          },
+          "plane_eligibility": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/plane"
+            }
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/entityOperation"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "cases": {
       "type": "array",
@@ -44,35 +165,1231 @@
         "type": "object",
         "required": [
           "caseId",
+          "contextClass",
           "tenantId",
           "principalId",
           "permissionId",
           "permissionCode",
           "riskLevel",
+          "planeEligibility",
           "legacy"
-        ]
+        ],
+        "properties": {
+          "caseId": {
+            "$ref": "#/$defs/sha256"
+          },
+          "contextClass": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tenantId": {
+            "$ref": "#/$defs/uuid"
+          },
+          "principalId": {
+            "$ref": "#/$defs/uuid"
+          },
+          "permissionId": {
+            "$ref": "#/$defs/uuid"
+          },
+          "permissionCode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "riskLevel": {
+            "enum": [
+              "high",
+              "critical"
+            ]
+          },
+          "planeEligibility": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/plane"
+            }
+          },
+          "personaId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "legacy": {
+            "type": "object",
+            "required": [
+              "single",
+              "batch",
+              "admin",
+              "mesh"
+            ],
+            "properties": {
+              "single": {
+                "type": "string"
+              },
+              "batch": {
+                "type": "string"
+              },
+              "admin": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "mesh": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
       }
     },
     "engineDisagreements": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "caseId",
+          "comparison",
+          "left",
+          "right",
+          "classification",
+          "approval"
+        ],
+        "properties": {
+          "caseId": {
+            "$ref": "#/$defs/sha256"
+          },
+          "comparison": {
+            "type": "string",
+            "minLength": 1
+          },
+          "left": {
+            "type": "string"
+          },
+          "right": {
+            "type": "string"
+          },
+          "classification": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "approval": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "coverage": {
       "type": "object",
       "required": [
         "expectedNeonPrincipalActionCases",
         "capturedNeonPrincipalActionCases",
+        "activeNeonPrincipals",
+        "activeNeonUsers",
+        "activeMeshPrincipals",
+        "activeMeshUsers",
+        "highRiskActions",
+        "missingIdentityBindings",
+        "missingMeshIdentityBindings",
+        "unmappedActions",
+        "requiredLegacyEngines",
+        "capturedLegacyEngines",
+        "missingLegacyEngines",
+        "requiredContextClasses",
+        "capturedContextClasses",
+        "missingContextClasses",
+        "supplementalDecisionEvidence",
+        "supplementalDecisionCases",
         "gates",
         "gaps"
-      ]
+      ],
+      "properties": {
+        "expectedNeonPrincipalActionCases": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "capturedNeonPrincipalActionCases": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeNeonPrincipals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeNeonUsers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeMeshPrincipals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "activeMeshUsers": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "highRiskActions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "missingIdentityBindings": {
+          "type": "array"
+        },
+        "missingMeshIdentityBindings": {
+          "type": "array"
+        },
+        "unmappedActions": {
+          "type": "array"
+        },
+        "requiredLegacyEngines": {
+          "$ref": "#/$defs/stringSet"
+        },
+        "capturedLegacyEngines": {
+          "$ref": "#/$defs/stringSet"
+        },
+        "missingLegacyEngines": {
+          "$ref": "#/$defs/stringSet"
+        },
+        "requiredContextClasses": {
+          "$ref": "#/$defs/stringSet"
+        },
+        "capturedContextClasses": {
+          "$ref": "#/$defs/stringSet"
+        },
+        "missingContextClasses": {
+          "$ref": "#/$defs/stringSet"
+        },
+        "supplementalDecisionEvidence": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "supplementalDecisionCases": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gates": {
+          "$ref": "#/$defs/coverageGates"
+        },
+        "gaps": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": false
     },
     "hashes": {
       "type": "object",
       "required": [
         "catalogSha256",
         "identitySha256",
+        "identityAuthorityEvidenceSha256",
         "actionsSha256",
-        "casesSha256"
+        "casesSha256",
+        "engineDisagreementsSha256",
+        "supplementalDecisionEvidenceSha256"
+      ],
+      "properties": {
+        "catalogSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "identitySha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "identityAuthorityEvidenceSha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "actionsSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "casesSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "engineDisagreementsSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "supplementalDecisionEvidenceSha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "plane": {
+      "enum": [
+        "neon",
+        "admin",
+        "mesh"
       ]
+    },
+    "stringSet": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "entityOperation": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenantId",
+        "entityName",
+        "surface",
+        "handlerType",
+        "handlerTarget",
+        "executionTarget",
+        "recordRequired"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "tenantId": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "entityName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "handlerType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "handlerTarget": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "executionTarget": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recordRequired": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "capturedBoundary": {
+      "type": "object",
+      "required": [
+        "plane",
+        "status",
+        "database_name",
+        "database_oid",
+        "wal_lsn",
+        "snapshot_id",
+        "captured_at",
+        "has_capture_clock",
+        "source_database_id",
+        "capture_contract_version",
+        "capture_installed_at",
+        "capture_watermark"
+      ],
+      "properties": {
+        "plane": {
+          "$ref": "#/$defs/plane"
+        },
+        "status": {
+          "const": "captured"
+        },
+        "database_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "database_oid": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "wal_lsn": {
+          "type": "string",
+          "minLength": 1
+        },
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "captured_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "has_capture_clock": {
+          "type": "boolean"
+        },
+        "source_database_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "capture_contract_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "capture_installed_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "capture_watermark": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "missingBoundary": {
+      "type": "object",
+      "required": [
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "const": "not_captured"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "identityBinding": {
+      "type": "object",
+      "required": [
+        "id",
+        "realmKey",
+        "providerCode",
+        "subjectSha256",
+        "syncStatus"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "realmKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "providerCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subjectSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "issuerSha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "audienceSha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "clientIdSha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "idpEnabled": {
+          "type": "boolean"
+        },
+        "syncStatus": {
+          "const": "synced"
+        }
+      },
+      "additionalProperties": false
+    },
+    "neonPrincipal": {
+      "type": "object",
+      "required": [
+        "id",
+        "tenantId",
+        "principalType",
+        "status",
+        "locked",
+        "serviceAccount",
+        "authEpoch",
+        "bindings"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "tenantId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "principalType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "const": "active"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "serviceAccount": {
+          "type": "boolean"
+        },
+        "authEpoch": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identityBinding"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "meshPrincipal": {
+      "type": "object",
+      "required": [
+        "id",
+        "principalType",
+        "status",
+        "bindings",
+        "accountGrants"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid"
+        },
+        "principalType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "const": "active"
+        },
+        "bindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identityBinding"
+          }
+        },
+        "accountGrants": {
+          "type": "array"
+        }
+      },
+      "additionalProperties": false
+    },
+    "externalIdentitySubject": {
+      "type": "object",
+      "required": [
+        "subjectKeySha256",
+        "realmKey",
+        "providerCode",
+        "subjectSha256",
+        "subjectType",
+        "enabled",
+        "expectedPlanes"
+      ],
+      "properties": {
+        "subjectKeySha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "realmKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "providerCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subjectSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "subjectType": {
+          "enum": [
+            "user",
+            "service_account",
+            "integration_user"
+          ]
+        },
+        "enabled": {
+          "const": true
+        },
+        "expectedPlanes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/plane"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "capturedIdentityAuthorityEvidence": {
+      "type": "object",
+      "required": [
+        "status",
+        "schemaVersion",
+        "evidenceId",
+        "generatedAt",
+        "source",
+        "subjects",
+        "hashes",
+        "reconciliation"
+      ],
+      "properties": {
+        "status": {
+          "const": "captured"
+        },
+        "schemaVersion": {
+          "const": 1
+        },
+        "evidenceId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "authoritySystem",
+            "sourceInstanceIdSha256",
+            "snapshotId",
+            "snapshotSha256",
+            "subjectSelection"
+          ],
+          "properties": {
+            "authoritySystem": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sourceInstanceIdSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "snapshotId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "snapshotSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "subjectSelection": {
+              "const": "enabled_only"
+            }
+          },
+          "additionalProperties": false
+        },
+        "subjects": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/externalIdentitySubject"
+          }
+        },
+        "hashes": {
+          "type": "object",
+          "required": [
+            "subjectsSha256"
+          ],
+          "properties": {
+            "subjectsSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          },
+          "additionalProperties": false
+        },
+        "reconciliation": {
+          "type": "object",
+          "required": [
+            "enabledAuthoritySubjects",
+            "enabledAuthorityUsers",
+            "expectedPlaneBindings",
+            "matchedPlaneBindings",
+            "activeNeonAdminLocalBindings",
+            "activeMeshLocalBindings",
+            "missingBindings",
+            "unexpectedLocalBindings",
+            "passed",
+            "gaps",
+            "reconciliationSha256"
+          ],
+          "properties": {
+            "enabledAuthoritySubjects": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "enabledAuthorityUsers": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "expectedPlaneBindings": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "matchedPlaneBindings": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "activeNeonAdminLocalBindings": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "activeMeshLocalBindings": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "missingBindings": {
+              "type": "array"
+            },
+            "unexpectedLocalBindings": {
+              "type": "array"
+            },
+            "passed": {
+              "type": "boolean"
+            },
+            "gaps": {
+              "type": "array"
+            },
+            "reconciliationSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "missingIdentityAuthorityEvidence": {
+      "type": "object",
+      "required": [
+        "status",
+        "reason"
+      ],
+      "properties": {
+        "status": {
+          "const": "not_captured"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "supplementalDecisionSource": {
+      "type": "object",
+      "required": [
+        "plane",
+        "sourceDatabaseId",
+        "captureWatermark",
+        "actionSelection",
+        "principalSelection",
+        "decisionCatalogSha256",
+        "evaluatorId",
+        "evaluatorRevision"
+      ],
+      "properties": {
+        "plane": {
+          "$ref": "#/$defs/plane"
+        },
+        "sourceDatabaseId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "captureWatermark": {
+          "type": "string",
+          "pattern": "^\\d+$"
+        },
+        "actionSelection": {
+          "const": "all_active_high_critical"
+        },
+        "principalSelection": {
+          "const": "all_active_plus_certification_fixtures"
+        },
+        "decisionCatalogSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evaluatorId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evaluatorRevision": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "supplementalDecisionPrincipal": {
+      "type": "object",
+      "required": [
+        "principalId",
+        "principalClass"
+      ],
+      "properties": {
+        "principalId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "principalClass": {
+          "enum": [
+            "active_inventory",
+            "certification_fixture"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "supplementalDecisionAction": {
+      "type": "object",
+      "required": [
+        "operationId",
+        "permissionId",
+        "permissionCode",
+        "riskLevel"
+      ],
+      "properties": {
+        "operationId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "permissionId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "permissionCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "riskLevel": {
+          "enum": [
+            "high",
+            "critical"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "supplementalDecisionCase": {
+      "type": "object",
+      "required": [
+        "caseId",
+        "plane",
+        "authorityScopeId",
+        "membershipId",
+        "principalId",
+        "operationId",
+        "permissionId",
+        "permissionCode",
+        "contextClass",
+        "resourceType",
+        "resourceIdSha256",
+        "resourceSentinel",
+        "engine",
+        "decision",
+        "decisionEvidenceSha256"
+      ],
+      "properties": {
+        "caseId": {
+          "$ref": "#/$defs/sha256"
+        },
+        "plane": {
+          "$ref": "#/$defs/plane"
+        },
+        "authorityScopeId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "membershipId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "principalId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "operationId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "permissionId": {
+          "$ref": "#/$defs/uuid"
+        },
+        "permissionCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contextClass": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resourceType": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "resourceIdSha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "resourceSentinel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "engine": {
+          "enum": [
+            "legacy_single",
+            "legacy_batch",
+            "legacy_admin",
+            "legacy_mesh"
+          ]
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 1
+        },
+        "decisionEvidenceSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "supplementalDecisionDisagreement": {
+      "type": "object",
+      "required": [
+        "caseId",
+        "comparison",
+        "left",
+        "right",
+        "classification",
+        "approval"
+      ],
+      "properties": {
+        "caseId": {
+          "$ref": "#/$defs/sha256"
+        },
+        "comparison": {
+          "type": "string",
+          "minLength": 1
+        },
+        "left": {
+          "type": "string",
+          "minLength": 1
+        },
+        "right": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "approval": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "supplementalDecisionEvidenceItem": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "evidenceId",
+        "generatedAt",
+        "repositoryRevision",
+        "governanceCatalogSha256",
+        "source",
+        "principals",
+        "actions",
+        "cases",
+        "engineDisagreements",
+        "hashes"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "evidenceId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._:-]{2,127}$"
+        },
+        "generatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "repositoryRevision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40,64}$"
+        },
+        "governanceCatalogSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "source": {
+          "$ref": "#/$defs/supplementalDecisionSource"
+        },
+        "principals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/supplementalDecisionPrincipal"
+          }
+        },
+        "actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/supplementalDecisionAction"
+          }
+        },
+        "cases": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/supplementalDecisionCase"
+          }
+        },
+        "engineDisagreements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/supplementalDecisionDisagreement"
+          }
+        },
+        "hashes": {
+          "type": "object",
+          "required": [
+            "principalsSha256",
+            "actionsSha256",
+            "casesSha256",
+            "engineDisagreementsSha256"
+          ],
+          "properties": {
+            "principalsSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "actionsSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "casesSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "engineDisagreementsSha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "capturedSupplementalDecisionEvidence": {
+      "type": "object",
+      "required": [
+        "status",
+        "items",
+        "evidenceSetSha256"
+      ],
+      "properties": {
+        "status": {
+          "const": "captured"
+        },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/supplementalDecisionEvidenceItem"
+          }
+        },
+        "evidenceSetSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "additionalProperties": false
+    },
+    "missingSupplementalDecisionEvidence": {
+      "type": "object",
+      "required": [
+        "status",
+        "reason",
+        "items",
+        "evidenceSetSha256"
+      ],
+      "properties": {
+        "status": {
+          "const": "not_captured"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "evidenceSetSha256": {
+          "type": "null"
+        }
+      },
+      "additionalProperties": false
+    },
+    "coverageGates": {
+      "type": "object",
+      "required": [
+        "activeNeonPrincipalInventoryNonEmpty",
+        "activeNeonUserInventoryNonEmpty",
+        "everyActiveNeonPrincipalIncluded",
+        "everyActiveNeonUserIncluded",
+        "highRiskActionInventoryNonEmpty",
+        "everyHighRiskActionIncluded",
+        "exactNeonPrincipalActionCrossProduct",
+        "everyActivePrincipalHasIdentityBinding",
+        "everyActionMappedOrClassified",
+        "allRequiredContextClassesCaptured",
+        "allRequiredLegacyEnginesCaptured",
+        "allLegacyEngineDisagreementsClassified",
+        "meshIdentityInventoryCaptured",
+        "activeMeshPrincipalInventoryNonEmpty",
+        "activeMeshUserInventoryNonEmpty",
+        "everyActiveMeshPrincipalHasIdentityBinding",
+        "meshDecisionCorpusCaptured",
+        "neonCaptureBoundaryComplete",
+        "meshCaptureBoundaryComplete",
+        "distinctPlaneSourceDatabaseIds",
+        "identityAuthorityEvidenceCaptured",
+        "identityAuthorityReconciled",
+        "repositoryCatalogProvenanceRecorded",
+        "repositoryStateClean"
+      ],
+      "properties": {
+        "activeNeonPrincipalInventoryNonEmpty": {
+          "type": "boolean"
+        },
+        "activeNeonUserInventoryNonEmpty": {
+          "type": "boolean"
+        },
+        "everyActiveNeonPrincipalIncluded": {
+          "type": "boolean"
+        },
+        "everyActiveNeonUserIncluded": {
+          "type": "boolean"
+        },
+        "highRiskActionInventoryNonEmpty": {
+          "type": "boolean"
+        },
+        "everyHighRiskActionIncluded": {
+          "type": "boolean"
+        },
+        "exactNeonPrincipalActionCrossProduct": {
+          "type": "boolean"
+        },
+        "everyActivePrincipalHasIdentityBinding": {
+          "type": "boolean"
+        },
+        "everyActionMappedOrClassified": {
+          "type": "boolean"
+        },
+        "allRequiredContextClassesCaptured": {
+          "type": "boolean"
+        },
+        "allRequiredLegacyEnginesCaptured": {
+          "type": "boolean"
+        },
+        "allLegacyEngineDisagreementsClassified": {
+          "type": "boolean"
+        },
+        "meshIdentityInventoryCaptured": {
+          "type": "boolean"
+        },
+        "activeMeshPrincipalInventoryNonEmpty": {
+          "type": "boolean"
+        },
+        "activeMeshUserInventoryNonEmpty": {
+          "type": "boolean"
+        },
+        "everyActiveMeshPrincipalHasIdentityBinding": {
+          "type": "boolean"
+        },
+        "meshDecisionCorpusCaptured": {
+          "type": "boolean"
+        },
+        "neonCaptureBoundaryComplete": {
+          "type": "boolean"
+        },
+        "meshCaptureBoundaryComplete": {
+          "type": "boolean"
+        },
+        "distinctPlaneSourceDatabaseIds": {
+          "type": "boolean"
+        },
+        "identityAuthorityEvidenceCaptured": {
+          "type": "boolean"
+        },
+        "identityAuthorityReconciled": {
+          "type": "boolean"
+        },
+        "repositoryCatalogProvenanceRecorded": {
+          "type": "boolean"
+        },
+        "repositoryStateClean": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

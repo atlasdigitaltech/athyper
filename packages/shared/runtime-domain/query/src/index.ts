@@ -41,7 +41,6 @@ export {
   type BookmarkRequest,
 } from "./hooks/use-record-bookmarks";
 export { useCommentCounts } from "./hooks/use-comment-counts";
-export { useFilterPresets, type FilterPreset } from "./hooks/use-filter-presets";
 export { useRecentItems, recordRecentVisit, type RecentItem } from "./hooks/use-recent-items";
 export {
   useSubmitPreflight,

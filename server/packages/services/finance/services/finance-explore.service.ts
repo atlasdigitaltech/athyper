@@ -292,11 +292,17 @@ export async function loadHouseBanksList(
   }>`
     SELECT bahc.id                              AS config_id,
            bahc.is_active                       AS config_active,
-           bp.id                                AS party_id,
-           bp.name                              AS party_name,
-           bp.is_active                         AS party_active,
+           COALESCE(bp.id, ba.id)                AS party_id,
+           COALESCE(bp.name, ba.bank_name_override, 'Bank')
+                                                AS party_name,
+           COALESCE(bp.is_active, true)          AS party_active,
            ba.id                                AS bank_account_id,
-           COALESCE(bahc.account_nickname, ba.iban, ba.account_number, ba.id::text)
+           COALESCE(
+             bahc.account_nickname,
+             ba.name,
+             ba.code,
+             concat('••••', ba.account_last4)
+           )
                                                 AS bank_account_label,
            ba.is_active                         AS bank_account_active,
            bal.id                               AS link_id,
@@ -315,9 +321,15 @@ export async function loadHouseBanksList(
         ON cc.id = bal.owner_id
        AND cc.tenant_id = ${tenantId}::uuid
        AND cc.code = ${companyCode}
-      JOIN master.bank_account ba ON ba.id = bal.bank_account_id
-      JOIN master.bank_party    bp ON bp.id = ba.bank_party_id
-      LEFT JOIN master.gl_account ga ON ga.id = bahc.gl_account_id
+      JOIN master.bank_account ba
+        ON ba.tenant_id = bal.tenant_id
+       AND ba.id = bal.bank_account_id
+      LEFT JOIN master.bank_party bp
+        ON bp.tenant_id = ba.tenant_id
+       AND bp.id = ba.bank_party_id
+      LEFT JOIN master.gl_account ga
+        ON ga.tenant_id = bahc.tenant_id
+       AND ga.id = bahc.gl_account_id
      WHERE bahc.tenant_id = ${tenantId}::uuid
      ORDER BY bp.name, bahc.usage_type
   `.execute(db);

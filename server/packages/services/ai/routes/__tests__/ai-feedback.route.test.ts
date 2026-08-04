@@ -185,7 +185,7 @@ describe("POST /ai/feedback Atlas Agent feedback", () => {
       PRINCIPAL_ID,
       "ai.agent.feedback.submit",
     );
-    expect(fixture.selectFrom).toHaveBeenCalledWith("log.ai_agent_run");
+    expect(fixture.selectFrom).toHaveBeenCalledWith("ai.ai_agent_run");
     expect(fixture.where.mock.calls).toEqual([
       ["tenant_id", "=", TENANT_ID],
       ["principal_id", "=", PRINCIPAL_ID],

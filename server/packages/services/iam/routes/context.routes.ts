@@ -1,16 +1,14 @@
 import type { RequestHandler, Router } from "express";
-import { normalizeFederatedAssurance } from "@athyper/auth-common";
 
 import {
   createPlaneContextResolver,
   type PlaneKey,
 } from "../context/context-resolver.service.js";
+import { tenantIdsFromOrganizationAliases } from "../identity/identity-admission.repository.js";
+import type { PlaneDatabaseRegistry } from "../runtime/plane-database-registry.js";
 
 export interface ContextRoutesDeps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: import("kysely").Kysely<any>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  meshDb?: import("kysely").Kysely<any>;
+  planeDatabases: PlaneDatabaseRegistry;
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
@@ -51,9 +49,16 @@ function clientRoles(resourceAccess: unknown, clientId: string): string[] {
   return Array.isArray(roles) ? roles.filter((role): role is string => typeof role === "string") : [];
 }
 
+const AUTHORIZED_CLIENT_IDS: Record<PlaneKey, readonly string[]> = {
+  admin: ["admin-web", "athyper-admin"],
+  neon: ["neon-web"],
+  mesh: ["mesh-web"],
+};
+
 function hasPlaneAccess(claims: Record<string, unknown>, planeKey: PlaneKey): boolean {
-  const planeRoles = clientRoles(claims.resource_access, `${planeKey}-web`);
-  return planeRoles.includes("AUTHORIZED");
+  return AUTHORIZED_CLIENT_IDS[planeKey].some((clientId) =>
+    clientRoles(claims.resource_access, clientId).includes("AUTHORIZED"),
+  );
 }
 
 function workbenchesFromClaims(claims: Record<string, unknown>, planeKey: PlaneKey): string[] {
@@ -72,16 +77,28 @@ function realmRoles(realmAccess: unknown): string[] {
   return Array.isArray(roles) ? roles.filter((role): role is string => typeof role === "string") : [];
 }
 
-function normalizeIdentityUsername(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const normalized = value.trim().toLowerCase();
-  if (!normalized || /\s/.test(normalized) || normalized.length > 320) return undefined;
-  return normalized;
+function organizationAliases(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string");
+  }
+  if (!value || typeof value !== "object") return [];
+  const aliases: string[] = [];
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      const alias = (raw as Record<string, unknown>).alias;
+      if (typeof alias === "string") {
+        aliases.push(alias);
+        continue;
+      }
+    }
+    aliases.push(key);
+  }
+  return aliases;
 }
 
 export function createContextRoutes(router: Router, deps: ContextRoutesDeps): Router {
   const { auth, logger } = deps;
-  const resolver = createPlaneContextResolver(deps.db, deps.meshDb);
+  const resolver = createPlaneContextResolver(deps.planeDatabases);
 
   const getContexts: RequestHandler = async (req, res, next) => {
     try {
@@ -124,15 +141,19 @@ export function createContextRoutes(router: Router, deps: ContextRoutesDeps): Ro
         ? headerWorkbenches
         : workbenchesFromClaims(claims, planeKey);
 
+      const realmKey = req.header("x-realm-key") ?? issuerRealmKey(claims);
       const result = await resolver.resolve({
         planeKey,
-        realmKey: req.header("x-realm-key") ?? issuerRealmKey(claims),
+        realmKey,
         sub,
-        username: normalizeIdentityUsername(claims.preferred_username ?? claims.username ?? claims.email),
+        tenantIds: tenantIdsFromOrganizationAliases(organizationAliases(claims.organization)),
         workbenches,
-        // This value comes only from the verified Keycloak token. Do not use
-        // the untrusted X-Identity-Provider header as a policy selector.
-        providerAlias: normalizeFederatedAssurance(claims).identityProvider ?? undefined,
+        username: claimString(claims.preferred_username),
+        displayName: claimString(claims.name) ?? claimString(claims.preferred_username),
+        email: claimString(claims.email),
+        issuer: claimString(claims.iss),
+        audience: audienceClaim(claims.aud),
+        allowJit: realmKey !== "platform-control",
       });
       res.json(result);
     } catch (err) {
@@ -143,4 +164,17 @@ export function createContextRoutes(router: Router, deps: ContextRoutesDeps): Ro
 
   router.get("/session/contexts", getContexts);
   return router;
+}
+
+function claimString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+function audienceClaim(value: unknown): string | undefined {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    const values = value.filter((entry): entry is string => typeof entry === "string");
+    return values.length > 0 ? values.join(" ").slice(0, 512) : undefined;
+  }
+  return undefined;
 }

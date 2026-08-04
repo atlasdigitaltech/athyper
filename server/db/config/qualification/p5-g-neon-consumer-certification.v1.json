@@ -1,0 +1,12 @@
+{
+  "contractVersion":"p5-g.neon-consumer-certification.v1",
+  "plane":"neon",
+  "entityCode":"business_partner",
+  "expectedOperations":["activate","create","deactivate","list","override_execute","shared_read","update"],
+  "currentReleaseHash":"51d3d9e07643fe0f0e37850298fa71c508890f4d179a71928ea3bb8e504dc824",
+  "currentArtifactHash":"9d9d1c3b9dbee8fcba488a6fdd73f9e4957e265230c763a8928903bb46689c6c",
+  "approvedSuccessorFormat":"athyper.meta-entity-plane-artifact@1.1",
+  "requiredRolloutMode":"shadow",
+  "activationRequirements":{"minimumSamples":1000,"minimumHours":24,"mismatches":0,"candidateErrors":0,"allCohortsCovered":true},
+  "certificationScope":["artifact_bindings","permission_catalog","rls_forced","rollout_shadow","canonical_audit_ready","consumer_wiring","candidate_parity","activation_fail_closed"]
+}

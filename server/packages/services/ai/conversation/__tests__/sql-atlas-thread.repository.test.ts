@@ -185,10 +185,10 @@ describe("SqlAtlasThreadRepository", () => {
     expect(sql[0]).toContain("app.current_tenant_id");
     expect(sql[0]).toContain("app.current_principal_id");
     expect(sql[0]).toContain("app.current_atlas_plane");
-    expect(sql[1]).toContain("INSERT INTO master.conversation");
-    expect(sql[2]).toContain("INSERT INTO master.atlas_thread");
-    expect(sql[3]).toContain("INSERT INTO master.conversation_participant");
-    expect(sql[4]).toContain("FROM master.atlas_thread");
+    expect(sql[1]).toContain("INSERT INTO document.conversation");
+    expect(sql[2]).toContain("INSERT INTO ai.atlas_thread");
+    expect(sql[3]).toContain("INSERT INTO document.conversation_participant");
+    expect(sql[4]).toContain("FROM ai.atlas_thread");
   });
 
   it("persists input and pending output before the deferred run row", async () => {
@@ -205,7 +205,7 @@ describe("SqlAtlasThreadRepository", () => {
       [runRow()],
     );
     const repository = new SqlAtlasThreadRepository(target.db);
-    const hostileText = "bound only'; DROP TABLE master.atlas_message; --";
+    const hostileText = "bound only'; DROP TABLE ai.atlas_message; --";
 
     const result = await repository.beginRun(scope(), {
       threadId: THREAD_ID,
@@ -226,15 +226,15 @@ describe("SqlAtlasThreadRepository", () => {
     });
     const queries = target.connection.queries;
     const inputIndex = queries.findIndex((query) =>
-      query.sql.includes("INSERT INTO master.atlas_message")
+      query.sql.includes("INSERT INTO ai.atlas_message")
       && query.sql.includes("'user'")
     );
     const outputIndex = queries.findIndex((query) =>
-      query.sql.includes("INSERT INTO master.atlas_message")
+      query.sql.includes("INSERT INTO ai.atlas_message")
       && query.sql.includes("'assistant'")
     );
     const runIndex = queries.findIndex((query) =>
-      query.sql.includes("INSERT INTO event.atlas_run")
+      query.sql.includes("INSERT INTO ai.atlas_run")
     );
     expect(inputIndex).toBeGreaterThan(0);
     expect(outputIndex).toBeGreaterThan(inputIndex);
@@ -283,7 +283,7 @@ describe("SqlAtlasThreadRepository", () => {
       [{ type: "text", text: "sensitive" }],
     );
     const inputInsert = target.connection.queries.find((query) =>
-      query.sql.includes("INSERT INTO master.atlas_message")
+      query.sql.includes("INSERT INTO ai.atlas_message")
       && query.sql.includes("'user'")
     );
     expect(inputInsert?.sql).toContain("protected_content_ref");
@@ -398,7 +398,7 @@ describe("SqlAtlasThreadRepository", () => {
       STALE_BEFORE,
     ]));
     const messageUpdate = queries.find((query) =>
-      query.sql.startsWith("UPDATE master.atlas_message")
+      query.sql.startsWith("UPDATE ai.atlas_message")
       && query.sql.includes("terminal_error_class")
     );
     expect(messageUpdate?.sql).toContain("content_blocks = '[]'::jsonb");
@@ -411,7 +411,7 @@ describe("SqlAtlasThreadRepository", () => {
       STALE_RUN_ID,
     ]));
     const recoveryRunUpdate = queries.find((query) =>
-      query.sql.startsWith("UPDATE event.atlas_run")
+      query.sql.startsWith("UPDATE ai.atlas_run")
       && query.sql.includes("started_at <=")
     );
     expect(recoveryRunUpdate?.parameters).toEqual(expect.arrayContaining([
@@ -424,7 +424,7 @@ describe("SqlAtlasThreadRepository", () => {
       STALE_BEFORE,
     ]));
     expect(queries.findIndex((query) =>
-      query.sql.includes("INSERT INTO event.atlas_run")
+      query.sql.includes("INSERT INTO ai.atlas_run")
     )).toBeGreaterThan(queries.indexOf(recoveryRunUpdate!));
   });
 
@@ -489,14 +489,14 @@ describe("SqlAtlasThreadRepository", () => {
     });
     const sql = target.connection.queries.map((query) => query.sql);
     expect(sql.filter((value) =>
-      value.startsWith("UPDATE master.atlas_message")
+      value.startsWith("UPDATE ai.atlas_message")
     )).toHaveLength(1);
     expect(sql.filter((value) =>
-      value.startsWith("UPDATE event.atlas_run")
+      value.startsWith("UPDATE ai.atlas_run")
     )).toHaveLength(1);
     expect(sql.some((value) =>
-      value.includes("INSERT INTO master.conversation")
-      || value.includes("INSERT INTO event.atlas_run")
+      value.includes("INSERT INTO document.conversation")
+      || value.includes("INSERT INTO ai.atlas_run")
     )).toBe(false);
   });
 
@@ -556,15 +556,15 @@ describe("SqlAtlasThreadRepository", () => {
       CLIENT_REQUEST_ID,
     ]));
     const sequences = target.connection.queries[3]!;
-    expect(sequences.sql).toContain("FROM master.atlas_message");
+    expect(sequences.sql).toContain("FROM ai.atlas_message");
     expect(sequences.sql).toContain("tenant_id =");
     expect(sequences.sql).toContain("plane =");
     expect(target.connection.queries.some((query) =>
-      query.sql.includes("INSERT INTO master.conversation")
+      query.sql.includes("INSERT INTO document.conversation")
     )).toBe(false);
     expect(target.connection.queries.some((query) =>
-      query.sql.startsWith("UPDATE master.atlas_message")
-      || query.sql.startsWith("UPDATE event.atlas_run")
+      query.sql.startsWith("UPDATE ai.atlas_message")
+      || query.sql.startsWith("UPDATE ai.atlas_run")
     )).toBe(false);
     expect(target.driver.beginCount).toBe(1);
     expect(target.driver.commitCount).toBe(1);
@@ -617,24 +617,24 @@ describe("SqlAtlasThreadRepository", () => {
       value.includes("r.client_request_id =")
     );
     const conversationIndex = sql.findIndex((value) =>
-      value.includes("INSERT INTO master.conversation (")
+      value.includes("INSERT INTO document.conversation (")
     );
     const threadIndex = sql.findIndex((value) =>
-      value.includes("INSERT INTO master.atlas_thread")
+      value.includes("INSERT INTO ai.atlas_thread")
     );
     const participantIndex = sql.findIndex((value) =>
-      value.includes("INSERT INTO master.conversation_participant")
+      value.includes("INSERT INTO document.conversation_participant")
     );
     const inputIndex = sql.findIndex((value) =>
-      value.includes("INSERT INTO master.atlas_message")
+      value.includes("INSERT INTO ai.atlas_message")
       && value.includes("'user'")
     );
     const outputIndex = sql.findIndex((value) =>
-      value.includes("INSERT INTO master.atlas_message")
+      value.includes("INSERT INTO ai.atlas_message")
       && value.includes("'assistant'")
     );
     const runIndex = sql.findIndex((value) =>
-      value.includes("INSERT INTO event.atlas_run")
+      value.includes("INSERT INTO ai.atlas_run")
     );
     expect(lockIndex).toBeGreaterThan(0);
     expect(recheckIndex).toBeGreaterThan(lockIndex);
@@ -673,10 +673,10 @@ describe("SqlAtlasThreadRepository", () => {
     expect(terminal?.status).toBe("failed");
     const sql = target.connection.queries.map((query) => query.sql);
     const messageUpdate = sql.findIndex((value) =>
-      value.startsWith("UPDATE master.atlas_message")
+      value.startsWith("UPDATE ai.atlas_message")
     );
     const runUpdate = sql.findIndex((value) =>
-      value.startsWith("UPDATE event.atlas_run")
+      value.startsWith("UPDATE ai.atlas_run")
     );
     expect(messageUpdate).toBeGreaterThan(0);
     expect(runUpdate).toBeGreaterThan(messageUpdate);

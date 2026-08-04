@@ -401,9 +401,9 @@ function CompanyCalendarAdoption({ selected, fiscalYear, setFiscalYear, matrix, 
                 {generating ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <WandSparkles className="mr-1.5 h-3.5 w-3.5" />}Generate FY {fiscalYear}</Button></div>
             {message && <p className="mt-3 text-xs text-muted-foreground">{message}</p>}
           </div>
-          <div className="rounded-lg border p-4"><div className="flex items-center justify-between"><h3 className="text-sm font-medium">Legacy-field consistency</h3>{matrix?.legacyConsistency.consistent ? <Badge variant="success" size="sm">consistent</Badge> : <Badge variant="warning" size="sm">review</Badge>}</div>
-            <p className="mt-1 text-xs text-muted-foreground">Assigned Calendar is authoritative; Company legacy fields remain compatibility summaries.</p>
-            <div className="mt-3 space-y-2">{matrix?.legacyConsistency.checks.length ? matrix.legacyConsistency.checks.map((check) => <div key={check.key} className="flex gap-2 text-xs">{check.passed ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-amber-600" />}<span>{check.message}</span></div>) : <p className="text-xs text-muted-foreground">Assign a Calendar to evaluate compatibility.</p>}</div>
+          <div className="rounded-lg border p-4"><div className="flex items-center justify-between"><h3 className="text-sm font-medium">Calendar authority</h3>{matrix?.assignment ? <Badge variant="success" size="sm">assigned</Badge> : <Badge variant="warning" size="sm">missing</Badge>}</div>
+            <p className="mt-1 text-xs text-muted-foreground">The effective company assignment is the sole fiscal-year calendar authority.</p>
+            <div className="mt-3 text-xs">{matrix?.assignment ? <div className="flex gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /><span>{matrix.assignment.calendarName} v{matrix.assignment.calendarVersion} covers FY {fiscalYear}.</span></div> : <div className="flex gap-2"><AlertTriangle className="h-4 w-4 text-amber-600" /><span>Assign an active Calendar before generating periods.</span></div>}</div>
           </div>
         </div>
         <div className="min-w-0">

@@ -118,7 +118,7 @@ const rules = [
     label: "Shared + Core product",
     roots: [
       "packages/shared",
-      "packages/product/design",
+      "packages/products/design",
       "packages/product-deprecated/runtime-ui",
     ],
     bannedPackages: [
@@ -131,7 +131,7 @@ const rules = [
     label: "Mesh",
     roots: [
       "apps/mesh",
-      "packages/apps/mesh",
+      "packages/products/mesh",
     ],
     bannedPackages: [
       ...neonOnlyPackages,
@@ -142,7 +142,7 @@ const rules = [
     label: "Neon",
     roots: [
       "apps/neon",
-      "packages/apps/neon",
+      "packages/products/neon",
     ],
     bannedPackages: [
       ...removedNeonProductPackages,
@@ -154,7 +154,7 @@ const rules = [
     label: "Admin",
     roots: [
       "apps/admin",
-      "packages/apps/admin",
+      "packages/products/admin",
     ],
     bannedPackages: [
       ...meshOnlyPackages,
@@ -199,9 +199,8 @@ const legacyRuntimePackages = [
 
 const legacyRuntimeImportScanRoots = [
   "apps",
-  "packages/apps",
+  "packages/products",
   "packages/shared",
-  "packages/product",
   "packages/domain",
   "server",
 ];
@@ -276,7 +275,7 @@ function isUnderRelRoot(path, relRoot) {
 }
 
 function collectProductPackagesByName() {
-  const productRoot = join(repoRoot, "packages/product");
+  const productRoot = join(repoRoot, "packages/products");
   const packagesByName = new Map();
   if (!existsSync(productRoot)) return packagesByName;
 
@@ -456,7 +455,7 @@ for (const [packageName, packageInfo] of productPackagesByName) {
       if (!depInfo || allowedGroups.has(depInfo.groupName)) continue;
 
       violations.push(
-        `Product tier: ${relative(repoRoot, packageInfo.packageJsonPath)} ${section} references ${depName} from packages/product/${depInfo.groupName}; allowed groups are ${[...allowedGroups].join(", ") || "(none)"}`,
+        `Product tier: ${relative(repoRoot, packageInfo.packageJsonPath)} ${section} references ${depName} from packages/products/${depInfo.groupName}; allowed groups are ${[...allowedGroups].join(", ") || "(none)"}`,
       );
     }
   }

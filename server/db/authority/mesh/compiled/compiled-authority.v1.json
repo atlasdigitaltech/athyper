@@ -1,0 +1,945 @@
+{
+  "authorityVersion": "wave3.mesh.authority.v1",
+  "semanticContractVersion": "wave3.authorization-authority.semantic.v1",
+  "database": "mesh",
+  "planes": [
+    "mesh"
+  ],
+  "publicationStatus": "draft",
+  "permissionSets": [
+    {
+      "id": "18215acc-6987-56ce-938d-706ff6e4e04c",
+      "code": "mesh.observer",
+      "name": "Mesh Observer",
+      "plane": "mesh",
+      "permissionIds": [
+        "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+        "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+        "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+        "5b7451f1-98c1-561d-b8ae-3911e9ebba43",
+        "76212049-e5a4-5092-8669-254fc0adab1a",
+        "bb36337f-fc55-518d-ab94-017284e56edd",
+        "d5169b57-85cc-576f-bea6-4cfded4b301b",
+        "dfb4bedf-4e41-50c1-bd7e-b06a1ab3ca71",
+        "fd8c1937-4fad-5829-b3de-b4b1b3cf338a"
+      ],
+      "checksum": "7f27a17054db20462a8114336635104dc2ad6b67eb69ee74113eba193d6e05fe",
+      "source": "mesh-local-authority-manifest"
+    },
+    {
+      "id": "ffddea67-89d7-59d4-b539-909e34158bdb",
+      "code": "mesh.participant",
+      "name": "Mesh Participant",
+      "plane": "mesh",
+      "permissionIds": [
+        "198bff99-7c71-547b-b39d-1dcf14924d72",
+        "1b5cfc3b-98bf-5f65-b189-e5f1b3363861",
+        "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+        "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+        "37035dcd-070c-50a8-a770-4ca121ddfe44",
+        "4060efc9-0961-500b-abe6-a4b0387baa26",
+        "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+        "5b7451f1-98c1-561d-b8ae-3911e9ebba43",
+        "76212049-e5a4-5092-8669-254fc0adab1a",
+        "7953c5b5-4483-5e7b-a08c-c6b3a069dce6",
+        "9403d252-6448-5775-96fd-84861bec41c4",
+        "9ef06b85-8b27-5f41-8afd-c9cf34dbda44",
+        "a045b342-005e-524b-91a4-4be958e81c5b",
+        "a29f1384-65ca-54d3-bf72-c3bea98e43f4",
+        "bb36337f-fc55-518d-ab94-017284e56edd",
+        "d19ff2ea-523b-54f3-a303-53cd411f20a7",
+        "d5169b57-85cc-576f-bea6-4cfded4b301b",
+        "d6d9e6a8-d056-58da-94e6-dd33237b7064",
+        "d8932cd5-2a71-5068-a69a-100fed4333b4",
+        "d9895fb9-b98f-54f4-a602-4d6cecfccf3e",
+        "dfb4bedf-4e41-50c1-bd7e-b06a1ab3ca71",
+        "fd8c1937-4fad-5829-b3de-b4b1b3cf338a"
+      ],
+      "checksum": "02c14877aa3993fa4f3780ac1a54bfdfb55c8b674d3057b91f83996fb2bea4e2",
+      "source": "mesh-local-authority-manifest"
+    },
+    {
+      "id": "3b136b84-cd61-5a18-9c6d-9f13d14b10b0",
+      "code": "mesh.security_admin",
+      "name": "Mesh Security Administrator",
+      "plane": "mesh",
+      "permissionIds": [
+        "198bff99-7c71-547b-b39d-1dcf14924d72",
+        "1b5cfc3b-98bf-5f65-b189-e5f1b3363861",
+        "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+        "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+        "333122bc-988e-5fbb-a403-85cb1e8fd3db",
+        "4060efc9-0961-500b-abe6-a4b0387baa26",
+        "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+        "63343551-1809-5607-88b7-132ee31e8b81",
+        "6d88bc96-fc04-53bc-a23b-29090ac44446",
+        "76212049-e5a4-5092-8669-254fc0adab1a",
+        "7953c5b5-4483-5e7b-a08c-c6b3a069dce6",
+        "9403d252-6448-5775-96fd-84861bec41c4",
+        "9ef06b85-8b27-5f41-8afd-c9cf34dbda44",
+        "a045b342-005e-524b-91a4-4be958e81c5b",
+        "b44cbd4c-de13-594f-b836-8679c47de554",
+        "bb36337f-fc55-518d-ab94-017284e56edd",
+        "d19ff2ea-523b-54f3-a303-53cd411f20a7",
+        "d5169b57-85cc-576f-bea6-4cfded4b301b",
+        "d6d9e6a8-d056-58da-94e6-dd33237b7064",
+        "d8932cd5-2a71-5068-a69a-100fed4333b4",
+        "d9895fb9-b98f-54f4-a602-4d6cecfccf3e",
+        "e1845d6b-72a0-5629-bb17-8f9867eb8303",
+        "fed9f35b-61af-57a8-9608-797250a3f1b6"
+      ],
+      "checksum": "a3087b4589f63b10afc8c18a365c4319d91dd249d8d37f1667d4a213f576e07b",
+      "source": "mesh-local-authority-manifest"
+    },
+    {
+      "id": "67ff7e40-9d44-5315-81fe-20eed89eba39",
+      "code": "mesh.account_owner",
+      "name": "Mesh Account Owner",
+      "plane": "mesh",
+      "permissionIds": [
+        "1524424a-39cc-5a64-b526-e9fe428bd8f9",
+        "198bff99-7c71-547b-b39d-1dcf14924d72",
+        "1b5cfc3b-98bf-5f65-b189-e5f1b3363861",
+        "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+        "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+        "333122bc-988e-5fbb-a403-85cb1e8fd3db",
+        "37035dcd-070c-50a8-a770-4ca121ddfe44",
+        "4060efc9-0961-500b-abe6-a4b0387baa26",
+        "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+        "5585fecf-65ce-5192-950e-bfe7aff1e054",
+        "56af7f78-91ed-5769-9b97-9ddd65106bc0",
+        "5b7451f1-98c1-561d-b8ae-3911e9ebba43",
+        "63343551-1809-5607-88b7-132ee31e8b81",
+        "6d88bc96-fc04-53bc-a23b-29090ac44446",
+        "76212049-e5a4-5092-8669-254fc0adab1a",
+        "779daf91-90ba-57cb-a82c-4ffe63934535",
+        "7953c5b5-4483-5e7b-a08c-c6b3a069dce6",
+        "9403d252-6448-5775-96fd-84861bec41c4",
+        "9ef06b85-8b27-5f41-8afd-c9cf34dbda44",
+        "a045b342-005e-524b-91a4-4be958e81c5b",
+        "a29f1384-65ca-54d3-bf72-c3bea98e43f4",
+        "b44cbd4c-de13-594f-b836-8679c47de554",
+        "bb36337f-fc55-518d-ab94-017284e56edd",
+        "d19ff2ea-523b-54f3-a303-53cd411f20a7",
+        "d5169b57-85cc-576f-bea6-4cfded4b301b",
+        "d6d9e6a8-d056-58da-94e6-dd33237b7064",
+        "d8932cd5-2a71-5068-a69a-100fed4333b4",
+        "d9895fb9-b98f-54f4-a602-4d6cecfccf3e",
+        "dfb4bedf-4e41-50c1-bd7e-b06a1ab3ca71",
+        "e1845d6b-72a0-5629-bb17-8f9867eb8303",
+        "fd8c1937-4fad-5829-b3de-b4b1b3cf338a",
+        "fed9f35b-61af-57a8-9608-797250a3f1b6"
+      ],
+      "checksum": "7bd346623ce573d2f990011e5c0737c0fef7e05b9363f16bfe960a48e559b136",
+      "source": "mesh-local-authority-manifest"
+    }
+  ],
+  "roles": [
+    {
+      "id": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "code": "mesh.observer",
+      "name": "Mesh Observer",
+      "plane": "mesh",
+      "permissionSetIds": [
+        "18215acc-6987-56ce-938d-706ff6e4e04c"
+      ],
+      "permissionIds": [
+        "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+        "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+        "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+        "5b7451f1-98c1-561d-b8ae-3911e9ebba43",
+        "76212049-e5a4-5092-8669-254fc0adab1a",
+        "bb36337f-fc55-518d-ab94-017284e56edd",
+        "d5169b57-85cc-576f-bea6-4cfded4b301b",
+        "dfb4bedf-4e41-50c1-bd7e-b06a1ab3ca71",
+        "fd8c1937-4fad-5829-b3de-b4b1b3cf338a"
+      ],
+      "checksum": "43b92cceb7084fcac141fcb2ae27792ac69a938a9d366d413be31365e10cc055",
+      "status": "draft"
+    },
+    {
+      "id": "0e889926-ed79-5772-b33e-e1136c608096",
+      "code": "mesh.participant",
+      "name": "Mesh Participant",
+      "plane": "mesh",
+      "permissionSetIds": [
+        "ffddea67-89d7-59d4-b539-909e34158bdb"
+      ],
+      "permissionIds": [
+        "198bff99-7c71-547b-b39d-1dcf14924d72",
+        "1b5cfc3b-98bf-5f65-b189-e5f1b3363861",
+        "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+        "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+        "37035dcd-070c-50a8-a770-4ca121ddfe44",
+        "4060efc9-0961-500b-abe6-a4b0387baa26",
+        "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+        "5b7451f1-98c1-561d-b8ae-3911e9ebba43",
+        "76212049-e5a4-5092-8669-254fc0adab1a",
+        "7953c5b5-4483-5e7b-a08c-c6b3a069dce6",
+        "9403d252-6448-5775-96fd-84861bec41c4",
+        "9ef06b85-8b27-5f41-8afd-c9cf34dbda44",
+        "a045b342-005e-524b-91a4-4be958e81c5b",
+        "a29f1384-65ca-54d3-bf72-c3bea98e43f4",
+        "bb36337f-fc55-518d-ab94-017284e56edd",
+        "d19ff2ea-523b-54f3-a303-53cd411f20a7",
+        "d5169b57-85cc-576f-bea6-4cfded4b301b",
+        "d6d9e6a8-d056-58da-94e6-dd33237b7064",
+        "d8932cd5-2a71-5068-a69a-100fed4333b4",
+        "d9895fb9-b98f-54f4-a602-4d6cecfccf3e",
+        "dfb4bedf-4e41-50c1-bd7e-b06a1ab3ca71",
+        "fd8c1937-4fad-5829-b3de-b4b1b3cf338a"
+      ],
+      "checksum": "9dcf9c4d163099a0d5b7898f157c0c027753b1de0976297a1894a0d8d89b2782",
+      "status": "draft"
+    },
+    {
+      "id": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "code": "mesh.security_admin",
+      "name": "Mesh Security Administrator",
+      "plane": "mesh",
+      "permissionSetIds": [
+        "3b136b84-cd61-5a18-9c6d-9f13d14b10b0"
+      ],
+      "permissionIds": [
+        "198bff99-7c71-547b-b39d-1dcf14924d72",
+        "1b5cfc3b-98bf-5f65-b189-e5f1b3363861",
+        "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+        "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+        "333122bc-988e-5fbb-a403-85cb1e8fd3db",
+        "4060efc9-0961-500b-abe6-a4b0387baa26",
+        "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+        "63343551-1809-5607-88b7-132ee31e8b81",
+        "6d88bc96-fc04-53bc-a23b-29090ac44446",
+        "76212049-e5a4-5092-8669-254fc0adab1a",
+        "7953c5b5-4483-5e7b-a08c-c6b3a069dce6",
+        "9403d252-6448-5775-96fd-84861bec41c4",
+        "9ef06b85-8b27-5f41-8afd-c9cf34dbda44",
+        "a045b342-005e-524b-91a4-4be958e81c5b",
+        "b44cbd4c-de13-594f-b836-8679c47de554",
+        "bb36337f-fc55-518d-ab94-017284e56edd",
+        "d19ff2ea-523b-54f3-a303-53cd411f20a7",
+        "d5169b57-85cc-576f-bea6-4cfded4b301b",
+        "d6d9e6a8-d056-58da-94e6-dd33237b7064",
+        "d8932cd5-2a71-5068-a69a-100fed4333b4",
+        "d9895fb9-b98f-54f4-a602-4d6cecfccf3e",
+        "e1845d6b-72a0-5629-bb17-8f9867eb8303",
+        "fed9f35b-61af-57a8-9608-797250a3f1b6"
+      ],
+      "checksum": "250cb57d8a2d99ddc1e72ec5c9d11409f5321f8ff9e89b46c74afd5ccb8acdaf",
+      "status": "draft"
+    },
+    {
+      "id": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "code": "mesh.account_owner",
+      "name": "Mesh Account Owner",
+      "plane": "mesh",
+      "permissionSetIds": [
+        "67ff7e40-9d44-5315-81fe-20eed89eba39"
+      ],
+      "permissionIds": [
+        "1524424a-39cc-5a64-b526-e9fe428bd8f9",
+        "198bff99-7c71-547b-b39d-1dcf14924d72",
+        "1b5cfc3b-98bf-5f65-b189-e5f1b3363861",
+        "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+        "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+        "333122bc-988e-5fbb-a403-85cb1e8fd3db",
+        "37035dcd-070c-50a8-a770-4ca121ddfe44",
+        "4060efc9-0961-500b-abe6-a4b0387baa26",
+        "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+        "5585fecf-65ce-5192-950e-bfe7aff1e054",
+        "56af7f78-91ed-5769-9b97-9ddd65106bc0",
+        "5b7451f1-98c1-561d-b8ae-3911e9ebba43",
+        "63343551-1809-5607-88b7-132ee31e8b81",
+        "6d88bc96-fc04-53bc-a23b-29090ac44446",
+        "76212049-e5a4-5092-8669-254fc0adab1a",
+        "779daf91-90ba-57cb-a82c-4ffe63934535",
+        "7953c5b5-4483-5e7b-a08c-c6b3a069dce6",
+        "9403d252-6448-5775-96fd-84861bec41c4",
+        "9ef06b85-8b27-5f41-8afd-c9cf34dbda44",
+        "a045b342-005e-524b-91a4-4be958e81c5b",
+        "a29f1384-65ca-54d3-bf72-c3bea98e43f4",
+        "b44cbd4c-de13-594f-b836-8679c47de554",
+        "bb36337f-fc55-518d-ab94-017284e56edd",
+        "d19ff2ea-523b-54f3-a303-53cd411f20a7",
+        "d5169b57-85cc-576f-bea6-4cfded4b301b",
+        "d6d9e6a8-d056-58da-94e6-dd33237b7064",
+        "d8932cd5-2a71-5068-a69a-100fed4333b4",
+        "d9895fb9-b98f-54f4-a602-4d6cecfccf3e",
+        "dfb4bedf-4e41-50c1-bd7e-b06a1ab3ca71",
+        "e1845d6b-72a0-5629-bb17-8f9867eb8303",
+        "fd8c1937-4fad-5829-b3de-b4b1b3cf338a",
+        "fed9f35b-61af-57a8-9608-797250a3f1b6"
+      ],
+      "checksum": "787e41aea2f9709cb474c2d486efd4f7332b985dc656cfae9aa18a68a126026f",
+      "status": "draft"
+    }
+  ],
+  "groups": [
+    {
+      "id": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "code": "mesh.observers",
+      "plane": "mesh",
+      "roleIds": [
+        "c669e4c9-d8af-5a4c-affd-798c10cd9ea5"
+      ],
+      "scopeKind": "account",
+      "zeroGrant": false
+    },
+    {
+      "id": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "code": "mesh.participants",
+      "plane": "mesh",
+      "roleIds": [
+        "0e889926-ed79-5772-b33e-e1136c608096"
+      ],
+      "scopeKind": "account",
+      "zeroGrant": false
+    },
+    {
+      "id": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "code": "mesh.security_admins",
+      "plane": "mesh",
+      "roleIds": [
+        "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5"
+      ],
+      "scopeKind": "account",
+      "zeroGrant": false
+    },
+    {
+      "id": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "code": "mesh.account_owners",
+      "plane": "mesh",
+      "roleIds": [
+        "8a45f522-b6cb-5273-8804-651131e3f7c6"
+      ],
+      "scopeKind": "account",
+      "zeroGrant": false
+    },
+    {
+      "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+      "code": "mesh.unassigned_review",
+      "plane": "mesh",
+      "roleIds": [],
+      "scopeKind": "account",
+      "zeroGrant": true
+    }
+  ],
+  "proofEdges": [
+    {
+      "permissionId": "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+      "roleId": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "groupId": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+      "roleId": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "groupId": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+      "roleId": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "groupId": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "5b7451f1-98c1-561d-b8ae-3911e9ebba43",
+      "roleId": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "groupId": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "76212049-e5a4-5092-8669-254fc0adab1a",
+      "roleId": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "groupId": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "bb36337f-fc55-518d-ab94-017284e56edd",
+      "roleId": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "groupId": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d5169b57-85cc-576f-bea6-4cfded4b301b",
+      "roleId": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "groupId": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "dfb4bedf-4e41-50c1-bd7e-b06a1ab3ca71",
+      "roleId": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "groupId": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "fd8c1937-4fad-5829-b3de-b4b1b3cf338a",
+      "roleId": "c669e4c9-d8af-5a4c-affd-798c10cd9ea5",
+      "groupId": "4f5ea1bc-a02a-5ded-8bbe-c4031971cc47",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "198bff99-7c71-547b-b39d-1dcf14924d72",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "1b5cfc3b-98bf-5f65-b189-e5f1b3363861",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "37035dcd-070c-50a8-a770-4ca121ddfe44",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "4060efc9-0961-500b-abe6-a4b0387baa26",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "5b7451f1-98c1-561d-b8ae-3911e9ebba43",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "76212049-e5a4-5092-8669-254fc0adab1a",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "7953c5b5-4483-5e7b-a08c-c6b3a069dce6",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "9403d252-6448-5775-96fd-84861bec41c4",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "9ef06b85-8b27-5f41-8afd-c9cf34dbda44",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "a045b342-005e-524b-91a4-4be958e81c5b",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "a29f1384-65ca-54d3-bf72-c3bea98e43f4",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "bb36337f-fc55-518d-ab94-017284e56edd",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d19ff2ea-523b-54f3-a303-53cd411f20a7",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d5169b57-85cc-576f-bea6-4cfded4b301b",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d6d9e6a8-d056-58da-94e6-dd33237b7064",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d8932cd5-2a71-5068-a69a-100fed4333b4",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d9895fb9-b98f-54f4-a602-4d6cecfccf3e",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "dfb4bedf-4e41-50c1-bd7e-b06a1ab3ca71",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "fd8c1937-4fad-5829-b3de-b4b1b3cf338a",
+      "roleId": "0e889926-ed79-5772-b33e-e1136c608096",
+      "groupId": "14cee14a-463c-5716-b493-8db7b398aed5",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "198bff99-7c71-547b-b39d-1dcf14924d72",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "1b5cfc3b-98bf-5f65-b189-e5f1b3363861",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "333122bc-988e-5fbb-a403-85cb1e8fd3db",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "4060efc9-0961-500b-abe6-a4b0387baa26",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "63343551-1809-5607-88b7-132ee31e8b81",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "6d88bc96-fc04-53bc-a23b-29090ac44446",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "76212049-e5a4-5092-8669-254fc0adab1a",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "7953c5b5-4483-5e7b-a08c-c6b3a069dce6",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "9403d252-6448-5775-96fd-84861bec41c4",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "9ef06b85-8b27-5f41-8afd-c9cf34dbda44",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "a045b342-005e-524b-91a4-4be958e81c5b",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "b44cbd4c-de13-594f-b836-8679c47de554",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "bb36337f-fc55-518d-ab94-017284e56edd",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d19ff2ea-523b-54f3-a303-53cd411f20a7",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d5169b57-85cc-576f-bea6-4cfded4b301b",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d6d9e6a8-d056-58da-94e6-dd33237b7064",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d8932cd5-2a71-5068-a69a-100fed4333b4",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d9895fb9-b98f-54f4-a602-4d6cecfccf3e",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "e1845d6b-72a0-5629-bb17-8f9867eb8303",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "fed9f35b-61af-57a8-9608-797250a3f1b6",
+      "roleId": "b09a94cb-c7a6-5cba-8db5-a2568f19f9a5",
+      "groupId": "ef9db2c3-3c89-57e3-80cf-ac5f64d2fa34",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "1524424a-39cc-5a64-b526-e9fe428bd8f9",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "198bff99-7c71-547b-b39d-1dcf14924d72",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "1b5cfc3b-98bf-5f65-b189-e5f1b3363861",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "2912b007-d4d3-555c-a7f4-98970e94d9dd",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "2cfcea48-16d5-5853-a90c-dc3882ef5526",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "333122bc-988e-5fbb-a403-85cb1e8fd3db",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "37035dcd-070c-50a8-a770-4ca121ddfe44",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "4060efc9-0961-500b-abe6-a4b0387baa26",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "4dea5253-cd94-51fe-8c40-9bd6aceff02f",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "5585fecf-65ce-5192-950e-bfe7aff1e054",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "56af7f78-91ed-5769-9b97-9ddd65106bc0",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "5b7451f1-98c1-561d-b8ae-3911e9ebba43",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "63343551-1809-5607-88b7-132ee31e8b81",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "6d88bc96-fc04-53bc-a23b-29090ac44446",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "76212049-e5a4-5092-8669-254fc0adab1a",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "779daf91-90ba-57cb-a82c-4ffe63934535",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "7953c5b5-4483-5e7b-a08c-c6b3a069dce6",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "9403d252-6448-5775-96fd-84861bec41c4",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "9ef06b85-8b27-5f41-8afd-c9cf34dbda44",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "a045b342-005e-524b-91a4-4be958e81c5b",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "a29f1384-65ca-54d3-bf72-c3bea98e43f4",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "b44cbd4c-de13-594f-b836-8679c47de554",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "bb36337f-fc55-518d-ab94-017284e56edd",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d19ff2ea-523b-54f3-a303-53cd411f20a7",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d5169b57-85cc-576f-bea6-4cfded4b301b",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d6d9e6a8-d056-58da-94e6-dd33237b7064",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d8932cd5-2a71-5068-a69a-100fed4333b4",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "d9895fb9-b98f-54f4-a602-4d6cecfccf3e",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "dfb4bedf-4e41-50c1-bd7e-b06a1ab3ca71",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "e1845d6b-72a0-5629-bb17-8f9867eb8303",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "fd8c1937-4fad-5829-b3de-b4b1b3cf338a",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    },
+    {
+      "permissionId": "fed9f35b-61af-57a8-9608-797250a3f1b6",
+      "roleId": "8a45f522-b6cb-5273-8804-651131e3f7c6",
+      "groupId": "474e0ffc-eb76-5dce-8592-75b18acb0876",
+      "plane": "mesh",
+      "scopeKind": "account"
+    }
+  ],
+  "subjectMapping": {
+    "principalSource": "mesh.principal",
+    "accountSource": "mesh.network_account",
+    "legacyGrantSource": "mesh.account_grant",
+    "identitySource": "mesh.principal_identity_binding",
+    "activeGrant": "explicit mesh.auth_plane_membership plus local group membership",
+    "missingOrInvalidGrant": "quarantined_zero_grant"
+  },
+  "scopeMigration": {
+    "account": "mesh.auth_scope_account",
+    "network_relationship": "mesh.auth_scope_network_relationship",
+    "resource": "mesh.auth_scope_resource",
+    "emptyOrUnknown": "anomaly_never_account"
+  }
+}

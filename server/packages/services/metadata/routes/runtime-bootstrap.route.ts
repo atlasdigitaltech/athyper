@@ -33,7 +33,6 @@ export interface RuntimeBootstrapPayload {
   operations: JsonObject[];
   policy: JsonObject | null;
   lifecycleStateMasks: JsonObject[];
-  permissionAliases: Record<string, string>;
   childProjections: RuntimeBootstrapChild[];
   effectiveSurfaceIds?: string[];
   effectiveFieldIds?: string[];
@@ -186,7 +185,11 @@ export function createRuntimeBootstrapRoute(router: Router, deps: RuntimeBootstr
       const tenantId = await resolveTenantId(deps.db, xOrg, xRealm);
       if (!tenantId) { res.status(404).json({ error: "TENANT_NOT_FOUND" }); return; }
       const plane = resolvePlane(req.headers["x-plane-key"] ?? req.headers["x-plane"]);
-      if (plane === "mesh" && !await hasActiveMeshBinding(res, deps.meshDb ?? deps.db)) {
+      if (plane === "mesh" && !deps.meshDb) {
+        res.status(503).json({ error: "MESH_DATABASE_CONFIGURATION_REQUIRED" });
+        return;
+      }
+      if (plane === "mesh" && !await hasActiveMeshBinding(res, deps.meshDb!)) {
         res.status(404).json({ error: "NOT_FOUND", message: "The requested resource was not found." });
         return;
       }
@@ -235,9 +238,8 @@ export function createRuntimeBootstrapLoader(input: {
       const name = stringValue(relation["relation_code"] ?? relation["name"]);
       if (target && name && !relationTargets.has(target)) relationTargets.set(target, name);
     }
-    const [operations, permissionAliases, children] = await Promise.all([
+    const [operations, children] = await Promise.all([
       projectContractOperationsV21(v21, plane),
-      loadPermissionAliases(input.db),
       Promise.all([...relationTargets].map(async ([childCode, relationName]): Promise<RuntimeBootstrapChild | null> => {
         const child = await input.loadCompiledEntity(childCode, tenantId, plane);
         if (!child) return null;
@@ -262,7 +264,6 @@ export function createRuntimeBootstrapLoader(input: {
       operations,
       policy: projectContractPolicyV21(v21),
       lifecycleStateMasks: projectLifecycleMasksV21(v21, plane),
-      permissionAliases,
       childProjections: children.filter((child): child is RuntimeBootstrapChild => child !== null),
     };
   };
@@ -353,9 +354,7 @@ export function projectRuntimeBootstrapPermissions(
     const code = stringValue(operation["permission_code"] ?? operation["permissionCode"]);
     if (!code || !permissions) return false;
     if (plane === "mesh" && !isMeshBootstrapOperationAllowed(operation)) return false;
-    const canonical = payload.permissionAliases[code] ?? code;
-    return !permissions.denied.has(code) && !permissions.denied.has(canonical)
-      && (permissions.allowed.has(code) || permissions.allowed.has(canonical));
+    return !permissions.denied.has(code) && permissions.allowed.has(code);
   }).map((operation) => ({ ...operation, permission_decision: "allow" }));
   const effective = plane === "mesh"
     ? projectMeshEffectiveSurfaceFields(payload, permissions)
@@ -375,10 +374,7 @@ function projectMeshEffectiveSurfaceFields(
   const contract = MetaEntityContractV21Schema.safeParse(payload.compiledEntity["contract_v21"]);
   if (!permissions || !contract.success) return { effectiveSurfaceIds: [], effectiveFieldIds: [] };
   const hasPermission = (code: string): boolean => {
-    const canonical = payload.permissionAliases[code] ?? code;
-    return !permissions.denied.has(code)
-      && !permissions.denied.has(canonical)
-      && (permissions.allowed.has(code) || permissions.allowed.has(canonical));
+    return !permissions.denied.has(code) && permissions.allowed.has(code);
   };
   const surfaces = contract.data.surfaces.filter((surface) =>
     surface.enabled
@@ -406,11 +402,11 @@ async function hasActiveMeshBinding(res: Parameters<RequestHandler>[1], meshDb: 
       || !context.networkAccountId) return false;
   const result = await sql<{ present: boolean }>`
     SELECT true AS present
-      FROM mesh.account_grant
+      FROM mesh.auth_current_plane_membership_v
      WHERE id=${context.accountGrantId}::uuid
        AND principal_id=${context.principalId}::uuid
        AND account_id=${context.networkAccountId}::uuid
-       AND status='active'
+       AND plane_code='mesh'
      LIMIT 1
   `.execute(meshDb);
   return result.rows[0]?.present === true;
@@ -424,15 +420,6 @@ function isMeshBootstrapOperationAllowed(operation: JsonObject): boolean {
   if (type === "navigate") return target.startsWith("/app/");
   if (type === "api") return target.startsWith("/api/mesh/") || target.startsWith("mesh:");
   return type === "modal" || type === "inline";
-}
-
-async function loadPermissionAliases(db: AnyDb): Promise<Record<string, string>> {
-  const result = await sql<{ alias_code: string; canonical_code: string }>`
-    SELECT alias_code, canonical_code FROM control.permission_alias
-     WHERE hard_fail_after IS NULL OR hard_fail_after > now()
-     ORDER BY alias_code
-  `.execute(db);
-  return Object.fromEntries(result.rows.map((row) => [row.alias_code, row.canonical_code]));
 }
 
 function runtimeBootstrapCacheKey(identity: ExecutionDescriptorIdentity): string {

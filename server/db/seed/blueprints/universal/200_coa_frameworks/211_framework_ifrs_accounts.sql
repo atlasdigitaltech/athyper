@@ -4,7 +4,7 @@
 DO $seed$
 DECLARE
     v_tid     uuid;
-    v_su      uuid := '00000000-0000-0000-0000-000000000000';
+    v_su      uuid := nullif(trim(current_setting('app.current_principal_id', true)), '')::uuid;
     v_pack    text := '211_framework_ifrs';
     v_version text := '1.0.1';
     v_meta    jsonb;
@@ -490,14 +490,14 @@ BEGIN
         id, tenant_id, chart_of_account_id, code, name,
         parent_id, level_no, path, description,
         account_class, node_type, normal_balance, subledger_type,
-        sort_order, tags,
+        sort_order,
         metadata, status, created_by
     )
     SELECT
         t.seed_id, v_tid, v_coa_id, t.code, t.name,
         NULL, t.level_no, t.code, t.description,
-        t.account_class, t.node_type, t.normal_balance, t.subledger_type,
-        t.sort_order, '[]'::jsonb,
+        t.account_class, t.node_type, t.normal_balance, upper(t.subledger_type),
+        t.sort_order,
         v_meta || jsonb_build_object('_display_no', t.sort_order::text),
         'active', v_su
     FROM tmp_gl t
@@ -544,14 +544,14 @@ BEGIN
         id, tenant_id, chart_of_account_id, code, name,
         parent_id, level_no, path, description,
         account_class, node_type, normal_balance, subledger_type,
-        sort_order, tags,
+        sort_order,
         metadata, status, created_by
     )
     SELECT
         t.seed_id, v_tid, v_coa_id, t.code, t.name,
         p.id, t.level_no, p.code || '/' || t.code, t.description,
-        t.account_class, t.node_type, t.normal_balance, t.subledger_type,
-        t.sort_order, '[]'::jsonb,
+        t.account_class, t.node_type, t.normal_balance, upper(t.subledger_type),
+        t.sort_order,
         v_meta || jsonb_build_object('_display_no', t.sort_order::text),
         'active', v_su
     FROM tmp_gl t
@@ -601,14 +601,14 @@ BEGIN
         id, tenant_id, chart_of_account_id, code, name,
         parent_id, level_no, path, description,
         account_class, node_type, normal_balance, subledger_type,
-        sort_order, tags,
+        sort_order,
         metadata, status, created_by
     )
     SELECT
         t.seed_id, v_tid, v_coa_id, t.code, t.name,
         p.id, t.level_no, p.path || '/' || t.code, t.description,
-        t.account_class, t.node_type, t.normal_balance, t.subledger_type,
-        t.sort_order, '[]'::jsonb,
+        t.account_class, t.node_type, t.normal_balance, upper(t.subledger_type),
+        t.sort_order,
         v_meta
             || jsonb_build_object('_display_no', t.sort_order::text)
             || CASE WHEN t.group_map IS NOT NULL

@@ -1,0 +1,18 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "ap-non-po",
+  "packVersion": "2.0.0",
+  "packChecksum": "e71e84179a4422572b47130af6daf32d33fcd814f2c3ecb5b9a81fafd4e0dd0c",
+  "plane": "neon",
+  "tenantId": "f5000000-0000-0000-0000-000000000001",
+  "status": "validated-disposable-neon",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [
+    {"payload":"AP Non-PO manifest (19 ordered payloads)","status":"passed-twice","rowCounts":{"accountingPolicies":4,"policyEvents":9,"policyEntries":18}}
+  ],
+  "assertionResults": [
+    {"assertion":"accounting-policy-aggregate","status":"passed","evidence":"four effective policies, nine events, and eighteen entries applied with deterministic identifiers"},
+    {"assertion":"tenant-and-actor-scope","status":"passed","evidence":"policy audit references resolve to the disposable tenant principal"},
+    {"assertion":"idempotent-convergence","status":"passed","evidence":"all 19 payloads completed twice in dependency order"}
+  ]
+}

@@ -985,11 +985,11 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
       });
       const operationRows = await (db as any)
         .selectFrom("control.entity_operation as eo")
-        .leftJoin("shared.permission as p", "p.code", "eo.permission_code")
+        .leftJoin("control.auth_permission as p", "p.id", "eo.permission_id_v2")
         .select([
           "eo.permission_code",
           "eo.is_enabled",
-          sql<boolean>`p.code IS NOT NULL AND p.status = 'active'`.as("permission_registered"),
+          sql<boolean>`p.id IS NOT NULL AND p.status = 'published'`.as("permission_registered"),
         ])
         .where("eo.entity_name", "=", entityRow.entity_code ?? entityCode)
         .where((eb: any) => tenantId

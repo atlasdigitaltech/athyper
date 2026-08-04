@@ -93,7 +93,7 @@ export interface PlatformRoutesDeps {
 
 const ENTITY_LIST_SAVED_VIEW_SURFACE = "entity.list";
 const DEFAULT_SAVED_VIEW_PREF_CODE = "grid.default_saved_view";
-const SYSTEM_CREATED_BY = "00000000-0000-0000-0000-000000000000";
+const SAVED_VIEW_FLAGS_PREF_CODE = "grid.saved_view_flags";
 const PLANE_REALM_KEYS = new Set(["neon", "mesh", "admin"]);
 const UNIFIED_EXPERIENCE_FLAGS = [
   "unified_shell_v2",
@@ -105,7 +105,6 @@ const UNIFIED_EXPERIENCE_FLAGS = [
   "content_hub_v2",
   "document_workspace_v2",
 ] as const;
-let savedViewPreferenceLookupsReady = false;
 
 const SCOPED_SETTING_DEFINITIONS: Record<string, Array<{
   key: string;
@@ -154,18 +153,20 @@ function hasSavedViewGovernance(claims: Record<string, unknown>): boolean {
 }
 
 function savedViewCapabilities(
-  row: { scope: string; owner_principal_id: string | null },
+  row: { scope: string; owner_principal_id: string | null; created_by?: string | null },
   principalId: string | null,
   canGovern: boolean,
 ) {
   const owns = Boolean(principalId && row.owner_principal_id === principalId);
-  const governs = canGovern || (row.scope !== "system" && owns);
+  const created = Boolean(principalId && row.created_by === principalId);
   const personalOwner = row.scope === "personal" && owns;
+  const sharedCreator = row.scope === "shared" && created;
+  const governs = canGovern || personalOwner || sharedCreator;
   return {
     canOpen: true,
     canEdit: personalOwner || governs,
     canSetDefault: Boolean(principalId),
-    canPin: personalOwner || governs,
+    canPin: Boolean(principalId),
     canShare: personalOwner || (row.scope === "shared" && governs),
     canArchive: personalOwner || governs,
     canDelete: personalOwner || governs,
@@ -207,7 +208,7 @@ function toSavedView(row: Record<string, any>, options: { principalId?: string |
   }
   return {
     id:          row.id as string,
-    entity_code: (row.entity_key ?? "") as string,
+    entity_code: (row.entity_code ?? "") as string,
     name:        row.name as string,
     scope:       row.scope === "personal" ? "private" : (row.scope as string),
     is_default:  Boolean(options.defaultViewId && row.id === options.defaultViewId),
@@ -228,7 +229,12 @@ function canDeleteSavedView(row: Record<string, any>, principalId?: string | nul
 }
 
 interface DefaultSavedViewPreference {
-  entity_defaults: Record<string, string>;
+    entity_defaults: Record<string, string>;
+}
+
+interface SavedViewFlagsPreference {
+  pinned_view_ids: string[];
+  starred_view_ids: string[];
 }
 
 function normalizeDefaultSavedViewPreference(value: unknown): DefaultSavedViewPreference {
@@ -246,6 +252,90 @@ function normalizeDefaultSavedViewPreference(value: unknown): DefaultSavedViewPr
 function readDefaultSavedViewPreference(value: unknown, entityKey: string): string | null {
   const preference = normalizeDefaultSavedViewPreference(value);
   return preference.entity_defaults[entityKey] ?? null;
+}
+
+function normalizeSavedViewFlagsPreference(value: unknown): SavedViewFlagsPreference {
+  const parsed = parseJsonObject(value);
+  const normalizeIds = (candidate: unknown): string[] => (
+    Array.isArray(candidate)
+      ? [...new Set(candidate.filter((item): item is string => (
+          typeof item === "string" && isUuid(item)
+        )))]
+      : []
+  );
+  return {
+    pinned_view_ids: normalizeIds(parsed?.["pinned_view_ids"]),
+    starred_view_ids: normalizeIds(parsed?.["starred_view_ids"]),
+  };
+}
+
+async function getPrincipalSavedViewFlags(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  principalId: string,
+): Promise<SavedViewFlagsPreference> {
+  const row = await db
+    .selectFrom("master.principal_ui_preference as pref")
+    .select("pref.preference_value")
+    .where("pref.tenant_id", "=", tenantId)
+    .where("pref.principal_id", "=", principalId)
+    .where("pref.preference_code", "=", SAVED_VIEW_FLAGS_PREF_CODE)
+    .where("pref.surface_code", "=", ENTITY_LIST_SAVED_VIEW_SURFACE)
+    .executeTakeFirst() as { preference_value?: unknown } | undefined;
+
+  return normalizeSavedViewFlagsPreference(row?.preference_value);
+}
+
+async function togglePrincipalSavedViewFlag(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  db: Kysely<any>,
+  tenantId: string,
+  principalId: string,
+  viewId: string,
+  flag: "pinned_view_ids" | "starred_view_ids",
+): Promise<boolean> {
+  const row = await db
+    .selectFrom("master.principal_ui_preference as pref")
+    .select(["pref.id", "pref.preference_value"])
+    .where("pref.tenant_id", "=", tenantId)
+    .where("pref.principal_id", "=", principalId)
+    .where("pref.preference_code", "=", SAVED_VIEW_FLAGS_PREF_CODE)
+    .where("pref.surface_code", "=", ENTITY_LIST_SAVED_VIEW_SURFACE)
+    .executeTakeFirst() as { id?: string; preference_value?: unknown } | undefined;
+
+  const next = normalizeSavedViewFlagsPreference(row?.preference_value);
+  const values = new Set(next[flag]);
+  const enabled = !values.has(viewId);
+  if (enabled) values.add(viewId);
+  else values.delete(viewId);
+  next[flag] = [...values];
+
+  if (row?.id) {
+    await db
+      .updateTable("master.principal_ui_preference" as never)
+      .set({
+        preference_value: JSON.stringify(next),
+        updated_at: new Date(),
+        updated_by: principalId,
+      } as never)
+      .where("id" as never, "=", row.id as never)
+      .execute();
+  } else {
+    await db
+      .insertInto("master.principal_ui_preference" as never)
+      .values({
+        tenant_id: tenantId,
+        principal_id: principalId,
+        preference_code: SAVED_VIEW_FLAGS_PREF_CODE,
+        surface_code: ENTITY_LIST_SAVED_VIEW_SURFACE,
+        preference_value: JSON.stringify(next),
+        created_by: principalId,
+      } as never)
+      .execute();
+  }
+
+  return enabled;
 }
 
 async function getPrincipalDefaultSavedViewId(
@@ -275,8 +365,6 @@ async function setPrincipalDefaultSavedViewId(
   entityKey: string,
   viewId: string,
 ): Promise<void> {
-  await ensureSavedViewPreferenceLookups(db);
-
   const row = await db
     .selectFrom("master.principal_ui_preference as pref")
     .select(["pref.id", "pref.preference_value"])
@@ -323,8 +411,6 @@ async function clearPrincipalDefaultSavedViewId(
   principalId: string,
   entityKey: string,
 ): Promise<void> {
-  await ensureSavedViewPreferenceLookups(db);
-
   const row = await db
     .selectFrom("master.principal_ui_preference as pref")
     .select(["pref.id", "pref.preference_value"])
@@ -356,80 +442,6 @@ async function clearPrincipalDefaultSavedViewId(
     } as never)
     .where("id" as never, "=", row.id as never)
     .execute();
-}
-
-async function ensureSavedViewPreferenceLookups(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  db: Kysely<any>,
-): Promise<void> {
-  if (savedViewPreferenceLookupsReady) return;
-
-  const existingRows = await db
-    .selectFrom("control.lookup_value as lv")
-    .select(["lv.code", "lv.domain_code"])
-    .where((eb) => eb.or([
-      eb.and([
-        eb("lv.domain_code", "=", "ui.preference_code"),
-        eb("lv.code", "=", DEFAULT_SAVED_VIEW_PREF_CODE),
-      ]),
-      eb.and([
-        eb("lv.domain_code", "=", "ui.surface_code"),
-        eb("lv.code", "=", ENTITY_LIST_SAVED_VIEW_SURFACE),
-      ]),
-    ]))
-    .where("lv.tenant_id" as never, "is", null)
-    .where("lv.status", "=", "active")
-    .execute() as Array<{ code?: string; domain_code?: string }>;
-  const hasPreferenceCode = existingRows.some((row) => (
-    row.domain_code === "ui.preference_code" && row.code === DEFAULT_SAVED_VIEW_PREF_CODE
-  ));
-  const hasSurfaceCode = existingRows.some((row) => (
-    row.domain_code === "ui.surface_code" && row.code === ENTITY_LIST_SAVED_VIEW_SURFACE
-  ));
-  if (hasPreferenceCode && hasSurfaceCode) {
-    savedViewPreferenceLookupsReady = true;
-    return;
-  }
-
-  const defaultPreferenceMetadata = JSON.stringify({
-    value_schema: {
-      type:       "object",
-      properties: {
-        entity_defaults: { type: "object" },
-      },
-    },
-  });
-
-  await sql`
-    INSERT INTO control.lookup_value
-      (code, name, domain_code, description, sort_order, is_system, status, metadata, created_by)
-    VALUES
-      (
-        ${DEFAULT_SAVED_VIEW_PREF_CODE},
-        'Default Saved View',
-        'ui.preference_code',
-        'Principal default saved view per entity list surface.',
-        13,
-        true,
-        'active',
-        CAST(${defaultPreferenceMetadata} AS jsonb),
-        CAST(${SYSTEM_CREATED_BY} AS uuid)
-      ),
-      (
-        ${ENTITY_LIST_SAVED_VIEW_SURFACE},
-        'Entity List',
-        'ui.surface_code',
-        'Generic runtime entity list surface.',
-        10,
-        true,
-        'active',
-        '{}'::jsonb,
-        CAST(${SYSTEM_CREATED_BY} AS uuid)
-      )
-    ON CONFLICT DO NOTHING
-  `.execute(db);
-
-  savedViewPreferenceLookupsReady = true;
 }
 
 function parseJsonObject(value: unknown): Record<string, unknown> | null {
@@ -632,14 +644,13 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       let query = db
         .selectFrom("master.saved_view as sv")
         .select([
-          "sv.id", "sv.entity_key", "sv.name", "sv.scope",
-          "sv.surface_code", "sv.is_default", "sv.state_json",
+          "sv.id", "sv.entity_code", "sv.name", "sv.scope",
+          "sv.surface_code", "sv.state_json",
           "sv.owner_principal_id", "sv.created_by", "sv.created_at",
         ])
         .where("sv.tenant_id", "=", tenantId)
-        .where("sv.entity_key", "=", entityKey)
-        .where("sv.status", "=", "active")
-        .where("sv.deleted_at" as never, "is", null);
+        .where("sv.entity_code", "=", entityKey)
+        .where("sv.status", "=", "active");
 
       if (principalId) {
         // personal views for this principal OR shared/system views
@@ -699,13 +710,6 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const name  = typeof body["name"] === "string" ? body["name"].trim() : "";
       const scope = typeof body["is_shared"] === "boolean" && body["is_shared"] ? "shared" : "personal";
       const config = normalizeSavedViewConfig((body["config"] ?? {}) as Record<string, unknown>, entityKey);
-      const planeKey = readPlaneKey(req.headers);
-      const target = {
-        plane: planeKey,
-        surface: ENTITY_LIST_SAVED_VIEW_SURFACE,
-        entityCode: entityKey,
-      };
-
       if (!name) { res.status(400).json({ error: "NAME_REQUIRED" }); return; }
 
       // Machine-stable code derived from name
@@ -715,22 +719,18 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         .insertInto("master.saved_view" as never)
         .values({
           tenant_id:          tenantId,
-          owner_principal_id: principalId,
+          owner_principal_id: scope === "personal" ? principalId : null,
           scope,
           surface_code:       ENTITY_LIST_SAVED_VIEW_SURFACE,
-          entity_key:         entityKey,
-          plane_key:           planeKey,
-          target:              JSON.stringify(target),
+          entity_code:        entityKey,
           code,
           name,
-          is_default:         false,
-          is_pinned:          false,
           state_json:         JSON.stringify(config),
           status:             "active",
           created_by:         principalId,
         } as never)
         .returning([
-          "id", "entity_key", "name", "scope", "surface_code", "is_default", "state_json",
+          "id", "entity_code", "name", "scope", "surface_code", "state_json",
           "owner_principal_id", "created_by", "created_at",
         ] as never[])
         .executeTakeFirstOrThrow();
@@ -784,10 +784,10 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       const existing = await db
         .selectFrom("master.saved_view as sv")
-        .select(["sv.id", "sv.entity_key", "sv.scope", "sv.owner_principal_id", "sv.created_by"])
+        .select(["sv.id", "sv.entity_code", "sv.scope", "sv.owner_principal_id", "sv.created_by"])
         .where("sv.id", "=", viewId)
         .where("sv.tenant_id", "=", tenantId)
-        .where("sv.deleted_at" as never, "is", null)
+        .where("sv.status", "=", "active")
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!existing) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -795,7 +795,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         res.status(403).json({ error: "FORBIDDEN" }); return;
       }
 
-      const entityKey = typeof existing["entity_key"] === "string" ? existing["entity_key"] : "";
+      const entityKey = typeof existing["entity_code"] === "string" ? existing["entity_code"] : "";
       if (principalId && entityKey) {
         const defaultViewId = await getPrincipalDefaultSavedViewId(db, tenantId, principalId, entityKey);
         if (defaultViewId === viewId) {
@@ -805,7 +805,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       await db
         .updateTable("master.saved_view" as never)
-        .set({ deleted_at: new Date(), status: "archived", updated_at: new Date(), updated_by: principalId ?? undefined } as never)
+        .set({ status: "archived", updated_at: new Date(), updated_by: principalId ?? undefined } as never)
         .where("id" as never, "=", viewId as never)
         .execute();
 
@@ -836,10 +836,10 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       const existing = await db
         .selectFrom("master.saved_view as sv")
-        .select(["sv.id", "sv.entity_key", "sv.scope", "sv.owner_principal_id", "sv.state_json"] as never[])
+        .select(["sv.id", "sv.entity_code", "sv.scope", "sv.owner_principal_id", "sv.state_json"] as never[])
         .where("sv.id", "=", viewId)
         .where("sv.tenant_id", "=", tenantId)
-        .where("sv.deleted_at" as never, "is", null)
+        .where("sv.status", "=", "active")
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!existing) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -851,8 +851,8 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       }
 
       const body   = req.body as Record<string, unknown>;
-      const existingEntityKey = typeof existing["entity_key"] === "string" && existing["entity_key"].trim()
-        ? existing["entity_key"]
+      const existingEntityKey = typeof existing["entity_code"] === "string" && existing["entity_code"].trim()
+        ? existing["entity_code"]
         : String(req.params["entity"] ?? "");
       const config = normalizeSavedViewConfig((body["config"] ?? {}) as Record<string, unknown>, existingEntityKey);
       const name   = typeof body["name"] === "string" ? body["name"].trim() : undefined;
@@ -870,7 +870,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         .where("id" as never, "=", viewId as never)
         .where("tenant_id" as never, "=", tenantId as never)
         .returning([
-          "id", "entity_key", "name", "scope", "surface_code", "is_default", "state_json",
+          "id", "entity_code", "name", "scope", "surface_code", "state_json",
           "owner_principal_id", "created_by", "created_at",
         ] as never[])
         .executeTakeFirstOrThrow();
@@ -905,13 +905,12 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       const existing = await db
         .selectFrom("master.saved_view as sv")
-        .select(["sv.id", "sv.scope", "sv.owner_principal_id", "sv.entity_key", "sv.surface_code"])
+        .select(["sv.id", "sv.scope", "sv.owner_principal_id", "sv.entity_code", "sv.surface_code"])
         .where("sv.id", "=", viewId)
         .where("sv.tenant_id", "=", tenantId)
-        .where("sv.entity_key", "=", entityKey)
+        .where("sv.entity_code", "=", entityKey)
         .where("sv.surface_code", "=", ENTITY_LIST_SAVED_VIEW_SURFACE)
         .where("sv.status", "=", "active")
-        .where("sv.deleted_at" as never, "is", null)
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!existing) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -973,6 +972,11 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const principalId = await resolveSavedViewPrincipalId(db, req.headers, claims, tenantId, xRealm);
       const canGovern = hasSavedViewGovernance(claims);
       const requestPlane = readPlaneKey(req.headers);
+      const flags = principalId
+        ? await getPrincipalSavedViewFlags(db, tenantId, principalId)
+        : { pinned_view_ids: [], starred_view_ids: [] };
+      const pinnedViewIds = new Set(flags.pinned_view_ids);
+      const starredViewIds = new Set(flags.starred_view_ids);
 
       // Fetch all personal + shared views across all entities for this principal
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -980,14 +984,11 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         .selectFrom("master.saved_view as sv")
         .select([
           "sv.id", "sv.name", "sv.description",
-          "sv.surface_code", "sv.entity_key",
-          "sv.scope", "sv.is_pinned", "sv.metadata", "sv.owner_principal_id",
-          "sv.plane_key", "sv.target",
-          "sv.status", "sv.created_at", "sv.updated_at",
+          "sv.surface_code", "sv.entity_code",
+          "sv.scope", "sv.metadata", "sv.owner_principal_id",
+          "sv.status", "sv.created_by", "sv.created_at", "sv.updated_at",
         ] as never[])
-        .where("sv.tenant_id" as never, "=", tenantId as never)
-        .where("sv.plane_key" as never, "=", requestPlane as never)
-        .where("sv.deleted_at" as never, "is", null);
+        .where("sv.tenant_id" as never, "=", tenantId as never);
 
       if (principalId) {
         query = query.where((eb: any) =>
@@ -1004,52 +1005,41 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       }
 
       const rows = await query
-        .orderBy("sv.is_pinned" as never, "desc")
         .orderBy("sv.name" as never, "asc")
         .execute() as Array<{
           id: string;
           name: string;
           description: string | null;
           surface_code: string;
-          entity_key: string | null;
+          entity_code: string;
           scope: string;
-          is_pinned: boolean;
           metadata: Record<string, unknown> | null;
           owner_principal_id: string | null;
-          plane_key: NotificationPlaneKey;
-          target: Record<string, unknown> | null;
           status: string;
+          created_by: string;
           created_at: string | Date;
           updated_at: string | Date | null;
         }>;
 
       const views = rows.map((row) => {
-        const planeKey = PLANE_REALM_KEYS.has(row.plane_key) ? row.plane_key : requestPlane;
-        const rawTarget = row.target && typeof row.target === "object" ? row.target : {};
         const target = {
-          plane: planeKey,
-          surface: typeof rawTarget["surface"] === "string" ? rawTarget["surface"] : row.surface_code,
-          ...(typeof rawTarget["entityCode"] === "string"
-            ? { entityCode: rawTarget["entityCode"] }
-            : row.entity_key ? { entityCode: row.entity_key } : {}),
-          ...(typeof rawTarget["routeName"] === "string" ? { routeName: rawTarget["routeName"] } : {}),
-          ...(rawTarget["parameters"] && typeof rawTarget["parameters"] === "object"
-            ? { parameters: rawTarget["parameters"] }
-            : {}),
+          plane: requestPlane,
+          surface: row.surface_code,
+          entityCode: row.entity_code,
         };
         return {
         id:          row.id,
         name:        row.name,
         description: row.description ?? null,
         view_type:   row.surface_code,
-        module_code: row.entity_key ?? "",
-        is_pinned:   row.is_pinned,
-        is_starred:  (row.metadata?.["is_starred"] === true),
+        module_code: row.entity_code,
+        is_pinned:   pinnedViewIds.has(row.id),
+        is_starred:  starredViewIds.has(row.id),
         is_shared:   row.scope === "shared" || row.scope === "system",
         is_archived: row.status === "archived",
         scope:       row.scope,
         owner_principal_id: row.owner_principal_id,
-        plane_key:   planeKey,
+        plane_key:   requestPlane,
         target,
         capabilities: savedViewCapabilities(row, principalId, canGovern),
         created_at:  row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
@@ -1057,7 +1047,10 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           ? (row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at))
           : null,
         };
-      });
+      }).sort((left, right) => (
+        Number(right.is_pinned) - Number(left.is_pinned)
+        || left.name.localeCompare(right.name)
+      ));
 
       res.json(views);
     } catch (err) {
@@ -1096,16 +1089,14 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       // Fetch current view to verify ownership + read current state
       const current = await db
         .selectFrom("master.saved_view as sv")
-        .select(["sv.id", "sv.scope", "sv.is_pinned", "sv.metadata", "sv.owner_principal_id"] as never[])
+        .select(["sv.id", "sv.scope", "sv.owner_principal_id", "sv.created_by"] as never[])
         .where("sv.id" as never, "=", viewId as never)
         .where("sv.tenant_id" as never, "=", tenantId as never)
-        .where("sv.deleted_at" as never, "is", null)
         .executeTakeFirst() as {
           id: string;
           scope: string;
-          is_pinned: boolean;
-          metadata: Record<string, unknown> | null;
           owner_principal_id: string | null;
+          created_by: string;
         } | undefined;
 
       if (!current) {
@@ -1131,28 +1122,34 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       switch (action) {
         case "pin": {
-          updateClause = {
-            is_pinned:  !current.is_pinned,
-            updated_at: new Date(),
-            updated_by: principalId ?? undefined,
-          };
-          break;
+          if (!principalId) {
+            res.status(403).json({ error: "PRINCIPAL_REQUIRED" });
+            return;
+          }
+          const enabled = await togglePrincipalSavedViewFlag(
+            db, tenantId, principalId, viewId, "pinned_view_ids",
+          );
+          res.json({ ok: true, enabled });
+          return;
         }
         case "star": {
-          const meta = { ...(current.metadata ?? {}), is_starred: !(current.metadata?.["is_starred"] === true) };
-          updateClause = {
-            metadata:   meta,
-            updated_at: new Date(),
-            updated_by: principalId ?? undefined,
-          };
-          break;
+          if (!principalId) {
+            res.status(403).json({ error: "PRINCIPAL_REQUIRED" });
+            return;
+          }
+          const enabled = await togglePrincipalSavedViewFlag(
+            db, tenantId, principalId, viewId, "starred_view_ids",
+          );
+          res.json({ ok: true, enabled });
+          return;
         }
         case "share": {
           const newScope = current.scope === "shared" ? "personal" : "shared";
           updateClause = {
-            scope:      newScope,
-            updated_at: new Date(),
-            updated_by: principalId ?? undefined,
+            scope:              newScope,
+            owner_principal_id: newScope === "personal" ? principalId : null,
+            updated_at:         new Date(),
+            updated_by:         principalId ?? undefined,
           };
           break;
         }
@@ -1171,7 +1168,6 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
             status:            "archived",
             status_changed_at: new Date(),
             status_changed_by: principalId ?? undefined,
-            deleted_at:        new Date(),
             updated_at:        new Date(),
             updated_by:        principalId ?? undefined,
           };
@@ -1209,12 +1205,12 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       const source = await db.selectFrom("master.saved_view as sv")
         .select([
-          "sv.scope", "sv.surface_code", "sv.entity_key", "sv.plane_key", "sv.target",
+          "sv.scope", "sv.surface_code", "sv.entity_code",
           "sv.name", "sv.description", "sv.state_json", "sv.metadata",
         ] as never[])
         .where("sv.id" as never, "=", viewId as never)
         .where("sv.tenant_id" as never, "=", tenantId as never)
-        .where("sv.deleted_at" as never, "is", null)
+        .where("sv.status" as never, "=", "active" as never)
         .executeTakeFirst() as Record<string, unknown> | undefined;
       if (!source) { res.status(404).json({ error: "NOT_FOUND" }); return; }
       if (source["scope"] === "personal") {
@@ -1229,9 +1225,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         owner_principal_id: principalId,
         scope: "personal",
         surface_code: source["surface_code"],
-        entity_key: source["entity_key"],
-        plane_key: source["plane_key"],
-        target: source["target"],
+        entity_code: source["entity_code"],
         code,
         name,
         description: source["description"],
@@ -1362,13 +1356,13 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           return { items: result.rows.map((row) => ({ id: row.id, title: `${row.entity_type} ${row.entity_id}`, status: row.status, occurredAt: row.created_at.toISOString(), href: `/inbox/${row.id}` })) };
         };
         tasks["frequent-saved-views"] = async () => {
-          const result = await sql<{ id: string; name: string; entity_key: string | null }>`
-            select id::text, name, entity_key from master.saved_view
-            where tenant_id = ${tenantId} and plane_key = 'neon' and status = 'active'
+          const result = await sql<{ id: string; name: string; entity_code: string }>`
+            select id::text, name, entity_code from master.saved_view
+            where tenant_id = ${tenantId} and status = 'active'
               and (scope in ('shared','system') or owner_principal_id = ${principalId})
-            order by is_pinned desc, updated_at desc nulls last limit 6
+            order by updated_at desc nulls last, created_at desc limit 6
           `.execute(db);
-          return { items: result.rows.map((row) => ({ id: row.id, title: row.name, detail: row.entity_key ?? undefined, href: "/saved-views" })) };
+          return { items: result.rows.map((row) => ({ id: row.id, title: row.name, detail: row.entity_code, href: "/saved-views" })) };
         };
         tasks["setup-readiness"] = () => count(
           sql<{ value: string }>`select count(*)::text as value from master.tenant_module_subscription where tenant_id = ${tenantId} and status = 'active'`,
@@ -1644,14 +1638,18 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         projection = "CMS, reference content, and authorized business-document attachments";
         const cms = await sql<{ id: string; title: string; summary: string | null; kind: string; status: string; updated_at: Date | null; created_at: Date }>`
           select ci.id::text, ci.title, ci.summary, ci.kind, ci.status, ci.updated_at, ci.created_at
-          from master.content_item ci where ci.tenant_id = ${tenantId} and ci.status <> 'ARCHIVED'
+          from document.content_item ci where ci.tenant_id = ${tenantId} and ci.status <> 'ARCHIVED'
             and (
               ci.created_by = ${principalId}
               or exists (
-                select 1 from master.content_item_access_grant g
-                where g.tenant_id = ci.tenant_id and g.content_item_id = ci.id
-                  and (g.expires_at is null or g.expires_at > now())
-                  and (g.subject_type = 'public' or (g.subject_type = 'principal' and g.subject_id = ${principalId}))
+                select 1 from master.auth_record_acl g
+                where g.tenant_id = ci.tenant_id
+                  and g.plane_code = 'neon'
+                  and g.record_id = ci.id
+                  and g.status = 'active'
+                  and (g.effective_until is null or g.effective_until > now())
+                  and g.subject_kind = 'principal'
+                  and g.principal_id = ${principalId}
               )
             )
           order by coalesce(ci.updated_at, ci.created_at) desc limit 60
@@ -2749,7 +2747,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
   // ── GET /platform/identity ────────────────────────────────────────────────
 
   const getIdentityHandler: RequestHandler = async (req, res, next) => {
-    const EMPTY = { persona: null, groups: [], teams: [], delegations_received: [], delegations_given: [] };
+    const EMPTY = { groups: [], teams: [], delegations_received: [], delegations_given: [] };
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
@@ -2763,24 +2761,16 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const principalId = await resolvePrincipalIdOrNull(db, sub, tenantId, xRealm);
       if (!principalId) { res.json(EMPTY); return; }
 
-      // Persona + shared.persona join
-      const personaRow = await db
-        .selectFrom("master.principal_persona as pp")
-        .innerJoin("shared.persona as p", "p.id", "pp.persona_id")
-        .select([
-          "pp.persona_id", "p.code as persona_code", "p.name as persona_name",
-          "pp.expires_at", "pp.assigned_by", "pp.created_at",
-        ])
-        .where("pp.tenant_id", "=", tenantId)
-        .where("pp.principal_id", "=", principalId)
-        .executeTakeFirst() as Record<string, unknown> | undefined;
-
       // Groups
       const groupRows = await db
-        .selectFrom("master.auth_group_member as gm")
-        .innerJoin("master.auth_group as g", "g.id", "gm.group_id")
+        .selectFrom("master.auth_current_group_member_v as gm")
+        .innerJoin("master.auth_group as g", (join) => join
+          .onRef("g.id", "=", "gm.group_id")
+          .onRef("g.tenant_id", "=", "gm.tenant_id")
+          .onRef("g.plane_code", "=", "gm.plane_code"))
         .select(["g.id", "g.code", "g.name", "g.is_system", "g.status"])
         .where("gm.tenant_id", "=", tenantId)
+        .where("gm.plane_code", "in", ["neon", "admin"])
         .where("gm.principal_id", "=", principalId)
         .execute() as Record<string, unknown>[];
 
@@ -2788,12 +2778,18 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       const roleRows = groupIds.length > 0
         ? await db
-            .selectFrom("master.auth_group_role as gr")
-            .innerJoin("shared.role as r", "r.id", "gr.role_id")
-            .select(["gr.group_id", "r.code as role_code", "r.name as role_name", "gr.visibility_scope", "gr.assignment_scope_type", "gr.assignment_scope_ref_id"])
+            .selectFrom("master.auth_current_group_role_v as gr")
+            .innerJoin("master.auth_role as r", (join) => join
+              .onRef("r.id", "=", "gr.role_id")
+              .onRef("r.tenant_id", "=", "gr.tenant_id")
+              .onRef("r.plane_code", "=", "gr.plane_code"))
+            .innerJoin("master.auth_scope_target_resolved_v as scope", (join) => join
+              .onRef("scope.scope_target_id", "=", "gr.scope_target_id")
+              .onRef("scope.tenant_id", "=", "gr.tenant_id")
+              .onRef("scope.plane_code", "=", "gr.plane_code"))
+            .select(["gr.group_id", "r.code as role_code", "r.name as role_name", "scope.scope_kind as assignment_scope_type", "scope.resource_id as assignment_scope_ref_id"])
             .where("gr.tenant_id", "=", tenantId)
             .where("gr.group_id", "in", groupIds)
-            .where("gr.status", "=", "active")
             .execute() as Record<string, unknown>[]
         : [];
 
@@ -2801,55 +2797,53 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
         ...g,
         roles: roleRows
           .filter((r) => r["group_id"] === g["id"])
-          .map((r) => ({ role_code: r["role_code"], role_name: r["role_name"], visibility_scope: r["visibility_scope"], assignment_scope_type: r["assignment_scope_type"], assignment_scope_ref_id: r["assignment_scope_ref_id"] })),
+          .map((r) => ({ role_code: r["role_code"], role_name: r["role_name"], assignment_scope_type: r["assignment_scope_type"], assignment_scope_ref_id: r["assignment_scope_ref_id"] })),
       }));
 
       // Teams
       const teams = await db
         .selectFrom("master.team_member as tp")
-        .innerJoin("master.team as t", "t.id", "tp.team_id")
+        .innerJoin("master.team as t", (join) => join
+          .onRef("t.tenant_id", "=", "tp.tenant_id")
+          .onRef("t.id", "=", "tp.team_id"))
         .select([
           "t.id", "t.code", "t.name", "t.team_type",
-          "tp.role_in_team", "t.effective_from",
+          "tp.role_code as role_in_team", "tp.joined_at",
         ])
         .where("tp.tenant_id", "=", tenantId)
         .where("tp.principal_id", "=", principalId)
         .where("tp.left_at" as never, "is", null)
+        .where("t.status" as never, "=", "active" as never)
+        .where(sql<boolean>`
+          t.effective_from <= CURRENT_DATE
+          AND (t.effective_until IS NULL OR t.effective_until > CURRENT_DATE)
+        `)
         .execute() as Record<string, unknown>[];
 
       // Accessible company codes — direct principal assignment + via group membership
-      const [directCC, groupCC] = await Promise.all([
-        db.selectFrom("master.company_code_access as cca")
-          .innerJoin("master.company_code as cc", "cc.id", "cca.company_code_id")
-          .leftJoin("master.legal_entity as le", "le.id", "cc.legal_entity_id")
-          .select([
-            "cc.code as company_code",
-            "cc.name as company_name",
-            "le.code as legal_entity_code",
-            "le.name as legal_entity_name",
-          ])
-          .where("cca.tenant_id", "=", tenantId)
-          .where("cca.entity_type", "=", "principal")
-          .where("cca.entity_id", "=", principalId)
-          .where("cc.is_active", "=", true)
-          .execute() as Promise<Array<{ company_code: string; company_name: string; legal_entity_code: string | null; legal_entity_name: string | null }>>,
-        groupIds.length > 0
-          ? db.selectFrom("master.company_code_access as cca")
-              .innerJoin("master.company_code as cc", "cc.id", "cca.company_code_id")
-              .leftJoin("master.legal_entity as le", "le.id", "cc.legal_entity_id")
-              .select([
-                "cc.code as company_code",
-                "cc.name as company_name",
-                "le.code as legal_entity_code",
-                "le.name as legal_entity_name",
-              ])
-              .where("cca.tenant_id", "=", tenantId)
-              .where("cca.entity_type", "=", "auth_group")
-              .where("cca.entity_id", "in", groupIds)
-              .where("cc.is_active", "=", true)
-              .execute() as Promise<Array<{ company_code: string; company_name: string; legal_entity_code: string | null; legal_entity_name: string | null }>>
-          : Promise.resolve([]),
-      ]);
+      const directCC = await db
+        .selectFrom("master.auth_current_group_member_v as gm")
+        .innerJoin("master.auth_current_group_role_v as gr", (join) => join
+          .onRef("gr.tenant_id", "=", "gm.tenant_id")
+          .onRef("gr.plane_code", "=", "gm.plane_code")
+          .onRef("gr.group_id", "=", "gm.group_id"))
+        .innerJoin("master.auth_scope_target_resolved_v as scope", (join) => join
+          .onRef("scope.tenant_id", "=", "gr.tenant_id")
+          .onRef("scope.plane_code", "=", "gr.plane_code")
+          .onRef("scope.scope_target_id", "=", "gr.scope_target_id"))
+        .innerJoin("master.company_code as cc", "cc.id", "scope.resource_id")
+        .leftJoin("master.legal_entity as le", "le.id", "cc.legal_entity_id")
+        .select([
+          "cc.code as company_code", "cc.name as company_name",
+          "le.code as legal_entity_code", "le.name as legal_entity_name",
+        ])
+        .where("gm.tenant_id", "=", tenantId)
+        .where("gm.principal_id", "=", principalId)
+        .where("gm.plane_code", "=", "neon")
+        .where("scope.scope_kind", "=", "company_code")
+        .where("cc.is_active", "=", true)
+        .execute() as Array<{ company_code: string; company_name: string; legal_entity_code: string | null; legal_entity_name: string | null }>;
+      const groupCC: typeof directCC = [];
 
       const seenCC = new Set<string>();
       const accessible_companies = [...directCC, ...groupCC].filter((r) => {
@@ -2861,33 +2855,30 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       // Delegations — include counterparty names for display
       const now = new Date();
       const [delegationsReceived, delegationsGiven] = await Promise.all([
-        db.selectFrom("master.delegation_grant as d")
+        db.selectFrom("master.auth_delegation as d")
           .leftJoin("master.principal as delegator", "delegator.id", "d.delegator_id")
           .select([
-            "d.id", "d.delegator_id", "d.scope_type", "d.scope_ref",
-            "d.permissions", "d.reason", "d.expires_at", "d.is_revoked", "d.created_at",
+            "d.id", "d.delegator_id", "d.reason", "d.effective_until", "d.status", "d.created_at",
             "delegator.name as delegator_name",
           ])
           .where("d.tenant_id", "=", tenantId)
           .where("d.delegate_id", "=", principalId)
-          .where("d.is_revoked", "=", false)
-          .where("d.expires_at", ">", now as never)
+          .where("d.status", "=", "active")
+          .where("d.effective_until", ">", now as never)
           .execute(),
-        db.selectFrom("master.delegation_grant as d")
+        db.selectFrom("master.auth_delegation as d")
           .leftJoin("master.principal as delegate", "delegate.id", "d.delegate_id")
           .select([
-            "d.id", "d.delegate_id", "d.scope_type", "d.scope_ref",
-            "d.permissions", "d.reason", "d.expires_at", "d.is_revoked", "d.created_at",
+            "d.id", "d.delegate_id", "d.reason", "d.effective_until", "d.status", "d.created_at",
             "delegate.name as delegate_name",
           ])
           .where("d.tenant_id", "=", tenantId)
           .where("d.delegator_id", "=", principalId)
-          .where("d.is_revoked", "=", false)
+          .where("d.status", "=", "active")
           .execute(),
       ]);
 
       res.json({
-        persona:               personaRow          ?? null,
         groups,
         teams:                 teams               as Record<string, unknown>[],
         delegations_received:  delegationsReceived as Record<string, unknown>[],
@@ -2927,11 +2918,15 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const tenantAdminCode = tenantCodeRow ? `${tenantCodeRow.code.toUpperCase()}-ADMIN` : "";
 
       const adminCheck = await db
-        .selectFrom("master.auth_group_member as gm")
-        .innerJoin("master.auth_group as g", "g.id", "gm.group_id")
+        .selectFrom("master.auth_current_group_member_v as gm")
+        .innerJoin("master.auth_group as g", (join) => join
+          .onRef("g.id", "=", "gm.group_id")
+          .onRef("g.tenant_id", "=", "gm.tenant_id")
+          .onRef("g.plane_code", "=", "gm.plane_code"))
         .select("gm.id")
         .where("gm.tenant_id", "=", tenantId)
         .where("gm.principal_id", "=", principalId)
+        .where("gm.plane_code", "=", "admin")
         .where("g.code", "in", ["tenant_admin", tenantAdminCode].filter(Boolean))
         .executeTakeFirst();
 
@@ -3319,10 +3314,11 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           .orderBy("m.code" as never, "asc")
           .execute(),
         db.selectFrom("shared.plan_permission_access as ppa")
-          .innerJoin("shared.permission as p", "p.id" as never, "ppa.permission_id" as never)
+          .innerJoin("control.auth_permission as p", "p.id" as never, "ppa.permission_id" as never)
           .where("ppa.plan_id" as never, "=", planId as never)
-          .select(["p.id", "p.code", "p.name"] as never[])
-          .orderBy("p.code" as never, "asc")
+          .select(["p.id", "p.canonical_code as code", "p.metadata"] as never[])
+          .where("p.status" as never, "=", "published" as never)
+          .orderBy("p.canonical_code" as never, "asc")
           .execute(),
         db.selectFrom("shared.plan_feature_access as pfa")
           .innerJoin("shared.enterprise_feature as ef", "ef.id" as never, "pfa.feature_id" as never)

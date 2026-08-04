@@ -1,11 +1,11 @@
 -- master.holiday_calendar + holiday_calendar_day for 14 supported jurisdictions
 -- (1 tenant-default calendar + 14 country-level; public holidays 2025-2026,
--- 5-10 per country per year). Header rows UPSERT; day rows delete-owned + reinsert.
+-- 5-10 per country per year). Headers and days converge by natural key.
 
 DO $seed$
 DECLARE
     v_tid   uuid;
-    v_su    uuid := '00000000-0000-0000-0000-000000000000';
+    v_su    uuid := nullif(trim(current_setting('app.current_principal_id', true)), '')::uuid;
     v_pack  text := '340_org';
     v_ver   text := '2.0.0';
     v_meta  jsonb := '{"_seed": {"pack": "340_org", "version": "2.0.0"}}'::jsonb;
@@ -14,9 +14,16 @@ DECLARE
     v_bad_wkend  int;
     r            record;
 BEGIN
+    IF current_setting('app.database_plane', true) IS DISTINCT FROM 'neon' THEN
+        RAISE EXCEPTION '[seed] holiday calendars are Neon-owned and require app.database_plane=neon';
+    END IF;
+
     v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
     IF v_tid IS NULL THEN
         RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
+    END IF;
+    IF v_su IS NULL THEN
+        RAISE EXCEPTION '[seed] app.current_principal_id is required';
     END IF;
 
     -- ══════════════════════════════════════════════════════════════════════
@@ -466,18 +473,17 @@ BEGIN
     ('HC-PH', 2026, '2026-12-30', 'Rizal Day');
 
     -- ══════════════════════════════════════════════════════════════════════
-    -- 4. DELETE SEED-OWNED HOLIDAY DAYS, THEN INSERT FRESH
+    -- 4. CONVERGE HOLIDAY DAYS BY NATURAL KEY
+    -- The DDL has no status/effectivity columns for calendar days. Historical
+    -- dates not present in this edition are preserved rather than deleted.
     -- ══════════════════════════════════════════════════════════════════════
 
-    DELETE FROM master.holiday_calendar_day
-    WHERE tenant_id = v_tid
-      AND metadata->'_seed'->>'pack' = v_pack;
-
     INSERT INTO master.holiday_calendar_day
-        (tenant_id, holiday_calendar_id, calendar_year, holiday_date,
+        (id, tenant_id, holiday_calendar_id, calendar_year, holiday_date,
          name, day_type, observance_type, is_half_day,
          metadata, created_by)
     SELECT
+        md5('wave5:holiday-day:' || v_tid || ':' || h.cal_code || ':' || h.hol_date)::uuid,
         v_tid,
         m.cal_id,
         h.cal_year,
@@ -489,7 +495,25 @@ BEGIN
         v_meta,
         v_su
     FROM tmp_hol h
-    JOIN tmp_cal_map m ON m.code = h.cal_code;
+    JOIN tmp_cal_map m ON m.code = h.cal_code
+    ON CONFLICT (tenant_id, holiday_calendar_id, holiday_date) DO UPDATE SET
+        calendar_year = EXCLUDED.calendar_year,
+        name = EXCLUDED.name,
+        day_type = EXCLUDED.day_type,
+        observance_type = EXCLUDED.observance_type,
+        is_half_day = EXCLUDED.is_half_day,
+        metadata = EXCLUDED.metadata,
+        updated_at = clock_timestamp(),
+        updated_by = v_su
+    WHERE (master.holiday_calendar_day.calendar_year,
+           master.holiday_calendar_day.name,
+           master.holiday_calendar_day.day_type,
+           master.holiday_calendar_day.observance_type,
+           master.holiday_calendar_day.is_half_day,
+           master.holiday_calendar_day.metadata)
+      IS DISTINCT FROM
+          (EXCLUDED.calendar_year, EXCLUDED.name, EXCLUDED.day_type,
+           EXCLUDED.observance_type, EXCLUDED.is_half_day, EXCLUDED.metadata);
 
     -- ══════════════════════════════════════════════════════════════════════
     -- 5. ASSERTIONS

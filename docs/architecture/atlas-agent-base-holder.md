@@ -142,7 +142,7 @@ Operational response is documented in
   modes, SSE transport, scope identity, feedback mapping, and protocol tests.
 - `packages/shared/ui-platform/atlas-agent-ui`: provider, Neon panel,
   conversation/composer UI, feedback, and surface-stack integration.
-- `packages/apps/neon/shell` and `apps/neon`: profile, feature-gated shell mount,
+- `packages/products/neon/shell` and `apps/neon`: profile, feature-gated shell mount,
   Dashboard hero trigger, and relay streaming.
 - `server/packages/services/ai`: exact bindings, provider registry/adapters,
   per-request catalog, agent runtime, canonical route, credential resolver,

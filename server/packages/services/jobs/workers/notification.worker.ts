@@ -238,6 +238,7 @@ async function getRuleDedupWindowMs(
 async function sweep(
   db: DB,
   queue: Queue<SendNotificationJobData | SweepJobData | DigestFlushJobData | ProviderHealthJobData>,
+  tenantId: string,
   logger?: JobLogger,
 ): Promise<void> {
   const BATCH = 100;
@@ -250,6 +251,7 @@ async function sweep(
       SELECT id
       FROM   event.notification_message
       WHERE  status = 'pending'
+        AND  tenant_id = ${tenantId}::uuid
         AND (expires_at IS NULL OR expires_at > now())
       ORDER  BY priority DESC, created_at ASC
       LIMIT  ${BATCH}
@@ -877,6 +879,7 @@ interface StagedRow {
 async function flush(
   db:        DB,
   queue:     Queue<SendNotificationJobData | SweepJobData | DigestFlushJobData | ProviderHealthJobData>,
+  tenantId:  string,
   frequency: string,
   logger?:   JobLogger,
 ): Promise<void> {
@@ -889,6 +892,7 @@ async function flush(
       SELECT id
       FROM   event.digest_staging
       WHERE  frequency     = ${frequency}
+        AND  tenant_id     = ${tenantId}::uuid
         AND  delivered_at IS NULL
       ORDER  BY staged_at ASC
       LIMIT  ${BATCH}
@@ -1066,11 +1070,20 @@ async function checkAllProviders(
 
 // ─── Housekeeping ─────────────────────────────────────────────────────────────
 
-async function pruneNotificationHousekeeping(db: DB, logger?: JobLogger): Promise<void> {
+async function notificationWorkTenants(db: DB, kind: "message" | "digest" | "housekeeping", frequency?: string): Promise<string[]> {
+  const result = await sql<{ tenant_id: string }>`
+    SELECT tenant_id::text
+    FROM event.fn_notification_work_tenants(${kind}, ${frequency ?? null}, 1000)
+  `.execute(db);
+  return result.rows.map((row) => row.tenant_id);
+}
+
+async function pruneNotificationHousekeeping(db: DB, tenantId: string, logger?: JobLogger): Promise<void> {
   const claims = await sql<{ count: string }>`
     WITH deleted AS (
       DELETE FROM event.notification_delivery_claim
       WHERE expires_at < now() - interval '1 day'
+        AND tenant_id = ${tenantId}::uuid
       RETURNING 1
     )
     SELECT count(*)::text AS count FROM deleted
@@ -1080,6 +1093,7 @@ async function pruneNotificationHousekeeping(db: DB, logger?: JobLogger): Promis
     WITH deleted AS (
       DELETE FROM event.push_subscription
       WHERE is_active = false
+        AND tenant_id = ${tenantId}::uuid
         AND COALESCE(updated_at, expires_at, created_at) < now() - interval '90 days'
       RETURNING 1
     )
@@ -1106,28 +1120,45 @@ export interface NotificationWorkerDeps {
   /** Per-plane FROM address overrides for the email channel. Keys: 'neon' | 'mesh' | 'admin'. */
   emailFromMap?:   Map<string, string>;
   logger?:         JobLogger;
+  runWithJobContext?: <T>(context: { tenantId?: string }, fn: () => T | Promise<T>) => Promise<T>;
 }
 
 export function createNotificationWorker(deps: NotificationWorkerDeps): Worker {
   const { db, queue, connection, logger } = deps;
   const channelHandlers = deps.channelHandlers ?? new Map();
   const emailFromMap    = deps.emailFromMap;
+  const runInTenant = async <T>(tenantId: string, fn: () => T | Promise<T>): Promise<T> =>
+    deps.runWithJobContext ? deps.runWithJobContext({ tenantId }, fn) : Promise.resolve(fn());
 
   const worker = new Worker<SendNotificationJobData | SweepJobData | DigestFlushJobData | ProviderHealthJobData>(
     QUEUE_NAME.NOTIFICATIONS,
     async (job: Job) => {
-      if      (job.name === JOB_NAME.SWEEP)           await sweep(db, queue, logger);
-      else if (job.name === JOB_NAME.SEND)            await send(
-        db, queue, job.data as SendNotificationJobData, channelHandlers, logger, emailFromMap,
-        job.attemptsMade,
-        typeof job.opts?.attempts === "number" ? job.opts.attempts : 3,
-      );
+      if (job.name === JOB_NAME.SWEEP) {
+        for (const tenantId of await notificationWorkTenants(db, "message")) {
+          await runInTenant(tenantId, () => sweep(db, queue, tenantId, logger));
+        }
+      }
+      else if (job.name === JOB_NAME.SEND) {
+        const data = job.data as SendNotificationJobData;
+        await runInTenant(data.tenantId, () => send(
+          db, queue, data, channelHandlers, logger, emailFromMap,
+          job.attemptsMade,
+          typeof job.opts?.attempts === "number" ? job.opts.attempts : 3,
+        ));
+      }
       // TODO: Phase 2 — digest flush scheduler is deferred; handler kept so
       // any jobs still in Redis from prior deployments drain gracefully.
-      else if (job.name === JOB_NAME.DIGEST_FLUSH)    await flush(db, queue, (job.data as DigestFlushJobData).frequency, logger);
+      else if (job.name === JOB_NAME.DIGEST_FLUSH) {
+        const frequency = (job.data as DigestFlushJobData).frequency;
+        for (const tenantId of await notificationWorkTenants(db, "digest", frequency)) {
+          await runInTenant(tenantId, () => flush(db, queue, tenantId, frequency, logger));
+        }
+      }
       else if (job.name === JOB_NAME.PROVIDER_HEALTH) {
         await checkAllProviders(db, channelHandlers, logger);
-        await pruneNotificationHousekeeping(db, logger);
+        for (const tenantId of await notificationWorkTenants(db, "housekeeping")) {
+          await runInTenant(tenantId, () => pruneNotificationHousekeeping(db, tenantId, logger));
+        }
       }
       else logger?.warn("notification_unknown_job", { name: job.name });
     },
@@ -1142,7 +1173,8 @@ export function createNotificationWorker(deps: NotificationWorkerDeps): Worker {
     if (job.attemptsMade < maxAttempts) return;
 
     const { messageId, tenantId } = job.data as SendNotificationJobData;
-    await sql`
+    await runInTenant(tenantId, async () => {
+      await sql`
       UPDATE event.notification_delivery
       SET    status        = 'bounced',
              attempt_count = max_attempts,
@@ -1156,13 +1188,13 @@ export function createNotificationWorker(deps: NotificationWorkerDeps): Worker {
         AND  tenant_id     = ${tenantId}::uuid
         AND  status        IN ('pending', 'failed')
         AND  attempt_count >= max_attempts
-    `.execute(db).catch((updateErr) => {
+      `.execute(db).catch((updateErr) => {
       logger?.error("notification_delivery_final_fail_update_error", {
         messageId, err: String(updateErr),
       });
-    });
+      });
 
-    await sql`
+      await sql`
       UPDATE event.notification_message
       SET    status     = 'failed',
              updated_at = now(),
@@ -1170,9 +1202,10 @@ export function createNotificationWorker(deps: NotificationWorkerDeps): Worker {
       WHERE  id        = ${messageId}::uuid
         AND  tenant_id = ${tenantId}::uuid
         AND  status    IN ('planning', 'delivering')
-    `.execute(db).catch((updateErr) => {
+      `.execute(db).catch((updateErr) => {
       logger?.error("notification_send_final_fail_update_error", {
         messageId, err: String(updateErr),
+      });
       });
     });
     logger?.warn("notification_send_permanently_failed", {

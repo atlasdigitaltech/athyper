@@ -36,11 +36,11 @@
  *   POST   /api/docservices/outputs/:id/deliver    — mark DELIVERED
  *   POST   /api/docservices/outputs/:id/revoke     — REVOKE with reason
  *
- * Render Jobs (document.render_job)
+ * Render Jobs (document.render_output execution state)
  *   GET    /api/docservices/jobs                   — list (output_id, status filter)
  *   POST   /api/docservices/jobs/:id/retry         — reset FAILED → PENDING for retry
  *
- * Dead Letter Queue (log.render_dlq)
+ * Failed render/replay queue (document.render_output)
  *   GET    /api/docservices/dlq                    — list (error_category, replayed filter)
  *   POST   /api/docservices/dlq/:id/replay         — mark replayed + re-enqueue output
  *
@@ -64,6 +64,7 @@ import {
   extractOrgHeaders,
   SYSTEM_PRINCIPAL_UUID,
 } from "@athyper/svc-shared";
+import { checkPermissionBatch } from "@athyper/svc-iam";
 import type { SyncPdfRenderer } from "@athyper/server-foundation/render/pdf-renderer-client";
 import { resolveEntityPrintSections, resolvePrintIdentity } from "@athyper/entity-print/core";
 import { buildEntityPrintHtml } from "../lib/build-entity-print-html.js";
@@ -96,9 +97,19 @@ export interface DocServicesRouteDeps {
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 function parsePage(q: Record<string, unknown>) {
-  const page     = Math.max(1, parseInt(String(q["page"] ?? "1"), 10));
-  const pageSize = Math.min(100, Math.max(1, parseInt(String(q["page_size"] ?? "25"), 10)));
-  return { page, pageSize, offset: (page - 1) * pageSize };
+    const page     = Math.max(1, parseInt(String(q["page"] ?? "1"), 10));
+    const pageSize = Math.min(100, Math.max(1, parseInt(String(q["page_size"] ?? "25"), 10)));
+    return { page, pageSize, offset: (page - 1) * pageSize };
+}
+
+function normalizeLocaleCode(value: unknown): string | null {
+  const parts = String(value ?? "en").trim().split("-");
+  const normalized = parts.length === 1
+    ? parts[0]?.toLowerCase()
+    : `${parts[0]?.toLowerCase()}-${parts[1]?.toUpperCase()}`;
+  return normalized && /^[a-z]{2,3}(?:-[A-Z]{2})?$/.test(normalized)
+    ? normalized
+    : null;
 }
 
 async function resolveCtx(
@@ -121,6 +132,28 @@ async function resolveCtx(
   return { claims, tenantId, principalId };
 }
 
+type DocResource = "template" | "brand_profile" | "letterhead" | "template_binding" | "print_profile";
+type DocAction = "export" | "create" | "update" | "delete";
+
+async function requireDocPermission(
+  db: Kysely<any>,
+  res: Parameters<RequestHandler>[1],
+  ctx: { tenantId: string; principalId: string },
+  resource: DocResource,
+  action: DocAction,
+): Promise<boolean> {
+  const permissionCode = `neon.catalog.${resource}.${action}`;
+  const decisions = await checkPermissionBatch(db, ctx.tenantId, ctx.principalId);
+  const decision = decisions[permissionCode];
+  if (decision?.decision === "allow") return true;
+
+  res.status(403).json({
+    error: "FORBIDDEN",
+    required_permission: permissionCode,
+  });
+  return false;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Route factory
 // ─────────────────────────────────────────────────────────────────────────────
@@ -137,6 +170,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template", "export")) return;
 
       const q = req.query as Record<string, unknown>;
       const { page, pageSize, offset } = parsePage(q);
@@ -178,6 +212,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template", "create")) return;
 
       const b = req.body as Record<string, unknown>;
       if (!b["code"] || !b["name"] || !b["kind"]) {
@@ -189,15 +224,13 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         .insertInto("master.template")
         .values({
           tenant_id:              ctx.tenantId,
-          code:                   String(b["code"]),
+          code:                   String(b["code"]).trim().toLowerCase(),
           name:                   String(b["name"]),
-          kind:                   String(b["kind"]),
-          engine:                 String(b["engine"] ?? "HANDLEBARS"),
+          kind:                   String(b["kind"]).trim().toLowerCase(),
+          engine:                 String(b["engine"] ?? "handlebars").trim().toLowerCase(),
           is_rtl_supported:       Boolean(b["is_rtl_supported"] ?? false),
           is_letterhead_required: Boolean(b["is_letterhead_required"] ?? false),
-          allowed_operations:     Array.isArray(b["allowed_operations"]) ? b["allowed_operations"] : null,
-          supported_locales:      Array.isArray(b["supported_locales"])  ? b["supported_locales"]  : null,
-          status:                 String(b["status"] ?? "DRAFT"),
+          status:                 "draft",
           metadata:               (b["metadata"] as object) ?? {},
           created_by:             ctx.principalId,
         } as never)
@@ -216,6 +249,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template", "update")) return;
 
       const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -224,12 +258,10 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
       const set: Record<string, unknown> = { updated_at: new Date().toISOString(), updated_by: ctx.principalId };
 
       if (b["name"]                   !== undefined) set["name"]                   = String(b["name"]);
-      if (b["status"]                 !== undefined) set["status"]                 = String(b["status"]);
-      if (b["engine"]                 !== undefined) set["engine"]                 = String(b["engine"]);
+      if (b["status"]                 !== undefined) set["status"]                 = String(b["status"]).trim().toLowerCase();
+      if (b["engine"]                 !== undefined) set["engine"]                 = String(b["engine"]).trim().toLowerCase();
       if (b["is_rtl_supported"]       !== undefined) set["is_rtl_supported"]       = Boolean(b["is_rtl_supported"]);
       if (b["is_letterhead_required"] !== undefined) set["is_letterhead_required"] = Boolean(b["is_letterhead_required"]);
-      if (b["allowed_operations"]     !== undefined) set["allowed_operations"]     = b["allowed_operations"];
-      if (b["supported_locales"]      !== undefined) set["supported_locales"]      = b["supported_locales"];
       if (b["current_version_id"]     !== undefined) set["current_version_id"]     = b["current_version_id"] ?? null;
       if (b["metadata"]               !== undefined) set["metadata"]               = b["metadata"];
 
@@ -254,13 +286,14 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template", "delete")) return;
 
       const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
 
       const row = await db
         .updateTable("master.template")
-        .set({ status: "ARCHIVED", updated_at: new Date().toISOString(), updated_by: ctx.principalId } as never)
+        .set({ status: "archived", updated_at: new Date().toISOString(), updated_by: ctx.principalId } as never)
         .where("id", "=", id)
         .where("tenant_id", "=", ctx.tenantId)
         .returningAll()
@@ -283,6 +316,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template", "export")) return;
 
       const templateId = req.query["template_id"] as string | undefined;
       if (!templateId || !isUuid(templateId)) {
@@ -310,6 +344,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template", "update")) return;
 
       const b = req.body as Record<string, unknown>;
       if (!b["template_id"] || !isUuid(String(b["template_id"]))) {
@@ -320,37 +355,65 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         res.status(400).json({ error: "MISSING_CHECKSUM", message: "checksum (SHA-256 of content) is required" });
         return;
       }
-      if (!b["content_html"] && !b["content_json"]) {
-        res.status(400).json({ error: "MISSING_CONTENT", message: "content_html or content_json required" });
+      const hasHtml = typeof b["content_html"] === "string" && b["content_html"].trim().length > 0;
+      const hasJson = b["content_json"] !== undefined && b["content_json"] !== null;
+      if (hasHtml === hasJson) {
+        res.status(400).json({ error: "INVALID_CONTENT", message: "Provide exactly one of content_html or content_json" });
+        return;
+      }
+      const checksum = String(b["checksum"]).trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(checksum)) {
+        res.status(400).json({ error: "INVALID_CHECKSUM", message: "checksum must be a SHA-256 hex digest" });
         return;
       }
 
       const templateId = String(b["template_id"]);
+      const localeCode = normalizeLocaleCode(b["locale_code"]);
+      if (!localeCode) {
+        res.status(400).json({ error: "INVALID_LOCALE", message: "locale_code must use language or language-REGION format" });
+        return;
+      }
 
-      // Compute next version number
-      const maxRow = await db
-        .selectFrom("snapshot.template_version as tv")
-        .select(db.fn.max("tv.version").as("max_v"))
-        .where("tv.tenant_id", "=", ctx.tenantId)
-        .where("tv.template_id", "=", templateId)
+      const parent = await db
+        .selectFrom("master.template")
+        .select("id")
+        .where("id", "=", templateId)
+        .where("tenant_id", "=", ctx.tenantId)
         .executeTakeFirst();
-      const nextVersion = ((maxRow as Record<string, unknown>)?.["max_v"] as number ?? 0) + 1;
+      if (!parent) {
+        res.status(404).json({ error: "NOT_FOUND", message: "Template not found" });
+        return;
+      }
 
       const result = await db.transaction().execute(async (trx) => {
+        await sql`
+          SELECT pg_advisory_xact_lock(
+            hashtextextended(${`${ctx.tenantId}:${templateId}:${localeCode}`}, 0)
+          )
+        `.execute(trx);
+
+        const maxRow = await trx
+          .selectFrom("snapshot.template_version as tv")
+          .select(trx.fn.max("tv.version").as("max_v"))
+          .where("tv.tenant_id", "=", ctx.tenantId)
+          .where("tv.template_id", "=", templateId)
+          .where("tv.locale_code", "=", localeCode)
+          .executeTakeFirst();
+        const nextVersion = (Number((maxRow as Record<string, unknown>)?.["max_v"] ?? 0)) + 1;
+
         const ver = await trx
           .insertInto("snapshot.template_version")
           .values({
             tenant_id:        ctx.tenantId,
             template_id:      templateId,
             version:          nextVersion,
+            locale_code:      localeCode,
             content_html:     (b["content_html"] as string) ?? null,
             content_json:     (b["content_json"] as object) ?? null,
-            header_html:      (b["header_html"] as string)  ?? null,
-            footer_html:      (b["footer_html"] as string)  ?? null,
             styles_css:       (b["styles_css"] as string)   ?? null,
             variables_schema: (b["variables_schema"] as object) ?? null,
-            assets_manifest:  (b["assets_manifest"] as object)  ?? null,
-            checksum:         String(b["checksum"]),
+            assets_manifest:  (b["assets_manifest"] as object)  ?? {},
+            checksum,
             effective_from:   (b["effective_from"] as string) ?? null,
             effective_to:     (b["effective_to"] as string)   ?? null,
             created_by:       ctx.principalId,
@@ -388,6 +451,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "brand_profile", "export")) return;
 
       const rows = await db
         .selectFrom("master.brand_profile as bp")
@@ -408,6 +472,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "brand_profile", "create")) return;
 
       const b = req.body as Record<string, unknown>;
       if (!b["code"] || !b["name"]) {
@@ -419,16 +484,11 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         .insertInto("master.brand_profile")
         .values({
           tenant_id:         ctx.tenantId,
-          code:              String(b["code"]),
+          code:              String(b["code"]).trim().toLowerCase(),
           name:              String(b["name"]),
-          direction:         String(b["direction"]      ?? "LTR"),
-          default_locale:    String(b["default_locale"] ?? "en"),
-          supported_locales: Array.isArray(b["supported_locales"]) ? b["supported_locales"] : null,
-          palette:           (b["palette"]    as object) ?? null,
-          typography:        (b["typography"] as object) ?? null,
-          spacing_scale:     (b["spacing_scale"] as object) ?? null,
+          palette:           (b["palette"]    as object) ?? {},
+          typography:        (b["typography"] as object) ?? {},
           is_default:        Boolean(b["is_default"] ?? false),
-          is_active:         true,
           metadata:          (b["metadata"] as object) ?? {},
           created_by:        ctx.principalId,
         } as never)
@@ -446,6 +506,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "brand_profile", "update")) return;
 
       const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -454,12 +515,8 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
       const set: Record<string, unknown> = { updated_at: new Date().toISOString(), updated_by: ctx.principalId };
 
       if (b["name"]              !== undefined) set["name"]              = String(b["name"]);
-      if (b["direction"]         !== undefined) set["direction"]         = String(b["direction"]);
-      if (b["default_locale"]    !== undefined) set["default_locale"]    = String(b["default_locale"]);
-      if (b["supported_locales"] !== undefined) set["supported_locales"] = b["supported_locales"];
       if (b["palette"]           !== undefined) set["palette"]           = b["palette"];
       if (b["typography"]        !== undefined) set["typography"]        = b["typography"];
-      if (b["spacing_scale"]     !== undefined) set["spacing_scale"]     = b["spacing_scale"];
       if (b["is_default"]        !== undefined) set["is_default"]        = Boolean(b["is_default"]);
       if (b["status"]            !== undefined) set["status"]            = String(b["status"]);
       if (b["metadata"]          !== undefined) set["metadata"]          = b["metadata"];
@@ -488,6 +545,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "letterhead", "export")) return;
 
       const rows = await db
         .selectFrom("master.letterhead as lh")
@@ -508,6 +566,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "letterhead", "create")) return;
 
       const b = req.body as Record<string, unknown>;
       if (!b["code"] || !b["name"]) {
@@ -519,18 +578,14 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         .insertInto("master.letterhead")
         .values({
           tenant_id:          ctx.tenantId,
-          code:               String(b["code"]),
+          code:               String(b["code"]).trim().toLowerCase(),
           name:               String(b["name"]),
-          company_code_id:    (b["company_code_id"] as string) ?? null,
-          logo_storage_key:   (b["logo_storage_key"] as string) ?? null,
+          logo_asset_ref:     (b["logo_asset_ref"] as string) ?? null,
           header_html:        (b["header_html"] as string) ?? null,
           footer_html:        (b["footer_html"] as string) ?? null,
           watermark_text:     (b["watermark_text"] as string) ?? null,
           watermark_opacity:  b["watermark_opacity"] != null ? Number(b["watermark_opacity"]) : 0.15,
-          default_fonts:      (b["default_fonts"] as object) ?? null,
-          page_margins:       (b["page_margins"] as object)  ?? null,
           is_default:         Boolean(b["is_default"] ?? false),
-          is_active:          true,
           metadata:           (b["metadata"] as object) ?? {},
           created_by:         ctx.principalId,
         } as never)
@@ -548,6 +603,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "letterhead", "update")) return;
 
       const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -556,13 +612,11 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
       const set: Record<string, unknown> = { updated_at: new Date().toISOString(), updated_by: ctx.principalId };
 
       if (b["name"]               !== undefined) set["name"]               = String(b["name"]);
-      if (b["company_code_id"]    !== undefined) set["company_code_id"]    = b["company_code_id"] ?? null;
-      if (b["logo_storage_key"]   !== undefined) set["logo_storage_key"]   = b["logo_storage_key"] ?? null;
+      if (b["logo_asset_ref"]     !== undefined) set["logo_asset_ref"]     = b["logo_asset_ref"] ?? null;
       if (b["header_html"]        !== undefined) set["header_html"]        = b["header_html"] ?? null;
       if (b["footer_html"]        !== undefined) set["footer_html"]        = b["footer_html"] ?? null;
       if (b["watermark_text"]     !== undefined) set["watermark_text"]     = b["watermark_text"] ?? null;
       if (b["watermark_opacity"]  !== undefined) set["watermark_opacity"]  = Number(b["watermark_opacity"]);
-      if (b["page_margins"]       !== undefined) set["page_margins"]       = b["page_margins"] ?? null;
       if (b["is_default"]         !== undefined) set["is_default"]         = Boolean(b["is_default"]);
       if (b["status"]             !== undefined) set["status"]             = String(b["status"]);
       if (b["metadata"]           !== undefined) set["metadata"]           = b["metadata"];
@@ -591,6 +645,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template_binding", "export")) return;
 
       const q = req.query as Record<string, unknown>;
 
@@ -598,18 +653,19 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         .selectFrom("master.template_binding as tb")
         .innerJoin("master.template as t", "t.id", "tb.template_id")
         .select([
-          "tb.id", "tb.template_id", "tb.entity_name", "tb.operation",
-          "tb.variant", "tb.priority", "tb.is_active", "tb.created_at",
+          "tb.id", "tb.template_id", "tb.entity_code", "tb.operation_code",
+          "tb.variant_code", "tb.locale_code", "tb.brand_profile_id",
+          "tb.letterhead_id", "tb.print_profile_id", "tb.status", "tb.created_at",
           "t.code as template_code", "t.name as template_name",
         ])
         .where("tb.tenant_id", "=", ctx.tenantId)
-        .orderBy("tb.entity_name", "asc")
-        .orderBy("tb.priority", "desc");
+        .orderBy("tb.entity_code", "asc")
+        .orderBy("tb.operation_code", "asc");
 
-      if (q["entity_name"])  query = query.where("tb.entity_name" as never, "=", q["entity_name"] as never);
-      if (q["operation"])    query = query.where("tb.operation"   as never, "=", q["operation"]   as never);
+      if (q["entity_code"])  query = query.where("tb.entity_code" as never, "=", q["entity_code"] as never);
+      if (q["operation_code"]) query = query.where("tb.operation_code" as never, "=", q["operation_code"] as never);
       if (q["is_active"] !== undefined) {
-        query = query.where("tb.is_active" as never, "=", (q["is_active"] === "true") as never);
+        query = query.where("tb.status" as never, "=", (q["is_active"] === "true" ? "active" : "inactive") as never);
       }
 
       const rows = await query.execute();
@@ -624,10 +680,20 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template_binding", "create")) return;
 
       const b = req.body as Record<string, unknown>;
-      if (!b["template_id"] || !b["entity_name"] || !b["operation"]) {
-        res.status(400).json({ error: "MISSING_FIELDS", message: "template_id, entity_name, operation are required" });
+      if (!b["template_id"] || !b["entity_code"] || !b["operation_code"]) {
+        res.status(400).json({ error: "MISSING_FIELDS", message: "template_id, entity_code, operation_code are required" });
+        return;
+      }
+      if (!isUuid(String(b["template_id"]))) {
+        res.status(400).json({ error: "INVALID_TEMPLATE_ID" });
+        return;
+      }
+      const localeCode = normalizeLocaleCode(b["locale_code"]);
+      if (!localeCode) {
+        res.status(400).json({ error: "INVALID_LOCALE", message: "locale_code must use language or language-REGION format" });
         return;
       }
 
@@ -636,11 +702,15 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         .values({
           tenant_id:   ctx.tenantId,
           template_id: String(b["template_id"]),
-          entity_name: String(b["entity_name"]),
-          operation:   String(b["operation"]),
-          variant:     String(b["variant"] ?? "default"),
-          priority:    b["priority"] != null ? Number(b["priority"]) : 0,
-          is_active:   Boolean(b["is_active"] ?? true),
+          entity_code: String(b["entity_code"]).trim().toLowerCase(),
+          operation_code: String(b["operation_code"]).trim().toLowerCase(),
+          variant_code: String(b["variant_code"] ?? "default").trim().toLowerCase(),
+          locale_code: localeCode,
+          brand_profile_id: (b["brand_profile_id"] as string) ?? null,
+          letterhead_id: (b["letterhead_id"] as string) ?? null,
+          print_profile_id: (b["print_profile_id"] as string) ?? null,
+          metadata: (b["metadata"] as object) ?? {},
+          status: String(b["status"] ?? "active"),
           created_by:  ctx.principalId,
         } as never)
         .returningAll()
@@ -657,6 +727,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template_binding", "update")) return;
 
       const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -664,9 +735,13 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
       const b   = req.body as Record<string, unknown>;
       const set: Record<string, unknown> = {};
 
-      if (b["is_active"] !== undefined) set["is_active"] = Boolean(b["is_active"]);
-      if (b["priority"]  !== undefined) set["priority"]  = Number(b["priority"]);
-      if (b["variant"]   !== undefined) set["variant"]   = String(b["variant"]);
+      if (b["status"]           !== undefined) set["status"]           = String(b["status"]);
+      if (b["brand_profile_id"] !== undefined) set["brand_profile_id"] = b["brand_profile_id"] ?? null;
+      if (b["letterhead_id"]    !== undefined) set["letterhead_id"]    = b["letterhead_id"] ?? null;
+      if (b["print_profile_id"] !== undefined) set["print_profile_id"] = b["print_profile_id"] ?? null;
+      if (b["metadata"]         !== undefined) set["metadata"]         = b["metadata"];
+      set["updated_at"] = new Date().toISOString();
+      set["updated_by"] = ctx.principalId;
 
       const row = await db
         .updateTable("master.template_binding")
@@ -688,13 +763,14 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template_binding", "delete")) return;
 
       const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
 
       const row = await db
         .updateTable("master.template_binding")
-        .set({ is_active: false } as never)
+        .set({ status: "inactive", updated_at: new Date().toISOString(), updated_by: ctx.principalId } as never)
         .where("id", "=", id)
         .where("tenant_id", "=", ctx.tenantId)
         .returningAll()
@@ -739,7 +815,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     }
   };
 
-  // Enqueue a new render (creates QUEUED render_output + PENDING render_job)
+  // Enqueue a new render (creates a QUEUED render_output)
   const enqueueOutput: RequestHandler = async (req, res, next) => {
     try {
       const ctx = await resolveCtx(db, req, auth, res);
@@ -751,8 +827,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         return;
       }
 
-      const result = await db.transaction().execute(async (trx) => {
-        const output = await trx
+      const output = await db
           .insertInto("document.render_output")
           .values({
             tenant_id:           ctx.tenantId,
@@ -772,25 +847,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
           .returningAll()
           .executeTakeFirstOrThrow();
 
-        const outputId = (output as Record<string, unknown>)["id"] as string;
-
-        const job = await trx
-          .insertInto("document.render_job")
-          .values({
-            tenant_id:    ctx.tenantId,
-            output_id:    outputId,
-            status:       "PENDING",
-            attempts:     0,
-            max_attempts: 3,
-            created_by:   ctx.principalId,
-          } as never)
-          .returningAll()
-          .executeTakeFirstOrThrow();
-
-        return { output, job };
-      });
-
-      res.status(201).json({ ok: true, data: result });
+      res.status(201).json({ ok: true, data: { output } });
     } catch (err) {
       logger?.error("docservices_outputs_enqueue_error", { err: String(err) });
       next(err);
@@ -910,7 +967,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
   };
 
   // ══════════════════════════════════════════════════════════════════════════
-  // §7  RENDER JOBS — document.render_job
+  // §7  RENDER JOBS — document.render_output execution state
   // ══════════════════════════════════════════════════════════════════════════
 
   const listJobs: RequestHandler = async (req, res, next) => {
@@ -922,13 +979,13 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
       const { pageSize, offset } = parsePage(q);
 
       let query = db
-        .selectFrom("document.render_job as rj")
+        .selectFrom("document.render_output as rj")
         .selectAll("rj")
         .where("rj.tenant_id", "=", ctx.tenantId)
         .orderBy("rj.created_at", "desc");
 
       if (q["output_id"] && isUuid(String(q["output_id"]))) {
-        query = query.where("rj.output_id" as never, "=", q["output_id"] as never);
+        query = query.where("rj.id" as never, "=", q["output_id"] as never);
       }
       if (q["status"]) {
         query = query.where("rj.status" as never, "=", q["status"] as never);
@@ -951,28 +1008,25 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
       const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
 
-      const result = await db.transaction().execute(async (trx) => {
-        const job = await trx
-          .updateTable("document.render_job")
-          .set({ status: "PENDING", updated_at: new Date().toISOString() } as never)
+      const result = await db
+          .updateTable("document.render_output")
+          .set({
+            status: "QUEUED",
+            error_code: null,
+            error_message: null,
+            failure_category: null,
+            attempt_count: 0,
+            replay_count: sql`replay_count + 1` as never,
+            last_replayed_at: new Date().toISOString(),
+            last_replayed_by: ctx.principalId,
+            updated_at: new Date().toISOString(),
+            updated_by: ctx.principalId,
+          } as never)
           .where("id", "=", id)
           .where("tenant_id", "=", ctx.tenantId)
           .where("status" as never, "=", "FAILED" as never)
           .returningAll()
           .executeTakeFirst();
-
-        if (!job) return null;
-
-        const outputId = (job as Record<string, unknown>)["output_id"] as string;
-        await trx
-          .updateTable("document.render_output")
-          .set({ status: "QUEUED", updated_at: new Date().toISOString(), updated_by: ctx.principalId } as never)
-          .where("id", "=", outputId)
-          .where("tenant_id", "=", ctx.tenantId)
-          .execute();
-
-        return job;
-      });
 
       if (!result) { res.status(404).json({ error: "NOT_FOUND_OR_NOT_FAILED" }); return; }
       res.json({ ok: true, data: result });
@@ -983,7 +1037,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
   };
 
   // ══════════════════════════════════════════════════════════════════════════
-  // §8  DEAD LETTER QUEUE — log.render_dlq
+  // §8  FAILED RENDER / REPLAY QUEUE — document.render_output
   // ══════════════════════════════════════════════════════════════════════════
 
   const listDlq: RequestHandler = async (req, res, next) => {
@@ -995,14 +1049,15 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
       const { pageSize, offset } = parsePage(q);
 
       let query = db
-        .selectFrom("log.render_dlq as dlq")
+        .selectFrom("document.render_output as dlq")
         .selectAll("dlq")
         .where("dlq.tenant_id", "=", ctx.tenantId)
-        .orderBy("dlq.dead_at", "desc");
+        .where("dlq.status" as never, "=", "FAILED" as never)
+        .orderBy("dlq.last_attempt_at", "desc");
 
-      if (q["error_category"]) query = query.where("dlq.error_category" as never, "=", q["error_category"] as never);
-      if (q["replayed"] === "true")  query = query.where("dlq.replayed_at" as never, "is not", null as never);
-      if (q["replayed"] === "false") query = query.where("dlq.replayed_at" as never, "is",     null as never);
+      if (q["error_category"]) query = query.where("dlq.failure_category" as never, "=", q["error_category"] as never);
+      if (q["replayed"] === "true")  query = query.where("dlq.last_replayed_at" as never, "is not", null as never);
+      if (q["replayed"] === "false") query = query.where("dlq.last_replayed_at" as never, "is",     null as never);
 
       const rows = await query.limit(pageSize).offset(offset).execute();
       res.json({ ok: true, data: rows });
@@ -1023,34 +1078,25 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
 
       const now = new Date().toISOString();
 
-      const result = await db.transaction().execute(async (trx) => {
-        const entry = await trx
-          .updateTable("log.render_dlq")
+      const result = await db
+          .updateTable("document.render_output")
           .set({
-            replayed_at:  now,
-            replayed_by:  ctx.principalId,
-            replay_count: sql`replay_count + 1` as never,
-            updated_at:   now,
-            updated_by:   ctx.principalId,
+            status:            "QUEUED",
+            error_code:        null,
+            error_message:     null,
+            failure_category:  null,
+            attempt_count:     0,
+            last_replayed_at:  now,
+            last_replayed_by:  ctx.principalId,
+            replay_count:      sql`replay_count + 1` as never,
+            updated_at:        now,
+            updated_by:        ctx.principalId,
           } as never)
           .where("id", "=", id)
           .where("tenant_id", "=", ctx.tenantId)
-          .where("replayed_at" as never, "is", null as never)
+          .where("status" as never, "=", "FAILED" as never)
           .returningAll()
           .executeTakeFirst();
-
-        if (!entry) return null;
-
-        const outputId = (entry as Record<string, unknown>)["output_id"] as string;
-        await trx
-          .updateTable("document.render_output")
-          .set({ status: "QUEUED", error_code: null, error_message: null, updated_at: now, updated_by: ctx.principalId } as never)
-          .where("id", "=", outputId)
-          .where("tenant_id", "=", ctx.tenantId)
-          .execute();
-
-        return entry;
-      });
 
       if (!result) { res.status(404).json({ error: "NOT_FOUND_OR_ALREADY_REPLAYED" }); return; }
       res.json({ ok: true, data: result });
@@ -1068,6 +1114,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "print_profile", "export")) return;
 
       const q = req.query as Record<string, unknown>;
 
@@ -1103,6 +1150,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "print_profile", "create")) return;
 
       const b = req.body as Record<string, unknown>;
       if (!b["code"] || !b["name"]) {
@@ -1114,23 +1162,13 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         .insertInto("master.print_profile")
         .values({
           tenant_id:           ctx.tenantId,
-          code:                String(b["code"]),
+          code:                String(b["code"]).trim().toLowerCase(),
           name:                String(b["name"]),
           paper_size:          String(b["paper_size"]  ?? "A4"),
           orientation:         String(b["orientation"] ?? "portrait"),
-          color_mode:          String(b["color_mode"]  ?? "color"),
-          quality_dpi:         b["quality_dpi"] != null ? Number(b["quality_dpi"]) : 300,
-          output_format:       String(b["output_format"] ?? "pdf"),
-          duplex:              String(b["duplex"]      ?? "none"),
           margins:             String(b["margins"]     ?? "normal"),
-          compression:         String(b["compression"] ?? "medium"),
           header_footer:       Boolean(b["header_footer"]       ?? true),
           background_graphics: Boolean(b["background_graphics"] ?? true),
-          watermark_enabled:   Boolean(b["watermark_enabled"]   ?? false),
-          watermark_text:      (b["watermark_text"] as string)  ?? null,
-          encrypt_pdf:         Boolean(b["encrypt_pdf"]         ?? false),
-          archive_after_render: Boolean(b["archive_after_render"] ?? true),
-          email_after_render:  Boolean(b["email_after_render"]  ?? false),
           is_default:          Boolean(b["is_default"]          ?? false),
           metadata:            (b["metadata"] as object) ?? {},
           created_by:          ctx.principalId,
@@ -1149,6 +1187,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "print_profile", "update")) return;
 
       const id = req.params["id"] as string;
       if (!isUuid(id)) { res.status(404).json({ error: "NOT_FOUND" }); return; }
@@ -1156,12 +1195,11 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
       const b   = req.body as Record<string, unknown>;
       const set: Record<string, unknown> = { updated_at: new Date().toISOString(), updated_by: ctx.principalId };
 
-      const textFields = ["name", "paper_size", "orientation", "color_mode", "output_format", "duplex", "margins", "compression", "watermark_text", "status"];
-      const boolFields = ["header_footer", "background_graphics", "watermark_enabled", "encrypt_pdf", "archive_after_render", "email_after_render", "is_default"];
+      const textFields = ["name", "paper_size", "orientation", "margins", "status"];
+      const boolFields = ["header_footer", "background_graphics", "is_default"];
 
       for (const f of textFields) if (b[f] !== undefined) set[f] = b[f] != null ? String(b[f]) : null;
       for (const f of boolFields) if (b[f] !== undefined) set[f] = Boolean(b[f]);
-      if (b["quality_dpi"] !== undefined) set["quality_dpi"] = Number(b["quality_dpi"]);
       if (b["metadata"]    !== undefined) set["metadata"]    = b["metadata"];
 
       const row = await db
@@ -1183,43 +1221,57 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
   // ══════════════════════════════════════════════════════════════════════════
   // §10  RESOLVER — resolve_template_binding
   // ══════════════════════════════════════════════════════════════════════════
-  // Emulates: document.resolve_template_binding(tenant_id, entity_name, operation, variant)
-  // Priority order: exact variant > 'default' fallback. Highest priority wins.
+  // Tenant-bound deterministic resolution: exact requested variant first,
+  // then the default variant. Active-coordinate uniqueness prevents ambiguity.
 
   const resolveBinding: RequestHandler = async (req, res, next) => {
     try {
       const ctx = await resolveCtx(db, req, auth, res);
       if (!ctx) return;
+      if (!await requireDocPermission(db, res, ctx, "template_binding", "export")) return;
 
       const b = req.body as Record<string, unknown>;
-      if (!b["entity_name"] || !b["operation"]) {
-        res.status(400).json({ error: "MISSING_FIELDS", message: "entity_name and operation are required" });
+      const entityCode = String(b["entity_code"] ?? b["entity_name"] ?? "").trim().toLowerCase();
+      const operationCode = String(b["operation_code"] ?? b["operation"] ?? "").trim().toLowerCase();
+      if (!entityCode || !operationCode) {
+        res.status(400).json({ error: "MISSING_FIELDS", message: "entity_code and operation_code are required" });
         return;
       }
 
-      const entityName = String(b["entity_name"]);
-      const operation  = String(b["operation"]);
-      const variant    = String(b["variant"] ?? "default");
+      const variant = String(b["variant_code"] ?? b["variant"] ?? "default").trim().toLowerCase();
+      const localeCode = normalizeLocaleCode(b["locale_code"] ?? b["locale"]);
+      if (!localeCode) {
+        res.status(400).json({ error: "INVALID_LOCALE", message: "locale_code must use language or language-REGION format" });
+        return;
+      }
 
-      // Find the highest-priority active binding matching (entity, operation, variant|default)
+      // Find the active binding matching (entity, operation, requested variant|default).
       const binding = await db
         .selectFrom("master.template_binding as tb")
         .selectAll("tb")
         .where("tb.tenant_id",   "=", ctx.tenantId)
-        .where("tb.entity_name", "=", entityName)
-        .where("tb.operation",   "=", operation)
-        .where("tb.is_active",   "=", true as never)
+        .where("tb.entity_code", "=", entityCode)
+        .where("tb.operation_code", "=", operationCode)
+        .where("tb.locale_code", "=", localeCode)
+        .where("tb.variant_code", "in", [...new Set([variant, "default"])] as never)
+        .where("tb.status", "=", "active")
         .orderBy(
           // Prefer exact variant match over 'default' fallback
-          sql`CASE WHEN tb.variant = ${variant} THEN 1 ELSE 2 END` as never,
+          sql`CASE WHEN tb.variant_code = ${variant} THEN 1 ELSE 2 END` as never,
           "asc"
         )
-        .orderBy("tb.priority", "desc")
         .limit(1)
         .executeTakeFirst();
 
       if (!binding) {
-        res.status(404).json({ ok: false, error: "NO_BINDING", entity_name: entityName, operation, variant });
+        res.status(404).json({
+          ok: false,
+          error: "NO_BINDING",
+          entity_code: entityCode,
+          operation_code: operationCode,
+          variant_code: variant,
+          locale_code: localeCode,
+        });
         return;
       }
 
@@ -1230,6 +1282,8 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         .selectFrom("master.template as t")
         .selectAll("t")
         .where("t.id", "=", bindingRow["template_id"] as string)
+        .where("t.tenant_id", "=", ctx.tenantId)
+        .where("t.status", "=", "published")
         .executeTakeFirst();
 
       const templateRow = template as Record<string, unknown> | undefined;
@@ -1240,6 +1294,8 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
           .selectFrom("snapshot.template_version as tv")
           .selectAll("tv")
           .where("tv.id", "=", templateRow["current_version_id"] as string)
+          .where("tv.tenant_id", "=", ctx.tenantId)
+          .where("tv.locale_code", "=", localeCode)
           .executeTakeFirst();
         version = ver as Record<string, unknown> | undefined;
       }
@@ -1249,7 +1305,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
         binding: bindingRow,
         template: templateRow ?? null,
         version:  version    ?? null,
-        resolved_variant: bindingRow["variant"],
+        resolved_variant: bindingRow["variant_code"],
       });
     } catch (err) {
       logger?.error("docservices_resolver_error", { err: String(err) });
@@ -1429,7 +1485,7 @@ export function createDocServicesRoutes(router: Router, deps: DocServicesRouteDe
 
       // Fetch tenant name
       const tenantRow = await db
-        .selectFrom("shared.tenant")
+        .selectFrom("master.tenant")
         .select("name")
         .where("id", "=", ctx.tenantId)
         .executeTakeFirst() as { name?: string } | undefined;

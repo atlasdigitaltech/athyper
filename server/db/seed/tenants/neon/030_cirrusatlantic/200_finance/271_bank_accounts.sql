@@ -1,3 +1,4 @@
+-- seed-pack-version: 2.0.0
 -- =============================================================================
 -- 030_cirrusatlantic/200_finance/271_bank_accounts.sql
 -- Primary house bank for CirrusAtlantic Ltd (CATL) — GBP operating account.
@@ -18,13 +19,14 @@
 
 DO $catl_bank$
 DECLARE
-    v_su    uuid        := '00000000-0000-0000-0000-000000000000';
+    v_su    uuid        := nullif(current_setting('app.current_principal_id', true), '')::uuid;
     v_tid   uuid;
     v_now   timestamptz := now();
-    v_meta  jsonb       := '{"_seed":{"batch":"271_bank_accounts","version":"1.0.0"}}'::jsonb;
+    v_meta  jsonb       := '{"_seed":{"batch":"271_bank_accounts","version":"2.0.0"}}'::jsonb;
 
     v_ba_id uuid := 'ee001030-0000-0000-0000-000000000001';
-    v_cc_id uuid := 'ee000030-0000-0000-0000-000000000001';  -- CATL company code
+    v_cc_id uuid;
+    v_owner_type_id uuid;
 BEGIN
     SELECT id INTO v_tid
     FROM master.tenant
@@ -32,6 +34,30 @@ BEGIN
 
     IF v_tid IS NULL THEN
         RAISE EXCEPTION '[271_bank_accounts] CirrusAtlantic tenant not found';
+    END IF;
+
+    IF v_su IS NULL OR NOT EXISTS (
+        SELECT 1 FROM master.principal p
+        WHERE p.id = v_su AND p.tenant_id = v_tid AND p.status = 'active'
+    ) THEN
+        RAISE EXCEPTION '[271_bank_accounts] app.current_principal_id must identify an active tenant-local principal';
+    END IF;
+
+    SELECT id INTO v_cc_id
+    FROM master.company_code
+    WHERE tenant_id = v_tid AND code = 'catl' AND status = 'active';
+
+    SELECT id INTO v_owner_type_id
+    FROM control.owner_type
+    WHERE code = 'company_code'
+      AND status = 'active'
+      AND supports_bank_account
+      AND (tenant_id IS NULL OR tenant_id = v_tid)
+    ORDER BY tenant_id DESC NULLS LAST
+    LIMIT 1;
+
+    IF v_cc_id IS NULL OR v_owner_type_id IS NULL THEN
+        RAISE EXCEPTION '[271_bank_accounts] active catl company or company_code owner type not found';
     END IF;
 
     -- ── 1. Bank Account ───────────────────────────────────────────────────────
@@ -42,7 +68,7 @@ BEGIN
         currency_code,
         account_nature,
         bic_override, bank_name_override, bank_country_override,
-        is_verified, verified_at,
+        is_verified, verified_at, verified_by, verification_method,
         metadata, status, created_by, created_at
     ) VALUES (
         v_ba_id, v_tid,
@@ -53,19 +79,20 @@ BEGIN
         'GBP',
         'direct',
         'BARCGB22', 'Barclays Bank PLC', 'GB',
-        true, v_now,
+        true, v_now, v_su, 'manual',
         v_meta, 'active', v_su, v_now
     )
     ON CONFLICT (id) DO NOTHING;
 
     -- ── 2. Bank Account Link (CATL company-code ownership) ───────────────────
     INSERT INTO master.bank_account_link (
-        tenant_id, owner_type, owner_id,
+        id, tenant_id, owner_type_id, owner_type, owner_id, relationship_role,
         bank_account_id, company_code_id,
         purpose, is_primary,
         effective_from, metadata, created_by, created_at
     ) VALUES (
-        v_tid, 'company_code', v_cc_id,
+        md5(format('neon:cirrusatlantic:bank-account-link:%s:%s', v_tid, v_ba_id))::uuid,
+        v_tid, v_owner_type_id, 'company_code', v_cc_id, 'operational',
         v_ba_id, v_cc_id,
         'default', true,
         '2024-01-01', v_meta, v_su, v_now
@@ -74,7 +101,7 @@ BEGIN
 
     -- ── 3. House Config ───────────────────────────────────────────────────────
     INSERT INTO master.bank_account_house_config (
-        tenant_id, bank_account_link_id, gl_account_id,
+        id, tenant_id, bank_account_link_id, gl_account_id,
         account_nickname, local_account_type, usage_type,
         is_disbursement_enabled, is_collection_enabled,
         is_default_disbursement, is_default_collection,
@@ -82,6 +109,7 @@ BEGIN
         reconciliation_mode, metadata, status, created_by, created_at
     )
     SELECT
+        md5(format('neon:cirrusatlantic:house-bank-config:%s:%s', v_tid, bal.id))::uuid,
         v_tid,
         bal.id,
         (

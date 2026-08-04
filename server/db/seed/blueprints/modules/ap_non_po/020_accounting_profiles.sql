@@ -78,7 +78,16 @@ BEGIN
             sort_order     = EXCLUDED.sort_order,
             status         = EXCLUDED.status,
             updated_at     = now(),
-            updated_by     = v_sys;
+            updated_by     = v_sys
+        WHERE (master.accounting_profile.name,master.accounting_profile.description,
+               master.accounting_profile.direction,master.accounting_profile.subledger_type,
+               master.accounting_profile.domain_hint,master.accounting_profile.icon_key,
+               master.accounting_profile.color_token,master.accounting_profile.sort_order,
+               master.accounting_profile.status)
+          IS DISTINCT FROM
+              (EXCLUDED.name,EXCLUDED.description,EXCLUDED.direction,EXCLUDED.subledger_type,
+               EXCLUDED.domain_hint,EXCLUDED.icon_key,EXCLUDED.color_token,EXCLUDED.sort_order,
+               EXCLUDED.status);
     END LOOP;
 
     RAISE NOTICE 'blueprint/020_accounting_profiles: upserted 4 profiles for tenant %', v_tid;

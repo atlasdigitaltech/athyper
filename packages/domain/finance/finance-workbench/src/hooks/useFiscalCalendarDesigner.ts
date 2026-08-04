@@ -33,7 +33,7 @@ export interface FiscalCalendarConfig {
   weekStartDay: number;
   periodsPerYear: number;
   leapWeekRule: "none" | "last_period";
-  status: "draft" | "active";
+  status: "draft" | "active" | "retired";
   createdAt: string;
   rules: FiscalCalendarRule[];
 }
@@ -43,7 +43,7 @@ export interface FiscalCalendarDesignerPayload {
   calendars: FiscalCalendarConfig[];
   assignments: Array<{
     id: string; calendarId: string; fiscalYearFrom: number;
-    fiscalYearTo: number | null; priority: number; status: string;
+    fiscalYearTo: number | null; status: string;
   }>;
   generatedYears: Array<{
     calendarId: string | null; fiscalYear: number; periodCount: number;
@@ -77,11 +77,10 @@ export interface FiscalCalendarPreview {
 }
 
 export interface FiscalPeriodMatrixPayload {
-  company: { id: string; code: string; name: string; fiscalYearStartMonth: number; fiscalYearVariant: string | null };
+  company: { id: string; code: string; name: string };
   fiscalYear: number;
   assignment: null | { id: string; calendarId: string; calendarCode: string; calendarName: string; calendarVersion: number; calendarType: FiscalCalendarType; anchorMonth: number; fiscalYearFrom: number; fiscalYearTo: number | null };
-  legacyConsistency: { consistent: boolean; expectedStartMonth: number | null; actualStartMonth: number; expectedVariant: string | null; actualVariant: string | null; checks: Array<{ key: string; passed: boolean; message: string }> };
-  books: Array<{ bookId: string; bookCode: string; bookName: string; isCompanyDefault: boolean }>;
+  books: Array<{ bookId: string; bookCode: string; bookName: string; isPrimary: boolean }>;
   rows: Array<{ periodId: string; periodNumber: number; periodType: string; name: string; startDate: string; endDate: string; companyStatus: string;
     calendarId: string | null; calendarVersion: number | null; generationKey: string | null; generatedAt: string | null;
     bookStatuses: Record<string, { status: string; gateId: string; metadata: Record<string, unknown> }> }>;

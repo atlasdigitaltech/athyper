@@ -5,7 +5,7 @@ import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 import { describe, expect, it } from "vitest";
 
-import { executeDurableMutationTransaction } from "@athyper/svc-shared/durable-mutation-transaction.js";
+import { executeDurableMutationTransaction } from "@athyper/svc-shared";
 
 const enabled = process.env.RUN_META_ENTITY_INTEGRATION === "1";
 const integrationDescribe = enabled ? describe : describe.skip;

@@ -42,7 +42,7 @@ describe("Phase 0 tenant and work-context contracts", () => {
   it("implements scoped deny subtraction and member-company propagation", () => {
     const permission = read("server/packages/services/iam/permission/permission.service.ts");
     const authorizationScope = read("server/db/ddl/master/05_zz_authorization_scope.sql");
-    const policy = read("server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql");
+    const policy = read("server/db/ddl/planes/neon/authz/12_compiled_permission_reference_seed.sql");
 
     expect(permission).toContain("grant_denies");
     expect(permission).toContain("ag.effect = 'deny'");

@@ -47,7 +47,7 @@ export interface EntityFlowRoutesDeps {
   /** Authoritative Phase B compiler projection. */
   compiledEntityProvider?: CompiledEntityProjectionProvider;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string, personaId: string) => Promise<Record<string, { decision: string } | undefined>>;
+  checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string) => Promise<Record<string, { decision: string } | undefined>>;
   getEffectiveModuleAccess?: typeof getEffectiveModuleAccess;
 }
 
@@ -626,16 +626,7 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
           ];
 
           if (permissionCodes.length > 0 && checkPermissionBatch) {
-            const personaRow = await db
-              .selectFrom("master.principal_persona as pp")
-              .select(["pp.persona_id"])
-              .where("pp.tenant_id", "=", tenantId)
-              .where("pp.principal_id", "=", principalId)
-              .executeTakeFirst();
-            const personaId: string =
-              (personaRow?.persona_id as string | undefined) ?? "00000000-0000-0000-0000-000000000000";
-
-            const batch = await checkPermissionBatch(db, tenantId, principalId, personaId);
+            const batch = await checkPermissionBatch(db, tenantId, principalId);
             userPermissions = permissionCodes.filter((code) => batch[code]?.decision === "allow");
           }
         } catch (permErr) {

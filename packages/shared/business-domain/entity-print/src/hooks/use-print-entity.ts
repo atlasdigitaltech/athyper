@@ -8,10 +8,10 @@ export interface PrintProfile {
   name: string;
   paper_size: string;
   orientation: string;
-  color_mode: string;
   margins: string;
+  header_footer: boolean;
+  background_graphics: boolean;
   is_default: boolean;
-  watermark?: string | null;
 }
 
 interface ProfilesResponse {

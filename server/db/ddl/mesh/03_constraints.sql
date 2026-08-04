@@ -16,20 +16,6 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- mesh_network_account_participant_fk removed — participant table dropped.
 
 DO $$ BEGIN
-    ALTER TABLE mesh.account_grant
-        ADD CONSTRAINT mesh_account_grant_account_fk
-        FOREIGN KEY (account_id) REFERENCES mesh.network_account (id)
-        ON DELETE CASCADE NOT VALID;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
-    ALTER TABLE mesh.account_grant
-        ADD CONSTRAINT mesh_account_grant_principal_fk
-        FOREIGN KEY (principal_id) REFERENCES mesh.principal (id)
-        ON DELETE CASCADE NOT VALID;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
-
-DO $$ BEGIN
     ALTER TABLE mesh.document_envelope
         ADD CONSTRAINT mesh_document_envelope_document_type_fk
         FOREIGN KEY (document_type_id) REFERENCES mesh.network_document_type (id)

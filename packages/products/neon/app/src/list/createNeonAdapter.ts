@@ -41,7 +41,7 @@ const NEON_LIST_FEATURE_DEFAULTS: RuntimeListServerAdapter["features"] = {
 
 // ─── Adapter config injected by the calling app route ─────────────────────────
 // The app route (apps/neon) injects the actual server functions.
-// This avoids a circular dependency: packages/apps/neon cannot import from apps/neon.
+// This avoids a circular dependency: packages/products/neon/app cannot import from apps/neon.
 
 export interface NeonAdapterConfig {
   fetchDescriptor: (

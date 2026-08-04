@@ -40,9 +40,6 @@ CREATE TRIGGER trg_workspace_updated_at BEFORE UPDATE ON shared.workspace FOR EA
 DROP TRIGGER IF EXISTS trg_module_updated_at ON shared.module;
 CREATE TRIGGER trg_module_updated_at BEFORE UPDATE ON shared.module FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_persona_updated_at ON shared.persona;
-CREATE TRIGGER trg_persona_updated_at BEFORE UPDATE ON shared.persona FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
-
 -- [B] status_changed_at (shared.trg_set_status_changed)
 
 DROP TRIGGER IF EXISTS trg_country_status_changed ON shared.country;
@@ -77,9 +74,6 @@ CREATE TRIGGER trg_workspace_status_changed BEFORE UPDATE ON shared.workspace FO
 
 DROP TRIGGER IF EXISTS trg_module_status_changed ON shared.module;
 CREATE TRIGGER trg_module_status_changed BEFORE UPDATE ON shared.module FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-
-DROP TRIGGER IF EXISTS trg_persona_status_changed ON shared.persona;
-CREATE TRIGGER trg_persona_status_changed BEFORE UPDATE ON shared.persona FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
 -- [C] Immutability guards (shared.trg_immutable_code)
 
@@ -147,11 +141,6 @@ CREATE TRIGGER trg_locale_consistency BEFORE INSERT OR UPDATE ON shared.locale F
 DROP TRIGGER IF EXISTS trg_state_region_code_check ON shared.state_region;
 CREATE TRIGGER trg_state_region_code_check BEFORE INSERT OR UPDATE ON shared.state_region FOR EACH ROW EXECUTE FUNCTION shared.trg_state_region_code_consistency();
 
--- [F] Persona protection
-
-DROP TRIGGER IF EXISTS trg_persona_protect_system ON shared.persona;
-CREATE TRIGGER trg_persona_protect_system BEFORE DELETE OR UPDATE ON shared.persona FOR EACH ROW EXECUTE FUNCTION shared.trg_protect_system_persona();
-
 -- [G] Lookup domain validation (replaces session-dependent CHECK constraints)
 -- Uses control.trg_validate_lookup_columns(domain_code, column_name).
 
@@ -160,12 +149,6 @@ DROP TRIGGER IF EXISTS trg_uom_quantity_type_lookup ON shared.uom;
 CREATE TRIGGER trg_uom_quantity_type_lookup
     BEFORE INSERT OR UPDATE OF quantity_type ON shared.uom
     FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('shared.uom_quantity_type', 'quantity_type');
-
--- persona.scope_mode
-DROP TRIGGER IF EXISTS trg_persona_scope_mode_lookup ON shared.persona;
-CREATE TRIGGER trg_persona_scope_mode_lookup
-    BEFORE INSERT OR UPDATE OF scope_mode ON shared.persona
-    FOR EACH ROW EXECUTE FUNCTION control.trg_validate_lookup_columns('shared.persona_scope_mode', 'scope_mode');
 
 -- [H] Plan version gate (subscription_plan_version)
 -- Closes the prior active version when a new version is inserted.

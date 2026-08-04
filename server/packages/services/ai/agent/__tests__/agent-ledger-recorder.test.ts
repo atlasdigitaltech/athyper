@@ -473,7 +473,7 @@ describe("TransactionalAgentExecutionLedgerRecorder", () => {
             insertInto: (table: string) => ({
               values: (row: Record<string, unknown>) => ({
                 execute: async () => {
-                  if (table === "log.ai_agent_call") throw failure;
+                  if (table === "ai.ai_agent_call") throw failure;
                   staged.push({ table, row });
                 },
               }),

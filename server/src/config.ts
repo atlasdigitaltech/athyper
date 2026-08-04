@@ -344,21 +344,6 @@ const PushConfigSchema = z
     }
   });
 
-function deriveLocalMeshDatabaseUrl(databaseUrl: string | undefined, env: "local" | "staging" | "production"): string | undefined {
-  if (env !== "local" || !databaseUrl) return undefined;
-  try {
-    const url = new URL(databaseUrl);
-    const databaseName = url.pathname.replace(/^\//, "");
-    if (databaseName === "athyper_neon") {
-      url.pathname = "/athyper_mesh";
-      return url.toString();
-    }
-  } catch {
-    // Invalid DATABASE_URL is reported by schema validation below.
-  }
-  return undefined;
-}
-
 // ─── Schema ──────────────────────────────────────────────────────────────────
 
 const ServerConfigSchema = z.object({
@@ -430,6 +415,11 @@ const ServerConfigSchema = z.object({
     url: z.string().min(1, "DATABASE_URL is required"),
     poolMax: z.coerce.number().int().positive().default(5),
   }),
+
+  platformDb: z.object({
+    url: z.string().min(1),
+    poolMax: z.coerce.number().int().positive().default(2),
+  }).optional(),
 
   meshDb: z.object({
     url: z.string().min(1),
@@ -731,9 +721,10 @@ export function loadConfig(): ServerConfig {
 
   const meshDatabaseUrl =
     process.env.MESH_DB_URL
-    ?? process.env.MESH_DATABASE_URL
-    ?? deriveLocalMeshDatabaseUrl(process.env.DATABASE_URL, env);
+    ?? process.env.MESH_DATABASE_URL;
   const meshDatabasePoolMax = process.env.MESH_DB_POOL_MAX ?? process.env.MESH_DATABASE_POOL_MAX;
+  const platformDatabaseUrl = process.env.ATHYPER_PLATFORM_DATABASE_URL;
+  const platformDatabasePoolMax = process.env.ATHYPER_PLATFORM_DATABASE_POOL_MAX;
 
   const raw = {
     env,
@@ -746,6 +737,9 @@ export function loadConfig(): ServerConfig {
       url: process.env.DATABASE_URL,
       poolMax: process.env.DB_POOL_MAX,
     },
+    platformDb: platformDatabaseUrl
+      ? { url: platformDatabaseUrl, poolMax: platformDatabasePoolMax }
+      : undefined,
     meshDb: meshDatabaseUrl
       ? { url: meshDatabaseUrl, poolMax: meshDatabasePoolMax }
       : undefined,

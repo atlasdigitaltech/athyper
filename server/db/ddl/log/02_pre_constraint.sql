@@ -1,6 +1,5 @@
 -- ============================================================================
 -- log/02_pre_constraint.sql
--- Concept: Audit Pre-Constraints — no functions required
--- Depends on: 04_tables/006_log.sql
--- Note: No pre-constraint functions required for the log schema.
+-- No pre-constraint routines are required by the live schema.
+-- Generated from the live Neon database log schema. Do not hand-edit.
 -- ============================================================================

@@ -8,9 +8,19 @@ export class SqlTenantByokAuditSink implements TenantByokAuditSink {
   constructor(private readonly db: Kysely<AnyDb>) {}
 
   async record(input: Parameters<TenantByokAuditSink["record"]>[0]): Promise<void> {
-    await sql`INSERT INTO log.atlas_byok_audit
-      (tenant_id,provider_id,event,rotation_epoch,reference_fingerprint)
-      VALUES (${input.tenantId}::uuid,${input.providerId},${input.event},
-        ${input.epoch},${input.credentialFingerprint})`.execute(this.db);
+    const eventCode = `ai.byok.${input.event}`;
+    const context = JSON.stringify({
+      provider_id: input.providerId,
+      rotation_epoch: input.epoch,
+      reference_fingerprint: input.credentialFingerprint,
+    });
+    await sql`INSERT INTO audit.audit_log (
+      tenant_id,event_code,operation,entity_type,entity_id,
+      actor_type,context
+    ) VALUES (
+      ${input.tenantId}::uuid,${eventCode},'execute',
+      'ai.byok_provider_binding',${input.tenantId}::uuid,
+      'system',${context}::jsonb
+    )`.execute(this.db);
   }
 }

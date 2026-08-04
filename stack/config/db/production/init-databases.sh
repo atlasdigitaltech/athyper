@@ -5,6 +5,7 @@
 # Idempotent: safe to re-run after partial failure or manual invocation.
 #
 # Frozen DB registry (all environments):
+#   athyper_platform  — platform/control plane (dbpool_apps, transaction)
 #   athyper_neon      — app runtime          (dbpool_apps, transaction)
 #   athyper_mesh      — future collaboration (dbpool_apps, transaction)
 #   athyper_iam       — Keycloak IAM         (dbpool_session, session)
@@ -30,6 +31,7 @@ EOSQL
     fi
 }
 
+create_db_if_missing "athyper_platform"  "Athyper platform and control plane"
 create_db_if_missing "athyper_mesh"      "future collaboration, product tier"
 create_db_if_missing "athyper_iam"       "Keycloak IAM, session pool"
 create_db_if_missing "athyper_health"    "Healthchecks, monitoring profile"
@@ -39,6 +41,7 @@ create_db_if_missing "athyper_analytics" "Metabase BI, analytics profile"
 
 echo "=== Granting privileges (idempotent) ==="
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    GRANT ALL PRIVILEGES ON DATABASE athyper_platform  TO ${POSTGRES_USER};
     GRANT ALL PRIVILEGES ON DATABASE athyper_neon      TO ${POSTGRES_USER};
     GRANT ALL PRIVILEGES ON DATABASE athyper_mesh      TO ${POSTGRES_USER};
     GRANT ALL PRIVILEGES ON DATABASE athyper_iam       TO ${POSTGRES_USER};
@@ -49,6 +52,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 EOSQL
 
 echo "=== Database initialization complete ==="
+echo "  - athyper_platform  (platform/control plane)"
 echo "  - athyper_neon      (app runtime)"
 echo "  - athyper_mesh      (future collaboration)"
 echo "  - athyper_iam       (Keycloak IAM)"

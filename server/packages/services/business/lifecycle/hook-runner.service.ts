@@ -18,7 +18,7 @@
  *                                  new row id so subsequent handlers can link
  *                                  back to it (notably snapshot.capture)
  *   snapshot.capture             — call captureDocumentSnapshot with the
- *                                  activity_log_id from the prior handler
+ *                                  audit_event_id from the prior handler
  *   transaction_flow.dispatch    — call dispatchTransactionFlow (Phase 5.3)
  *   workflow.start               — INSERT a document.workflow_request for the
  *                                  configured workflow_definition. The actual

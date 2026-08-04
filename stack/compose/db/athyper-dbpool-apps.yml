@@ -6,8 +6,8 @@
 # Compose     : athyper-dbpool-apps-config
 #
 # Description :
-#   PgBouncer connection pooler for application database (athyper_dev1).
-#   Transaction-mode pooling on port 6432.
+#   PgBouncer transaction pooler for Athyper platform, Neon, Mesh, and
+#   supporting application databases on port 6432.
 #
 # =======================================================================
 

@@ -42,7 +42,6 @@ export interface EntityOperationsRoutesDeps {
     db: Kysely<any>,
     tenantId: string,
     principalId: string,
-    personaId: string,
   ) => Promise<Record<string, { decision: string } | undefined>>;
 }
 
@@ -54,6 +53,7 @@ interface EntityOperationRow {
   id: string;
   entity_name: string;
   permission_code: string;
+  operation_code: string;
   surface: string;
   placement: string;
   handler_type: string;
@@ -80,7 +80,6 @@ interface LifecycleTransitionInfo {
   requires_confirmation?: boolean;
 }
 
-const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
 const WORKFLOW_TASK_DECISIONS = new Set([
   "approve",
   "deny",
@@ -178,7 +177,7 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
       // Phase 4: prefer the EffectivePermissionContext built upstream by the
       // permission-context middleware (Phase 2). When the middleware has run,
       // res.locals.effectivePermissionContext carries the allowed set already,
-      // so we skip the inline persona query + checkPermissionBatch round-trip.
+      // so we skip a redundant permission-context resolution round-trip.
       // When the middleware is NOT wired (legacy route consumers, sysadmin
       // tooling) we fall back to the inline resolution that has shipped since
       // Phase 1.
@@ -203,18 +202,10 @@ export function createEntityOperationsRoute(router: Router, deps: EntityOperatio
         // narrow `checkPermissionBatch` across that branch.
         if (!checkPermissionBatch) { res.json([]); return; }
         principalId = await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims);
-        const personaRow = await db
-          .selectFrom("master.principal_persona as pp" as never)
-          .select(["pp.persona_id"] as never[])
-          .where("pp.tenant_id" as never, "=" as never, tenantId as never)
-          .where("pp.principal_id" as never, "=" as never, principalId as never)
-          .executeTakeFirst() as { persona_id: string } | undefined;
-
         permissionDecisions = await checkPermissionBatch(
           db,
           tenantId,
           principalId,
-          personaRow?.persona_id ?? ZERO_UUID,
         );
       }
 
@@ -306,6 +297,7 @@ function projectContractOperationRows(contract: MetaEntityContractV2): EntityOpe
       id: operation.id,
       entity_name: contract.catalog.entity_code,
       permission_code: operation.permission_code,
+      operation_code: operation.operation_code,
       surface: operation.surface,
       placement: operation.placement,
       handler_type: operation.handler_type,
@@ -335,6 +327,7 @@ function projectContractOperationRowsV21(contract: MetaEntityContractV21): Entit
       id: operation.id,
       entity_name: contract.catalog.entity_code,
       permission_code: operation.permission_code,
+      operation_code: operation.operation_code,
       surface: operation.surface,
       placement: operation.placement,
       handler_type: operation.handler.kind.toUpperCase(),
@@ -406,12 +399,13 @@ async function loadOperationRows(
 ): Promise<EntityOperationRow[]> {
   return await db
     .selectFrom("control.entity_operation as eo")
-    .innerJoin("shared.permission as p", "p.code" as never, "eo.permission_code" as never)
-    .innerJoin("shared.permission_category as pc", "pc.id" as never, "p.category_id" as never)
+    .innerJoin("control.auth_permission as p", "p.id" as never, "eo.permission_id_v2" as never)
+    .innerJoin("shared.auth_permission_category as pc", "pc.id" as never, "p.category_id" as never)
     .select([
       "eo.id",
       "eo.entity_name",
       "eo.permission_code",
+      "eo.operation_code_v2 as operation_code",
       "eo.surface",
       "eo.placement",
       "eo.handler_type",
@@ -424,13 +418,13 @@ async function loadOperationRows(
       "eo.is_enabled",
       "eo.selection_config",
       "eo.tenant_id",
-      "p.risk_level as permission_risk_level",
+      "p.risk_tier as permission_risk_level",
       "p.metadata as permission_metadata",
       "pc.code as permission_category_code",
     ] as never[])
     .where("eo.entity_name" as never, "=" as never, entityCode as never)
     .where("eo.is_enabled" as never, "=" as never, true as never)
-    .where("p.status" as never, "=" as never, "active" as never)
+    .where("p.status" as never, "=" as never, "published" as never)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .where((eb: any) =>
       eb.or([
@@ -533,9 +527,8 @@ function resolveIntent(row: EntityOperationRow, metadata: Record<string, unknown
   const explicit = readIntent(metadata, "intent");
   if (explicit) return explicit;
 
-  const leaf = permissionLeaf(row.permission_code);
-  if (DANGER_LEAVES.has(leaf) || row.permission_risk_level === "critical") return "danger";
-  if (SUCCESS_LEAVES.has(leaf)) return "success";
+  if (DANGER_LEAVES.has(row.operation_code) || row.permission_risk_level === "critical") return "danger";
+  if (SUCCESS_LEAVES.has(row.operation_code)) return "success";
   if (row.permission_risk_level === "high") return "warning";
   return "neutral";
 }
@@ -559,7 +552,7 @@ function isWorkflowTaskOperation(row: EntityOperationRow, metadata: Record<strin
   const explicitSource = readString(metadata, "source") ?? readString(metadata, "operation_source");
   const explicitGroup = readString(metadata, "action_group") ?? readString(metadata, "actionGroup");
   if (explicitSource === "workflow_task" || explicitGroup === "workflow_task") return true;
-  return row.permission_category_code === "workflow" && WORKFLOW_TASK_DECISIONS.has(permissionLeaf(row.permission_code));
+  return row.permission_category_code === "workflow" && WORKFLOW_TASK_DECISIONS.has(row.operation_code);
 }
 
 function normalizeDecision(value: string | undefined): PermissionDecision {
@@ -604,10 +597,6 @@ function readBoolean(record: Record<string, unknown>, key: string): boolean | un
   if (["true", "t", "yes", "y", "1", "enabled", "on"].includes(normalized)) return true;
   if (["false", "f", "no", "n", "0", "disabled", "off"].includes(normalized)) return false;
   return undefined;
-}
-
-function permissionLeaf(permissionCode: string): string {
-  return permissionCode.toLowerCase().split(/[.:_/-]+/).filter(Boolean).at(-1) ?? "";
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

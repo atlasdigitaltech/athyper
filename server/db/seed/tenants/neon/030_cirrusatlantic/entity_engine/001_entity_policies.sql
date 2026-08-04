@@ -1,100 +1,40 @@
--- ============================================================================
--- CIRRUSATLANTIC — ENTITY POLICIES
--- ============================================================================
--- File:     001_entity_policies.sql
--- Schema:   control.entity_policy
--- Purpose:  Seed one entity_policy per system-owned master.*, document.*, and log.* entity for
---           CirrusAtlantic. Uses safe defaults (default_deny / audit enabled).
--- Depends:  000_tenant.sql, seed/platform/003_control/
--- Idempotent: Yes — ON CONFLICT (entity_id, entity_version_id) DO NOTHING
--- ============================================================================
+-- seed-pack-version: 2.0.0
+-- disposition: retired-legacy-control-override
+--
+-- Entity contracts and operation permissions are published by the metadata and
+-- authz DDL-layer packs. The legacy tenant seed depended on removed
+-- control.entity rows, applied blanket default_allow policies, and included an
+-- explicitly demo-only bank-account policy. No equivalent tenant override is
+-- created.
 
-DO $$
+DO $seed$
 DECLARE
-    v_su        uuid := '00000000-0000-0000-0000-000000000000';
-    v_tenant_id uuid;
-    cnt         int  := 0;
-    r           record;
+    v_tid uuid := nullif(current_setting('app.seed_tenant_id', true), '')::uuid;
+    v_actor uuid := nullif(current_setting('app.current_principal_id', true), '')::uuid;
 BEGIN
-    SELECT id INTO v_tenant_id
-    FROM master.tenant
-    WHERE realm_key = 'athyper' AND code = 'cirrusatlantic';
-
-    IF v_tenant_id IS NULL THEN
-        RAISE EXCEPTION '[001_entity_policies] CirrusAtlantic tenant not found';
+    IF v_tid IS NULL OR NOT EXISTS (
+        SELECT 1 FROM master.tenant t
+        WHERE t.id=v_tid
+          AND t.realm_key='athyper'
+          AND t.code='cirrusatlantic'
+          AND t.status='active'
+    ) THEN
+        RAISE EXCEPTION '[001_entity_policies] active CirrusAtlantic tenant scope required';
     END IF;
 
-    -- Seed one entity_policy per master.*, document.*, and log.* system-owned entity using defaults.
-    -- NOTE: bank_account_house_config is excluded here — seeded explicitly below
-    --       as a demo-only entity (Athyper/Technostat/CirrusAtlantic only).
-    FOR r IN
-        SELECT e.id AS entity_id, e.entity_class
-        FROM   control.entity e
-        WHERE  e.table_schema IN ('master', 'document', 'log')
-          AND  e.ownership_model = 'system'
-          AND  e.entity_code != 'bank_account_house_config'
-          AND  NOT EXISTS (
-              SELECT 1 FROM control.entity_policy ep
-              WHERE  ep.entity_id = e.id
-                AND  ep.entity_version_id IS NULL
-                AND  ep.tenant_id = v_tenant_id
-          )
-        ORDER BY e.name
-    LOOP
-        INSERT INTO control.entity_policy (
-            tenant_id, entity_id, entity_version_id,
-            access_mode, company_scope_mode, audit_mode,
-            retention_policy, default_filters, cache_flags,
-            created_by
-        ) VALUES (
-            v_tenant_id,
-            r.entity_id,
-            NULL,
-            'default_allow',
-            CASE r.entity_class
-                WHEN 'DOCUMENT' THEN 'single'
-                WHEN 'LOG'      THEN 'single'
-                ELSE 'none'
-            END,
-            CASE r.entity_class
-                WHEN 'LOG'      THEN 'sampling'
-                WHEN 'RELATION' THEN 'disabled'
-                ELSE 'enabled'
-            END,
-            '{}',
-            '{}',
-            '{}',
-            v_su
-        )
-        ON CONFLICT ON CONSTRAINT ep_tenant_entity_version_uq DO NOTHING;
-        cnt := cnt + 1;
-    END LOOP;
+    IF v_actor IS NULL OR NOT EXISTS (
+        SELECT 1 FROM master.principal p
+        WHERE p.id=v_actor
+          AND p.tenant_id=v_tid
+          AND p.status='active'
+    ) THEN
+        RAISE EXCEPTION '[001_entity_policies] active tenant-local seed principal required';
+    END IF;
 
-    -- ── bank_account_house_config: demo tenants only (Athyper · Technostat · CirrusAtlantic) ──
-    INSERT INTO control.entity_policy (
-        tenant_id, entity_id, entity_version_id,
-        access_mode, company_scope_mode, audit_mode,
-        retention_policy, default_filters, cache_flags,
-        created_by
-    )
-    SELECT v_tenant_id, e.id, NULL,
-           'default_allow', 'none', 'enabled',
-           '{}', '{}', '{}', v_su
-    FROM   control.entity e
-    WHERE  e.entity_code = 'bank_account_house_config'
-    ON CONFLICT ON CONSTRAINT ep_tenant_entity_version_uq DO NOTHING;
+    IF to_regclass('authz.permission') IS NULL THEN
+        RAISE EXCEPTION '[001_entity_policies] compiled authz.permission authority is missing';
+    END IF;
 
-    UPDATE control.entity_policy ep
-       SET access_mode = 'default_allow',
-           updated_at = now(),
-           updated_by = v_su
-      FROM control.entity e
-     WHERE ep.tenant_id = v_tenant_id
-       AND ep.entity_id = e.id
-       AND e.table_schema IN ('master', 'document', 'log')
-       AND e.ownership_model = 'system'
-       AND ep.access_mode = 'default_deny';
-
-    RAISE NOTICE '[001_entity_policies] % entity policies seeded for CirrusAtlantic', cnt;
-END;
-$$;
+    RAISE NOTICE
+        '[001_entity_policies] retired legacy default_allow overrides; DDL metadata/authz authority retained';
+END $seed$;

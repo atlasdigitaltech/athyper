@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "contractId": "authorization-v2-wave1-additive-ddl",
+  "status": "repository_implemented_and_verified_live_install_pending",
+  "decisionDate": "2026-07-27",
+  "authorityDuringWave1": "legacy_only",
+  "runtimeReadMode": "legacy",
+  "targetWriteMode": "migration_projector_only_after_approval",
+  "productionInstallRequires": [
+    "exact target database identity",
+    "approved change ticket",
+    "named migration owner",
+    "named rollback owner",
+    "approved recovery contract",
+    "atomic change-capture installation receipt",
+    "recorded durable source watermark"
+  ],
+  "boundaries": {
+    "neonDatabase": {
+      "planes": [
+        "neon",
+        "admin"
+      ],
+      "schemas": [
+        "shared",
+        "control",
+        "master",
+        "event",
+        "log"
+      ],
+      "forbiddenPlaneCodes": [
+        "mesh"
+      ],
+      "forbiddenData": "mesh_specific_authorization_or_business_data"
+    },
+    "meshDatabase": {
+      "planes": [
+        "mesh"
+      ],
+      "schemas": [
+        "mesh_control",
+        "mesh",
+        "mesh_log"
+      ],
+      "forbiddenDependencies": [
+        "shared.auth_permission_category",
+        "control.auth_permission",
+        "master.auth_role",
+        "DATABASE_URL",
+        "implicit_neon_database_fallback"
+      ]
+    }
+  },
+  "mandatoryOrder": [
+    "expand",
+    "install_change_capture_and_record_watermark",
+    "snapshot_backfill",
+    "replay_from_watermark",
+    "continuous_synchronization",
+    "compare",
+    "clean_anomalies",
+    "validate_constraints",
+    "enforce_not_null",
+    "atomic_view_name_read_swap",
+    "contract_legacy"
+  ],
+  "wave0Preparation": {
+    "captureControlAndEvidenceRelationsPresent": true,
+    "meshExpandRequiresExistingHealthyCaptureTriggers": true,
+    "doesNotReplacePostExpandCaptureGate": true,
+    "postExpandRequirement": "rerun the plane-specific capture installer under source locks and retain its receipt and observed durable watermark before snapshot/backfill"
+  },
+  "stageState": {
+    "expand": "repository_implemented_static_and_postgresql17_pglite_verified_live_install_pending",
+    "install_change_capture_and_record_watermark": "repository_foundation_present_live_receipt_pending",
+    "snapshot_backfill": "blocked_until_capture_receipt_and_approved_transformers",
+    "replay_from_watermark": "repository_foundation_implemented_and_statically_verified_no_live_run",
+    "continuous_synchronization": "blocked_until_snapshot_and_replay_reconcile",
+    "compare": "blocked_until_shadow_projection_is_current",
+    "clean_anomalies": "blocked_until_comparison_evidence_exists",
+    "validate_constraints": "blocked_until_backfill_and_anomaly_cleanup",
+    "enforce_not_null": "not_part_of_additive_wave1_install",
+    "atomic_view_name_read_swap": "not_part_of_additive_wave1_install",
+    "contract_legacy": "prohibited_in_wave1"
+  },
+  "coexistencePatterns": {
+    "legacyEntityOperation": {
+      "relation": "control.entity_operation",
+      "pattern": "nullable_v2_columns",
+      "canonicalColumns": [
+        "catalog_owner_id_v2",
+        "entity_id_v2",
+        "entity_version_id_v2",
+        "operation_code_v2",
+        "permission_id_v2",
+        "v2_publication_status"
+      ],
+      "nullMeaning": "legacy_only_not_published_to_v2",
+      "legacyColumnsRemainAuthoritative": true
+    },
+    "legacyGroupNames": {
+      "pattern": "shadow_tables",
+      "relations": [
+        "master.auth_group_v2",
+        "master.auth_group_member_v2",
+        "master.auth_group_role_v2"
+      ]
+    },
+    "newCanonicalRelations": {
+      "pattern": "additive_empty_targets",
+      "legacyRowsMutatedByExpand": false
+    }
+  },
+  "legacyFreeze": {
+    "contractVersion": "wave1.authz-legacy-freeze.v1",
+    "policy": "no_new_feature_reads_or_writes",
+    "sourceOfTruth": "control.authorization_capture_source and mesh_control.authorization_capture_source",
+    "neonExpectedCaptureSourceCount": 66,
+    "meshExpectedCaptureSourceCount": 8,
+    "captureSourceSetMayExpandDuringWave1": false,
+    "exceptionsRequire": [
+      "named owner",
+      "approval ticket",
+      "reason",
+      "expiry",
+      "inventory update"
+    ]
+  },
+  "integrity": {
+    "exactOperationPermission": {
+      "rule": "a v2 operation and its plane exposure cannot publish without the same exact active permission",
+      "enforcement": [
+        "composite foreign key",
+        "publication trigger",
+        "permission-plane composite foreign key",
+        "effective-window containment"
+      ]
+    },
+    "targetTenantPlaneWrites": {
+      "rule": "new target writes must reject cross-tenant, cross-account, or cross-plane references immediately",
+      "enforcement": [
+        "database-local plane check and foreign key",
+        "composite tenant-plane foreign keys",
+        "typed scope-child foreign keys",
+        "integrity triggers for lifecycle and publication state"
+      ]
+    },
+    "shareAndDelegate": {
+      "recordAcl": "exact permission must assert is_shareable=true",
+      "delegation": "exact permission must assert is_delegable=true",
+      "delegationScopes": "each scope is paired with one delegated-permission row"
+    }
+  },
+  "deferredValidation": {
+    "allowedRelations": [
+      "control.entity_operation"
+    ],
+    "expectedConstraintCount": 13,
+    "registry": "control.authorization_v2_deferred_constraint_registry",
+    "inspectionView": "control.v_authorization_v2_deferred_constraints",
+    "validationGate": "post_backfill_pre_enforce",
+    "releaseRequirement": "zero unexpected unvalidated constraints in target schemas"
+  },
+  "changeCaptureAndReplay": {
+    "captureMustBeInstalledBeforeSnapshot": true,
+    "watermarkKind": "durable_commit_ordered_source_watermark",
+    "mutableGeneralOutboxMayBeWatermark": false,
+    "replayUnit": "complete_source_transaction",
+    "partialTransactionMayAdvanceCheckpoint": false,
+    "unknownTransformerBehavior": "fail_closed",
+    "truncateBehavior": "reject_and_require_classification",
+    "idempotency": "source_database_id_plus_source_watermark",
+    "continuousSynchronizationStartsAfter": "snapshot_and_watermark_binding"
+  },
+  "decisionEvidence": {
+    "required": true,
+    "appendOnly": true,
+    "mustInclude": [
+      "plane and tenant or account",
+      "acting and subject principal",
+      "exact permission and optional entity operation",
+      "entitlement and catalog versions",
+      "global tenant-or-account and plane epochs",
+      "matched allow deny override ACL delegation and scope evidence",
+      "evidence checksum"
+    ]
+  },
+  "cacheInvalidation": {
+    "triggerManifests": {
+      "neonAdmin": {
+        "targetCount": 47,
+        "canonicalCatalogAndAuthorityTargets": 34,
+        "existingDecisionInputTargets": 13
+      },
+      "mesh": {
+        "targetCount": 40,
+        "canonicalCatalogAndAuthorityTargets": 36,
+        "existingDecisionInputTargets": 4
+      }
+    },
+    "requiredScopes": [
+      "global",
+      "tenant_or_account",
+      "plane",
+      "principal",
+      "group",
+      "role",
+      "permission",
+      "entitlement",
+      "catalog",
+      "scope",
+      "record",
+      "scheduled_effective_boundary"
+    ],
+    "outboxIsAppendOnly": true,
+    "leaseIsExplicit": true,
+    "replayCauseCarriesSourceWatermark": true
+  },
+  "gates": {
+    "additiveAndReversible": {
+      "repositoryStatus": "verified",
+      "liveStatus": "not_run"
+    },
+    "nullableOrShadowCoexistence": {
+      "repositoryStatus": "verified_for_neon_and_mesh",
+      "liveStatus": "not_run"
+    },
+    "backfillConstraintsAndDeferredTracking": {
+      "repositoryStatus": "verified_for_neon_and_mesh",
+      "liveStatus": "not_run"
+    },
+    "rejectCrossTenantPlaneTargetWrites": {
+      "repositoryStatus": "static_and_postgresql17_pglite_negative_dml_verified",
+      "liveStatus": "negative_dml_not_run"
+    },
+    "publishedOperationHasExactPermission": {
+      "repositoryStatus": "exact_composite_fk_and_publication_guard_statically_verified",
+      "liveStatus": "negative_dml_not_run"
+    },
+    "captureInstalledBeforeInitialSnapshot": {
+      "repositoryStatus": "installer_and_ordering_guards_verified",
+      "liveStatus": "blocked_pending_approval_and_database"
+    }
+  }
+}

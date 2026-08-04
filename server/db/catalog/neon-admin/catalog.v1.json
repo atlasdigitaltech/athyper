@@ -1,0 +1,204 @@
+{
+  "contractVersion": "wave2.authorization-catalog.semantic.v1",
+  "manifestVersion": "wave2.neon-admin.catalog.v1",
+  "catalogId": "neon-admin",
+  "database": "neon",
+  "catalogOwnerCode": "platform",
+  "planes": ["neon", "admin"],
+  "canonicalCodePrefix": "neon.catalog",
+  "entityOperationSource": {
+    "kind": "legacy_seed_snapshot",
+    "roots": [
+      "seed/platform/003_control",
+      "seed/blueprints"
+    ],
+    "relation": "control.entity_operation",
+    "entityColumn": "entity_name",
+    "legacyPermissionColumn": "permission_code",
+    "surfaceColumn": "surface",
+    "enabledPredicate": "is_enabled = true"
+  },
+  "adminEntities": [
+    "tenant",
+    "principal",
+    "auth_group",
+    "auth_role",
+    "permission",
+    "permission_category",
+    "subscription_plan",
+    "module",
+    "enterprise_feature",
+    "workspace"
+  ],
+  "excludedEntities": [
+    "bank_account_mandate",
+    "bank_branch",
+    "business_unit",
+    "company_code_gl_config",
+    "content_item_access_grant",
+    "cost_center_dimension_map",
+    "document_template",
+    "document_template_clause",
+    "gl_account_hierarchy",
+    "gl_account_type",
+    "profit_center_dimension_map",
+    "project_dimension_map",
+    "tenant_feature_entitlement",
+    "tenant_module_subscription",
+    "trigger_rule"
+  ],
+  "referenceSources": [
+    {
+      "kind": "entity_operation",
+      "relation": "control.entity_operation",
+      "identityColumns": ["id"],
+      "entityPath": "entity_name -> control.entity.entity_code",
+      "operationPath": "operation_code_v2 ?? exact contextual legacy map(permission_code)",
+      "permissionPath": "permission_id_v2",
+      "role": "execute"
+    },
+    {
+      "kind": "surface",
+      "relation": "control.entity_surface",
+      "identityColumns": ["id"],
+      "entityPath": "entity_id",
+      "operationPath": "each required_permissions[] exact contextual map",
+      "permissionPath": "compiled reference permission_id",
+      "role": "render"
+    },
+    {
+      "kind": "action",
+      "relation": "control.entity_action_rule",
+      "identityColumns": ["entity_code", "status", "action_code"],
+      "entityPath": "entity_code -> control.entity.entity_code",
+      "operationPath": "action_code exact manifest map",
+      "permissionPath": "required_permission exact contextual map",
+      "role": "execute"
+    },
+    {
+      "kind": "transition",
+      "relation": "control.lifecycle_transition",
+      "identityColumns": ["id"],
+      "entityPath": "lifecycle_id -> control.entity_lifecycle -> control.entity",
+      "operationPath": "operation_code exact contextual map",
+      "permissionPath": "compiled reference permission_id",
+      "role": "execute"
+    },
+    {
+      "kind": "flow",
+      "relation": "control.entity_flow",
+      "identityColumns": ["id"],
+      "entityPath": "entity_version_id -> control.entity_version.entity_id",
+      "operationPath": "explicit flow operation binding",
+      "permissionPath": "compiled reference permission_id",
+      "role": "execute"
+    },
+    {
+      "kind": "flow_step",
+      "relation": "control.entity_flow_step",
+      "identityColumns": ["id"],
+      "entityPath": "flow_id -> control.entity_flow.entity_version_id -> control.entity",
+      "operationPath": "explicit step operation binding",
+      "permissionPath": "compiled reference permission_id",
+      "role": "execute"
+    },
+    {
+      "kind": "flow_field",
+      "relation": "control.entity_flow_field",
+      "identityColumns": ["id"],
+      "entityPath": "flow_step_id -> flow -> entity_version_id -> control.entity",
+      "operationPath": "override_permission exact contextual map",
+      "permissionPath": "compiled reference permission_id",
+      "role": "override"
+    },
+    {
+      "kind": "field_security",
+      "relation": "control.field_security_policy",
+      "identityColumns": ["id"],
+      "entityPath": "entity_id",
+      "operationPath": "explicit field access operation binding",
+      "permissionPath": "compiled reference permission_id",
+      "role": "mask"
+    },
+    {
+      "kind": "relation",
+      "relation": "control.entity_relation",
+      "identityColumns": ["id"],
+      "entityPath": "entity_version_id -> control.entity_version.entity_id",
+      "operationPath": "each mutation_permissions[] exact contextual map",
+      "permissionPath": "compiled reference permission_id",
+      "role": "mutate"
+    }
+  ],
+  "operationProfiles": [
+    {
+      "profile": "read",
+      "codes": ["read", "export", "print", "view_je", "view_match"],
+      "operationKind": "read",
+      "idempotencyMode": "idempotent",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "shareable": false,
+      "delegable": true
+    },
+    {
+      "profile": "normal_mutation",
+      "codes": [
+        "accept", "accept_changes", "add_attachment", "add_comment", "add_line",
+        "amend", "ap.promote_proforma", "cancel_line", "close_line", "confirm",
+        "copy", "create", "create_commitment", "create_receipt", "edit",
+        "create_service_sheet", "dispatch", "edit_line", "extend", "hold",
+        "import", "mark_arrived", "propose_changes", "receipt",
+        "receipt_from_commitment", "reject_acceptance", "reject_changes",
+        "release_hold", "reopen", "request_info", "return", "revise",
+        "service_sheet_from_commitment", "submit_for_acceptance", "update",
+        "withdraw"
+      ],
+      "operationKind": "mutation",
+      "idempotencyMode": "idempotency_key_required",
+      "riskTier": "medium",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "shareable": false,
+      "delegable": true
+    },
+    {
+      "profile": "high_risk_mutation",
+      "codes": [
+        "approve", "block_supplier", "bulk_update", "cancel", "close",
+        "commitment_from_requisition", "convert", "create_payment",
+        "del_others_comment", "delegate", "delete_draft", "deny",
+        "invoice_from_receipt", "invoice_from_service_sheet", "payment_from_invoice",
+        "PO.EXPIRE", "PO.HOLD", "PO.RELEASE_HOLD", "PO.SHORT_CLOSE",
+        "reject", "share_read", "submit", "unblock_supplier"
+      ],
+      "operationKind": "mutation",
+      "idempotencyMode": "idempotency_key_required",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "shareable": false,
+      "delegable": false
+    },
+    {
+      "profile": "critical_mutation",
+      "codes": [
+        "clear", "delete", "post", "PO.PLACE_ORDER", "reverse", "transmit", "void"
+      ],
+      "operationKind": "mutation",
+      "idempotencyMode": "idempotency_key_required",
+      "riskTier": "critical",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "shareable": false,
+      "delegable": false
+    }
+  ],
+  "forbiddenRuntimeResolution": [
+    "permission code suffix matching",
+    "permission code token matching",
+    "global alias lookup",
+    "generic verb mutation authority"
+  ]
+}

@@ -181,9 +181,15 @@ async function resolveApprovers(
       case "group": {
         const rows = await sql<{ principal_id: string }>`
           SELECT agm.principal_id
-          FROM   master.auth_group_member agm
-          JOIN   master.auth_group g ON g.id = agm.group_id
-          WHERE  g.tenant_id = ${tenantId} AND g.code = ${val}
+          FROM master.auth_current_group_member_v agm
+          JOIN master.auth_group g
+            ON g.id = agm.group_id
+           AND g.tenant_id = agm.tenant_id
+           AND g.plane_code = agm.plane_code
+          WHERE g.tenant_id = ${tenantId}
+            AND g.plane_code = 'neon'
+            AND g.code = ${val}
+            AND g.status = 'active'
         `.execute(db);
         rows.rows.forEach((m) => ids.add(m.principal_id));
         break;
@@ -232,7 +238,7 @@ export async function preparePurchaseInvoiceSubmit(
   // The submit-for-approval flow declares its inputs in control.entity_flow_field.
   // The 'notes' binding carries metadata.target = { kind: 'comment',
   // comment_intent: 'submission_note', ... } so dispatchFlowFieldBindings
-  // routes the value into master.comment. Nothing here hardcodes that mapping.
+  // routes the value into document.comment. Nothing here hardcodes that mapping.
 
   return runInTransaction(db, async (trx) => {
 

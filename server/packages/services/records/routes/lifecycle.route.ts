@@ -58,7 +58,7 @@ interface TransitionRow {
   actor_id:        string | null;
 }
 
-interface PersonaRow {
+interface ActorRow {
   principal_id: string;
   display_name: string | null;
 }
@@ -178,14 +178,14 @@ export function createLifecycleRoute(router: Router, deps: LifecycleRouteDeps): 
 
       // 4. Enrich actor names from principal_profile
       const actorIds = [...new Set(transitionRows.map((r) => r.actor_id).filter(Boolean))] as string[];
-      const personas: PersonaRow[] = actorIds.length > 0
+      const actors: ActorRow[] = actorIds.length > 0
         ? await (db as any)
             .selectFrom("master.principal_profile as pp")
             .select(["pp.principal_id", "pp.display_name"] as never[])
             .where("pp.principal_id" as never, "in", actorIds as never)
-            .execute() as PersonaRow[]
+            .execute() as ActorRow[]
         : [];
-      const personaMap = new Map(personas.map((p) => [p.principal_id, p.display_name ?? null]));
+      const actorMap = new Map(actors.map((p) => [p.principal_id, p.display_name ?? null]));
 
       // 5. Build steps
       // Map each state code to when it was first entered (from transition log).
@@ -195,7 +195,7 @@ export function createLifecycleRoute(router: Router, deps: LifecycleRouteDeps): 
         if (!stateEnteredAt.has(key)) {
           stateEnteredAt.set(key, {
             at:        String(t.transitioned_at),
-            actorName: t.actor_id ? (personaMap.get(t.actor_id) ?? null) : null,
+            actorName: t.actor_id ? (actorMap.get(t.actor_id) ?? null) : null,
           });
         }
       }
@@ -239,7 +239,7 @@ export function createLifecycleRoute(router: Router, deps: LifecycleRouteDeps): 
         to_status:       t.to_status,
         transitioned_at: String(t.transitioned_at),
         operation_code:  t.operation_code ?? null,
-        actor_name:      t.actor_id ? (personaMap.get(t.actor_id) ?? null) : null,
+        actor_name:      t.actor_id ? (actorMap.get(t.actor_id) ?? null) : null,
         remarks:         t.remarks ?? null,
       }));
 

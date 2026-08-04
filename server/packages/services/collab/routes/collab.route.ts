@@ -17,8 +17,8 @@
  * DELETE /api/collab/drafts                               — discard draft
  * GET    /api/collab/mentions                             — search principals for @-mention
  *
- * Backed by master.comment / master.comment_reaction / master.comment_draft /
- * master.comment_feed_cursor / event.comment_flag.
+ * Backed by document.comment / document.comment_reaction / document.comment_draft /
+ * document.comment_feed_cursor / event.comment_flag.
  * Tenant resolved from X-Org header.
  */
 
@@ -152,7 +152,7 @@ async function resolveIntegerParameter(
  * Creates entity_document_link rows linking pre-uploaded attachments to a
  * comment. Called inside the comment insert flow — any DB error rolls back
  * the whole operation via the caller's try/catch.
- * reference_count on master.attachment is incremented for each valid link.
+ * reference_count on document.attachment is incremented for each valid link.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function linkAttachmentsToComment(
@@ -168,7 +168,7 @@ async function linkAttachmentsToComment(
 
   // Verify all attachment_ids belong to this tenant and are active
   const rows = await db
-    .selectFrom("master.attachment as a")
+    .selectFrom("document.attachment as a")
     .select(["a.id"])
     .where("a.tenant_id", "=", tenantId)
     .where("a.status",    "=", "active")
@@ -180,11 +180,11 @@ async function linkAttachmentsToComment(
 
   // Insert link rows
   await db
-    .insertInto("master.entity_document_link" as never)
+    .insertInto("document.attachment_link" as never)
     .values(
       confirmedIds.map((aid) => ({
         tenant_id:     tenantId,
-        entity_type:   "master.comment",
+        entity_type:   "document.comment",
         entity_id:     commentId,
         attachment_id: aid,
         link_kind:     "related",
@@ -198,7 +198,7 @@ async function linkAttachmentsToComment(
   // Increment reference_count on each linked attachment
   if (confirmedIds.length > 0) {
     await db
-      .updateTable("master.attachment" as never)
+      .updateTable("document.attachment" as never)
       .set({ reference_count: sql`reference_count + 1`, updated_at: new Date() } as never)
       .where("id"        as never, "in", confirmedIds as never)
       .where("tenant_id" as never, "=",  tenantId     as never)
@@ -291,7 +291,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         : SYSTEM_PRINCIPAL_UUID;
 
       let query = db
-        .selectFrom("master.comment as c")
+        .selectFrom("document.comment as c")
         .leftJoin("master.principal as p", "p.id" as never, "c.commenter_id" as never)
         .select([
           "c.id", "c.tenant_id", "c.entity_type", "c.entity_id",
@@ -342,14 +342,14 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
           ? sql<CommentEnrichmentRow>`
               WITH RECURSIVE thread AS (
                 SELECT c.*, p.name AS commenter_name
-                FROM master.comment c
+                FROM document.comment c
                 LEFT JOIN master.principal p ON p.id = c.commenter_id
                 WHERE c.tenant_id = ${tenantId}::uuid
                   AND c.parent_comment_id = ANY(${sql.val(rootIds)}::uuid[])
                   AND c.deleted_at IS NULL
                 UNION ALL
                 SELECT child.*, p.name AS commenter_name
-                FROM master.comment child
+                FROM document.comment child
                 JOIN thread parent ON child.parent_comment_id = parent.id
                 LEFT JOIN master.principal p ON p.id = child.commenter_id
                 WHERE child.tenant_id = ${tenantId}::uuid
@@ -362,7 +362,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         sql<CommentCountRow>`
           WITH cursor AS (
             SELECT last_read_at
-            FROM master.comment_feed_cursor
+            FROM document.comment_feed_cursor
             WHERE tenant_id = ${tenantId}::uuid
               AND principal_id = ${principalId}::uuid
               AND entity_type = ${entityType}
@@ -378,7 +378,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
                   OR c.created_at > (SELECT last_read_at FROM cursor))
             )::text AS unread_count,
             (SELECT last_read_at FROM cursor) AS last_read_at
-          FROM master.comment c
+          FROM document.comment c
           WHERE c.tenant_id = ${tenantId}::uuid
             AND c.entity_type = ${entityType}
             AND c.entity_id = ${entityId}
@@ -387,7 +387,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         sql<IntentRow>`
           SELECT code, name, description, sort_order, metadata, tenant_id
           FROM control.lookup_value
-          WHERE domain_code = 'master.comment_intent'
+          WHERE domain_code = 'document.comment_intent'
             AND status = 'active'
             AND (tenant_id IS NULL OR tenant_id = ${tenantId}::uuid)
           ORDER BY sort_order ASC, code ASC, tenant_id NULLS FIRST
@@ -421,12 +421,12 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
                 a.file_name,
                 a.content_type,
                 a.size_bytes
-              FROM master.entity_document_link edl
-              JOIN master.attachment a
+              FROM document.attachment_link edl
+              JOIN document.attachment a
                 ON a.id = edl.attachment_id
                AND a.tenant_id = edl.tenant_id
               WHERE edl.tenant_id = ${tenantId}::uuid
-                AND edl.entity_type = 'master.comment'
+                AND edl.entity_type = 'document.comment'
                 AND edl.entity_id = ANY(${sql.val(allCommentIds)}::uuid[])
                 AND a.status = 'active'
               ORDER BY edl.display_order ASC, a.created_at ASC
@@ -438,18 +438,18 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
                 cr.comment_id,
                 cr.reaction_type,
                 COALESCE((
-                  SELECT lv.metadata ->> 'emoji'
-                  FROM control.lookup_value lv
-                  WHERE lv.domain_code = 'master.reaction_type'
-                    AND lv.code = cr.reaction_type
-                    AND lv.status = 'active'
-                    AND (lv.tenant_id IS NULL OR lv.tenant_id = ${tenantId}::uuid)
-                  ORDER BY (lv.tenant_id IS NOT NULL) DESC
+                  SELECT rt.metadata->>'emoji'
+                  FROM control.lookup_value rt
+                  WHERE rt.code = cr.reaction_type
+                    AND rt.domain_code = 'document.reaction_type'
+                    AND rt.status = 'active'
+                    AND (rt.tenant_id IS NULL OR rt.tenant_id = ${tenantId}::uuid)
+                  ORDER BY (rt.tenant_id IS NOT NULL) DESC
                   LIMIT 1
                 ), cr.reaction_type) AS emoji,
                 COUNT(*)::text AS cnt,
                 COUNT(*) FILTER (WHERE cr.principal_id = ${principalId}::uuid)::text AS self_count
-              FROM master.comment_reaction cr
+              FROM document.comment_reaction cr
               WHERE cr.tenant_id = ${tenantId}::uuid
                 AND cr.comment_id = ANY(${sql.val(allCommentIds)}::uuid[])
               GROUP BY cr.comment_id, cr.reaction_type
@@ -549,7 +549,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
   };
 
   // ── GET /api/collab/comments/unread-count ─────────────────────────────────
-  // Uses master.comment_feed_cursor for O(1) lookup.
+  // Uses document.comment_feed_cursor for O(1) lookup.
 
   const unreadCountHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -579,7 +579,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       // Fetch cursor
       const cursor = await db
-        .selectFrom("master.comment_feed_cursor as cfc" as never)
+        .selectFrom("document.comment_feed_cursor as cfc" as never)
         .select("cfc.last_read_at" as never)
         .where("cfc.tenant_id" as never, "=", tenantId as never)
         .where("cfc.principal_id" as never, "=", principalId as never)
@@ -590,7 +590,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       if (!cursor) {
         // No cursor means never opened — count all non-own comments
         const result = await db
-          .selectFrom("master.comment as c")
+          .selectFrom("document.comment as c")
           .select(db.fn.countAll<string>().as("n"))
           .where("c.tenant_id" as never, "=", tenantId as never)
           .where("c.entity_type" as never, "=", entityType as never)
@@ -604,7 +604,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       }
 
       const result = await db
-        .selectFrom("master.comment as c")
+        .selectFrom("document.comment as c")
         .select(db.fn.countAll<string>().as("n"))
         .where("c.tenant_id" as never, "=", tenantId as never)
         .where("c.entity_type" as never, "=", entityType as never)
@@ -649,7 +649,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const now = new Date().toISOString();
 
       await db
-        .insertInto("master.comment_feed_cursor" as never)
+        .insertInto("document.comment_feed_cursor" as never)
         .values({
           tenant_id:    tenantId,
           principal_id: principalId,
@@ -695,7 +695,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         : "internal";
 
       // Optional discriminators — validated server-side against lookup
-      // domains via DB triggers (master.comment_type, master.comment_intent).
+      // domains via DB triggers (document.comment_type, document.comment_intent).
       // Default to existing behaviour when omitted.
       const rawContextType = (req.body as Record<string, unknown>).contextType;
       const contextType = typeof rawContextType === "string" && /^[a-z][a-z0-9_]*$/.test(rawContextType)
@@ -726,7 +726,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       let threadDepth = 0;
       if (parentCommentId && isUuid(parentCommentId)) {
         const parent = await db
-          .selectFrom("master.comment as c")
+          .selectFrom("document.comment as c")
           .select("c.thread_depth")
           .where("c.id", "=", parentCommentId)
           .where("c.tenant_id", "=", tenantId)
@@ -756,7 +756,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       }
 
       const row = await db
-        .insertInto("master.comment" as never)
+        .insertInto("document.comment" as never)
         .values(insertValues as never)
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -792,7 +792,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       // Process @mentions: persist mention rows + dispatch notifications
       if (mentionService) {
         try {
-          const mentionResult = await mentionService.processMentions({
+          await mentionService.processMentions({
             commentId,
             contextType: DEFAULT_CONTEXT_TYPE,
             tenantId,
@@ -802,17 +802,6 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
             entityId,
           });
 
-          if (mentionResult.total.length > 0) {
-            const mentionsJson = JSON.stringify(
-              mentionResult.total.map((m: { userId: string; displayName: string }) => ({ user_id: m.userId, display_name: m.displayName })),
-            );
-            await db
-              .updateTable("master.comment" as never)
-              .set({ mentions: mentionsJson } as never)
-              .where("id" as never, "=", commentId as never)
-              .where("tenant_id" as never, "=", tenantId as never)
-              .execute();
-          }
         } catch {
           // Mention processing failure is non-fatal — comment was already saved.
         }
@@ -865,7 +854,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       }
 
       const parent = await db
-        .selectFrom("master.comment as c")
+        .selectFrom("document.comment as c")
         .select([
           "c.entity_type", "c.entity_id", "c.thread_depth",
           "c.context_type", "c.comment_intent" as never,
@@ -915,7 +904,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       if (replyContentHtml) replyInsertValues.content_html = replyContentHtml;
 
       const row = await db
-        .insertInto("master.comment" as never)
+        .insertInto("document.comment" as never)
         .values(replyInsertValues as never)
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -956,7 +945,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       // Process @mentions in reply
       if (mentionService) {
         try {
-          const mentionResult = await mentionService.processMentions({
+          await mentionService.processMentions({
             commentId,
             contextType: DEFAULT_CONTEXT_TYPE,
             tenantId,
@@ -966,17 +955,6 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
             entityId: parent.entity_id as string,
           });
 
-          if (mentionResult.total.length > 0) {
-            const mentionsJson = JSON.stringify(
-              mentionResult.total.map((m: { userId: string; displayName: string }) => ({ user_id: m.userId, display_name: m.displayName })),
-            );
-            await db
-              .updateTable("master.comment" as never)
-              .set({ mentions: mentionsJson } as never)
-              .where("id" as never, "=", commentId as never)
-              .where("tenant_id" as never, "=", tenantId as never)
-              .execute();
-          }
         } catch {
           // Non-fatal
         }
@@ -1009,7 +987,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       }
 
       const rows = await db
-        .selectFrom("master.comment as c")
+        .selectFrom("document.comment as c")
         .leftJoin("master.principal as p", "p.id" as never, "c.commenter_id" as never)
         .select([
           "c.id", "c.tenant_id", "c.entity_type", "c.entity_id",
@@ -1033,7 +1011,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         const replyIds = rows.map((r) => r.id as string);
         const rcResult = await sql<{ parent_comment_id: string; cnt: string }>`
           SELECT parent_comment_id, COUNT(*)::text AS cnt
-          FROM master.comment
+          FROM document.comment
           WHERE parent_comment_id = ANY(${sql.val(replyIds)}::uuid[])
             AND deleted_at IS NULL
           GROUP BY parent_comment_id
@@ -1091,8 +1069,8 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       // Fetch existing comment for mention diff
       const existing = mentionService
         ? (await db
-            .selectFrom("master.comment as c")
-            .select(["c.mentions", "c.commenter_id", "c.entity_type", "c.entity_id"])
+            .selectFrom("document.comment as c")
+            .select(["c.commenter_id", "c.entity_type", "c.entity_id"])
             .where("c.id" as never, "=", commentId as never)
             .where("c.tenant_id" as never, "=", tenantId as never)
             .where("c.deleted_at" as never, "is", null)
@@ -1104,6 +1082,26 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         return;
       }
 
+      const previousMentions = mentionService
+        ? (await (db as any)
+            .selectFrom("document.comment_mention as cm")
+            .innerJoin("master.principal as p", (join: any) =>
+              join
+                .onRef("p.tenant_id", "=", "cm.tenant_id")
+                .onRef("p.id", "=", "cm.mentioned_id"))
+            .select([
+              "cm.mentioned_id as user_id",
+              "p.name as display_name",
+            ])
+            .where("cm.tenant_id", "=", tenantId)
+            .where("cm.comment_id", "=", commentId)
+            .execute() as Array<{ user_id: string; display_name: string }>)
+            .map((mention) => ({
+              userId: mention.user_id,
+              displayName: mention.display_name,
+            }))
+        : [];
+
       const updateSet: Record<string, unknown> = {
         comment_text:   (trimmedText || "[rich comment]").slice(0, 50000),
         content_format: updateContentJson ? "rich_json" : "plain",
@@ -1113,7 +1111,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       if (updateContentHtml !== null) updateSet.content_html = updateContentHtml;
 
       const row = await db
-        .updateTable("master.comment" as never)
+        .updateTable("document.comment" as never)
         .set(updateSet as never)
         .where("id" as never, "=", commentId as never)
         .where("tenant_id" as never, "=", (tenantId ?? "") as never)
@@ -1134,15 +1132,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
             ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
             : (existing.commenter_id as string);
 
-          const prevRaw = existing.mentions as unknown;
-          const previousMentions = Array.isArray(prevRaw)
-            ? (prevRaw as Array<{ user_id: string; display_name: string }>).map((m) => ({
-                userId: m.user_id,
-                displayName: m.display_name,
-              }))
-            : [];
-
-          const mentionResult = await mentionService.processMentions({
+          await mentionService.processMentions({
             commentId,
             contextType: DEFAULT_CONTEXT_TYPE,
             tenantId,
@@ -1153,25 +1143,6 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
             previousMentions,
           });
 
-          if (mentionResult.total.length > 0) {
-            const mentionsJson = JSON.stringify(
-              mentionResult.total.map((m: { userId: string; displayName: string }) => ({ user_id: m.userId, display_name: m.displayName })),
-            );
-            await db
-              .updateTable("master.comment" as never)
-              .set({ mentions: mentionsJson } as never)
-              .where("id" as never, "=", commentId as never)
-              .where("tenant_id" as never, "=", tenantId as never)
-              .execute();
-          } else if (previousMentions.length > 0) {
-            // All mentions removed — clear the JSONB
-            await db
-              .updateTable("master.comment" as never)
-              .set({ mentions: null } as never)
-              .where("id" as never, "=", commentId as never)
-              .where("tenant_id" as never, "=", tenantId as never)
-              .execute();
-          }
         } catch {
           // Non-fatal
         }
@@ -1209,7 +1180,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         : SYSTEM_PRINCIPAL_UUID;
 
       const row = await db
-        .updateTable("master.comment" as never)
+        .updateTable("document.comment" as never)
         .set({ deleted_at: new Date().toISOString(), deleted_by: deletedBy } as never)
         .where("id" as never, "=", commentId as never)
         .where("tenant_id" as never, "=", (tenantId ?? "") as never)
@@ -1230,7 +1201,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
   };
 
   // ── GET /api/collab/comments/:commentId/reactions ─────────────────────────
-  // Returns reactions with emoji from the master.reaction_type lookup.
+  // Returns reactions with emoji from the document.reaction_type lookup.
 
   const listReactionsHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -1257,7 +1228,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       // Aggregate reaction counts
       type ReactionRow = { reaction_type: string; cnt: string; self_count: string };
       const rows = await db
-        .selectFrom("master.comment_reaction as cr" as never)
+        .selectFrom("document.comment_reaction as cr" as never)
         .select([
           "cr.reaction_type" as never,
           db.fn.countAll<string>().as("cnt") as never,
@@ -1276,11 +1247,15 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       type LookupRow = { code: string; metadata: Record<string, unknown> };
       const lookupRows = codes.length > 0
         ? (await db
-            .selectFrom("control.lookup_value as lv" as never)
-            .select(["lv.code" as never, "lv.metadata" as never])
-            .where("lv.domain_code" as never, "=", "master.reaction_type" as never)
-            .where("lv.code" as never, "in" as never, codes as never)
-            .where("lv.tenant_id" as never, "is", null)
+            .selectFrom("control.lookup_value as rt" as never)
+            .select([
+              "rt.code" as never,
+              "rt.metadata" as never,
+            ])
+            .where("rt.code" as never, "in" as never, codes as never)
+            .where("rt.domain_code" as never, "=", "document.reaction_type" as never)
+            .where("rt.tenant_id" as never, "is", null)
+            .where("rt.status" as never, "=", "active" as never)
             .execute() as LookupRow[])
         : [];
 
@@ -1336,7 +1311,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       // Fetch comment for pub/sub channel routing (entity_type / entity_id)
       const commentCtx = await db
-        .selectFrom("master.comment as c")
+        .selectFrom("document.comment as c")
         .select(["c.entity_type", "c.entity_id"])
         .where("c.id",        "=", commentId)
         .where("c.tenant_id", "=", tenantId)
@@ -1344,7 +1319,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       // Check if reaction already exists
       const existing = await db
-        .selectFrom("master.comment_reaction as cr" as never)
+        .selectFrom("document.comment_reaction as cr" as never)
         .select("cr.id" as never)
         .where("cr.tenant_id" as never,    "=", tenantId as never)
         .where("cr.comment_id" as never,   "=", commentId as never)
@@ -1355,7 +1330,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       if (existing) {
         // Toggle off — delete
         await db
-          .deleteFrom("master.comment_reaction" as never)
+          .deleteFrom("document.comment_reaction" as never)
           .where("id" as never, "=", existing.id as never)
           .where("tenant_id" as never, "=", tenantId as never)
           .execute();
@@ -1369,10 +1344,9 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       } else {
         // Toggle on — insert (ignore conflict in case of race)
         await db
-          .insertInto("master.comment_reaction" as never)
+          .insertInto("document.comment_reaction" as never)
           .values({
             tenant_id:     tenantId,
-            context_type:  DEFAULT_CONTEXT_TYPE,
             comment_id:    commentId,
             principal_id:  principalId,
             reaction_type: reactionType,
@@ -1474,7 +1448,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         : SYSTEM_PRINCIPAL_UUID;
 
       let query = db
-        .selectFrom("master.comment_draft as cd" as never)
+        .selectFrom("document.comment_draft as cd" as never)
         .select([
           "cd.id" as never, "cd.draft_text" as never,
           "cd.content_json" as never,
@@ -1564,7 +1538,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       if (draftContentJson !== null) draftConflictUpdate.content_json = JSON.stringify(draftContentJson);
 
       await db
-        .insertInto("master.comment_draft" as never)
+        .insertInto("document.comment_draft" as never)
         .values({
           ...insertValues,
           ...(draftContentJson !== null ? { content_json: JSON.stringify(draftContentJson) } : {}),
@@ -1611,7 +1585,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         : SYSTEM_PRINCIPAL_UUID;
 
       let query = db
-        .deleteFrom("master.comment_draft" as never)
+        .deleteFrom("document.comment_draft" as never)
         .where("tenant_id" as never,   "=", tenantId as never)
         .where("principal_id" as never, "=", principalId as never)
         .where("entity_type" as never,  "=", entityType as never)
@@ -1688,7 +1662,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
   // ── GET /api/collab/comments/:commentId/attachments ─────────────────────
   // Returns attachments linked to a specific comment (entity_document_link
-  // where entity_type='master.comment' and entity_id=commentId).
+  // where entity_type='document.comment' and entity_id=commentId).
 
   const listCommentAttachmentsHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -1702,8 +1676,8 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       if (!tenantId) { res.json({ ok: true, data: [] }); return; }
 
       const rows = await db
-        .selectFrom("master.entity_document_link as edl")
-        .innerJoin("master.attachment as a", "a.id", "edl.attachment_id")
+        .selectFrom("document.attachment_link as edl")
+        .innerJoin("document.attachment as a", "a.id", "edl.attachment_id")
         .select([
           "a.id as attachment_id",
           "a.file_name",
@@ -1711,7 +1685,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
           "a.size_bytes",
         ])
         .where("edl.tenant_id"   as never, "=", tenantId              as never)
-        .where("edl.entity_type" as never, "=", "master.comment"      as never)
+        .where("edl.entity_type" as never, "=", "document.comment"      as never)
         .where("edl.entity_id"   as never, "=", commentId             as never)
         .where("a.status"        as never, "=", "active"              as never)
         .orderBy("edl.display_order" as never, "asc")
@@ -1755,13 +1729,11 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
       const body       = req.body as {
         entity_code?: string;
         record_id?: string;
-        display_name?: unknown;
-        record_code?: unknown;
+        label_snapshot?: unknown;
       } | undefined;
       const entityCode = (body?.entity_code ?? "").trim();
       const recordId   = (body?.record_id   ?? "").trim();
-      const displayName = optionalBookmarkSnapshotText(body?.display_name);
-      const recordCode  = optionalBookmarkSnapshotText(body?.record_code, 120);
+      const labelSnapshot = optionalBookmarkSnapshotText(body?.label_snapshot);
       if (!entityCode || !recordId) {
         res.status(400).json({ error: "entity_code and record_id are required" });
         return;
@@ -1798,8 +1770,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
             principal_id: principalId,
             entity_code:  entityCode,
             record_id:    recordId,
-            display_name: displayName,
-            record_code:  recordCode,
+            label_snapshot: labelSnapshot,
             created_at:   new Date().toISOString(),
           } as never)
           .execute() as Promise<unknown>);
@@ -1833,8 +1804,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         id: string;
         entity_code: string;
         record_id: string;
-        display_name: string | null;
-        record_code: string | null;
+        label_snapshot: string | null;
         created_at: Date | string;
       };
 
@@ -1844,8 +1814,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
           "rb.id"           as never,
           "rb.entity_code"  as never,
           "rb.record_id"    as never,
-          "rb.display_name" as never,
-          "rb.record_code"  as never,
+          "rb.label_snapshot" as never,
           "rb.created_at"   as never,
         ])
         .where("rb.tenant_id"    as never, "=", tenantId    as never)
@@ -1881,8 +1850,8 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
           id:          row.id,
           entityCode:  row.entity_code,
           recordId:    row.record_id,
-          displayName: row.display_name,
-          recordCode:  row.record_code,
+          displayName: row.label_snapshot,
+          recordCode:  null,
           createdAt:   bookmarkTimestamp(row.created_at),
         });
         group.count += 1;
@@ -1962,7 +1931,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
 
       type CountRow = { record_id: string; total: unknown };
       const rows = await (db
-        .selectFrom("master.comment as c" as never)
+        .selectFrom("document.comment as c" as never)
         .select([
           "c.entity_id as record_id" as never,
           sql`count(*)`.as("total"),
@@ -2109,7 +2078,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
     const getCount = async (): Promise<number> => {
       try {
         const row = await db
-          .selectFrom("master.comment as c")
+          .selectFrom("document.comment as c")
           .select(db.fn.count("c.id").as("cnt"))
           .where("c.tenant_id",   "=", tenantId)
           .where("c.entity_type", "=", entityType)
@@ -2174,7 +2143,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
     const poll = async (): Promise<void> => {
       try {
         const newComments = await db
-          .selectFrom("master.comment as c")
+          .selectFrom("document.comment as c")
           .select([
             "c.id", "c.commenter_id", "c.comment_text",
             "c.parent_comment_id", "c.thread_depth",
@@ -2204,12 +2173,16 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
         }
 
         const newReactions = await db
-          .selectFrom("master.comment_reaction as cr")
-          .innerJoin("master.comment as c", "c.id" as never, "cr.comment_id" as never)
+          .selectFrom("document.comment_reaction as cr")
+          .innerJoin("document.comment as c", (join) =>
+            join
+              .onRef("c.tenant_id" as never, "=", "cr.tenant_id" as never)
+              .onRef("c.id" as never, "=", "cr.comment_id" as never))
           .select([
             "cr.id" as never, "cr.comment_id" as never,
-            "cr.reaction_code" as never, "cr.reactor_id" as never,
-            "cr.is_active" as never, "cr.created_at" as never,
+            "cr.reaction_type as reaction_code" as never,
+            "cr.principal_id as reactor_id" as never,
+            "cr.created_at" as never,
           ])
           .where("c.tenant_id"   as never, "=", tenantId   as never)
           .where("c.entity_type" as never, "=", entityType as never)
@@ -2227,7 +2200,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
             commentId:    row["comment_id"],
             reactionCode: row["reaction_code"],
             reactorId:    row["reactor_id"],
-            isActive:     Boolean(row["is_active"]),
+            isActive:     true,
           }, at);
         }
 

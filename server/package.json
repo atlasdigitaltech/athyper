@@ -29,6 +29,11 @@
     "p2p:field-contract:audit": "tsx scripts/audit-p2p-field-contract.ts",
     "metadata:semantic-fallbacks:audit": "tsx scripts/audit-metadata-semantic-fallbacks.ts",
     "metadata:cache-policy:audit": "tsx scripts/audit-metadata-cache-policy.ts",
+    "authorization:v2:phase2:report": "tsx scripts/verify-authorization-v2-phase2-runtime.ts",
+    "authorization:v2:phase2:verify": "tsx scripts/verify-authorization-v2-phase2-runtime.ts --strict",
+    "meta-entity:authority:provision": "tsx db/scripts/authority/provision-meta-entity-authority.ts",
+    "meta-entity:authority:project-identities": "tsx db/scripts/authority/project-meta-entity-admin-identities.ts",
+    "meta-entity:authority:smoke": "tsx db/scripts/verify/smoke-meta-entity-authority.ts",
     "lint": "tsx scripts/check-runtime-server-paths.ts --strict && tsx scripts/verify-pi-line-default-resolver-coverage.ts"
   },
   "dependencies": {
@@ -54,6 +59,7 @@
     "@athyper/svc-jobs": "workspace:*",
     "@athyper/svc-master": "workspace:*",
     "@athyper/svc-metadata": "workspace:*",
+    "@athyper/svc-meta-entity-authoring": "workspace:*",
     "@athyper/svc-policy": "workspace:*",
     "@athyper/svc-platform": "workspace:*",
     "@athyper/svc-records": "workspace:*",

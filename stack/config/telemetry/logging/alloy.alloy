@@ -21,6 +21,15 @@ loki.process "normalize" {
       level    = "level",
       service  = "service",
       env      = "env",
+      event = "event",
+      audit_event_id = "audit_event_id",
+      event_code = "event_code",
+      event_class = "event_class",
+      plane_code = "plane_code",
+      tenant_id = "tenant_id",
+      outcome = "outcome",
+      severity = "severity",
+      correlation_id = "correlation_id",
     }
   }
 
@@ -40,6 +49,25 @@ loki.process "normalize" {
       level    = "",
       service  = "",
       env      = "",
+      event = "",
+      audit_event_id = "",
+      event_code = "",
+      event_class = "",
+      plane_code = "",
+      tenant_id = "",
+      outcome = "",
+      severity = "",
+      correlation_id = "",
+    }
+  }
+
+  // Keep only bounded reporting dimensions as Loki labels. Identifiers remain
+  // structured metadata to prevent unbounded stream cardinality.
+  stage.labels {
+    values = {
+      plane_code = "",
+      event_class = "",
+      outcome = "",
     }
   }
 

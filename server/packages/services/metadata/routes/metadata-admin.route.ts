@@ -291,16 +291,17 @@ async function loadAdminOperationPermissionInfo(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const anyDb = db as any;
   const rows = await anyDb
-    .selectFrom("shared.permission as p")
-    .leftJoin("shared.permission_category as pc", "pc.id", "p.category_id")
+    .selectFrom("control.auth_permission as p")
+    .leftJoin("shared.auth_permission_category as pc", "pc.id", "p.category_id")
     .select([
-      "p.code as permission_code",
-      "p.name as permission_label",
-      "p.risk_level as permission_risk_level",
+      "p.canonical_code as permission_code",
+      sql<string | null>`p.metadata #>> '{label}'`.as("permission_label"),
+      "p.risk_tier as permission_risk_level",
       "p.metadata as permission_metadata",
       "pc.code as permission_category_code",
     ])
-    .where("p.code", "in", uniquePermissionCodes)
+    .where("p.canonical_code", "in", uniquePermissionCodes)
+    .where("p.status", "=", "published")
     .execute() as Array<{
       permission_code: string;
       permission_label: string | null;

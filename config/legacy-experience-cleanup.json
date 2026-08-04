@@ -7,9 +7,9 @@
       "status": "retain_until_observed",
       "flag": "unified_shell_v2",
       "paths": [
-        "packages/apps/admin/shell/src/index.tsx",
-        "packages/apps/neon/shell/src/index.tsx",
-        "packages/apps/mesh/shell/src/index.tsx"
+        "packages/products/admin/shell/src/index.tsx",
+        "packages/products/neon/shell/src/index.tsx",
+        "packages/products/mesh/shell/src/index.tsx"
       ]
     },
     {
@@ -35,8 +35,8 @@
       "status": "retain_until_observed",
       "flag": "unified_shell_v2",
       "paths": [
-        "packages/apps/admin/command-hub/src/index.tsx",
-        "packages/apps/neon/command-hub/src/index.tsx"
+        "packages/products/admin/command-hub/src/index.tsx",
+        "packages/products/neon/command-hub/src/index.tsx"
       ]
     },
     {
@@ -44,7 +44,7 @@
       "status": "retain_until_observed",
       "flag": "unified_shell_v2",
       "paths": [
-        "packages/apps/neon/src/collaboration/FavoritesPanelContainer.tsx"
+        "packages/products/neon/app/src/collaboration/FavoritesPanelContainer.tsx"
       ]
     },
     {
@@ -72,9 +72,9 @@
       "status": "retain_until_observed",
       "flag": "unified_shell_v2",
       "paths": [
-        "packages/apps/admin/shell/src/index.tsx",
-        "packages/apps/neon/shell/src/index.tsx",
-        "packages/apps/mesh/shell/src/index.tsx"
+        "packages/products/admin/shell/src/index.tsx",
+        "packages/products/neon/shell/src/index.tsx",
+        "packages/products/mesh/shell/src/index.tsx"
       ]
     },
     {

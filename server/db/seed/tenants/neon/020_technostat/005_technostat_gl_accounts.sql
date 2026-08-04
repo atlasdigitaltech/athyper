@@ -34,13 +34,12 @@ BEGIN
     ) ON COMMIT DROP;
 
     INSERT INTO tmp_framework_source (coa_code, source_coa_id, dest_coa_id)
-    SELECT d.code, s.id, d.id
+    SELECT DISTINCT ON (lower(d.code)) lower(d.code), s.id, d.id
     FROM master.chart_of_account d
     JOIN LATERAL (
         SELECT src.id
         FROM master.chart_of_account src
-        WHERE src.code = d.code
-          AND src.tenant_id <> v_tid
+        WHERE lower(src.code) = lower(d.code)
           AND EXISTS (
               SELECT 1
               FROM master.gl_account ga
@@ -48,25 +47,26 @@ BEGIN
                 AND ga.chart_of_account_id = src.id
                 AND ga.node_type = 'posting'
                 AND ga.code = CASE
-                    WHEN d.code = 'COA-GAAP' THEN 'USGAAP-L-AP-TRADE'
+                    WHEN lower(d.code) = 'coa-gaap' THEN 'USGAAP-L-AP-TRADE'
                     ELSE 'IFRS-L-AP-TRADE'
                 END
-          )
+        )
         ORDER BY src.created_at NULLS LAST, src.id
         LIMIT 1
     ) s ON true
     WHERE d.tenant_id = v_tid
-      AND d.code IN ('COA-IFRS', 'COA-GAAP');
+      AND lower(d.code) IN ('coa-ifrs', 'coa-gaap')
+    ORDER BY lower(d.code), d.created_at NULLS LAST, d.id;
 
     SELECT string_agg(code, ', ' ORDER BY code)
     INTO v_missing
     FROM master.chart_of_account d
     WHERE d.tenant_id = v_tid
-      AND d.code IN ('COA-IFRS', 'COA-GAAP')
+      AND lower(d.code) IN ('coa-ifrs', 'coa-gaap')
       AND NOT EXISTS (
           SELECT 1
           FROM tmp_framework_source s
-          WHERE s.coa_code = d.code
+          WHERE s.coa_code = lower(d.code)
       );
 
     IF v_missing IS NOT NULL THEN
@@ -78,7 +78,7 @@ BEGIN
             tenant_id, chart_of_account_id,
             code, name, parent_id, level_no, path,
             description, account_class, node_type, normal_balance,
-            subledger_type, currency_code, sort_order, tags,
+            subledger_type, currency_code, sort_order,
             metadata, status, created_by
         )
         SELECT
@@ -96,7 +96,6 @@ BEGIN
             src.subledger_type,
             src.currency_code,
             src.sort_order,
-            src.tags,
             src.metadata || jsonb_build_object(
                 '_seed', jsonb_build_object(
                     'pack', '005_technostat_gl_accounts',
@@ -130,11 +129,11 @@ BEGIN
             subledger_type  = EXCLUDED.subledger_type,
             currency_code   = EXCLUDED.currency_code,
             sort_order      = EXCLUDED.sort_order,
-            tags            = EXCLUDED.tags,
             metadata        = master.gl_account.metadata || EXCLUDED.metadata,
             status          = 'active',
             updated_at      = now(),
-            updated_by      = v_su;
+            updated_by      = v_su
+        ;
     END LOOP;
 
     IF NOT EXISTS (
@@ -144,7 +143,7 @@ BEGIN
           ON ga.chart_of_account_id = coa.id
          AND ga.tenant_id = coa.tenant_id
         WHERE coa.tenant_id = v_tid
-          AND coa.code = 'COA-IFRS'
+          AND lower(coa.code) = 'coa-ifrs'
           AND ga.code = 'IFRS-L-AP-TRADE'
           AND ga.node_type = 'posting'
           AND ga.is_active = true
@@ -155,7 +154,7 @@ BEGIN
           ON ga.chart_of_account_id = coa.id
          AND ga.tenant_id = coa.tenant_id
         WHERE coa.tenant_id = v_tid
-          AND coa.code = 'COA-GAAP'
+          AND lower(coa.code) = 'coa-gaap'
           AND ga.code = 'USGAAP-L-AP-TRADE'
           AND ga.node_type = 'posting'
           AND ga.is_active = true

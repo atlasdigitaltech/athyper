@@ -145,12 +145,12 @@ describe("TenantStampDriver", () => {
     });
 
     const conn = await driver.acquireConnection();
-    await conn.executeQuery(cq("SELECT 1 FROM master.content_item"));
+    await conn.executeQuery(cq("SELECT 1 FROM document.content_item"));
 
     expect(sqlsOnly(base.events)).toEqual([
       "BEGIN",
       "SELECT set_config('app.current_tenant_id', $1, true)",
-      "SELECT 1 FROM master.content_item",
+      "SELECT 1 FROM document.content_item",
       "COMMIT",
     ]);
 
@@ -196,8 +196,8 @@ describe("TenantStampDriver", () => {
 
     const conn = await driver.acquireConnection();
     await driver.beginTransaction(conn, {});
-    await conn.executeQuery(cq("INSERT INTO master.comment(...)"));
-    await conn.executeQuery(cq("UPDATE master.comment SET ..."));
+    await conn.executeQuery(cq("INSERT INTO document.comment(...)"));
+    await conn.executeQuery(cq("UPDATE document.comment SET ..."));
     await driver.commitTransaction(conn);
 
     // One BEGIN, one stamp, two user queries, one COMMIT — no extra
@@ -213,8 +213,8 @@ describe("TenantStampDriver", () => {
 
     expect(sqlsOnly(base.events)).toEqual([
       "SELECT set_config('app.current_tenant_id', $1, true)",
-      "INSERT INTO master.comment(...)",
-      "UPDATE master.comment SET ...",
+      "INSERT INTO document.comment(...)",
+      "UPDATE document.comment SET ...",
     ]);
   });
 

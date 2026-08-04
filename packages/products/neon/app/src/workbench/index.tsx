@@ -32,7 +32,17 @@ export function WorkbenchPage({ plane, path }: { plane: PlaneKey; path?: readonl
       title="Workbench"
       description={path?.length ? path.join(" / ") : undefined}
     >
-      <StatePanel title="Workbench" message="Operational workspaces will appear here." />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <a
+          href="/workbench/document-rendering"
+          className="rounded-lg border bg-card p-5 text-card-foreground transition-colors hover:border-primary/50 hover:bg-muted/30"
+        >
+          <div className="font-medium">Document rendering</div>
+          <div className="mt-1 text-sm text-muted-foreground">
+            Templates, immutable versions, brands, letterheads, bindings, and print profiles.
+          </div>
+        </a>
+      </div>
     </PageFrame>
   );
 }

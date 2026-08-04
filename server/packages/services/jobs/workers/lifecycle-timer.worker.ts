@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Lifecycle Timer Worker
  *
  * Queue: jobs:lifecycle-timers
@@ -156,7 +156,7 @@ async function insertNotification(
        template_key,    template_version,     entity_type,
        payload,         status,               created_by)
     VALUES
-      (${tenantId}::uuid, 'neon',               shared.uuidv7()::text, 'lifecycle.timer.reminder',
+      (${tenantId}::uuid, event.current_plane_key(), shared.uuidv7()::text, 'lifecycle.timer.reminder',
        ${tplKey},          1,                    ${entityName},
        ${payloadJson}::jsonb, 'pending',          ${SYSTEM_ACTOR_ID}::uuid)
   `.execute(db);
@@ -213,12 +213,12 @@ async function cleanOrphans(args: {
       a.storage_key AS "storageKey",
       a.status AS "status",
       (a.metadata -> 'scan' ->> 'attempts')::int AS "scanAttempts"
-    FROM master.attachment AS a
+    FROM document.attachment AS a
     WHERE a.status IN ('quarantined', 'failed')
       AND COALESCE(a.reference_count, 0) = 0
       AND NOT EXISTS (
         SELECT 1
-        FROM master.entity_document_link AS l
+        FROM document.attachment_link AS l
         WHERE l.attachment_id = a.id
           AND l.tenant_id = a.tenant_id
       )
@@ -241,7 +241,7 @@ async function cleanOrphans(args: {
 
   for (const row of rows.rows) {
     const updated = await sql<{ attachment_id: string }>`
-      UPDATE master.attachment
+      UPDATE document.attachment
       SET status            = 'orphaned',
           status_changed_at  = now(),
           status_changed_by  = ${SYSTEM_ACTOR_ID}::uuid,

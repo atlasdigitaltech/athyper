@@ -1,23 +1,23 @@
--- ============================================================================
+﻿-- ============================================================================
 -- 314_open_period_may2026.sql
 -- ============================================================================
--- Opens master.fiscal_period AND governance.book_period_status for the May
+-- Opens master.fiscal_period AND ledger.book_period_status for the May
 -- 2026 period across ALL companies in the athyper (demo) and technostat
 -- tenants.
 --
 -- Root cause of BOOK_PERIOD_NOT_OPEN error:
---   athyper  : 313 opened fiscal_period ✓ but some book_period_status rows
---              may be missing if new company×book pairs were added later.
+--   athyper  : 313 opened fiscal_period âœ“ but some book_period_status rows
+--              may be missing if new companyÃ—book pairs were added later.
 --   technostat: P11 seed created FY2026 as 'future' throughout; P12A opened
---               book_period_status only for (FY2026, P5) — hardcoded, so
+--               book_period_status only for (FY2026, P5) â€” hardcoded, so
 --               TEGY (Jul-Jun) May 2026 = FY2026 P11 was never opened.
 --               fiscal_period itself was never flipped.
 --
 -- Strategy (by start_date range, not hardcoded period_number):
---   Part A: UPDATE master.fiscal_period → 'open' where start_date
+--   Part A: UPDATE master.fiscal_period â†’ 'open' where start_date
 --           falls in May 2026 (correctly resolves TEGY FY2026 P11).
---   Part B: UPSERT governance.book_period_status for each
---           (company × statutory-book) pair, deriving fiscal_year and
+--   Part B: UPSERT ledger.book_period_status for each
+--           (company Ã— statutory-book) pair, deriving fiscal_year and
 --           period_number from the fiscal_period rows found in Part A.
 --
 -- Idempotent: safe to re-run. Already-open rows are not touched.
@@ -42,8 +42,8 @@ BEGIN
     LOOP
         RAISE NOTICE '[%] Opening May 2026 periods (tenant_id=%)', v_tenant.code, v_tenant.id;
 
-        -- ── Part A: Open fiscal_period rows for May 2026 ─────────────────────
-        -- Only transitions 'future' → 'open'; preserves soft_close/hard_close.
+        -- â”€â”€ Part A: Open fiscal_period rows for May 2026 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        -- Only transitions 'future' â†’ 'open'; preserves soft_close/hard_close.
         UPDATE master.fiscal_period
         SET    status     = 'open',
                updated_at = now(),
@@ -56,7 +56,7 @@ BEGIN
         GET DIAGNOSTICS v_fp_upd = ROW_COUNT;
         RAISE NOTICE '[%] Part A: % fiscal_period row(s) opened', v_tenant.code, v_fp_upd;
 
-        -- ── Part B: Upsert book_period_status ────────────────────────────────
+        -- â”€â”€ Part B: Upsert book_period_status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         -- Derive correct (fiscal_year, period_number) per company from
         -- fiscal_period (handles Jan-Dec and Jul-Jun FY variants).
         v_bps_upd := 0;
@@ -79,7 +79,7 @@ BEGIN
                   AND  ba.status          = 'active'
                   AND  lb.category        = 'statutory'
             LOOP
-                INSERT INTO governance.book_period_status
+                INSERT INTO ledger.book_period_status
                     (tenant_id, company_code_id, book_id,
                      fiscal_year, period_number,
                      status, opened_at, opened_by,
@@ -91,13 +91,13 @@ BEGIN
                      v_su, v_meta)
                 ON CONFLICT (tenant_id, company_code_id, book_id, fiscal_year, period_number)
                 DO UPDATE SET
-                    status     = CASE WHEN governance.book_period_status.status = 'future'
+                    status     = CASE WHEN ledger.book_period_status.status = 'future'
                                       THEN 'open'
-                                      ELSE governance.book_period_status.status END,
-                    opened_at  = COALESCE(governance.book_period_status.opened_at, now()),
+                                      ELSE ledger.book_period_status.status END,
+                    opened_at  = COALESCE(ledger.book_period_status.opened_at, now()),
                     updated_at = now(),
                     updated_by = v_su
-                WHERE  governance.book_period_status.status = 'future';
+                WHERE  ledger.book_period_status.status = 'future';
 
                 v_bps_upd := v_bps_upd + 1;
             END LOOP;
@@ -106,7 +106,7 @@ BEGIN
         RAISE NOTICE '[%] Part B: % book_period_status row(s) processed', v_tenant.code, v_bps_upd;
     END LOOP;
 
-    -- ── Assertions ────────────────────────────────────────────────────────────
+    -- â”€â”€ Assertions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     -- All May 2026 fiscal_period rows must now be open (or soft_close).
     IF EXISTS (
         SELECT 1
@@ -120,7 +120,7 @@ BEGIN
         RAISE EXCEPTION '314 FAIL: Some May 2026 fiscal_period rows are still not open';
     END IF;
 
-    -- Every statutory (company × book) pair must have a book_period_status
+    -- Every statutory (company Ã— book) pair must have a book_period_status
     -- row for the May 2026 period in open/soft_close.
     IF EXISTS (
         SELECT fp.company_code_id, ba.book_id,
@@ -141,15 +141,16 @@ BEGIN
         EXCEPT
         SELECT bps.company_code_id, bps.book_id,
                bps.fiscal_year,     bps.period_number
-        FROM   governance.book_period_status bps
+        FROM   ledger.book_period_status bps
         JOIN   master.tenant t ON t.id = bps.tenant_id
         WHERE  t.code IN ('athyper', 'technostat')
           AND  bps.status IN ('open', 'soft_close')
           AND  bps.fiscal_year = 2026
     ) THEN
-        RAISE EXCEPTION '314 FAIL: Some company×book pairs missing open book_period_status for May 2026';
+        RAISE EXCEPTION '314 FAIL: Some companyÃ—book pairs missing open book_period_status for May 2026';
     END IF;
 
     RAISE NOTICE '314: May 2026 is now fully open for athyper + technostat. All assertions passed.';
 END;
 $fix$;
+

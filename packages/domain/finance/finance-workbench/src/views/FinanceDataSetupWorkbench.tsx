@@ -548,7 +548,7 @@ const SETUP_SECTIONS: SetupSection[] = [
     description: "Book period status matrix with inline transitions.",
     recommendedPattern: "Use a books by periods matrix instead of a flat grid.",
     entities: [
-      entity("book-period-status", "Book Period Status", "governance.book_period_status", "C", "Open, soft close, hard close, archived status.", {
+      entity("book-period-status", "Book Period Status", "ledger.book_period_status", "C", "Open, soft close, hard close, archived status.", {
         detailMode: "period-matrix",
         defaultView: "matrix",
         connectedHref: "/workbench/finance/close",

@@ -11,7 +11,7 @@ import type { PermissionResolverRegistry } from "./resolvers/registry.js";
 
 /**
  * Build the EffectivePermissionContext for the active request. Throws when
- * the resolver cannot find a binding/persona — callers should translate that
+ * the resolver cannot find a canonical authority binding; callers translate that
  * into a 403 at the HTTP boundary.
  */
 export async function buildEffectivePermissionContext(

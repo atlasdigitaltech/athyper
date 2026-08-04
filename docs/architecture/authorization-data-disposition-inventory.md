@@ -4,47 +4,70 @@
 > Edit the policy, not this file.
 
 - Policy: `authorization-wave0-data-disposition`
-- Policy hash: `f245d856f1f6e06300f28785b0e878b8455d6ea26bd22af235bd49bf59eda9b9`
+- Policy hash: `3e382b2a4f20b6c4843f1b1febe5c75d89c3f0a784f671b3a65186c09bcd8592`
 - Approval: **pending**
-- Discovered DDL tables: 667
-- External object stores/systems: 9
+- Cataloged database tables: 798
+- Exact runtime-created table registrations: 1
+- External object stores/systems: 12
 - Unclassified tables: 0
 
 The checked-in inventory assigns one proposed disposition to every table
-discoverable in versioned DDL and every registered external object. Production
+discoverable in versioned DDL, every exactly registered runtime-created table,
+and every registered external object. Production
 use remains blocked until the named data, retention, security, and operations
-approvers change the policy status to `approved` and a live `pg_class` overlay
-finds no extra or multiply classified runtime objects.
+approvers change the policy status to `approved`, bind `approvedPolicyHash`
+to the generated policy hash, and a live `pg_class` overlay finds no extra
+or multiply classified runtime objects.
 
 ## Summary by data class
 
 | Data class | Objects |
 | --- | ---: |
-| audit_log | 47 |
+| audit_log | 49 |
 | authentication_authority | 1 |
+| authentication_configuration | 2 |
 | authorization_audit | 1 |
 | authorization_cache | 1 |
-| business_master_transactional | 184 |
+| authorization_migration_compatibility | 1 |
+| authorization_migration_control | 6 |
+| authorization_migration_evidence | 13 |
+| business_identity_context_non_authorizing | 1 |
+| business_master_transactional | 193 |
+| business_scope_context_non_authorizing | 2 |
 | cache_invalidation_projection | 1 |
-| ddl_catalog_reference | 154 |
-| derived_projection | 13 |
+| canonical_authorization_assignment | 1 |
+| canonical_authorization_population | 2 |
+| commercial_catalog | 4 |
+| database_backup_object | 1 |
+| ddl_catalog_reference | 158 |
+| derived_projection | 14 |
 | document_metadata | 95 |
 | document_object | 2 |
-| event_outbox_inbox | 23 |
+| event_outbox_inbox | 30 |
 | event_stream | 1 |
 | governance_audit | 16 |
+| identity_context_non_authorizing | 1 |
 | identity_projection | 3 |
 | ledger_regulatory | 16 |
 | legacy_authorization | 12 |
+| legacy_authorization_catalog | 3 |
 | legacy_entitlement_authorization_coupling | 2 |
-| legacy_mesh_authorization | 2 |
-| mesh_owned | 68 |
-| mesh_owned_audit | 14 |
-| mesh_owned_catalog | 15 |
+| legacy_mesh_authorization | 3 |
+| mesh_owned | 94 |
+| mesh_owned_audit | 29 |
+| mesh_owned_catalog | 36 |
 | mesh_owned_document_object | 1 |
+| mesh_provisioning_ledger | 1 |
+| network_business_context_non_authorizing | 3 |
+| network_integration_reference | 1 |
+| operational_log | 1 |
+| provisioning_ledger | 1 |
 | secret | 1 |
 | session_token | 2 |
+| tenant_business_context_non_authorizing | 1 |
+| tenant_entitlement | 2 |
 | tenant_foundation | 1 |
+| trace_telemetry | 1 |
 
 ## Table dispositions
 
@@ -68,28 +91,47 @@ finds no extra or multiply classified runtime objects.
 | `control.atlas_conversation_retention_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.atlas_tenant_provider_credential` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.atlas_tenant_provider_credential_epoch` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.authorization_anomaly_disposition` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.authorization_capture_source` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.authorization_migration_run` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.authorization_writer_registry` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.auth_admin_entitlement_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.auth_catalog_owner` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.auth_catalog_reference_v2` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.auth_entitlement_target_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.auth_permission` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.auth_permission_alias_v2` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.auth_permission_plane` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.auth_permission_scope_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.auth_plane` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.authorization_anomaly_disposition` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `control.authorization_capture_source` | authorization_migration_control | recreate_from_approved_source_registry | exact_table_override |
+| `control.authorization_migration_run` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `control.authorization_v2_conservation_ledger` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `control.authorization_v2_deferred_constraint_registry` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `control.authorization_v2_expand_installation` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `control.authorization_v2_frozen_legacy_object` | authorization_migration_control | recreate_from_approved_source_registry | exact_table_override |
+| `control.authorization_v2_transformer_registry` | authorization_migration_control | recreate_from_approved_transformer_registry | exact_table_override |
+| `control.authorization_v3_scope_mapping` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.authorization_v3_subject_mapping` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.authorization_v4_access_grant_disposition` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.authorization_v4_feature_grant_disposition` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.authorization_v4_role_deny_disposition` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.authorization_writer_registry` | authorization_migration_control | recreate_from_approved_writer_registry | exact_table_override |
 | `control.bank_format_rule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.bank_interface_profile` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.blueprint_registry` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.blueprint_tenant_application` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.book_posting_rule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.budget_check_config` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.budget_check_config` | retired_finance_configuration | replace_with_control_budget_control_policy | table_override |
 | `control.commodity_category_buy_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.commodity_category_inventory_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.commodity_category_sell_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.commodity_classification_config` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.commodity_classification_to_intent_rule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.commodity_code_to_category_rule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.company_fiscal_calendar_assignment` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.company_fiscal_calendar_assignment` | tenant_finance_configuration | migrate_after_fiscal_calendar_period_rule | table_override |
 | `control.connector_type` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.content_quota` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.cron_schedule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.dimension_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.dimension_policy_allowed_value` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.dimension_policy` | tenant_finance_configuration | migrate_in_declared_fk_order | table_override |
+| `control.dimension_policy_allowed_value` | tenant_finance_configuration | migrate_after_dimension_policy | table_override |
 | `control.document_lookup` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity_action_rule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -106,9 +148,11 @@ finds no extra or multiply classified runtime objects.
 | `control.entity_numbering_config` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity_numbering_counter` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity_operation` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.entity_operation_plane` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity_publish_state` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity_relation` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.entity_scope_binding` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity_surface` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity_version` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.entity_version_contract` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -117,10 +161,10 @@ finds no extra or multiply classified runtime objects.
 | `control.field_group_member` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.field_security_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.finance_posting_rollout_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.fiscal_calendar_config` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.fiscal_calendar_period_rule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.forecast_budget_bridge` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.forecast_line` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.fiscal_calendar_config` | tenant_finance_configuration | migrate_in_declared_fk_order | table_override |
+| `control.fiscal_calendar_period_rule` | tenant_finance_configuration | migrate_after_fiscal_calendar_config | table_override |
+| `control.forecast_budget_bridge` | retired_planning_bridge | do_not_migrate_replaced_by_planning_model_and_run | table_override |
+| `control.forecast_line` | retired_planning_document | transform_to_document_planning_scenario_line | table_override |
 | `control.formula_expression` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.formula_expression_version` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.fx_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -152,7 +196,7 @@ finds no extra or multiply classified runtime objects.
 | `control.payment_method_company_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.payment_method_interface_binding` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.payment_settlement_rule` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `control.permission_alias` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `control.permission_alias` | authorization_migration_compatibility | retain_through_alias_observation_then_drop | exact_table_override |
 | `control.planning_driver` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.planning_driver_assumption` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.planning_driver_formula` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -281,6 +325,19 @@ finds no extra or multiply classified runtime objects.
 | `document.workflow_stage` | document_metadata | migrate_with_referenced_objects | schema_default |
 | `event.ai_tool_invocation` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.atlas_run` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
+| `event.authorization_capture_clock` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `event.authorization_change_event` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `event.authorization_change_transaction` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `event.authorization_global_epoch_v2` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
+| `event.authorization_invalidation_outbox_v2` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
+| `event.authorization_plane_epoch_v2` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
+| `event.authorization_projection_checkpoint` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `event.authorization_snapshot_marker` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `event.authorization_tenant_epoch_v2` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
+| `event.authorization_v2_replay_application` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
+| `event.authorization_v2_replay_binding` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
+| `event.authorization_v2_replay_inbox` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
+| `event.authorization_v2_replay_transaction` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.comment_flag` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.connector_instance` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.digest_staging` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
@@ -291,7 +348,6 @@ finds no extra or multiply classified runtime objects.
 | `event.endpoint` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.lifecycle_timer_schedule` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.notification_delivery` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
-| `event.notification_delivery_2026_04` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.notification_delivery_claim` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.notification_delivery_default` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
 | `event.notification_message` | event_outbox_inbox | drain_watermark_and_replay_pending | schema_default |
@@ -350,6 +406,8 @@ finds no extra or multiply classified runtime objects.
 | `log.audit_dlq` | audit_log | migrate_or_immutable_archive | schema_default |
 | `log.audit_log` | audit_log | migrate_or_immutable_archive | schema_default |
 | `log.audit_log_default` | audit_log | migrate_or_immutable_archive | schema_default |
+| `log.auth_decision_evidence_v2` | audit_log | migrate_or_immutable_archive | schema_default |
+| `log.auth_decision_evidence_v2_default` | audit_log | migrate_or_immutable_archive | schema_default |
 | `log.close_activity_log` | audit_log | migrate_or_immutable_archive | schema_default |
 | `log.close_override_log` | audit_log | migrate_or_immutable_archive | schema_default |
 | `log.comment_retention_log` | audit_log | migrate_or_immutable_archive | schema_default |
@@ -403,9 +461,34 @@ finds no extra or multiply classified runtime objects.
 | `master.attachment_acl` | legacy_authorization | backfill_canonical_record_acl_then_drop | exact_table_override |
 | `master.attachment_comment` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.attachment_folder` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.auth_group` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.auth_group_member` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.auth_group_role` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_delegation` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_delegation_permission` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_delegation_permission_scope` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_deny_rule` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_deny_rule_group` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_deny_rule_hard_policy` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_deny_rule_principal` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_group` | canonical_authorization_population | migrate_exact_stable_ids_and_enrich_from_approved_manifest | exact_table_override |
+| `master.auth_group_member` | canonical_authorization_population | preserve_existing_users_and_migrate_exact_membership | exact_table_override |
+| `master.auth_group_member_v2` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_group_role` | canonical_authorization_assignment | backfill_tenant_role_fk_and_migrate_scoped_assignment | exact_table_override |
+| `master.auth_group_role_v2` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_group_v2` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_override` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_permission_set` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_permission_set_rule` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_plane_membership` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_record_acl` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_record_acl_permission` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_role` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_role_compilation` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_role_permission` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_role_permission_set` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_scope_company` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_scope_legal_entity` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_scope_operating_organization` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_scope_target` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.auth_scope_tenant` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_account` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_account_house_config` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.bank_account_link` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -414,12 +497,12 @@ finds no extra or multiply classified runtime objects.
 | `master.budget_allocation` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.budget_profile` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.business_intent` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.business_network` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.business_network` | legacy_mesh_authorization | classify_mesh_migration_or_drop_from_neon | exact_table_override |
 | `master.business_network_membership` | legacy_mesh_authorization | classify_mesh_migration_or_drop_from_neon | exact_table_override |
 | `master.business_network_membership_role` | legacy_mesh_authorization | classify_mesh_migration_or_drop_from_neon | exact_table_override |
 | `master.business_partner` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.business_partner_network_capability` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.business_partner_network_link` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.business_partner_network_capability` | network_business_context_non_authorizing | migrate_only_approved_plane_neutral_projection | exact_table_override |
+| `master.business_partner_network_link` | network_business_context_non_authorizing | migrate_only_approved_plane_neutral_projection | exact_table_override |
 | `master.business_partner_relation` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.career_band` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.career_level` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -492,12 +575,13 @@ finds no extra or multiply classified runtime objects.
 | `master.ledger_book` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.legal_entity` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.legal_entity_business_partner_link` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.legal_entity_identity_binding` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.legal_entity_network_account` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.legal_entity_identity_binding` | business_identity_context_non_authorizing | migrate_as_external_organization_mapping | exact_table_override |
+| `master.legal_entity_network_account` | network_business_context_non_authorizing | migrate_only_approved_plane_neutral_projection | exact_table_override |
 | `master.letterhead` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.lifecycle_instance` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.multipart_upload` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.network_provider` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.mv_company_postable_account` | derived_projection | rebuild_from_authoritative_data | exact_table_override |
+| `master.network_provider` | network_integration_reference | retain_only_plane_neutral_external_provider_rows | exact_table_override |
 | `master.notification` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.notification_default` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.operating_organization` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -535,7 +619,7 @@ finds no extra or multiply classified runtime objects.
 | `master.principal_notification_preference` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.principal_persona` | legacy_authorization | backfill_group_membership_archive_then_drop | exact_table_override |
 | `master.principal_profile` | identity_projection | import_cleaned_preserved_projection | exact_table_override |
-| `master.principal_relationship` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.principal_relationship` | identity_context_non_authorizing | migrate_as_correlation_only | exact_table_override |
 | `master.principal_ui_preference` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.principal_ui_profile` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.print_profile` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
@@ -563,32 +647,59 @@ finds no extra or multiply classified runtime objects.
 | `master.supplier_qualification` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.tax_jurisdiction` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.tax_type` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.team` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.team_member` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.team` | business_scope_context_non_authorizing | migrate_as_context_only | exact_table_override |
+| `master.team_member` | business_scope_context_non_authorizing | migrate_as_context_only | exact_table_override |
 | `master.template` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.template_binding` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.tenant` | tenant_foundation | migrate_exact_stable_ids | exact_table_override |
 | `master.tenant_admin_grant` | legacy_authorization | backfill_admin_plane_membership_and_roles_then_drop | exact_table_override |
-| `master.tenant_feature_entitlement` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.tenant_identity_domain` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.tenant_identity_provider` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.tenant_module_subscription` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.tenant_entitlement_override` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.tenant_feature_entitlement` | tenant_entitlement | migrate_exact_active_and_historical_rows | exact_table_override |
+| `master.tenant_identity_domain` | authentication_configuration | migrate_without_secrets_and_reconcile_keycloak | exact_table_override |
+| `master.tenant_identity_provider` | authentication_configuration | migrate_without_secrets_and_reconcile_keycloak | exact_table_override |
+| `master.tenant_module_subscription` | tenant_entitlement | migrate_exact_active_and_historical_rows | exact_table_override |
 | `master.tenant_parameter_definition` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.tenant_parameter_value` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.tenant_permission_override` | legacy_entitlement_authorization_coupling | classify_feature_entitlement_override_then_drop | exact_table_override |
 | `master.tenant_profile` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
-| `master.tenant_relationship` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `master.tenant_relationship` | tenant_business_context_non_authorizing | migrate_as_relationship_context_only | exact_table_override |
 | `master.tenant_risk_source_config` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.trusted_device` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.warehouse` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.work_assignment` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.work_pattern` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
 | `master.work_pattern_day` | business_master_transactional | migrate_in_declared_fk_order | schema_default |
+| `mesh_control.auth_catalog_owner` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.auth_catalog_reference_v2` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.auth_entitlement_policy` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.auth_permission` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.auth_permission_alias_v2` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.auth_permission_category` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.auth_permission_plane` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.auth_permission_scope_policy` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.auth_plane` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.authorization_anomaly_disposition` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.authorization_capture_source` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.authorization_migration_run` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.authorization_v2_conservation_ledger` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `mesh_control.authorization_v2_deferred_constraint_registry` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `mesh_control.authorization_v2_expand_installation` | authorization_migration_evidence | preserve_immutable_through_observation | exact_table_override |
+| `mesh_control.authorization_v2_frozen_legacy_object` | authorization_migration_control | recreate_from_approved_source_registry | exact_table_override |
+| `mesh_control.authorization_v2_transformer_registry` | authorization_migration_control | recreate_from_approved_transformer_registry | exact_table_override |
+| `mesh_control.authorization_v3_scope_mapping` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.authorization_v3_subject_mapping` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.authorization_v4_legacy_exception_disposition` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.authorization_writer_registry` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
 | `mesh_control.change_request` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
 | `mesh_control.connector_instance` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
 | `mesh_control.connector_type` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
 | `mesh_control.cron_schedule` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
 | `mesh_control.delivery_policy` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.entity` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.entity_operation` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.entity_operation_plane` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.entity_scope_binding` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
+| `mesh_control.entity_version` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
 | `mesh_control.feature_flag` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
 | `mesh_control.notification_provider` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
 | `mesh_control.notification_routing_rule` | mesh_owned_catalog | recreate_in_mesh_db_only | schema_default |
@@ -605,6 +716,21 @@ finds no extra or multiply classified runtime objects.
 | `mesh_log.attachment_access_log_default` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
 | `mesh_log.audit_event` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
 | `mesh_log.audit_event_default` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.auth_decision_evidence_v2` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.auth_decision_evidence_v2_default` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_account_epoch_v2` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_capture_clock` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_change_event` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_change_transaction` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_global_epoch_v2` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_invalidation_outbox_v2` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_plane_epoch_v2` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_projection_checkpoint` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_snapshot_marker` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_v2_replay_application` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_v2_replay_binding` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_v2_replay_inbox` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh_log.authorization_v2_replay_transaction` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
 | `mesh_log.delivery_attempt_log` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
 | `mesh_log.delivery_attempt_log_default` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
 | `mesh_log.dlq` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
@@ -613,6 +739,8 @@ finds no extra or multiply classified runtime objects.
 | `mesh_log.job_log_default` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
 | `mesh_log.security_event_log` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
 | `mesh_log.security_event_log_default` | mesh_owned_audit | migrate_or_archive_in_mesh_boundary | schema_default |
+| `mesh.account_entitlement` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.account_entitlement_override` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.account_grant` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.activity_log` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.address` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
@@ -622,6 +750,30 @@ finds no extra or multiply classified runtime objects.
 | `mesh.attachment_comment` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.attachment_folder` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.audit_event` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_delegation` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_delegation_permission` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_delegation_permission_scope` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_deny_rule` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_deny_rule_group` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_deny_rule_hard_policy` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_deny_rule_principal` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_group_member_v2` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_group_role_v2` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_group_v2` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_override` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_permission_set` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_permission_set_rule` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_plane_membership` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_record_acl` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_record_acl_permission` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_role` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_role_compilation` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_role_permission` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_role_permission_set` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_scope_account` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_scope_network_relationship` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_scope_resource` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
+| `mesh.auth_scope_target` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.bank_account` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.bank_account_disclosure` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.bank_account_link` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
@@ -681,7 +833,9 @@ finds no extra or multiply classified runtime objects.
 | `mesh.supplier_profile_verification` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.supplier_service_coverage` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.sync_checkpoint` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
-| `public.schema_provisions` | ddl_catalog_reference | recreate_from_versioned_ddl | schema_default |
+| `public.mesh_schema_provisions` | mesh_provisioning_ledger | recreate_empty_in_mesh_then_rebuild_from_executed_manifest | exact_runtime_table_override |
+| `public.schema_provisions` | provisioning_ledger | recreate_empty_then_rebuild_from_executed_manifest | exact_table_override |
+| `shared.auth_permission_category` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.commodity_code` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.commodity_crosswalk` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.country` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -692,18 +846,18 @@ finds no extra or multiply classified runtime objects.
 | `shared.language` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.locale` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.module` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `shared.permission` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `shared.permission_category` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `shared.permission_scope_policy` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.permission` | legacy_authorization_catalog | backfill_control_auth_permission_then_drop | exact_table_override |
+| `shared.permission_category` | legacy_authorization_catalog | backfill_control_auth_permission_category_then_drop | exact_table_override |
+| `shared.permission_scope_policy` | legacy_authorization_catalog | backfill_control_scope_policy_then_drop | exact_table_override |
 | `shared.persona` | legacy_authorization | archive_evidence_then_drop | exact_table_override |
 | `shared.persona_permission` | legacy_authorization | backfill_role_permissions_archive_then_drop | exact_table_override |
-| `shared.plan_feature_access` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `shared.plan_module_access` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.plan_feature_access` | commercial_catalog | recreate_from_approved_seed | exact_table_override |
+| `shared.plan_module_access` | commercial_catalog | recreate_from_approved_seed | exact_table_override |
 | `shared.plan_permission_access` | legacy_entitlement_authorization_coupling | replace_with_module_feature_entitlement_then_drop | exact_table_override |
 | `shared.role` | legacy_authorization | backfill_tenant_roles_archive_then_drop | exact_table_override |
 | `shared.state_region` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `shared.subscription_plan` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
-| `shared.subscription_plan_version` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
+| `shared.subscription_plan` | commercial_catalog | recreate_from_approved_seed | exact_table_override |
+| `shared.subscription_plan_version` | commercial_catalog | recreate_from_approved_seed | exact_table_override |
 | `shared.timezone` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.uom` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.workspace` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -722,11 +876,14 @@ finds no extra or multiply classified runtime objects.
 
 | Object | Data class | Disposition |
 | --- | --- | --- |
+| `backup.database-snapshot-object-storage` | database_backup_object | retain_encrypted_backups_then_rebind_to_plane_specific_backup_policy |
 | `event-broker.pending-topics` | event_stream | drain_record_offsets_and_resume_idempotently |
 | `keycloak.realm-and-credential-store` | authentication_authority | supported_encrypted_backup_and_restore |
 | `mesh.exchange-object-storage` | mesh_owned_document_object | migrate_with_mesh_exchange_metadata_in_mesh_boundary |
 | `neon.attachment-object-storage` | document_object | migrate_with_attachment_metadata |
 | `neon.document-object-storage` | document_object | migrate_with_document_metadata |
+| `observability.log-object-storage` | operational_log | retain_or_archive_under_log_and_legal_hold_policy |
+| `observability.trace-object-storage` | trace_telemetry | retain_or_expire_under_observability_policy_without_business_replay |
 | `redis.application-sessions` | session_token | revoke_flush_and_do_not_migrate |
 | `redis.authorization-cache` | authorization_cache | increment_epoch_flush_and_rebuild |
 | `search.derived-indexes` | derived_projection | rebuild_from_authoritative_data |
@@ -737,4 +894,3 @@ finds no extra or multiply classified runtime objects.
 Runtime partitions and tenant/environment-created objects are discovered from
 `pg_class` by the live coverage report. A live object absent from this inventory
 has no fallback disposition and blocks the Wave 0 gate.
-

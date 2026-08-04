@@ -1,0 +1,5 @@
+-- ============================================================================
+-- shared/07_views.sql
+-- Concept: Reference Views — shared tables accessed directly, no view abstraction
+-- Depends on: 04_tables/001_shared.sql
+-- ============================================================================

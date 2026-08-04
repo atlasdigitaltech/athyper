@@ -4,7 +4,7 @@
  * POST /api/collab/attachments
  *   Accepts multipart/form-data (field name "file") OR
  *   JSON { filename, content_type?, size_bytes?, data_base64 }.
- *   Stores file in S3, inserts master.attachment row (status='active').
+ *   Stores file in S3, inserts document.attachment row (status='active').
  *   Returns { attachment_id, file_name, content_type, size_bytes }.
  *   NOTE: No entity_document_link is created here. The link is created
  *   atomically when the comment is submitted (POST /api/collab/comments
@@ -177,7 +177,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
     // sha256 dedup — reuse only if the object lives in the CURRENT bucket.
     const existing = await db
-      .selectFrom("master.attachment as a")
+      .selectFrom("document.attachment as a")
       .select(["a.id", "a.storage_key"])
       .where("a.tenant_id",      "=", tenantId)
       .where("a.sha256",         "=", sha256)
@@ -189,7 +189,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
     if (existing) {
       const ex = existing as Record<string, unknown>;
       await db
-        .updateTable("master.attachment" as never)
+        .updateTable("document.attachment" as never)
         .set({ reference_count: sql`reference_count + 1`, updated_at: new Date() } as never)
         .where("id"        as never, "=", ex["id"]  as never)
         .where("tenant_id" as never, "=", tenantId  as never)
@@ -215,7 +215,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
         sizeBytes,
       });
       await db
-        .insertInto("master.attachment" as never)
+        .insertInto("document.attachment" as never)
         .values({
           id:                           attachmentId,
           tenant_id:                    tenantId,
@@ -500,7 +500,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
       // Only allow delete if no links exist (staged only)
       const linkCount = await db
-        .selectFrom("master.entity_document_link as edl")
+        .selectFrom("document.attachment_link as edl")
         .select(sql<string>`COUNT(*)`.as("cnt") as never)
         .where("edl.attachment_id" as never, "=", attachmentId as never)
         .where("edl.tenant_id"     as never, "=", tenantId     as never)
@@ -513,7 +513,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       }
 
       await db
-        .updateTable("master.attachment" as never)
+        .updateTable("document.attachment" as never)
         .set({ status: "deleted", is_active: false, updated_at: new Date() } as never)
         .where("id"        as never, "=", attachmentId as never)
         .where("tenant_id" as never, "=", tenantId     as never)
@@ -550,7 +550,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       const { tenantId, principalId } = authorized;
 
       const row = await db
-        .selectFrom("master.attachment as a")
+        .selectFrom("document.attachment as a")
         .select(["a.storage_key", "a.file_name", "a.content_type", "a.size_bytes", "a.status"])
         .where("a.id",        "=", attachmentId)
         .where("a.tenant_id", "=", tenantId)
@@ -574,7 +574,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
         tenant_id:             tenantId,
         principal_id:          principalId,
         attachment_id:         attachmentId,
-        parent_entity_type:    "master.comment",
+        parent_entity_type:    "document.comment",
         access_type:           "download",
         attachment_name:       r["file_name"] as string,
         attachment_size_bytes: Number(r["size_bytes"] ?? 0),
@@ -611,7 +611,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       }
 
       const row = await db
-        .selectFrom("master.attachment as a")
+        .selectFrom("document.attachment as a")
         .select(["a.id", "a.status"])
         .where("a.id",        "=", attachmentId)
         .where("a.tenant_id", "=", tenantId)
@@ -626,7 +626,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
         return;
       }
 
-      await db.insertInto("master.entity_document_link" as never).values({
+      await db.insertInto("document.attachment_link" as never).values({
         tenant_id:   tenantId,
         entity_type: body.entity_type,
         entity_id:   body.entity_id,
@@ -636,7 +636,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       } as never).onConflict((oc) => (oc as unknown as { doNothing(): unknown }).doNothing() as never).execute();
 
       await db
-        .updateTable("master.attachment" as never)
+        .updateTable("document.attachment" as never)
         .set({ reference_count: sql`reference_count + 1`, updated_at: new Date() } as never)
         .where("id"        as never, "=", attachmentId as never)
         .where("tenant_id" as never, "=", tenantId     as never)
@@ -670,7 +670,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       }
 
       const deleted = await db
-        .deleteFrom("master.entity_document_link" as never)
+        .deleteFrom("document.attachment_link" as never)
         .where("tenant_id"    as never, "=", tenantId       as never)
         .where("attachment_id" as never, "=", attachmentId  as never)
         .where("entity_type"  as never, "=", body.entity_type as never)
@@ -679,7 +679,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
 
       if (deleted) {
         await db
-          .updateTable("master.attachment" as never)
+          .updateTable("document.attachment" as never)
           .set({ reference_count: sql`GREATEST(reference_count - 1, 0)`, updated_at: new Date() } as never)
           .where("id"        as never, "=", attachmentId as never)
           .where("tenant_id" as never, "=", tenantId     as never)
@@ -711,8 +711,8 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       }
 
       const rows = await db
-        .selectFrom("master.entity_document_link as edl")
-        .innerJoin("master.attachment as a", "a.id" as never, "edl.attachment_id" as never)
+        .selectFrom("document.attachment_link as edl")
+        .innerJoin("document.attachment as a", "a.id" as never, "edl.attachment_id" as never)
         .leftJoin("master.principal as p", "p.id" as never, "a.uploaded_by" as never)
         .select([
           "a.id as attachment_id",
@@ -812,7 +812,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       }
 
       const existing = await db
-        .selectFrom("master.attachment as a")
+        .selectFrom("document.attachment as a")
         .select(["a.id"])
         .where("a.id",        "=", attachmentId)
         .where("a.tenant_id", "=", tenantId)
@@ -822,7 +822,7 @@ export function registerCollabAttachmentRoutes(router: Router, deps: CollabAttac
       if (!existing) { res.status(404).json({ error: "ATTACHMENT_NOT_FOUND" }); return; }
 
       await db
-        .updateTable("master.attachment" as never)
+        .updateTable("document.attachment" as never)
         .set({ file_name: body.file_name.trim().slice(0, 500), updated_at: new Date() } as never)
         .where("id"        as never, "=", attachmentId as never)
         .where("tenant_id" as never, "=", tenantId     as never)

@@ -12,9 +12,13 @@
 #   ./seed-db.sh --seed-only     Run only shared ref + Mesh seed data
 #   ./seed-db.sh --status        Show checksum status, no data changes
 #   ./seed-db.sh --reset         Drop shared/mesh schemas, then re-run
+#   ./seed-db.sh --reset --confirm LOCAL-AUTH-V2-RESET
+#                                Local shorthand for the guarded athyper_mesh reset.
+#                                The disposable DB marker/fingerprint must already match.
 #   ./seed-db.sh --drop-only     Drop shared/mesh schemas only
 #   ./seed-db.sh --force         Re-run even when checksums match
 #   ./seed-db.sh --discover      Print the Mesh file set
+#   --confirm is valid only with --reset or --drop-only.
 #   ./seed-db.sh --docker        Run from a temporary Node container on the
 #                                internal Docker network.
 #

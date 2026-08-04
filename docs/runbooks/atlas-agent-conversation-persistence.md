@@ -22,9 +22,9 @@ Admin RLS bypass.
 
 Provision the Atlas additions before enabling either persistence gate:
 
-- `master.atlas_thread`, one-to-one with `master.conversation`;
-- append-only `master.atlas_message`;
-- durable `event.atlas_run`;
+- `ai.atlas_thread`, one-to-one with `master.conversation`;
+- append-only `ai.atlas_message`;
+- durable `ai.atlas_run`;
 - the `atlas_agent` conversation type;
 - Atlas owner/participant RLS helpers and policies;
 - `ai.agent.history.read`, `ai.agent.history.manage`,
@@ -88,7 +88,7 @@ browser/app environment files.
 
 The fallback policy identifier is
 `atlas-default-<ATLAS_CONVERSATION_RETENTION_DAYS>d-v1`. An active
-`control.atlas_conversation_retention_policy` row may shorten or otherwise
+`ai.atlas_conversation_retention_policy` row may shorten or otherwise
 override retention within platform bounds. The list API resolves that policy
 for the verified tenant and returns its policy ID, days, and approved display
 copy from the same decision, including when the list is empty.

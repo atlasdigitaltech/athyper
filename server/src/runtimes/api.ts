@@ -24,7 +24,14 @@ import {
   getEffectiveModuleAccess,
   createPermissionResolverRegistry,
   createPermissionContextMiddleware,
+  createMeshAuthorizationRuntime,
+  createNeonAuthorizationRuntime,
+  withNormalizedOperationScopeRollout,
+  SqlNormalizedEntitlementResolver,
+  SqlOperationScopeRolloutResolver,
+  SqlSessionV2CatalogRepository,
   isPlaneKey,
+  createPlaneDatabaseRegistry,
 } from "@athyper/svc-iam";
 import {
   createRuntimeBootstrapLoader,
@@ -32,6 +39,8 @@ import {
   registerMetadataRoutes,
   RuntimeBootstrapProvider,
 } from "@athyper/svc-metadata";
+import { registerMetaEntityAuthoringRoutes } from "@athyper/svc-meta-entity-authoring";
+import { PostgresNumberingPolicyTester } from "../../packages/services/numbering-runtime/index.js";
 import {
   EntityQueryService,
   KyselyEntityQueryExecutor,
@@ -39,7 +48,7 @@ import {
   getRecordsCapabilityHandlerManifest,
   registerRecordsRoutes,
 } from "@athyper/svc-records";
-import { createResolverRoute, registerAllResolvers } from "@athyper/svc-shared";
+import { createResolverRoute, registerAllResolvers, resolvePrincipalIdOrNull } from "@athyper/svc-shared";
 import { registerSearchRoutes } from "@athyper/svc-search";
 import { registerDocumentsRoutes } from "@athyper/svc-documents";
 import { registerCollabRoutes } from "@athyper/svc-collab";
@@ -238,6 +247,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     logger,
     lifecycle,
     db,
+    platformDb,
     meshDb,
     redis,
     auth,
@@ -253,6 +263,18 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const _db = db.kysely as unknown as import("kysely").Kysely<Record<string, any>>;
+  if (!platformDb) {
+    throw new Error("Athyper platform database configuration is required for Admin IAM");
+  }
+  if (!meshDb) {
+    throw new Error("Mesh database configuration is required for Mesh IAM");
+  }
+  const planeDatabases = createPlaneDatabaseRegistry({
+    admin: platformDb.kysely as unknown as import("kysely").Kysely<Record<string, any>>,
+    neon: _db,
+    mesh: meshDb.kysely as unknown as import("kysely").Kysely<Record<string, any>>,
+  });
+  await planeDatabases.assertReady();
 
   // ─── Claim-first context guard mode ───────────────────────────────────────
   // Phase B (refactor): the claim-vs-context cross-checks now live in
@@ -1036,7 +1058,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // Build the EffectivePermissionContext for each authenticated request and
   // stash it on res.locals so downstream routes (entity-operations, runtime-
   // records, etc.) can read the resolved {allowed, denied} sets without
-  // re-running the persona / grant SQL. Falls back gracefully when:
+  // re-running authority resolution.
   //   - no Bearer token  → readContextInput returns null
   //   - no tenant scope  → readContextInput returns null
   //   - resolver throws  → middleware catches and converts mesh "no binding"
@@ -1049,10 +1071,137 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   // executor — the concrete DB schema is irrelevant. `as never` strips the
   // generated DB$1 typing without compromising the SQL the resolvers run
   // (they all use the kysely sql tag which doesn't typecheck the schema).
+  if (!meshDb) {
+    throw new Error(
+      "Mesh database configuration is required for canonical authorization",
+    );
+  }
+  const evaluatorRevision =
+    process.env["AUTHORIZATION_EVALUATOR_REVISION"] ?? "unpublished";
+
+  // Admin identity and Meta Entity authority are both plane-local in Athyper.
+  if (platformDb) {
+    apiRouter.use("/meta-entity", async (req: Request, res: Response, next: NextFunction) => {
+      const authorization = req.headers.authorization ?? "";
+      const bearer = /^Bearer\s+(.+)$/i.exec(authorization)?.[1];
+      if (!bearer) {
+        res.status(401).json({ error: "MISSING_TOKEN", message: "Authorization: Bearer <token> required." });
+        return;
+      }
+      try {
+        const claims = await verifyTokenForCurrentContext(bearer);
+        const resourceAccess = claims["resource_access"] as Record<string, { roles?: unknown }> | undefined;
+        const adminRoles = resourceAccess?.["admin-web"]?.roles;
+        if (!Array.isArray(adminRoles) || !adminRoles.includes("AUTHORIZED")) {
+          res.status(403).json({ error: "NO_PLATFORM_ACCESS", message: "admin-web AUTHORIZED role required." });
+          return;
+        }
+        const context = tryGetContext();
+        const tenantId = context?.tenantId;
+        const subject = typeof claims["sub"] === "string" ? claims["sub"] : "";
+        const realmKey = context?.realmKey ?? context?.realm ?? effectiveDefaultRealm;
+        if (!context || !tenantId || !subject) {
+          res.status(403).json({ error: "VERIFIED_CONTEXT_REQUIRED", message: "Verified tenant and subject context is required." });
+          return;
+        }
+        const principalId = await resolvePrincipalIdOrNull(
+          platformDb.kysely as unknown as import("kysely").Kysely<Record<string, any>>,
+          subject,
+          tenantId,
+          realmKey,
+        );
+        if (!principalId) {
+          res.status(403).json({ error: "NO_PRINCIPAL", message: "No active Admin principal binding exists for this tenant." });
+          return;
+        }
+        context.principalId = principalId;
+        (req as Request & { athyperClaims?: Record<string, unknown> }).athyperClaims = claims;
+        // The generic Neon/Admin permission snapshot currently depends on the
+        // Neon runtime_meta authorization projection. Meta Entity uses the
+        // independent platform authority contract instead, so provide only
+        // the verified identity envelope here. Route handlers must continue
+        // to authorize every capability with TargetCapabilityAuthorizer.
+        (res.locals as Record<string, unknown>)["effectivePermissionContext"] = Object.freeze({
+          planeKey: "admin",
+          tenantId,
+          principalId,
+          principalFingerprint: `platform:${tenantId}:${principalId}`,
+          allowed: new Set<string>(),
+          denied: new Set<string>(),
+          planLocked: new Set<string>(),
+          planeExcluded: new Set<string>(),
+          entries: new Map<string, never>(),
+          authorizationScopes: new Map<string, never>(),
+          profileHash: "platform-target-authority",
+          schemaHash: "meta-entity-authoring-v1",
+          resolvedAt: Date.now(),
+        });
+        next();
+      } catch (error) {
+        logger.warn("meta_entity_identity_boundary_rejected", {
+          requestId: tryGetContext()?.requestId,
+          err: error instanceof Error ? error.message : String(error),
+        });
+        res.status(401).json({ error: "INVALID_TOKEN", message: "Token verification failed." });
+      }
+    });
+  }
+
+  const neonLegacyAuthorization = createNeonAuthorizationRuntime({
+    db: db.kysely as unknown as never,
+    plane: "neon",
+    expectedDatabaseName: "athyper_neon",
+    evaluatorRevision,
+  });
+  const neonAuthorization = withNormalizedOperationScopeRollout(neonLegacyAuthorization, {
+    db: db.kysely as unknown as never,
+    plane: "neon",
+    expectedDatabaseName: "athyper_neon",
+    evaluatorRevision,
+    entitlementResolver: new SqlNormalizedEntitlementResolver(db.kysely as unknown as never, "neon"),
+    rollout: new SqlOperationScopeRolloutResolver(db.kysely as unknown as never, "neon"),
+  });
+  const adminAuthorization = createNeonAuthorizationRuntime({
+    db: platformDb.kysely as unknown as never,
+    plane: "admin",
+    expectedDatabaseName: "athyper_platform",
+    evaluatorRevision,
+  });
+  const meshLegacyAuthorization = createMeshAuthorizationRuntime({
+    meshDb: meshDb.kysely as unknown as never,
+    expectedDatabaseName: "athyper_mesh",
+    evaluatorRevision,
+  });
+  const meshAuthorization = withNormalizedOperationScopeRollout(meshLegacyAuthorization, {
+    db: meshDb.kysely as unknown as never,
+    plane: "mesh",
+    expectedDatabaseName: "athyper_mesh",
+    evaluatorRevision,
+    entitlementResolver: new SqlNormalizedEntitlementResolver(meshDb.kysely as unknown as never, "mesh"),
+    rollout: new SqlOperationScopeRolloutResolver(meshDb.kysely as unknown as never, "mesh"),
+  });
   const permissionResolverRegistry = createPermissionResolverRegistry({
-    neon:  { db: db.kysely as unknown as never },
-    admin: { db: db.kysely as unknown as never },
-    mesh:  { db: db.kysely as unknown as never, meshDb: meshDb?.kysely as unknown as never },
+    neon: {
+      decisions: neonAuthorization.decisions,
+      catalog: new SqlSessionV2CatalogRepository(
+        db.kysely as unknown as never,
+        "neon",
+      ),
+    },
+    admin: {
+      decisions: adminAuthorization.decisions,
+      catalog: new SqlSessionV2CatalogRepository(
+        platformDb.kysely as unknown as never,
+        "admin",
+      ),
+    },
+    mesh: {
+      decisions: meshAuthorization.decisions,
+      catalog: new SqlSessionV2CatalogRepository(
+        meshDb.kysely as unknown as never,
+        "mesh",
+      ),
+    },
   });
   apiRouter.use(createPermissionContextMiddleware({
     registry: permissionResolverRegistry,
@@ -1063,8 +1212,6 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       context.tenantId = permissions.tenantId;
       context.principalId = permissions.principalId;
       context.profileHash = permissions.profileHash;
-      context.personaId = permissions.personaId;
-      context.accountGrantId = permissions.accountGrantId;
       context.principalFingerprint = permissions.principalFingerprint;
     },
     readContextInput: (req): { planeKey: "neon" | "admin" | "mesh"; tenantId: string; principalId: string } | null => {
@@ -1085,8 +1232,14 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   }));
 
   registerIamRoutes(apiRouter, {
+    planeDatabases,
+    discoveryKeycloak: {
+      baseUrl: kcBaseUrl,
+      realm: config.iam.realm,
+      getAdminToken: getKcAdminToken,
+    },
     db: db.kysely,
-    meshDb: meshDb?.kysely,
+    meshDb: meshDb.kysely,
     cache: iamCache,
     auth: routeAuth,
     logger,
@@ -1127,6 +1280,23 @@ export async function startApi(deps: ServerDeps): Promise<void> {
         getRecordsCapabilityHandlerManifest(),
       ).validateVersionForActivation(versionId),
   });
+
+  if (platformDb) {
+    registerMetaEntityAuthoringRoutes(apiRouter, {
+      db: platformDb.kysely,
+      auth: routeAuth,
+      cache: iamCache,
+      logger,
+      numberingPolicyTesters: {
+        neon: new PostgresNumberingPolicyTester(db.kysely as never, "neon"),
+        mesh: new PostgresNumberingPolicyTester(meshDb.kysely as never, "mesh"),
+      },
+    });
+  } else {
+    logger.error("meta_entity_authoring_disabled", {
+      reason: "ATHYPER_PLATFORM_DATABASE_URL_missing",
+    });
+  }
 
   const entityQueryRuntimeConfig = resolveEntityQueryRuntimeConfig(process.env);
   const atlasDataGateway =

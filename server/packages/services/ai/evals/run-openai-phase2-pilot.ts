@@ -820,10 +820,10 @@ async function loadLedgerRow(
         call.reasoning_tokens AS call_reasoning_tokens,
         call.cost_amount AS call_cost_amount,
         call.provider_request_id AS call_provider_request_id
-      FROM log.ai_agent_run AS run
+      FROM ai.ai_agent_run AS run
       LEFT JOIN LATERAL (
         SELECT model_call.*
-        FROM log.ai_agent_call AS model_call
+        FROM ai.ai_agent_call AS model_call
         WHERE model_call.tenant_id = run.tenant_id
           AND model_call.run_id = run.id
           AND model_call.call_kind = 'model'

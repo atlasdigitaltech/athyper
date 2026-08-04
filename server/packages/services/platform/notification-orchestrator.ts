@@ -171,7 +171,7 @@ export class NotificationOrchestrator {
    * Idempotent when dedupKey is provided.
    */
   async dispatch(input: DispatchNotificationInput): Promise<DispatchResult> {
-    const planeKey = input.sourcePlane ?? "neon";
+    const planeKey = input.sourcePlane ?? await this.currentPlaneKey();
     // Dedup check
     if (input.dedupKey) {
       const isDupe = await this.isDuplicate(
@@ -244,6 +244,13 @@ export class NotificationOrchestrator {
   }
 
   // ── Private ─────────────────────────────────────────────────────────────────
+
+  private async currentPlaneKey(): Promise<"neon" | "mesh" | "admin"> {
+    const result = await sql<{ plane_key: "neon" | "mesh" | "admin" }>`
+      SELECT event.current_plane_key() AS plane_key
+    `.execute(this.db);
+    return result.rows[0]?.plane_key ?? "neon";
+  }
 
   private async createMessage(opts: {
     tenantId:     string;

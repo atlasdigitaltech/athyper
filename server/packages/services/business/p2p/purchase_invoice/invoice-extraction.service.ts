@@ -102,7 +102,7 @@ async function extractInvoiceDraftInner(
 ): Promise<ExtractInvoiceResult> {
   // Fetch raw bytes from object storage via attachment record
   const attachment = await db
-    .selectFrom("master.attachment as a")
+    .selectFrom("document.attachment as a")
     .select(["a.file_name", "a.content_type", "a.storage_key", "a.size_bytes"])
     .where("a.id",        "=", input.attachmentId)
     .where("a.tenant_id", "=", input.tenantId)

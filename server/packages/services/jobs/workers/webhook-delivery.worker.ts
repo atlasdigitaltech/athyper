@@ -167,7 +167,7 @@ function parseRetryAfterMs(value: string | null): number | null {
   return null;
 }
 
-async function claimOutboxEvents(db: Kysely<DB>): Promise<ClaimedEvent[]> {
+async function claimOutboxEvents(db: Kysely<DB>, tenantId: string): Promise<ClaimedEvent[]> {
   const lockedUntil = new Date(Date.now() + OUTBOX_LOCK_DURATION_MS).toISOString();
   const { rows } = await sql<ClaimedEvent>`
     UPDATE event.outbox
@@ -178,7 +178,8 @@ async function claimOutboxEvents(db: Kysely<DB>): Promise<ClaimedEvent[]> {
     WHERE  id IN (
       SELECT id
       FROM   event.outbox
-      WHERE  (
+      WHERE  tenant_id = ${tenantId}::uuid
+        AND  ( (
                status IN ('pending', 'failed')
                AND available_at <= now()
              )
@@ -187,6 +188,7 @@ async function claimOutboxEvents(db: Kysely<DB>): Promise<ClaimedEvent[]> {
                AND locked_until IS NOT NULL
                AND locked_until < now()
              )
+          )
       ORDER  BY available_at ASC, created_at ASC
       LIMIT  ${SWEEP_BATCH_SIZE}
       FOR UPDATE SKIP LOCKED
@@ -305,9 +307,10 @@ async function markOutboxCompletedWithoutSubscriptions(db: Kysely<DB>, eventId: 
 async function sweepWebhooks(
   db: Kysely<DB>,
   queue: Queue<DeliverWebhookJobData | SweepJobData>,
+  tenantId: string,
   logger: JobLogger,
 ): Promise<void> {
-  const events = await claimOutboxEvents(db);
+  const events = await claimOutboxEvents(db, tenantId);
   if (events.length === 0) return;
 
   let enqueued = 0;
@@ -694,7 +697,17 @@ export function createWebhookDeliveryWorker(
   db: Kysely<DB>,
   redis: ConnectionOptions,
   logger: JobLogger,
+  runWithJobContext?: <T>(context: { tenantId?: string }, fn: () => T | Promise<T>) => Promise<T>,
 ): WebhookDeliveryWorkerResult {
+  const runInTenant = async <T>(tenantId: string, fn: () => T | Promise<T>): Promise<T> =>
+    runWithJobContext ? runWithJobContext({ tenantId }, fn) : Promise.resolve(fn());
+
+  const workTenants = async (): Promise<string[]> => {
+    const result = await sql<{ tenant_id: string }>`
+      SELECT tenant_id::text FROM event.fn_notification_work_tenants('webhook', NULL, 1000)
+    `.execute(db);
+    return result.rows.map((row) => row.tenant_id);
+  };
   const queue = new Queue<DeliverWebhookJobData | SweepJobData>(QUEUE_NAME.WEBHOOK_DELIVERY, {
     connection: redis,
     defaultJobOptions: {
@@ -716,9 +729,14 @@ export function createWebhookDeliveryWorker(
     async (job: Job) => {
       switch (job.name) {
         case JOB_NAME.SWEEP_WEBHOOKS:
-          return sweepWebhooks(db, queue, logger);
-        case JOB_NAME.DELIVER_WEBHOOK:
-          return deliverWebhook(db, job.data as DeliverWebhookJobData, logger);
+          for (const tenantId of await workTenants()) {
+            await runInTenant(tenantId, () => sweepWebhooks(db, queue, tenantId, logger));
+          }
+          return;
+        case JOB_NAME.DELIVER_WEBHOOK: {
+          const data = job.data as DeliverWebhookJobData;
+          return runInTenant(data.tenantId, () => deliverWebhook(db, data, logger));
+        }
         default:
           logger.warn("webhook_delivery_unknown_job", { name: job.name });
       }

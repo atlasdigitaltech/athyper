@@ -22,7 +22,7 @@
  * The decision returned by check_permission() (5-step evaluation):
  *   Step 1: plan gate  → not_in_plan | addon_required
  *   Step 2: derive roles/groups
- *   Step 3: persona base  → allow (persona_granted reason)
+ *   Step 3: canonical role/group authority → allow
  *   Step 4: access_grant allow  → allow (grant_granted reason)
  *   Step 5: access_grant deny (always wins)  → deny
  *   Fallthrough  → not_found
@@ -44,10 +44,9 @@ export type PermissionDecisionOutcome =
 export type PermissionDecisionReason =
   | "plan_gate_denied"     // Step 1: plan gate blocked the permission
   | "addon_required"       // Step 1: plan gate requires addon purchase
-  | "no_grant_found"       // Fallthrough: no persona/group/grant covers this permission
+  | "no_grant_found"       // Fallthrough: no canonical authority path covers this permission
   | "explicit_deny"        // Step 5: access_grant deny won (always wins rule)
-  | "persona_granted"      // Step 3: persona base permission granted this
-  | "role_granted"         // Step 3b: group->role->persona path granted this
+  | "role_granted"         // Step 3: canonical group-to-role path granted this
   | "grant_granted"        // Step 4: access_grant allow granted this
   | "delegation_granted";  // Extended: merged from an active delegation grant
 

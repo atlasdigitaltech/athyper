@@ -37,10 +37,6 @@ import { getNeonServerSession } from "@/lib/server/session";
 import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";
 import { isDocumentSaveAndTransitionEnabled } from "@/lib/server/document-edit-submit-policy";
 import { buildDocumentEditPermissionStamp } from "@/lib/server/document-edit-coordinator-identity";
-import {
-  buildSessionConfigurationIdentity,
-  getSessionConfiguration,
-} from "@/lib/server/session-configuration-cache";
 import { resolveDocumentOpenRollout } from "@/lib/server/document-runtime-feature-flags";
 import { runtimeDescriptorParity } from "@/lib/server/runtime-descriptor-parity";
 import {
@@ -344,7 +340,6 @@ async function loadBootstrapRuntimeDescriptor(input: RuntimeLoadInput): Promise<
     operations,
     entityPolicy: (bootstrap.policy ?? undefined) as RuntimeEntityPolicy | undefined,
     lifecycleStateMasks: bootstrap.lifecycleStateMasks,
-    permissionAliasMap: bootstrap.permissionAliases,
     relationProjections,
   });
   if (!descriptor) return undefined;
@@ -367,11 +362,10 @@ async function loadLegacyRuntimeDescriptor(
   );
   const cached = input.cacheEnabled ? descriptorSharedCache.get(descriptorKey) : undefined;
   if (cached) { descriptorCacheStates.set(cached, "warm"); return cached; }
-  const [operations, entityPolicy, lifecycleStateMasks, permissionAliasMap, relationProjections] = await Promise.all([
+  const [operations, entityPolicy, lifecycleStateMasks, relationProjections] = await Promise.all([
     fetchEntityOperations(input.entityCode, input.headers, input.recordId),
     fetchEntityPolicy(input.entityCode, input.headers),
     fetchLifecycleStateMasks(input.entityCode, input.headers),
-    fetchPermissionAliasMap(input.session, input.headers),
     fetchRelationRuntimeProjections(compiled.relations, input.headers),
   ]);
   const descriptor = compileProjectedDescriptor({
@@ -381,7 +375,6 @@ async function loadLegacyRuntimeDescriptor(
     operations,
     entityPolicy,
     lifecycleStateMasks,
-    permissionAliasMap,
     relationProjections,
   });
   if (!descriptor) return undefined;
@@ -627,7 +620,6 @@ function projectBootstrapChildren(
         operations: operations.data,
         entityPolicy: (child.policy ?? undefined) as RuntimeEntityPolicy | undefined,
         lifecycleStateMasks: child.lifecycleStateMasks,
-        permissionAliasMap: bootstrap.permissionAliases,
         relations: [],
         lifecycle: projectRuntimeLifecycle(runtimeInput),
         numbering: projectRuntimeNumbering(runtimeInput),
@@ -649,7 +641,6 @@ function compileProjectedDescriptor(input: {
   operations: EntityOperation[];
   entityPolicy?: RuntimeEntityPolicy;
   lifecycleStateMasks: MetaEntityLifecycleStateMask[];
-  permissionAliasMap: Record<string, string>;
   relationProjections: ReadonlyMap<string, ChildRuntimeProjection>;
 }): MetaEntityRuntimeDescriptor | undefined {
   const relationCapabilities = Object.fromEntries([...input.relationProjections].map(([code, projection]) => [code, {
@@ -681,7 +672,6 @@ function compileProjectedDescriptor(input: {
           }
         : {}),
       lifecycleStateMasks: input.lifecycleStateMasks,
-      permissionAliasMap: input.permissionAliasMap,
       documentSaveAndTransitionEnabled: isDocumentSaveAndTransitionEnabled({ tenantId, entityCode: input.entityCode }),
       compiledAt: runtimeInput.compiled_at,
     });
@@ -940,40 +930,6 @@ async function fetchLifecycleStateMasks(
 
   const parsed = MetaEntityLifecycleStateMaskSchema.array().safeParse(json);
   return parsed.success ? parsed.data : [];
-}
-
-async function fetchPermissionAliasMap(
-  session: V4Session,
-  headers: Record<string, string>,
-): Promise<Record<string, string>> {
-  const sessionIdentity = buildSessionConfigurationIdentity(session);
-  if (!sessionIdentity) return {};
-
-  try {
-    return await getSessionConfiguration({
-      namespace: "permission_aliases",
-      sessionIdentity,
-      policy: {
-        freshForMs: 5 * 60_000,
-        staleForMs: 30 * 60_000,
-      },
-      loader: async () => {
-        const response = await fetchMetadata(`/api/metadata/permission-aliases`, headers);
-        if (!response) throw new Error("Permission aliases are unavailable.");
-
-        const json = await readJson(response);
-        if (!isRecord(json)) throw new Error("Permission aliases response was malformed.");
-
-        const out: Record<string, string> = {};
-        for (const [alias, canonical] of Object.entries(json)) {
-          if (typeof canonical === "string") out[alias] = canonical;
-        }
-        return out;
-      },
-    });
-  } catch {
-    return {};
-  }
 }
 
 async function fetchMetadata(

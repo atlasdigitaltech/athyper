@@ -136,7 +136,7 @@ export function classifyRecordWorkspaceRequest({
     return classification("comments", `comments.draft.${safeQueryShape(parsed)}`, "comments.draft");
   }
 
-  if (path.includes("/api/metadata/lookups/master.comment_intent")) {
+  if (path.includes("/api/metadata/lookups/document.comment_intent")) {
     return classification("comments", "comments.intent", "comments.intent");
   }
 

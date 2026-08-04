@@ -1,20 +1,15 @@
 -- ============================================================================
 -- master/02_pre_constraint.sql
--- Concept: Owner Type Validation — fn_valid_owner_type() for polymorphic references
--- Depends on: 04_tables/003a_master_identity.sql, 05_pre_constraint_functions/001_shared.sql
+-- Order-sensitive routines reconstructed from the live catalog.
+-- Generated from the live Neon database master schema. Do not hand-edit.
 -- ============================================================================
--- Execution order: 04_tables → 002_control → THIS → 06_constraints
 
--- fn_valid_owner_type — validation helper for trigger guards.
--- Returns true if the given code exists in owner_type and is active.
--- Tenant-aware: system rows (tenant_id IS NULL) always valid, plus tenant
--- extension rows if they belong to the current session tenant.
 CREATE OR REPLACE FUNCTION master.fn_valid_owner_type(p_code text)
-RETURNS boolean
-LANGUAGE sql STABLE PARALLEL SAFE
-SECURITY DEFINER
-SET search_path = master, pg_catalog
-AS $$
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE PARALLEL SAFE SECURITY DEFINER
+ SET search_path TO 'master', 'pg_catalog'
+AS $function$
     SELECT EXISTS (
         SELECT 1
         FROM master.owner_type otr
@@ -25,4 +20,4 @@ AS $$
               OR otr.tenant_id = shared.current_tenant_id()
           )
     );
-$$;
+$function$;

@@ -43,7 +43,8 @@ import {
 import { applyFieldSecurityMask } from "@athyper/svc-policy";
 import {
   checkPermission,
-  createCompanyCodeScopeService,
+  hasCompanyCodeAccess,
+  resolveCompanyCodeScope,
   requireAllow,
   requireVerifiedContext,
 } from "@athyper/svc-iam";
@@ -941,6 +942,8 @@ async function checkEntityOperationCompanyScope(input: {
   recordId: string;
   activeCompanyCodeId?: string;
   activeLegalEntityId?: string;
+  permissionCode: string;
+  authorizationContext: import("@athyper/svc-iam").VerifiedRequestContext;
 }): Promise<EntityOperationCompanyScopeResult> {
   const qualifiedTable = `${input.table.table_schema}.${input.table.table_name}`;
   let sourceQuery = (input.db.selectFrom(qualifiedTable as never) as any)
@@ -974,8 +977,11 @@ async function checkEntityOperationCompanyScope(input: {
       };
     }
   }
-  const hasScope = await createCompanyCodeScopeService(input.db)
-    .hasAccess(input.principalId, companyCodeId, input.tenantId);
+  const hasScope = hasCompanyCodeAccess(
+    input.authorizationContext.permissions,
+    input.permissionCode,
+    companyCodeId,
+  );
   return hasScope
     ? { allowed: true }
     : {
@@ -2183,7 +2189,7 @@ function requireJwtSubject(claims: Record<string, unknown>, res: Response): stri
 }
 
 function isCertificationBackingTable(table: EntityTableInfo): boolean {
-  return table.table_schema === "master" && table.table_name === "certification";
+  return table.table_schema === "certification" && table.table_name === "certification";
 }
 
 function isCommodityClassificationBackingTable(table: EntityTableInfo): boolean {
@@ -3462,7 +3468,10 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
       // Apply company-code ACL filtering after all explicit entity filters.
       if (entityCode === "company_code" && tenantId) {
         if (principalId) {
-          const scope = await createCompanyCodeScopeService(db).resolveScope(principalId, tenantId);
+          const scope = resolveCompanyCodeScope(
+            verifiedContext.permissions,
+            "neon.catalog.company_code.export",
+          );
           if (!scope.isUnrestricted) {
             if (scope.companyCodeIds.length === 0) {
               listQuery  = listQuery.where(sql<boolean>`false` as never);
@@ -9175,61 +9184,6 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
 
   // â”€â”€ Filter-preset handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  const listPresetsHandler: RequestHandler = async (req, res, next) => {
-    try {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
-
-      const entity   = String(req.params["entity"] ?? "").trim();
-      const xOrg     = (req.headers["x-org"]   as string) ?? "";
-      const xRealm   = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "Tenant not found" }); return; }
-
-      const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
-        : SYSTEM_PRINCIPAL_UUID;
-
-      type PresetRow = {
-        id: string; name: string; filters: unknown;
-        is_shared: boolean; created_at: string; updated_at: string;
-      };
-      const rows = await (db
-        .selectFrom("master.filter_preset as fp" as never)
-        .select([
-          "fp.id" as never, "fp.name" as never, "fp.filters" as never,
-          "fp.is_shared" as never, "fp.created_at" as never, "fp.updated_at" as never,
-          "fp.principal_id" as never,
-        ])
-        .where("fp.tenant_id"   as never, "=", tenantId   as never)
-        .where("fp.entity_code" as never, "=", entity     as never)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .where((eb: any) => eb.or([
-          eb("fp.principal_id" as never, "=", principalId as never),
-          eb("fp.is_shared"    as never, "=", true        as never),
-        ]))
-        .orderBy("fp.name" as never, "asc")
-        .execute() as Promise<(PresetRow & { principal_id: string })[]>);
-
-      res.json({
-        ok: true,
-        data: rows.map((r) => ({
-          id:        r.id,
-          name:      r.name,
-          filters:   r.filters,
-          isShared:  r.is_shared,
-          isOwn:     r.principal_id === principalId,
-          createdAt: r.created_at,
-          updatedAt: r.updated_at,
-        })),
-      });
-    } catch (err) {
-      logger?.error("records_filter_presets_list_error", { err: String(err) });
-      next(err);
-    }
-  };
-
   const initiateDraftHandler: RequestHandler = async (req, res, next) => {
     const initiatedAt = performance.now();
     const phaseTimings: Array<{ name: string; durationMs: number }> = [];
@@ -9734,93 +9688,6 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
     }
   };
 
-  const createPresetHandler: RequestHandler = async (req, res, next) => {
-    try {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
-
-      const entity   = String(req.params["entity"] ?? "").trim();
-      const body     = req.body as { name?: string; filters?: unknown; is_shared?: boolean } | undefined;
-      const name     = (body?.name ?? "").trim();
-      const filters  = body?.filters ?? {};
-      const isShared = body?.is_shared === true;
-
-      if (!name) { res.status(400).json({ error: "name is required" }); return; }
-
-      const xOrg     = (req.headers["x-org"]   as string) ?? "";
-      const xRealm   = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "Tenant not found" }); return; }
-
-      const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
-        : SYSTEM_PRINCIPAL_UUID;
-
-      const now = new Date().toISOString();
-      const id  = crypto.randomUUID();
-
-      await (db
-        .insertInto("master.filter_preset" as never)
-        .values({
-          id, tenant_id: tenantId, principal_id: principalId,
-          entity_code: entity, name,
-          filters: JSON.stringify(filters),
-          is_shared: isShared,
-          created_at: now, updated_at: now,
-          created_by: principalId, updated_by: principalId,
-        } as never)
-        .onConflict((oc) =>
-          (oc as any).columns(["tenant_id", "principal_id", "entity_code", "name"]).doUpdateSet({
-            filters:    JSON.stringify(filters),
-            is_shared:  isShared,
-            updated_at: now,
-            updated_by: principalId,
-          })
-        )
-        .execute() as Promise<unknown>);
-
-      res.status(201).json({ ok: true, data: { id, name, filters, isShared } });
-    } catch (err) {
-      logger?.error("records_filter_presets_create_error", { err: String(err) });
-      next(err);
-    }
-  };
-
-  const deletePresetHandler: RequestHandler = async (req, res, next) => {
-    try {
-      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
-      if (!claims) return;
-
-      const entity   = String(req.params["entity"]   ?? "").trim();
-      const presetId = String(req.params["presetId"] ?? "").trim();
-
-      const xOrg     = (req.headers["x-org"]   as string) ?? "";
-      const xRealm   = (req.headers["x-realm"] as string) ?? "athyper";
-      const tenantId = await resolveTenantId(db, xOrg, xRealm);
-      if (!tenantId) { res.status(400).json({ error: "Tenant not found" }); return; }
-
-      const sub = typeof claims.sub === "string" ? claims.sub : "";
-      const principalId = sub
-        ? await resolvePrincipalIdWithJit(db, sub, tenantId, xRealm, claims)
-        : SYSTEM_PRINCIPAL_UUID;
-
-      // Only the owner can delete (even if shared)
-      await (db
-        .deleteFrom("master.filter_preset" as never)
-        .where("id" as never,           "=", presetId    as never)
-        .where("tenant_id" as never,    "=", tenantId    as never)
-        .where("entity_code" as never,  "=", entity      as never)
-        .where("principal_id" as never, "=", principalId as never)
-        .execute() as Promise<unknown>);
-
-      res.status(204).end();
-    } catch (err) {
-      logger?.error("records_filter_presets_delete_error", { err: String(err) });
-      next(err);
-    }
-  };
-
   // â”€â”€ POST /:entity/:id/lock â€” acquire pessimistic document edit lock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const acquireLockHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -10067,6 +9934,28 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
         res.status(400).json({ error: "INVALID_OPERATION_SOURCE", message: "The operation source entity is not available." });
         return;
       }
+      const operationPermission = await (db
+        .selectFrom("control.entity_operation as eo") as any)
+        .innerJoin(
+          "control.auth_permission as permission",
+          "permission.id",
+          "eo.permission_id_v2",
+        )
+        .select("permission.canonical_code as permission_code")
+        .where("eo.entity_name", "=", entityCode)
+        .where("eo.operation_code_v2", "=", opCode)
+        .where((eb: any) =>
+          eb.or([eb("eo.tenant_id", "is", null), eb("eo.tenant_id", "=", tenantId)])
+        )
+        .orderBy("eo.tenant_id", "desc")
+        .executeTakeFirst() as { permission_code?: string } | undefined;
+      if (!operationPermission?.permission_code) {
+        res.status(403).json({
+          error: "ENTITY_OPERATION_REQUIRED",
+          message: `Exact operation '${opCode}' is not enabled for '${entityCode}'.`,
+        });
+        return;
+      }
       for (const sourceId of sourceIds) {
         const companyScope = await checkEntityOperationCompanyScope({
           db,
@@ -10076,6 +9965,8 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           recordId: sourceId,
           activeCompanyCodeId,
           activeLegalEntityId,
+          permissionCode: operationPermission.permission_code,
+          authorizationContext: verifiedContext,
         });
         if (!companyScope.allowed) {
           res.status(403).json({
@@ -10110,16 +10001,6 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
           res.status(targetAuthorization.status).json({ error: targetAuthorization.error, message: targetAuthorization.message });
           return;
         }
-      }
-      const operationPermission = await (db.selectFrom("control.entity_operation as eo") as any)
-        .select("permission_code")
-        .where("entity_name", "=", entityCode)
-        .where((eb: any) => eb.or([eb("permission_code", "=", opCode), eb("permission_code", "like", `%.${opCode}`)]))
-        .where((eb: any) => eb.or([eb("tenant_id", "is", null), eb("tenant_id", "=", tenantId)]))
-        .orderBy("tenant_id", "desc").executeTakeFirst() as { permission_code?: string } | undefined;
-      if (!operationPermission?.permission_code) {
-        res.status(403).json({ error: "ENTITY_OPERATION_REQUIRED", message: `Operation '${opCode}' is not enabled for '${entityCode}'.` });
-        return;
       }
       for (const sourceId of sourceIds) {
         const permissionDecision = await checkPermission(db, tenantId, principalId, operationPermission.permission_code, {
@@ -10263,7 +10144,7 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   // alias. Matches runtimePath.lineDistribution{s}() in api-contracts; the
   // /records/* mount above stays in place until the client cleanup track
   // retires legacy callers, identical to the dual-mount pattern used by
-  // filter-presets, workflow, lock, and the rest of the sub-resources below.
+  // workflow, lock, and the rest of the sub-resources below.
   router.get   ("/runtime/v1/entities/:entity/:id/lines/:lineId/distributions",                lineDistributionsHandler);
   router.post  ("/runtime/v1/entities/:entity/:id/lines/:lineId/copy",                         copyLineHandler);
   router.post  ("/runtime/v1/entities/:entity/:id/lines/:lineId/distributions",               createDistributionHandler);
@@ -10271,17 +10152,11 @@ export function createRecordsRoute(router: Router, deps: RecordsRouteDeps): Rout
   router.patch ("/runtime/v1/entities/:entity/:id/lines/:lineId/distributions/:distId",      patchDistributionHandler);
   router.delete("/runtime/v1/entities/:entity/:id/lines/:lineId/distributions/:distId",     deleteDistributionHandler);
   // Filter presets â€” canonical + legacy alias.
-  router.get   ("/runtime/v1/entities/:entity/filter-presets",            listPresetsHandler);
-  router.post  ("/runtime/v1/entities/:entity/filter-presets",            createPresetHandler);
-  router.delete("/runtime/v1/entities/:entity/filter-presets/:presetId",  deletePresetHandler);
 
   router.post  ("/runtime/v1/entities/:entity/draft/initiate",            initiateDraftHandler);
   router.post  ("/runtime/v1/entities/:entity/:id/draft/promote",         promoteDraftHandler);
   router.post  ("/runtime/v1/entities/:entity/:id/draft/discard",         discardDraftHandler);
 
-  router.get   ("/records/:entity/filter-presets",                        listPresetsHandler);
-  router.post  ("/records/:entity/filter-presets",                        createPresetHandler);
-  router.delete("/records/:entity/filter-presets/:presetId",              deletePresetHandler);
 
   router.post  ("/records/:entity/draft/initiate",                        initiateDraftHandler);
   router.post  ("/records/:entity/:id/draft/promote",                     promoteDraftHandler);

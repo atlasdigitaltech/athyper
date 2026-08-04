@@ -57,7 +57,7 @@ type StatusKey =
   | "active"   | "verified" | "synced"  | "allow"  | "view"  | "plan"   | "all"
   | "trial"    | "drift"    | "delegation" | "own"
   | "suspended"| "error"    | "deny"
-  | "system"   | "functional" | "enterprise" | "persona" | "shared" | "edit" | "team"
+  | "system"   | "functional" | "enterprise" | "shared" | "edit" | "team"
   | "pending"  | "disabled" | "inactive" | "member" | "personal"
   | "leader"   | "project"  | "virtual"  | "group"  | "principal";
 
@@ -66,7 +66,7 @@ const STATUS_VARIANT: Record<StatusKey, Parameters<typeof Badge>[0]["variant"]> 
   view: "success", plan: "success", all: "success",
   trial: "warning", drift: "warning", delegation: "warning", own: "warning",
   suspended: "destructive", error: "destructive", deny: "destructive",
-  system: "info", functional: "info", enterprise: "info", persona: "info",
+  system: "info", functional: "info", enterprise: "info",
   shared: "info", edit: "info", team: "info",
   pending: "muted", disabled: "muted", inactive: "muted", member: "muted", personal: "muted",
   leader: "secondary", project: "secondary", virtual: "secondary", group: "secondary", principal: "secondary",
@@ -362,4 +362,3 @@ export function ConfirmDialog({ action, onConfirm, onCancel }: {
     </div>
   );
 }
-

@@ -62,16 +62,11 @@ async function resolveTenantPlanVersion(
   tenantId: string,
 ): Promise<string | null> {
   const row = await sql<{ plan_version_id: string | null }>`
-    SELECT spv.id::text AS plan_version_id
-    FROM master.tenant t
-    JOIN shared.subscription_plan sp
-      ON sp.code = t.subscription
-    JOIN shared.subscription_plan_version spv
-      ON spv.plan_id = sp.id
-     AND spv.valid_to IS NULL
-     AND spv.status = 'active'
-    WHERE t.id = ${tenantId}
-    LIMIT 1
+    SELECT t.subscription_plan_id::text AS plan_version_id
+      FROM master.tenant t
+     WHERE t.id = ${tenantId}::uuid
+       AND t.status = 'active'
+     LIMIT 1
   `.execute(db);
 
   return row.rows[0]?.plan_version_id ?? null;
@@ -109,66 +104,32 @@ export async function getEffectiveModuleAccess(
       from_role_binding: boolean;
     }>`
     WITH group_role_modules AS (
-      SELECT DISTINCT r.module_id, r.workspace_id
-      FROM master.auth_group_member gm
-      JOIN master.auth_group_role gr
+      SELECT DISTINCT permission.module_id, module.workspace_id
+      FROM authz.current_group_member gm
+      JOIN authz.current_group_role gr
         ON gr.group_id = gm.group_id
        AND gr.tenant_id = gm.tenant_id
-       AND gr.status = 'active'
-       AND (gr.expires_at IS NULL OR gr.expires_at > now())
-      JOIN shared.role r
-        ON r.id = gr.role_id
-       AND r.status = 'active'
+      JOIN authz.published_role_permission role_permission
+        ON role_permission.tenant_id = gr.tenant_id
+       AND role_permission.role_id = gr.role_id
+      JOIN authz.permission permission
+        ON permission.id = role_permission.permission_id
+      JOIN master.module module
+        ON module.id = permission.module_id
       WHERE gm.tenant_id = ${tenantId}
         AND gm.principal_id = ${principalId}
-        AND r.module_id IS NOT NULL
-    ),
-    plan_modules AS (
-      SELECT DISTINCT
-        m.id AS module_id,
-        m.code::text AS module_code,
-        m.workspace_id::text AS workspace_id
-      FROM shared.plan_module_access pma
-      JOIN shared.module m
-        ON m.id = pma.module_id
-     WHERE pma.plan_version_id = ${planVersionId}::uuid
-       AND pma.is_included = true
-       AND m.status = 'active'
-    ),
-    role_bound_modules AS (
-      SELECT
-        grm.module_id,
-        grm.workspace_id::text AS workspace_id,
-        m.code::text AS module_code
+        AND permission.status = 'published'
+    ), role_bound_modules AS (
+      SELECT grm.module_id, grm.workspace_id::text AS workspace_id,
+             m.code::text AS module_code
       FROM group_role_modules grm
-      JOIN shared.module m
+      JOIN master.module m
         ON m.id = grm.module_id
-      JOIN plan_modules pm
-        ON pm.module_id = grm.module_id
       WHERE m.status = 'active'
-    ),
-    resolved_modules AS (
-      SELECT
-        rbm.module_id::text AS module_id,
-        rbm.module_code,
-        rbm.workspace_id,
-        true AS from_role_binding
-      FROM role_bound_modules rbm
-      UNION ALL
-      SELECT
-        pm.module_id::text AS module_id,
-        pm.module_code,
-        pm.workspace_id,
-        false AS from_role_binding
-      FROM plan_modules pm
-      WHERE NOT EXISTS (SELECT 1 FROM role_bound_modules)
     )
-    SELECT
-      r.module_id::text AS module_id,
-      r.module_code,
-      r.workspace_id::text AS workspace_id,
-      r.from_role_binding
-    FROM resolved_modules r
+    SELECT r.module_id::text AS module_id, r.module_code,
+           r.workspace_id::text AS workspace_id, true AS from_role_binding
+      FROM role_bound_modules r
     ORDER BY r.module_code NULLS LAST;
   `.execute(db);
 

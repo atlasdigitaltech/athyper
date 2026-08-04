@@ -356,7 +356,7 @@ export const FlowFieldBindingSchema = z.object({
   /** Whether the user has manually overridden this derived field. */
   is_overridden: z.boolean().default(false),
   /** Free-form binding metadata. Reserved key: `target` selects a non-column
-   *  destination (e.g. master.comment) for the field value at submit time. */
+   *  destination (e.g. document.comment) for the field value at submit time. */
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 export type FlowFieldBinding = z.infer<typeof FlowFieldBindingSchema>;

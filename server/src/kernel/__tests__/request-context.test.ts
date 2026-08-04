@@ -104,7 +104,6 @@ describe("runWithContext()", () => {
       authEpoch: 9,
       profileHash: "profile-hash",
       permissions: {
-        personaId: "persona-id",
         principalFingerprint: "fingerprint",
       },
     }) as unknown as VerifiedRequestContext;

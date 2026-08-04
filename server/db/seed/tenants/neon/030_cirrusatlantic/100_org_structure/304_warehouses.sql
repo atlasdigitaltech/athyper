@@ -1,3 +1,4 @@
+-- seed-pack-version: 2.0.0
 -- ============================================================================
 -- CIRRUSATLANTIC — WAREHOUSE SEED: Inventory storage nodes
 -- ============================================================================
@@ -15,7 +16,7 @@
 DO $seed$
 DECLARE
     v_tid      uuid;
-    v_su       uuid := '00000000-0000-0000-0000-000000000000';
+    v_su       uuid := nullif(current_setting('app.current_principal_id', true), '')::uuid;
     v_pack     text := '340_catl_org';
     v_version  text := '1.0.0';
     v_meta     jsonb;
@@ -31,6 +32,16 @@ BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'cirrusatlantic';
     IF v_tid IS NULL THEN
         RAISE EXCEPTION '[304_warehouses] Tenant CIRRUSATLANTIC not found — run 000_tenant.sql first';
+    END IF;
+
+    IF v_su IS NULL OR NOT EXISTS (
+        SELECT 1
+        FROM master.principal p
+        WHERE p.id = v_su
+          AND p.tenant_id = v_tid
+          AND p.status = 'active'
+    ) THEN
+        RAISE EXCEPTION '[304_warehouses] app.current_principal_id must identify an active tenant-local principal';
     END IF;
 
     v_meta := jsonb_build_object('_seed', jsonb_build_object(
@@ -65,7 +76,7 @@ BEGIN
     -- ════════════════════════════════════════════════════════════════════════
 
     CREATE TEMP TABLE tmp_wh (
-        seed_id                   uuid DEFAULT shared.uuidv7(),
+        seed_id                   uuid,
         company_code              text    NOT NULL,
         site_code                 text    NOT NULL,
         code                      text    NOT NULL,
@@ -82,18 +93,20 @@ BEGIN
     -- ════════════════════════════════════════════════════════════════════════
 
     -- ── CATL — Operations & Logistics Hub (3 warehouses) ────────────────
-    INSERT INTO tmp_wh (company_code, site_code, code, name, description, warehouse_type, is_negative_stock_allowed) VALUES
-    ('CATL', 'CATL-SITE-OPS-01', 'WH-SPARES',
+    INSERT INTO tmp_wh (
+        seed_id, company_code, site_code, code, name, description, warehouse_type, is_negative_stock_allowed
+    ) VALUES
+    (md5(format('wave5:neon-catl:warehouses:%s:WH-SPARES', v_tid))::uuid, 'catl', 'catl-site-ops-01', 'WH-SPARES',
      'IT & Office Equipment Spares',
      'Spare parts for IT hardware, office equipment, and facilities',
      'spares', false),
 
-    ('CATL', 'CATL-SITE-OPS-01', 'WH-CONSUM',
+    (md5(format('wave5:neon-catl:warehouses:%s:WH-CONSUM', v_tid))::uuid, 'catl', 'catl-site-ops-01', 'WH-CONSUM',
      'Consumables & Supplies',
      'Office consumables, stationery, cleaning materials, and sundries',
      'raw', false),
 
-    ('CATL', 'CATL-SITE-OPS-01', 'WH-TRANSIT',
+    (md5(format('wave5:neon-catl:warehouses:%s:WH-TRANSIT', v_tid))::uuid, 'catl', 'catl-site-ops-01', 'WH-TRANSIT',
      'Goods in Transit',
      'Incoming goods awaiting inspection and put-away',
      'transit', true);

@@ -121,7 +121,7 @@ export async function dispatchLifecycleNotification(
           status, created_by
         ) VALUES (
           ${ctx.tenantId}::uuid,
-          'neon',
+          event.current_plane_key(),
           ${eventId}::text,
           ${eventType}::text,
           ${rule.id}::uuid,

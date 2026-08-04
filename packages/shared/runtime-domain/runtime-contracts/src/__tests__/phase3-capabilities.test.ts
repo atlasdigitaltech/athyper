@@ -194,7 +194,8 @@ describe("Phase 3 — permission alias map", () => {
       operations: [{
         id: "op-edit-alias",
         entity_name: "supplier",
-        permission_code: "edit", // legacy code
+        operation_code: "update",
+        permission_code: "supplier.update",
         surface: "DETAIL",
         placement: "PRIMARY",
         handler_type: "NAVIGATE",
@@ -203,7 +204,6 @@ describe("Phase 3 — permission alias map", () => {
         sort_order: 20,
         is_enabled: true,
       }],
-      permissionAliasMap: { edit: "update" },
     });
 
     expect(descriptor.capabilities.canEdit).toBe(true);
@@ -224,7 +224,6 @@ describe("Phase 3 — permission alias map", () => {
         sort_order: 20,
         is_enabled: true,
       }],
-      // No alias map provided
     });
 
     expect(descriptor.capabilities.canEdit).toBe(true);

@@ -151,11 +151,11 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
           COALESCE(t.updated_at, c.updated_at, c.created_at) AS activity_at,
           cp.role AS participant_role,
           cp.principal_id AS access_principal_id
-        FROM master.atlas_thread t
-        JOIN master.conversation c
+        FROM ai.atlas_thread t
+        JOIN document.conversation c
           ON c.tenant_id = t.tenant_id
          AND c.id = t.conversation_id
-        JOIN master.conversation_participant cp
+        JOIN document.conversation_participant cp
           ON cp.tenant_id = t.tenant_id
          AND cp.conversation_id = t.conversation_id
          AND cp.principal_id = ${scope.principalId}::uuid
@@ -231,15 +231,15 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
           m.terminal_error_class,
           m.created_at,
           m.terminal_at
-        FROM master.atlas_message m
-        JOIN master.atlas_thread t
+        FROM ai.atlas_message m
+        JOIN ai.atlas_thread t
           ON t.tenant_id = m.tenant_id
          AND t.conversation_id = m.conversation_id
          AND t.plane = m.plane
-        JOIN master.conversation c
+        JOIN document.conversation c
           ON c.tenant_id = m.tenant_id
          AND c.id = m.conversation_id
-        JOIN master.conversation_participant cp
+        JOIN document.conversation_participant cp
           ON cp.tenant_id = m.tenant_id
          AND cp.conversation_id = m.conversation_id
          AND cp.principal_id = ${scope.principalId}::uuid
@@ -279,7 +279,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
     try {
       return await this.withScope(scope, async (trx) => {
         const bumped = await sql<{ conversation_id: string }>`
-          UPDATE master.atlas_thread t
+          UPDATE ai.atlas_thread t
           SET row_version = t.row_version + 1,
               updated_at = now(),
               updated_by = ${scope.principalId}::uuid
@@ -290,7 +290,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
             AND t.row_version = ${input.expectedRowVersion}::bigint
             AND EXISTS (
               SELECT 1
-              FROM master.conversation c
+              FROM document.conversation c
               WHERE c.tenant_id = t.tenant_id
                 AND c.id = t.conversation_id
                 AND c.status <> 'deleted'
@@ -299,7 +299,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
         `.execute(trx);
         if (!bumped.rows[0]) throw new MutationMiss();
         await sql`
-          UPDATE master.conversation
+          UPDATE document.conversation
           SET title = ${input.title},
               updated_at = now(),
               updated_by = ${scope.principalId}::uuid
@@ -324,7 +324,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
     try {
       return await this.withScope(scope, async (trx) => {
         const bumped = await sql<{ conversation_id: string }>`
-          UPDATE master.atlas_thread t
+          UPDATE ai.atlas_thread t
           SET row_version = t.row_version + 1,
               updated_at = now(),
               updated_by = ${scope.principalId}::uuid
@@ -335,7 +335,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
             AND t.row_version = ${input.expectedRowVersion}::bigint
             AND EXISTS (
               SELECT 1
-              FROM master.conversation c
+              FROM document.conversation c
               WHERE c.tenant_id = t.tenant_id
                 AND c.id = t.conversation_id
                 AND c.status = 'active'
@@ -344,7 +344,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
         `.execute(trx);
         if (!bumped.rows[0]) throw new MutationMiss();
         const changed = await sql<{ id: string }>`
-          UPDATE master.conversation
+          UPDATE document.conversation
           SET status = 'archived',
               status_changed_at = now(),
               status_changed_by = ${scope.principalId}::uuid,
@@ -373,7 +373,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
     try {
       return await this.withScope(scope, async (trx) => {
         const bumped = await sql<{ conversation_id: string }>`
-          UPDATE master.atlas_thread t
+          UPDATE ai.atlas_thread t
           SET row_version = t.row_version + 1,
               purge_after = ${input.deletedAt},
               updated_at = ${input.deletedAt},
@@ -386,7 +386,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
             AND t.legal_hold = false
             AND EXISTS (
               SELECT 1
-              FROM master.conversation c
+              FROM document.conversation c
               WHERE c.tenant_id = t.tenant_id
                 AND c.id = t.conversation_id
                 AND c.status <> 'deleted'
@@ -395,7 +395,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
         `.execute(trx);
         if (!bumped.rows[0]) throw new MutationMiss();
         const deleted = await sql<{ id: string }>`
-          UPDATE master.conversation
+          UPDATE document.conversation
           SET status = 'deleted',
               status_changed_at = ${input.deletedAt},
               status_changed_by = ${scope.principalId}::uuid,
@@ -490,11 +490,11 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
         await lockClientRequest(trx, scope, input.clientRequestId);
         const locked = await sql<{ thread_id: string; status: string }>`
           SELECT t.conversation_id AS thread_id, c.status
-          FROM master.atlas_thread t
-          JOIN master.conversation c
+          FROM ai.atlas_thread t
+          JOIN document.conversation c
             ON c.tenant_id = t.tenant_id
            AND c.id = t.conversation_id
-          JOIN master.conversation_participant cp
+          JOIN document.conversation_participant cp
             ON cp.tenant_id = t.tenant_id
            AND cp.conversation_id = t.conversation_id
            AND cp.principal_id = ${scope.principalId}::uuid
@@ -540,7 +540,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
 
         const active = await sql<{ run_id: string }>`
           SELECT r.id AS run_id
-          FROM event.atlas_run r
+          FROM ai.atlas_run r
           WHERE r.tenant_id = ${scope.tenantId}::uuid
             AND r.conversation_id = ${input.threadId}::uuid
             AND r.plane = ${scope.plane}
@@ -653,7 +653,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
         output.contentBlocks,
       );
       const messageResult = await sql<{ id: string }>`
-        UPDATE master.atlas_message
+        UPDATE ai.atlas_message
         SET status = ${target},
             content_blocks = ${JSON.stringify(protectedOutput.contentBlocks)}::jsonb,
             protected_content_ref = ${protectedOutput.protectedContentRef},
@@ -677,7 +677,7 @@ export class SqlAtlasThreadRepository implements AtlasThreadRepository {
         throw new AtlasThreadRepositoryError("RUN_TERMINAL");
       }
       const runResult = await sql<RunRow>`
-        UPDATE event.atlas_run
+        UPDATE ai.atlas_run
         SET status = ${target},
             cancellation_requested_at = CASE
               WHEN ${target} = 'cancelled' THEN ${terminalAt}
@@ -823,8 +823,8 @@ implements AtlasThreadMaintenanceAuthority {
           SELECT
             t.tenant_id,
             t.conversation_id
-          FROM master.atlas_thread t
-          JOIN master.conversation c
+          FROM ai.atlas_thread t
+          JOIN document.conversation c
             ON c.tenant_id = t.tenant_id
            AND c.id = t.conversation_id
           WHERE t.legal_hold = false
@@ -836,7 +836,7 @@ implements AtlasThreadMaintenanceAuthority {
           FOR UPDATE OF t, c SKIP LOCKED
         ),
         thread_updates AS (
-          UPDATE master.atlas_thread t
+          UPDATE ai.atlas_thread t
           SET purge_after = COALESCE(t.purge_after, ${input.asOf}),
               row_version = t.row_version + 1,
               updated_at = ${input.asOf},
@@ -848,7 +848,7 @@ implements AtlasThreadMaintenanceAuthority {
             AND t.conversation_id = x.conversation_id
           RETURNING t.tenant_id, t.conversation_id
         )
-        UPDATE master.conversation c
+        UPDATE document.conversation c
         SET status = 'deleted',
             status_changed_at = ${input.asOf},
             status_changed_by = ${this.options.systemPrincipalId}::uuid,
@@ -869,8 +869,8 @@ implements AtlasThreadMaintenanceAuthority {
           SELECT
             t.tenant_id,
             t.conversation_id
-          FROM master.atlas_thread t
-          JOIN master.conversation c
+          FROM ai.atlas_thread t
+          JOIN document.conversation c
             ON c.tenant_id = t.tenant_id
            AND c.id = t.conversation_id
           WHERE t.legal_hold = false
@@ -883,7 +883,7 @@ implements AtlasThreadMaintenanceAuthority {
           LIMIT ${input.batchSize}
           FOR UPDATE OF t, c SKIP LOCKED
         )
-        DELETE FROM master.conversation c
+        DELETE FROM document.conversation c
         USING candidates x
         WHERE c.tenant_id = x.tenant_id
           AND c.id = x.conversation_id
@@ -937,11 +937,11 @@ async function recoverStaleRun(
   if (!input.ownerBoundaryLocked) {
     const thread = await sql<{ thread_id: string }>`
       SELECT t.conversation_id AS thread_id
-      FROM master.atlas_thread t
-      JOIN master.conversation c
+      FROM ai.atlas_thread t
+      JOIN document.conversation c
         ON c.tenant_id = t.tenant_id
        AND c.id = t.conversation_id
-      JOIN master.conversation_participant cp
+      JOIN document.conversation_participant cp
         ON cp.tenant_id = t.tenant_id
        AND cp.conversation_id = t.conversation_id
        AND cp.principal_id = ${scope.principalId}::uuid
@@ -970,7 +970,7 @@ async function recoverStaleRun(
   if (!locked) return false;
 
   const message = await sql<{ id: string }>`
-    UPDATE master.atlas_message
+    UPDATE ai.atlas_message
     SET status = 'failed',
         content_blocks = '[]'::jsonb,
         result_cards = '[]'::jsonb,
@@ -994,7 +994,7 @@ async function recoverStaleRun(
   }
 
   const terminal = await sql<{ id: string }>`
-    UPDATE event.atlas_run
+    UPDATE ai.atlas_run
     SET status = 'failed',
         terminal_at = ${input.terminalAt},
         terminal_error_class = ${STALE_RUN_ERROR_CLASS},
@@ -1026,7 +1026,7 @@ async function selectRunByClientRequest(
     AND r.client_request_id = ${clientRequestId}::uuid
     AND EXISTS (
       SELECT 1
-      FROM master.conversation c
+      FROM document.conversation c
       WHERE c.tenant_id = r.tenant_id
         AND c.id = r.conversation_id
         AND c.status <> 'deleted'
@@ -1058,7 +1058,7 @@ async function insertThreadRows(
   input: CreateAtlasThreadRecordInput,
 ): Promise<void> {
   await sql`
-    INSERT INTO master.conversation (
+    INSERT INTO document.conversation (
       id, tenant_id, type, title, status, created_by
     ) VALUES (
       ${input.threadId}::uuid,
@@ -1072,7 +1072,7 @@ async function insertThreadRows(
   // Live athyperapp RLS requires the Atlas scope row before the private owner
   // participant. The deferred envelope trigger validates that owner at commit.
   await sql`
-    INSERT INTO master.atlas_thread (
+    INSERT INTO ai.atlas_thread (
       conversation_id,
       tenant_id,
       plane,
@@ -1093,7 +1093,7 @@ async function insertThreadRows(
     )
   `.execute(trx);
   await sql`
-    INSERT INTO master.conversation_participant (
+    INSERT INTO document.conversation_participant (
       tenant_id,
       conversation_id,
       principal_id,
@@ -1116,7 +1116,7 @@ async function insertNewRunRows(
   protectedInput: ProtectedAtlasMessageContent,
 ): Promise<BeginAtlasRunResult> {
   const inputMessage = await sql<SequenceRow>`
-    INSERT INTO master.atlas_message (
+    INSERT INTO ai.atlas_message (
       id,
       tenant_id,
       conversation_id,
@@ -1150,7 +1150,7 @@ async function insertNewRunRows(
     throw new Error("Atlas input message sequence was not allocated.");
   }
   const outputMessage = await sql<SequenceRow>`
-    INSERT INTO master.atlas_message (
+    INSERT INTO ai.atlas_message (
       id,
       tenant_id,
       conversation_id,
@@ -1182,7 +1182,7 @@ async function insertNewRunRows(
     throw new Error("Atlas output message sequence was not allocated.");
   }
   const runResult = await sql<RunRow>`
-    INSERT INTO event.atlas_run (
+    INSERT INTO ai.atlas_run (
       id,
       tenant_id,
       conversation_id,
@@ -1250,7 +1250,7 @@ function runSelectSql(scope: AtlasThreadRepositoryScope) {
       r.terminal_error_class,
       r.metering_run_id,
       r.started_at
-    FROM event.atlas_run r
+    FROM ai.atlas_run r
     WHERE r.tenant_id = ${scope.tenantId}::uuid
       AND r.plane = ${scope.plane}
       AND r.principal_id = ${scope.principalId}::uuid
@@ -1282,11 +1282,11 @@ async function selectThread(
       COALESCE(t.updated_at, c.updated_at, c.created_at) AS activity_at,
       cp.role AS participant_role,
       cp.principal_id AS access_principal_id
-    FROM master.atlas_thread t
-    JOIN master.conversation c
+    FROM ai.atlas_thread t
+    JOIN document.conversation c
       ON c.tenant_id = t.tenant_id
      AND c.id = t.conversation_id
-    JOIN master.conversation_participant cp
+    JOIN document.conversation_participant cp
       ON cp.tenant_id = t.tenant_id
      AND cp.conversation_id = t.conversation_id
      AND cp.principal_id = ${scope.principalId}::uuid
@@ -1308,7 +1308,7 @@ async function selectRunSequences(
 ): Promise<{ input: string; output: string }> {
   const result = await sql<{ id: string; sequence: ScalarInteger }>`
     SELECT id, sequence
-    FROM master.atlas_message
+    FROM ai.atlas_message
     WHERE tenant_id = ${scope.tenantId}::uuid
       AND plane = ${scope.plane}
       AND id IN (${inputMessageId}::uuid, ${outputMessageId}::uuid)

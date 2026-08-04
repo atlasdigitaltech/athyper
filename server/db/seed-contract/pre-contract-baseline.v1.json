@@ -1,0 +1,450 @@
+{
+  "contractVersion": "athyper.seed-contract-baseline.v1",
+  "files": {
+    "server/db/ddl/common/audit/12_reference_seed.sql": {
+      "sourceSha256": "a46e1db6e5ace15513753fd4954f0e2ba96c9b4ce46b644416beb7db0148ea53",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/common/control/12_banking_reference_seed.sql": {
+      "sourceSha256": "b236295375207b5bad16712d0845bc1ad949e1d552953dcb1a9bb1b68856ddd3",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/common/control/12_collaboration_lookup_seed.sql": {
+      "sourceSha256": "08a79b431e6d58e1fb937464107acfe504d1b5adc093d5acb84619158561da9a",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/common/control/12_cron_schedule_reference_seed.sql": {
+      "sourceSha256": "5f310fbe2036af92a7c101a840df400a6f8e0f04d994d3cc31e90a8cd8d6dffc",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/common/control/12_notification_reference_seed.sql": {
+      "sourceSha256": "e4aa98630ff72586937f0adfcd8888179ad7175ea834ab4c9d7983da998a1129",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/common/control/12_operational_governance_reference_seed.sql": {
+      "sourceSha256": "55289d9713569c677db5a9642a9bef8a61dccb7cde84724117c6dc1ba96095f5",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/common/control/12_usage_metric_catalog_seed.sql": {
+      "sourceSha256": "d1dd128724b5b122f2c0aaa4f4c905e8c354384b64719675a72c91628f40fb90",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/common/master/12_contact_person_reference_seed.sql": {
+      "sourceSha256": "7e78e22108301e7c1fd95b065b8a25b65c232dbd26396475884d77735bbb677b",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.conflict-target",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/common/master/12_system_authority_reference_seed.sql": {
+      "sourceSha256": "0990967dc59613237496ac4649822652114a34f64640d9cc8123fe61bf98ec01",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.do-nothing",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/common/shared/12_reference_seed.sql": {
+      "sourceSha256": "36de1b8d51fa21003411d458cc5b8d7b1a9a054ebdd5b3232971f45f7c139069",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/athyper/control/12_reference_seed.sql": {
+      "sourceSha256": "21acfa77b192e6ac48e1ac40ef532c6d5fe29886f649c1888f84ba6d81758200",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.conflict-target",
+        "convergence.do-nothing",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/mesh/control/12_reference_seed.sql": {
+      "sourceSha256": "b48543016d5e3b3c18659c548338766027de227192ab955b8d72b7f2207c2716",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.conflict-target",
+        "convergence.do-nothing",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/mesh/mesh/12_certification_reference_seed.sql": {
+      "sourceSha256": "11d801fc44b9f804b9a5beb238f5dcdbc6b371afee4dd35f1e2d7850810bc92c",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.conflict-target",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/mesh/mesh/12_partner_profile_reference_seed.sql": {
+      "sourceSha256": "ae0665af000cd0bcc1509ff863524e248218a850e13e77f289d49aadd4476573",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/mesh/mesh/12_reference_seed.sql": {
+      "sourceSha256": "9a0f9148b06cfa2ad07e1fae56f75c0d7285b417c5dbe7166f5656597d18b2ed",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/neon/control/12_accounting_policy_reference_seed.sql": {
+      "sourceSha256": "15879e7593af63fdbd34fe0f56825d6276653fcc7c8c2f3a1bb1aa6d680f21cd",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/neon/control/12_business_partner_control_reference_seed.sql": {
+      "sourceSha256": "dd49a52840ab6360f27258bd6d376faf6049033bb9072486f39433d28f4ab402",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/neon/control/12_notification_reference_seed.sql": {
+      "sourceSha256": "3bc0881757244def41d80e334d8834977827daf428fced2b72daf0fe99a34333",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/neon/control/12_numbering_policy_reference_seed.sql": {
+      "sourceSha256": "bb50d9f6e150853a7ad3f2a3d6fcc8b5985245dfd38e1960f2844c7e9b4f67c5",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.do-nothing",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.hardcoded-tenant",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/neon/control/12_reference_seed.sql": {
+      "sourceSha256": "44b04af093c43a6e7d1186fceae3a973b811e67c83ecf63b9f1cc87d4c5a14e2",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.conflict-target",
+        "convergence.do-nothing",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/neon/master/12_business_partner_reference_seed.sql": {
+      "sourceSha256": "ecd411f13c83f095e7d6eda182365ba4faa1c790f2d3e1be5f5df8eeff75bf17",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.no-op-update",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    },
+    "server/db/ddl/planes/neon/master/12_certification_reference_seed.sql": {
+      "sourceSha256": "0ef157a3425ad24c73b8604e7fbd4c2b23b0ec4801eb370017a9d4f32ca3dfb3",
+      "ruleIds": [
+        "assertion.failure",
+        "assertion.marker",
+        "convergence.conflict-target",
+        "identity.cross-file",
+        "identity.natural-key",
+        "identity.strategy",
+        "metadata.assertions",
+        "metadata.contract-version",
+        "metadata.data-class",
+        "metadata.expected-count",
+        "metadata.missing",
+        "metadata.pack-version",
+        "metadata.plane",
+        "metadata.tenant-scope",
+        "scope.plane-assertion"
+      ]
+    }
+  }
+}

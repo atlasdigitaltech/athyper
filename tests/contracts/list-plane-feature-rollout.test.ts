@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { resolveRuntimeListFeaturesWithDiagnostics } from "../../packages/shared/runtime-domain/runtime-list/src/adapter/index";
-import { adminAdapter } from "../../packages/apps/admin/src/list/index";
-import { createMeshAdapter } from "../../packages/apps/mesh/src/list/index";
-import { createNeonAdapter } from "../../packages/apps/neon/src/list/index";
+import { adminAdapter } from "../../packages/products/admin/app/src/list/index";
+import { createMeshAdapter } from "../../packages/products/mesh/app/src/list/index";
+import { createNeonAdapter } from "../../packages/products/neon/app/src/list/index";
 
 const neonAdapter = createNeonAdapter({
   fetchDescriptor: async () => null,

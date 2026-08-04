@@ -8,7 +8,7 @@
  *   general — any valid bearer:
  *     currencies, countries, state-regions, languages, locales, timezones, uom
  *   admin   — bearer + "platform-admin" Keycloak realm role:
- *     workspaces, modules, personas, permission-categories, permissions, roles
+ *     workspaces, modules, permission-categories, permissions, roles
  *
  * Final URLs (apiRouter mounted at /api):
  *   GET /api/platform/ref/currencies
@@ -20,7 +20,6 @@
  *   GET /api/platform/ref/uom
  *   GET /api/platform/ref/workspaces            [admin]
  *   GET /api/platform/ref/modules               [admin]
- *   GET /api/platform/ref/personas              [admin]
  *   GET /api/platform/ref/permission-categories [admin]
  *   GET /api/platform/ref/permissions           [admin]
  *   GET /api/platform/ref/roles                 [admin]
@@ -37,7 +36,6 @@
  * Deferred (not in this file):
  *   shared.commodity_code / shared.industry_code — hierarchical trees, need dedicated API
  *   shared.enterprise_feature / shared.subscription_plan / shared.plan_*_access — control-plane
- *   shared.persona_permission — grant matrix, not a picker
  */
 
 import { createHash } from "node:crypto";
@@ -529,11 +527,11 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
   };
   router.get("/platform/ref/modules", listModulesHandler);
 
-  // ── GET /platform/ref/personas ───────────────────────────────────────────────
-  // shared.persona; ?search= (code, name)
+  // ── Canonical role catalog endpoint ───────────────────────────────────────────────
+  // Canonical roles; ?search= (code, name)
   // scope_mode, priority, is_system included — structural fields for RBAC introspection
 
-  const listPersonasHandler: RequestHandler = async (req, res, next) => {
+  const obsoleteRoleCatalogHandler: RequestHandler = async (req, res, next) => {
     try {
       const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
       if (!claims) return;
@@ -547,7 +545,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
       const search = parseSearch(q);
       const sf = resolveStatusFilter(q);
 
-      let base = db.selectFrom("shared.persona as p");
+      let base = db.selectFrom("master.auth_role as p");
       if (search) {
         base = base.where((eb) => eb.or([
           eb("p.code" as never, "ilike", `%${search}%` as never),
@@ -559,8 +557,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
       const [countRow, rows] = await Promise.all([
         base.select((eb) => eb.fn.countAll<string>().as("n")).executeTakeFirst(),
         base
-          .select(["p.id", "p.code", "p.name", "p.description", "p.scope_mode", "p.priority", "p.is_system", "p.status"] as never[])
-          .orderBy("p.priority" as never, "asc")
+          .select(["p.id", "p.code", "p.name", "p.description", "p.plane_code", "p.version_no", "p.status"] as never[])
           .orderBy("p.name" as never, "asc")
           .limit(limit)
           .offset(offset)
@@ -569,11 +566,11 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
 
       refResponse(res, rows, Number(countRow?.n ?? 0), page, limit);
     } catch (err) {
-      logger?.error("ref_personas_error", { err: String(err) });
+      logger?.error("obsolete_role_catalog_error", { err: String(err) });
       next(err);
     }
   };
-  router.get("/platform/ref/personas", listPersonasHandler);
+  router.get("/platform/ref/obsolete-role-catalog", obsoleteRoleCatalogHandler);
 
   // ── GET /platform/ref/permission-categories ──────────────────────────────────
   // shared.permission_category; small stable set, no search
@@ -591,7 +588,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
       const { page, limit, offset } = parsePagination(q);
       const sf = resolveStatusFilter(q);
 
-      let base = db.selectFrom("shared.permission_category as pc");
+      let base = db.selectFrom("shared.auth_permission_category as pc");
       base = applyStatus(base, sf, "pc.status");
 
       const [countRow, rows] = await Promise.all([
@@ -633,7 +630,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
       const categoryCode = typeof q["category_code"] === "string" ? q["category_code"].trim() : "";
       const categoryId   = typeof q["category_id"]   === "string" ? q["category_id"].trim()   : "";
 
-      let base = db.selectFrom("shared.permission as p");
+      let base = db.selectFrom("control.auth_permission as p");
 
       // category_code takes precedence; resolve to category_id via subquery
       if (categoryCode) {
@@ -641,7 +638,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
           "p.category_id" as never,
           "=",
           (eb: { selectFrom: (t: string) => any }) =>
-            eb.selectFrom("shared.permission_category as pc")
+            eb.selectFrom("shared.auth_permission_category as pc")
               .select("pc.id" as never)
               .where("pc.code" as never, "=", categoryCode as never),
         ) as typeof base;
@@ -651,8 +648,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
 
       if (search) {
         base = base.where((eb) => eb.or([
-          eb("p.code" as never, "ilike", `%${search}%` as never),
-          eb("p.name" as never, "ilike", `%${search}%` as never),
+          eb("p.canonical_code" as never, "ilike", `%${search}%` as never),
         ])) as typeof base;
       }
       base = applyStatus(base, sf, "p.status");
@@ -661,13 +657,11 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
         base.select((eb) => eb.fn.countAll<string>().as("n")).executeTakeFirst(),
         base
           .select([
-            "p.id", "p.code", "p.name", "p.category_id",
-            "p.scope_type", "p.risk_level", "p.is_plan_restricted",
-            "p.sort_order", "p.status",
+            "p.id", "p.canonical_code as code", "p.category_id",
+            "p.risk_tier as risk_level", "p.metadata", "p.status",
           ] as never[])
           .orderBy("p.category_id" as never, "asc")
-          .orderBy("p.sort_order" as never, "asc")
-          .orderBy("p.code" as never, "asc")
+          .orderBy("p.canonical_code" as never, "asc")
           .limit(limit)
           .offset(offset)
           .execute(),
@@ -682,10 +676,10 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
   router.get("/platform/ref/permissions", listPermissionsHandler);
 
   // ── GET /platform/ref/roles ──────────────────────────────────────────────────
-  // shared.role — platform RBAC role = Persona × Module|Workspace
-  // ?search= (code, name, kc_role_code), ?persona_id=, ?module_id=, ?workspace_id=
+  // Canonical platform role catalog
+  // ?search= (code, name, kc_role_code), ?module_id=, ?workspace_id=
   // status: active | suspended | deprecated  (3-value — different from ref_status_d)
-  // persona_id, module_id, workspace_id, kc_role_code included — structural RBAC fields
+  // module_id, workspace_id, kc_role_code included — structural RBAC fields
 
   const listRolesHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -700,19 +694,11 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
       const { page, limit, offset } = parsePagination(q);
       const search = parseSearch(q);
       const sf = resolveStatusFilter(q);
-      const personaId   = typeof q["persona_id"]   === "string" ? q["persona_id"].trim()   : "";
-      const moduleId    = typeof q["module_id"]     === "string" ? q["module_id"].trim()     : "";
-      const workspaceId = typeof q["workspace_id"]  === "string" ? q["workspace_id"].trim()  : "";
-
-      let base = db.selectFrom("shared.role as r");
-      if (personaId)   { base = base.where("r.persona_id"   as never, "=", personaId as never)   as typeof base; }
-      if (moduleId)    { base = base.where("r.module_id"    as never, "=", moduleId as never)    as typeof base; }
-      if (workspaceId) { base = base.where("r.workspace_id" as never, "=", workspaceId as never) as typeof base; }
+      let base = db.selectFrom("master.auth_role as r");
       if (search) {
         base = base.where((eb) => eb.or([
           eb("r.code"         as never, "ilike", `%${search}%` as never),
           eb("r.name"         as never, "ilike", `%${search}%` as never),
-          eb("r.kc_role_code" as never, "ilike", `%${search}%` as never),
         ])) as typeof base;
       }
       // shared.role.status is text IN ('active','suspended','deprecated') — not ref_status_d
@@ -721,7 +707,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
       const [countRow, rows] = await Promise.all([
         base.select((eb) => eb.fn.countAll<string>().as("n")).executeTakeFirst(),
         base
-          .select(["r.id", "r.code", "r.name", "r.persona_id", "r.module_id", "r.workspace_id", "r.kc_role_code", "r.status"] as never[])
+          .select(["r.id", "r.code", "r.name", "r.description", "r.plane_code", "r.version_no", "r.status"] as never[])
           .orderBy("r.code" as never, "asc")
           .limit(limit)
           .offset(offset)

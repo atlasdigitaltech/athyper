@@ -24,26 +24,37 @@ async function companyContext(db: AnyDb, tenantId: string, companyCode: string) 
 }
 
 export async function loadPaymentTermDefinitions(db: AnyDb, tenantId: string) {
-  const [terms, clauses, tiers, calendars] = await Promise.all([
+  const [terms, clauses, tiers, calendarCatalog] = await Promise.all([
     sql<Row>`SELECT id,code,name,description,applicable_to AS "applicableTo",base_event AS "baseEvent",
       due_rule_type AS "dueRuleType",due_days AS "dueDays",due_day_of_month AS "dueDayOfMonth",grace_days AS "graceDays",
       due_date_flexibility AS "dueDateFlexibility",business_day_convention AS "businessDayConvention",
       holiday_calendar_id AS "holidayCalendarId",month_offset AS "monthOffset",term_category AS "termCategory",
-      installment_count AS "installmentCount",version,supersedes_payment_term_id AS "supersedesPaymentTermId",
-      is_current_version AS "isCurrentVersion",effective_from::text AS "effectiveFrom",effective_to::text AS "effectiveTo",status
-      FROM master.payment_term WHERE tenant_id=${tenantId}::uuid ORDER BY code,is_current_version DESC,version DESC`.execute(db).then(x => x.rows),
+      installment_count AS "installmentCount",discount_selection_mode AS "discountSelectionMode",
+      replaces_payment_term_id AS "replacesPaymentTermId",sort_order AS "sortOrder",metadata,status
+      FROM master.payment_term WHERE tenant_id=${tenantId}::uuid
+      ORDER BY code,status='draft' DESC,created_at DESC`.execute(db).then(x => x.rows),
     sql<Row>`SELECT id,payment_term_id AS "paymentTermId",clause_code AS "clauseCode",clause_type AS "clauseType",
       sequence_no AS "sequenceNo",settles_clause_code AS "settlesClauseCode",application_scope AS "applicationScope",
       basis_amount_mode AS "basisAmountMode",calc_mode AS "calcMode",default_pct::text AS "defaultPct",
       default_amount::text AS "defaultAmount",trim(currency_code) AS "currencyCode",flexibility_mode AS "flexibilityMode",
-      trigger_event AS "triggerEvent",release_event AS "releaseEvent",rounding_method AS "roundingMethod",rounding_scale AS "roundingScale",is_active AS "isActive"
+      min_pct::text AS "minPct",max_pct::text AS "maxPct",min_amount::text AS "minAmount",max_amount::text AS "maxAmount",
+      cumulative_cap_pct::text AS "cumulativeCapPct",cumulative_cap_amount::text AS "cumulativeCapAmount",
+      trigger_event AS "triggerEvent",release_event AS "releaseEvent",release_delay_days AS "releaseDelayDays",
+      recovery_start_after_pct::text AS "recoveryStartAfterPct",recovery_end_before_pct::text AS "recoveryEndBeforePct",
+      recovery_method AS "recoveryMethod",partial_release_pct::text AS "partialReleasePct",
+      partial_release_event AS "partialReleaseEvent",rounding_method AS "roundingMethod",
+      rounding_scale AS "roundingScale",metadata
       FROM master.payment_term_clause WHERE tenant_id=${tenantId}::uuid ORDER BY payment_term_id,sequence_no`.execute(db).then(x => x.rows),
     sql<Row>`SELECT id,payment_term_id AS "paymentTermId",tier_no AS "tierNo",qualify_within_days AS "qualifyWithinDays",
       discount_pct::text AS "discountPct",discount_fixed::text AS "discountFixed",trim(currency_code) AS "currencyCode",
-      discount_basis_mode AS "discountBasisMode",min_invoice_amount::text AS "minInvoiceAmount",is_best_only AS "isBestOnly"
+      discount_basis_mode AS "discountBasisMode",min_invoice_amount::text AS "minInvoiceAmount",metadata
       FROM master.payment_term_discount_tier WHERE tenant_id=${tenantId}::uuid ORDER BY payment_term_id,tier_no`.execute(db).then(x => x.rows),
-    sql<Row>`SELECT id,code,name FROM master.holiday_calendar WHERE tenant_id=${tenantId}::uuid AND status='active' ORDER BY code`.execute(db).then(x => x.rows),
+    sql<{ relation: string | null }>`SELECT to_regclass('master.holiday_calendar')::text AS relation`.execute(db),
   ]);
+  const calendars = calendarCatalog.rows[0]?.relation
+    ? (await sql<Row>`SELECT id,code,name FROM master.holiday_calendar
+        WHERE tenant_id=${tenantId}::uuid AND status='active' ORDER BY code`.execute(db)).rows
+    : [];
   return { terms: terms.map(term => ({ ...term, clauses: clauses.filter(c => c.paymentTermId === term.id), discountTiers: tiers.filter(t => t.paymentTermId === term.id) })), holidayCalendars: calendars };
 }
 
@@ -59,6 +70,8 @@ function validateTermAggregate(body: Row) {
   for (const [index, clause] of clauses.entries()) {
     const settles = nullable(clause.settlesClauseCode)?.toUpperCase();
     if (settles && !clauseCodes.slice(0, index).includes(settles)) throw new FinancePaymentsError("INVALID_CLAUSE_ORDER", 400, "Recovery/release clauses must settle an earlier clause.");
+    if (String(clause.clauseType) === "ADVANCE_RECOVERY" && !nullable(clause.recoveryMethod)) throw new FinancePaymentsError("RECOVERY_METHOD_REQUIRED", 400, "Advance recovery clauses require a recovery method.");
+    if (String(clause.clauseType) === "RETENTION_RELEASE" && !nullable(clause.releaseEvent)) throw new FinancePaymentsError("RELEASE_EVENT_REQUIRED", 400, "Retention release clauses require a release event.");
   }
   const tierDays = tiers.map(t => Number(t.qualifyWithinDays));
   if (tierDays.some((days, index) => !Number.isFinite(days) || days <= 0 || tierDays.indexOf(days) !== index)) throw new FinancePaymentsError("INVALID_DISCOUNT_TIERS", 400, "Discount qualification days must be positive and unique.");
@@ -70,45 +83,78 @@ export async function savePaymentTerm(db: AnyDb, input: { tenantId: string; acto
   if (validated.dueRule !== "NET_DAYS") b.dueDays = null;
   if (validated.dueRule !== "FIXED_DAY") b.dueDayOfMonth = null;
   if (!['draft','active'].includes(requestedStatus)) throw new FinancePaymentsError("INVALID_TERM_STATUS", 400, "Payment Term status must be draft or active.");
-  const effectiveFrom = String(b.effectiveFrom ?? today()), effectiveTo = nullable(b.effectiveTo);
-  let saved!: { id: string; version: number };
+  let saved!: { id: string; status: string };
   await db.transaction().execute(async trx => {
     const termId = nullable(b.termId);
-    const existing = termId ? (await sql<{ id: string; code: string; version: number; status: string; effective_from: string }>`
-      SELECT id,code,version,status,effective_from::text FROM master.payment_term
+    const existing = termId ? (await sql<{ id: string; code: string; status: string }>`
+      SELECT id,code,status FROM master.payment_term
        WHERE tenant_id=${input.tenantId}::uuid AND id=${termId}::uuid FOR UPDATE`.execute(trx)).rows[0] : undefined;
-    if (termId && !existing) throw new FinancePaymentsError("PAYMENT_TERM_NOT_FOUND", 404, "Payment Term version not found.");
-    if (existing && existing.code !== validated.code) throw new FinancePaymentsError("TERM_CODE_IMMUTABLE", 409, "Payment Term code cannot change across versions.");
-    let targetId = existing?.status === 'draft' ? existing.id : null;
-    let version = existing ? existing.version : Number((await sql<{ version: number }>`SELECT COALESCE(max(version),0)::int+1 AS version FROM master.payment_term WHERE tenant_id=${input.tenantId}::uuid AND code=${validated.code}`.execute(trx)).rows[0]!.version);
-    if (existing && existing.status !== 'draft') {
-      if (effectiveFrom <= existing.effective_from) throw new FinancePaymentsError("TERM_EFFECTIVITY_CONFLICT", 409, "A successor must start after the current version.");
-      version = existing.version + 1;
-      await sql`UPDATE master.payment_term SET is_current_version=false,status='superseded',effective_to=${effectiveFrom}::date-1,
-        status_changed_at=now(),status_changed_by=${input.actorId}::uuid,updated_at=now(),updated_by=${input.actorId}::uuid WHERE id=${existing.id}::uuid`.execute(trx);
-    }
+    if (termId && !existing) throw new FinancePaymentsError("PAYMENT_TERM_NOT_FOUND", 404, "Payment Term not found.");
+    if (existing?.status !== undefined && existing.status !== 'draft') throw new FinancePaymentsError("PAYMENT_TERM_IMMUTABLE", 409, "Active or retired Payment Terms cannot be edited. Create a new code and optionally identify the term it replaces.");
+    if (existing && existing.code !== validated.code) throw new FinancePaymentsError("TERM_CODE_IMMUTABLE", 409, "A draft Payment Term code cannot be changed.");
+    let targetId = existing?.id ?? null;
     if (targetId) {
       await sql`UPDATE master.payment_term SET name=${validated.name},description=${nullable(b.description)},applicable_to=${String(b.applicableTo ?? 'BOTH')},
         base_event=${String(b.baseEvent ?? 'INVOICE_DATE')},due_rule_type=${validated.dueRule},due_days=${b.dueDays == null ? null : Number(b.dueDays)},
         due_day_of_month=${b.dueDayOfMonth == null ? null : Number(b.dueDayOfMonth)},grace_days=${Number(b.graceDays ?? 0)},
-        due_date_flexibility=${String(b.dueDateFlexibility ?? 'FIXED')},business_day_convention=${nullable(b.businessDayConvention)},
+        due_date_flexibility=${String(b.dueDateFlexibility ?? 'FIXED')},business_day_convention=${String(b.businessDayConvention ?? 'NONE')},
         holiday_calendar_id=${nullable(b.holidayCalendarId)}::uuid,month_offset=${Number(b.monthOffset ?? 0)},term_category=${String(b.termCategory ?? 'standard')},
-        installment_count=${b.installmentCount == null ? null : Number(b.installmentCount)},effective_from=${effectiveFrom}::date,effective_to=${effectiveTo}::date,
-        status=${requestedStatus},status_changed_at=now(),status_changed_by=${input.actorId}::uuid,updated_at=now(),updated_by=${input.actorId}::uuid WHERE id=${targetId}::uuid`.execute(trx);
+        installment_count=${b.installmentCount == null ? null : Number(b.installmentCount)},
+        discount_selection_mode=${String(b.discountSelectionMode ?? 'BEST_ELIGIBLE')},
+        replaces_payment_term_id=${nullable(b.replacesPaymentTermId)}::uuid,sort_order=${Number(b.sortOrder ?? 0)},
+        metadata=${JSON.stringify(b.metadata ?? {})}::jsonb,updated_at=now(),updated_by=${input.actorId}::uuid
+        WHERE tenant_id=${input.tenantId}::uuid AND id=${targetId}::uuid`.execute(trx);
       await sql`DELETE FROM master.payment_term_clause WHERE tenant_id=${input.tenantId}::uuid AND payment_term_id=${targetId}::uuid`.execute(trx);
       await sql`DELETE FROM master.payment_term_discount_tier WHERE tenant_id=${input.tenantId}::uuid AND payment_term_id=${targetId}::uuid`.execute(trx);
     } else {
-      const created = await sql<{ id: string }>`INSERT INTO master.payment_term(tenant_id,code,name,description,applicable_to,base_event,due_rule_type,due_days,due_day_of_month,grace_days,due_date_flexibility,business_day_convention,holiday_calendar_id,month_offset,term_category,installment_count,version,supersedes_payment_term_id,is_current_version,effective_from,effective_to,status,created_by)
-        VALUES(${input.tenantId}::uuid,${validated.code},${validated.name},${nullable(b.description)},${String(b.applicableTo ?? 'BOTH')},${String(b.baseEvent ?? 'INVOICE_DATE')},${validated.dueRule},${b.dueDays == null ? null : Number(b.dueDays)},${b.dueDayOfMonth == null ? null : Number(b.dueDayOfMonth)},${Number(b.graceDays ?? 0)},${String(b.dueDateFlexibility ?? 'FIXED')},${nullable(b.businessDayConvention)},${nullable(b.holidayCalendarId)}::uuid,${Number(b.monthOffset ?? 0)},${String(b.termCategory ?? 'standard')},${b.installmentCount == null ? null : Number(b.installmentCount)},${version},${existing?.id ?? null}::uuid,true,${effectiveFrom}::date,${effectiveTo}::date,${requestedStatus},${input.actorId}::uuid) RETURNING id`.execute(trx);
+      const created = await sql<{ id: string }>`INSERT INTO master.payment_term(
+        tenant_id,code,name,description,applicable_to,base_event,due_rule_type,due_days,due_day_of_month,
+        grace_days,due_date_flexibility,business_day_convention,holiday_calendar_id,month_offset,
+        term_category,installment_count,discount_selection_mode,replaces_payment_term_id,sort_order,metadata,created_by)
+        VALUES(${input.tenantId}::uuid,${validated.code},${validated.name},${nullable(b.description)},
+        ${String(b.applicableTo ?? 'BOTH')},${String(b.baseEvent ?? 'INVOICE_DATE')},${validated.dueRule},
+        ${b.dueDays == null ? null : Number(b.dueDays)},${b.dueDayOfMonth == null ? null : Number(b.dueDayOfMonth)},
+        ${Number(b.graceDays ?? 0)},${String(b.dueDateFlexibility ?? 'FIXED')},${String(b.businessDayConvention ?? 'NONE')},
+        ${nullable(b.holidayCalendarId)}::uuid,${Number(b.monthOffset ?? 0)},${String(b.termCategory ?? 'standard')},
+        ${b.installmentCount == null ? null : Number(b.installmentCount)},${String(b.discountSelectionMode ?? 'BEST_ELIGIBLE')},
+        ${nullable(b.replacesPaymentTermId)}::uuid,${Number(b.sortOrder ?? 0)},${JSON.stringify(b.metadata ?? {})}::jsonb,
+        ${input.actorId}::uuid) RETURNING id`.execute(trx);
       targetId = created.rows[0]!.id;
     }
-    for (const [index, c] of validated.clauses.entries()) await sql`INSERT INTO master.payment_term_clause(tenant_id,payment_term_id,clause_code,clause_type,sequence_no,settles_clause_code,application_scope,basis_amount_mode,calc_mode,default_pct,default_amount,currency_code,flexibility_mode,trigger_event,release_event,rounding_method,rounding_scale,is_active,created_by)
-      VALUES(${input.tenantId}::uuid,${targetId}::uuid,${String(c.clauseCode).trim().toUpperCase()},${String(c.clauseType)},${index + 1},${nullable(c.settlesClauseCode)?.toUpperCase() ?? null},${String(c.applicationScope ?? 'HEADER')},${String(c.basisAmountMode ?? 'GROSS')},${String(c.calcMode ?? 'PERCENT')},${c.defaultPct == null || c.defaultPct === '' ? null : Number(c.defaultPct)},${c.defaultAmount == null || c.defaultAmount === '' ? null : Number(c.defaultAmount)},${nullable(c.currencyCode)},${String(c.flexibilityMode ?? 'FIXED')},${nullable(c.triggerEvent)},${nullable(c.releaseEvent)},${String(c.roundingMethod ?? 'ROUND_HALF_UP')},${c.roundingScale == null ? null : Number(c.roundingScale)},${c.isActive !== false},${input.actorId}::uuid)`.execute(trx);
-    for (const [index, t] of validated.tiers.entries()) await sql`INSERT INTO master.payment_term_discount_tier(tenant_id,payment_term_id,tier_no,qualify_within_days,discount_pct,discount_fixed,currency_code,discount_basis_mode,min_invoice_amount,is_best_only,created_by)
-      VALUES(${input.tenantId}::uuid,${targetId}::uuid,${index + 1},${Number(t.qualifyWithinDays)},${t.discountPct == null || t.discountPct === '' ? null : Number(t.discountPct)},${t.discountFixed == null || t.discountFixed === '' ? null : Number(t.discountFixed)},${nullable(t.currencyCode)},${String(t.discountBasisMode ?? 'GROSS')},${t.minInvoiceAmount == null || t.minInvoiceAmount === '' ? null : Number(t.minInvoiceAmount)},${t.isBestOnly !== false},${input.actorId}::uuid)`.execute(trx);
-    saved = { id: targetId, version };
+    for (const [index, c] of validated.clauses.entries()) await sql`INSERT INTO master.payment_term_clause(
+      tenant_id,payment_term_id,clause_code,clause_type,sequence_no,settles_clause_code,application_scope,
+      basis_amount_mode,calc_mode,default_pct,default_amount,currency_code,flexibility_mode,min_pct,max_pct,
+      min_amount,max_amount,cumulative_cap_pct,cumulative_cap_amount,trigger_event,release_event,release_delay_days,
+      recovery_start_after_pct,recovery_end_before_pct,recovery_method,partial_release_pct,partial_release_event,
+      rounding_method,rounding_scale,metadata,created_by)
+      VALUES(${input.tenantId}::uuid,${targetId}::uuid,${String(c.clauseCode).trim().toUpperCase()},${String(c.clauseType)},
+      ${index + 1},${nullable(c.settlesClauseCode)?.toUpperCase() ?? null},${String(c.applicationScope ?? 'HEADER')},
+      ${String(c.basisAmountMode ?? 'GROSS')},${String(c.calcMode ?? 'PERCENT')},
+      ${c.defaultPct == null || c.defaultPct === '' ? null : Number(c.defaultPct)},${c.defaultAmount == null || c.defaultAmount === '' ? null : Number(c.defaultAmount)},
+      ${nullable(c.currencyCode)},${String(c.flexibilityMode ?? 'FIXED')},${c.minPct == null || c.minPct === '' ? null : Number(c.minPct)},
+      ${c.maxPct == null || c.maxPct === '' ? null : Number(c.maxPct)},${c.minAmount == null || c.minAmount === '' ? null : Number(c.minAmount)},
+      ${c.maxAmount == null || c.maxAmount === '' ? null : Number(c.maxAmount)},${c.cumulativeCapPct == null || c.cumulativeCapPct === '' ? null : Number(c.cumulativeCapPct)},
+      ${c.cumulativeCapAmount == null || c.cumulativeCapAmount === '' ? null : Number(c.cumulativeCapAmount)},${nullable(c.triggerEvent)},
+      ${nullable(c.releaseEvent)},${c.releaseDelayDays == null || c.releaseDelayDays === '' ? null : Number(c.releaseDelayDays)},
+      ${c.recoveryStartAfterPct == null || c.recoveryStartAfterPct === '' ? null : Number(c.recoveryStartAfterPct)},
+      ${c.recoveryEndBeforePct == null || c.recoveryEndBeforePct === '' ? null : Number(c.recoveryEndBeforePct)},
+      ${nullable(c.recoveryMethod)},${c.partialReleasePct == null || c.partialReleasePct === '' ? null : Number(c.partialReleasePct)},
+      ${nullable(c.partialReleaseEvent)},${String(c.roundingMethod ?? 'ROUND_HALF_UP')},${Number(c.roundingScale ?? 2)},
+      ${JSON.stringify(c.metadata ?? {})}::jsonb,${input.actorId}::uuid)`.execute(trx);
+    for (const [index, t] of validated.tiers.entries()) await sql`INSERT INTO master.payment_term_discount_tier(
+      tenant_id,payment_term_id,tier_no,qualify_within_days,discount_pct,discount_fixed,currency_code,
+      discount_basis_mode,min_invoice_amount,metadata,created_by)
+      VALUES(${input.tenantId}::uuid,${targetId}::uuid,${index + 1},${Number(t.qualifyWithinDays)},
+      ${t.discountPct == null || t.discountPct === '' ? null : Number(t.discountPct)},
+      ${t.discountFixed == null || t.discountFixed === '' ? null : Number(t.discountFixed)},${nullable(t.currencyCode)},
+      ${String(t.discountBasisMode ?? 'GROSS')},${t.minInvoiceAmount == null || t.minInvoiceAmount === '' ? null : Number(t.minInvoiceAmount)},
+      ${JSON.stringify(t.metadata ?? {})}::jsonb,${input.actorId}::uuid)`.execute(trx);
+    if (requestedStatus === 'active') {
+      await sql`SELECT master.activate_payment_term(${input.tenantId}::uuid,${targetId}::uuid,${input.actorId}::uuid)`.execute(trx);
+    }
+    saved = { id: targetId, status: requestedStatus };
   });
-  await writeFinanceSetupAudit(db, { tenantId: input.tenantId, actorId: input.actorId, activityType: 'finance_setup.payment_term_saved', entityType: 'payment_term', entityId: saved.id, detail: { code: validated.code, version: saved.version, status: requestedStatus } });
+  await writeFinanceSetupAudit(db, { tenantId: input.tenantId, actorId: input.actorId, activityType: 'finance_setup.payment_term_saved', entityType: 'payment_term', entityId: saved.id, detail: { code: validated.code, status: requestedStatus } });
   return saved;
 }
 

@@ -13,7 +13,7 @@
  *   1. Reads ai_inference_log for the last drift_window_hours
  *   2. Computes rolling mean confidence
  *   3. Compares against drift_alert_below threshold
- *   4. Writes a row to log.ai_monitoring_log when drift is detected
+ *   4. Writes a row to ai.ai_monitoring_log when drift is detected
  */
 
 import { sql } from "kysely";
@@ -80,7 +80,7 @@ async function runDriftCheck(
       SELECT
         AVG(confidence)::float   AS mean_confidence,
         COUNT(*)::int            AS sample_count
-      FROM log.ai_inference_log
+      FROM ai.ai_inference_log
       WHERE tenant_id    = ${tenantId}::uuid
         AND action_type  = ${actionCode}
         AND created_at  >= now() - (${windowHours} || ' hours')::interval
@@ -95,7 +95,7 @@ async function runDriftCheck(
 
     if (isAlert) {
       await sql`
-        INSERT INTO log.ai_monitoring_log (
+        INSERT INTO ai.ai_monitoring_log (
           tenant_id, log_type, monitor_type,
           metric_name, metric_value, baseline_value,
           is_alert, is_alert_sent,

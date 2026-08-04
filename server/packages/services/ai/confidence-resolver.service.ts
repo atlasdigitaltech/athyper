@@ -147,7 +147,7 @@ export class ConfidenceResolver {
       }>`
         SELECT min_for_suggest, min_for_assist, min_for_auto,
                drift_alert_below, drift_window_hours
-        FROM   control.ai_confidence_threshold
+        FROM   ai.ai_confidence_threshold
         WHERE  tenant_id   = ${tenantId}::uuid
           AND  action_code = ${actionCode}
           AND  is_active   = true

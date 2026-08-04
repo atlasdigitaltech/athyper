@@ -268,11 +268,22 @@ async function resolveWhtGroupContext(
           AND trs.wht_basis IS NOT NULL
       ) AS is_wht_group,
       tg.jurisdiction_id,
-      tj.wht_section_required
+      EXISTS (
+        SELECT 1
+        FROM control.tax_group_component tgc
+        JOIN control.tax_rate_schedule trs
+          ON trs.tenant_id = tgc.tenant_id
+         AND trs.id        = tgc.tax_rate_schedule_id
+        JOIN master.tax_type tt
+          ON tt.tenant_id = trs.tenant_id
+         AND tt.id        = trs.tax_type_id
+        WHERE tgc.tenant_id    = ${tenantId}::uuid
+          AND tgc.tax_group_id = ${taxGroupId}::uuid
+          AND trs.wht_basis IS NOT NULL
+          AND tt.status = 'active'
+          AND tt.section_code_mode = 'required'
+      ) AS wht_section_required
     FROM control.tax_group tg
-    LEFT JOIN master.tax_jurisdiction tj
-      ON tj.tenant_id = tg.tenant_id
-     AND tj.id        = tg.jurisdiction_id
     WHERE tg.tenant_id = ${tenantId}::uuid
       AND tg.id        = ${taxGroupId}::uuid
   `.execute(db);

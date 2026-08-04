@@ -43,6 +43,7 @@ describe("canonical session termination", () => {
       sid: "sid-1",
       userId: "user-1",
       keycloakSessionId: "kc-1",
+      realmKey: "athyper",
       reason: "manual_logout",
     });
 
@@ -53,7 +54,8 @@ describe("canonical session termination", () => {
     ]);
     expect(redis.removed).toEqual([
       ["user_sessions:neon:user-1", "sid-1"],
-      ["kc_session:kc-1", "neon:sid-1"],
+      ["realm_subject_sessions:athyper:user-1", "neon:sid-1"],
+      ["realm_kc_session:athyper:kc-1", "neon:sid-1"],
     ]);
   });
 
@@ -64,6 +66,8 @@ describe("canonical session termination", () => {
 
     await expect(terminateSubjectSessions(redis as never, "user-1")).resolves.toBe(3);
     expect(redis.deleted).toEqual([
+      "realm_subject_sessions:athyper:user-1",
+      "realm_subject_sessions:platform-control:user-1",
       "sess:neon:n1",
       "sess:neon:n2",
       "user_sessions:neon:user-1",
@@ -82,6 +86,8 @@ describe("canonical session termination", () => {
     await expect(notifyIamSubjectCleanup({
       accessToken: "token",
       subjectId: "user-1",
+      planeKey: "neon",
+      realmKey: "athyper",
       reason: "idle_timeout",
       requestId: "req-1",
       auditContext: { tenant: { id: "tenant-1" } },
@@ -97,6 +103,7 @@ describe("canonical session termination", () => {
         sid: `sid-${reason}`,
         userId: "user-1",
         keycloakSessionId: "kc-1",
+        realmKey: "athyper",
         reason,
       });
       expect(redis.deleted).toEqual(expect.arrayContaining([
@@ -105,7 +112,8 @@ describe("canonical session termination", () => {
         `refresh_lock:neon:sid-${reason}`,
       ]));
       expect(redis.removed).toContainEqual(["user_sessions:neon:user-1", `sid-${reason}`]);
-      expect(redis.removed).toContainEqual(["kc_session:kc-1", `neon:sid-${reason}`]);
+      expect(redis.removed).toContainEqual(["realm_subject_sessions:athyper:user-1", `neon:sid-${reason}`]);
+      expect(redis.removed).toContainEqual(["realm_kc_session:athyper:kc-1", `neon:sid-${reason}`]);
     }
   });
 });

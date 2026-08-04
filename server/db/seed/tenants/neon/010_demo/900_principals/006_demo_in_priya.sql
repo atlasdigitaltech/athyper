@@ -10,10 +10,10 @@ BEGIN
     PERFORM set_config('app.current_principal_id', v_su::text, true);
 
     INSERT INTO master.tenant (
-        code, name, display_name, realm_key, tenant_type, region, subscription,
+        code, name, display_name, realm_key, region, subscription,
         status, metadata, created_by
     ) VALUES (
-        'demo_in', 'Demo India', 'Demo India Tenant', 'athyper', 'customer', 'IN',
+        'demo_in', 'Demo India', 'Demo India Tenant', 'athyper', 'IN',
         'enterprise', 'active',
         jsonb_build_object('_seed', jsonb_build_object('pack', '010_demo/006_demo_in_priya', 'version', '1.0.0')),
         v_su
@@ -21,7 +21,6 @@ BEGIN
     ON CONFLICT (realm_key, code) DO UPDATE SET
         name = EXCLUDED.name,
         display_name = EXCLUDED.display_name,
-        tenant_type = EXCLUDED.tenant_type,
         region = EXCLUDED.region,
         subscription = EXCLUDED.subscription,
         status = EXCLUDED.status,

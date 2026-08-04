@@ -168,12 +168,6 @@ CREATE TRIGGER trg_principal_identity_binding_updated_at
     BEFORE UPDATE ON mesh.principal_identity_binding
     FOR EACH ROW EXECUTE FUNCTION mesh.trg_set_updated_at();
 
-DROP TRIGGER IF EXISTS trg_account_grant_updated_at ON mesh.account_grant;
-CREATE TRIGGER trg_account_grant_updated_at
-    BEFORE UPDATE ON mesh.account_grant
-    FOR EACH ROW EXECUTE FUNCTION mesh.trg_set_updated_at();
-
-
 DROP TRIGGER IF EXISTS trg_network_invitation_updated_at ON mesh.network_invitation;
 CREATE TRIGGER trg_network_invitation_updated_at
     BEFORE UPDATE ON mesh.network_invitation

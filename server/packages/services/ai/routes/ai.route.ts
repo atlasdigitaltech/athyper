@@ -202,7 +202,7 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
           }
 
           const ownedRun = await db
-            .selectFrom("log.ai_agent_run")
+            .selectFrom("ai.ai_agent_run")
             .select("id")
             .where("tenant_id", "=", tenantId)
             .where("principal_id", "=", principalId)
@@ -354,7 +354,7 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
         const overridePolicyId = body.override_policy_definition_id ?? null;
 
         const result = await sql<{ id: string }>`
-          INSERT INTO control.ai_action_policy (
+          INSERT INTO ai.ai_action_policy (
             tenant_id, action_code, doc_class, autonomy_level, min_confidence_for_auto,
             requires_human_confirmation, override_policy_definition_id, is_active,
             created_by, updated_by
@@ -407,7 +407,7 @@ export function registerAiRoutes(router: Router, deps: AiRouteDeps): Router {
         const driftAlertBelow = body.drift_alert_below ?? null;
 
         const result = await sql<{ id: string }>`
-          INSERT INTO control.ai_confidence_threshold (
+          INSERT INTO ai.ai_confidence_threshold (
             tenant_id, action_code, doc_class, model_id,
             min_for_suggest, min_for_assist, min_for_auto,
             drift_alert_below, drift_window_hours, is_active,

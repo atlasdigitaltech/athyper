@@ -38,16 +38,24 @@
 DO $rsk_cfg$
 DECLARE
     v_tid  uuid;
-    v_sys  uuid := '00000000-0000-0000-0000-000000000000';
+    v_sys  uuid;
 BEGIN
     SELECT id INTO v_tid
     FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
     IF v_tid IS NULL THEN RAISE EXCEPTION '[rsk_cfg] technostat tenant not found'; END IF;
+    SELECT id INTO v_sys
+      FROM master.principal
+     WHERE tenant_id = v_tid AND status = 'active'
+     ORDER BY code
+     LIMIT 1;
+    IF v_sys IS NULL THEN
+        RAISE EXCEPTION '[rsk_cfg] active tenant-local seed principal not found';
+    END IF;
 
-    INSERT INTO master.tenant_risk_source_config
-        (tenant_id, source_code, is_enabled, custom_trust_level,
-         api_config, status, created_by)
-    SELECT v_tid, src, enabled, trust_ovr, cfg, 'active', v_sys
+    INSERT INTO control.risk_source_config
+        (tenant_id, source_code, custom_trust_level,
+         risk_settings, status, created_by)
+    SELECT v_tid, src, trust_ovr, cfg, 'active', v_sys
     FROM (VALUES
         ('ecovadis',     true,  5, '{"refresh_cadence_months":12,"portal":"ecovadis.com"}'::jsonb),
         ('dun_bradstreet',    true,  5, '{"product":"credit_risk","refresh_cadence_months":6}'::jsonb),
@@ -60,10 +68,10 @@ BEGIN
     ) AS v(src, enabled, trust_ovr, cfg)
     WHERE EXISTS (SELECT 1 FROM master.risk_source WHERE code = v.src)
       AND NOT EXISTS (
-        SELECT 1 FROM master.tenant_risk_source_config
+        SELECT 1 FROM control.risk_source_config
          WHERE tenant_id = v_tid AND source_code = v.src);
 
-    RAISE NOTICE '[rsk_cfg] tenant_risk_source_config seeded for technostat';
+    RAISE NOTICE '[rsk_cfg] control.risk_source_config seeded for technostat';
 END $rsk_cfg$;
 
 
@@ -76,74 +84,84 @@ END $rsk_cfg$;
 DO $idx$
 DECLARE
     v_tid  uuid;
+    v_has_supplier_app_index boolean := to_regclass('master.supplier_app_index') IS NOT NULL;
+    v_has_customer_app_index boolean := to_regclass('master.customer_app_index') IS NOT NULL;
 BEGIN
     SELECT id INTO v_tid
     FROM master.tenant WHERE realm_key = 'athyper' AND code = 'technostat';
     IF v_tid IS NULL THEN RAISE EXCEPTION '[idx] technostat tenant not found'; END IF;
 
     -- supplier_app_index — one row per supplier (id = supplier.id)
-    INSERT INTO master.supplier_app_index (
-        id, tenant_id, supplier_id, business_partner_id,
-        supplier_code, supplier_type, supplier_status, is_payment_ready,
-        business_partner_code, name, display_name, legal_name, legal_form,
-        registration_no, registration_country_code, tax_residence_country_code,
-        partner_category, aliases, business_types, search_text, updated_at)
-    SELECT
-        s.id, s.tenant_id, s.id, bp.id,
-        s.supplier_code, s.supplier_type, s.status, s.is_payment_ready,
-        bp.code, bp.name, bp.display_name, bp.legal_name, bp.legal_form,
-        bp.registration_no, bp.registration_country_code, bp.tax_residence_country_code,
-        bp.partner_category, bp.aliases, bp.business_types,
-        lower(
-            bp.name || ' ' || s.supplier_code || ' ' ||
-            COALESCE(bp.display_name, '') || ' ' ||
-            COALESCE(bp.legal_name, '') || ' ' ||
-            COALESCE(bp.registration_no, '') || ' ' ||
-            COALESCE(bp.external_ref, '') || ' ' ||
-            COALESCE(array_to_string(bp.aliases::text[], ' '), '')
-        ),
-        now()
-    FROM master.supplier s
-    JOIN master.business_partner bp
-         ON bp.id = s.business_partner_id AND bp.tenant_id = s.tenant_id
-    WHERE s.tenant_id = v_tid
-    ON CONFLICT (id) DO UPDATE
-        SET search_text  = EXCLUDED.search_text,
-            supplier_status = EXCLUDED.supplier_status,
-            updated_at   = now();
+    IF v_has_supplier_app_index THEN
+        INSERT INTO master.supplier_app_index (
+            id, tenant_id, supplier_id, business_partner_id,
+            supplier_code, supplier_type, supplier_status, is_payment_ready,
+            business_partner_code, name, display_name, legal_name, legal_form,
+            registration_no, registration_country_code, tax_residence_country_code,
+            partner_category, aliases, business_types, search_text, updated_at)
+        SELECT
+            s.id, s.tenant_id, s.id, bp.id,
+            s.supplier_code, s.supplier_type, s.status, s.is_payment_ready,
+            bp.code, bp.name, bp.display_name, bp.legal_name, bp.legal_form,
+            bp.registration_no, bp.registration_country_code, bp.tax_residence_country_code,
+            bp.partner_category, bp.aliases, bp.business_types,
+            lower(
+                bp.name || ' ' || s.supplier_code || ' ' ||
+                COALESCE(bp.display_name, '') || ' ' ||
+                COALESCE(bp.legal_name, '') || ' ' ||
+                COALESCE(bp.registration_no, '') || ' ' ||
+                COALESCE(bp.external_ref, '') || ' ' ||
+                COALESCE(array_to_string(bp.aliases::text[], ' '), '')
+            ),
+            now()
+        FROM master.supplier s
+        JOIN master.business_partner bp
+             ON bp.id = s.business_partner_id AND bp.tenant_id = s.tenant_id
+        WHERE s.tenant_id = v_tid
+        ON CONFLICT (id) DO UPDATE
+            SET search_text  = EXCLUDED.search_text,
+                supplier_status = EXCLUDED.supplier_status,
+                updated_at   = now();
+    END IF;
 
     -- customer_app_index — one row per customer (id = customer.id)
-    INSERT INTO master.customer_app_index (
-        id, tenant_id, customer_id, business_partner_id,
-        customer_code, customer_type, customer_status, is_key_account, risk_rating,
-        business_partner_code, name, display_name, legal_name, legal_form,
-        registration_no, registration_country_code,
-        aliases, business_types, search_text, updated_at)
-    SELECT
-        c.id, c.tenant_id, c.id, bp.id,
-        c.customer_code, c.customer_type, c.status, c.is_key_account, c.risk_rating,
-        bp.code, bp.name, bp.display_name, bp.legal_name, bp.legal_form,
-        bp.registration_no, bp.registration_country_code,
-        bp.aliases, bp.business_types,
-        lower(
-            bp.name || ' ' || c.customer_code || ' ' ||
-            COALESCE(bp.display_name, '') || ' ' ||
-            COALESCE(bp.legal_name, '') || ' ' ||
-            COALESCE(bp.registration_no, '') || ' ' ||
-            COALESCE(bp.external_ref, '') || ' ' ||
-            COALESCE(array_to_string(bp.aliases::text[], ' '), '')
-        ),
-        now()
-    FROM master.customer c
-    JOIN master.business_partner bp
-         ON bp.id = c.business_partner_id AND bp.tenant_id = c.tenant_id
-    WHERE c.tenant_id = v_tid
-    ON CONFLICT (id) DO UPDATE
-        SET search_text    = EXCLUDED.search_text,
-            customer_status = EXCLUDED.customer_status,
-            updated_at     = now();
+    IF v_has_customer_app_index THEN
+        INSERT INTO master.customer_app_index (
+            id, tenant_id, customer_id, business_partner_id,
+            customer_code, customer_type, customer_status, is_key_account, risk_rating,
+            business_partner_code, name, display_name, legal_name, legal_form,
+            registration_no, registration_country_code,
+            aliases, business_types, search_text, updated_at)
+        SELECT
+            c.id, c.tenant_id, c.id, bp.id,
+            c.customer_code, c.customer_type, c.status, c.is_key_account, c.risk_rating,
+            bp.code, bp.name, bp.display_name, bp.legal_name, bp.legal_form,
+            bp.registration_no, bp.registration_country_code,
+            bp.aliases, bp.business_types,
+            lower(
+                bp.name || ' ' || c.customer_code || ' ' ||
+                COALESCE(bp.display_name, '') || ' ' ||
+                COALESCE(bp.legal_name, '') || ' ' ||
+                COALESCE(bp.registration_no, '') || ' ' ||
+                COALESCE(bp.external_ref, '') || ' ' ||
+                COALESCE(array_to_string(bp.aliases::text[], ' '), '')
+            ),
+            now()
+        FROM master.customer c
+        JOIN master.business_partner bp
+             ON bp.id = c.business_partner_id AND bp.tenant_id = c.tenant_id
+        WHERE c.tenant_id = v_tid
+        ON CONFLICT (id) DO UPDATE
+            SET search_text    = EXCLUDED.search_text,
+                customer_status = EXCLUDED.customer_status,
+                updated_at     = now();
+    END IF;
 
-    RAISE NOTICE '[idx] supplier_app_index + customer_app_index refreshed for technostat';
+    IF v_has_supplier_app_index OR v_has_customer_app_index THEN
+        RAISE NOTICE '[idx] supplier_app_index + customer_app_index refreshed for technostat';
+    ELSE
+        RAISE NOTICE '[idx] supplier_app_index/customer_app_index are not present in this schema; supplier/customer index bootstrap skipped';
+    END IF;
 END $idx$;
 
 
@@ -157,6 +175,7 @@ DECLARE
     v_tid  uuid;
     v_sys  uuid := '00000000-0000-0000-0000-000000000000';
     v_meta jsonb := '{"_seed":{"pack":"tksa_bp_advanced_v1"}}'::jsonb;
+    v_has_supplier_commodity_category boolean := to_regclass('master.supplier_commodity_category') IS NOT NULL;
 
     -- Supplier IDs
     v_amts uuid; v_anic uuid; v_ntp  uuid; v_csi  uuid;
@@ -168,6 +187,7 @@ DECLARE
     v_sc_const_m uuid; v_sc_const_e uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     IF v_tid IS NULL THEN RAISE EXCEPTION '[sup_scx] technostat tenant not found'; END IF;
 
     -- Supplier lookups
@@ -188,8 +208,11 @@ BEGIN
     SELECT id INTO v_sc_const_e FROM master.commodity_category WHERE tenant_id=v_tid AND code='SC-CONST-EQUIP';
 
     -- Helper: insert a commodity category for a supplier.
-    -- is_primary is only claimed when no primary row already exists for that supplier
-    -- (guards against sscat_one_primary_uidx when 009 has already assigned a primary).
+    IF NOT v_has_supplier_commodity_category THEN
+        RAISE NOTICE '[sup_scx] master.supplier_commodity_category is not present in this schema; supplier classification seeds skipped';
+    ELSE
+        -- is_primary is only claimed when no primary row already exists for that supplier
+        -- (guards against sscat_one_primary_uidx when 009 has already assigned a primary).
 
     -- AMTS: IT Services + IT Hardware
     IF v_amts IS NOT NULL AND v_sc_it_svc IS NOT NULL THEN
@@ -293,7 +316,8 @@ BEGIN
         WHERE NOT EXISTS (SELECT 1 FROM master.supplier_commodity_category WHERE tenant_id=v_tid AND supplier_id=v_mgi AND commodity_category_id=v_sc_prof_mg);
     END IF;
 
-    RAISE NOTICE '[sup_scx] supplier_commodity_category seeded for 6 suppliers';
+        RAISE NOTICE '[sup_scx] supplier_commodity_category seeded for 6 suppliers';
+    END IF;
 END $sup_scx$;
 
 
@@ -310,53 +334,62 @@ DECLARE
     v_meta jsonb := '{"_seed":{"pack":"tksa_bp_advanced_v1"}}'::jsonb;
     v_anic uuid;
     v_ntp  uuid;
+    v_has_supplier_block boolean := to_regclass('master.supplier_block') IS NOT NULL;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     IF v_tid IS NULL THEN RAISE EXCEPTION '[sup_blk] technostat tenant not found'; END IF;
 
     SELECT id INTO v_anic FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-SSK-ANIC-001';
     SELECT id INTO v_ntp  FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-TEGY-NTP-001';
 
-    -- ANIC: Lifted payment block (invoice dispute — resolved)
-    IF v_anic IS NOT NULL THEN
-        INSERT INTO master.supplier_block
-            (tenant_id, supplier_id, block_type, block_reason,
-             blocked_at, blocked_by, lifted_at, lifted_by, lift_reason,
-             notes, metadata, status, created_by)
-        SELECT v_tid, v_anic, 'payment',
-            'Invoice #SSK-ANIC-2024-0312 disputed. Payment suspended pending credit note issuance.',
-            '2024-05-10 10:00+03'::timestamptz, v_sys,
-            '2024-08-15 09:00+03'::timestamptz, v_sys,
-            'Credit note CN-2024-ANIC-001 (SAR 48,500) accepted by finance. '
-            'Invoice dispute resolved. Payment unblocked by CFO approval.',
-            'Block lifted after 97 days. Supplier dispute resolution process completed per procurement policy.',
-            v_meta, 'lifted', v_sys
-        WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_block
-             WHERE tenant_id=v_tid AND supplier_id=v_anic AND block_type='payment'
-               AND blocked_at='2024-05-10 10:00+03'::timestamptz);
-    END IF;
+    -- Legacy supplier_block support is optional in current Neon schemas.
+    -- If the table does not exist, this entire behavior is intentionally
+    -- retired and represented through policy metadata instead.
+    IF v_has_supplier_block THEN
+        -- ANIC: Lifted payment block (invoice dispute — resolved)
+        IF v_anic IS NOT NULL THEN
+            INSERT INTO master.supplier_block
+                (tenant_id, supplier_id, block_type, block_reason,
+                 blocked_at, blocked_by, lifted_at, lifted_by, lift_reason,
+                 notes, metadata, status, created_by)
+            SELECT v_tid, v_anic, 'payment',
+                'Invoice #SSK-ANIC-2024-0312 disputed. Payment suspended pending credit note issuance.',
+                '2024-05-10 10:00+03'::timestamptz, v_sys,
+                '2024-08-15 09:00+03'::timestamptz, v_sys,
+                'Credit note CN-2024-ANIC-001 (SAR 48,500) accepted by finance. '
+                'Invoice dispute resolved. Payment unblocked by CFO approval.',
+                'Block lifted after 97 days. Supplier dispute resolution process completed per procurement policy.',
+                v_meta, 'lifted', v_sys
+            WHERE NOT EXISTS (
+                SELECT 1 FROM master.supplier_block
+                 WHERE tenant_id=v_tid AND supplier_id=v_anic AND block_type='payment'
+                   AND blocked_at='2024-05-10 10:00+03'::timestamptz);
+        END IF;
 
-    -- NTP: Active invoice block (expired tax clearance)
-    IF v_ntp IS NOT NULL THEN
-        INSERT INTO master.supplier_block
-            (tenant_id, supplier_id, block_type, block_reason,
-             blocked_at, blocked_by,
-             notes, metadata, status, created_by)
-        SELECT v_tid, v_ntp, 'invoice',
-            'Egyptian Tax Authority clearance certificate expired 2025-03-31. '
-            'TEGY tax team requires renewed certificate before new invoices can be posted.',
-            '2025-04-01 08:00+02'::timestamptz, v_sys,
-            'Automatically flagged by compliance scheduler. Supplier notified by email 2025-04-01. '
-            'Renewal certificate expected within 30 days per supplier SLA.',
-            v_meta, 'active', v_sys
-        WHERE NOT EXISTS (
-            SELECT 1 FROM master.supplier_block
-             WHERE tenant_id=v_tid AND supplier_id=v_ntp AND block_type='invoice'
-               AND lifted_at IS NULL);
-    END IF;
+        -- NTP: Active invoice block (expired tax clearance)
+        IF v_ntp IS NOT NULL THEN
+            INSERT INTO master.supplier_block
+                (tenant_id, supplier_id, block_type, block_reason,
+                 blocked_at, blocked_by,
+                 notes, metadata, status, created_by)
+            SELECT v_tid, v_ntp, 'invoice',
+                'Egyptian Tax Authority clearance certificate expired 2025-03-31. '
+                'TEGY tax team requires renewed certificate before new invoices can be posted.',
+                '2025-04-01 08:00+02'::timestamptz, v_sys,
+                'Automatically flagged by compliance scheduler. Supplier notified by email 2025-04-01. '
+                'Renewal certificate expected within 30 days per supplier SLA.',
+                v_meta, 'active', v_sys
+            WHERE NOT EXISTS (
+                SELECT 1 FROM master.supplier_block
+                 WHERE tenant_id=v_tid AND supplier_id=v_ntp AND block_type='invoice'
+                   AND lifted_at IS NULL);
+        END IF;
 
-    RAISE NOTICE '[sup_blk] supplier_block seeded (ANIC lifted, NTP active)';
+        RAISE NOTICE '[sup_blk] supplier_block seeded (ANIC lifted, NTP active)';
+    ELSE
+        RAISE NOTICE '[sup_blk] master.supplier_block absent in schema; supplier block semantics are retired from this tenant pack';
+    END IF;
 END $sup_blk$;
 
 
@@ -372,54 +405,61 @@ DECLARE
     v_meta jsonb := '{"_seed":{"pack":"tksa_bp_advanced_v1"}}'::jsonb;
     v_sth  uuid;
     v_sctc uuid;
+    v_has_customer_block boolean := to_regclass('master.customer_block') IS NOT NULL;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     IF v_tid IS NULL THEN RAISE EXCEPTION '[cus_blk] technostat tenant not found'; END IF;
 
     SELECT id INTO v_sth  FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-SSK-STH-001';
     SELECT id INTO v_sctc FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-SDTX-SCTC-001';
 
-    -- STH: Lifted credit block (overdue balance dispute resolved)
-    IF v_sth IS NOT NULL THEN
-        INSERT INTO master.customer_block
-            (tenant_id, customer_id, block_type, block_reason,
-             blocked_at, blocked_by, lifted_at, lifted_by, lift_reason,
-             notes, metadata, status, created_by)
-        SELECT v_tid, v_sth, 'credit',
-            'Outstanding overdue balance SAR 2,340,000 (invoice STH-INV-2024-0087). '
-            'Credit facility suspended pending payment or written repayment schedule.',
-            '2024-07-22 09:00+03'::timestamptz, v_sys,
-            '2024-10-01 10:00+03'::timestamptz, v_sys,
-            'Overdue balance cleared. Payment received SAR 2,340,000 on 2024-09-28. '
-            'Credit facility reinstated at SAR 20,000,000 per original terms.',
-            'Block duration: 71 days. Customer relationship maintained. No change to credit rating.',
-            v_meta, 'lifted', v_sys
-        WHERE NOT EXISTS (
-            SELECT 1 FROM master.customer_block
-             WHERE tenant_id=v_tid AND customer_id=v_sth AND block_type='credit'
-               AND blocked_at='2024-07-22 09:00+03'::timestamptz);
-    END IF;
+    -- Legacy customer_block support is optional in current Neon schemas.
+    IF v_has_customer_block THEN
+        -- STH: Lifted credit block (overdue balance dispute resolved)
+        IF v_sth IS NOT NULL THEN
+            INSERT INTO master.customer_block
+                (tenant_id, customer_id, block_type, block_reason,
+                 blocked_at, blocked_by, lifted_at, lifted_by, lift_reason,
+                 notes, metadata, status, created_by)
+            SELECT v_tid, v_sth, 'credit',
+                'Outstanding overdue balance SAR 2,340,000 (invoice STH-INV-2024-0087). '
+                'Credit facility suspended pending payment or written repayment schedule.',
+                '2024-07-22 09:00+03'::timestamptz, v_sys,
+                '2024-10-01 10:00+03'::timestamptz, v_sys,
+                'Overdue balance cleared. Payment received SAR 2,340,000 on 2024-09-28. '
+                'Credit facility reinstated at SAR 20,000,000 per original terms.',
+                'Block duration: 71 days. Customer relationship maintained. No change to credit rating.',
+                v_meta, 'lifted', v_sys
+            WHERE NOT EXISTS (
+                SELECT 1 FROM master.customer_block
+                 WHERE tenant_id=v_tid AND customer_id=v_sth AND block_type='credit'
+                   AND blocked_at='2024-07-22 09:00+03'::timestamptz);
+        END IF;
 
-    -- SCTC: Active collection hold (KYC re-verification required)
-    IF v_sctc IS NOT NULL THEN
-        INSERT INTO master.customer_block
-            (tenant_id, customer_id, block_type, block_reason,
-             blocked_at, blocked_by,
-             notes, metadata, status, created_by)
-        SELECT v_tid, v_sctc, 'collection',
-            'Annual KYC re-verification overdue. Compliance team requires updated UBO '
-            'declarations and beneficial ownership confirmation before collection actions proceed.',
-            '2025-02-15 10:00+02'::timestamptz, v_sys,
-            'Government-linked entity — enhanced due diligence applies. '
-            'SDTX compliance team following up with Suez Canal Authority for documentation.',
-            v_meta, 'active', v_sys
-        WHERE NOT EXISTS (
-            SELECT 1 FROM master.customer_block
-             WHERE tenant_id=v_tid AND customer_id=v_sctc AND block_type='collection'
-               AND lifted_at IS NULL);
-    END IF;
+        -- SCTC: Active collection hold (KYC re-verification required)
+        IF v_sctc IS NOT NULL THEN
+            INSERT INTO master.customer_block
+                (tenant_id, customer_id, block_type, block_reason,
+                 blocked_at, blocked_by,
+                 notes, metadata, status, created_by)
+            SELECT v_tid, v_sctc, 'collection',
+                'Annual KYC re-verification overdue. Compliance team requires updated UBO '
+                'declarations and beneficial ownership confirmation before collection actions proceed.',
+                '2025-02-15 10:00+02'::timestamptz, v_sys,
+                'Government-linked entity — enhanced due diligence applies. '
+                'SDTX compliance team following up with Suez Canal Authority for documentation.',
+                v_meta, 'active', v_sys
+            WHERE NOT EXISTS (
+                SELECT 1 FROM master.customer_block
+                 WHERE tenant_id=v_tid AND customer_id=v_sctc AND block_type='collection'
+                   AND lifted_at IS NULL);
+        END IF;
 
-    RAISE NOTICE '[cus_blk] customer_block seeded (STH lifted, SCTC active)';
+        RAISE NOTICE '[cus_blk] customer_block seeded (STH lifted, SCTC active)';
+    ELSE
+        RAISE NOTICE '[cus_blk] master.customer_block absent in schema; customer block semantics are retired from this tenant pack';
+    END IF;
 END $cus_blk$;
 
 
@@ -433,18 +473,76 @@ END $cus_blk$;
 CREATE OR REPLACE FUNCTION _seed_csip_add_intent(
     p_tid uuid, p_meta jsonb, p_sys uuid,
     p_prof uuid, p_code text, p_default boolean,
-    p_src bool, p_po bool, p_inv bool
+    p_src bool, p_po bool, p_inv bool,
+    p_has_supplier_commodity_category boolean
 ) RETURNS void LANGUAGE plpgsql AS $fn$
-DECLARE v_bi_id uuid;
+DECLARE
+    v_bi_id uuid;
+    v_sc_id uuid;
 BEGIN
     SELECT id INTO v_bi_id FROM master.business_intent WHERE tenant_id=p_tid AND code=p_code;
     IF v_bi_id IS NULL THEN RETURN; END IF;
+    IF p_has_supplier_commodity_category THEN
+        INSERT INTO control.commodity_category_buy_policy
+            (tenant_id, commodity_category_id, business_intent_id, company_code_id,
+             scope_type, scope_id, mapping_mode, is_default, is_selectable, sort_order,
+             effective_from, metadata, status, created_by)
+        SELECT p_tid,
+               ssc.commodity_category_id,
+               v_bi_id,
+               p.company_code_id,
+               'SUPPLIER_PROFILE',
+               p_prof,
+               'ALLOW',
+               false,
+               p_src AND p_po AND p_inv,
+               CASE WHEN p_default THEN 40 ELSE 50 END,
+               CURRENT_DATE,
+               p_meta || jsonb_build_object(
+                 'requested_default', p_default,
+                 'sourcing_allowed', p_src,
+                 'po_allowed', p_po,
+                 'invoice_allowed', p_inv,
+                 'policy_kind', 'advanced_supplier_intent'
+               ),
+               'active',
+               p_sys
+          FROM master.company_code_supplier_profile p
+          JOIN master.supplier_commodity_category ssc
+            ON ssc.tenant_id = p.tenant_id
+           AND ssc.supplier_id = p.supplier_id
+           AND ssc.status = 'active'
+         WHERE p.tenant_id = p_tid
+           AND p.id = p_prof
+           AND NOT EXISTS (
+               SELECT 1 FROM control.commodity_category_buy_policy existing
+                WHERE existing.tenant_id = p_tid
+                  AND existing.scope_type = 'SUPPLIER_PROFILE'
+                  AND existing.scope_id = p_prof
+                  AND existing.commodity_category_id = ssc.commodity_category_id
+                  AND existing.business_intent_id = v_bi_id
+           );
+        RETURN;
+    END IF;
+
+    -- Fallback path for environments without supplier_commodity_category table.
+    SELECT s.commodity_category_id
+      INTO v_sc_id
+      FROM master.company_code_supplier_profile p
+      JOIN master.supplier s
+        ON s.id = p.supplier_id
+      WHERE p.tenant_id = p_tid AND p.id = p_prof;
+
+    IF v_sc_id IS NULL THEN
+        RETURN;
+    END IF;
+
     INSERT INTO control.commodity_category_buy_policy
         (tenant_id, commodity_category_id, business_intent_id, company_code_id,
          scope_type, scope_id, mapping_mode, is_default, is_selectable, sort_order,
          effective_from, metadata, status, created_by)
     SELECT p_tid,
-           ssc.commodity_category_id,
+           v_sc_id,
            v_bi_id,
            p.company_code_id,
            'SUPPLIER_PROFILE',
@@ -459,15 +557,11 @@ BEGIN
              'sourcing_allowed', p_src,
              'po_allowed', p_po,
              'invoice_allowed', p_inv,
-             'policy_kind', 'advanced_supplier_intent'
+             'policy_kind', 'advanced_supplier_intent_fallback'
            ),
            'active',
            p_sys
       FROM master.company_code_supplier_profile p
-      JOIN master.supplier_commodity_category ssc
-        ON ssc.tenant_id = p.tenant_id
-       AND ssc.supplier_id = p.supplier_id
-       AND ssc.status = 'active'
      WHERE p.tenant_id = p_tid
        AND p.id = p_prof
        AND NOT EXISTS (
@@ -475,7 +569,7 @@ BEGIN
             WHERE existing.tenant_id = p_tid
               AND existing.scope_type = 'SUPPLIER_PROFILE'
               AND existing.scope_id = p_prof
-              AND existing.commodity_category_id = ssc.commodity_category_id
+              AND existing.commodity_category_id = v_sc_id
               AND existing.business_intent_id = v_bi_id
        );
 END;
@@ -486,10 +580,12 @@ DECLARE
     v_tid  uuid;
     v_sys  uuid := '00000000-0000-0000-0000-000000000000';
     v_meta jsonb := '{"_seed":{"pack":"tksa_bp_advanced_v1"}}'::jsonb;
+    v_has_supplier_commodity_category boolean := to_regclass('master.supplier_commodity_category') IS NOT NULL;
     v_prof uuid;
     prof_rec record;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     IF v_tid IS NULL THEN RAISE EXCEPTION '[csip] technostat tenant not found'; END IF;
 
     -- ── AMTS @ TKSA: IT services + CAPEX IT ─────────────────────────────────
@@ -499,9 +595,9 @@ BEGIN
     JOIN master.company_code cc ON cc.id=p.company_code_id
     WHERE s.tenant_id=v_tid AND s.supplier_code='SUP-TKSA-AMTS-001' AND cc.code='TKSA';
     IF v_prof IS NOT NULL THEN
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',    true,  true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-CAPEX',   false, true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',false, true, true, true);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',    true,  true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-CAPEX',   false, true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',false, true, true, true, v_has_supplier_commodity_category);
     END IF;
 
     -- ── ANIC @ SSK: CAPEX plant + MRO + equipment ───────────────────────────
@@ -511,9 +607,9 @@ BEGIN
     JOIN master.company_code cc ON cc.id=p.company_code_id
     WHERE s.tenant_id=v_tid AND s.supplier_code='SUP-SSK-ANIC-001' AND cc.code='SSK';
     IF v_prof IS NOT NULL THEN
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-CAPEX', true,  true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-CAPEX', false, true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',    false, true, true, true);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-CAPEX', true,  true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-CAPEX', false, true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',    false, true, true, true, v_has_supplier_commodity_category);
     END IF;
 
     -- ── NTP @ TEGY: IT OPEX + outsourcing ───────────────────────────────────
@@ -523,8 +619,8 @@ BEGIN
     JOIN master.company_code cc ON cc.id=p.company_code_id
     WHERE s.tenant_id=v_tid AND s.supplier_code='SUP-TEGY-NTP-001' AND cc.code='TEGY';
     IF v_prof IS NOT NULL THEN
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',    true,  true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',false, true, true, true);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',    true,  true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',false, true, true, true, v_has_supplier_commodity_category);
     END IF;
 
     -- ── CSI @ SDTX: IT OPEX + CAPEX IT ─────────────────────────────────────
@@ -534,8 +630,8 @@ BEGIN
     JOIN master.company_code cc ON cc.id=p.company_code_id
     WHERE s.tenant_id=v_tid AND s.supplier_code='SUP-SDTX-CSI-001' AND cc.code='SDTX';
     IF v_prof IS NOT NULL THEN
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',   true,  true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-CAPEX',  false, true, true, true);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-OPEX',   true,  true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, v_prof, 'BI-CAPEX',  false, true, true, true, v_has_supplier_commodity_category);
     END IF;
 
     -- ── GPS @ all 4 companies: professional + IT + admin ────────────────────
@@ -546,9 +642,9 @@ BEGIN
         JOIN master.company_code cc ON cc.id=p.company_code_id
         WHERE s.tenant_id=v_tid AND s.supplier_code='SUP-GLB-GPS-001'
     LOOP
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-OPEX', true,  true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-OPEX',   false, true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-ADMIN',     false, true, true, true);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-OPEX', true,  true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-OPEX',   false, true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-ADMIN',     false, true, true, true, v_has_supplier_commodity_category);
     END LOOP;
 
     -- ── MGI @ all 4 companies: IT + professional ────────────────────────────
@@ -559,9 +655,9 @@ BEGIN
         JOIN master.company_code cc ON cc.id=p.company_code_id
         WHERE s.tenant_id=v_tid AND s.supplier_code='SUP-GLB-MGI-001'
     LOOP
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-OPEX',   true,  true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-OPEX', false, true, true, true);
-        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-CAPEX',  false, true, true, true);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-OPEX',   true,  true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-OPEX', false, true, true, true, v_has_supplier_commodity_category);
+        PERFORM _seed_csip_add_intent(v_tid, v_meta, v_sys, prof_rec.prof_id, 'BI-CAPEX',  false, true, true, true, v_has_supplier_commodity_category);
     END LOOP;
 
     RAISE NOTICE '[csip] supplier-scoped commodity_category_buy_policy intent rows seeded for 6 suppliers';
@@ -669,6 +765,7 @@ DECLARE
     prof_rec record;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     IF v_tid IS NULL THEN RAISE EXCEPTION '[csspo] technostat tenant not found'; END IF;
 
     -- ── AMTS @ TKSA ──────────────────────────────────────────────────────────
@@ -758,8 +855,10 @@ DECLARE
     v_prof  uuid;
     v_gl_sub uuid;
     v_gl_vnd uuid;
+    v_has_supplier_posting_override boolean := to_regclass('control.supplier_posting_override') IS NOT NULL;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     IF v_tid IS NULL THEN RAISE EXCEPTION '[cspo_gl] technostat tenant not found'; END IF;
 
     SELECT p.id INTO v_prof
@@ -807,7 +906,7 @@ BEGIN
       AND COALESCE((a.metadata->>'_journal_postable')::boolean, true) = true
       AND a.code = CASE WHEN c.code = 'COA-GAAP' THEN 'USGAAP-L-AP-TRADE' ELSE 'IFRS-L-AP-TRADE' END;
 
-    IF v_prof IS NOT NULL AND v_gl_sub IS NOT NULL THEN
+    IF v_has_supplier_posting_override AND v_prof IS NOT NULL AND v_gl_sub IS NOT NULL THEN
         -- Subcontractor posting role override (civil/network contractor classification)
         INSERT INTO control.supplier_posting_override
             (tenant_id, supplier_profile_id, posting_role_code, gl_account_id, book_code,
@@ -824,7 +923,7 @@ BEGIN
                AND effective_to IS NULL);
     END IF;
 
-    IF v_prof IS NOT NULL AND v_gl_vnd IS NOT NULL THEN
+    IF v_has_supplier_posting_override AND v_prof IS NOT NULL AND v_gl_vnd IS NOT NULL THEN
         -- Materials supplier posting (separate from subcontractor services)
         INSERT INTO control.supplier_posting_override
             (tenant_id, supplier_profile_id, posting_role_code, gl_account_id, book_code,
@@ -840,7 +939,11 @@ BEGIN
                AND effective_to IS NULL);
     END IF;
 
-    RAISE NOTICE '[cspo_gl] supplier_posting_override seeded for ANIC@SSK';
+    IF v_has_supplier_posting_override THEN
+        RAISE NOTICE '[cspo_gl] supplier_posting_override seeded for ANIC@SSK';
+    ELSE
+        RAISE NOTICE '[cspo_gl] supplier_posting_override not available in this schema; override seed skipped';
+    END IF;
 END $cspo_gl$;
 
 
@@ -858,6 +961,7 @@ DECLARE
     v_ds   uuid; -- temp for RETURNING
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='SUP-KSA-01';
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-TKSA-AMTS-001';
     IF v_sup IS NULL THEN RAISE WARNING '[risk_amts] SUP-TKSA-AMTS-001 not found — skip'; RETURN; END IF;
@@ -866,19 +970,19 @@ BEGIN
     END IF;
 
     -- Evidence
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'ecovadis','score','EcoVadis Sustainability Rating 2024 — Al Madar Technology Solutions','Silver medal score 78/100. Environment 80, Ethics 84, Labour & Human Rights 72, Sustainable Procurement 76. Improvement plan submitted for L&HR.','2024-08-15',now(),'2024-08-15','2025-08-14',
-        '{"score":78,"medal":"silver","percentile":74,"dimensions":{"environment":80,"labor_human_rights":72,"ethics":84,"sustainable_procurement":76}}'::jsonb,92,'active',v_sys,'api',ARRAY['ecovadis','esg','annual'],v_sys)
+        '{"score":78,"medal":"silver","percentile":74,"dimensions":{"environment":80,"labor_human_rights":72,"ethics":84,"sustainable_procurement":76}}'::jsonb,92,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'dun_bradstreet','score','D&B Credit Report Q1 2025 — Al Madar Technology Solutions','PAYDEX 86/100. Composite risk rating 4A2. Risk class 2 (Low). Stable 12-month financial outlook. No negative payment events recorded.','2025-02-10',now(),'2025-02-10','2026-02-09',
-        '{"paydex":86,"rating":"4A2","risk_class":2,"failure_score":92,"delinquency_score":88,"payment_trend":"positive"}'::jsonb,95,'active',v_sys,'api',ARRAY['dnb','credit','financial'],v_sys)
+        '{"paydex":86,"rating":"4A2","risk_class":2,"failure_score":92,"delinquency_score":88,"payment_trend":"positive"}'::jsonb,95,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev2;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'refinitiv_wcc','alert','Refinitiv World-Check Screening Q1 2025 — Al Madar Technology Solutions','No matches. Entity, 3 directors, and 2 UBO entities screened. OFAC SDN, EU Consolidated, UN, and PEP lists checked.','2025-03-01',now(),'2025-03-01','2025-09-01',
-        '{"hits":0,"screening_status":"clear","entities_screened":5,"lists_checked":["OFAC_SDN","EU_CONSOLIDATED","UN","PEP","ADVERSE_MEDIA"]}'::jsonb,98,'active',v_sys,'api',ARRAY['worldcheck','sanctions','pep','annual'],v_sys)
+        '{"hits":0,"screening_status":"clear","entities_screened":5,"lists_checked":["OFAC_SDN","EU_CONSOLIDATED","UN","PEP","ADVERSE_MEDIA"]}'::jsonb,98,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev3;
 
     -- Assessment
@@ -929,6 +1033,7 @@ DECLARE
     v_ds   uuid; v_drv1 uuid; v_drv2 uuid; v_drv3 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='SUP-KSA-02';
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-SSK-ANIC-001';
     IF v_sup IS NULL THEN RAISE WARNING '[risk_anic] SUP-SSK-ANIC-001 not found — skip'; RETURN; END IF;
@@ -937,14 +1042,14 @@ BEGIN
     END IF;
 
     -- Evidence
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'dun_bradstreet','score','D&B Credit Report Q1 2025 — Arabian Network Infrastructure Co.','PAYDEX 71/100. Composite risk rating 2A3. Risk class 3 (Moderate). One payment delinquency event (Q4 2024) — resolved. Financial size category revised down due to project completion cycle.','2025-01-20',now(),'2025-01-20','2026-01-19',
-        '{"paydex":71,"rating":"2A3","risk_class":3,"failure_score":72,"delinquency_score":68,"payment_events":1,"payment_trend":"stable"}'::jsonb,88,'active',v_sys,'api',ARRAY['dnb','credit','financial'],v_sys)
+        '{"paydex":71,"rating":"2A3","risk_class":3,"failure_score":72,"delinquency_score":68,"payment_events":1,"payment_trend":"stable"}'::jsonb,88,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'supplier_questionnaire','questionnaire','ANIC Supplier Self-Assessment Questionnaire 2025','ESG policy: None established. ZATCA Phase 2 e-invoicing: Not yet compliant (target Q3 2025). ISO 14001: Not certified. Single project site (KAEC) represents 85% of current revenue.','2025-02-01',now(),'2025-02-01','2026-02-01',
-        '{"esg_policy":false,"iso14001":false,"zatca_phase2":false,"zatca_target_date":"2025-09-01","revenue_concentration_pct":85,"primary_site":"KAEC"}'::jsonb,80,'active',v_sys,'workflow',ARRAY['questionnaire','esg','compliance','annual'],v_sys)
+        '{"esg_policy":false,"iso14001":false,"zatca_phase2":false,"zatca_target_date":"2025-09-01","revenue_concentration_pct":85,"primary_site":"KAEC"}'::jsonb,80,'active',v_sys,'workflow',v_sys)
     RETURNING id INTO v_ev2;
 
     -- Assessment
@@ -1025,6 +1130,7 @@ DECLARE
     v_ds   uuid; v_drv1 uuid; v_drv2 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='SUP-EGY-01';
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-TEGY-NTP-001';
     IF v_sup IS NULL THEN RAISE WARNING '[risk_ntp] SUP-TEGY-NTP-001 not found — skip'; RETURN; END IF;
@@ -1033,14 +1139,14 @@ BEGIN
     END IF;
 
     -- Evidence
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'ecovadis','score','EcoVadis Sustainability Rating 2024 — Nile Technology Partners','Bronze medal score 65/100. Environment 68, Ethics 70, Labour & Human Rights 62, Sustainable Procurement 60. First-time assessment — improvement actions in progress.','2024-10-01',now(),'2024-10-01','2025-10-01',
-        '{"score":65,"medal":"bronze","percentile":48,"dimensions":{"environment":68,"labor_human_rights":62,"ethics":70,"sustainable_procurement":60}}'::jsonb,85,'active',v_sys,'api',ARRAY['ecovadis','esg','annual'],v_sys)
+        '{"score":65,"medal":"bronze","percentile":48,"dimensions":{"environment":68,"labor_human_rights":62,"ethics":70,"sustainable_procurement":60}}'::jsonb,85,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'supplier_questionnaire','questionnaire','NTP Supplier Self-Assessment 2025','Single-founder ownership (Ahmed El-Masry 100%). ETA tax clearance certificate expired 31 March 2025. No succession plan. Revenue 90% from 3 clients. Gross margin 28%.','2025-03-01',now(),'2025-03-01','2026-03-01',
-        '{"founder_ownership_pct":100,"eta_clearance_expired":true,"eta_expiry_date":"2025-03-31","client_concentration_top3_pct":90,"gross_margin_pct":28,"succession_plan":false}'::jsonb,82,'active',v_sys,'workflow',ARRAY['questionnaire','governance','compliance'],v_sys)
+        '{"founder_ownership_pct":100,"eta_clearance_expired":true,"eta_expiry_date":"2025-03-31","client_concentration_top3_pct":90,"gross_margin_pct":28,"succession_plan":false}'::jsonb,82,'active',v_sys,'workflow',v_sys)
     RETURNING id INTO v_ev2;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1105,6 +1211,7 @@ DECLARE
     v_ds   uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='SUP-EGY-02';
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-SDTX-CSI-001';
     IF v_sup IS NULL THEN RAISE WARNING '[risk_csi] SUP-SDTX-CSI-001 not found — skip'; RETURN; END IF;
@@ -1112,14 +1219,14 @@ BEGIN
         RAISE NOTICE '[risk_csi] approved assessment exists — skip'; RETURN;
     END IF;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'refinitiv_wcc','alert','World-Check + OFAC Screening 2025 — Cairo Systems Integration','No sanctions, PEP, or adverse media matches. 3 directors and 2 UBOs screened. Egyptian regulatory lists also checked.','2025-01-15',now(),'2025-01-15','2025-07-15',
-        '{"hits":0,"screening_status":"clear","entities_screened":5,"pep_hits":0,"adverse_media_hits":0}'::jsonb,97,'active',v_sys,'api',ARRAY['worldcheck','sanctions','pep'],v_sys)
+        '{"hits":0,"screening_status":"clear","entities_screened":5,"pep_hits":0,"adverse_media_hits":0}'::jsonb,97,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'supplier_questionnaire','questionnaire','CSI Supplier Self-Assessment 2025','Founded 2017, 8 years trading. ETA tax clearance valid until Dec 2025. ISO 27001 certified (satellite systems scope). EcoVadis not yet enrolled (< 3 years of ESG reporting history). Audited financial statements available for 2023 and 2024.','2025-02-01',now(),'2025-02-01','2026-02-01',
-        '{"founded_year":2017,"eta_clearance_valid":true,"eta_expiry":"2025-12-31","iso27001":true,"ecovadis_enrolled":false,"audited_accounts_years":[2023,2024],"employee_count":45}'::jsonb,82,'active',v_sys,'workflow',ARRAY['questionnaire','compliance','onboarding'],v_sys)
+        '{"founded_year":2017,"eta_clearance_valid":true,"eta_expiry":"2025-12-31","iso27001":true,"ecovadis_enrolled":false,"audited_accounts_years":[2023,2024],"employee_count":45}'::jsonb,82,'active',v_sys,'workflow',v_sys)
     RETURNING id INTO v_ev2;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1166,6 +1273,7 @@ DECLARE
     v_ev1  uuid; v_ev2 uuid; v_ev3 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='SUP-GLB-01';
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-GLB-GPS-001';
     IF v_sup IS NULL THEN RAISE WARNING '[risk_gps] SUP-GLB-GPS-001 not found — skip'; RETURN; END IF;
@@ -1173,19 +1281,19 @@ BEGIN
         RAISE NOTICE '[risk_gps] approved assessment exists — skip'; RETURN;
     END IF;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'ecovadis','score','EcoVadis Sustainability Rating 2024 — Global Procurement Solutions Ltd','Gold medal score 85/100. Top 10% in Professional Services sector. Strong performance across all four pillars. Labour & Human Rights 88 — Living Wage commitment documented.','2024-06-01',now(),'2024-06-01','2025-06-01',
-        '{"score":85,"medal":"gold","percentile":91,"dimensions":{"environment":84,"labor_human_rights":88,"ethics":86,"sustainable_procurement":82}}'::jsonb,95,'active',v_sys,'api',ARRAY['ecovadis','esg','gold','annual'],v_sys)
+        '{"score":85,"medal":"gold","percentile":91,"dimensions":{"environment":84,"labor_human_rights":88,"ethics":86,"sustainable_procurement":82}}'::jsonb,95,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'dun_bradstreet','score','D&B Credit Report H1 2025 — Global Procurement Solutions Ltd','PAYDEX 94/100. Risk rating 5A1. Risk class 1 (Minimal). 8-year consistent payment performance with no adverse events. Revenue GBP 42M, 500+ employees.','2025-01-10',now(),'2025-01-10','2026-01-09',
-        '{"paydex":94,"rating":"5A1","risk_class":1,"failure_score":98,"delinquency_score":96,"payment_trend":"excellent","revenue_gbp_m":42}'::jsonb,97,'active',v_sys,'api',ARRAY['dnb','credit','financial'],v_sys)
+        '{"paydex":94,"rating":"5A1","risk_class":1,"failure_score":98,"delinquency_score":96,"payment_trend":"excellent","revenue_gbp_m":42}'::jsonb,97,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev2;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'refinitiv_wcc','alert','World-Check + OFAC Screening Q1 2025 — Global Procurement Solutions Ltd','No sanctions, PEP, or adverse media matches. 5 entities screened across UK, EU, OFAC, and UN lists.','2025-02-01',now(),'2025-02-01','2025-08-01',
-        '{"hits":0,"screening_status":"clear","entities_screened":5}'::jsonb,99,'active',v_sys,'api',ARRAY['worldcheck','sanctions','pep'],v_sys)
+        '{"hits":0,"screening_status":"clear","entities_screened":5}'::jsonb,99,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev3;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1225,6 +1333,7 @@ DECLARE
     v_ds   uuid; v_drv1 uuid; v_drv2 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='BOTH-GLB-01';
     SELECT id INTO v_sup FROM master.supplier WHERE tenant_id=v_tid AND supplier_code='SUP-GLB-MGI-001';
     IF v_sup IS NULL THEN RAISE WARNING '[risk_mgi_sup] SUP-GLB-MGI-001 not found — skip'; RETURN; END IF;
@@ -1232,14 +1341,14 @@ BEGIN
         RAISE NOTICE '[risk_mgi_sup] approved assessment exists — skip'; RETURN;
     END IF;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'ecovadis','score','EcoVadis Sustainability Rating 2024 — Meridian Group International BV','Silver medal 72/100. Strong Ethics pillar (82). Environment and Labour pillars at 70. Sustainable Procurement 65 — third-party supplier oversight gaps noted.','2024-09-01',now(),'2024-09-01','2025-09-01',
-        '{"score":72,"medal":"silver","percentile":65,"dimensions":{"environment":70,"labor_human_rights":70,"ethics":82,"sustainable_procurement":65}}'::jsonb,90,'active',v_sys,'api',ARRAY['ecovadis','esg','annual'],v_sys)
+        '{"score":72,"medal":"silver","percentile":65,"dimensions":{"environment":70,"labor_human_rights":70,"ethics":82,"sustainable_procurement":65}}'::jsonb,90,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'supplier',v_sup,v_bp,'internal_system','finding','Internal Dual-Role Assessment 2025 — Meridian Group','Meridian is both a material supplier and a strategic customer of Technostat Group. Monthly intercompany netting applies. Net exposure as of Feb 2025: Technostat payable EUR 340,000. Risk: offset disputes could result in delayed or withheld supplier payments.','2025-02-15',now(),'2025-02-15','2026-02-15',
-        '{"dual_role":true,"monthly_netting_active":true,"net_payable_eur":340000,"netting_disputes_12m":1,"netting_dispute_resolved":true}'::jsonb,85,'active',v_sys,'workflow',ARRAY['dual-role','netting','credit','internal'],v_sys)
+        '{"dual_role":true,"monthly_netting_active":true,"net_payable_eur":340000,"netting_disputes_12m":1,"netting_dispute_resolved":true}'::jsonb,85,'active',v_sys,'workflow',v_sys)
     RETURNING id INTO v_ev2;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1303,6 +1412,7 @@ DECLARE
     v_ev1  uuid; v_ev2 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='CUS-KSA-01';
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-TKSA-ARD-001';
     IF v_cus IS NULL THEN RAISE WARNING '[risk_ard] CUS-TKSA-ARD-001 not found — skip'; RETURN; END IF;
@@ -1310,14 +1420,14 @@ BEGIN
         RAISE NOTICE '[risk_ard] approved assessment exists — skip'; RETURN;
     END IF;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'refinitiv_wcc','alert','World-Check Screening 2025 — Al Rajhi Digital Systems Co','No sanctions or PEP matches. Al Rajhi Banking Group entities and UBOs screened against OFAC SDN, EU, UN, SAMA watchlists.','2025-01-20',now(),'2025-01-20','2025-07-20',
-        '{"hits":0,"screening_status":"clear","entities_screened":6,"lists":["OFAC_SDN","EU","UN","SAMA"]}'::jsonb,98,'active',v_sys,'api',ARRAY['worldcheck','sanctions','pep'],v_sys)
+        '{"hits":0,"screening_status":"clear","entities_screened":6,"lists":["OFAC_SDN","EU","UN","SAMA"]}'::jsonb,98,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'dun_bradstreet','score','D&B Credit Score 2025 — Al Rajhi Digital Systems Co','Exceptional rating backed by Al Rajhi Banking Group. PAYDEX 92. Risk class 1. DSO consistently under 30 days. No payment events.','2025-02-01',now(),'2025-02-01','2026-02-01',
-        '{"paydex":92,"risk_class":1,"dso_days":24,"payment_behavior":"excellent","parent_group":"Al Rajhi Banking Group"}'::jsonb,96,'active',v_sys,'api',ARRAY['dnb','credit','annual'],v_sys)
+        '{"paydex":92,"risk_class":1,"dso_days":24,"payment_behavior":"excellent","parent_group":"Al Rajhi Banking Group"}'::jsonb,96,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev2;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1357,6 +1467,7 @@ DECLARE
     v_ds   uuid; v_drv1 uuid; v_drv2 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='CUS-KSA-02';
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-SSK-STH-001';
     IF v_cus IS NULL THEN RAISE WARNING '[risk_sth] CUS-SSK-STH-001 not found — skip'; RETURN; END IF;
@@ -1364,14 +1475,14 @@ BEGIN
         RAISE NOTICE '[risk_sth] approved assessment exists — skip'; RETURN;
     END IF;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'internal_system','finding','Internal AR Aging Review Q4 2024 — Saudi Telecom Holdings','Invoice STH-INV-2024-0087 (SAR 2.34M) 71 days overdue at peak. Credit block applied July 2024, lifted October 2024 after full payment. DSO spiked from 35 to 78 days during dispute period.','2024-10-15',now(),'2024-10-15','2025-10-15',
-        '{"peak_overdue_days":71,"dispute_amount_sar":2340000,"credit_block_applied":true,"block_lifted":true,"dso_peak":78,"dso_current":42,"payment_received":"2024-09-28"}'::jsonb,92,'active',v_sys,'workflow',ARRAY['ar-aging','credit-block','dispute','internal'],v_sys)
+        '{"peak_overdue_days":71,"dispute_amount_sar":2340000,"credit_block_applied":true,"block_lifted":true,"dso_peak":78,"dso_current":42,"payment_received":"2024-09-28"}'::jsonb,92,'active',v_sys,'workflow',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'refinitiv_wcc','alert','World-Check Screening Q1 2025 — Saudi Telecom Holdings','No sanctions matches. STH and parent entities screened. Note: 2 board members identified as Politically Exposed Persons (PEPs) per SAMA notification — government-affiliated roles confirmed, no adverse finding.','2025-01-20',now(),'2025-01-20','2025-07-20',
-        '{"hits":0,"pep_identified":2,"pep_type":"government_affiliated","adverse_finding":false,"screening_status":"clear_with_note"}'::jsonb,90,'active',v_sys,'api',ARRAY['worldcheck','sanctions','pep'],v_sys)
+        '{"hits":0,"pep_identified":2,"pep_type":"government_affiliated","adverse_finding":false,"screening_status":"clear_with_note"}'::jsonb,90,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev2;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1433,6 +1544,7 @@ DECLARE
     v_ev1  uuid; v_ev2 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='CUS-EGY-01';
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-TEGY-ENI-001';
     IF v_cus IS NULL THEN RAISE WARNING '[risk_eni] CUS-TEGY-ENI-001 not found — skip'; RETURN; END IF;
@@ -1440,14 +1552,14 @@ BEGIN
         RAISE NOTICE '[risk_eni] approved assessment exists — skip'; RETURN;
     END IF;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'refinitiv_wcc','alert','World-Check Screening 2025 — Egyptian National Industries SAE','No sanctions, PEP, or adverse media matches. IFC, Nasser Industrial Group and directors screened against OFAC, EU, UN, and CBE watchlists.','2025-01-20',now(),'2025-01-20','2025-07-20',
-        '{"hits":0,"screening_status":"clear","entities_screened":7,"ifc_shareholder_noted":true}'::jsonb,97,'active',v_sys,'api',ARRAY['worldcheck','sanctions','pep'],v_sys)
+        '{"hits":0,"screening_status":"clear","entities_screened":7,"ifc_shareholder_noted":true}'::jsonb,97,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'dun_bradstreet','score','D&B Credit Report 2025 — Egyptian National Industries SAE','Strong industrial group credit profile. IFC co-investor (World Bank Group) provides institutional discipline. DSO 35 days. No overdue events in 5-year history with Technostat Egypt.','2025-02-01',now(),'2025-02-01','2026-02-01',
-        '{"risk_class":2,"dso_days":35,"payment_behavior":"good","ifc_shareholder":true,"overdue_events_5y":0}'::jsonb,90,'active',v_sys,'api',ARRAY['dnb','credit','annual'],v_sys)
+        '{"risk_class":2,"dso_days":35,"payment_behavior":"good","ifc_shareholder":true,"overdue_events_5y":0}'::jsonb,90,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev2;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1489,6 +1601,7 @@ DECLARE
     v_drv1 uuid; v_drv2 uuid; v_drv3 uuid; v_drv4 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='CUS-EGY-02';
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-SDTX-SCTC-001';
     IF v_cus IS NULL THEN RAISE WARNING '[risk_sctc] CUS-SDTX-SCTC-001 not found — skip'; RETURN; END IF;
@@ -1496,19 +1609,19 @@ BEGIN
         RAISE NOTICE '[risk_sctc] approved assessment exists — skip'; RETURN;
     END IF;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'refinitiv_wcc','alert','World-Check Screening Feb 2025 — Suez Canal Trading Company','3 PEP matches identified: Chairman (Egyptian Parliament member), Deputy CEO (Suez Canal Authority appointee), 1 board member (former ministry official). No OFAC SDN or EU sanctions hits. Enhanced due diligence required.','2025-02-01',now(),'2025-02-01','2025-08-01',
-        '{"hits":0,"pep_identified":3,"pep_type":"government_officials","sanctions_hits":0,"edd_required":true,"screening_status":"clear_pep_noted"}'::jsonb,88,'active',v_sys,'api',ARRAY['worldcheck','pep','edd','high-risk'],v_sys)
+        '{"hits":0,"pep_identified":3,"pep_type":"government_officials","sanctions_hits":0,"edd_required":true,"screening_status":"clear_pep_noted"}'::jsonb,88,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'customer_questionnaire','questionnaire','SCTC Customer KYC Questionnaire 2025 — OVERDUE','Annual KYC questionnaire overdue since 31 January 2025. UBO declaration form not returned. Beneficial ownership structure beyond SCAF (Suez Canal Authority Fund) not confirmed. Company financial statements unavailable — government-linked entity exempt from public disclosure.','2025-02-15',now(),NULL,NULL,
-        '{"questionnaire_status":"overdue","ubo_declaration_returned":false,"financial_statements":"not_available","exemption_reason":"government_linked","overdue_since":"2025-01-31"}'::jsonb,60,'active',v_sys,'workflow',ARRAY['kyc','overdue','compliance','high-risk'],v_sys)
+        '{"questionnaire_status":"overdue","ubo_declaration_returned":false,"financial_statements":"not_available","exemption_reason":"government_linked","overdue_since":"2025-01-31"}'::jsonb,60,'active',v_sys,'workflow',v_sys)
     RETURNING id INTO v_ev2;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'manual_review','finding','SDTX Compliance Officer Manual Review — SCTC Feb 2025','Enhanced due diligence triggered by PEP findings. Historical payment behavior: 3 late payments in 24 months (avg 22 days late). No fraud indicators. Government procurement cycles drive systematic Q4 late payments. DSO 68 days. Collection block applied Feb 2025 pending KYC renewal.','2025-02-15',now(),'2025-02-15','2025-08-15',
-        '{"late_payments_24m":3,"avg_days_late":22,"fraud_indicators":false,"dso_days":68,"collection_block_active":true,"edd_completed":true}'::jsonb,85,'active',v_sys,'manual',ARRAY['edd','manual','compliance','high-risk'],v_sys)
+        '{"late_payments_24m":3,"avg_days_late":22,"fraud_indicators":false,"dso_days":68,"collection_block_active":true,"edd_completed":true}'::jsonb,85,'active',v_sys,'manual',v_sys)
     RETURNING id INTO v_ev3;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1602,6 +1715,7 @@ DECLARE
     v_ev1  uuid; v_ev2 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='CUS-GLB-01';
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-GLB-IBH-001';
     IF v_cus IS NULL THEN RAISE WARNING '[risk_ibh] CUS-GLB-IBH-001 not found — skip'; RETURN; END IF;
@@ -1609,14 +1723,14 @@ BEGIN
         RAISE NOTICE '[risk_ibh] approved assessment exists — skip'; RETURN;
     END IF;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'refinitiv_wcc','alert','World-Check + OFAC Screening Q1 2025 — International Business Holdings Inc','No sanctions, PEP, or adverse media matches. 6 entities screened: IBH entity, 4 directors, and Whitfield Capital Group (UBO). OFAC SDN, EU, UK, UN lists checked.','2025-02-01',now(),'2025-02-01','2025-08-01',
-        '{"hits":0,"screening_status":"clear","entities_screened":6}'::jsonb,99,'active',v_sys,'api',ARRAY['worldcheck','sanctions','pep'],v_sys)
+        '{"hits":0,"screening_status":"clear","entities_screened":6}'::jsonb,99,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'dun_bradstreet','score','D&B Credit Report 2025 — International Business Holdings Inc','Exceptional credit rating. PAYDEX 96. Risk class 1. DSO 27 days consistently over 4-year relationship. Revenue USD 220M+ FY2024. Global account — strategic tier.','2025-01-20',now(),'2025-01-20','2026-01-19',
-        '{"paydex":96,"risk_class":1,"dso_days":27,"revenue_usd_m":220,"strategic_account":true,"payment_behavior":"excellent"}'::jsonb,97,'active',v_sys,'api',ARRAY['dnb','credit','strategic','annual'],v_sys)
+        '{"paydex":96,"risk_class":1,"dso_days":27,"revenue_usd_m":220,"strategic_account":true,"payment_behavior":"excellent"}'::jsonb,97,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev2;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1656,6 +1770,7 @@ DECLARE
     v_ds   uuid; v_drv1 uuid;
 BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code='technostat';
+    SELECT id INTO v_sys FROM master.principal WHERE tenant_id=v_tid AND status = 'active' ORDER BY code LIMIT 1;
     SELECT id INTO v_bp  FROM master.business_partner WHERE tenant_id=v_tid AND code='BOTH-GLB-01';
     SELECT id INTO v_cus FROM master.customer WHERE tenant_id=v_tid AND customer_code='CUS-GLB-MGI-001';
     IF v_cus IS NULL THEN RAISE WARNING '[risk_mgi_cus] CUS-GLB-MGI-001 not found — skip'; RETURN; END IF;
@@ -1663,14 +1778,14 @@ BEGIN
         RAISE NOTICE '[risk_mgi_cus] approved assessment exists — skip'; RETURN;
     END IF;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'refinitiv_wcc','alert','World-Check Screening Q1 2025 — Meridian Group (Customer Role)','No sanctions, PEP, or adverse media matches. Separate screening from supplier role assessment — same entity, different risk context.','2025-02-01',now(),'2025-02-01','2025-08-01',
-        '{"hits":0,"screening_status":"clear","role":"customer","shared_with_supplier_assessment":true}'::jsonb,99,'active',v_sys,'api',ARRAY['worldcheck','sanctions','dual-role'],v_sys)
+        '{"hits":0,"screening_status":"clear","role":"customer","shared_with_supplier_assessment":true}'::jsonb,99,'active',v_sys,'api',v_sys)
     RETURNING id INTO v_ev1;
 
-    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,tags,created_by)
+    INSERT INTO master.party_risk_evidence (tenant_id,subject_type,subject_id,business_partner_id,source_code,evidence_type,title,summary,evidence_date,received_at,valid_from,valid_until,normalized_payload,confidence_score,status,ingested_by,ingested_via,created_by)
     VALUES (v_tid,'customer',v_cus,v_bp,'internal_system','finding','Dual-Role AR Assessment 2025 — Meridian Group','Meridian as customer: DSO 48 days (elevated due to netting process timing). Netting agreement allows net receivable to be deducted from AP. One netting dispute Q3 2024 temporarily froze EUR 28K AR collection. Net AR position as of Feb 2025: Technostat receivable EUR 182,000.','2025-02-15',now(),'2025-02-15','2026-02-15',
-        '{"dual_role":true,"dso_days":48,"netting_active":true,"net_receivable_eur":182000,"netting_disputes_12m":1,"dispute_amount_eur":28000,"dispute_resolved":true}'::jsonb,85,'active',v_sys,'workflow',ARRAY['dual-role','netting','ar','internal'],v_sys)
+        '{"dual_role":true,"dso_days":48,"netting_active":true,"net_receivable_eur":182000,"netting_disputes_12m":1,"dispute_amount_eur":28000,"dispute_resolved":true}'::jsonb,85,'active',v_sys,'workflow',v_sys)
     RETURNING id INTO v_ev2;
 
     INSERT INTO master.party_risk_assessment (tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,is_override,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
@@ -1711,3 +1826,7 @@ BEGIN
 
     RAISE NOTICE '[risk_mgi_cus] CUS-GLB-MGI-001 risk assessment seeded (ass=%, score=71, band=medium)', v_ass;
 END $risk_mgi_cus$;
+
+
+
+

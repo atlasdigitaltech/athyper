@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://athyper.local/schemas/authorization-external-object-evidence-v1.json",
+  "title": "Authorization Wave 0 external-object disposition evidence",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "policyHash",
+    "environment",
+    "inventoryAuthoritative",
+    "inventorySourceUri",
+    "inventorySourceSha256",
+    "inventoryCapturedAt",
+    "objects"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "policyHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "environment": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inventoryAuthoritative": {
+      "const": true
+    },
+    "inventorySourceUri": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inventorySourceSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "inventoryCapturedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "evidenceUri",
+          "evidenceSha256",
+          "verifiedBy",
+          "verifiedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 3
+          },
+          "status": {
+            "const": "verified"
+          },
+          "evidenceUri": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidenceSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "verifiedBy": {
+            "type": "string",
+            "minLength": 1
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

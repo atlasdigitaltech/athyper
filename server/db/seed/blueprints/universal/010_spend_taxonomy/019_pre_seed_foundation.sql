@@ -1,132 +1,64 @@
--- Pre-seed foundation that MUST land before any Tier 2 spend-taxonomy file
--- (020/021/022/023/024/025/026) or pack file. Execution order:
---   019 → 020 → 021 → 025 → 022 → 023 → 024 → 026
--- Two responsibilities:
---   B1 — assert 'seed' provenance lookup exists; trg_cc_provenance_lookup will
---        reject every bridge row with provenance='seed' if it's missing.
---   B2 — write the tenant's 1-row control.commodity_classification_config so
---        classification behaviour (crosswalk strategy, confidence thresholds,
---        auto-classification flags) is explicit instead of inherited from app defaults.
-
-DO $seed$
+-- Wave 5 tenant commodity-code policy. Category intent and inventory behaviour
+-- are seeded separately in control.commodity_category_*_policy.
+DO $wave5_commodity_policy$
 DECLARE
-    v_tid uuid;
-    v_su  uuid := '00000000-0000-0000-0000-000000000000';
-    v_pack     text := '019_base';
-    v_version  text := '1.0.0';
+    v_tid uuid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    v_actor uuid := nullif(trim(current_setting('app.current_principal_id',true)),'')::uuid;
 BEGIN
-    v_tid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
-    IF v_tid IS NULL THEN
-        RAISE EXCEPTION '[seed] app.seed_tenant_id not set — run: SET app.seed_tenant_id = ''<uuid>''';
+    IF current_setting('app.database_plane', true) <> 'neon' THEN
+        RAISE EXCEPTION '[wave5.spend-taxonomy] Neon plane required';
+    END IF;
+    IF v_tid IS NULL OR NOT EXISTS (SELECT 1 FROM master.tenant WHERE id=v_tid) THEN
+        RAISE EXCEPTION '[wave5.spend-taxonomy] valid app.seed_tenant_id required';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM shared.classification_scheme WHERE code='unspsc' AND status='active')
+       OR NOT EXISTS (SELECT 1 FROM shared.classification_scheme WHERE code='hs' AND status='active') THEN
+        RAISE EXCEPTION '[wave5.spend-taxonomy] active UNSPSC and HS reference schemes required';
     END IF;
 
-    -- 'seed' provenance lives in platform/000_lookups/LookupDomain/master/cc_provenance.sql.
-    IF NOT EXISTS (
-        SELECT 1 FROM control.lookup_value
-        WHERE domain_code = 'master.cc_provenance' AND code = 'seed'
-    ) THEN
-        RAISE EXCEPTION '[019_base] Provenance "seed" not found in cc_provenance lookup — ensure platform/000_lookups ran first';
-    END IF;
-
-    -- Classification config defaults: primary=unspsc, trade=hs, BEST_MATCH crosswalk,
-    -- auto-accept ≥90 / suggest ≥60. Cross-border triggers are GCC-standard;
-    -- tenants typically override metadata.company_capex_currencies in their own seed.
-    INSERT INTO control.commodity_classification_config (
-        tenant_id,
-        primary_commodity_domain,
-        trade_commodity_domain,
-        is_commodity_code_required,
-        is_trade_code_required,
-        is_required_for_regulated,
-        primary_industry_domain,
-        is_auto_classify_enabled,
-        is_auto_crosswalk_enabled,
-        min_confidence_auto,
-        min_confidence_suggest,
-        crosswalk_strategy,
-        cross_border_triggers,
-        metadata,
-        created_by
+    INSERT INTO control.commodity_code_classification_policy (
+        id,tenant_id,primary_commodity_domain_code,trade_commodity_domain_code,
+        commodity_code_required,trade_code_required,regulated_classification_required,
+        auto_classification_enabled,auto_crosswalk_enabled,auto_accept_confidence,
+        suggestion_confidence,crosswalk_strategy,metadata,status,created_by
     ) VALUES (
-        v_tid,
-        'unspsc',
-        'hs',
-        false,
-        false,
-        true,                           -- classification required for regulated items
-        'isic',
-        true,
-        true,
-        90.00,
-        60.00,
-        'BEST_MATCH',
-        '["SUPPLIER_COUNTRY_MISMATCH","SHIP_TO_MISMATCH","IMPORT_TAX","CUSTOMS_REQUIRED"]'::jsonb,
-        jsonb_build_object(
-            '_seed', jsonb_build_object(
-                'pack',      v_pack,
-                'version',   v_version,
-                'seeded_at', now()::text
-            ),
-            'company_capex_currencies', '{}'::jsonb
-        ),
-        v_su
+        md5('wave5:commodity-code-policy:' || v_tid::text)::uuid,v_tid,'unspsc','hs',
+        false,false,true,true,true,90.00,60.00,'best_match',
+        '{"_seed":{"pack":"spend-taxonomy-business-intents","version":"2.0.0"}}'::jsonb,
+        'active',v_actor
     )
     ON CONFLICT (tenant_id) DO UPDATE SET
-        primary_commodity_domain    = EXCLUDED.primary_commodity_domain,
-        trade_commodity_domain      = EXCLUDED.trade_commodity_domain,
-        is_commodity_code_required  = EXCLUDED.is_commodity_code_required,
-        is_trade_code_required      = EXCLUDED.is_trade_code_required,
-        is_required_for_regulated   = EXCLUDED.is_required_for_regulated,
-        primary_industry_domain     = EXCLUDED.primary_industry_domain,
-        is_auto_classify_enabled    = EXCLUDED.is_auto_classify_enabled,
-        is_auto_crosswalk_enabled   = EXCLUDED.is_auto_crosswalk_enabled,
-        min_confidence_auto         = EXCLUDED.min_confidence_auto,
-        min_confidence_suggest      = EXCLUDED.min_confidence_suggest,
-        crosswalk_strategy          = EXCLUDED.crosswalk_strategy,
-        cross_border_triggers       = EXCLUDED.cross_border_triggers,
-        metadata                  = control.commodity_classification_config.metadata
-                                    || jsonb_build_object(
-                                           '_seed', jsonb_build_object(
-                                               'pack',      v_pack,
-                                               'version',   v_version,
-                                               'seeded_at', now()::text
-                                           ),
-                                           'company_capex_currencies', EXCLUDED.metadata->'company_capex_currencies'
-                                       ),
-        updated_at = now(),
-        updated_by = v_su
-    WHERE (control.commodity_classification_config.primary_commodity_domain,
-           control.commodity_classification_config.trade_commodity_domain,
-           control.commodity_classification_config.is_commodity_code_required,
-           control.commodity_classification_config.is_trade_code_required,
-           control.commodity_classification_config.is_required_for_regulated,
-           control.commodity_classification_config.primary_industry_domain,
-           control.commodity_classification_config.is_auto_classify_enabled,
-           control.commodity_classification_config.is_auto_crosswalk_enabled,
-           control.commodity_classification_config.min_confidence_auto,
-           control.commodity_classification_config.min_confidence_suggest,
-           control.commodity_classification_config.crosswalk_strategy,
-           control.commodity_classification_config.cross_border_triggers)
-       IS DISTINCT FROM
-          (EXCLUDED.primary_commodity_domain,
-           EXCLUDED.trade_commodity_domain,
-           EXCLUDED.is_commodity_code_required,
-           EXCLUDED.is_trade_code_required,
-           EXCLUDED.is_required_for_regulated,
-           EXCLUDED.primary_industry_domain,
-           EXCLUDED.is_auto_classify_enabled,
-           EXCLUDED.is_auto_crosswalk_enabled,
-           EXCLUDED.min_confidence_auto,
-           EXCLUDED.min_confidence_suggest,
-           EXCLUDED.crosswalk_strategy,
-           EXCLUDED.cross_border_triggers);
+        primary_commodity_domain_code=excluded.primary_commodity_domain_code,
+        trade_commodity_domain_code=excluded.trade_commodity_domain_code,
+        commodity_code_required=excluded.commodity_code_required,
+        trade_code_required=excluded.trade_code_required,
+        regulated_classification_required=excluded.regulated_classification_required,
+        auto_classification_enabled=excluded.auto_classification_enabled,
+        auto_crosswalk_enabled=excluded.auto_crosswalk_enabled,
+        auto_accept_confidence=excluded.auto_accept_confidence,
+        suggestion_confidence=excluded.suggestion_confidence,
+        crosswalk_strategy=excluded.crosswalk_strategy,metadata=excluded.metadata,status='active',
+        updated_at=now(),updated_by=excluded.created_by
+    WHERE (control.commodity_code_classification_policy.primary_commodity_domain_code,
+           control.commodity_code_classification_policy.trade_commodity_domain_code,
+           control.commodity_code_classification_policy.commodity_code_required,
+           control.commodity_code_classification_policy.trade_code_required,
+           control.commodity_code_classification_policy.regulated_classification_required,
+           control.commodity_code_classification_policy.auto_classification_enabled,
+           control.commodity_code_classification_policy.auto_crosswalk_enabled,
+           control.commodity_code_classification_policy.auto_accept_confidence,
+           control.commodity_code_classification_policy.suggestion_confidence,
+           control.commodity_code_classification_policy.crosswalk_strategy,
+           control.commodity_code_classification_policy.metadata,
+           control.commodity_code_classification_policy.status)
+      IS DISTINCT FROM
+          (excluded.primary_commodity_domain_code,excluded.trade_commodity_domain_code,
+           excluded.commodity_code_required,excluded.trade_code_required,
+           excluded.regulated_classification_required,excluded.auto_classification_enabled,
+           excluded.auto_crosswalk_enabled,excluded.auto_accept_confidence,
+           excluded.suggestion_confidence,excluded.crosswalk_strategy,excluded.metadata,'active'::shared.active_inactive_d);
 
-    IF NOT EXISTS (
-        SELECT 1 FROM control.commodity_classification_config WHERE tenant_id = v_tid
-    ) THEN
-        RAISE EXCEPTION '[019_base] commodity_classification_config row not created for tenant %', v_tid;
+    IF (SELECT count(*) FROM control.commodity_code_classification_policy WHERE tenant_id=v_tid AND status='active') <> 1 THEN
+        RAISE EXCEPTION '[wave5.spend-taxonomy] commodity policy assertion failed';
     END IF;
-
-    RAISE NOTICE '[019_base] Pre-seed foundation complete: provenance "seed" registered, commodity_classification_config ready';
-
-END $seed$;
+END $wave5_commodity_policy$;

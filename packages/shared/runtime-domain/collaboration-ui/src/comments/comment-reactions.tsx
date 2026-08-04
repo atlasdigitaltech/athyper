@@ -13,19 +13,7 @@ import { SmilePlus } from "lucide-react";
 
 import { Button } from "@athyper/ui/primitives";
 import { cn } from "@athyper/theme/utils";
-import { useReactions } from "../hooks/collab";
-
-// Canonical picker list — must match the 8 codes seeded in master.reaction_type.
-const REACTIONS = [
-  { code: "thumbs_up",   emoji: "👍" },
-  { code: "thumbs_down", emoji: "👎" },
-  { code: "heart",       emoji: "❤️" },
-  { code: "celebrate",   emoji: "🎉" },
-  { code: "eyes",        emoji: "👀" },
-  { code: "rocket",      emoji: "🚀" },
-  { code: "idea",        emoji: "💡" },
-  { code: "thinking",    emoji: "🤔" },
-] as const;
+import { useReactionTypes, useReactions } from "../hooks/collab";
 
 interface CommentReactionsProps {
   commentId: string;
@@ -33,6 +21,7 @@ interface CommentReactionsProps {
 
 export function CommentReactions({ commentId }: CommentReactionsProps) {
   const { reactions, toggleReaction } = useReactions(commentId);
+  const { reactionTypes } = useReactionTypes();
   const [showPicker, setShowPicker] = useState(false);
 
   return (
@@ -68,11 +57,11 @@ export function CommentReactions({ commentId }: CommentReactionsProps) {
 
         {showPicker && (
           <div className="absolute bottom-full left-0 z-50 mb-1 flex gap-0.5 rounded-lg border bg-popover p-1 text-popover-foreground shadow-md">
-            {REACTIONS.map(({ code, emoji }) => (
+            {reactionTypes.map(({ code, emoji, name }) => (
               <button
                 key={code}
                 type="button"
-                title={code.replace(/_/g, " ")}
+                title={name}
                 className="rounded p-1 text-base hover:bg-accent"
                 onClick={() => {
                   toggleReaction(code);

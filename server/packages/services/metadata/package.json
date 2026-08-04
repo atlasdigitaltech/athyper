@@ -27,6 +27,7 @@
   "dependencies": {
     "@athyper/adapter-telemetry": "workspace:*",
     "@athyper/api-contracts": "workspace:*",
+    "@athyper/entity-operation-scope-contracts": "workspace:*",
     "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-shared": "workspace:*",
     "@athyper/svc-workflow": "workspace:*",

@@ -15,11 +15,10 @@
 //                       Permission-local runtime caches are invalidated; shared
 //                       execution descriptors remain principal-agnostic.
 //
-// We also run a 30s poller against `log.descriptor_cache_invalidation` for
-// rows where `processed_at IS NULL`. This is the fallback for missed
+// We also run a 30s poller against `event.descriptor_invalidation_outbox` for
+// pending/failed rows. This is the fallback for missed
 // notifications (LISTEN connection dropped, listener restarted, etc.).
-// Every successful recovery updates `processed_at` and `processed_by`;
-// `redis_keys_deleted` remains zero during the generation compatibility window.
+// The poller uses a lease so multiple listener instances can recover safely.
 
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
@@ -47,7 +46,7 @@ export interface DescriptorCacheListenerLogger {
 
 export interface CreateDescriptorCacheListenerOptions {
   redis: DescriptorCacheRedis;
-  /** Polling-fallback connection. Reuses the pooled client; only SELECT + UPDATE on log.* */
+  /** Polling-fallback connection. Reuses the pooled client for the durable event outbox. */
   logDb: DescriptorCacheLogDb;
   logger: DescriptorCacheListenerLogger;
   /** Override the env-resolved listen connection string (tests). */
@@ -94,6 +93,7 @@ interface NotifyPayload {
   new_status?: string | null;
   principal_id?: string | null;
   at?: number | null;
+  outbox_id?: string | null;
 }
 
 interface InvalidationLogRow {
@@ -102,8 +102,8 @@ interface InvalidationLogRow {
   entity_code: string | null;
   plane_key: string | null;
   reason: string;
-  triggered_by_table: string | null;
-  triggered_by_id: string | null;
+  source_table: string | null;
+  source_id: string | null;
   created_at: string;
 }
 
@@ -141,14 +141,32 @@ export function createDescriptorCacheListener(
 
   // ─── Log mark ─────────────────────────────────────────────────────────────────
 
-  async function markProcessedById(id: string, keysDeleted: number): Promise<void> {
+  async function markProcessedById(id: string): Promise<void> {
     await logDb.query(
-      `UPDATE log.descriptor_cache_invalidation
-          SET processed_at       = now(),
-              processed_by       = $1,
-              redis_keys_deleted = $2
-        WHERE id = $3 AND processed_at IS NULL`,
-      [instanceId, keysDeleted, id],
+      `UPDATE event.descriptor_invalidation_outbox
+          SET status       = 'completed',
+              processed_at = now(),
+              processed_by = $1,
+              locked_at    = NULL,
+              locked_by    = NULL,
+              locked_until = NULL,
+              last_error   = NULL
+        WHERE id = $2 AND status IN ('pending','processing','failed')`,
+      [instanceId, id],
+    );
+  }
+
+  async function markFailedById(id: string, error: unknown): Promise<void> {
+    await logDb.query(
+      `UPDATE event.descriptor_invalidation_outbox
+          SET status       = CASE WHEN attempts >= max_attempts THEN 'dead_letter' ELSE 'failed' END,
+              available_at = CASE WHEN attempts >= max_attempts THEN available_at ELSE now() + interval '30 seconds' END,
+              locked_at    = NULL,
+              locked_by    = NULL,
+              locked_until = NULL,
+              last_error   = left($1, 2048)
+        WHERE id = $2 AND status = 'processing'`,
+      [String(error), id],
     );
   }
 
@@ -168,6 +186,7 @@ export function createDescriptorCacheListener(
         ...(payload.entity_code ? { entity: payload.entity_code } : {}),
         reason: payload.reason ?? "metadata_publication",
       });
+      if (payload.outbox_id) await markProcessedById(payload.outbox_id);
       counters.notifications += 1;
       logger.info("cache_invalidation_processed", {
         channel: CHANNEL_DESC_INVALIDATE,
@@ -297,13 +316,27 @@ export function createDescriptorCacheListener(
     counters.pollerRuns += 1;
     try {
       const result = await logDb.query<InvalidationLogRow>(
-        `SELECT id, tenant_id, entity_code, plane_key, reason,
-                triggered_by_table, triggered_by_id, created_at
-           FROM log.descriptor_cache_invalidation
-          WHERE processed_at IS NULL
-            AND created_at > now() - interval '1 hour'
-          ORDER BY created_at
-          LIMIT 200`,
+        `WITH candidates AS (
+           SELECT id
+             FROM event.descriptor_invalidation_outbox
+            WHERE status IN ('pending','failed')
+              AND available_at <= now()
+              AND attempts < max_attempts
+            ORDER BY available_at, created_at, id
+            FOR UPDATE SKIP LOCKED
+            LIMIT 200
+         )
+         UPDATE event.descriptor_invalidation_outbox AS work
+            SET status       = 'processing',
+                attempts     = work.attempts + 1,
+                locked_at    = now(),
+                locked_by    = $1,
+                locked_until = now() + interval '60 seconds'
+           FROM candidates
+          WHERE work.id = candidates.id
+         RETURNING work.id, work.tenant_id, work.entity_code, work.plane_key,
+                   work.reason, work.source_table, work.source_id, work.created_at`,
+        [instanceId],
       );
       for (const row of result.rows) {
         try {
@@ -318,9 +351,10 @@ export function createDescriptorCacheListener(
             ...(row.entity_code ? { entity: row.entity_code } : {}),
             reason: row.reason,
           });
-          await markProcessedById(row.id, 0);
+          await markProcessedById(row.id);
         } catch (err) {
           counters.errors += 1;
+          await markFailedById(row.id, err).catch(() => undefined);
           logger.warn("cache_invalidation_poller_row_failed", {
             id: row.id, err: String(err),
           });

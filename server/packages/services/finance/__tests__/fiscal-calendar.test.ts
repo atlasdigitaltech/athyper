@@ -30,16 +30,16 @@ describe("fiscal calendar templates", () => {
 
 describe("fiscal calendar DDL contract", () => {
   const tableDdl = readFileSync(
-    new URL("../../../../db/ddl/control/01t_tables_fiscal_calendar.sql", import.meta.url), "utf8",
+    new URL("../../../../db/ddl/planes/neon/control/03_fiscal_calendar_tables.sql", import.meta.url), "utf8",
   );
   const functionDdl = readFileSync(
-    new URL("../../../../db/ddl/control/05_functions_fiscal_calendar.sql", import.meta.url), "utf8",
+    new URL("../../../../db/ddl/planes/neon/control/07_fiscal_calendar_functions.sql", import.meta.url), "utf8",
   );
   const periodDdl = readFileSync(
-    new URL("../../../../db/ddl/master/01b_tables_finance.sql", import.meta.url), "utf8",
+    new URL("../../../../db/ddl/planes/neon/master/03_tables.sql", import.meta.url), "utf8",
   );
   const rlsDdl = readFileSync(
-    new URL("../../../../db/ddl/control/08_rls_fiscal_calendar.sql", import.meta.url), "utf8",
+    new URL("../../../../db/ddl/planes/neon/control/10_fiscal_calendar_rls.sql", import.meta.url), "utf8",
   );
 
   it("separates reusable definitions, rules, and company assignments", () => {
@@ -51,7 +51,7 @@ describe("fiscal calendar DDL contract", () => {
   it("derives adjustment semantics from period_type and centralises posting-date resolution", () => {
     expect(periodDdl).toContain("GENERATED ALWAYS AS (period_type = 'adjustment')");
     expect(functionDdl).toContain("FUNCTION master.resolve_fiscal_period");
-    expect(functionDdl).toContain("p_include_special OR fp.period_type = 'normal'");
+    expect(functionDdl).toContain("p_include_special OR period.period_type = 'normal'");
   });
 
   it("forces tenant RLS on all calendar control tables", () => {

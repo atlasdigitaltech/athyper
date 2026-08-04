@@ -1,0 +1,60 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "asset-policies",
+  "version": "2.0.0",
+  "executionOrder": 40,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [
+    "tax-fx"
+  ],
+  "checksumAlgorithm": "sha256",
+  "checksum": "522222d925ae195c86ab71a35573ea5cf9e326fad25c0d6642f3e96141b4653b",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/universal/040_assets/340_asset_classes.sql",
+      "sha256": "4897b21f331b7d26ee87c6c28bc249094b0b87ccadbe30f203938c0121225a36",
+      "bytes": 8667,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/universal/040_assets/341_asset_class_book_policy_templates.sql",
+      "sha256": "713476c6b65015ed4ac874df52f85bb8d39fbc5b827161ed62322c7fe93896e1",
+      "bytes": 19384,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "master.asset_class",
+      "control.asset_book_policy"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed-packs/blueprints-v2/receipts/40-asset-policies.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

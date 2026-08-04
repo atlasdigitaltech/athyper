@@ -682,7 +682,7 @@ export class WorkflowEngine {
     params: { tenantId: string; actorId: string; groupId: string },
   ): Promise<boolean> {
     const row = await trx
-      .selectFrom("master.auth_group_member as agm" as never)
+      .selectFrom("master.auth_current_group_member_v as agm" as never)
       .select("agm.group_id" as never)
       .where("agm.tenant_id" as never, "=", params.tenantId as never)
       .where("agm.principal_id" as never, "=", params.actorId as never)
@@ -697,16 +697,23 @@ export class WorkflowEngine {
     trx: Transaction<any>,
     params: { tenantId: string; actorId: string; teamId: string },
   ): Promise<boolean> {
-    const row = await trx
-      .selectFrom("master.team_member as tm" as never)
-      .select("tm.team_id" as never)
-      .where("tm.tenant_id" as never, "=", params.tenantId as never)
-      .where("tm.principal_id" as never, "=", params.actorId as never)
-      .where("tm.team_id" as never, "=", params.teamId as never)
-      .where("tm.left_at" as never, "is" as never, null as never)
-      .executeTakeFirst();
+    const result = await sql<{ team_id: string }>`
+      SELECT tm.team_id
+        FROM master.team_member AS tm
+        JOIN master.team AS t
+          ON t.tenant_id = tm.tenant_id
+         AND t.id = tm.team_id
+       WHERE tm.tenant_id = ${params.tenantId}::uuid
+         AND tm.principal_id = ${params.actorId}::uuid
+         AND tm.team_id = ${params.teamId}::uuid
+         AND tm.left_at IS NULL
+         AND t.status = 'active'
+         AND t.effective_from <= CURRENT_DATE
+         AND (t.effective_until IS NULL OR t.effective_until > CURRENT_DATE)
+       LIMIT 1
+    `.execute(trx);
 
-    return !!row;
+    return result.rows.length > 0;
   }
 
   private async hasActiveDelegation(
@@ -715,21 +722,14 @@ export class WorkflowEngine {
     params: { tenantId: string; actorId: string; delegatorId: string },
   ): Promise<boolean> {
     const row = await trx
-      .selectFrom("master.delegation_grant as dg" as never)
+      .selectFrom("master.auth_delegation as dg" as never)
       .select("dg.id" as never)
       .where("dg.tenant_id" as never, "=", params.tenantId as never)
       .where("dg.delegate_id" as never, "=", params.actorId as never)
       .where("dg.delegator_id" as never, "=", params.delegatorId as never)
-      .where("dg.is_revoked" as never, "=", false as never)
-      .where("dg.expires_at" as never, ">", new Date() as never)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .where((eb: any) =>
-        eb.or([
-          eb("dg.scope_type", "=", "workflow"),
-          eb("dg.scope_type", "=", "entity"),
-          eb("dg.scope_type", "=", "task"),
-        ]),
-      )
+      .where("dg.status" as never, "=", "active" as never)
+      .where("dg.effective_from" as never, "<=", new Date() as never)
+      .where("dg.effective_until" as never, ">", new Date() as never)
       .executeTakeFirst();
 
     return !!row;

@@ -36,6 +36,12 @@ export interface AuthorizationRolloutApproval {
   readonly ticket: string;
   readonly rollbackOwner: string;
   readonly observationWindowEndsAt: string;
+  /** SHA-256 of the independently verified golden decision corpus. */
+  readonly goldenCorpusSha256: string;
+  /** Durable plane-local capture source UUID certified by that corpus. */
+  readonly sourceDatabaseId: string;
+  /** Projector watermark that must be reached before this rule can match. */
+  readonly minimumAppliedWatermark: string;
 }
 
 /**
@@ -72,9 +78,19 @@ export interface AuthorizationRolloutSnapshot {
 export interface AuthorizationRolloutContext {
   readonly planeKey: AuthorizationRolloutPlane;
   readonly permissionCode: string;
+  /** Required to match a named rule; omission always leaves the request legacy. */
   readonly cohortCode?: string;
   readonly tenantId?: string;
   readonly principalId?: string;
+  /**
+   * Request/job-pinned certification state supplied by the plane-local
+   * rollout integration. Omission or mismatch always selects legacy.
+   */
+  readonly certification?: {
+    readonly goldenCorpusSha256: string;
+    readonly sourceDatabaseId: string;
+    readonly appliedWatermark: string;
+  };
 }
 
 export type AuthorizationRolloutSelectionReason =
@@ -96,6 +112,11 @@ export interface AuthorizationRolloutSelection {
   readonly policyRevision?: string;
   readonly ruleId?: string;
   readonly cohortCode?: string;
+  readonly certification?: {
+    readonly goldenCorpusSha256: string;
+    readonly sourceDatabaseId: string;
+    readonly appliedWatermark: string;
+  };
   readonly diagnosticCode?: string;
 }
 

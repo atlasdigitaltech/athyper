@@ -1,10 +1,10 @@
-﻿/**
+/**
  * Tika Extract Worker â€” attachment text extraction + PII classification
  *
  * Consumes `jobs-tika-extract` jobs. Two job names supported:
  *   - JOB_NAME.EXTRACT_TEXT â€” process one attachment id (enqueued by uploads
  *     or by the admin reindex endpoint).
- *   - JOB_NAME.SWEEP        â€” scan master.attachment for rows where
+ *   - JOB_NAME.SWEEP        â€” scan document.attachment for rows where
  *     text_extraction_status IS NULL and self-enqueue extract-text jobs. Runs
  *     periodically to catch uploads that missed the inline enqueue (e.g. a
  *     runtime restart between S3 commit and queue add).
@@ -15,7 +15,7 @@
  *   3. Download blob from object storage
  *   4. PUT to ${DOCPARSER_URL}/tika with Accept: text/plain â€” receive extracted text
  *   5. Classify PII in the extracted text (inline, regex-based)
- *   6. UPDATE master.attachment with text + PII columns in a single write
+ *   6. UPDATE document.attachment with text + PII columns in a single write
  *
  * Retries are driven by BullMQ; terminal failures land in the DLQ via the
  * standard error handler wired in jobs.service.ts.
@@ -224,7 +224,7 @@ async function processOne(args: {
   const startedAt = Date.now();
 
   const row = await db
-    .selectFrom("master.attachment" as never)
+    .selectFrom("document.attachment" as never)
     .select([
       "file_name" as never,
       "id" as never,
@@ -412,7 +412,7 @@ async function processOne(args: {
   }
 
   await db
-    .updateTable("master.attachment" as never)
+    .updateTable("document.attachment" as never)
     .set(setValues as never)
     .where("id" as never, "=", attachmentId as never)
     .where("tenant_id" as never, "=", tenantId as never)
@@ -462,7 +462,7 @@ async function runSweep(args: {
   const { db, queue, logger, sweepBatchSize } = args;
 
   const rows = await db
-    .selectFrom("master.attachment" as never)
+    .selectFrom("document.attachment" as never)
     .select(["id" as never, "tenant_id" as never])
     .where(sql<boolean>`text_extraction_status IS NULL`)
     .where(sql<boolean>`status IN ('quarantined','failed','active')`)
@@ -541,7 +541,7 @@ async function markStatus(
   }
 
   await db
-    .updateTable("master.attachment" as never)
+    .updateTable("document.attachment" as never)
     .set(update as never)
     .where("id" as never, "=", attachmentId as never)
     .where("tenant_id" as never, "=", tenantId as never)

@@ -1,0 +1,25 @@
+-- Wave 3 consumer-owned lookup pack entrypoint.
+\ir lookup-packs/12_catalog_address_type_seed.sql
+\ir lookup-packs/12_catalog_bank_interface_file_format_seed.sql
+\ir lookup-packs/12_catalog_business_intent_visibility_seed.sql
+\ir lookup-packs/12_catalog_cc_domain_code_seed.sql
+\ir lookup-packs/12_catalog_dimension_type_category_seed.sql
+\ir lookup-packs/12_catalog_holiday_weekend_pattern_seed.sql
+\ir lookup-packs/12_catalog_notification_priority_seed.sql
+\ir lookup-packs/12_catalog_p2p_lookup_values_seed.sql
+\ir lookup-packs/12_catalog_pay_contribution_category_seed.sql
+\ir lookup-packs/12_catalog_payment_rounding_method_seed.sql
+\ir lookup-packs/12_catalog_payment_term_category_seed.sql
+\ir lookup-packs/12_catalog_posting_role_seed.sql
+\ir lookup-packs/12_catalog_priority_seed.sql
+\ir lookup-packs/12_catalog_purchase_order_seed.sql
+\ir lookup-packs/12_catalog_purchase_requisition_type_seed.sql
+\ir lookup-packs/12_catalog_setup_contract_seed.sql
+\ir lookup-packs/12_catalog_spend_visibility_seed.sql
+\ir lookup-packs/12_catalog_supplier_taxation_type_seed.sql
+\ir lookup-packs/12_catalog_valuation_method_seed.sql
+\ir lookup-packs/12_erp_assets_seed.sql
+\ir lookup-packs/12_erp_finance_seed.sql
+\ir lookup-packs/12_erp_master_data_seed.sql
+\ir lookup-packs/12_erp_procure_to_pay_seed.sql
+\ir lookup-packs/12_erp_workforce_projects_seed.sql

@@ -1,12 +1,13 @@
 # Phase 4 — Product package creation
 
-The product package boundary is now present for Neon, Admin, and Mesh:
+The product package boundary is now present for Neon, Admin, and Mesh, and all product-scoped
+packages live under `packages/products/<product>/<role>/`:
 
-| Product | Package | Owns |
+| Product | Runtime package | Composition packages |
 | --- | --- | --- |
-| Neon | `@athyper/neon-runtime` | End-user entity screens, document workspaces, runtime record experiences, Neon workflows, business composition |
-| Admin | `@athyper/admin-studio` | Metadata Studio, tenant administration, diagnostics, governance, platform configuration UI |
-| Mesh | `@athyper/mesh-runtime` | Integration administration, external connectors, exchange workflows, Mesh operational tooling |
+| Neon | `@athyper/neon-runtime` (`packages/products/neon/runtime`) | `app`, `brand`, `shell`, `navigation`, `route-manifest`, `i18n`, `command-hub` |
+| Admin | `@athyper/admin-studio` (`packages/products/admin/runtime`) | `app`, `brand`, `shell`, `navigation`, `route-manifest`, `i18n`, `command-hub` |
+| Mesh | `@athyper/mesh-runtime` (`packages/products/mesh/runtime`) | `app`, `brand`, `shell`, `navigation`, `route-manifest`, `i18n` |
 
 ## Dependency contract
 
@@ -14,9 +15,9 @@ Product packages may depend on shared contracts, shared platform packages, share
 packages, and shared business capabilities. They may not depend on another product package or
 application composition package. This is enforced by `policy:canonical-packages`.
 
-The product packages are intentionally minimal initially. Existing application packages under
-`packages/apps/<product>` remain application composition: brand, shell, navigation, route
-manifest, command hub, and i18n. They are not copied into product packages.
+The `runtime` subpackage is intentionally minimal initially. The sibling composition subpackages
+(`app`, `brand`, `shell`, `navigation`, `route-manifest`, `command-hub`, `i18n`) remain the
+application composition surface. They are not copied into `runtime`.
 
 ## Relocation rule
 
@@ -25,9 +26,9 @@ consumers belong to the same product. Shared consumers stay in `packages/shared`
 must update imports, package exports, workspace metadata, and the ownership matrix in one change.
 
 The first extraction candidates are product-shaped subtrees such as the Neon purchase-invoice
-experience. These require file-level consumer analysis because their parent packages also contain
-reusable runtime components. Whole-package moves are prohibited unless the package has exactly
-one product consumer.
+experience under `packages/products/neon/app/src/workbench`. These require file-level consumer
+analysis because their parent packages also contain reusable runtime components. Whole-package
+moves are prohibited unless the package has exactly one product consumer.
 
 ## Validation
 

@@ -261,7 +261,7 @@ implements AtlasRetentionPolicyResolver {
       revision: number | string;
     }>`
       SELECT retention_days, revision
-      FROM control.atlas_conversation_retention_policy
+      FROM ai.atlas_conversation_retention_policy
       WHERE tenant_id = ${context.tenantId}::uuid
         AND status = 'active'
         AND effective_from <= ${now}

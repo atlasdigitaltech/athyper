@@ -1,0 +1,13 @@
+{
+  "extends": "../../../../tooling/tsconfig/base.json",
+  "compilerOptions": {
+    "rootDir": "../../../..",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@athyper/meta-entity-authoring-contracts": ["../../../../packages/shared/data-integration/meta-entity-authoring-contracts/src/index.ts"]
+    }
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["dist", "node_modules", ".turbo", "**/*.test.ts", "**/*.spec.ts"]
+}

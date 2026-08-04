@@ -34,7 +34,6 @@ import { createEntityPolicyRoute } from "./entity-policy.route.js";
 import { createStatusRouteRoute } from "./status-route.route.js";
 import { createMetadataAdminRoutes } from "./metadata-admin.route.js";
 import { createLifecycleMaskRoute } from "./lifecycle-mask.route.js";
-import { createPermissionAliasRoute } from "./permission-alias.route.js";
 import { createDocumentRuntimeRegistryRoute } from "./document-runtime-registry.route.js";
 import { createStudioVersionRoutes } from "./studio-version.route.js";
 import { createStudioContractV2Routes } from "./studio-contract-v2.route.js";
@@ -70,7 +69,7 @@ export interface MetadataRoutesDeps {
   readAuthenticatedContext?: (req: Parameters<import("express").RequestHandler>[0]) => { tenantId?: string } | undefined;
   runtimeBootstrapProvider?: RuntimeBootstrapProvider;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string, personaId: string) => Promise<Record<string, { decision: string } | undefined>>;
+  checkPermissionBatch?: (db: Kysely<any>, tenantId: string, principalId: string) => Promise<Record<string, { decision: string } | undefined>>;
   getEffectiveModuleAccess?: typeof getEffectiveModuleAccess;
   validateEntityVersionActivation?: (versionId: string) => Promise<unknown>;
   compileEntityVersionInTransaction?: (
@@ -99,7 +98,6 @@ export function registerMetadataRoutes(router: Router, deps: MetadataRoutesDeps)
   createMetadataAdminRoutes(router, deps);
   // Phase 4 — three-plane permission stack
   createLifecycleMaskRoute(router, deps);
-  createPermissionAliasRoute(router, deps);
   // Cleanup Plan v5 §P6 — direct readers for the three document-runtime
   // registry tables (polymorphic_child_binding, document_lookup,
   // entity_action_rule). Bypasses the records-API path so the lookups

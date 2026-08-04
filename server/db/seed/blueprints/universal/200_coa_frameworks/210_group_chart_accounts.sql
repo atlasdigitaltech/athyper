@@ -4,7 +4,7 @@
 DO $seed$
 DECLARE
     v_tid     uuid;
-    v_su      uuid := '00000000-0000-0000-0000-000000000000';
+    v_su      uuid := nullif(trim(current_setting('app.current_principal_id', true)), '')::uuid;
     v_pack    text := '210_group_chart';
     v_version text := '1.0.0';
     v_meta    jsonb;
@@ -40,7 +40,7 @@ BEGIN
         NULL,
         'GRP-*',
         1,
-        true,
+        false,
         v_meta || jsonb_build_object(
             '_chart_role', 'reporting_taxonomy',
             '_selectable', false,
@@ -58,12 +58,38 @@ BEGIN
         country_code  = EXCLUDED.country_code,
         account_range = EXCLUDED.account_range,
         version       = EXCLUDED.version,
-        is_locked     = EXCLUDED.is_locked,
         metadata      = master.chart_of_account.metadata || EXCLUDED.metadata,
         status        = 'active',
         updated_at    = now(),
         updated_by    = v_su
+    WHERE (master.chart_of_account.name,master.chart_of_account.description,
+           master.chart_of_account.framework,master.chart_of_account.country_code,
+           master.chart_of_account.account_range,master.chart_of_account.version,
+           master.chart_of_account.status)
+      IS DISTINCT FROM (EXCLUDED.name,EXCLUDED.description,EXCLUDED.framework,
+           EXCLUDED.country_code,EXCLUDED.account_range,EXCLUDED.version,
+           'active'::master.finance_setup_status_d)
+       OR master.chart_of_account.metadata->>'_chart_role' IS DISTINCT FROM 'reporting_taxonomy'
+       OR master.chart_of_account.metadata->>'_selectable' IS DISTINCT FROM 'false'
+       OR master.chart_of_account.metadata->>'_journal_postable' IS DISTINCT FROM 'false'
     RETURNING id INTO v_coa_id;
+    IF v_coa_id IS NULL THEN
+        SELECT id INTO v_coa_id FROM master.chart_of_account
+        WHERE tenant_id=v_tid AND code='COA-GROUP';
+    END IF;
+
+    -- A locked reporting taxonomy is immutable. A same-version convergence
+    -- pass validates the completed receipt rather than attempting an INSERT,
+    -- because the structural guard correctly rejects even conflict candidates.
+    IF EXISTS (SELECT 1 FROM master.chart_of_account
+               WHERE id=v_coa_id AND is_locked
+                 AND metadata->'_seed'->>'version'=v_version)
+       AND (SELECT count(*) FROM master.gl_account
+            WHERE tenant_id=v_tid AND chart_of_account_id=v_coa_id
+              AND metadata->'_seed'->>'pack'=v_pack)>=140 THEN
+        RAISE NOTICE '[210_group_chart] locked same-version taxonomy already converged';
+        RETURN;
+    END IF;
 
     -- ══════════════════════════════════════════════════════════════════════
     -- STAGE B: Stage all accounts in temp table
@@ -306,14 +332,14 @@ BEGIN
         id, tenant_id, chart_of_account_id, code, name,
         parent_id, level_no, path, description,
         account_class, node_type, normal_balance, subledger_type,
-        sort_order, tags,
+        sort_order,
         metadata, status, created_by
     )
     SELECT
         t.seed_id, v_tid, v_coa_id, t.code, t.name,
         NULL, t.level_no, t.code, t.description,
-        t.account_class, t.node_type, t.normal_balance, t.subledger_type,
-        t.sort_order, '[]'::jsonb,
+        t.account_class, t.node_type, t.normal_balance, upper(t.subledger_type),
+        t.sort_order,
         v_meta || jsonb_build_object(
             '_display_no', t.sort_order::text,
             '_journal_postable', false,
@@ -325,14 +351,9 @@ BEGIN
     WHERE t.parent_code IS NULL
     ON CONFLICT (tenant_id, chart_of_account_id, code) DO UPDATE SET
         name           = EXCLUDED.name,
-        parent_id      = EXCLUDED.parent_id,
         level_no       = EXCLUDED.level_no,
         path           = EXCLUDED.path,
         description    = EXCLUDED.description,
-        account_class  = EXCLUDED.account_class,
-        node_type      = EXCLUDED.node_type,
-        normal_balance = EXCLUDED.normal_balance,
-        subledger_type = EXCLUDED.subledger_type,
         sort_order     = EXCLUDED.sort_order,
         metadata       = master.gl_account.metadata
                          || jsonb_build_object('_seed', jsonb_build_object(
@@ -348,17 +369,13 @@ BEGIN
                             ),
         updated_at = now(),
         updated_by = v_su
-    WHERE (master.gl_account.name, master.gl_account.parent_id,
+    WHERE (master.gl_account.name,
            master.gl_account.level_no, master.gl_account.path,
-           master.gl_account.description, master.gl_account.account_class,
-           master.gl_account.node_type, master.gl_account.normal_balance,
-           master.gl_account.subledger_type, master.gl_account.sort_order)
+           master.gl_account.description, master.gl_account.sort_order)
        IS DISTINCT FROM
-          (EXCLUDED.name, EXCLUDED.parent_id,
+          (EXCLUDED.name,
            EXCLUDED.level_no, EXCLUDED.path,
-           EXCLUDED.description, EXCLUDED.account_class,
-           EXCLUDED.node_type, EXCLUDED.normal_balance,
-           EXCLUDED.subledger_type, EXCLUDED.sort_order)
+           EXCLUDED.description, EXCLUDED.sort_order)
        OR master.gl_account.metadata->>'_journal_postable' IS DISTINCT FROM 'false'
        OR master.gl_account.metadata->>'_reporting_taxonomy' IS DISTINCT FROM 'true'
        OR master.gl_account.metadata->>'_reporting_leaf' IS DISTINCT FROM
@@ -372,14 +389,14 @@ BEGIN
         id, tenant_id, chart_of_account_id, code, name,
         parent_id, level_no, path, description,
         account_class, node_type, normal_balance, subledger_type,
-        sort_order, tags,
+        sort_order,
         metadata, status, created_by
     )
     SELECT
         t.seed_id, v_tid, v_coa_id, t.code, t.name,
         p.id, t.level_no, p.code || '/' || t.code, t.description,
-        t.account_class, t.node_type, t.normal_balance, t.subledger_type,
-        t.sort_order, '[]'::jsonb,
+        t.account_class, t.node_type, t.normal_balance, upper(t.subledger_type),
+        t.sort_order,
         v_meta || jsonb_build_object(
             '_display_no', t.sort_order::text,
             '_journal_postable', false,
@@ -395,14 +412,9 @@ BEGIN
     WHERE t.level_no = 2
     ON CONFLICT (tenant_id, chart_of_account_id, code) DO UPDATE SET
         name           = EXCLUDED.name,
-        parent_id      = EXCLUDED.parent_id,
         level_no       = EXCLUDED.level_no,
         path           = EXCLUDED.path,
         description    = EXCLUDED.description,
-        account_class  = EXCLUDED.account_class,
-        node_type      = EXCLUDED.node_type,
-        normal_balance = EXCLUDED.normal_balance,
-        subledger_type = EXCLUDED.subledger_type,
         sort_order     = EXCLUDED.sort_order,
         metadata       = master.gl_account.metadata
                          || jsonb_build_object('_seed', jsonb_build_object(
@@ -418,17 +430,13 @@ BEGIN
                             ),
         updated_at = now(),
         updated_by = v_su
-    WHERE (master.gl_account.name, master.gl_account.parent_id,
+    WHERE (master.gl_account.name,
            master.gl_account.level_no, master.gl_account.path,
-           master.gl_account.description, master.gl_account.account_class,
-           master.gl_account.node_type, master.gl_account.normal_balance,
-           master.gl_account.subledger_type, master.gl_account.sort_order)
+           master.gl_account.description, master.gl_account.sort_order)
        IS DISTINCT FROM
-          (EXCLUDED.name, EXCLUDED.parent_id,
+          (EXCLUDED.name,
            EXCLUDED.level_no, EXCLUDED.path,
-           EXCLUDED.description, EXCLUDED.account_class,
-           EXCLUDED.node_type, EXCLUDED.normal_balance,
-           EXCLUDED.subledger_type, EXCLUDED.sort_order)
+           EXCLUDED.description, EXCLUDED.sort_order)
        OR master.gl_account.metadata->>'_journal_postable' IS DISTINCT FROM 'false'
        OR master.gl_account.metadata->>'_reporting_taxonomy' IS DISTINCT FROM 'true'
        OR master.gl_account.metadata->>'_reporting_leaf' IS DISTINCT FROM
@@ -442,14 +450,14 @@ BEGIN
         id, tenant_id, chart_of_account_id, code, name,
         parent_id, level_no, path, description,
         account_class, node_type, normal_balance, subledger_type,
-        sort_order, tags,
+        sort_order,
         metadata, status, created_by
     )
     SELECT
         t.seed_id, v_tid, v_coa_id, t.code, t.name,
         p.id, t.level_no, p.path || '/' || t.code, t.description,
-        t.account_class, t.node_type, t.normal_balance, t.subledger_type,
-        t.sort_order, '[]'::jsonb,
+        t.account_class, t.node_type, t.normal_balance, upper(t.subledger_type),
+        t.sort_order,
         v_meta || jsonb_build_object(
             '_display_no', t.sort_order::text,
             '_journal_postable', false,
@@ -465,14 +473,9 @@ BEGIN
     WHERE t.level_no = 3
     ON CONFLICT (tenant_id, chart_of_account_id, code) DO UPDATE SET
         name           = EXCLUDED.name,
-        parent_id      = EXCLUDED.parent_id,
         level_no       = EXCLUDED.level_no,
         path           = EXCLUDED.path,
         description    = EXCLUDED.description,
-        account_class  = EXCLUDED.account_class,
-        node_type      = EXCLUDED.node_type,
-        normal_balance = EXCLUDED.normal_balance,
-        subledger_type = EXCLUDED.subledger_type,
         sort_order     = EXCLUDED.sort_order,
         metadata       = master.gl_account.metadata
                          || jsonb_build_object('_seed', jsonb_build_object(
@@ -488,17 +491,13 @@ BEGIN
                             ),
         updated_at = now(),
         updated_by = v_su
-    WHERE (master.gl_account.name, master.gl_account.parent_id,
+    WHERE (master.gl_account.name,
            master.gl_account.level_no, master.gl_account.path,
-           master.gl_account.description, master.gl_account.account_class,
-           master.gl_account.node_type, master.gl_account.normal_balance,
-           master.gl_account.subledger_type, master.gl_account.sort_order)
+           master.gl_account.description, master.gl_account.sort_order)
        IS DISTINCT FROM
-          (EXCLUDED.name, EXCLUDED.parent_id,
+          (EXCLUDED.name,
            EXCLUDED.level_no, EXCLUDED.path,
-           EXCLUDED.description, EXCLUDED.account_class,
-           EXCLUDED.node_type, EXCLUDED.normal_balance,
-           EXCLUDED.subledger_type, EXCLUDED.sort_order)
+           EXCLUDED.description, EXCLUDED.sort_order)
        OR master.gl_account.metadata->>'_journal_postable' IS DISTINCT FROM 'false'
        OR master.gl_account.metadata->>'_reporting_taxonomy' IS DISTINCT FROM 'true'
        OR master.gl_account.metadata->>'_reporting_leaf' IS DISTINCT FROM
@@ -568,6 +567,10 @@ BEGIN
     ) THEN
         RAISE EXCEPTION '[210_group_chart] COA-GROUP chart metadata must be internal, non-selectable, and non-postable';
     END IF;
+
+    UPDATE master.chart_of_account
+       SET is_locked=true, updated_at=now(), updated_by=v_su
+     WHERE id=v_coa_id AND is_locked=false;
 
     RAISE NOTICE '[210_group_chart] Internal COA-GROUP taxonomy seeded: % total accounts (% roots, % posting)',
         v_total, v_roots, v_posting;

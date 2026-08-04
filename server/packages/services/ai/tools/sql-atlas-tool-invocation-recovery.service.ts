@@ -124,8 +124,8 @@ export class SqlAtlasToolInvocationRecoveryAdminService {
       const missingActorResult = await sql<MissingActorCountRow>`
         WITH candidate_scopes AS (
           SELECT i.tenant_id, i.plane
-          FROM event.ai_tool_invocation i
-          JOIN event.atlas_run r
+          FROM ai.ai_tool_invocation i
+          JOIN ai.atlas_run r
             ON r.tenant_id = i.tenant_id
            AND r.conversation_id = i.thread_id
            AND r.plane = i.plane
@@ -169,8 +169,8 @@ export class SqlAtlasToolInvocationRecoveryAdminService {
             i.tenant_id,
             i.plane,
             MIN(COALESCE(i.executing_at, i.created_at)) AS oldest_at
-          FROM event.ai_tool_invocation i
-          JOIN event.atlas_run r
+          FROM ai.ai_tool_invocation i
+          JOIN ai.atlas_run r
             ON r.tenant_id = i.tenant_id
            AND r.conversation_id = i.thread_id
            AND r.plane = i.plane

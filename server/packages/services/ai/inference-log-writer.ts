@@ -1,5 +1,5 @@
 /**
- * InferenceLogWriter — writes one row to log.ai_inference_log per runAction call.
+ * InferenceLogWriter — writes one row to ai.ai_inference_log per runAction call.
  *
  * PII redaction is applied to input/output before persist.  Full unredacted
  * content is intended to go to S3 (Phase 7c); here only the redacted snapshot
@@ -62,7 +62,7 @@ export class InferenceLogWriter {
 
     try {
       await sql`
-        INSERT INTO log.ai_inference_log (
+        INSERT INTO ai.ai_inference_log (
           id, tenant_id, log_type,
           inference_type, model_id, model_version, target_engine,
           txn_id, confidence, reasoning_chain,

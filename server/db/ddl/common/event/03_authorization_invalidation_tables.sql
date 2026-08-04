@@ -1,0 +1,41 @@
+-- Durable, plane-local work for propagating authorization cache invalidations.
+CREATE TABLE event.authorization_invalidation_outbox (
+    id                           uuid        NOT NULL DEFAULT shared.uuidv7(),
+    idempotency_key              text        NOT NULL,
+    scope_kind                   text        NOT NULL,
+    tenant_id                    uuid,
+    plane_code                   text,
+    global_epoch                 bigint,
+    tenant_epoch                 bigint,
+    plane_epoch                  bigint,
+    epoch_applied_at             timestamptz,
+    authority_schema             text        NOT NULL DEFAULT 'authz',
+    authority_table              text        NOT NULL,
+    authority_operation          char(1)     NOT NULL,
+    source_row_key               jsonb       NOT NULL,
+    affected_principal_ids       uuid[]      NOT NULL DEFAULT '{}'::uuid[],
+    affected_group_ids           uuid[]      NOT NULL DEFAULT '{}'::uuid[],
+    affected_role_ids            uuid[]      NOT NULL DEFAULT '{}'::uuid[],
+    affected_permission_set_ids  uuid[]      NOT NULL DEFAULT '{}'::uuid[],
+    affected_permission_ids      uuid[]      NOT NULL DEFAULT '{}'::uuid[],
+    affected_scope_ids           uuid[]      NOT NULL DEFAULT '{}'::uuid[],
+    affected_record_ids          uuid[]      NOT NULL DEFAULT '{}'::uuid[],
+    affected_delegation_ids      uuid[]      NOT NULL DEFAULT '{}'::uuid[],
+    effective_at                 timestamptz NOT NULL DEFAULT clock_timestamp(),
+    available_at                 timestamptz NOT NULL DEFAULT clock_timestamp(),
+    status                       text        NOT NULL DEFAULT 'pending',
+    attempts                     integer     NOT NULL DEFAULT 0,
+    max_attempts                 integer     NOT NULL DEFAULT 12,
+    locked_at                    timestamptz,
+    locked_by                    text,
+    locked_until                 timestamptz,
+    last_error                   text,
+    processed_at                 timestamptz,
+    created_at                   timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by                   text        NOT NULL DEFAULT session_user,
+    CONSTRAINT authorization_invalidation_outbox_pkey PRIMARY KEY (id),
+    CONSTRAINT authorization_invalidation_outbox_idempotency_uq UNIQUE (idempotency_key)
+);
+
+COMMENT ON TABLE event.authorization_invalidation_outbox IS
+  'Append-preserving local authorization invalidation delivery state; it is not cross-plane replication or audit history.';

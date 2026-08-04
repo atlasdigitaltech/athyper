@@ -1,0 +1,10 @@
+import { Client } from 'pg';
+const c = new Client({ connectionString: 'postgresql://athyperadmin:athyperadmin@localhost:5432/athyper_neon' });
+await c.connect();
+const t = await c.query(`SELECT table_name FROM information_schema.tables WHERE table_schema='master' ORDER BY table_name`);
+const hasAccounting = t.rows.some(r=>r.table_name==='accounting_profile');
+const hasBudget = t.rows.some(r=>r.table_name==='budget_profile');
+console.log('accounting_profile exists:', hasAccounting, 'budget_profile exists:', hasBudget);
+const d = await c.query(`SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema IN ('master') AND table_name IN ('budget_profile','accounting_profile','tenant') ORDER BY table_name`);
+console.log('target rows', d.rows);
+await c.end();

@@ -119,8 +119,7 @@ function buildBookmarkSnapshot(
     firstColumnDisplay(row, columns, (column) => isNameLikeColumn(column)) ??
     firstColumnDisplay(row, columns, (_column, index) => index === 0) ??
     recordId;
-  const recordCode = firstColumnDisplay(row, columns, (column) => isCodeLikeColumn(column));
-  return { displayName, recordCode };
+  return { displayName };
 }
 
 function firstColumnDisplay(
@@ -144,13 +143,6 @@ function isNameLikeColumn(column: ResolvedColumn): boolean {
     name === "display_name" ||
     name.endsWith("_name") ||
     name.endsWith("_title");
-}
-
-function isCodeLikeColumn(column: ResolvedColumn): boolean {
-  const name = column.name.toLowerCase();
-  return name === "code" ||
-    name === "record_code" ||
-    name.endsWith("_code");
 }
 
 function cx(...classes: Array<string | false | null | undefined>): string {

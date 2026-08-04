@@ -5,6 +5,7 @@ export {
   createStepUpBinding,
   createStepUpService,
   hasFreshKeycloakStepUpAssurance,
+  isDeviceTrusted,
   requireStepUp,
   type ActionClass,
   type StepUpBinding,
@@ -40,12 +41,81 @@ export type {
 } from "./support/atlas-support-session.types.js";
 export { checkPermission, checkPermissionBatch, requireAllow } from "./permission/permission.service.js";
 export { getEffectiveModuleAccess, type EffectiveModuleAccess } from "./permission/module-access.service.js";
-export { createCompanyCodeScopeService, type CompanyCodeAccess, type ScopeResolutionResult } from "./permission/company-code-scope.service.js";
+export {
+  hasCompanyCodeAccess,
+  resolveCompanyCodeScope,
+  type ScopeResolutionResult,
+} from "./permission/company-code-scope.service.js";
 export { resolveParameterSnapshot, getIntParam, getStringParam, type ParameterSnapshot } from "./parameters/parameter-resolver.service.js";
 export { jitProvisionPrincipal, type JitPrincipalInput, type JitPrincipalResult } from "./jit/jit.service.js";
 export {
+  AuthorizationDecisionRouter,
+  AuthorizationV2EnforcementError,
+  type AuthorizationDecisionEvaluators,
+  type AuthorizationDecisionRouterDeps,
+  type AuthorizationShadowComparison,
+  type AuthorizationShadowComparisonStatus,
+} from "./authorization-rollout/authorization-decision-router.js";
+export {
+  AuthorizationRolloutPolicyValidationError,
+  parseAuthorizationRolloutSnapshot,
+  selectAuthorizationRollout,
+  type AuthorizationRolloutPolicyValidationCode,
+} from "./authorization-rollout/authorization-rollout.policy.js";
+export {
+  AuthorizationRolloutService,
+  type AuthorizationRolloutServiceDeps,
+} from "./authorization-rollout/authorization-rollout.service.js";
+export {
+  AUTHORIZATION_MISMATCH_CLASSES,
+  AUTHORIZATION_SHADOW_ACTION_CLASSES,
+  AUTHORIZATION_SHADOW_CONSUMER_PATHS,
+  AuthorizationShadowComparisonService,
+  classifyMismatch,
+  computeAuthorizationImmutableContextSha256,
+  decisionsEqual,
+  isDeterministicallySampled,
+  mustCompare,
+  normalizeDecision,
+  type AuthorizationComparableDecision,
+  type AuthorizationImmutableShadowInput,
+  type AuthorizationMismatchClass,
+  type AuthorizationNormalizedScope,
+  type AuthorizationShadowActionClass,
+  type AuthorizationShadowComparisonRecord,
+  type AuthorizationShadowComparisonServiceDeps,
+  type AuthorizationShadowComparisonSink,
+  type AuthorizationShadowConsumerPath,
+  type AuthorizationShadowDecision,
+  type AuthorizationShadowEvaluators,
+  type AuthorizationTypedScopeKind,
+} from "./authorization-rollout/authorization-shadow-comparison.js";
+export {
+  evaluateAuthorizationCutoverGate,
+  type AuthorizationCutoverGateInput,
+  type AuthorizationCutoverGateResult,
+  type AuthorizationCutoverTransition,
+  type AuthorizationRollbackProjectionStatus,
+} from "./authorization-rollout/authorization-cutover-gates.js";
+export {
+  AUTHORIZATION_ROLLOUT_AUTHORITY_BY_PLANE,
+  AUTHORIZATION_ROLLOUT_MODES,
+  AUTHORIZATION_ROLLOUT_PLANES,
+  type AuthorizationRolloutApproval,
+  type AuthorizationRolloutAuthority,
+  type AuthorizationRolloutContext,
+  type AuthorizationRolloutMode,
+  type AuthorizationRolloutPlane,
+  type AuthorizationRolloutPolicyProvider,
+  type AuthorizationRolloutRule,
+  type AuthorizationRolloutSelection,
+  type AuthorizationRolloutSelectionOptions,
+  type AuthorizationRolloutSelectionReason,
+  type AuthorizationRolloutSnapshot,
+} from "./authorization-rollout/authorization-rollout.types.js";
+export {
   buildEffectivePermissionContext,
-  computePersonaFingerprint,
+  createCanonicalResolver,
   computeProfileHash,
   computeSchemaHash,
   createAdminResolver,
@@ -63,8 +133,7 @@ export {
   requireVerifiedRequestContext,
   storeVerifiedRequestContext,
   VerifiedRequestContextRequiredError,
-  loadPermissionAliasMap,
-  loadPlaneEligiblePermissions,
+  type CanonicalResolverDeps,
   PLANE_KEYS,
   type AdminResolverDeps,
   type CreateResolverRegistryDeps,
@@ -80,3 +149,21 @@ export {
   type ResolverInput,
   type VerifiedRequestContext,
 } from "./permission-context/index.js";
+export * from "./authorization-evaluator/index.js";
+export * from "./authorization-runtime/index.js";
+export {
+  PlaneDatabaseRegistry,
+  createPlaneDatabaseRegistry,
+  type DatabasePlane,
+  type PlaneDatabaseBinding,
+  type PlaneDatabaseRegistryInput,
+  type RuntimeDatabase,
+  type RuntimePlaneKey,
+} from "./runtime/plane-database-registry.js";
+export {
+  SqlIdentityAdmissionRepository,
+  tenantIdsFromOrganizationAliases,
+  type AdmittedIdentity,
+  type IdentityAdmissionRepository,
+  type IdentityCoordinate,
+} from "./identity/identity-admission.repository.js";

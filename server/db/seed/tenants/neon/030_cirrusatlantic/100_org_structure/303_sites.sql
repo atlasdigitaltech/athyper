@@ -1,3 +1,4 @@
+-- seed-pack-version: 2.1.0
 -- ============================================================================
 -- CIRRUSATLANTIC — SITE SEED: Physical locations
 -- ============================================================================
@@ -8,13 +9,13 @@
 --             • CATL-SITE-OPS-01 — Operations & Logistics Hub (depot)
 -- Depends:  000_tenant.sql
 --           200_legal_entities.sql  (company_code CATL)
--- Idempotent: Yes — ON CONFLICT (tenant_id, code) DO UPDATE
+-- Idempotent: Yes — ON CONFLICT ON CONSTRAINT site_code_uq DO UPDATE
 -- ============================================================================
 
 DO $seed$
 DECLARE
     v_tid      uuid;
-    v_su       uuid := '00000000-0000-0000-0000-000000000000';
+    v_su       uuid := nullif(current_setting('app.current_principal_id', true), '')::uuid;
     v_pack     text := '340_catl_org';
     v_version  text := '1.0.0';
     v_meta     jsonb;
@@ -30,6 +31,16 @@ BEGIN
     SELECT id INTO v_tid FROM master.tenant WHERE realm_key = 'athyper' AND code = 'cirrusatlantic';
     IF v_tid IS NULL THEN
         RAISE EXCEPTION '[303_sites] Tenant CIRRUSATLANTIC not found — run 000_tenant.sql first';
+    END IF;
+
+    IF v_su IS NULL OR NOT EXISTS (
+        SELECT 1
+        FROM master.principal p
+        WHERE p.id = v_su
+          AND p.tenant_id = v_tid
+          AND p.status = 'active'
+    ) THEN
+        RAISE EXCEPTION '[303_sites] app.current_principal_id must identify an active tenant-local principal';
     END IF;
 
     v_meta := jsonb_build_object('_seed', jsonb_build_object(
@@ -71,7 +82,7 @@ BEGIN
     -- ════════════════════════════════════════════════════════════════════════
 
     CREATE TEMP TABLE tmp_site (
-        seed_id        uuid DEFAULT shared.uuidv7(),
+        seed_id        uuid,
         company_code   text         NOT NULL,
         code           text         NOT NULL,
         name           text         NOT NULL,
@@ -90,12 +101,14 @@ BEGIN
     -- ════════════════════════════════════════════════════════════════════════
 
     -- ── CATL — CirrusAtlantic Ltd (UK) ──────────────────────────────────
-    INSERT INTO tmp_site (company_code, code, name, description, site_type, sort_order, country_code, timezone_code) VALUES
-    ('CATL', 'CATL-SITE-HQ', 'UK Headquarters',
+    INSERT INTO tmp_site (
+        seed_id, company_code, code, name, description, site_type, sort_order, country_code, timezone_code
+    ) VALUES
+    (md5(format('wave5:neon-catl:sites:%s:catl-site-hq', v_tid))::uuid, 'catl', 'catl-site-hq', 'UK Headquarters',
      'CirrusAtlantic head office — finance, procurement, and management',
      'office', 1, 'GB', 'Europe/London'),
 
-    ('CATL', 'CATL-SITE-OPS-01', 'Operations & Logistics Hub',
+    (md5(format('wave5:neon-catl:sites:%s:catl-site-ops-01', v_tid))::uuid, 'catl', 'catl-site-ops-01', 'Operations & Logistics Hub',
      'Goods receiving, storage, and dispatch depot for UK operations',
      'depot',  2, 'GB', 'Europe/London');
 
@@ -159,7 +172,7 @@ BEGIN
     JOIN master.company_code cc
       ON cc.tenant_id = v_tid AND cc.code = t.company_code
     WHERE t.parent_code IS NULL
-    ON CONFLICT (tenant_id, code) DO UPDATE SET
+    ON CONFLICT ON CONSTRAINT site_code_uq DO UPDATE SET
         name            = EXCLUDED.name,
         description     = EXCLUDED.description,
         company_code_id = EXCLUDED.company_code_id,
@@ -225,7 +238,7 @@ BEGIN
      AND ps.code = t.parent_code
      AND ps.company_code_id = cc.id
     WHERE t.parent_code IS NOT NULL
-    ON CONFLICT (tenant_id, code) DO UPDATE SET
+    ON CONFLICT ON CONSTRAINT site_code_uq DO UPDATE SET
         name            = EXCLUDED.name,
         description     = EXCLUDED.description,
         company_code_id = EXCLUDED.company_code_id,

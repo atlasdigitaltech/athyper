@@ -6,7 +6,7 @@
 DO $seed$
 DECLARE
     v_tid     uuid;
-    v_su      uuid := '00000000-0000-0000-0000-000000000000';
+    v_su      uuid := nullif(trim(current_setting('app.current_principal_id',true)),'')::uuid;
     v_pack    text := '021_domain_intents';
     v_version text := '2.0.0';
 BEGIN

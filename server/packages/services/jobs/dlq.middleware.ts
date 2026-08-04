@@ -2,16 +2,14 @@
  * DLQ Middleware — Phase 3.3
  *
  * Dead-letter queue insert helper for failed background job processing.
- * Each subsystem has its own DLQ table conforming to a common schema:
- *   - log.audit_dlq
- *   - log.notification_dlq
- *   - log.render_dlq
+ * Notification delivery retains its dedicated DLQ. Audit delivery failures are
+ * tracked by ops.job_execution, while render failures live on render_output.
  *
  * DlqRecord interface matches the common columns across all three tables.
  * insertDlq() handles insert against the appropriate table.
  *
- * Usage (in a worker's failed handler):
- *   await insertDlq(db, "log.audit_dlq", {
+ * Usage (in the notification worker's failed handler):
+ *   await insertDlq(db, DLQ_TABLE.NOTIFICATION, {
  *     tenantId:          job.data.tenantId,
  *     queueName:         "jobs-domain-outbox",
  *     jobName:           job.name,
@@ -45,9 +43,7 @@ export interface DlqRecord {
 
 /** Well-known DLQ table names */
 export const DLQ_TABLE = {
-  AUDIT:        "log.audit_dlq",
   NOTIFICATION: "log.notification_dlq",
-  RENDER:       "log.render_dlq",
 } as const;
 
 export type DlqTableName = (typeof DLQ_TABLE)[keyof typeof DLQ_TABLE];

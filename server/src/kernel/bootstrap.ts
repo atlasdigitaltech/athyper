@@ -30,7 +30,7 @@ import {
   recordTenantStampSkipped,
 } from "../metrics.js";
 import { applyAuthFlagPostureValidation } from "./auth-flag-validator.js";
-import { tryGetContext } from "./request-context.js";
+import { runWithJobContext, tryGetContext } from "./request-context.js";
 import { createRedisClient, type RedisClientOptions } from "@athyper/adapter-memory-cache";
 import {
   instrumentFrameworkRedisClient,
@@ -93,8 +93,6 @@ import {
 } from "@athyper/svc-search";
 import { createRenderService } from "@athyper/server-foundation/render/render.service";
 import { createHttpConnectorClient, createOAuth2TokenCache } from "@athyper/svc-integration";
-import { createPersonaRegistryService } from "../../packages/services/iam/persona-registry.service.js";
-import { createCompanyCodeScopeService } from "../../packages/services/iam/permission/company-code-scope.service.js";
 import { createMentionService } from "../../packages/services/collab/mention.service.js";
 import { createNotificationOrchestrator } from "../../packages/services/platform/notification-orchestrator.js";
 
@@ -374,6 +372,23 @@ export async function bootstrap(
     ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
   } as never);
   lifecycle.onShutdown(() => db.close());
+
+  const platformDb = config.platformDb?.url
+    ? createDbAdapter({
+        connectionString: config.platformDb.url,
+        poolMax: config.platformDb.poolMax ?? 2,
+        tenantIdProvider: () => tryGetContext()?.tenantId,
+        onSkippedStamp: onTenantStampSkipped,
+        onRollbackFailure: onTenantStampRollbackFailure,
+        performanceObserver: {
+          onPoolAcquire: observeFrameworkPoolWait,
+          onQuery: observeFrameworkSql,
+          onTransaction: observeFrameworkTransaction,
+        },
+        ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
+      } as never)
+    : null;
+  if (platformDb) lifecycle.onShutdown(() => platformDb.close());
 
   const meshDb = config.meshDb?.url
       ? createDbAdapter({
@@ -871,6 +886,7 @@ export async function bootstrap(
     topicHandlers,
     channelHandlers,
     emailFromMap,
+    runWithJobContext,
     gotenberg,
     renderStorage: objectStorage ?? undefined,
     tikaUrl,
@@ -930,7 +946,7 @@ export async function bootstrap(
       logger,
     });
     lifecycle.onShutdown(() => webhookRedis.disconnect());
-    webhookDelivery = createWebhookDeliveryWorker(_db as never, webhookRedis, logger);
+    webhookDelivery = createWebhookDeliveryWorker(_db as never, webhookRedis, logger, runWithJobContext);
     lifecycle.onShutdown(async () => {
       await Promise.all([
         webhookDelivery!.worker.close(),
@@ -1009,11 +1025,8 @@ export async function bootstrap(
   // (constructed above before createJobsService).
   const renderService = createRenderService(_db, pdfRenderer, objectStorage);
 
-  // ─── Phase 6.2 — Persona Registry ───────────────────────────────────────────
-  const personaRegistry = createPersonaRegistryService(_db);
 
   // ─── Phase 6.3 — Company-Code Scope Resolution ───────────────────────────────
-  const companyCodeScope = createCompanyCodeScopeService(_db);
 
   // ─── Phase 6.4 — Notification Orchestrator + Mention Service ─────────────────
   // NotificationOrchestrator requires the notifications BullMQ queue.
@@ -1065,6 +1078,7 @@ export async function bootstrap(
     logger,
     lifecycle,
     db,
+    platformDb,
     meshDb,
     redis,
     auth,
@@ -1090,10 +1104,7 @@ export async function bootstrap(
     // Phase 5.3 — HTTP connector + OAuth2 token cache
     httpConnector,
     oauth2TokenCache,
-    // Phase 6.2 — Persona Registry
-    personaRegistry,
     // Phase 6.3 — Company-Code Scope Resolution
-    companyCodeScope,
     // Phase 6.4 — Notification Orchestrator + Mention Service
     notificationOrchestrator,
     mentionService,

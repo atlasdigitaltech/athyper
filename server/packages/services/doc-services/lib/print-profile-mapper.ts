@@ -21,8 +21,7 @@ interface PrintProfileRow {
   orientation:  string;
   margins:      string;
   header_footer: boolean;
-  watermark_enabled?: boolean;
-  watermark_text?: string | null;
+  background_graphics: boolean;
 }
 
 export function mapProfileToRenderOptions(profile: PrintProfileRow): PdfRenderOptions {
@@ -33,7 +32,7 @@ export function mapProfileToRenderOptions(profile: PrintProfileRow): PdfRenderOp
   return {
     format:             (profile.paper_size as PdfRenderOptions["format"]) ?? "A4",
     landscape,
-    printBackground:    true,
+    printBackground:    profile.background_graphics,
     displayHeaderFooter: profile.header_footer,
     margin: {
       top:    margin + "in",

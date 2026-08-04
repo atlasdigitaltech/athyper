@@ -103,7 +103,6 @@ function toPermissionDecision(row: Record<string, unknown>) {
     id:                row["id"],
     tenantId:          row["tenant_id"],
     principalId:       row["principal_id"],
-    personaCode:       row["persona_code"] ?? null,
     permissionId:      row["permission_id"] ?? null,
     permissionCode:    row["permission_code"] ?? null,
     featureId:         row["feature_id"] ?? null,

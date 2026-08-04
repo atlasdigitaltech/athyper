@@ -22,7 +22,6 @@ export type BookmarkRequest = (
 
 export interface BookmarkSnapshot {
   displayName?: string | null;
-  recordCode?: string | null;
 }
 
 export interface BookmarkListItem {
@@ -87,8 +86,7 @@ async function toggleBookmarkRequest(
     body:    JSON.stringify({
       entity_code:  entityCode,
       record_id:    recordId,
-      display_name: snapshot?.displayName ?? undefined,
-      record_code:  snapshot?.recordCode ?? undefined,
+      label_snapshot: snapshot?.displayName ?? undefined,
     }),
   });
   if (!res.ok) throw new Error("Bookmark toggle failed");

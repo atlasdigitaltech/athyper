@@ -239,11 +239,12 @@ function TrustedDevicesPanel() {
   const [deviceName, setDeviceName]       = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  const { data, isLoading } = useQuery<{ devices: TrustedDevice[] }>({
+  const { data, isLoading, isError } = useQuery<{ devices: TrustedDevice[]; ttl_days: number }>({
     queryKey: ["trusted-devices"],
     queryFn: async () => {
       const res = await fetch("/api/iam/trusted-devices");
-      return res.ok ? res.json() : { devices: [] };
+      if (!res.ok) throw new Error("Failed to load trusted devices");
+      return res.json();
     },
     staleTime: 30_000,
   });
@@ -255,15 +256,25 @@ function TrustedDevicesPanel() {
       const res = await fetch("/api/iam/trusted-devices", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-        body: JSON.stringify({ device_name: deviceName.trim() || undefined, ttl_days: 30 }),
+        body: JSON.stringify({ device_name: deviceName.trim() || undefined }),
       });
       if (res.status === 403) {
         const json = await res.json().catch(() => ({})) as { error?: string };
-        if (json.error === "STEP_UP_REQUIRED") { setAddDialogOpen(false); setStepUpOpen(true); return; }
+        if (json.error === "STEP_UP_REQUIRED") {
+          setAddDialogOpen(false);
+          setStepUpOpen(true);
+          return false;
+        }
       }
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).message ?? "Failed");
+      return true;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["trusted-devices"] }); setAddDialogOpen(false); setDeviceName(""); },
+    onSuccess: (created) => {
+      if (!created) return;
+      qc.invalidateQueries({ queryKey: ["trusted-devices"] });
+      setAddDialogOpen(false);
+      setDeviceName("");
+    },
   });
 
   const revokeDevice = useMutation({
@@ -311,11 +322,16 @@ function TrustedDevicesPanel() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Trusted devices skip MFA for 30 days. Revoke any device you don't recognize.
+        Trusted devices skip eligible step-up checks for {data?.ttl_days ?? 30} days.
+        Revoke any device you don&apos;t recognize.
       </p>
 
       {isLoading ? (
         <div className="space-y-2">{[...Array(2)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}</div>
+      ) : isError ? (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4 text-center">
+          <p className="text-xs text-destructive">Trusted devices could not be loaded. Refresh or contact support.</p>
+        </div>
       ) : devices.length === 0 ? (
         <div className="rounded-md border border-dashed border-border p-4 text-center">
           <Monitor className="mx-auto mb-1.5 h-6 w-6 text-muted-foreground/30" />
@@ -364,7 +380,9 @@ function TrustedDevicesPanel() {
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Trust This Device</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
-            <p className="text-sm text-muted-foreground">Label this device for easy identification. Trusted for 30 days.</p>
+            <p className="text-sm text-muted-foreground">
+              Label this device for easy identification. Trusted for {data?.ttl_days ?? 30} days.
+            </p>
             <div className="space-y-1">
               <Label className="text-xs">Device Label</Label>
               <Input value={deviceName} onChange={(e) => setDeviceName(e.target.value)} placeholder="e.g. Work MacBook" />
@@ -529,7 +547,7 @@ export function MfaSection({ active }: { active: boolean }) {
         <ul className="list-disc list-inside space-y-0.5">
           <li>Removing a method requires a fresh Keycloak MFA step-up.</li>
           <li>If you lose access, contact your administrator to re-enroll.</li>
-          <li>Trusted devices expire after 30 days.</li>
+          <li>Trusted devices expire after the tenant-configured trust period.</li>
           <li>High-risk actions (delegation, session rebuild) always require step-up regardless of trusted device.</li>
           <li>Trusted devices do not bypass step-up for security_change actions.</li>
           <li>WebAuthn / passkeys require browser and device support.</li>

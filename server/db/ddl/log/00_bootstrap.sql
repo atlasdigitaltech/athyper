@@ -1,6 +1,5 @@
 -- ============================================================================
 -- log/00_bootstrap.sql
--- Concept: Audit Bootstrap — no pre-table functions required for this schema
--- Depends on: 01_schemas/001_schemas.sql
--- Note: No bootstrap functions required for the log schema.
+-- Pre-table schema types and sequences.
+-- Generated from the live Neon database log schema. Do not hand-edit.
 -- ============================================================================

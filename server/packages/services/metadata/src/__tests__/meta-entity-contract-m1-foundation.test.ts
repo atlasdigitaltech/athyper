@@ -13,7 +13,7 @@ const functionDdl = source("../../../../../db/ddl/control/05zz_meta_entity_contr
 const triggerDdl = source("../../../../../db/ddl/control/06zz_meta_entity_contract_m1.sql");
 const rlsDdl = source("../../../../../db/ddl/control/08zz_meta_entity_contract_m1.sql");
 const finalSeed = source("../../../../../db/seed/platform/003_control/101_control_meta_entity_contract_v2.sql");
-const permissionSeed = source("../../../../../db/seed/platform/002_permission_model/017_permission.sql");
+const permissionSeed = source("../../../../../db/ddl/planes/athyper/authz/12_compiled_permission_reference_seed.sql");
 const contractRoute = source("../../routes/studio-contract-v2.route.ts");
 const versionRoute = source("../../routes/studio-version.route.ts");
 

@@ -53,8 +53,8 @@ describe("Finance FX Slice 2 contract",()=>{
 
   it("enforces permissions and stable tenant, Legal Entity, and Company scope errors",()=>{
     const route=read("server/packages/services/finance/routes/finance-fx-setup.route.ts");
-    const permissions=read("server/db/seed/platform/002_permission_model/017_permission.sql");
-    const grants=read("server/db/seed/platform/002_permission_model/018_persona_permission.sql");
+    const permissions=read("server/db/ddl/planes/neon/authz/12_compiled_permission_reference_seed.sql");
+    const grants=read("server/db/seed/blueprints/universal/990_validation/998_canonical_neon_authority.sql");
     expect(route).toContain('checkPermission(deps.db');
     expect(route).toContain("FX_PERMISSION_DENIED");
     expect(route).toContain("FX_TENANT_SCOPE_DENIED");

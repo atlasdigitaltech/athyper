@@ -1,0 +1,17 @@
+CREATE INDEX sourcing_event_org_status_idx ON document.sourcing_event(tenant_id,operating_organization_id,status,close_at);
+CREATE INDEX sourcing_event_central_company_idx ON document.sourcing_event(tenant_id,central_buyer_company_id) WHERE central_buyer_company_id IS NOT NULL;
+CREATE INDEX sourcing_event_requested_by_idx ON document.sourcing_event(tenant_id,requested_by);
+CREATE UNIQUE INDEX sourcing_event_one_lead_idx ON document.sourcing_event_company(tenant_id,sourcing_event_id)
+    WHERE participation_role='lead_buyer' AND status='active';
+CREATE INDEX sourcing_event_company_company_idx ON document.sourcing_event_company(tenant_id,company_code_id,status);
+CREATE INDEX sourcing_event_demand_company_idx ON document.sourcing_event_demand(tenant_id,demand_company_code_id,status);
+CREATE INDEX sourcing_event_demand_source_idx ON document.sourcing_event_demand(tenant_id,purchase_requisition_line_id,status);
+CREATE INDEX sourcing_event_award_event_status_idx ON document.sourcing_event_award(tenant_id,sourcing_event_id,status);
+CREATE INDEX sourcing_event_award_supplier_idx ON document.sourcing_event_award(tenant_id,supplier_id,status);
+CREATE INDEX sourcing_event_award_allocation_demand_idx ON document.sourcing_event_award_allocation(tenant_id,sourcing_event_demand_id,status);
+CREATE INDEX sourcing_event_award_allocation_company_idx ON document.sourcing_event_award_allocation(tenant_id,company_code_id,status);
+CREATE INDEX sourcing_event_award_allocation_commitment_idx ON document.sourcing_event_award_allocation(tenant_id,output_commitment_id) WHERE output_commitment_id IS NOT NULL;
+CREATE INDEX sourcing_event_ic_source_idx ON document.sourcing_event_intercompany_allocation(tenant_id,source_company_code_id,status);
+CREATE INDEX sourcing_event_ic_beneficiary_idx ON document.sourcing_event_intercompany_allocation(tenant_id,beneficiary_company_code_id,status);
+CREATE INDEX sourcing_event_ic_commitment_idx ON document.sourcing_event_intercompany_allocation(tenant_id,commitment_id);
+CREATE INDEX sourcing_event_ic_journal_idx ON document.sourcing_event_intercompany_allocation(tenant_id,posting_journal_entry_id) WHERE posting_journal_entry_id IS NOT NULL;

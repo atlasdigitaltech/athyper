@@ -141,8 +141,8 @@ function projectPartnerSafe<T extends Record<string, unknown>>(
 
 export function createMeshInboxRoutes(router: Router, deps: MeshInboxRoutesDeps): Router {
   const { db, meshDb: _meshDb, auth, logger } = deps;
-  // Resolve once; consumers don't need to know which client is which.
-  const meshDb = _meshDb ?? db;
+  if (!_meshDb) throw new Error("MESH_DATABASE_CONFIGURATION_REQUIRED");
+  const meshDb = _meshDb;
 
   // ── GET /api/mesh/inbox ─────────────────────────────────────────────────────
   // Returns a flat list of {entity, id, code, status, amount_total} for every
@@ -201,14 +201,13 @@ export function createMeshInboxRoutes(router: Router, deps: MeshInboxRoutesDeps)
               (CASE WHEN ${entity}::text IN ('purchase_invoice','purchase_order','sales_invoice','sales_order')
                     THEN t.amount_total ELSE NULL END)::numeric AS amount_total
             FROM ${sql.raw(`master.${entity}`)} t
-            JOIN master.access_grant ag
+            JOIN master.auth_record_acl ag
               ON ag.tenant_id    = ${partner.tenantId}::uuid
              AND ag.principal_id = ${partner.principalId}::uuid
              AND ag.status       = 'active'
-             AND (ag.expires_at IS NULL OR ag.expires_at > now())
-             AND ag.effect       = 'allow'
-             AND ag.resource_type = ${entity}
-             AND ag.resource_id   = t.id::text
+             AND (ag.effective_until IS NULL OR ag.effective_until > now())
+             AND ag.subject_kind = 'principal'
+             AND ag.record_id = t.id
            WHERE t.tenant_id = ${partner.tenantId}::uuid
            ORDER BY t.id
            LIMIT ${limit}
@@ -248,14 +247,14 @@ export function createMeshInboxRoutes(router: Router, deps: MeshInboxRoutesDeps)
             ag.account_id::text  AS account_id,
             na.account_code,
             na.display_name,
-            ag.role_code,
-            ag.status,
-            ag.granted_at::text  AS granted_at
-          FROM mesh.account_grant ag
+            ag.source_type AS role_code,
+            'active'::text AS status,
+            ag.effective_from::text AS granted_at
+          FROM mesh.auth_current_plane_membership_v ag
           JOIN mesh.network_account na ON na.id = ag.account_id
          WHERE ag.principal_id = ${partner.principalId}::uuid
-           AND ag.status       = 'active'
-         ORDER BY ag.granted_at DESC
+           AND ag.plane_code   = 'mesh'
+         ORDER BY ag.effective_from DESC
       `.execute(meshDb);
 
       res.json({ items: bindings.rows });
@@ -289,13 +288,12 @@ export function createMeshInboxRoutes(router: Router, deps: MeshInboxRoutesDeps)
       const rows = await sql<Record<string, unknown>>`
         SELECT t.*
           FROM ${sql.raw(`master.${entity}`)} t
-          JOIN master.access_grant ag
+          JOIN master.auth_record_acl ag
             ON ag.tenant_id    = ${partner.tenantId}::uuid
            AND ag.principal_id = ${partner.principalId}::uuid
            AND ag.status       = 'active'
-           AND ag.effect       = 'allow'
-           AND ag.resource_type = ${entity}
-           AND ag.resource_id   = t.id::text
+           AND ag.subject_kind = 'principal'
+           AND ag.record_id = t.id
          WHERE t.id = ${id}::uuid
            AND t.tenant_id = ${partner.tenantId}::uuid
          LIMIT 1

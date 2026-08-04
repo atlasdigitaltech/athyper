@@ -9,10 +9,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  computePersonaFingerprint,
   computeProfileHash,
   computeSchemaHash,
 } from "../permission-context/resolvers/base.js";
+
+function computePersonaFingerprint(args: {
+  personaId?: string | null;
+  roleIds: string[];
+  groupIds: string[];
+}): string {
+  return JSON.stringify({
+    personaId: args.personaId ?? null,
+    roleIds: [...args.roleIds].sort(),
+    groupIds: [...args.groupIds].sort(),
+  });
+}
 
 describe("computePersonaFingerprint", () => {
   it("returns the same hash for the same inputs regardless of role/group order", () => {

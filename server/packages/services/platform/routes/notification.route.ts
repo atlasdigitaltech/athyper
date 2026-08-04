@@ -75,7 +75,7 @@ function isPlatformAdmin(claims: Record<string, unknown>): boolean {
   return Array.isArray(roles) && (roles as string[]).includes("platform-admin");
 }
 
-const SYSTEM_ACTOR = "00000000-0000-7000-a000-000000000001";
+const SYSTEM_ACTOR = "00000000-0000-0000-0000-000000000000";
 const DEFAULT_CHANNELS = ["in_app"];
 const ALLOWED_CHANNELS = new Set(["in_app", "email", "sms", "push", "webhook", "whatsapp"]);
 const DEFAULT_MAX_PUSH_SUBSCRIPTIONS_PER_PRINCIPAL = 10;

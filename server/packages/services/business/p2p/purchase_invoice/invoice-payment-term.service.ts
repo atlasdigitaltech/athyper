@@ -143,6 +143,7 @@ export async function evaluatePaymentTerm(
       FROM master.payment_term
      WHERE id        = ${paymentTermId}
        AND tenant_id = ${tenantId}
+       AND status    = 'active'
      LIMIT 1
   `.execute(db);
 
@@ -170,7 +171,6 @@ export async function evaluatePaymentTerm(
       FROM master.payment_term_clause
      WHERE payment_term_id = ${paymentTermId}
        AND tenant_id       = ${tenantId}
-       AND is_active        = true
      ORDER BY sequence_no
   `.execute(db);
 

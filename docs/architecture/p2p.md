@@ -476,7 +476,7 @@ reference the plan.
   - `ledger.commitment_consume(kind=ZERO)` â€” seeds
     `commitment_fulfillment(0)` baseline.
   - `ledger.budget_commit` â€” transfers from PR-reserved to PO-committed.
-- Policy gate: `budget_check` (synchronous; reads `budget_check_config`).
+- Policy gate: `budget_check` (synchronous; resolves `control.budget_control_policy` and reads authoritative document allocations plus ledger balances).
 - Notification: `p2p.po.approved`.
 
 ### Gâ€“H: Place order; supplier confirms (POC)
@@ -1206,5 +1206,4 @@ to `Topbar`.
 - Smoke script + integration tests: delete the three new test files.
   Pure read-only against the live DB (cleanup in `afterAll`) â€” no
   rollback needed beyond file removal.
-
 

@@ -134,7 +134,7 @@ export const FINANCE_ENTITY_DIRECTORY: readonly FinanceEntityDirectoryGroup[] = 
       ["payment_method_interface_binding", "Payment Method Interface Bindings", "Payments"],
       ["payment_settlement_rule", "Payment Settlement Rules", "Payments"],
       ["asset_class_book_policy_template", "Asset Book Policy Templates", "Assets"],
-      ["budget_check_config", "Budget Check Configuration", "Planning"],
+      ["budget_control_policy", "Budget Control Policy", "Planning"],
       ["planning_driver", "Planning Drivers", "Planning"],
       ["planning_driver_formula", "Planning Driver Formulas", "Planning"],
       ["planning_driver_assumption", "Planning Driver Assumptions", "Planning"],

@@ -1,6 +1,11 @@
 -- ============================================================================
 -- control/00_bootstrap.sql
--- Concept: Control Bootstrap — no pre-table functions required for this schema
--- Depends on: 01_schemas/001_schemas.sql
--- Note: No bootstrap functions required for the control schema.
+-- Pre-table schema types and sequences.
+-- Generated from the live Neon control schema. Do not hand-edit.
 -- ============================================================================
+
+CREATE TYPE "control"."auth_plane_code" AS ENUM (
+  'neon',
+  'admin',
+  'all'
+);

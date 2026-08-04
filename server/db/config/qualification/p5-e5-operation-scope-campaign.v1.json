@@ -1,0 +1,25 @@
+{
+  "contractVersion": "p5-e5.operation-scope-campaign.v1",
+  "qualification": {
+    "minimumSamplesPerCoordinate": 1000,
+    "minimumObservationHours": 24,
+    "maximumMismatches": 0,
+    "maximumCandidateErrors": 0,
+    "timestamps": "database_observed_real_time_only"
+  },
+  "cohorts": [
+    { "code": "ordinary_allow", "requires": ["entity_resource_binding", "assignable_non_resource_scope"] },
+    { "code": "explicit_deny", "requires": ["entity_resource_binding"] },
+    { "code": "delegation_allow", "requires": ["is_delegable"] },
+    { "code": "record_acl_allow", "requires": ["is_shareable", "resource_scope"] },
+    { "code": "tenant_binding_override", "requires": ["tenant_specific_binding"] },
+    { "code": "exception_override_allow", "requires": ["is_overridable"] },
+    { "code": "mfa_required", "requires": ["requires_mfa"] },
+    { "code": "sod_failed", "requires": ["requires_sod"] },
+    { "code": "collection_allow", "requires": ["collection_binding"] },
+    { "code": "collection_deny_filter", "requires": ["collection_binding"] },
+    { "code": "resource_dimension_match", "requires": ["entity_resource_binding", "non_tenant_scope"] },
+    { "code": "resource_dimension_mismatch", "requires": ["entity_resource_binding", "non_tenant_scope"] }
+  ],
+  "activationPolicy": "Each exact plane/entity/operation/release/artifact coordinate must satisfy every applicable cohort and the aggregate database qualification gate. Missing applicable coverage blocks activation."
+}

@@ -71,17 +71,6 @@ export type MeProfile = z.infer<typeof MeProfileSchema>;
 
 // ── Identity ────────────────────────────────────────────────────
 
-export const MeIdentityPersonaSchema = z.object({
-  persona_id: UuidSchema,
-  persona_code: z.string(),
-  persona_name: z.string(),
-  expires_at: z.string().datetime().nullable(),
-  assigned_by: UuidSchema.nullable(),
-  created_at: z.string().datetime().nullable(),
-});
-
-export type MeIdentityPersona = z.infer<typeof MeIdentityPersonaSchema>;
-
 export const MeIdentityGroupRoleSchema = z.object({
   role_code: z.string(),
   role_name: z.string(),
@@ -109,7 +98,7 @@ export const MeIdentityTeamSchema = z.object({
   name: z.string(),
   team_type: z.string().nullable(),
   role_in_team: z.string().nullable(),
-  effective_from: z.string().datetime().nullable(),
+  joined_at: z.string().datetime().nullable(),
 });
 
 export type MeIdentityTeam = z.infer<typeof MeIdentityTeamSchema>;
@@ -141,7 +130,6 @@ export const MeIdentityAccessibleCompanySchema = z.object({
 export type MeIdentityAccessibleCompany = z.infer<typeof MeIdentityAccessibleCompanySchema>;
 
 export const MeIdentitySchema = z.object({
-  persona: MeIdentityPersonaSchema.nullable(),
   groups: z.array(MeIdentityGroupSchema),
   teams: z.array(MeIdentityTeamSchema),
   delegations_received: z.array(MeIdentityDelegationSchema),

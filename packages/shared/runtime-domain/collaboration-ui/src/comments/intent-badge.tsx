@@ -2,7 +2,7 @@
 
 /**
  * IntentBadge — pill that renders a comment's semantic role
- * (master.comment_intent).
+ * (document.comment_intent).
  *
  * The label, icon and tone all come from the lookup domain — nothing here
  * hardcodes intent codes. `general` is treated as the "no badge" baseline.

@@ -27,7 +27,7 @@ function discoverPackageFiles(directory) {
 const packageFiles = [...new Set([
   ...tracked.filter((file) => existsSync(resolve(root, file))),
   // Include new, not-yet-tracked workspace packages in every ownership area.
-  // Restricting discovery to packages/product made generated ownership output
+  // Restricting discovery to packages/products made generated ownership output
   // silently omit new shared packages until after their first commit.
   ...discoverPackageFiles(resolve(root, "packages")),
 ])];
@@ -83,7 +83,7 @@ const categoryValues = [
 ];
 
 function appFromPath(path) {
-  const match = path.match(/^(?:apps|packages\/apps|packages\/product)\/(neon|admin|mesh)(?:\/|$)/);
+  const match = path.match(/^(?:apps|packages\/products)\/(neon|admin|mesh)(?:\/|$)/);
   return match?.[1] ?? null;
 }
 
@@ -91,8 +91,7 @@ function classify(path, manifest) {
   if (path.startsWith("packages/product-deprecated/")) return "Deprecated";
   if (path.startsWith("server/")) return "Server-only";
   if (path.startsWith("apps/")) return "Application composition";
-  if (path.startsWith("packages/apps/")) return "Product-specific";
-  if (path.startsWith("packages/product/")) return "Product-specific";
+  if (path.startsWith("packages/products/")) return "Product-specific";
   if (path.startsWith("packages/domain/")) return "Shared domain";
   if (path.startsWith("tooling/") || path === "package.json") return "Shared platform";
 
@@ -151,9 +150,6 @@ function proposedPath(item, duplicateItems) {
   if (item.isSourceAlias) return item.canonicalPath;
   const activeCandidate = duplicateItems.find((candidate) => activeSet.has(candidate.path));
   if (activeCandidate) return activeCandidate.path;
-  if (item.path.startsWith("packages/apps/")) {
-    return item.path.replace(/^packages\/apps\/(neon|admin|mesh)/, "packages/product/$1");
-  }
   if (item.path.startsWith("packages/product-deprecated/")) return "DELETE (deprecated package tree)";
   return item.path;
 }
@@ -164,7 +160,6 @@ function migration(item, category, duplicateItems) {
   if (duplicateItems.length > 1) {
     return activeSet.has(item.path) ? "Canonical candidate; consolidate duplicate package names" : "Retired duplicate; remove after canonical verification";
   }
-  if (item.path.startsWith("packages/apps/")) return "Planned move to packages/product/<app>";
   if (item.path.startsWith("packages/domain/")) return "Review shared-domain placement";
   return "Inventory complete; no move in Phase 1";
 }
@@ -251,7 +246,7 @@ const markdown = [
   "## Phase 1 decision rules",
   "",
   "- `packages/shared/*` is the canonical shared source area.",
-  "- `packages/product/<app>/*` is the destination for product-specific reusable packages.",
+  "- `packages/products/<app>/*` is the destination for product-specific reusable packages (`app`, `brand`, `shell`, `navigation`, `route-manifest`, `i18n`, `command-hub`, `runtime`).",
   "- `apps/<app>` remains application composition and deployment entrypoint code.",
   "- `server/packages/*` remains server-only.",
   "- `packages/product-deprecated/*` is never a dependency authority and is scheduled for retirement.",

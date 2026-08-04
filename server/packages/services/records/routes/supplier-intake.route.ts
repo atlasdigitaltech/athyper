@@ -1057,7 +1057,7 @@ export function createSupplierIntakeRoute(router: Router, deps: SupplierIntakeDe
                 ?? bpFields["legal_name"]
                 ?? bpFields["name"]
                 ?? supplierCode,
-              account_id_type: ba["account_id_type"] ?? "LOCAL",
+              account_id_type: String(ba["account_id_type"] ?? "local").toLowerCase(),
               bic_override: ba["bic_override"] ?? null,
               is_verified: false,
               tenant_id: tenantId,

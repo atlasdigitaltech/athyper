@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- ATHYPER GROUP - COMPANY CODE CHART ASSIGNMENTS
 -- ============================================================================
 -- File:     201_company_chart_assignments.sql
@@ -34,7 +34,7 @@ BEGIN
     END IF;
 
     CREATE TEMP TABLE tmp_cc_map ON COMMIT DROP AS
-        SELECT code, id, regulatory_framework
+        SELECT code, id, country_code
         FROM master.company_code
         WHERE tenant_id = v_tid
           AND status = 'active';
@@ -56,7 +56,7 @@ BEGIN
     SELECT
         cc.code,
         CASE
-            WHEN cc.regulatory_framework = 'us_gaap'
+            WHEN cc.country_code = 'US'
              AND EXISTS (
                  SELECT 1
                  FROM tmp_coa_map coa
@@ -182,3 +182,6 @@ BEGIN
     RAISE NOTICE '[201_company_assignments] athyper: % primary operating COA assignments', v_oper;
 
 END $seed$;
+
+
+

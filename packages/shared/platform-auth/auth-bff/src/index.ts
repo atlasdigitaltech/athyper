@@ -7,7 +7,8 @@ import {
   isPlaneKey,
   isRealmKey,
   isSupportSession,
-  kcSessionReverseKey,
+  realmKcSessionReverseKey,
+  realmSubjectSessionsKey,
   normalizeRealmKey,
   pkceStateKey,
   refreshLockKey,
@@ -20,7 +21,6 @@ import {
   type PlaneKey,
   type RealmKey,
   type SessionNamespace,
-  userSessionsKey,
 } from "@athyper/session-plane";
 import { createSessionRedisClient as getSessionRedis } from "@athyper/session-store";
 import {
@@ -317,6 +317,7 @@ type StepUpActionClass =
   | "iam_admin"
   | "tenant_settings"
   | "delegation_accept"
+  | "metadata_release"
   | "payment_release"
   | "security_change";
 
@@ -324,6 +325,7 @@ const STEP_UP_ACTION_CLASSES: readonly StepUpActionClass[] = [
   "iam_admin",
   "tenant_settings",
   "delegation_accept",
+  "metadata_release",
   "payment_release",
   "security_change",
 ];
@@ -2433,13 +2435,14 @@ export async function handleCallback(plane: PlaneKey, request: NextRequest): Pro
 
     const sessionPolicy = await resolveAuthSessionPolicy(plane, session);
     await redis.set(sessKey(sessionNamespace, sid), JSON.stringify(session), { EX: sessionPolicy.absoluteTtlSeconds });
-    await redis.sAdd(userSessionsKey(sessionNamespace, sub), sid);
-    await redis.expire(userSessionsKey(sessionNamespace, sub), sessionPolicy.absoluteTtlSeconds);
+    const subjectIndex = realmSubjectSessionsKey(realmKey, sub);
+    await redis.sAdd(subjectIndex, `${sessionNamespace}:${sid}`);
+    await redis.expire(subjectIndex, sessionPolicy.absoluteTtlSeconds);
 
     // Reverse index for KC back-channel logout: maps KC session → app sessions
     // so a single KC logout token can wipe all plane sessions for that user.
     if (session.keycloakSessionId) {
-      const reverseKey = kcSessionReverseKey(session.keycloakSessionId);
+      const reverseKey = realmKcSessionReverseKey(realmKey, session.keycloakSessionId);
       await redis.sAdd(reverseKey, `${sessionNamespace}:${sid}`);
       await redis.expire(reverseKey, sessionPolicy.absoluteTtlSeconds);
     }
@@ -2972,11 +2975,12 @@ export async function handleRefresh(plane: PlaneKey, request: NextRequest): Prom
     // pointer and find the valid session, preventing spurious 401s during refresh.
     await redis.set(sidRotationKey(session.sessionNamespace, sid), newSid, { EX: sessionPolicy.refreshRotationGraceSeconds });
     await redis.del(sessKey(session.sessionNamespace, sid));
-    await redis.sRem(userSessionsKey(session.sessionNamespace, session.userId), sid);
-    await redis.sAdd(userSessionsKey(session.sessionNamespace, session.userId), newSid);
-    await redis.expire(userSessionsKey(session.sessionNamespace, session.userId), sessionTtl);
+    const subjectIndex = realmSubjectSessionsKey(session.realmKey, session.userId);
+    await redis.sRem(subjectIndex, `${session.sessionNamespace}:${sid}`);
+    await redis.sAdd(subjectIndex, `${session.sessionNamespace}:${newSid}`);
+    await redis.expire(subjectIndex, sessionTtl);
     if (updated.keycloakSessionId) {
-      const reverseKey = kcSessionReverseKey(updated.keycloakSessionId);
+      const reverseKey = realmKcSessionReverseKey(updated.realmKey, updated.keycloakSessionId);
       await redis.sRem(reverseKey, `${updated.sessionNamespace}:${sid}`).catch(() => {});
       await redis.sAdd(reverseKey, `${updated.sessionNamespace}:${newSid}`).catch(() => {});
       await redis.expire(reverseKey, sessionTtl).catch(() => {});
@@ -3178,6 +3182,9 @@ export async function handleLogout(plane: PlaneKey, request: NextRequest): Promi
         const iamCleanup = await notifyIamSubjectCleanup({
           accessToken: session.accessToken,
           subjectId: session.userId,
+          planeKey: session.planeKey,
+          realmKey: session.realmKey,
+          sessionId: effectiveSid,
           reason: "manual_logout",
           requestId,
           auditContext: sessionAuditScope(session),
@@ -3675,6 +3682,9 @@ async function destroySessionWithRefreshRevocation(
   const iamCleanup = await notifyIamSubjectCleanup({
     accessToken: session.accessToken,
     subjectId: session.userId,
+    planeKey: session.planeKey,
+    realmKey: session.realmKey,
+    sessionId: sid,
     reason,
     requestId,
     auditContext: sessionAuditScope(session),
@@ -3701,7 +3711,7 @@ async function destroySession(
   redis: RedisClient,
   namespace: string,
   sid: string,
-  session?: Pick<V4Session, "userId" | "keycloakSessionId">,
+  session?: Pick<V4Session, "userId" | "keycloakSessionId" | "realmKey">,
   reason: SessionTerminationReason = "manual_logout",
 ): Promise<void> {
   clearVerifiedSessionCache(namespace, sid);
@@ -3710,6 +3720,7 @@ async function destroySession(
     sid,
     userId: session?.userId,
     keycloakSessionId: session?.keycloakSessionId,
+    realmKey: session?.realmKey,
     reason,
   });
 }
@@ -5593,9 +5604,9 @@ async function handleBackchannelLogout(plane: PlaneKey, request: NextRequest): P
     return new Response("malformed token", { status: 400 });
   }
 
-  const { iss, aud, sid, sub, events, nonce } = payload as {
+  const { iss, aud, sid, sub, events, nonce, iat, jti } = payload as {
     iss?: string; aud?: string | string[]; sid?: string; sub?: string;
-    events?: Record<string, unknown>; nonce?: unknown;
+    events?: Record<string, unknown>; nonce?: unknown; iat?: number; jti?: string;
   };
 
   // Per spec: logout tokens MUST NOT contain a nonce.
@@ -5615,6 +5626,10 @@ async function handleBackchannelLogout(plane: PlaneKey, request: NextRequest): P
   const kcBase = (process.env.KEYCLOAK_BASE_URL ?? "https://iam.athyper.local").replace(/\/+$/, "");
   if (!iss.startsWith(`${kcBase}/realms/`)) {
     return new Response("untrusted issuer", { status: 400 });
+  }
+  const issuerRealmKey = iss.split("/").pop();
+  if (issuerRealmKey !== "athyper" && issuerRealmKey !== "platform-control") {
+    return new Response("untrusted realm", { status: 400 });
   }
 
   // Fetch JWKS with Redis cache (1 hour TTL).
@@ -5671,9 +5686,19 @@ async function handleBackchannelLogout(plane: PlaneKey, request: NextRequest): P
     return new Response("audience mismatch", { status: 400 });
   }
 
+  // Back-channel tokens are one-time, short-lived termination commands.
+  const nowSeconds = Math.floor(Date.now() / 1_000);
+  if (!Number.isFinite(iat) || typeof jti !== "string" || !jti
+    || (!sid && !sub) || iat! < nowSeconds - 300 || iat! > nowSeconds + 60) {
+    return new Response("stale or incomplete logout token", { status: 400 });
+  }
+  const replayKey = `logout_replay:${issuerRealmKey}:${jti}`;
+  const replayAccepted = await redis.set(replayKey, "1", { NX: true, EX: 600 }).catch(() => null);
+  if (replayAccepted !== "OK") return new Response("logout token replay", { status: 409 });
+
   // Primary wipe path: use KC session reverse index if sid is present.
   if (sid && typeof sid === "string") {
-    const reverseKey = kcSessionReverseKey(sid);
+    const reverseKey = realmKcSessionReverseKey(issuerRealmKey, sid);
     const entries = await redis.sMembers(reverseKey).catch(() => [] as string[]);
     for (const entry of entries) {
       const colonIdx = entry.indexOf(":");
@@ -5686,6 +5711,7 @@ async function handleBackchannelLogout(plane: PlaneKey, request: NextRequest): P
         sid: appSid,
         ...(sub ? { userId: sub } : {}),
         keycloakSessionId: sid,
+        realmKey: issuerRealmKey,
         reason: "keycloak_backchannel_logout",
       });
     }
@@ -5694,7 +5720,7 @@ async function handleBackchannelLogout(plane: PlaneKey, request: NextRequest): P
 
   // Fallback: if no sid in token, wipe all sessions for the sub across all planes.
   if (!sid && sub && typeof sub === "string") {
-    await terminateSubjectSessions(redis, sub);
+    await terminateSubjectSessions(redis, sub, issuerRealmKey);
   }
 
   return new Response(null, { status: 200 });

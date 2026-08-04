@@ -1,123 +1,203 @@
-// Shared helpers used by all three resolvers (Neon / Admin / Mesh).
-//
-// Two pieces of logic live here so each resolver doesn't reinvent them:
-//
-//   1. `computeProfileHash` — deterministic SHA256 over the inputs that the
-//      cache key depends on. Sorting + joining must be stable across runs.
-//   2. `loadPlaneEligibility` — single query against shared.permission to
-//      pull the per-plane allowlist that drives plane filtering.
-//
-// Both are tested in isolation in resolvers/__tests__/base.test.ts.
-
 import { createHash } from "node:crypto";
 
-import { sql, type Kysely } from "kysely";
+import type { CanonicalDecisionRequest } from "../../authorization-evaluator/index.js";
+import type {
+  ProductionAuthorizationDecisionApi,
+} from "../../authorization-runtime/types.js";
+import type {
+  SessionV2CatalogRepository,
+} from "../../authorization-runtime/session-v2.js";
+import type {
+  EffectiveAuthorizationScope,
+  EffectivePermissionContext,
+  EffectivePermissionEntry,
+  PermissionResolver,
+  PlaneKey,
+  ResolverInput,
+} from "../types.js";
 
-import type { PlaneKey } from "../plane-key.js";
+export interface CanonicalResolverDeps {
+  readonly decisions: ProductionAuthorizationDecisionApi;
+  readonly catalog: SessionV2CatalogRepository;
+}
 
-// Use a structural type so we don't drag in a specific Kysely schema.
-type AnyDb = Kysely<Record<string, unknown>>;
-
-/**
- * Compute the cache-key fingerprint over the inputs that meaningfully change
- * the descriptor for a principal. Order matters; we sort allowed codes so
- * the order in which the resolver discovered them does not affect the hash.
- */
 export function computeProfileHash(args: {
   principalFingerprint: string;
   allowedCodes: ReadonlySet<string>;
   planVersionId?: string;
 }): string {
-  const sortedAllowed = [...args.allowedCodes].sort().join(",");
-  const planPart = args.planVersionId ?? "na";
-  const material = `${args.principalFingerprint}|${planPart}|${sortedAllowed}`;
-  return createHash("sha256").update(material).digest("hex");
+  return createHash("sha256").update(JSON.stringify({
+    principalFingerprint: args.principalFingerprint,
+    allowedCodes: [...args.allowedCodes].sort(),
+    planVersionId: args.planVersionId ?? "na",
+  })).digest("hex");
 }
 
-/**
- * Compute a stable persona fingerprint for the neon / admin resolvers. The
- * mesh resolver uses `mesh.account_grant.fingerprint` (DB-trigger-computed)
- * directly and does not need this helper.
- */
-export function computePersonaFingerprint(args: {
-  personaId: string | null | undefined;
-  roleIds: readonly string[];
-  groupIds: readonly string[];
-  scopeVersions?: readonly string[];
-}): string {
-  const roleStr = [...args.roleIds].sort().join(",");
-  const groupStr = [...args.groupIds].sort().join(",");
-  const scopeStr = [...(args.scopeVersions ?? [])].sort().join(",");
-  const material = `persona=${args.personaId ?? "none"}|roles=${roleStr}|groups=${groupStr}|scopes=${scopeStr}`;
-  return createHash("sha256").update(material).digest("hex");
-}
-
-/**
- * Read schema-affecting runtime flags (env-driven feature flags + version pins)
- * so the cache key invalidates when the compiler output could change.
- *
- * Truncated to 12 hex chars — enough entropy for cache disambiguation; the
- * full hash is overkill given the small input space.
- */
 export function computeSchemaHash(): string {
-  const material = [
-    process.env["NODE_ENV"] ?? "unknown",
-    process.env["ATHYPER_FEATURE_FLAGS"] ?? "",
-    process.env["ATHYPER_RUNTIME_CONTRACTS_VERSION"] ?? "0",
-    process.env["ATHYPER_COMPILER_VERSION"] ?? "0",
-  ].join("|");
-  return createHash("sha256").update(material).digest("hex").slice(0, 12);
+  return createHash("sha256").update(JSON.stringify({
+    nodeEnv: process.env["NODE_ENV"] ?? "unknown",
+    featureFlags: process.env["ATHYPER_FEATURE_FLAGS"] ?? "",
+    runtimeContractsVersion:
+      process.env["ATHYPER_RUNTIME_CONTRACTS_VERSION"] ?? "0",
+    compilerVersion: process.env["ATHYPER_COMPILER_VERSION"] ?? "0",
+  })).digest("hex").slice(0, 12);
 }
 
-// ─── Plane eligibility ──────────────────────────────────────────────────────────
-
-export interface PlanePermissionRow {
-  code: string;
-  is_plan_restricted: boolean;
-}
-
-/**
- * Pull the active permissions whose `plane_eligibility` array includes the
- * requested plane. The result is the candidate set every resolver intersects
- * with role/persona/grant evaluation.
- */
-export async function loadPlaneEligiblePermissions(
-  db: AnyDb,
+export function createCanonicalResolver(
   planeKey: PlaneKey,
-): Promise<Map<string, PlanePermissionRow>> {
-  const result = await sql<{ code: string; is_plan_restricted: boolean }>`
-    SELECT code, is_plan_restricted
-      FROM shared.permission
-     WHERE status = 'active'
-       AND plane_eligibility @> ARRAY[${planeKey}]::text[]
-  `.execute(db);
+  deps: CanonicalResolverDeps,
+): PermissionResolver {
+  return {
+    planeKey,
+    async build(input: ResolverInput): Promise<EffectivePermissionContext> {
+      if (input.planeKey !== planeKey) {
+        throw new Error(
+          `permission resolver plane mismatch: expected ${planeKey}, received ${input.planeKey}`,
+        );
+      }
 
-  const map = new Map<string, PlanePermissionRow>();
-  for (const row of result.rows) {
-    map.set(row.code, {
-      code: row.code,
-      is_plan_restricted: row.is_plan_restricted,
-    });
-  }
-  return map;
-}
+      const evaluatedAt = new Date();
+      const catalog = await deps.catalog.load({
+        plane: planeKey,
+        tenantOrAccountId: input.tenantId,
+        evaluatedAt,
+      });
+      const requests: CanonicalDecisionRequest[] = catalog.entries.map(
+        (entry, index) => entry.entityOperationId
+          ? {
+              requestId: `permission-context:${planeKey}:${index}:${entry.entityOperationId}`,
+              mode: "collection",
+              subject: {
+                plane: planeKey,
+                tenantOrAccountId: input.tenantId,
+                principalId: input.principalId,
+              },
+              entityOperationId: entry.entityOperationId,
+              evaluatedAt,
+              assurance: { mfaSatisfied: false, sodSatisfied: false },
+            }
+          : {
+              requestId: `permission-context:${planeKey}:${index}:${entry.permissionId}`,
+              mode: "registered_capability",
+              subject: {
+                plane: planeKey,
+                tenantOrAccountId: input.tenantId,
+                principalId: input.principalId,
+              },
+              permissionId: entry.permissionId,
+              evaluatedAt,
+              assurance: { mfaSatisfied: false, sodSatisfied: false },
+            },
+      );
+      const batch = await deps.decisions.decideBatch(requests);
+      if (batch.results.length !== catalog.entries.length) {
+        throw new Error("canonical permission-context decision batch is incomplete");
+      }
 
-/**
- * Resolve permission_code aliases through `control.permission_alias`. A caller
- * may supply legacy codes (e.g. 'edit') and the resolver returns the canonical
- * code ('update'). Returns the input unchanged when no alias matches.
- */
-export async function loadPermissionAliasMap(
-  db: AnyDb,
-): Promise<Map<string, string>> {
-  const result = await sql<{ alias_code: string; canonical_code: string }>`
-    SELECT alias_code, canonical_code
-      FROM control.permission_alias
-  `.execute(db);
+      const allowed = new Set<string>();
+      const denied = new Set<string>();
+      const planLocked = new Set<string>();
+      const entries = new Map<string, EffectivePermissionEntry>();
+      const authorizationScopes =
+        new Map<string, EffectiveAuthorizationScope>();
 
-  const map = new Map<string, string>();
-  for (const row of result.rows) {
-    map.set(row.alias_code, row.canonical_code);
-  }
-  return map;
+      for (let index = 0; index < batch.results.length; index += 1) {
+        const envelope = batch.results[index]!;
+        const catalogEntry = catalog.entries[index]!;
+        const organizationalAllow = envelope.result.mode !== "collection"
+          || envelope.result.materialization.organizationalAllowClauses.length > 0;
+        const legacyScopeCanRepresentDecision =
+          envelope.result.mode !== "collection"
+          || envelope.result.materialization.denyScopes.length === 0;
+        const isAllowed =
+          envelope.result.decision === "allow"
+          && organizationalAllow
+          && legacyScopeCanRepresentDecision;
+        if (isAllowed) allowed.add(catalogEntry.canonicalCode);
+        else if (envelope.result.reason === "entitlement_unavailable") {
+          planLocked.add(catalogEntry.canonicalCode);
+        } else {
+          denied.add(catalogEntry.canonicalCode);
+        }
+        entries.set(catalogEntry.canonicalCode, {
+          code: catalogEntry.canonicalCode,
+          status: isAllowed
+            ? "allow"
+            : envelope.result.reason === "entitlement_unavailable"
+            ? "not_in_plan"
+            : "deny",
+          reason: isAllowed
+            ? "allowed"
+            : envelope.result.reason === "entitlement_unavailable"
+            ? "plan_locked"
+            : "denied_by_grant",
+        });
+        if (envelope.result.mode === "collection") {
+          const constraints = envelope.result.materialization
+            .organizationalAllowClauses.flatMap((clause) => clause.intersection);
+          const dimensionValues = (
+            dimension:
+              | "legal_entity"
+              | "company_code"
+              | "operating_organization"
+              | "network_relationship",
+          ): ReadonlySet<string> => new Set(
+            constraints.flatMap((constraint) =>
+              constraint.dimensions[dimension] ?? []
+            ),
+          );
+          authorizationScopes.set(catalogEntry.canonicalCode, {
+            permissionCode: catalogEntry.canonicalCode,
+            tenantWide: legacyScopeCanRepresentDecision
+              && envelope.result.materialization.organizationalAllowClauses
+                .some((clause) =>
+                  clause.intersection.every((constraint) => constraint.tenantWide)
+                ),
+            legalEntityIds: legacyScopeCanRepresentDecision
+              ? dimensionValues("legal_entity")
+              : new Set(),
+            companyCodeIds: legacyScopeCanRepresentDecision
+              ? dimensionValues("company_code")
+              : new Set(),
+            operatingOrganizationIds: legacyScopeCanRepresentDecision
+              ? dimensionValues("operating_organization")
+              : new Set(),
+            networkMembershipIds: legacyScopeCanRepresentDecision
+              ? dimensionValues("network_relationship")
+              : new Set(),
+            visibility: legacyScopeCanRepresentDecision ? "all" : "own",
+          });
+        }
+      }
+
+      const principalFingerprint = createHash("sha256").update(JSON.stringify({
+        principalId: input.principalId,
+        tenantOrAccountId: input.tenantId,
+        plane: planeKey,
+        catalogVersion: catalog.catalogVersion,
+        decisionFingerprints: batch.results
+          .map((result) => result.authorizationFingerprint)
+          .sort(),
+      })).digest("hex");
+
+      return {
+        planeKey,
+        tenantId: input.tenantId,
+        principalId: input.principalId,
+        principalFingerprint,
+        allowed,
+        denied,
+        planLocked,
+        planeExcluded: new Set(),
+        entries,
+        authorizationScopes,
+        profileHash: computeProfileHash({
+          principalFingerprint,
+          allowedCodes: allowed,
+        }),
+        schemaHash: input.schemaHash ?? computeSchemaHash(),
+        resolvedAt: evaluatedAt.getTime(),
+      };
+    },
+  };
 }

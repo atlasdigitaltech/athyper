@@ -1,396 +1,230 @@
 -- ============================================================================
--- CIRRUSATLANTIC — TENANT, LEGAL ENTITY & COMPANY CODE ADDRESSES + CONTACTS
+-- CIRRUSATLANTIC — ORGANIZATION ADDRESS AND CONTACT FOUNDATION
 -- ============================================================================
--- File:     003_address_contacts.sql
--- Schema:   master.address, master.address_link,
---           master.contact_link, master.contact_email, master.contact_phone
--- Purpose:  Seed Innovative Data floor addresses and primary contacts for the
---           CirrusAtlantic tenant. This tenant intentionally keeps
---           role-specific org address purposes and excludes default:
---           bill_to/correspondence use Floor 2; ship_to/place_of_service use
---           Ground Floor through Floor 4.
--- Idempotent: Yes — ON CONFLICT DO NOTHING / DO UPDATE throughout
+-- seed-pack-version: 3.0.0
+-- Dataset:  cirrusatlantic.organization-address-contact
+-- Plane:    neon
+-- Depends:  cirrusatlantic.organization-root 2.1.0; control.owner_type
+-- Natural keys: deterministic owner/address and owner/channel identities
+-- Idempotent: convergent updates; no destructive refresh
 -- ============================================================================
 
-DO $catl_addr$
+DO $catl_address_contact$
 DECLARE
-    v_su          uuid := '00000000-0000-0000-0000-000000000000';
-    v_tid         uuid;
-    v_le_id       uuid;
-    v_cc_id       uuid;
-    v_addr_id     uuid;
-    v_addr_code   text;
-    v_addr_name   text;
-    v_addr_attention text;
-    v_addr_line1  text;
-    v_addr_line2  text;
-    v_addr_city   text;
-    v_addr_region text;
-    v_addr_postal text;
-    v_addr_country text;
-    v_addr_formatted text;
-    v_cl_id       uuid;
-
-    v_site_ids    uuid[];
-    v_site_count  int;
-    v_floor       record;
+    v_tid uuid := nullif(trim(current_setting('app.seed_tenant_id', true)), '')::uuid;
+    v_actor uuid := nullif(trim(current_setting('app.current_principal_id', true)), '')::uuid;
+    v_le_id uuid;
+    v_cc_id uuid;
+    v_address_id constant uuid :=
+        md5('neon:address:athyper:cirrusatlantic:registered-office')::uuid;
+    v_owner record;
+    v_contact record;
+    v_contact_id uuid;
+    v_metadata constant jsonb :=
+        '{"_seed":{"pack":"cirrusatlantic.organization-address-contact","version":"3.0.0"}}'::jsonb;
 BEGIN
-    -- Resolve tenant and CATL entities
-    SELECT id INTO v_tid
-    FROM master.tenant
-    WHERE realm_key = 'athyper' AND code = 'cirrusatlantic';
+    IF v_tid IS NULL OR NOT EXISTS (
+        SELECT 1 FROM master.tenant
+         WHERE id = v_tid AND code = 'cirrusatlantic' AND status = 'active'
+    ) THEN
+        RAISE EXCEPTION '[003_address_contacts] active CirrusAtlantic tenant scope required';
+    END IF;
 
-    IF v_tid IS NULL THEN
-        RAISE EXCEPTION '[003_address_contacts] CirrusAtlantic tenant not found';
+    IF v_actor IS NULL OR NOT EXISTS (
+        SELECT 1 FROM master.principal
+         WHERE tenant_id = v_tid AND id = v_actor AND status = 'active'
+    ) THEN
+        RAISE EXCEPTION '[003_address_contacts] active tenant-local actor required';
     END IF;
 
     SELECT id INTO v_le_id
-    FROM master.legal_entity
-    WHERE tenant_id = v_tid AND code = 'CATL';
-
-    -- Backward-compatible: some earlier CATL seeds used LE-CATL, so fall back if needed.
-    IF v_le_id IS NULL THEN
-        SELECT id INTO v_le_id
-        FROM master.legal_entity
-        WHERE tenant_id = v_tid AND code = 'LE-CATL';
-    END IF;
-
+      FROM master.legal_entity
+     WHERE tenant_id = v_tid AND code = 'catl' AND status = 'active';
     SELECT id INTO v_cc_id
-    FROM master.company_code
-    WHERE tenant_id = v_tid AND code = 'CATL';
+      FROM master.company_code
+     WHERE tenant_id = v_tid AND code = 'catl' AND status = 'active';
 
     IF v_le_id IS NULL OR v_cc_id IS NULL THEN
-        RAISE EXCEPTION '[003_address_contacts] CATL LE/CC not found for tenant cirrusatlantic';
+        RAISE EXCEPTION '[003_address_contacts] catl legal entity/company code required';
     END IF;
 
-    SELECT array_agg(s.id ORDER BY s.code)
-    INTO v_site_ids
-    FROM master.site s
-    WHERE s.tenant_id = v_tid
-      AND s.company_code_id = v_cc_id
-      AND s.status = 'active';
+    IF (
+        SELECT count(*) FROM control.owner_type
+         WHERE tenant_id IS NULL
+           AND code IN ('tenant', 'legal_entity', 'company_code')
+           AND supports_address AND supports_contact AND status = 'active'
+    ) <> 3 THEN
+        RAISE EXCEPTION '[003_address_contacts] required owner-type registry entries missing';
+    END IF;
 
-    v_site_count := COALESCE(cardinality(v_site_ids), 0);
+    INSERT INTO master.address (
+        id, tenant_id, address_type, line1, line2, line3, city, region,
+        postal_code, country_code, metadata, status, created_by
+    ) VALUES (
+        v_address_id, v_tid, 'commercial',
+        'Floor 2, Innovative Data Building', '18 Innovation Avenue', 'Canary Wharf',
+        'London', 'England', 'EC3M 3BY', 'GB', v_metadata, 'active', v_actor
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        address_type = EXCLUDED.address_type,
+        line1 = EXCLUDED.line1,
+        line2 = EXCLUDED.line2,
+        line3 = EXCLUDED.line3,
+        city = EXCLUDED.city,
+        region = EXCLUDED.region,
+        postal_code = EXCLUDED.postal_code,
+        country_code = EXCLUDED.country_code,
+        metadata = master.address.metadata || EXCLUDED.metadata,
+        status = EXCLUDED.status,
+        updated_at = now(),
+        updated_by = v_actor
+    WHERE (
+        master.address.address_type, master.address.line1, master.address.line2,
+        master.address.line3, master.address.city, master.address.region,
+        master.address.postal_code, master.address.country_code,
+        master.address.metadata, master.address.status
+    ) IS DISTINCT FROM (
+        EXCLUDED.address_type, EXCLUDED.line1, EXCLUDED.line2,
+        EXCLUDED.line3, EXCLUDED.city, EXCLUDED.region,
+        EXCLUDED.postal_code, EXCLUDED.country_code,
+        master.address.metadata || EXCLUDED.metadata, EXCLUDED.status
+    );
 
-    -- Full reset for these owners
-    DELETE FROM master.contact_email ce
-    USING master.contact_link cl
-    WHERE ce.tenant_id = v_tid
-      AND ce.contact_link_id = cl.id
-      AND cl.tenant_id = v_tid
-      AND (
-            (cl.owner_type = 'tenant' AND cl.owner_id = v_tid)
-         OR (cl.owner_type = 'legal_entity' AND cl.owner_id = v_le_id)
-         OR (cl.owner_type = 'company_code' AND cl.owner_id = v_cc_id)
-         OR (cl.owner_type = 'site' AND cl.owner_id = ANY(COALESCE(v_site_ids, ARRAY[]::uuid[])))
-      );
-
-    DELETE FROM master.contact_phone cp
-    USING master.contact_link cl
-    WHERE cp.tenant_id = v_tid
-      AND cp.contact_link_id = cl.id
-      AND cl.tenant_id = v_tid
-      AND (
-            (cl.owner_type = 'tenant' AND cl.owner_id = v_tid)
-         OR (cl.owner_type = 'legal_entity' AND cl.owner_id = v_le_id)
-         OR (cl.owner_type = 'company_code' AND cl.owner_id = v_cc_id)
-         OR (cl.owner_type = 'site' AND cl.owner_id = ANY(COALESCE(v_site_ids, ARRAY[]::uuid[])))
-      );
-
-    DELETE FROM master.contact_link
-    WHERE tenant_id = v_tid
-      AND (
-           (owner_type = 'tenant' AND owner_id = v_tid)
-        OR (owner_type = 'legal_entity' AND owner_id = v_le_id)
-        OR (owner_type = 'company_code' AND owner_id = v_cc_id)
-        OR (owner_type = 'site' AND owner_id = ANY(COALESCE(v_site_ids, ARRAY[]::uuid[])))
-      );
-
-    DELETE FROM master.address_link
-    WHERE tenant_id = v_tid
-      AND (
-           (owner_type = 'tenant' AND owner_id = v_tid)
-        OR (owner_type = 'legal_entity' AND owner_id = v_le_id)
-        OR (owner_type = 'company_code' AND owner_id = v_cc_id)
-        OR (owner_type = 'site' AND owner_id = ANY(COALESCE(v_site_ids, ARRAY[]::uuid[])))
-      );
-
-    CREATE TEMP TABLE tmp_catl_floor_address (
-        floor_no smallint PRIMARY KEY,
-        floor_label text NOT NULL,
-        address_id uuid
-    ) ON COMMIT DROP;
-
-    INSERT INTO tmp_catl_floor_address (floor_no, floor_label)
-    VALUES
-        (0, 'Ground Floor'),
-        (1, 'Floor 1'),
-        (2, 'Floor 2'),
-        (3, 'Floor 3'),
-        (4, 'Floor 4');
-
-    FOR v_floor IN
-        SELECT floor_no, floor_label
-        FROM tmp_catl_floor_address
-        ORDER BY floor_no
+    FOR v_owner IN
+        SELECT owner_type.id AS owner_type_id, owner_row.owner_id, owner_row.owner_code
+          FROM (VALUES
+              ('tenant'::text, v_tid, 'tenant'::text),
+              ('legal_entity'::text, v_le_id, 'legal_entity'::text),
+              ('company_code'::text, v_cc_id, 'company_code'::text)
+          ) AS owner_row(owner_type_code, owner_id, owner_code)
+          JOIN control.owner_type owner_type
+            ON owner_type.tenant_id IS NULL
+           AND owner_type.code = owner_row.owner_type_code
+           AND owner_type.status = 'active'
     LOOP
-        v_addr_code := format('catl-innovative-data-floor-%s', v_floor.floor_no);
-        v_addr_name := format('Innovative Data - %s', v_floor.floor_label);
-        v_addr_attention := format('Innovative Data, %s', v_floor.floor_label);
-        v_addr_line1 := format('%s, Innovative Data Building', v_floor.floor_label);
-        v_addr_line2 := '18 Innovation Avenue';
-        v_addr_city := 'London';
-        v_addr_region := 'England';
-        v_addr_postal := 'EC3M 3BY';
-        v_addr_country := 'GB';
-        v_addr_formatted := concat_ws(', ', v_addr_attention, v_addr_line1, v_addr_line2, v_addr_city, v_addr_postal, v_addr_country);
-
-        INSERT INTO master.address (
-            tenant_id, code, name, address_type, attention_line,
-            line1, line2, line3, city, region, postal_code, country_code,
-            formatted_address, status, created_by
+        INSERT INTO master.address_link (
+            id, tenant_id, owner_type_id, owner_id, address_id, purpose,
+            attention_line, is_primary, effective_from, metadata, created_by
         ) VALUES (
-            v_tid, v_addr_code, v_addr_name, 'commercial', v_addr_attention,
-            v_addr_line1, v_addr_line2, 'Canary Wharf', v_addr_city, v_addr_region, v_addr_postal, v_addr_country,
-            v_addr_formatted, 'active', v_su
+            md5('neon:address-link:' || v_tid || ':' || v_owner.owner_code || ':registered-office')::uuid,
+            v_tid, v_owner.owner_type_id, v_owner.owner_id, v_address_id,
+            'default', 'CirrusAtlantic Limited', true, DATE '2025-01-01',
+            v_metadata, v_actor
         )
-        ON CONFLICT (tenant_id, country_code, postal_code, line1, city)
-            WHERE (line1 IS NOT NULL) AND (postal_code IS NOT NULL) AND (status = 'active'::text)
-        DO UPDATE SET
-            code = EXCLUDED.code,
-            name = EXCLUDED.name,
+        ON CONFLICT (id) DO UPDATE SET
+            address_id = EXCLUDED.address_id,
             attention_line = EXCLUDED.attention_line,
-            line2 = EXCLUDED.line2,
-            line3 = EXCLUDED.line3,
-            region = EXCLUDED.region,
-            formatted_address = EXCLUDED.formatted_address,
-            updated_at = now()
-        RETURNING id INTO v_addr_id;
+            is_primary = EXCLUDED.is_primary,
+            effective_from = EXCLUDED.effective_from,
+            effective_until = NULL,
+            metadata = master.address_link.metadata || EXCLUDED.metadata,
+            updated_at = now(),
+            updated_by = v_actor
+        WHERE (
+            master.address_link.address_id, master.address_link.attention_line,
+            master.address_link.is_primary, master.address_link.effective_from,
+            master.address_link.effective_until, master.address_link.metadata
+        ) IS DISTINCT FROM (
+            EXCLUDED.address_id, EXCLUDED.attention_line,
+            EXCLUDED.is_primary, EXCLUDED.effective_from,
+            NULL::date, master.address_link.metadata || EXCLUDED.metadata
+        );
 
-        UPDATE tmp_catl_floor_address
-        SET address_id = v_addr_id
-        WHERE floor_no = v_floor.floor_no;
+        FOR v_contact IN
+            SELECT * FROM (VALUES
+                ('email'::text,
+                 CASE v_owner.owner_code
+                   WHEN 'tenant' THEN 'info@cirrusatlantic.co.uk'
+                   WHEN 'legal_entity' THEN 'legal@cirrusatlantic.co.uk'
+                   ELSE 'finance@cirrusatlantic.co.uk' END,
+                 'correspondence'::text),
+                ('phone'::text,
+                 CASE v_owner.owner_code
+                   WHEN 'tenant' THEN '+442071112222'
+                   WHEN 'legal_entity' THEN '+442071112223'
+                   ELSE '+442071112224' END,
+                 'default'::text)
+            ) AS desired(channel_type, value, purpose)
+        LOOP
+            v_contact_id := md5(
+                'neon:contact-link:' || v_tid || ':' || v_owner.owner_code || ':' ||
+                v_contact.channel_type || ':' || v_contact.purpose
+            )::uuid;
+
+            INSERT INTO master.contact_link (
+                id, tenant_id, owner_type_id, owner_id, channel_type, value,
+                purpose, is_primary, is_verified, verified_at,
+                metadata, status, created_by
+            ) VALUES (
+                v_contact_id, v_tid, v_owner.owner_type_id, v_owner.owner_id,
+                v_contact.channel_type, v_contact.value, v_contact.purpose,
+                true, true, TIMESTAMPTZ '2025-01-01 00:00:00+00',
+                v_metadata, 'active', v_actor
+            )
+            ON CONFLICT (id) DO UPDATE SET
+                value = EXCLUDED.value,
+                is_primary = EXCLUDED.is_primary,
+                is_verified = EXCLUDED.is_verified,
+                verified_at = EXCLUDED.verified_at,
+                metadata = master.contact_link.metadata || EXCLUDED.metadata,
+                status = EXCLUDED.status,
+                updated_at = now(),
+                updated_by = v_actor
+            WHERE (
+                master.contact_link.value, master.contact_link.is_primary,
+                master.contact_link.is_verified, master.contact_link.verified_at,
+                master.contact_link.metadata, master.contact_link.status
+            ) IS DISTINCT FROM (
+                EXCLUDED.value, EXCLUDED.is_primary,
+                EXCLUDED.is_verified, EXCLUDED.verified_at,
+                master.contact_link.metadata || EXCLUDED.metadata, EXCLUDED.status
+            );
+
+            IF v_contact.channel_type = 'email' THEN
+                INSERT INTO master.contact_email (
+                    contact_link_id, tenant_id, mx_checked_at, mx_valid,
+                    metadata, created_by
+                ) VALUES (
+                    v_contact_id, v_tid, TIMESTAMPTZ '2025-01-01 00:00:00+00', true,
+                    v_metadata, v_actor
+                )
+                ON CONFLICT (contact_link_id) DO UPDATE SET
+                    mx_checked_at = EXCLUDED.mx_checked_at,
+                    mx_valid = EXCLUDED.mx_valid,
+                    metadata = master.contact_email.metadata || EXCLUDED.metadata,
+                    updated_at = now(), updated_by = v_actor
+                WHERE (master.contact_email.mx_checked_at, master.contact_email.mx_valid,
+                       master.contact_email.metadata)
+                   IS DISTINCT FROM
+                      (EXCLUDED.mx_checked_at, EXCLUDED.mx_valid,
+                       master.contact_email.metadata || EXCLUDED.metadata);
+            ELSE
+                INSERT INTO master.contact_phone (
+                    contact_link_id, tenant_id, line_type, metadata, created_by
+                ) VALUES (
+                    v_contact_id, v_tid, 'landline', v_metadata, v_actor
+                )
+                ON CONFLICT (contact_link_id) DO UPDATE SET
+                    line_type = EXCLUDED.line_type,
+                    metadata = master.contact_phone.metadata || EXCLUDED.metadata,
+                    updated_at = now(), updated_by = v_actor
+                WHERE (master.contact_phone.line_type, master.contact_phone.metadata)
+                   IS DISTINCT FROM
+                      (EXCLUDED.line_type,
+                       master.contact_phone.metadata || EXCLUDED.metadata);
+            END IF;
+        END LOOP;
     END LOOP;
 
-    INSERT INTO master.address_link (
-        tenant_id, owner_type, owner_id, address_id, purpose, is_primary, role_qualifier, created_by
-    )
-    SELECT v_tid, owner_type, owner_id, floor2.address_id, purpose, true, role_qualifier, v_su
-    FROM (VALUES
-        ('tenant'::text, v_tid::uuid, 'bill_to'::text, NULL::text),
-        ('tenant'::text, v_tid::uuid, 'correspondence'::text, 'account_statement'::text),
-        ('legal_entity'::text, v_le_id::uuid, 'bill_to'::text, NULL::text),
-        ('legal_entity'::text, v_le_id::uuid, 'correspondence'::text, 'legal_notice'::text),
-        ('company_code'::text, v_cc_id::uuid, 'bill_to'::text, NULL::text),
-        ('company_code'::text, v_cc_id::uuid, 'correspondence'::text, 'tax_filing'::text)
-    ) AS owner_roles(owner_type, owner_id, purpose, role_qualifier)
-    CROSS JOIN tmp_catl_floor_address floor2
-    WHERE floor2.floor_no = 2
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
-
-    INSERT INTO master.address_link (
-        tenant_id, owner_type, owner_id, address_id, purpose, is_primary, role_qualifier, created_by
-    )
-    SELECT
-        v_tid,
-        owners.owner_type,
-        owners.owner_id,
-        floors.address_id,
-        roles.purpose,
-        floors.floor_no = 0,
-        NULL,
-        v_su
-    FROM (VALUES
-        ('tenant'::text, v_tid::uuid),
-        ('legal_entity'::text, v_le_id::uuid),
-        ('company_code'::text, v_cc_id::uuid)
-    ) AS owners(owner_type, owner_id)
-    CROSS JOIN (VALUES ('ship_to'::text), ('place_of_service'::text)) AS roles(purpose)
-    CROSS JOIN tmp_catl_floor_address floors
-    ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
-
-    -- Site owners use the same Innovative Data building. Bill/correspondence
-    -- use Floor 2; ship/service cycle through Ground Floor through Floor 4.
-    IF v_site_count > 0 THEN
-        INSERT INTO master.address_link (
-            tenant_id, owner_type, owner_id, address_id, purpose, is_primary, role_qualifier, created_by
-        )
-        SELECT v_tid, 'site', site_rows.site_id, floor2.address_id, role_rows.purpose, true, role_rows.role_qualifier, v_su
-        FROM (
-            SELECT unnest(v_site_ids) AS site_id
-        ) AS site_rows
-        CROSS JOIN (VALUES
-            ('bill_to'::text, NULL::text),
-            ('correspondence'::text, 'account_statement'::text)
-        ) AS role_rows(purpose, role_qualifier)
-        CROSS JOIN tmp_catl_floor_address floor2
-        WHERE floor2.floor_no = 2
-        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
-
-        INSERT INTO master.address_link (
-            tenant_id, owner_type, owner_id, address_id, purpose, is_primary, role_qualifier, created_by
-        )
-        SELECT
-            v_tid,
-            'site',
-            site_rows.site_id,
-            floors.address_id,
-            role_rows.purpose,
-            true,
-            NULL,
-            v_su
-        FROM (
-            SELECT u.site_id, ((row_number() OVER (ORDER BY u.site_id))::int - 1) % 5 AS floor_no
-            FROM unnest(v_site_ids) AS u(site_id)
-        ) AS site_rows
-        JOIN tmp_catl_floor_address floors
-          ON floors.floor_no = site_rows.floor_no
-        CROSS JOIN (VALUES ('ship_to'::text), ('place_of_service'::text)) AS role_rows(purpose)
-        ON CONFLICT (tenant_id, owner_type, owner_id, purpose, role_qualifier, address_id) DO NOTHING;
-    ELSE
-        RAISE WARNING '[003_address_contacts] No active CATL sites found for cirrusatlantic tenant';
+    IF (SELECT count(*) FROM master.address_link
+         WHERE tenant_id = v_tid AND address_id = v_address_id
+           AND metadata->'_seed'->>'pack' = 'cirrusatlantic.organization-address-contact') <> 3
+       OR (SELECT count(*) FROM master.contact_link
+            WHERE tenant_id = v_tid
+              AND metadata->'_seed'->>'pack' = 'cirrusatlantic.organization-address-contact') <> 6 THEN
+        RAISE EXCEPTION '[003_address_contacts] expected-count assertion failed';
     END IF;
 
-    -- =========================================================================
-    -- CONTACTS: Tenant
-    -- =========================================================================
-    INSERT INTO master.contact_link (
-        tenant_id, owner_type, owner_id, channel_type, value,
-        code, name, purpose, role_qualifier, is_primary, is_verified, verified_at, status, created_by
-    ) VALUES (
-        v_tid, 'tenant', v_tid, 'email', 'info@cirrusatlantic.co.uk',
-        'tenant-support-email', 'Tenant Support Email', 'default', NULL,
-        true, true, now(), 'active', v_su
-    )
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
-
-    SELECT id INTO v_cl_id
-    FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'tenant' AND owner_id = v_tid
-      AND channel_type = 'email' AND value = 'info@cirrusatlantic.co.uk' AND purpose = 'default';
-
-    INSERT INTO master.contact_email (
-        tenant_id, contact_link_id, local_part, domain, mx_valid, created_by
-    ) VALUES (
-        v_tid, v_cl_id, 'info', 'cirrusatlantic.co.uk', true, v_su
-    )
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (
-        tenant_id, owner_type, owner_id, channel_type, value,
-        code, name, purpose, role_qualifier, is_primary, is_verified, verified_at, status, created_by
-    ) VALUES (
-        v_tid, 'tenant', v_tid, 'phone', '+442071112222',
-        'tenant-support-phone', 'Tenant Support Phone', 'default', NULL,
-        true, true, now(), 'active', v_su
-    )
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
-
-    SELECT id INTO v_cl_id
-    FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'tenant' AND owner_id = v_tid
-      AND channel_type = 'phone' AND value = '+442071112222' AND purpose = 'default';
-
-    INSERT INTO master.contact_phone (
-        tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by
-    ) VALUES (
-        v_tid, v_cl_id, '+442071112222', '44', '2071112222', 'landline', v_su
-    )
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    -- =========================================================================
-    -- CONTACTS: Legal Entity CATL
-    -- =========================================================================
-    INSERT INTO master.contact_link (
-        tenant_id, owner_type, owner_id, channel_type, value,
-        code, name, purpose, role_qualifier, is_primary, is_verified, verified_at, status, created_by
-    ) VALUES (
-        v_tid, 'legal_entity', v_le_id, 'email', 'legal@cirrusatlantic.co.uk',
-        'le-catl-legal-email', 'Legal Entity Correspondence', 'default', NULL,
-        true, true, now(), 'active', v_su
-    )
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
-
-    SELECT id INTO v_cl_id
-    FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_id
-      AND channel_type = 'email' AND value = 'legal@cirrusatlantic.co.uk' AND purpose = 'default';
-
-    INSERT INTO master.contact_email (
-        tenant_id, contact_link_id, local_part, domain, mx_valid, created_by
-    ) VALUES (
-        v_tid, v_cl_id, 'legal', 'cirrusatlantic.co.uk', true, v_su
-    )
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (
-        tenant_id, owner_type, owner_id, channel_type, value,
-        code, name, purpose, role_qualifier, is_primary, is_verified, verified_at, status, created_by
-    ) VALUES (
-        v_tid, 'legal_entity', v_le_id, 'phone', '+442071112223',
-        'le-catl-legal-phone', 'Legal Entity Phone', 'default', NULL,
-        true, true, now(), 'active', v_su
-    )
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
-
-    SELECT id INTO v_cl_id
-    FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'legal_entity' AND owner_id = v_le_id
-      AND channel_type = 'phone' AND value = '+442071112223' AND purpose = 'default';
-
-    INSERT INTO master.contact_phone (
-        tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by
-    ) VALUES (
-        v_tid, v_cl_id, '+442071112223', '44', '2071112223', 'landline', v_su
-    )
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    -- =========================================================================
-    -- CONTACTS: Company Code CATL
-    -- =========================================================================
-    INSERT INTO master.contact_link (
-        tenant_id, owner_type, owner_id, channel_type, value,
-        code, name, purpose, role_qualifier, is_primary, is_verified, verified_at, status, created_by
-    ) VALUES (
-        v_tid, 'company_code', v_cc_id, 'email', 'finance@cirrusatlantic.co.uk',
-        'cc-catl-finance-email', 'Company Code Finance Email', 'default', NULL,
-        true, true, now(), 'active', v_su
-    )
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
-
-    SELECT id INTO v_cl_id
-    FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_id
-      AND channel_type = 'email' AND value = 'finance@cirrusatlantic.co.uk' AND purpose = 'default';
-
-    INSERT INTO master.contact_email (
-        tenant_id, contact_link_id, local_part, domain, mx_valid, created_by
-    ) VALUES (
-        v_tid, v_cl_id, 'finance', 'cirrusatlantic.co.uk', true, v_su
-    )
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    INSERT INTO master.contact_link (
-        tenant_id, owner_type, owner_id, channel_type, value,
-        code, name, purpose, role_qualifier, is_primary, is_verified, verified_at, status, created_by
-    ) VALUES (
-        v_tid, 'company_code', v_cc_id, 'phone', '+442071112224',
-        'cc-catl-finance-phone', 'Company Code Finance Phone', 'default', NULL,
-        true, true, now(), 'active', v_su
-    )
-    ON CONFLICT (tenant_id, owner_type, owner_id, channel_type, value, purpose, role_qualifier) DO NOTHING;
-
-    SELECT id INTO v_cl_id
-    FROM master.contact_link
-    WHERE tenant_id = v_tid AND owner_type = 'company_code' AND owner_id = v_cc_id
-      AND channel_type = 'phone' AND value = '+442071112224' AND purpose = 'default';
-
-    INSERT INTO master.contact_phone (
-        tenant_id, contact_link_id, e164, calling_code, national_number, line_type, created_by
-    ) VALUES (
-        v_tid, v_cl_id, '+442071112224', '44', '2071112224', 'landline', v_su
-    )
-    ON CONFLICT (tenant_id, contact_link_id) DO NOTHING;
-
-    RAISE NOTICE '[003_address_contacts] CirrusAtlantic: tenant + LE + CC + site address/contact wiring seeded';
-END $catl_addr$;
+    RAISE NOTICE '[003_address_contacts] organization address and six contact channels ready';
+END
+$catl_address_contact$;

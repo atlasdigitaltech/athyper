@@ -148,7 +148,7 @@ export function createWfOutboxHandler(db: DB): OutboxTopicHandler {
            payload,            channels,          priority,
            created_by)
         VALUES
-          (${tenant_id}::uuid, 'neon',           ${outboxId},      ${event_type ?? "wf.event"},
+          (${tenant_id}::uuid, event.current_plane_key(), ${outboxId}, ${event_type ?? "wf.event"},
            ${templateKey},     1,                ${subjectForEvent(event_type!, payload)},
            ${entity_type},     ${entity_id}::uuid,
            ${JSON.stringify(enrichedPayload)}::jsonb,

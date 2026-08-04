@@ -86,7 +86,6 @@ export const getMeshRuntimeDescriptor = cache(async (
       relations: projectRelations(canonical),
       entityPolicy: parsed.data.policy,
       lifecycleStateMasks: parsed.data.lifecycleStateMasks,
-      permissionAliasMap: parsed.data.permissionAliases,
       lifecycle: canonical.lifecycle ? {
         enabled: true,
         lifecycleId: canonical.lifecycle.binding.code,

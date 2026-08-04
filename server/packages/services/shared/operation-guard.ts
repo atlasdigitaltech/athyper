@@ -27,10 +27,7 @@ export type CheckPermissionBatchFn = (
   db:          AnyDb,
   tenantId:    string,
   principalId: string,
-  personaId:   string,
 ) => Promise<Record<string, { decision: string } | undefined>>;
-
-const ZERO_UUID = "00000000-0000-0000-0000-000000000000";
 
 /**
  * Returns true only when:
@@ -51,30 +48,25 @@ export async function isEntityOperationAllowed(
 ): Promise<boolean> {
   if (!checkPermissionBatch) return false;
 
-  // Find enabled operation rows for this entity, match by leaf verb.
+  // Resolve only the exact catalog operation. Permission suffixes are never
+  // interpreted as operations.
   const rows = await db
     .selectFrom("control.entity_operation as eo")
-    .select(["eo.permission_code"])
+    .innerJoin(
+      "control.auth_permission as permission",
+      "permission.id",
+      "eo.permission_id_v2",
+    )
+    .select(["permission.canonical_code as permission_code"])
     .where("eo.entity_name" as never, "=" as never, entityCode as never)
+    .where("eo.operation_code_v2" as never, "=" as never, operationLeaf as never)
     .where("eo.is_enabled"   as never, "=" as never, true       as never)
     .execute() as { permission_code: string }[];
 
-  const matchingCodes = rows
-    .map((r) => r.permission_code)
-    .filter((code) => code === operationLeaf || code.endsWith(`.${operationLeaf}`));
+  const matchingCodes = rows.map((row) => row.permission_code);
 
   if (matchingCodes.length === 0) return false;
 
-  // Resolve the principal's persona (same pattern as entity-operations.route.ts).
-  const personaRow = await db
-    .selectFrom("master.principal_persona as pp" as never)
-    .select(["pp.persona_id"] as never[])
-    .where("pp.tenant_id"   as never, "=" as never, tenantId    as never)
-    .where("pp.principal_id" as never, "=" as never, principalId as never)
-    .executeTakeFirst() as { persona_id: string } | undefined;
-
-  const personaId = personaRow?.persona_id ?? ZERO_UUID;
-
-  const decisions = await checkPermissionBatch(db, tenantId, principalId, personaId);
+  const decisions = await checkPermissionBatch(db, tenantId, principalId);
   return matchingCodes.some((code) => decisions[code]?.decision === "allow");
 }

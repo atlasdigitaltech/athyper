@@ -20,7 +20,7 @@
 
 DO $tksa_org$
 DECLARE
-    v_su   uuid := '00000000-0000-0000-0000-000000000000';
+    v_su   uuid;
     v_tid  uuid;
 
     -- company code ids
@@ -51,14 +51,18 @@ BEGIN
     IF v_tid IS NULL THEN
         RAISE EXCEPTION '[017_positions_work_assignments] Technostat tenant not found';
     END IF;
+    SELECT created_by INTO v_su FROM master.tenant WHERE id = v_tid;
+    IF v_su IS NULL THEN
+        RAISE EXCEPTION '[017_positions_work_assignments] Tenant created_by missing for %', v_tid;
+    END IF;
 
     PERFORM set_config('app.current_principal_id', v_su::text, true);
 
     -- ── company codes ──────────────────────────────────────────────────────────
-    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND code = 'TKSA';
-    SELECT id INTO v_cc_ssk  FROM master.company_code WHERE tenant_id = v_tid AND code = 'SSK';
-    SELECT id INTO v_cc_tegy FROM master.company_code WHERE tenant_id = v_tid AND code = 'TEGY';
-    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND code = 'SDTX';
+    SELECT id INTO v_cc_tksa FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'tksa';
+    SELECT id INTO v_cc_ssk  FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'ssk';
+    SELECT id INTO v_cc_tegy FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'tegy';
+    SELECT id INTO v_cc_sdtx FROM master.company_code WHERE tenant_id = v_tid AND lower(code) = 'sdtx';
 
     -- ── org units ──────────────────────────────────────────────────────────────
     SELECT id INTO v_ou_tksa_root  FROM master.org_unit WHERE tenant_id = v_tid AND code = 'TKSA-ORG';

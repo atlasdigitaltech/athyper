@@ -25,15 +25,15 @@ BEGIN
                ('06','amre'),('07','aphs'),('08','aqts'),('09','aqtu'),('0a','asac'),
                ('0b','asah'),('0c','asgf'),('0d','aspe'),('0e','atem'),('0f','auet'),
                ('10','auic'),('11','auka')
-    ), personas(persona_hex, persona) AS (
+    ), role_codes(role_hex, role_code) AS (
         VALUES ('01','viewer'),('02','reporter'),('03','requester'),('04','agent'),
                ('05','manager'),('06','owner'),('07','admin')
-    ), principal_rows(id, code, name, persona) AS (
-        SELECT format('aa01%s%s-0000-0000-0000-000000000000', le_hex, persona_hex)::uuid,
-               cc || '.' || persona,
-               upper(cc) || ' ' || initcap(persona),
-               persona
-        FROM legal_entities CROSS JOIN personas
+    ), principal_rows(id, code, name, role_code) AS (
+        SELECT format('aa01%s%s-0000-0000-0000-000000000000', le_hex, role_hex)::uuid,
+               cc || '.' || role_code,
+               upper(cc) || ' ' || initcap(role_code),
+               role_code
+        FROM legal_entities CROSS JOIN role_codes
         UNION ALL VALUES
             ('aa010006-0000-0000-0000-000000000000'::uuid, 'athyper.owner', 'Athyper Owner', 'owner'),
             ('aa010007-0000-0000-0000-000000000000'::uuid, 'athyper.admin', 'Athyper Admin', 'admin')
@@ -52,12 +52,12 @@ BEGIN
                ('06','amre'),('07','aphs'),('08','aqts'),('09','aqtu'),('0a','asac'),
                ('0b','asah'),('0c','asgf'),('0d','aspe'),('0e','atem'),('0f','auet'),
                ('10','auic'),('11','auka')
-    ), personas(persona_hex, persona) AS (
+    ), role_codes(role_hex, role_code) AS (
         VALUES ('01','viewer'),('02','reporter'),('03','requester'),('04','agent'),('05','manager'),('06','owner'),('07','admin')
-    ), principal_rows(id, code, given_name, family_name, display_name, persona) AS (
-        SELECT format('aa01%s%s-0000-0000-0000-000000000000', le_hex, persona_hex)::uuid,
-               cc || '.' || persona, upper(cc), initcap(persona), upper(cc) || ' ' || initcap(persona), persona
-        FROM legal_entities CROSS JOIN personas
+    ), principal_rows(id, code, given_name, family_name, display_name, role_code) AS (
+        SELECT format('aa01%s%s-0000-0000-0000-000000000000', le_hex, role_hex)::uuid,
+               cc || '.' || role_code, upper(cc), initcap(role_code), upper(cc) || ' ' || initcap(role_code), role_code
+        FROM legal_entities CROSS JOIN role_codes
         UNION ALL VALUES
             ('aa010006-0000-0000-0000-000000000000'::uuid, 'athyper.owner', 'Athyper', 'Owner', 'Athyper Owner', 'owner'),
             ('aa010007-0000-0000-0000-000000000000'::uuid, 'athyper.admin', 'Athyper', 'Admin', 'Athyper Admin', 'admin')
@@ -76,11 +76,11 @@ BEGIN
 
     WITH legal_entities(le_hex, cc) AS (
         VALUES ('01','athq'),('02','acfb'),('03','adpm'),('04','aitm'),('05','ajed'),('06','amre'),('07','aphs'),('08','aqts'),('09','aqtu'),('0a','asac'),('0b','asah'),('0c','asgf'),('0d','aspe'),('0e','atem'),('0f','auet'),('10','auic'),('11','auka')
-    ), personas(persona_hex, persona) AS (
+    ), role_codes(role_hex, role_code) AS (
         VALUES ('01','viewer'),('02','reporter'),('03','requester'),('04','agent'),('05','manager'),('06','owner'),('07','admin')
-    ), principal_rows(id, code, persona) AS (
-        SELECT format('aa01%s%s-0000-0000-0000-000000000000', le_hex, persona_hex)::uuid, cc || '.' || persona, persona
-        FROM legal_entities CROSS JOIN personas
+    ), principal_rows(id, code, role_code) AS (
+        SELECT format('aa01%s%s-0000-0000-0000-000000000000', le_hex, role_hex)::uuid, cc || '.' || role_code, role_code
+        FROM legal_entities CROSS JOIN role_codes
         UNION ALL VALUES ('aa010006-0000-0000-0000-000000000000'::uuid, 'athyper.owner', 'owner'),('aa010007-0000-0000-0000-000000000000'::uuid, 'athyper.admin', 'admin')
     )
     INSERT INTO master.principal_identity_binding (
@@ -94,18 +94,5 @@ BEGIN
         idp_enabled = EXCLUDED.idp_enabled, idp_email_verified = EXCLUDED.idp_email_verified,
         synced_at = EXCLUDED.synced_at, updated_at = now(), updated_by = v_su;
 
-    WITH legal_entities(le_hex) AS (
-        VALUES ('01'),('02'),('03'),('04'),('05'),('06'),('07'),('08'),('09'),('0a'),('0b'),('0c'),('0d'),('0e'),('0f'),('10'),('11')
-    ), personas(persona_hex, persona) AS (
-        VALUES ('01','viewer'),('02','reporter'),('03','requester'),('04','agent'),('05','manager'),('06','owner'),('07','admin')
-    ), persona_rows(id, persona) AS (
-        SELECT format('aa01%s%s-0000-0000-0000-000000000000', le_hex, persona_hex)::uuid, persona FROM legal_entities CROSS JOIN personas
-        UNION ALL VALUES ('aa010006-0000-0000-0000-000000000000'::uuid, 'owner'),('aa010007-0000-0000-0000-000000000000'::uuid, 'admin')
-    )
-    INSERT INTO master.principal_persona (tenant_id, principal_id, persona_id, assigned_by, created_by)
-    SELECT v_tid, pr.id, per.id, v_su, v_su
-    FROM persona_rows pr JOIN shared.persona per ON per.code = pr.persona
-    ON CONFLICT (tenant_id, principal_id) DO UPDATE SET persona_id = EXCLUDED.persona_id;
-
-    RAISE NOTICE '[001_demo_principals] 121 systematic Athyper principals, profiles, bindings and personas seeded';
+    RAISE NOTICE '[001_demo_principals] 121 systematic Athyper principals, profiles and bindings seeded';
 END $athyper_systematic_principals$;

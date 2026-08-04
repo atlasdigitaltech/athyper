@@ -182,7 +182,6 @@ export interface ImportChunkJobData {
 export interface RenderDocumentJobData {
   outputId:  string;
   tenantId:  string;
-  jobId:     string;
 }
 
 /** Partition archive sweep — no payload; worker scans candidate partitions per tenant */
@@ -200,7 +199,7 @@ export interface ArchivePartitionJobData {
 
 /** CMS preview generation — extract preview_text/preview_html from a content version */
 export interface PreviewContentJobData {
-  /** master.content_item.id */
+  /** document.content_item.id */
   contentItemId: string;
   /** snapshot.content_item_version.id — the version whose body_json should be rendered */
   versionId:     string;

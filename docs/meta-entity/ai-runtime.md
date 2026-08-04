@@ -40,7 +40,7 @@ First enabled match wins.
 
 ---
 
-## `control.ai_action_policy`
+## `ai.ai_action_policy`
 
 Autonomy ceiling per tenant × action × document class. The runtime **never exceeds** this ceiling regardless of confidence score. `ARCHETYPE=C;SCOPE=T`.
 
@@ -74,7 +74,7 @@ Autonomy ceiling per tenant × action × document class. The runtime **never exc
 
 ---
 
-## `control.ai_confidence_threshold`
+## `ai.ai_confidence_threshold`
 
 Tiered confidence gates governing L1/L2/L3 autonomy. `ARCHETYPE=C;SCOPE=T`.
 
@@ -103,7 +103,7 @@ The three gate values must satisfy: `min_for_suggest ≤ min_for_assist ≤ min_
 
 ---
 
-## `control.ai_drift_baseline`
+## `ai.ai_drift_baseline`
 
 Statistical reference distributions for drift monitoring. One row per `(tenant, action_code, doc_class, model_id, baseline_date)`. Multiple baselines are retained; `is_current = true` marks the active reference. `ARCHETYPE=C;SCOPE=T`.
 
@@ -141,11 +141,11 @@ Statistical reference distributions for drift monitoring. One row per `(tenant, 
 
 When a new baseline is established:
 ```sql
-UPDATE control.ai_drift_baseline
+UPDATE ai.ai_drift_baseline
    SET is_current = false, superseded_at = now(), superseded_by_id = <new_id>
  WHERE tenant_id = :t AND action_code = :a AND model_id = :m AND is_current = true;
 
-INSERT INTO control.ai_drift_baseline (..., is_current = true) VALUES (...);
+INSERT INTO ai.ai_drift_baseline (..., is_current = true) VALUES (...);
 ```
 
 ---

@@ -231,7 +231,7 @@ export function createP2pNotificationOutboxHandler(db: DB): OutboxTopicHandler {
            payload,            channels,          priority,
            created_by)
         VALUES
-          (${tenant_id}::uuid, 'neon',           ${outboxId},      ${event_type},
+          (${tenant_id}::uuid, event.current_plane_key(), ${outboxId}, ${event_type},
            ${templateKey},     1,                ${subjectForEvent(event_type, payload)},
            ${entity_type},     ${entity_id ?? null}::uuid,
            ${JSON.stringify(enrichedPayload)}::jsonb,

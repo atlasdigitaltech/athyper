@@ -139,19 +139,37 @@ export class PolicyFactsProvider {
     // Load role assignments
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const roleRows = await (this.db as any)
-      .selectFrom("master.principal_role as pr")
-      .innerJoin("master.role as r", "r.id", "pr.role_id")
+      .selectFrom("master.auth_current_group_member_v as gm")
+      .innerJoin("master.auth_current_group_role_v as gr", (join: any) => join
+        .onRef("gr.tenant_id", "=", "gm.tenant_id")
+        .onRef("gr.plane_code", "=", "gm.plane_code")
+        .onRef("gr.group_id", "=", "gm.group_id"))
+      .innerJoin("master.auth_role as r", (join: any) => join
+        .onRef("r.tenant_id", "=", "gr.tenant_id")
+        .onRef("r.plane_code", "=", "gr.plane_code")
+        .onRef("r.id", "=", "gr.role_id"))
       .select("r.code")
-      .where("pr.principal_id", "=", this.session.principalId)
-      .where("pr.tenant_id", "=", this.session.tenantId)
+      .where("gm.principal_id", "=", this.session.principalId)
+      .where("gm.tenant_id", "=", this.session.tenantId)
+      .where("gm.plane_code", "=", "neon")
       .execute() as Array<{ code: string }>;
 
     // Load company code access
-    const ccRows = await this.db
-      .selectFrom("master.company_code_access as cca" as never)
-      .select("cca.company_code_id" as never)
-      .where("cca.principal_id" as never, "=", this.session.principalId as never)
-      .where("cca.tenant_id" as never, "=", this.session.tenantId as never)
+    const ccRows = await (this.db as any)
+      .selectFrom("master.auth_current_group_member_v as gm")
+      .innerJoin("master.auth_current_group_role_v as gr", (join: any) => join
+        .onRef("gr.tenant_id", "=", "gm.tenant_id")
+        .onRef("gr.plane_code", "=", "gm.plane_code")
+        .onRef("gr.group_id", "=", "gm.group_id"))
+      .innerJoin("master.auth_scope_target_resolved_v as scope", (join: any) => join
+        .onRef("scope.tenant_id", "=", "gr.tenant_id")
+        .onRef("scope.plane_code", "=", "gr.plane_code")
+        .onRef("scope.scope_target_id", "=", "gr.scope_target_id"))
+      .select("scope.resource_id as company_code_id")
+      .where("gm.principal_id", "=", this.session.principalId)
+      .where("gm.tenant_id", "=", this.session.tenantId)
+      .where("gm.plane_code", "=", "neon")
+      .where("scope.scope_kind", "=", "company_code")
       .execute() as Array<{ company_code_id: string }>;
 
     this._userFacts = {

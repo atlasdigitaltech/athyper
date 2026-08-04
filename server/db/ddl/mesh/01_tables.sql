@@ -128,38 +128,6 @@ CREATE INDEX IF NOT EXISTS mesh_network_account_network_role_idx
 COMMENT ON TABLE mesh.network_account IS
     'Stable BNA address on the Mesh network. Owns exchange address, participant identity, and profile data.';
 
-CREATE TABLE IF NOT EXISTS mesh.account_grant (
-    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
-    account_id          uuid        NOT NULL,
-    principal_id        uuid        NOT NULL,
-    role_code           text        NOT NULL,
-    status              text        NOT NULL DEFAULT 'active',
-    granted_at          timestamptz NOT NULL DEFAULT now(),
-    granted_by          text        NOT NULL DEFAULT 'system',
-    revoked_at          timestamptz,
-    revoked_by          text,
-    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
-    created_at          timestamptz NOT NULL DEFAULT now(),
-    created_by          text        NOT NULL DEFAULT 'system',
-    updated_at          timestamptz,
-    updated_by          text,
-
-    CONSTRAINT mesh_account_grant_pkey PRIMARY KEY (id),
-    CONSTRAINT mesh_account_grant_role_chk CHECK (role_code IN ('account_owner', 'account_admin', 'account_user')),
-    CONSTRAINT mesh_account_grant_status_chk CHECK (status IN ('active', 'inactive', 'suspended', 'revoked')),
-    CONSTRAINT mesh_account_grant_revoked_pair_chk CHECK ((revoked_at IS NULL) = (revoked_by IS NULL)),
-    CONSTRAINT mesh_account_grant_metadata_obj_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT mesh_account_grant_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS mesh_account_grant_active_uq
-    ON mesh.account_grant (account_id, principal_id, role_code)
-    WHERE status = 'active';
-CREATE INDEX IF NOT EXISTS mesh_account_grant_principal_idx
-    ON mesh.account_grant (principal_id, status);
-CREATE INDEX IF NOT EXISTS mesh_account_grant_account_idx
-    ON mesh.account_grant (account_id, status);
-
 -- Buyer–supplier pairing. Replaces the former network_connection table.
 CREATE TABLE IF NOT EXISTS mesh.network_relationship (
     id                    uuid        NOT NULL DEFAULT shared.uuidv7(),

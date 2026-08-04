@@ -1,5 +1,7 @@
 import {
   kcSessionReverseKey,
+  realmKcSessionReverseKey,
+  realmSubjectSessionsKey,
   sessKey,
   sidRotationKey,
   userSessionsKey,
@@ -23,6 +25,7 @@ export interface SessionTerminationContext {
   sid: string;
   userId?: string | undefined;
   keycloakSessionId?: string | undefined;
+  realmKey?: string | undefined;
   reason?: SessionTerminationReason | string | undefined;
 }
 
@@ -52,10 +55,15 @@ export async function terminateSession(
 
   if (context.userId && typeof redis.sRem === "function") {
     await redis.sRem(userSessionsKey(context.namespace, context.userId), context.sid).catch(() => 0);
+    if (context.realmKey) {
+      await redis.sRem(realmSubjectSessionsKey(context.realmKey, context.userId), `${context.namespace}:${context.sid}`).catch(() => 0);
+    }
   }
 
   if (context.keycloakSessionId && typeof redis.sRem === "function") {
-    const reverseKey = kcSessionReverseKey(context.keycloakSessionId);
+    const reverseKey = context.realmKey
+      ? realmKcSessionReverseKey(context.realmKey, context.keycloakSessionId)
+      : kcSessionReverseKey(context.keycloakSessionId);
     await redis.sRem(reverseKey, `${context.namespace}:${context.sid}`).catch(() => 0);
   }
 }
@@ -68,6 +76,7 @@ export async function terminateSession(
 export async function terminateSubjectSessions(
   redis: SessionRedisClient,
   userId: string,
+  realmKey?: string,
 ): Promise<number> {
   if (typeof redis.sMembers !== "function") {
     return 0;
@@ -76,6 +85,22 @@ export async function terminateSubjectSessions(
   const namespaces = ["neon", "mesh", "admin", "platform"] as const;
   let deleted = 0;
 
+  const realms = realmKey ? [realmKey] : ["athyper", "platform-control"];
+  for (const realm of realms) {
+    const realmIndex = realmSubjectSessionsKey(realm, userId);
+    const entries = await redis.sMembers(realmIndex).catch(() => [] as string[]);
+    for (const entry of entries) {
+      const separator = entry.indexOf(":");
+      if (separator < 1) continue;
+      const namespace = entry.slice(0, separator);
+      const sid = entry.slice(separator + 1);
+      await redis.del(sessKey(namespace, sid)).catch(() => 0);
+      deleted++;
+    }
+    await redis.del(realmIndex).catch(() => 0);
+  }
+
+  // Compatibility cleanup for sessions created before realm-scoped indexes.
   for (const namespace of namespaces) {
     const indexKey = userSessionsKey(namespace, userId);
     const sids = await redis.sMembers(indexKey).catch(() => [] as string[]);
@@ -101,6 +126,9 @@ function subjectCleanupEnabled(): boolean {
 export async function notifyIamSubjectCleanup(args: {
   accessToken?: string | undefined;
   subjectId: string;
+  planeKey: "admin" | "neon" | "mesh";
+  realmKey: string;
+  sessionId?: string | undefined;
   reason: SessionTerminationReason | string;
   requestId: string;
   auditContext?: unknown;
@@ -120,7 +148,10 @@ export async function notifyIamSubjectCleanup(args: {
       "X-Request-ID": args.requestId,
       "X-Logout-Reason": args.reason,
       "X-Logout-Subject": args.subjectId,
+      "X-Plane-Key": args.planeKey,
+      "X-Realm-Key": args.realmKey,
     };
+    if (args.sessionId) headers["X-Session-ID"] = args.sessionId;
     if (args.auditContext) {
       headers["X-Logout-Context"] = Buffer.from(JSON.stringify(args.auditContext), "utf8").toString("base64url");
     }

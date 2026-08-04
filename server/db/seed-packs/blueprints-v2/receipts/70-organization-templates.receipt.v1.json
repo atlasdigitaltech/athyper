@@ -1,0 +1,16 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "organization-templates",
+  "packVersion": "2.0.0",
+  "packChecksum": "da07a0b0654ad09e1733c420373aa00cc87b9c70237d0ed951e9cd530ab4676d",
+  "plane": "neon",
+  "tenantId": "f5000000-0000-0000-0000-000000000001",
+  "status": "validated-disposable-neon",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [{"status":"passed-twice","rowCounts":{"orgUnitTypes":2,"orgUnits":9,"costCenters":19,"profitCenters":15}}],
+  "assertionResults": [
+    {"assertion":"universal-parents","status":"passed","evidence":"organization/operations plus company cost/profit parents"},
+    {"assertion":"explicit-industry-scope","status":"passed","evidence":"pack_utilities applied only to explicit company id"},
+    {"assertion":"idempotent-convergence","status":"passed","evidence":"maximum update timestamps unchanged on final pass"}
+  ]
+}

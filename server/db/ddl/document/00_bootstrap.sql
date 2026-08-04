@@ -1,6 +1,14 @@
 -- ============================================================================
 -- document/00_bootstrap.sql
--- Concept: Document Bootstrap — no pre-table functions required for this schema
--- Depends on: 01_schemas/001_schemas.sql
--- Note: No bootstrap functions required for the document schema.
+-- Pre-table schema types and sequences.
+-- Generated from the live Neon database document schema. Do not hand-edit.
 -- ============================================================================
+
+CREATE SEQUENCE "document"."upupr_code_seq"
+  AS bigint
+  START WITH 1
+  INCREMENT BY 1
+  MINVALUE 1
+  MAXVALUE 9223372036854775807
+  CACHE 1
+  NO CYCLE;

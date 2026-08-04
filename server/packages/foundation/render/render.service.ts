@@ -2,7 +2,7 @@
  * RenderService — Phase 5.1
  *
  * Orchestrates PDF rendering via the athyper-renderer container.
- * Manages document.render_output + document.render_job lifecycle.
+ * Manages the durable document.render_output lifecycle.
  *
  * Wiring:
  *   - Calls PdfRendererClient for synchronous (<5MB) or async (large) renders
@@ -75,27 +75,23 @@ export class RenderService {
 
   /**
    * Synchronous render flow:
-   *   1. Create render_output (QUEUED) + render_job (PENDING)
+   *   1. Create render_output (QUEUED)
    *   2. Call renderer /render endpoint
    *   3. Upload PDF to object storage
-   *   4. Update render_output (RENDERED) + render_job (COMPLETED)
+   *   4. Update render_output (RENDERED)
    */
   async renderDocument(input: RenderDocumentInput): Promise<RenderDocumentResult> {
-    // Create output + job rows
+    // render_output is both the requested artifact and its execution state.
     const outputId = await this.createOutputRecord(input);
-    const jobId    = await this.createJobRecord(outputId, input.tenantId);
 
     if (!this.renderer) {
-      await this.failOutput(outputId, input.tenantId, jobId, "RENDERER_UNAVAILABLE", "Renderer not configured");
+      await this.failOutput(outputId, input.tenantId, "RENDERER_UNAVAILABLE", "permanent", "Renderer not configured");
       return { outputId, storageKey: null, status: "FAILED", error: "Renderer not configured" };
     }
-
-    const startMs = Date.now();
 
     try {
       // Mark as RENDERING
       await this.updateOutputStatus(outputId, input.tenantId, "RENDERING");
-      await this.updateJobStatus(jobId, input.tenantId, "PROCESSING");
 
       // Call renderer
       const pdfBuffer = await this.renderer.renderSync(input.html, input.renderOptions);
@@ -113,8 +109,6 @@ export class RenderService {
         await this.storage.put(storageKey, pdfBuffer, { contentType: "application/pdf" });
       }
 
-      const durationMs = Date.now() - startMs;
-
       // Mark as RENDERED
       await this.db
         .updateTable("document.render_output" as never)
@@ -125,6 +119,9 @@ export class RenderService {
           size_bytes:   pdfBuffer.byteLength as never,
           mime_type:    "application/pdf" as never,
           rendered_at:  new Date().toISOString() as never,
+          error_code:   null as never,
+          error_message: null as never,
+          failure_category: null as never,
           updated_at:   new Date().toISOString() as never,
           updated_by:   SYSTEM_ACTOR as never,
         } as never)
@@ -132,22 +129,11 @@ export class RenderService {
         .where("tenant_id" as never, "=", input.tenantId as never)
         .execute();
 
-      await this.db
-        .updateTable("document.render_job" as never)
-        .set({
-          status:       "COMPLETED" as never,
-          completed_at: new Date().toISOString() as never,
-          duration_ms:  durationMs as never,
-          updated_at:   new Date().toISOString() as never,
-        } as never)
-        .where("id" as never, "=", jobId as never)
-        .execute();
-
       return { outputId, storageKey, status: "RENDERED" };
 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      await this.failOutput(outputId, input.tenantId, jobId, "RENDER_ERROR", message);
+      await this.failOutput(outputId, input.tenantId, "RENDER_ERROR", "crash", message);
       return { outputId, storageKey: null, status: "FAILED", error: message };
     }
   }
@@ -204,23 +190,6 @@ export class RenderService {
     return row.id;
   }
 
-  private async createJobRecord(outputId: string, tenantId: string): Promise<string> {
-    const row = await this.db
-      .insertInto("document.render_job" as never)
-      .values({
-        tenant_id:   tenantId,
-        output_id:   outputId,
-        status:      "PENDING",
-        attempts:    0,
-        max_attempts: 3,
-        created_by:  SYSTEM_ACTOR,
-      } as never)
-      .returning("id" as never)
-      .executeTakeFirstOrThrow() as { id: string };
-
-    return row.id;
-  }
-
   private async updateOutputStatus(
     outputId: string,
     tenantId: string,
@@ -228,26 +197,16 @@ export class RenderService {
   ): Promise<void> {
     await this.db
       .updateTable("document.render_output" as never)
-      .set({ status: status as never, updated_at: new Date().toISOString() as never } as never)
-      .where("id" as never, "=", outputId as never)
-      .where("tenant_id" as never, "=", tenantId as never)
-      .execute();
-  }
-
-  private async updateJobStatus(
-    jobId:    string,
-    tenantId: string,
-    status:   string,
-  ): Promise<void> {
-    await this.db
-      .updateTable("document.render_job" as never)
       .set({
-        status:     status as never,
-        started_at: status === "PROCESSING" ? new Date().toISOString() as never : undefined as never,
-        attempts:   sql`attempts + 1` as never,
+        status: status as never,
+        ...(status === "RENDERING" ? {
+          attempt_count: sql`attempt_count + 1` as never,
+          last_attempt_at: new Date().toISOString() as never,
+        } : {}),
         updated_at: new Date().toISOString() as never,
+        updated_by: SYSTEM_ACTOR as never,
       } as never)
-      .where("id" as never, "=", jobId as never)
+      .where("id" as never, "=", outputId as never)
       .where("tenant_id" as never, "=", tenantId as never)
       .execute();
   }
@@ -255,37 +214,24 @@ export class RenderService {
   private async failOutput(
     outputId:    string,
     tenantId:    string,
-    jobId:       string,
     errorCode:   string,
+    failureCategory: "transient" | "permanent" | "validation" | "crash",
     errorMessage: string,
   ): Promise<void> {
-    await Promise.all([
-      this.db
+    await this.db
         .updateTable("document.render_output" as never)
         .set({
           status:        "FAILED" as never,
           error_code:    errorCode as never,
           error_message: errorMessage.substring(0, 2048) as never,
+          failure_category: failureCategory as never,
           updated_at:    new Date().toISOString() as never,
           updated_by:    SYSTEM_ACTOR as never,
         } as never)
         .where("id" as never, "=", outputId as never)
         .where("tenant_id" as never, "=", tenantId as never)
         .execute()
-        .catch(() => undefined),
-
-      this.db
-        .updateTable("document.render_job" as never)
-        .set({
-          status:       "FAILED" as never,
-          error_code:   errorCode as never,
-          error_detail: errorMessage.substring(0, 2048) as never,
-          updated_at:   new Date().toISOString() as never,
-        } as never)
-        .where("id" as never, "=", jobId as never)
-        .execute()
-        .catch(() => undefined),
-    ]);
+        .catch(() => undefined);
   }
 }
 
@@ -299,4 +245,3 @@ export function createRenderService(
 ): RenderService {
   return new RenderService(db, renderer, storage);
 }
-

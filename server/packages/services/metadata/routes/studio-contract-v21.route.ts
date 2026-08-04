@@ -15,6 +15,19 @@ import { PostgresContractApplicationRepository } from "../src/contract-applicati
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<any>;
 
+const STUDIO_CONTRACT_PERMISSION_CODES = [
+  "metadata.contract.break_glass",
+  "metadata.contract.draft",
+  "metadata.contract.edit",
+  "metadata.contract.export",
+  "metadata.contract.import",
+  "metadata.contract.publish",
+  "metadata.contract.review",
+  "metadata.contract.rollback",
+  "metadata.contract.submit",
+  "metadata.contract.view",
+] as const;
+
 export interface StudioContractV21RoutesDeps {
   db: AnyDb;
   auth: { verifyToken(token: string): Promise<Record<string, unknown>> };
@@ -122,7 +135,7 @@ export function createStudioContractV21Routes(
         contractPermissions?: ReadonlySet<string>;
       }).contractPermissions;
       const permissions = permissionSet
-        ? [...permissionSet].filter((permission) => permission.startsWith("metadata.contract.")).sort()
+        ? STUDIO_CONTRACT_PERMISSION_CODES.filter((permission) => permissionSet.has(permission))
         : [];
       res.status(result.valid ? 200 : 422).json({
         ...result,

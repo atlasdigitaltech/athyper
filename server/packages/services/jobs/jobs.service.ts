@@ -122,6 +122,8 @@ export interface JobsServiceOptions {
 export interface JobsServiceDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: DB;
+  /** Runs tenant-scoped BullMQ work inside the kernel ALS context used by the DB tenant-stamp driver. */
+  runWithJobContext?: <T>(context: { tenantId?: string }, fn: () => T | Promise<T>) => Promise<T>;
   /**
    * BullMQ ConnectionOptions. Built by bootstrap with `maxRetriesPerRequest: null`
    * (required for BullMQ Workers). Intentionally a plain ConnectionOptions (not
@@ -370,6 +372,7 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
       channelHandlers,
       emailFromMap,
       logger,
+      ...(deps.runWithJobContext ? { runWithJobContext: deps.runWithJobContext } : {}),
     }),
     createDomainOutboxWorker({
       db,
@@ -747,21 +750,16 @@ export function createJobsService(deps: JobsServiceDeps): JobsService {
       let dbSkipped = 0;
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const dbSchedules = await (db as any)
-          .selectFrom("control.cron_schedule as cs")
-          .select([
-            "cs.code", "cs.name", "cs.handler_type",
-            "cs.cron_expression", "cs.timezone",
-            "cs.target_queue", "cs.payload_template",
-          ])
-          .where("cs.is_enabled" as never, "=", true as never)
-          .where(sql`(cs.effective_from IS NULL OR cs.effective_from <= now())`)
-          .where(sql`(cs.effective_until IS NULL OR cs.effective_until > now())`)
-          .execute() as Array<{
+        const scheduleResult = await sql<{
             code: string; name: string; handler_type: string;
             cron_expression: string; timezone: string;
             target_queue: string; payload_template: Record<string, unknown>;
-          }>;
+          }>`
+          SELECT code, name, handler_type, cron_expression, timezone,
+                 target_queue, payload_template
+          FROM control.fn_cron_schedules_for_scheduler()
+        `.execute(db);
+        const dbSchedules = scheduleResult.rows;
 
         for (const cs of dbSchedules) {
           const queueKey = QUEUE_NAME_TO_KEY[cs.target_queue];

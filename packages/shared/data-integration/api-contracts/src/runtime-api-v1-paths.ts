@@ -89,9 +89,6 @@ export const runtimePath = {
   bulkPreflight: (entity: string) => `${ROOT}/entities/${enc(entity)}/bulk-preflight`,
   bulkAction:    (entity: string) => `${ROOT}/entities/${enc(entity)}/bulk-action`,
   bulkCrud:      (entity: string) => `${ROOT}/entities/${enc(entity)}/bulk`,
-  filterPresets: (entity: string) => `${ROOT}/entities/${enc(entity)}/filter-presets`,
-  filterPreset:  (entity: string, presetId: string) =>
-    `${ROOT}/entities/${enc(entity)}/filter-presets/${enc(presetId)}`,
 
   // ── Descriptor + relation helpers ──────────────────────────────────────────
   relationRecords: (entity: string, relation: string, parentId: string) =>

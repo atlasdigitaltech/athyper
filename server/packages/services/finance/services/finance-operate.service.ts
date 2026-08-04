@@ -95,7 +95,12 @@ export async function loadReconciliationSignals(
     last_statement_date: string | null;
   }>`
     SELECT ba.id                                                      AS bank_account_id,
-           COALESCE(bahc.account_nickname, ba.iban, ba.account_number, ba.id::text)
+           COALESCE(
+             bahc.account_nickname,
+             ba.name,
+             ba.code,
+             concat('••••', ba.account_last4)
+           )
                                                                        AS bank_account_label,
            ga.code                                                     AS gl_account_code,
            bal.effective_from::text                                    AS effective_from,
@@ -125,8 +130,12 @@ export async function loadReconciliationSignals(
         ON cc.id = bal.owner_id
        AND cc.tenant_id = ${tenantId}::uuid
        AND cc.code = ${companyCode}
-      JOIN master.bank_account ba ON ba.id = bal.bank_account_id
-      LEFT JOIN master.gl_account ga ON ga.id = bahc.gl_account_id
+      JOIN master.bank_account ba
+        ON ba.tenant_id = bal.tenant_id
+       AND ba.id = bal.bank_account_id
+      LEFT JOIN master.gl_account ga
+        ON ga.tenant_id = bahc.tenant_id
+       AND ga.id = bahc.gl_account_id
      WHERE bahc.tenant_id = ${tenantId}::uuid
      ORDER BY open_cases DESC, unmatched_lines DESC
   `.execute(db);

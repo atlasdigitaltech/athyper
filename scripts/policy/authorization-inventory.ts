@@ -79,8 +79,33 @@ export interface AuthorizationRegistry {
     scanRoots: string[];
     excludedDirectories: string[];
     excludedFiles: string[];
+    captureSourceDdls: Array<{
+      plane: string;
+      path: string;
+      registryTable: string;
+    }>;
   };
   objects: AuthorizationRegistryObject[];
+  captureSourceObjectIds: Record<string, string[]>;
+  keycloakRestWriters: Array<{
+    id: string;
+    path: string;
+    owner: string;
+    disposition: string;
+    allowedOperations: string[];
+  }>;
+  knownSourceAnomalies: Array<{
+    id: string;
+    type: "object" | "permission_code" | "configuration";
+    identity: string;
+    owner: string;
+    currentPaths: string[];
+    matchText?: string;
+    disposition: string;
+    removalWave: string;
+    blocksStrictCertification: true;
+    boundaryClass?: string;
+  }>;
   securitySymbols: string[];
   contractFields: string[];
   generatedArtifacts: Array<{
@@ -165,6 +190,8 @@ interface DerivedDatabaseObject {
   executes?: string;
   dependencies: string[];
   classification: "registered" | "structural_dependency" | "unclassified";
+  owner: string | null;
+  disposition: string;
 }
 
 interface KeycloakMapping {
@@ -175,6 +202,22 @@ interface KeycloakMapping {
   userAttribute: string | null;
   claimName: string | null;
   hardcodedRole: string | null;
+}
+
+interface CaptureSourceEntry {
+  plane: string;
+  qualifiedName: string;
+  path: string;
+  line: number;
+}
+
+interface KeycloakRestWriterReference {
+  path: string;
+  owner: string | null;
+  disposition: string | null;
+  operations: string[];
+  lines: number[];
+  classification: "reviewed" | "unclassified";
 }
 
 interface GeneratedArtifact {
@@ -196,6 +239,11 @@ export interface AuthorizationInventory {
     scanRoots: string[];
     excludedDirectories: string[];
     excludedFiles: string[];
+    captureSourceDdls: Array<{
+      plane: string;
+      path: string;
+      registryTable: string;
+    }>;
   };
   summary: {
     filesScanned: number;
@@ -211,6 +259,9 @@ export interface AuthorizationInventory {
     keycloakMappings: number;
     derivedDatabaseObjects: number;
     generatedArtifacts: number;
+    captureSources: number;
+    captureSourcesByPlane: Record<string, number>;
+    keycloakRestWriters: number;
   };
   objects: Array<
     AuthorizationRegistryObject & {
@@ -233,6 +284,16 @@ export interface AuthorizationInventory {
   permissionUses: PermissionUse[];
   routes: RouteEntry[];
   keycloakMappings: KeycloakMapping[];
+  captureSources: Array<{
+    plane: string;
+    objectId: string | null;
+    qualifiedName: string;
+    owner: string | null;
+    disposition: string | null;
+    path: string;
+    line: number;
+  }>;
+  keycloakRestWriters: KeycloakRestWriterReference[];
   derivedDatabaseObjects: DerivedDatabaseObject[];
   generatedArtifacts: GeneratedArtifact[];
   gates: {
@@ -247,6 +308,35 @@ export interface AuthorizationInventory {
     unclassifiedWriters: ObjectReference[];
     missingDefinitions: string[];
     generatedArtifactFailures: string[];
+    unknownCaptureSources: string[];
+    staleCaptureSourceRegistrations: string[];
+    duplicateCaptureSources: string[];
+    crossPlaneCaptureSources: string[];
+    unknownKeycloakRestWriters: KeycloakRestWriterReference[];
+    staleKeycloakRestWriterRules: string[];
+    knownSourceAnomalies: Array<{
+      id: string;
+      type: "object" | "permission_code" | "configuration";
+      identity: string;
+      owner: string;
+      path: string;
+      lines: number[];
+      disposition: string;
+      removalWave: string;
+      blocksStrictCertification: true;
+    }>;
+    zeroMeshNeonBoundaryFindings: Array<{
+      id: string;
+      type: "object" | "permission_code" | "configuration";
+      identity: string;
+      boundaryClass: string;
+      owner: string;
+      path: string;
+      lines: number[];
+      disposition: string;
+      removalWave: string;
+      blocksStrictCertification: true;
+    }>;
   };
 }
 
@@ -302,6 +392,7 @@ export function classifyArtifact(path: string): ArtifactClass {
   if (
     normalized.includes("/__tests__/")
     || normalized.includes("/tests/")
+    || normalized.includes("/test-harness/")
     || normalized.endsWith(".test.ts")
     || normalized.endsWith(".test.tsx")
     || normalized.endsWith(".spec.ts")
@@ -461,7 +552,7 @@ function aggregateUnknownObjectReferences(
 export function isStrongAuthorizationObjectName(qualifiedName: string): boolean {
   const component = qualifiedName.split(".").at(-1) ?? "";
   if (/(?:_ck|_fk|_idx|_pkey|_uq)$/u.test(component)) return false;
-  return /(?:^|_)(?:access_grant|access_log|acl|auth|decision_log|delegation|entitlement|feature_grant|identity_binding|identity_domain|identity_provider|permission|persona|principal_relationship|tenant_admin_grant)(?:_|$)/iu.test(component);
+  return /(?:^|_)(?:access_grant|access_log|acl|auth|authorization|decision_log|delegation|entitlement|feature_grant|identity_domain|identity_provider|permission|persona|principal_identity_binding|principal_relationship|tenant_admin_grant)(?:_|$)/iu.test(component);
 }
 
 function isInsideSqlSingleQuotedLiteral(content: string, index: number): boolean {
@@ -635,15 +726,35 @@ function aggregateExactFieldReferences(
   fields: string[],
 ): ContractFieldReference[] {
   const references = new Map<string, ContractFieldReference>();
+  const contextDependentFields = new Set([
+    "allowed",
+    "denied",
+    "groupIds",
+    "permissions",
+    "persona",
+    "roleIds",
+  ]);
   for (const file of files) {
+    const authorizationPath =
+      /(?:access|auth|entity[_-]operation|group|iam|keycloak|permission|persona|resolver|role|session-plane)/iu.test(file.path);
     for (const field of fields) {
       const pattern = new RegExp(
         `(?<![A-Za-z0-9_$])${escapeRegex(field)}(?![A-Za-z0-9_$])`,
         "gu",
       );
       for (const match of file.scanContent.matchAll(pattern)) {
+        const index = match.index ?? 0;
+        if (contextDependentFields.has(field) && !authorizationPath) {
+          const around = file.scanContent.slice(
+            Math.max(0, index - 220),
+            index + field.length + 220,
+          );
+          if (!/(?:authorization|groupIds|matchedGrantId|matchedGroupId|matchedRoleId|permission|personaId|planLocked|roleIds)/u.test(around)) {
+            continue;
+          }
+        }
         const key = `${field}\u0000${file.path}`;
-        const line = lineNumberAt(file.scanContent, match.index ?? 0);
+        const line = lineNumberAt(file.scanContent, index);
         const current = references.get(key);
         if (current) current.lines.push(line);
         else {
@@ -670,13 +781,58 @@ function scanPermissionDefinitions(files: SourceFile[]): PermissionDefinition[] 
   const definitions = new Map<string, PermissionDefinition>();
   const definitionStatement =
     /\bINSERT\s+INTO\s+shared\.permission(?![A-Za-z0-9_])[\s\S]*?;/giu;
-  const permissionCode = /'([A-Z][A-Z0-9_]+(?:\.[A-Z0-9_]+)+)'/gu;
+  const upperPermissionCode = /'([A-Z][A-Z0-9_]+(?:\.[A-Z0-9_]+)+)'/gu;
+  const canonicalTuple =
+    /\(\s*'([A-Za-z][A-Za-z0-9._-]*)'\s*,\s*'[^']*'\s*,\s*'[^']+'\s*,\s*'(?:record|tenant|special)'\s*,\s*'(low|medium|high|critical)'/gu;
+  const shortTuple =
+    /\(\s*'([A-Za-z][A-Za-z0-9._-]*)'\s*,\s*'[^']*'\s*,\s*'(?:record|tenant|special)'\s*,\s*'(low|medium|high|critical)'/gu;
 
   for (const file of files.filter((item) => item.path.endsWith(".sql"))) {
     for (const statementMatch of file.scanContent.matchAll(definitionStatement)) {
       const statement = statementMatch[0];
       const statementOffset = statementMatch.index ?? 0;
-      for (const codeMatch of statement.matchAll(permissionCode)) {
+      const recordDefinition = (
+        code: string,
+        riskLevel: PermissionDefinition["riskLevel"],
+        codeIndex: number,
+      ): void => {
+        const line = lineNumberAt(file.scanContent, statementOffset + codeIndex);
+        const existing = definitions.get(code);
+        if (existing) {
+          const source = existing.sources.find((item) => item.path === file.path);
+          if (source) source.lines.push(line);
+          else existing.sources.push({ path: file.path, lines: [line] });
+          if (existing.riskLevel === "unknown" && riskLevel !== "unknown") {
+            existing.riskLevel = riskLevel;
+          }
+        } else {
+          definitions.set(code, {
+            code,
+            riskLevel,
+            sources: [{ path: file.path, lines: [line] }],
+          });
+        }
+      };
+
+      for (const tupleMatch of statement.matchAll(canonicalTuple)) {
+        if (tupleMatch[1] && tupleMatch[2]) {
+          recordDefinition(
+            tupleMatch[1],
+            tupleMatch[2] as PermissionDefinition["riskLevel"],
+            tupleMatch.index ?? 0,
+          );
+        }
+      }
+      for (const tupleMatch of statement.matchAll(shortTuple)) {
+        if (tupleMatch[1] && tupleMatch[2]) {
+          recordDefinition(
+            tupleMatch[1],
+            tupleMatch[2] as PermissionDefinition["riskLevel"],
+            tupleMatch.index ?? 0,
+          );
+        }
+      }
+      for (const codeMatch of statement.matchAll(upperPermissionCode)) {
         const code = codeMatch[1];
         if (!code) continue;
         const codeIndex = codeMatch.index ?? 0;
@@ -684,22 +840,7 @@ function scanPermissionDefinitions(files: SourceFile[]): PermissionDefinition[] 
         const riskLevel = riskWindow.match(
           /,\s*'(low|medium|high|critical)'(?:\s*[,)]|\s*::)/u,
         )?.[1] as PermissionDefinition["riskLevel"] | undefined;
-        const line = lineNumberAt(file.scanContent, statementOffset + codeIndex);
-        const existing = definitions.get(code);
-        if (existing) {
-          const source = existing.sources.find((item) => item.path === file.path);
-          if (source) source.lines.push(line);
-          else existing.sources.push({ path: file.path, lines: [line] });
-          if (existing.riskLevel === "unknown" && riskLevel) {
-            existing.riskLevel = riskLevel;
-          }
-        } else {
-          definitions.set(code, {
-            code,
-            riskLevel: riskLevel ?? "unknown",
-            sources: [{ path: file.path, lines: [line] }],
-          });
-        }
+        recordDefinition(code, riskLevel ?? "unknown", codeIndex);
       }
     }
   }
@@ -913,6 +1054,180 @@ function scanKeycloakMappings(files: SourceFile[]): KeycloakMapping[] {
     compareText(left.path, right.path) || compareText(left.jsonPath, right.jsonPath));
 }
 
+function scanCaptureSources(
+  root: string,
+  registry: AuthorizationRegistry,
+): CaptureSourceEntry[] {
+  const rowPattern =
+    /\(\s*'([a-z][a-z0-9_]*)'\s*,\s*'([a-z][a-z0-9_]*)'\s*,\s*'[a-z][a-z0-9_]*'/gu;
+  const entries: CaptureSourceEntry[] = [];
+  for (const sourceContract of registry.contract.captureSourceDdls) {
+    const absolutePath = resolve(root, sourceContract.path);
+    if (!existsSync(absolutePath)) continue;
+    const content = readFileSync(absolutePath, "utf8").replaceAll("\r\n", "\n");
+    const scannable = stripSourceComments(content, ".sql");
+    const insertPattern = new RegExp(
+      String.raw`\bINSERT\s+INTO\s+${escapeRegex(sourceContract.registryTable)}`
+        + String.raw`\b[\s\S]*?\bVALUES\b([\s\S]*?)(?=\bON\s+CONFLICT\b)`,
+      "giu",
+    );
+    for (const insertMatch of scannable.matchAll(insertPattern)) {
+      const sourceBlock = insertMatch[1] ?? "";
+      const sourceBlockOffset =
+        (insertMatch.index ?? 0) + insertMatch[0].length - sourceBlock.length;
+      for (const rowMatch of sourceBlock.matchAll(rowPattern)) {
+        entries.push({
+          plane: sourceContract.plane,
+          qualifiedName: `${rowMatch[1]}.${rowMatch[2]}`.toLowerCase(),
+          path: sourceContract.path,
+          line: lineNumberAt(
+            scannable,
+            sourceBlockOffset + (rowMatch.index ?? 0),
+          ),
+        });
+      }
+    }
+  }
+  return entries
+    .sort((left, right) =>
+      compareText(left.plane, right.plane)
+      || compareText(left.qualifiedName, right.qualifiedName)
+      || left.line - right.line);
+}
+
+function keycloakResourceKind(endpoint: string): string {
+  const value = endpoint.toLowerCase().split("?")[0] ?? endpoint.toLowerCase();
+  if (value === "") return "realm";
+  if (
+    value.includes("protocol-mappers")
+    || value.includes("protocolmappers")
+    || value.includes("partialimport")
+  ) return "protocol_mapper_or_realm_import";
+  if (value.includes("/users") && value.includes("/groups")) {
+    return "user_group_membership";
+  }
+  if (value.includes("/users") && value.includes("/credentials")) {
+    return "user_credential";
+  }
+  if (value.includes("/users") && value.includes("/role-mappings")) {
+    return "user_role_mapping";
+  }
+  if (value.includes("/users") && value.includes("/execute-actions-email")) {
+    return "user_required_action";
+  }
+  if (value.includes("/users")) return "user";
+  if (value.includes("/groups") && value.includes("/role-mappings")) {
+    return "group_role_mapping";
+  }
+  if (value.includes("/groups")) return "group";
+  if (value.includes("/organizations") && value.includes("/members")) {
+    return "organization_membership";
+  }
+  if (value.includes("/organizations")) return "organization";
+  if (value.includes("/identity-provider")) return "identity_provider";
+  if (value.includes("/authentication")) return "authentication_flow";
+  if (value.includes("/clients") && value.includes("/roles")) return "client_role";
+  if (value.includes("/clients")) return "client";
+  if (/\/admin\/realms\/[^/{}$]+\/?$/u.test(value)) return "realm";
+  return "admin_other";
+}
+
+function keycloakEndpointCandidates(file: SourceFile): Array<{
+  endpoint: string;
+  index: number;
+}> {
+  const endpoints: Array<{ endpoint: string; index: number }> = [];
+  const absolutePattern =
+    /(["'`])([^"'`\r\n]*\/admin\/realms\/[^"'`\r\n]*)\1/gu;
+  for (const match of file.scanContent.matchAll(absolutePattern)) {
+    endpoints.push({
+      endpoint: match[2] ?? "",
+      index: match.index ?? 0,
+    });
+  }
+  if (file.path.startsWith("tools/devtools/keycloackgen/")) {
+    const relativePattern =
+      /(["'`])(\/(?:users|groups|organizations|identity-provider|authentication|clients|client-scopes|partialImport)[^"'`\r\n]*)\1/giu;
+    for (const match of file.scanContent.matchAll(relativePattern)) {
+      endpoints.push({
+        endpoint: match[2] ?? "",
+        index: match.index ?? 0,
+      });
+    }
+  }
+  return endpoints;
+}
+
+function scanKeycloakRestWriters(
+  files: SourceFile[],
+  registry: AuthorizationRegistry,
+): KeycloakRestWriterReference[] {
+  const rulesByPath = new Map(
+    registry.keycloakRestWriters.map((rule) => [rule.path, rule]),
+  );
+  const references: KeycloakRestWriterReference[] = [];
+  for (const file of files) {
+    if (file.artifactClass === "test") continue;
+    const endpoints = keycloakEndpointCandidates(file);
+    const operations = new Set<string>();
+    const lines: number[] = [];
+    const record = (method: string, endpoint: string, index: number): void => {
+      operations.add(`${method}:${keycloakResourceKind(endpoint)}`);
+      lines.push(lineNumberAt(file.scanContent, index));
+    };
+    for (const match of file.scanContent.matchAll(
+      /\b[A-Za-z_$][A-Za-z0-9_$]*\s*\(\s*(["'])(POST|PUT|PATCH|DELETE)\1\s*,\s*(["'`])([^"'`\r\n]*\/admin\/realms\/[^"'`\r\n]*)\3/gu,
+    )) {
+      record(match[2] ?? "", match[4] ?? "", match.index ?? 0);
+    }
+    if (file.path.startsWith("tools/devtools/keycloackgen/")) {
+      for (const match of file.scanContent.matchAll(
+        /\bapi(?:Json)?\s*\(\s*[^,\r\n]+,\s*(["'`])([^"'`\r\n]*)\1\s*,\s*(["'])(POST|PUT|PATCH|DELETE)\3/gu,
+      )) {
+        record(match[4] ?? "", match[2] ?? "", match.index ?? 0);
+      }
+    }
+    for (const match of file.scanContent.matchAll(
+      /\bfetch\s*\(\s*(["'`])([^"'`\r\n]*\/admin\/realms\/[^"'`\r\n]*)\1\s*,\s*\{[\s\S]{0,400}?method\s*:\s*(["'])(POST|PUT|PATCH|DELETE)\3/gu,
+    )) {
+      record(match[4] ?? "", match[2] ?? "", match.index ?? 0);
+    }
+    for (const match of file.scanContent.matchAll(
+      /(["'])(POST|PUT|PATCH|DELETE)\1/gu,
+    )) {
+      const methodIndex = match.index ?? 0;
+      const nearest = endpoints
+        .map((endpoint) => ({
+          ...endpoint,
+          distance: methodIndex - endpoint.index,
+        }))
+        .filter((endpoint) => endpoint.distance >= 0 && endpoint.distance <= 500)
+        .filter((endpoint) =>
+          /\bfetch\s*\(/u.test(
+            file.scanContent.slice(endpoint.index, methodIndex),
+          ))
+        .sort((left, right) => left.distance - right.distance)[0];
+      if (nearest) record(match[2] ?? "", nearest.endpoint, methodIndex);
+    }
+    if (operations.size === 0) continue;
+    const rule = rulesByPath.get(file.path);
+    const discoveredOperations = [...operations].sort(compareText);
+    const allowedOperations = new Set(rule?.allowedOperations ?? []);
+    const exactMatch = Boolean(rule)
+      && discoveredOperations.every((operation) => allowedOperations.has(operation))
+      && rule!.allowedOperations.every((operation) => operations.has(operation));
+    references.push({
+      path: file.path,
+      owner: rule?.owner ?? null,
+      disposition: rule?.disposition ?? null,
+      operations: discoveredOperations,
+      lines: [...new Set(lines)].sort((left, right) => left - right),
+      classification: exactMatch ? "reviewed" : "unclassified",
+    });
+  }
+  return references.sort((left, right) => compareText(left.path, right.path));
+}
+
 function objectDependenciesInBlock(
   block: string,
   objects: AuthorizationRegistryObject[],
@@ -924,6 +1239,27 @@ function objectDependenciesInBlock(
     ).test(block))
     .map((object) => object.qualifiedName)
     .sort(compareText);
+}
+
+function derivedOwnership(
+  qualifiedName: string,
+  dependencies: string[],
+  objects: AuthorizationRegistryObject[],
+): { owner: string | null; disposition: string } {
+  const direct = objects.find((object) =>
+    object.qualifiedName.toLowerCase() === qualifiedName.toLowerCase());
+  if (direct) return { owner: direct.owner, disposition: direct.disposition };
+  const owners = uniqueSorted(
+    dependencies.flatMap((dependency) => {
+      const object = objects.find((candidate) =>
+        candidate.qualifiedName.toLowerCase() === dependency.toLowerCase());
+      return object?.owner ? [object.owner] : [];
+    }),
+  );
+  return {
+    owner: owners.length > 0 ? owners.join("+") : null,
+    disposition: owners.length > 0 ? "review_with_registered_dependency" : "requires_review",
+  };
 }
 
 function scanDerivedDatabaseObjects(
@@ -946,6 +1282,7 @@ function scanDerivedDatabaseObjects(
         objects,
       ).filter((dependency) => dependency.toLowerCase() !== qualifiedName);
       const registered = registeredNames.has(qualifiedName);
+      const ownership = derivedOwnership(qualifiedName, dependencies, objects);
       if (!registered && dependencies.length === 0 && !isStrongAuthorizationObjectName(qualifiedName)) {
         continue;
       }
@@ -958,11 +1295,12 @@ function scanDerivedDatabaseObjects(
         classification: registered
           ? "registered"
           : dependencies.length > 0 ? "structural_dependency" : "unclassified",
+        ...ownership,
       });
     }
 
     const triggerPattern =
-      /\bCREATE\s+TRIGGER\s+([a-z_][a-z0-9_]*)[\s\S]*?\bON\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)[\s\S]*?\bEXECUTE\s+FUNCTION\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)[\s\S]*?;/giu;
+      /\bCREATE\s+TRIGGER\s+([a-z_][a-z0-9_]*)[^;]*?\bON\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)[^;]*?\bEXECUTE\s+FUNCTION\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)[^;]*?;/giu;
     for (const match of file.scanContent.matchAll(triggerPattern)) {
       const attachedTo = (match[2] ?? "").toLowerCase();
       const attachedObject = objects.find((object) =>
@@ -970,6 +1308,7 @@ function scanDerivedDatabaseObjects(
       const triggerName = match[1] ?? "";
       const qualifiedName = `${attachedTo}.${triggerName}`;
       if (!attachedObject && !isStrongAuthorizationObjectName(qualifiedName)) continue;
+      const dependencies = attachedObject ? [attachedObject.qualifiedName] : [];
       derived.push({
         qualifiedName,
         kind: "trigger",
@@ -977,8 +1316,9 @@ function scanDerivedDatabaseObjects(
         line: lineNumberAt(file.scanContent, match.index ?? 0),
         attachedTo,
         executes: (match[3] ?? "").toLowerCase(),
-        dependencies: attachedObject ? [attachedObject.qualifiedName] : [],
+        dependencies,
         classification: attachedObject ? "structural_dependency" : "unclassified",
+        ...derivedOwnership(qualifiedName, dependencies, objects),
       });
     }
 
@@ -988,6 +1328,7 @@ function scanDerivedDatabaseObjects(
       const qualifiedName = (match[1] ?? "").toLowerCase();
       const dependencies = objectDependenciesInBlock(match[2] ?? "", objects);
       if (dependencies.length === 0 && !isStrongAuthorizationObjectName(qualifiedName)) continue;
+      const ownership = derivedOwnership(qualifiedName, dependencies, objects);
       derived.push({
         qualifiedName,
         kind: "view",
@@ -997,6 +1338,7 @@ function scanDerivedDatabaseObjects(
         classification: registeredNames.has(qualifiedName)
           ? "registered"
           : dependencies.length > 0 ? "structural_dependency" : "unclassified",
+        ...ownership,
       });
     }
   }
@@ -1041,6 +1383,39 @@ function mergeReferences(...groups: ObjectReference[][]): ObjectReference[] {
 export function validateRegistry(registry: AuthorizationRegistry): string[] {
   const failures: string[] = [];
   if (registry.schemaVersion !== 1) failures.push("Registry schemaVersion must be 1.");
+  if (!Array.isArray(registry.contract.captureSourceDdls)
+    || registry.contract.captureSourceDdls.length === 0) {
+    failures.push("Registry contract.captureSourceDdls must contain plane-aware DDL contracts.");
+  }
+  const capturePlanes = new Set<string>();
+  const captureDdlPaths = new Set<string>();
+  const captureRegistryTables = new Set<string>();
+  for (const sourceContract of registry.contract.captureSourceDdls ?? []) {
+    if (!sourceContract.plane?.trim()) {
+      failures.push("Capture-source DDL contract has no plane.");
+    } else if (capturePlanes.has(sourceContract.plane)) {
+      failures.push(`Duplicate capture-source plane: ${sourceContract.plane}`);
+    }
+    if (!sourceContract.path?.trim()) {
+      failures.push(`Capture-source DDL contract has no path: ${sourceContract.plane}`);
+    } else if (captureDdlPaths.has(sourceContract.path)) {
+      failures.push(`Duplicate capture-source DDL path: ${sourceContract.path}`);
+    }
+    if (!/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/u.test(
+      sourceContract.registryTable ?? "",
+    )) {
+      failures.push(
+        `Capture-source registry table is not exact: ${sourceContract.registryTable}`,
+      );
+    } else if (captureRegistryTables.has(sourceContract.registryTable)) {
+      failures.push(
+        `Duplicate capture-source registry table: ${sourceContract.registryTable}`,
+      );
+    }
+    capturePlanes.add(sourceContract.plane);
+    captureDdlPaths.add(sourceContract.path);
+    captureRegistryTables.add(sourceContract.registryTable);
+  }
   const ids = new Set<string>();
   const names = new Set<string>();
   for (const object of registry.objects) {
@@ -1055,6 +1430,102 @@ export function validateRegistry(registry: AuthorizationRegistry): string[] {
     if (object.planes.length === 0) failures.push(`Object has no plane: ${object.id}`);
     if (!/^[a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*$/u.test(object.qualifiedName)) {
       failures.push(`Object is not an exact qualified SQL identity: ${object.qualifiedName}`);
+    }
+  }
+  for (const plane of Object.keys(registry.captureSourceObjectIds ?? {})) {
+    if (!capturePlanes.has(plane)) {
+      failures.push(`Capture-source object IDs use an unknown plane: ${plane}`);
+    }
+  }
+  for (const sourceContract of registry.contract.captureSourceDdls ?? []) {
+    const captureIds = new Set<string>();
+    const objectIds = registry.captureSourceObjectIds?.[sourceContract.plane];
+    if (!Array.isArray(objectIds)) {
+      failures.push(
+        `Capture-source object IDs are missing for plane: ${sourceContract.plane}`,
+      );
+      continue;
+    }
+    for (const objectId of objectIds) {
+      if (captureIds.has(objectId)) {
+        failures.push(
+          `Duplicate capture-source object id for ${sourceContract.plane}: ${objectId}`,
+        );
+      }
+      captureIds.add(objectId);
+      const object = registry.objects.find((candidate) => candidate.id === objectId);
+      if (!object) {
+        failures.push(
+          `Capture-source object id is not registered for ${sourceContract.plane}: ${objectId}`,
+        );
+      } else if (object.kind !== "table") {
+        failures.push(
+          `Capture-source object is not a table for ${sourceContract.plane}: ${objectId}`,
+        );
+      }
+    }
+  }
+  const writerIds = new Set<string>();
+  const writerPaths = new Set<string>();
+  for (const writer of registry.keycloakRestWriters ?? []) {
+    if (writerIds.has(writer.id)) {
+      failures.push(`Duplicate Keycloak REST writer id: ${writer.id}`);
+    }
+    if (writerPaths.has(writer.path)) {
+      failures.push(`Duplicate Keycloak REST writer path: ${writer.path}`);
+    }
+    writerIds.add(writer.id);
+    writerPaths.add(writer.path);
+    if (!writer.owner.trim()) {
+      failures.push(`Keycloak REST writer has no owner: ${writer.id}`);
+    }
+    if (!writer.disposition.trim()) {
+      failures.push(`Keycloak REST writer has no disposition: ${writer.id}`);
+    }
+    if (writer.allowedOperations.length === 0) {
+      failures.push(`Keycloak REST writer has no exact operation: ${writer.id}`);
+    }
+    if (new Set(writer.allowedOperations).size !== writer.allowedOperations.length) {
+      failures.push(`Keycloak REST writer has duplicate operations: ${writer.id}`);
+    }
+    for (const operation of writer.allowedOperations) {
+      if (!/^(?:POST|PUT|PATCH|DELETE):[a-z][a-z0-9_]*$/u.test(operation)) {
+        failures.push(
+          `Keycloak REST writer has invalid exact operation ${operation}: ${writer.id}`,
+        );
+      }
+    }
+  }
+  const anomalyIds = new Set<string>();
+  const anomalyIdentities = new Set<string>();
+  for (const anomaly of registry.knownSourceAnomalies ?? []) {
+    const identityKey = `${anomaly.type}\u0000${anomaly.identity}`;
+    if (anomalyIds.has(anomaly.id)) {
+      failures.push(`Duplicate known anomaly id: ${anomaly.id}`);
+    }
+    if (anomalyIdentities.has(identityKey)) {
+      failures.push(`Duplicate known anomaly identity: ${anomaly.type}:${anomaly.identity}`);
+    }
+    anomalyIds.add(anomaly.id);
+    anomalyIdentities.add(identityKey);
+    if (!anomaly.owner.trim()) failures.push(`Known anomaly has no owner: ${anomaly.id}`);
+    if (anomaly.currentPaths.length === 0) {
+      failures.push(`Known anomaly has no current path: ${anomaly.id}`);
+    }
+    if (anomaly.type === "configuration" && !anomaly.matchText?.trim()) {
+      failures.push(`Known configuration anomaly has no matchText: ${anomaly.id}`);
+    }
+    if (anomaly.boundaryClass !== undefined && !anomaly.boundaryClass.trim()) {
+      failures.push(`Known boundary anomaly has no boundary class: ${anomaly.id}`);
+    }
+    if (!anomaly.disposition.trim()) {
+      failures.push(`Known anomaly has no disposition: ${anomaly.id}`);
+    }
+    if (!anomaly.removalWave.trim()) {
+      failures.push(`Known anomaly has no removal wave: ${anomaly.id}`);
+    }
+    if (anomaly.blocksStrictCertification !== true) {
+      failures.push(`Known anomaly must block strict certification: ${anomaly.id}`);
     }
   }
   return failures.sort(compareText);
@@ -1072,6 +1543,37 @@ export function buildAuthorizationInventory(
   }
 
   const files = discoverFiles(root, registry);
+  const captureSourceEntries = scanCaptureSources(root, registry);
+  const captureKey = (plane: string, qualifiedName: string): string =>
+    `${plane}\u0000${qualifiedName}`;
+  const captureSourceCounts = new Map<string, number>();
+  for (const entry of captureSourceEntries) {
+    const key = captureKey(entry.plane, entry.qualifiedName);
+    captureSourceCounts.set(
+      key,
+      (captureSourceCounts.get(key) ?? 0) + 1,
+    );
+  }
+  const registryObjectsById = new Map(
+    registry.objects.map((object) => [object.id, object]),
+  );
+  const registryObjectsByName = new Map(
+    registry.objects.map((object) => [object.qualifiedName, object]),
+  );
+  const registeredCaptureEntries = Object.entries(registry.captureSourceObjectIds)
+    .flatMap(([plane, objectIds]) => objectIds
+      .map((objectId) => registryObjectsById.get(objectId)?.qualifiedName)
+      .filter((qualifiedName): qualifiedName is string => Boolean(qualifiedName))
+      .map((qualifiedName) => ({ plane, qualifiedName })));
+  const registeredCaptureKeys = new Set(
+    registeredCaptureEntries.map((entry) =>
+      captureKey(entry.plane, entry.qualifiedName)),
+  );
+  const ddlCaptureKeys = new Set(
+    captureSourceEntries.map((entry) =>
+      captureKey(entry.plane, entry.qualifiedName)),
+  );
+  const keycloakRestWriters = scanKeycloakRestWriters(files, registry);
   const staticScan = scanObjectReferences(files, registry.objects);
   const prismaReferences = scanPrismaReferences(files, registry.objects);
   const references = mergeReferences(staticScan.references, prismaReferences);
@@ -1083,6 +1585,14 @@ export function buildAuthorizationInventory(
   const keycloakMappings = scanKeycloakMappings(files);
   const derivedDatabaseObjects = scanDerivedDatabaseObjects(files, registry.objects);
   const generatedArtifacts = generatedArtifactInventory(root, registry);
+  const isKnownAnomaly = (
+    type: "object" | "permission_code",
+    identity: string,
+    path: string,
+  ): boolean => registry.knownSourceAnomalies.some((anomaly) =>
+    anomaly.type === type
+    && anomaly.identity === identity
+    && anomaly.currentPaths.includes(path));
 
   const objects = registry.objects.map((object) => {
     const objectReferences = references.filter((reference) => reference.objectId === object.id);
@@ -1098,17 +1608,22 @@ export function buildAuthorizationInventory(
     };
   }).sort((left, right) => compareText(left.id, right.id));
 
-  const unknownObjectSources = staticScan.unknownObjectReferences.map((reference) => ({
-    type: "object" as const,
-    qualifiedName: reference.qualifiedName,
-    path: reference.path,
-    access: reference.access,
-    lines: reference.lines,
-  }));
+  const unknownObjectSources = staticScan.unknownObjectReferences
+    .filter((reference) =>
+      reference.artifactClass !== "test"
+      && !isKnownAnomaly("object", reference.qualifiedName, reference.path))
+    .map((reference) => ({
+      type: "object" as const,
+      qualifiedName: reference.qualifiedName,
+      path: reference.path,
+      access: reference.access,
+      lines: reference.lines,
+    }));
   const unknownSymbolSources = securitySymbols
     .filter((reference) =>
       reference.classification === "unclassified"
-      && reference.artifactClass !== "test")
+      && reference.artifactClass !== "test"
+      && reference.artifactClass !== "tool")
     .map((reference) => ({
       type: "security_symbol" as const,
       symbol: reference.symbol,
@@ -1116,9 +1631,7 @@ export function buildAuthorizationInventory(
       lines: reference.lines,
     }));
   const unknownDerivedSources = derivedDatabaseObjects
-    .filter((item) =>
-      item.classification === "unclassified"
-      || (item.kind !== "trigger" && item.classification !== "registered"))
+    .filter((item) => item.classification === "unclassified")
     .map((item) => ({
       type: "database_object" as const,
       qualifiedName: item.qualifiedName,
@@ -1126,7 +1639,9 @@ export function buildAuthorizationInventory(
       line: item.line,
     }));
   const unknownPermissionSources = permissionScan.unknownUses
-    .filter((item) => item.artifactClass !== "test")
+    .filter((item) =>
+      item.artifactClass !== "test"
+      && !isKnownAnomaly("permission_code", item.code, item.path))
     .map((item) => ({
       type: "permission_code" as const,
       code: item.code,
@@ -1154,6 +1669,98 @@ export function buildAuthorizationInventory(
     }
     return failures;
   });
+  const unknownCaptureSources = [
+    ...registry.contract.captureSourceDdls
+      .filter((sourceContract) => !existsSync(resolve(root, sourceContract.path)))
+      .map((sourceContract) =>
+        `<missing-capture-source-ddl:${sourceContract.plane}:${sourceContract.path}>`),
+    ...captureSourceEntries
+      .filter((entry) =>
+        !registeredCaptureKeys.has(captureKey(entry.plane, entry.qualifiedName)))
+      .map((entry) => `${entry.plane}:${entry.qualifiedName}`),
+  ].sort(compareText);
+  const staleCaptureSourceRegistrations = registeredCaptureEntries
+    .filter((entry) =>
+      !ddlCaptureKeys.has(captureKey(entry.plane, entry.qualifiedName)))
+    .map((entry) => `${entry.plane}:${entry.qualifiedName}`)
+    .sort(compareText);
+  const duplicateCaptureSources = [...captureSourceCounts]
+    .filter(([, count]) => count !== 1)
+    .map(([key, count]) => `${key.replace("\u0000", ":")}:${count}`)
+    .sort(compareText);
+  const registeredPlanesBySource = new Map<string, Set<string>>();
+  for (const entry of registeredCaptureEntries) {
+    const planes = registeredPlanesBySource.get(entry.qualifiedName) ?? new Set<string>();
+    planes.add(entry.plane);
+    registeredPlanesBySource.set(entry.qualifiedName, planes);
+  }
+  const ddlPlanesBySource = new Map<string, Set<string>>();
+  for (const entry of captureSourceEntries) {
+    const planes = ddlPlanesBySource.get(entry.qualifiedName) ?? new Set<string>();
+    planes.add(entry.plane);
+    ddlPlanesBySource.set(entry.qualifiedName, planes);
+  }
+  const crossPlaneCaptureSources = uniqueSorted([
+    ...registeredPlanesBySource.keys(),
+    ...ddlPlanesBySource.keys(),
+  ]).flatMap((qualifiedName) => {
+    const registeredPlanes = [...(registeredPlanesBySource.get(qualifiedName) ?? [])]
+      .sort(compareText);
+    const ddlPlanes = [...(ddlPlanesBySource.get(qualifiedName) ?? [])]
+      .sort(compareText);
+    return registeredPlanes.join(",") === ddlPlanes.join(",")
+      ? []
+      : [
+        `${qualifiedName}:registry=${registeredPlanes.join(",") || "none"}`
+        + `:ddl=${ddlPlanes.join(",") || "none"}`,
+      ];
+  });
+  const keycloakWriterByPath = new Map(
+    keycloakRestWriters.map((writer) => [writer.path, writer]),
+  );
+  const staleKeycloakRestWriterRules = registry.keycloakRestWriters.flatMap((rule) => {
+    const discovered = new Set(keycloakWriterByPath.get(rule.path)?.operations ?? []);
+    return rule.allowedOperations
+      .filter((operation) => !discovered.has(operation))
+      .map((operation) => `${rule.id}:${operation}`);
+  }).sort(compareText);
+  const anomalyFindings = registry.knownSourceAnomalies.flatMap((anomaly) =>
+    anomaly.currentPaths.map((path) => {
+      const lines = anomaly.type === "object"
+        ? staticScan.unknownObjectReferences.find((reference) =>
+          reference.qualifiedName === anomaly.identity && reference.path === path)?.lines ?? []
+        : anomaly.type === "permission_code"
+          ? permissionScan.unknownUses.find((use) =>
+            use.code === anomaly.identity && use.path === path)?.lines ?? []
+          : (() => {
+            const absolutePath = resolve(root, path);
+            if (!existsSync(absolutePath) || !anomaly.matchText) return [];
+            const content = readFileSync(absolutePath, "utf8").replaceAll("\r\n", "\n");
+            const result: number[] = [];
+            let index = content.indexOf(anomaly.matchText);
+            while (index >= 0) {
+              result.push(lineNumberAt(content, index));
+              index = content.indexOf(anomaly.matchText, index + anomaly.matchText.length);
+            }
+            return result;
+          })();
+      return {
+        ...anomaly,
+        path,
+        lines,
+        currentPaths: undefined,
+      };
+    })).map(({ currentPaths: _currentPaths, ...anomaly }) => anomaly)
+    .sort((left, right) =>
+      compareText(left.id, right.id) || compareText(left.path, right.path));
+  const knownSourceAnomalies = anomalyFindings
+    .filter((anomaly) => !anomaly.boundaryClass);
+  const zeroMeshNeonBoundaryFindings = anomalyFindings
+    .filter((anomaly) => Boolean(anomaly.boundaryClass))
+    .map((anomaly) => ({
+      ...anomaly,
+      boundaryClass: anomaly.boundaryClass!,
+    }));
   const authorizationPaths = new Set<string>([
     ...references.map((reference) => reference.path),
     ...staticScan.unknownObjectReferences.map((reference) => reference.path),
@@ -1165,8 +1772,11 @@ export function buildAuthorizationInventory(
     ...permissionScan.unknownUses.map((use) => use.path),
     ...routes.map((route) => route.path),
     ...keycloakMappings.map((mapping) => mapping.path),
+    ...keycloakRestWriters.map((writer) => writer.path),
     ...derivedDatabaseObjects.map((object) => object.path),
     ...generatedArtifacts.map((artifact) => artifact.path),
+    ...registry.knownSourceAnomalies.flatMap((anomaly) => anomaly.currentPaths),
+    ...registry.contract.captureSourceDdls.map((sourceContract) => sourceContract.path),
   ]);
   const authorizationFiles = files.filter((file) => authorizationPaths.has(file.path));
 
@@ -1179,6 +1789,9 @@ export function buildAuthorizationInventory(
       scanRoots: [...registry.contract.scanRoots],
       excludedDirectories: [...registry.contract.excludedDirectories],
       excludedFiles: [...registry.contract.excludedFiles],
+      captureSourceDdls: registry.contract.captureSourceDdls.map(
+        (sourceContract) => ({ ...sourceContract }),
+      ),
     },
     summary: {
       filesScanned: files.length,
@@ -1194,6 +1807,15 @@ export function buildAuthorizationInventory(
       keycloakMappings: keycloakMappings.length,
       derivedDatabaseObjects: derivedDatabaseObjects.length,
       generatedArtifacts: generatedArtifacts.length,
+      captureSources: captureSourceEntries.length,
+      captureSourcesByPlane: Object.fromEntries(
+        registry.contract.captureSourceDdls.map((sourceContract) => [
+          sourceContract.plane,
+          captureSourceEntries.filter((entry) =>
+            entry.plane === sourceContract.plane).length,
+        ]),
+      ),
+      keycloakRestWriters: keycloakRestWriters.length,
     },
     objects,
     files: authorizationFiles.map((file) => ({
@@ -1208,6 +1830,19 @@ export function buildAuthorizationInventory(
     permissionUses: permissionScan.uses,
     routes,
     keycloakMappings,
+    captureSources: captureSourceEntries.map((entry) => {
+      const object = registryObjectsByName.get(entry.qualifiedName);
+      return {
+        plane: entry.plane,
+        objectId: object?.id ?? null,
+        qualifiedName: entry.qualifiedName,
+        owner: object?.owner ?? null,
+        disposition: object?.disposition ?? null,
+        path: entry.path,
+        line: entry.line,
+      };
+    }),
+    keycloakRestWriters,
     derivedDatabaseObjects,
     generatedArtifacts,
     gates: {
@@ -1223,11 +1858,23 @@ export function buildAuthorizationInventory(
           "path" in right ? right.path : "",
         )),
       unknownWriters: staticScan.unknownObjectReferences
-        .filter((reference) => WRITER_ACCESS.has(reference.access)),
+        .filter((reference) =>
+          WRITER_ACCESS.has(reference.access)
+          && reference.artifactClass !== "test"
+          && !isKnownAnomaly("object", reference.qualifiedName, reference.path)),
       unownedObjects: unownedObjects.sort(compareText),
       unclassifiedWriters,
       missingDefinitions: missingDefinitions.sort(compareText),
       generatedArtifactFailures: generatedArtifactFailures.sort(compareText),
+      unknownCaptureSources,
+      staleCaptureSourceRegistrations,
+      duplicateCaptureSources,
+      crossPlaneCaptureSources,
+      unknownKeycloakRestWriters: keycloakRestWriters
+        .filter((writer) => writer.classification === "unclassified"),
+      staleKeycloakRestWriterRules,
+      knownSourceAnomalies,
+      zeroMeshNeonBoundaryFindings,
     },
   };
   return inventory;
@@ -1241,7 +1888,7 @@ function markdownCell(value: string): string {
   return value.replaceAll("|", "\\|").replaceAll("\n", " ");
 }
 
-function gateCount(inventory: AuthorizationInventory): number {
+export function gateCount(inventory: AuthorizationInventory): number {
   return Object.values(inventory.gates).reduce((total, entries) => total + entries.length, 0);
 }
 
@@ -1255,13 +1902,18 @@ export function renderAuthorizationInventoryMarkdown(
     "> Generated deterministically by `scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.",
     "",
     `Registry SHA-256: \`${inventory.contract.registrySha256}\``,
-    `Files scanned: ${inventory.summary.filesScanned}`,
+    `Files scanned / authorization-bearing: ${inventory.summary.filesScanned} / ${inventory.summary.authorizationFiles}`,
     `Registered authorization objects: ${inventory.summary.registeredObjects}`,
     `Aggregated object references: ${inventory.summary.objectReferences}`,
     `Writer references: ${inventory.summary.writerReferences}`,
+    `Contract/UI field references: ${inventory.summary.contractFieldReferences}`,
     `Permission definitions / uses: ${inventory.summary.permissionDefinitions} / ${inventory.summary.permissionUses}`,
     `Authorization-bearing routes: ${inventory.summary.routes}`,
     `Keycloak mappers: ${inventory.summary.keycloakMappings}`,
+    `Canonical capture sources: ${inventory.summary.captureSources} (${Object.entries(
+      inventory.summary.captureSourcesByPlane,
+    ).map(([plane, count]) => `${plane}=${count}`).join(", ")})`,
+    `Keycloak REST writer paths: ${inventory.summary.keycloakRestWriters}`,
     `Open gate findings: ${openGateCount}`,
     "",
     "## Gate status",
@@ -1274,8 +1926,16 @@ export function renderAuthorizationInventoryMarkdown(
     `| Unclassified writers | ${inventory.gates.unclassifiedWriters.length} |`,
     `| Missing source definitions | ${inventory.gates.missingDefinitions.length} |`,
     `| Generated artifact failures | ${inventory.gates.generatedArtifactFailures.length} |`,
+    `| Unknown capture sources | ${inventory.gates.unknownCaptureSources.length} |`,
+    `| Stale capture-source registrations | ${inventory.gates.staleCaptureSourceRegistrations.length} |`,
+    `| Duplicate capture sources | ${inventory.gates.duplicateCaptureSources.length} |`,
+    `| Cross-plane capture-source drift | ${inventory.gates.crossPlaneCaptureSources.length} |`,
+    `| Unknown Keycloak REST writers | ${inventory.gates.unknownKeycloakRestWriters.length} |`,
+    `| Stale Keycloak REST writer rules | ${inventory.gates.staleKeycloakRestWriterRules.length} |`,
+    `| Known source anomalies blocking strict certification | ${inventory.gates.knownSourceAnomalies.length} |`,
+    `| Zero-Mesh-specific-data Neon boundary findings | ${inventory.gates.zeroMeshNeonBoundaryFindings.length} |`,
     "",
-    "A non-zero finding is deliberately visible and blocks the Wave 0 completeness gate. Tests and documentation do not satisfy runtime ownership.",
+    "Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. Owned known anomalies remain visible and block strict certification, but are reported separately by structural-only verification. Tests and documentation do not satisfy runtime ownership.",
     "",
     "## Registered authorities",
     "",
@@ -1283,6 +1943,20 @@ export function renderAuthorizationInventoryMarkdown(
     "|---|---|---|---|---|---|---|---:|---:|---:|",
     ...inventory.objects.map((object) =>
       `| ${markdownCell(object.id)} | \`${markdownCell(object.qualifiedName)}\` | ${markdownCell(object.database)} | ${markdownCell(object.authorityClass)} | ${markdownCell(object.owner)} | ${markdownCell(object.planes.join(", "))} | ${markdownCell(object.disposition)} | ${object.definitionCount} | ${object.readerCount} | ${object.writerCount} |`),
+    "",
+    "## Authorization-linked database functions, triggers, and views",
+    "",
+    "| Kind | Exact identity | Classification | Owner | Disposition | Source | Dependencies |",
+    "|---|---|---|---|---|---|---|",
+    ...inventory.derivedDatabaseObjects.map((object) =>
+      `| ${object.kind} | \`${markdownCell(object.qualifiedName)}\` | ${object.classification} | ${markdownCell(object.owner ?? "—")} | ${markdownCell(object.disposition)} | ${markdownCell(object.path)}:${object.line} | ${object.dependencies.map((dependency) => `\`${markdownCell(dependency)}\``).join("<br>") || "—"} |`),
+    "",
+    "## Runtime authorization reader and evaluator symbols",
+    "",
+    "| Symbol | Classification | Artifact class | Path | Lines |",
+    "|---|---|---|---|---|",
+    ...inventory.securitySymbols.map((symbol) =>
+      `| \`${markdownCell(symbol.symbol)}\` | ${symbol.classification} | ${symbol.artifactClass} | ${markdownCell(symbol.path)} | ${symbol.lines.join(", ")} |`),
     "",
     "## Unknown source findings",
     "",
@@ -1305,6 +1979,34 @@ export function renderAuthorizationInventoryMarkdown(
 
   lines.push(
     "",
+    "## Known source anomalies",
+    "",
+    "| ID | Type | Identity | Owner | Current path | Lines | Disposition | Removal wave |",
+    "|---|---|---|---|---|---|---|---|",
+    ...inventory.gates.knownSourceAnomalies.map((anomaly) =>
+      `| ${markdownCell(anomaly.id)} | ${anomaly.type} | \`${markdownCell(anomaly.identity)}\` | ${markdownCell(anomaly.owner)} | ${markdownCell(anomaly.path)} | ${anomaly.lines.join(", ") || "not observed"} | ${markdownCell(anomaly.disposition)} | ${markdownCell(anomaly.removalWave)} |`),
+    "",
+    "## Zero-Mesh-specific-data Neon boundary findings",
+    "",
+    "These are owned current-state exceptions to the target boundary, not evidence that the boundary is already satisfied.",
+    "",
+    "| ID | Boundary class | Identity | Owner | Current path | Lines | Disposition | Removal wave |",
+    "|---|---|---|---|---|---|---|---|",
+    ...inventory.gates.zeroMeshNeonBoundaryFindings.map((finding) =>
+      `| ${markdownCell(finding.id)} | ${markdownCell(finding.boundaryClass)} | \`${markdownCell(finding.identity)}\` | ${markdownCell(finding.owner)} | ${markdownCell(finding.path)} | ${finding.lines.join(", ") || "not observed"} | ${markdownCell(finding.disposition)} | ${markdownCell(finding.removalWave)} |`),
+    "",
+    "## Canonical capture-source parity",
+    "",
+    "Capture DDLs:",
+    "",
+    ...inventory.contract.captureSourceDdls.map((sourceContract) =>
+      `- ${sourceContract.plane}: \`${sourceContract.path}\` -> \`${sourceContract.registryTable}\``),
+    "",
+    "| Plane | Exact source | Object ID | Owner | Disposition | DDL | Line |",
+    "|---|---|---|---|---|---|---:|",
+    ...inventory.captureSources.map((source) =>
+      `| ${markdownCell(source.plane)} | \`${markdownCell(source.qualifiedName)}\` | ${markdownCell(source.objectId ?? "unregistered")} | ${markdownCell(source.owner ?? "unowned")} | ${markdownCell(source.disposition ?? "unclassified")} | ${markdownCell(source.path)} | ${source.line} |`),
+    "",
     "## Writer inventory",
     "",
     "| Object | Access | Artifact class | Path | Lines |",
@@ -1314,12 +2016,33 @@ export function renderAuthorizationInventoryMarkdown(
       .map((reference) =>
         `| \`${markdownCell(reference.qualifiedName)}\` | ${reference.access} | ${reference.artifactClass} | ${markdownCell(reference.path)} | ${reference.lines.join(", ")} |`),
     "",
+    "## Keycloak REST writer inventory",
+    "",
+    "| Path | Classification | Owner | Operations | Disposition | Lines |",
+    "|---|---|---|---|---|---|",
+    ...inventory.keycloakRestWriters.map((writer) =>
+      `| ${markdownCell(writer.path)} | ${writer.classification} | ${markdownCell(writer.owner ?? "unowned")} | ${writer.operations.map((operation) => `\`${markdownCell(operation)}\``).join("<br>")} | ${markdownCell(writer.disposition ?? "unclassified")} | ${writer.lines.join(", ")} |`),
+    "",
+    "## Permission seed inventory",
+    "",
+    "| Code | Risk | Definition sources |",
+    "|---|---|---|",
+    ...inventory.permissionDefinitions.map((definition) =>
+      `| \`${markdownCell(definition.code)}\` | ${definition.riskLevel} | ${definition.sources.map((source) => `${markdownCell(source.path)}:${source.lines.join(",")}`).join("<br>")} |`),
+    "",
     "## Authorization-bearing routes",
     "",
     "| Source | Route | Methods | Permissions | Security symbols |",
     "|---|---|---|---|---|",
     ...inventory.routes.map((route) =>
       `| ${markdownCell(route.path)} | \`${markdownCell(route.route)}\` | ${route.methods.join(", ")} | ${route.permissionCodes.map((code) => `\`${markdownCell(code)}\``).join("<br>") || "—"} | ${route.securitySymbols.map(markdownCell).join("<br>") || "—"} |`),
+    "",
+    "## Contract and UI field inventory",
+    "",
+    "| Field | Artifact class | Path | Lines |",
+    "|---|---|---|---|",
+    ...inventory.contractFields.map((field) =>
+      `| \`${markdownCell(field.field)}\` | ${field.artifactClass} | ${markdownCell(field.path)} | ${field.lines.join(", ")} |`),
     "",
     "## Keycloak mapper inventory",
     "",
@@ -1328,6 +2051,13 @@ export function renderAuthorizationInventoryMarkdown(
     ...inventory.keycloakMappings.map((mapping) =>
       `| ${markdownCell(mapping.path)} | ${markdownCell(mapping.jsonPath)} | ${markdownCell(mapping.name ?? "—")} | ${markdownCell(mapping.mapperType)} | ${markdownCell(mapping.userAttribute ?? "—")} | ${markdownCell(mapping.claimName ?? "—")} | ${markdownCell(mapping.hardcodedRole ?? "—")} |`),
     "",
+    "## Generated authorization artifacts",
+    "",
+    "| Artifact | Generator | Owner | Present | Generator present |",
+    "|---|---|---|---:|---:|",
+    ...inventory.generatedArtifacts.map((artifact) =>
+      `| ${markdownCell(artifact.path)} | ${markdownCell(artifact.generator)} | ${markdownCell(artifact.owner)} | ${artifact.present ? "yes" : "no"} | ${artifact.generatorPresent ? "yes" : "no"} |`),
+    "",
     "## Classification contract",
     "",
     "- SQL and Kysely access is classified as define, read, reference, insert, update, delete, truncate, execute, or generated mirror.",
@@ -1335,6 +2065,10 @@ export function renderAuthorizationInventoryMarkdown(
     "- A structurally strong unregistered authorization object, an unreviewed runtime security symbol, or an unknown permission code in a permission-check context is emitted as an open gate.",
     "- Dynamic SQL must be represented by an exact reviewed source entry; it is not silently allowlisted.",
     "- Generated files are projections and must name an existing generator.",
+    "- Each plane in `captureSourceObjectIds` must match the exact relation set seeded by its `contract.captureSourceDdls` entry in both directions; moving a source between Neon and Mesh is an explicit cross-plane gate failure.",
+    "- Keycloak Admin REST writes are classified by exact source path plus the discovered HTTP-method/resource operation set; new or removed capabilities are gate failures.",
+    "- Machine-readable recomputation: `pnpm exec tsx scripts/policy/verify-authorization-inventory.ts --check --json --structural-only`. `structuralPassed` excludes owned known source and boundary anomalies; `strictPassed` includes them.",
+    "- JSON verification fields: `artifactDriftFailures`, `structuralGateFailures`, `knownAnomalyFailures`, `gateCounts`, `structuralPassed`, and `strictPassed`.",
   );
 
   return `${lines.join("\n")}\n`;

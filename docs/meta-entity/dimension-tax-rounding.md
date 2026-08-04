@@ -28,8 +28,8 @@ Dimension validation/governance rules. Purpose: "Department is REQUIRED on Expen
 |---|---|---|
 | `id` | `uuid PK` | |
 | `tenant_id` | `uuid NOT NULL` | |
-| `policy_code` | `text NOT NULL` | Non-empty; unique per `(tenant, policy_code, policy_version)` |
-| `policy_version` | `smallint NOT NULL DEFAULT 1` | |
+| `policy_code` | `text NOT NULL` | Stable identifier shared by a version lineage |
+| `version_no` | `integer NOT NULL DEFAULT 1` | Increments by one from `supersedes_id` |
 | `description` | `text` | |
 | `dimension_type_id` | `uuid NOT NULL` | FK → `master.dimension_type` |
 | `company_code_id` | `uuid` | NULL = tenant-global policy; non-null = company-specific |
@@ -37,34 +37,31 @@ Dimension validation/governance rules. Purpose: "Department is REQUIRED on Expen
 | `scope_account_id` | `uuid` | NULL = all; specific GL account |
 | `scope_subledger_type` | `text` | NULL = all; `AP` / `AR` / `ASSET` / `INVENTORY` / `WIP` / `COMMISSION` / `NONE` |
 | `scope_book_id` | `uuid` | NULL = all; specific ledger book |
-| `scope_doc_type` | `text` | NULL = all; `PURCHASE_INVOICE` / `SALES_INVOICE` / `JE` / etc. |
-| `behavior` | `text NOT NULL DEFAULT 'OPTIONAL'` | See Behavior Values below |
-| `fixed_value_id` | `uuid` | Required when `behavior = 'FIXED_VALUE'` |
-| `derive_source` | `text` | Required when `behavior = 'DERIVE_IF_MISSING'` |
-| `depends_on_type_id` | `uuid` | This dimension only applies if another type is present on the line |
-| `mutually_exclusive_with` | `uuid` | Cannot coexist with another dimension type on the same JE line |
-| `priority` | `smallint NOT NULL DEFAULT 0` | Higher wins on conflict between matching policies |
+| `scope_document_type` | `text` | NULL = all; normalized document-type code otherwise |
+| `enforcement` | `dimension_policy_enforcement_d NOT NULL` | `required`, `optional`, or `forbidden` |
+| `depends_on_dimension_type_id` | `uuid` | Dimension is applicable only with the referenced dimension type |
+| `mutually_exclusive_dimension_type_id` | `uuid` | Referenced dimension type cannot coexist on the same accounting line |
+| `effective_from` / `effective_to` | `date` | Inclusive policy validity window |
 | `metadata` | `jsonb NOT NULL DEFAULT '{}'` | |
-| `status` | `text NOT NULL DEFAULT 'active'` | `active` / `inactive` |
+| `status` | `finance_policy_status_d NOT NULL DEFAULT 'draft'` | `draft`, `active`, `inactive`, or `archived` |
 | `is_active` | `bool GENERATED` | |
+| `supersedes_id` | `uuid` | Previous version in the same tenant, code, and scope lineage |
+| `status_changed_at` / `status_changed_by` | `timestamptz` / `uuid` | Status evidence pair |
 | `created_at` | `timestamptz NOT NULL` | |
 | `created_by` | `uuid NOT NULL` | |
 | `updated_at` / `updated_by` | `timestamptz` / `uuid` | |
 
-**Unique:** `(tenant_id, policy_code, policy_version)` and `(tenant_id, id)`
+**Unique:** tenant-safe identity, scope/version lineage, and one active row per policy code. Identical active scopes may not overlap in time.
 
 **Precedence:** company-specific match → tenant-global → no rule.
 
-### Behavior Values
+### Enforcement Values
 
 | Value | Description |
 |---|---|
-| `REQUIRED` | Dimension must be present; posting blocked if missing |
-| `OPTIONAL` | No enforcement |
-| `FORBIDDEN` | Dimension must NOT be present |
-| `DERIVE_IF_MISSING` | Attempt to derive from `derive_source`; no error if derivation fails |
-| `INHERIT_FROM_HEADER` | Copy from document header dimension |
-| `FIXED_VALUE` | Always set to `fixed_value_id`; overrides any user input |
+| `required` | Dimension must be present; posting is blocked if missing |
+| `optional` | No presence requirement; any selected value is still validated |
+| `forbidden` | Dimension must not be present and cannot have allowed-value children |
 
 ---
 
@@ -77,11 +74,12 @@ Indexable allowed-value list for a dimension policy. Replaces the `uuid[]` colum
 | `id` | `uuid PK` | |
 | `tenant_id` | `uuid NOT NULL` | |
 | `policy_id` | `uuid NOT NULL` | FK → `control.dimension_policy` ON DELETE CASCADE |
+| `dimension_type_id` | `uuid NOT NULL` | Included in both composite FKs to prove parent/value type agreement |
 | `dimension_value_id` | `uuid NOT NULL` | FK → `master.dimension_value` |
 | `created_at` | `timestamptz NOT NULL` | |
 | `created_by` | `uuid NOT NULL` | |
 
-**Unique:** `(policy_id, dimension_value_id)`
+**Unique:** `(tenant_id, policy_id, dimension_value_id)`. Membership can change only while the parent is a draft. No children means every otherwise-valid value for the policy dimension is allowed.
 
 ---
 

@@ -29,6 +29,7 @@ export type AuthorizationRolloutPolicyValidationCode =
   | "WILDCARD_PERMISSION"
   | "INVALID_SELECTOR"
   | "INVALID_APPROVAL"
+  | "INVALID_CERTIFICATION"
   | "INVALID_TIME_WINDOW";
 
 export class AuthorizationRolloutPolicyValidationError extends Error {
@@ -71,6 +72,9 @@ const APPROVAL_KEYS = new Set([
   "ticket",
   "rollbackOwner",
   "observationWindowEndsAt",
+  "goldenCorpusSha256",
+  "sourceDatabaseId",
+  "minimumAppliedWatermark",
 ]);
 
 /**
@@ -206,6 +210,11 @@ export function selectAuthorizationRollout(
     policyRevision: snapshot.revision,
     ruleId: rule.id,
     cohortCode: rule.cohortCode,
+    certification: Object.freeze({
+      goldenCorpusSha256: rule.approval.goldenCorpusSha256,
+      sourceDatabaseId: rule.approval.sourceDatabaseId,
+      appliedWatermark: context.certification!.appliedWatermark,
+    }),
   });
 }
 
@@ -325,6 +334,18 @@ function parseApproval(
       `rules[${ruleIndex}].approval.rollbackOwner`,
     ),
     observationWindowEndsAt,
+    goldenCorpusSha256: requireSha256(
+      source["goldenCorpusSha256"],
+      `rules[${ruleIndex}].approval.goldenCorpusSha256`,
+    ),
+    sourceDatabaseId: requireUuid(
+      source["sourceDatabaseId"],
+      `rules[${ruleIndex}].approval.sourceDatabaseId`,
+    ),
+    minimumAppliedWatermark: requireWatermark(
+      source["minimumAppliedWatermark"],
+      `rules[${ruleIndex}].approval.minimumAppliedWatermark`,
+    ),
   });
 }
 
@@ -334,14 +355,28 @@ function ruleMatches(
   nowEpochMs: number,
 ): boolean {
   if (!rule.permissionCodes.includes(context.permissionCode)) return false;
-  if (context.cohortCode && context.cohortCode !== rule.cohortCode) return false;
+  // A named rule never becomes plane-global because a caller omitted the
+  // cohort. Missing or mismatched cohort evidence safely selects legacy.
+  if (!context.cohortCode || context.cohortCode !== rule.cohortCode) return false;
   if (rule.tenantIds && (
     !context.tenantId || !rule.tenantIds.includes(context.tenantId)
   )) return false;
   if (rule.principalIds && (
     !context.principalId || !rule.principalIds.includes(context.principalId)
   )) return false;
+  const certification = context.certification;
+  if (
+    !certification ||
+    certification.goldenCorpusSha256 !== rule.approval.goldenCorpusSha256 ||
+    certification.sourceDatabaseId !== rule.approval.sourceDatabaseId ||
+    !/^\d+$/.test(certification.appliedWatermark) ||
+    BigInt(certification.appliedWatermark) <
+      BigInt(rule.approval.minimumAppliedWatermark)
+  ) return false;
   if (Date.parse(rule.approval.approvedAt) > nowEpochMs) return false;
+  if (Date.parse(rule.approval.observationWindowEndsAt) <= nowEpochMs) {
+    return false;
+  }
   if (rule.effectiveFrom && Date.parse(rule.effectiveFrom) > nowEpochMs) {
     return false;
   }
@@ -457,6 +492,42 @@ function requireDate(value: unknown, path: string): string {
 
 function optionalDate(value: unknown, path: string): string | undefined {
   return value === undefined ? undefined : requireDate(value, path);
+}
+
+function requireSha256(value: unknown, path: string): string {
+  const text = requireNonBlank(value, "INVALID_CERTIFICATION", path);
+  if (!/^[0-9a-f]{64}$/.test(text)) {
+    throw validationError(
+      "INVALID_CERTIFICATION",
+      `${path} must be a lowercase SHA-256 digest.`,
+    );
+  }
+  return text;
+}
+
+function requireUuid(value: unknown, path: string): string {
+  const text = requireNonBlank(value, "INVALID_CERTIFICATION", path);
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+      .test(text)
+  ) {
+    throw validationError(
+      "INVALID_CERTIFICATION",
+      `${path} must be a UUID.`,
+    );
+  }
+  return text;
+}
+
+function requireWatermark(value: unknown, path: string): string {
+  const text = requireNonBlank(value, "INVALID_CERTIFICATION", path);
+  if (!/^\d+$/.test(text)) {
+    throw validationError(
+      "INVALID_CERTIFICATION",
+      `${path} must be a non-negative integer string.`,
+    );
+  }
+  return text;
 }
 
 function isExactPermissionCode(value: string): boolean {

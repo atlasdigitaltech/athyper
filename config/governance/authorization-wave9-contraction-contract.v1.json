@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "contractId": "authorization-v2-wave9-contraction",
+  "status": "blocked_pending_wave8_certification",
+  "executionMode": "explicit_guarded_transaction",
+  "executionProfiles": {
+    "production_migration": {
+      "authorized": false,
+      "reason": "Wave 8 operational certification and rollback-retention completion evidence are not present",
+      "requiresWave8Certification": true,
+      "requiresRollbackRetention": true,
+      "inPlaceResetAllowed": false
+    },
+    "development_clean_reset": {
+      "authorized": true,
+      "environmentClass": "disposable_local",
+      "approvalLabel": "LOCAL-AUTH-V2-RESET",
+      "requiresWave8Certification": false,
+      "requiresRollbackRetention": false,
+      "requiresTombstoneReceiptBeforeFreshReset": false,
+      "preserveKeycloakUsers": true,
+      "authorizationDataSource": "deterministic_canonical_seed_packs",
+      "productionCertificationClaimed": false
+    }
+  },
+  "cascadeDropsAllowed": false,
+  "buildFromZeroDeletionAllowedBeforeTombstoneReceipt": false,
+  "requiredPreconditions": [
+    "wave8_certification_passed",
+    "rollback_retention_window_complete",
+    "legacy_source_independently_restorable_or_formally_decommissioned",
+    "zero_live_database_dependency",
+    "zero_application_reader_writer",
+    "rollback_no_longer_depends_on_legacy",
+    "change_and_security_approval_complete"
+  ],
+  "removalOrder": [
+    "legacy_runtime_consumers_and_writers",
+    "old_database_functions_views_triggers_and_compatibility_adapters",
+    "principal_persona_assignment",
+    "persona_permission_mapping",
+    "role_persona_fk_and_persona_catalog",
+    "admin_company_access_feature_grants",
+    "old_acl_and_delegation",
+    "neon_network_membership_and_business_network_graph",
+    "contextual_aliases",
+    "stale_repository_artifacts"
+  ],
+  "databaseRules": [
+    "one plane per execution",
+    "exact expected database identity is mandatory",
+    "all object drops use RESTRICT",
+    "one transaction and one plane-scoped advisory lock",
+    "unknown dependencies abort contraction",
+    "completion receipt is immutable",
+    "re-execution with identical evidence is idempotent",
+    "re-execution with conflicting evidence fails"
+  ],
+  "repositoryRules": [
+    "deployed tombstone receipts must exist before deleting legacy build DDL",
+    "Neon provisioning must contain no Mesh authority",
+    "Mesh provisioning must contain no Neon authority",
+    "generated clients target only canonical objects",
+    "active source, seeds, configuration, contracts, UI, generated files, tests and docs contain no Persona concept",
+    "contextual aliases are absent from compiled catalogs and provision inputs"
+  ],
+  "finalCertificationRules": [
+    "certification uses an empty disposable database for each plane",
+    "the final baseline is provisioned without executing the tombstone migration",
+    "no legacy object is created at any point",
+    "two clean provisions have the same schema and seed-owned hashes",
+    "rollback uses the canonical release or fresh database restore and no deleted legacy object"
+  ],
+  "liveExecution": {
+    "authorized": false,
+    "reason": "production migration remains blocked; only the development_clean_reset profile is authorized"
+  }
+}

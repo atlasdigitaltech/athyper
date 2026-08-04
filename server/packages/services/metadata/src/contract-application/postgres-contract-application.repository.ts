@@ -278,8 +278,9 @@ export class PostgresContractApplicationTransaction implements ContractApplicati
     if (permissionCodes.size > 0) {
       const values = [...permissionCodes];
       const rows = await sql<{ code: string }>`
-        SELECT code FROM shared.permission
-         WHERE code IN (${sql.join(values.map((code) => sql`${code}`))})
+        SELECT canonical_code AS code FROM control.auth_permission
+         WHERE status = 'published'
+           AND canonical_code IN (${sql.join(values.map((code) => sql`${code}`))})
       `.execute(this.trx);
       const found = new Set(rows.rows.map((row) => row.code));
       const missing = values.filter((code) => !found.has(code));
@@ -1419,22 +1420,30 @@ export class PostgresContractApplicationTransaction implements ContractApplicati
       sourceVersionId: input.sourceVersionId,
     });
     await sql`
-      INSERT INTO log.descriptor_cache_invalidation (
-        tenant_id, entity_code, plane_key, reason,
-        triggered_by_table, triggered_by_id, created_by
-      ) VALUES (
-        ${row.tenant_id}::uuid, ${row.entity_code}, NULL, 'version_publish',
-        'control.entity_version', ${input.versionId}::uuid, ${input.actorId}::uuid
+      WITH queued AS (
+        INSERT INTO event.descriptor_invalidation_outbox (
+          tenant_id, entity_code, plane_key, reason,
+          source_table, source_id, event_key, created_by
+        ) VALUES (
+          ${row.tenant_id}::uuid, ${row.entity_code}, NULL, 'version_publish',
+          'control.entity_version', ${input.versionId}::uuid,
+          ${`metadata.entity_version:${input.versionId}`}, ${input.actorId}::uuid
+        )
+        ON CONFLICT (event_key) DO UPDATE
+          SET status = 'pending', available_at = now(), last_error = NULL,
+              attempts = 0, locked_at = NULL, locked_by = NULL, locked_until = NULL,
+              processed_at = NULL, processed_by = NULL
+        RETURNING id
       )
-    `.execute(this.trx);
-    await sql`
       SELECT pg_notify('desc_invalidate', json_build_object(
+        'outbox_id', queued.id,
         'tenant_id', ${row.tenant_id}::uuid,
         'entity_code', ${row.entity_code},
         'reason', 'version_publish',
         'source', 'control.entity_version',
         'at', extract(epoch from clock_timestamp())
       )::text)
+      FROM queued
     `.execute(this.trx);
   }
 

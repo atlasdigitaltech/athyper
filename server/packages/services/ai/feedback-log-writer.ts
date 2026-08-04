@@ -1,5 +1,5 @@
 /**
- * FeedbackLogWriter — writes one row to log.ai_feedback_log per user verdict.
+ * FeedbackLogWriter — writes one row to ai.ai_feedback_log per user verdict.
  *
  * feedback_type must match a value seeded in the log.ai_feedback_type lookup domain.
  * Supported seeded types include "atlas_agent", "atlas", and
@@ -46,7 +46,7 @@ export class FeedbackLogWriter {
 
     try {
       await sql`
-        INSERT INTO log.ai_feedback_log (
+        INSERT INTO ai.ai_feedback_log (
           tenant_id, log_type,
           feedback_type, entity_type, entity_id, target_id,
           verdict, reason_code, reason_detail,

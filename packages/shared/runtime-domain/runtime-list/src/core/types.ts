@@ -1,6 +1,6 @@
 // ─── Descriptor ───────────────────────────────────────────────────────────────
 // Inlined types — zero @athyper/product/* imports.
-// packages/apps/neon converts MetaEntityRuntimeDescriptor → RuntimeDescriptor.
+// packages/products/neon/app converts MetaEntityRuntimeDescriptor → RuntimeDescriptor.
 
 export interface RuntimeDescriptor {
   entityCode:   string;

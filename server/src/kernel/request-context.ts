@@ -36,20 +36,18 @@ export interface RequestContext {
   /** Company code key from X-Org when present as {tenant}--{companyCode}. */
   companyCodeKey?: string;
   /**
-   * Active persona for neon/admin contexts. Mesh requests leave this undefined
-   * (mesh authorization flows through account_grant, not persona_permission).
+   * Canonical authority context for Neon/Admin. Mesh uses its local repository
+   * and never falls back to Neon authority.
    * Populated by the permission-context middleware after token verification.
    */
-  personaId?: string;
   /**
    * Active mesh.account_grant id when planeKey === 'mesh'. Pairs with the
    * fingerprint stored on the grant row; used in the descriptor cache key.
    */
-  accountGrantId?: string;
   /**
-   * Stable fingerprint of the persona (neon/admin) or binding (mesh) that
+   * Stable fingerprint of the authority binding for the active plane that
    * identifies *this* principal scope. Goes into the descriptor cache key
-   * so persona switches and binding revocations invalidate the cache.
+   * so authority changes and binding revocations invalidate the cache.
    */
   principalFingerprint?: string;
   /**
@@ -143,8 +141,6 @@ export function bindVerifiedRequestContext(context: VerifiedRequestContext): voi
   current.principalId = context.principalId;
   current.profileHash = context.profileHash;
   current.authEpoch = context.authEpoch;
-  current.personaId = context.permissions.personaId;
-  current.accountGrantId = context.permissions.accountGrantId;
   current.principalFingerprint = context.permissions.principalFingerprint;
 }
 
@@ -180,8 +176,6 @@ export async function runWithJobContext<T>(
     tenantId: payloadCtx.tenantId,
     orgKey: payloadCtx.orgKey,
     companyCodeKey: payloadCtx.companyCodeKey,
-    personaId: payloadCtx.personaId,
-    accountGrantId: payloadCtx.accountGrantId,
     principalFingerprint: payloadCtx.principalFingerprint,
     profileHash: payloadCtx.profileHash,
     authEpoch: payloadCtx.authEpoch,

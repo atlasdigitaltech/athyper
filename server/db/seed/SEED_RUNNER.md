@@ -80,50 +80,32 @@ No tenant required â€” no `SET app.seed_tenant_id` needed.
 Files sort alphabetically by subfolder prefix (numeric order):
 
 ```
-platform/000_bootstrap/000_bootstrap.sql          â† MUST be first
+# System authority bootstrap is no longer a legacy platform seed phase. It is
+# owned by the common DDL layer and executes first at layer 12 in all planes:
+ddl/common/master/12_system_authority_reference_seed.sql
 
-platform/000_lookups/LookupDomain/000_lookup_domains.sql
-platform/000_lookups/LookupDomain/010_ai_lookup_domains.sql
-platform/000_lookups/LookupDomain/control/*.sql
-platform/000_lookups/LookupDomain/document/*.sql
-platform/000_lookups/LookupDomain/event/*.sql
-platform/000_lookups/LookupDomain/log/*.sql
-platform/000_lookups/LookupDomain/master/*.sql
-platform/000_lookups/LookupDomain/shared/*.sql
+# Lookup domains moved to DDL layer-12 in Wave 3 and are owned by manifests:
+# common/control/12_lookup_reference_entrypoint.sql
+# athyper/control/12_lookup_reference_entrypoint.sql
+# neon/control/12_lookup_reference_entrypoint.sql
+# mesh/control/12_lookup_reference_entrypoint.sql
 
-# Global reference data (countries, currencies, UoM, commodity/industry codes)
-platform/001_global_reference/001_country.sql
-platform/001_global_reference/002_state_region.sql
-platform/001_global_reference/003_currency.sql
-platform/001_global_reference/004_language.sql
-platform/001_global_reference/005_locale.sql
-platform/001_global_reference/006_timezone.sql
-platform/001_global_reference/007_uom.sql
-platform/001_global_reference/008a_commodity_code_unspsc.sql
-platform/001_global_reference/008b_commodity_code_hs.sql
-platform/001_global_reference/008c_commodity_crosswalk.sql
-platform/001_global_reference/008d_commodity_code_keywords.sql
-platform/001_global_reference/009b_industry_code_isic_groups_classes.sql
-platform/001_global_reference/009c_industry_code_naics_subsectors.sql
-platform/001_global_reference/009d_industry_crosswalk.sql
-platform/001_global_reference/009e_industry_code_keywords.sql
+# Global reference data is no longer a legacy platform seed phase. It is owned
+# by the common DDL layer and executes in Athyper, Neon, and Mesh through:
+ddl/common/shared/12_reference_seed.sql
+ddl/common/shared/reference-data/*.sql
 
-# Permission model (personas, modules, permissions, roles)
-platform/002_permission_model/010_persona.sql
-platform/002_permission_model/011_workspace.sql
-platform/002_permission_model/012_module.sql
-platform/002_permission_model/013_enterprise_feature.sql
-platform/002_permission_model/014_subscription_plan.sql
-platform/002_permission_model/015_permission_category.sql
-platform/002_permission_model/016_plan_module_access.sql
-platform/002_permission_model/017_permission.sql
-platform/002_permission_model/018_persona_permission.sql
-platform/002_permission_model/019_role.sql
+# Permission model has been retired from legacy platform seed path.
+# Platform catalog and authorization seed contracts are now DDL-layer owned:
+# ddl/planes/athyper/master/12_platform_catalog_reference_seed.sql
+# ddl/planes/neon/master/12_platform_catalog_reference_seed.sql
+# ddl/planes/mesh/master/12_platform_catalog_reference_seed.sql
 
 # Control tables
 # Default layout is one table-owned file per control table. During development,
 # tightly coupled domain contracts may be consolidated when that is clearer than
-# patch-style fragments. Lookup domain/value seeds remain in 000_lookups/LookupDomain/*.
+# patch-style fragments. Lookup domain/value seeds now execute from DDL lookup packs
+# (Wave 3), not legacy platform files.
 platform/003_control/005_control_entity_metadata_rebuild_contract.sql
 platform/003_control/010_control_entity_class_profile_contract.sql
 platform/003_control/020_control_field_group_contract.sql
@@ -177,10 +159,10 @@ platform/003_control/092_entity_print_config.sql
 platform/003_control/093_print_hide_fields.sql
 platform/003_control/095_control_three_plane_runtime_contract.sql
 
-platform/003_master/*.sql
+# Legacy platform/003_master packs moved to plane-local/common DDL layer 12.
 
-# Athyper system tenant (blueprint owner â€” platform-level singleton)
-platform/006_system_tenant/000_athyper_tenant.sql
+# The former platform/006_system_tenant copy was retired as duplicate demo
+# onboarding data. Named demo tenants are owned only by tenants/<plane>/...
 ```
 
 ---
@@ -380,8 +362,3 @@ ORDER BY tba.applied_at;
 1. Add framework account files to `blueprints/universal/200_coa_frameworks/`
 2. Register as `category = 'coa_framework'` with appropriate `framework` value
 3. Update the provisioning wizard to present the new option
-
-
-
-
-

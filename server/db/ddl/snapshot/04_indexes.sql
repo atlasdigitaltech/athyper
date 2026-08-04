@@ -1,68 +1,37 @@
 -- ============================================================================
 -- snapshot/04_indexes.sql
--- Concept: Snapshot Indexes — version and compiled entity lookup performance
--- Depends on: 04_tables/009_snapshot.sql
+-- Non-constraint indexes reconstructed from the live catalog.
+-- Generated from the live Neon database snapshot schema. Do not hand-edit.
 -- ============================================================================
 
-CREATE INDEX IF NOT EXISTS li_state_idx
-    ON master.lifecycle_instance (tenant_id, lifecycle_id, state_id);
+CREATE INDEX civ_item_version_desc_idx ON snapshot.content_item_version USING btree (content_item_id, version DESC);
 
--- ── snapshot.lifecycle_version ───────────────────────────────────────────────
--- Latest version per lifecycle
-CREATE INDEX IF NOT EXISTS lv_lifecycle_latest_idx
-    ON snapshot.lifecycle_version (lifecycle_id, version DESC);
+CREATE INDEX ds_activity_log_idx ON ONLY snapshot.document_snapshot USING btree (tenant_id, activity_log_id) WHERE activity_log_id IS NOT NULL;
 
--- ── snapshot.status_route ────────────────────────────────────────────────────
--- Hash-based staleness check
-CREATE INDEX IF NOT EXISTS sr_hash_idx
-    ON snapshot.status_route (tenant_id, entity_name, compiled_hash);
+CREATE INDEX ds_chain_idx ON ONLY snapshot.document_snapshot USING btree (tenant_id, entity_id, chain_seq DESC);
 
--- ─── snapshot.entity_compiled ───────────────────────────────────────────────
+CREATE INDEX ds_entity_recent_idx ON ONLY snapshot.document_snapshot USING btree (tenant_id, entity_type, entity_id, captured_at DESC);
 
-CREATE INDEX IF NOT EXISTS ec_version_idx
-    ON snapshot.entity_compiled (entity_version_id, artifact_kind);
+CREATE INDEX ds_gate_kind_idx ON ONLY snapshot.document_snapshot USING btree (tenant_id, gate_event_kind, captured_at DESC);
 
-CREATE INDEX IF NOT EXISTS ec_artifact_scope_idx
-    ON snapshot.entity_compiled (tenant_id, artifact_kind, entity_version_id);
+CREATE INDEX document_snapshot_default_tenant_id_activity_log_id_idx ON snapshot.document_snapshot_default USING btree (tenant_id, activity_log_id) WHERE activity_log_id IS NOT NULL;
 
+CREATE INDEX document_snapshot_default_tenant_id_entity_id_chain_seq_idx ON snapshot.document_snapshot_default USING btree (tenant_id, entity_id, chain_seq DESC);
 
--- =============================================================================
--- §6  DOCUMENT · PRINT · BRANDING  —  snapshot indexes
--- =============================================================================
+CREATE INDEX document_snapshot_default_tenant_id_entity_type_entity_id_c_idx ON snapshot.document_snapshot_default USING btree (tenant_id, entity_type, entity_id, captured_at DESC);
 
--- ── snapshot.content_item_version ───────────────────────────────────────────
--- Latest version per content item (DESC for most-recent-first queries)
-CREATE INDEX IF NOT EXISTS civ_item_version_desc_idx
-    ON snapshot.content_item_version (content_item_id, version DESC);
+CREATE INDEX document_snapshot_default_tenant_id_gate_event_kind_capture_idx ON snapshot.document_snapshot_default USING btree (tenant_id, gate_event_kind, captured_at DESC);
 
--- ── snapshot.template_version ──────────────────────────────────────────────
--- GiST temporal range: answers "which version was effective on date X?"
--- Requires btree_gist (already loaded in 00_extensions/001_extensions.sql)
-CREATE INDEX IF NOT EXISTS template_version_effective_range_idx
-    ON snapshot.template_version USING GIST (
-        tenant_id,
-        template_id,
-        daterange(effective_from, effective_to, '[)')
-    );
+CREATE INDEX ec_artifact_scope_idx ON snapshot.entity_compiled USING btree (tenant_id, artifact_kind, entity_version_id);
 
+CREATE INDEX ec_version_idx ON snapshot.entity_compiled USING btree (entity_version_id, artifact_kind);
 
--- =============================================================================
--- §8  snapshot.document_snapshot — generic document snapshot indexes
--- =============================================================================
+CREATE INDEX epc_hash_lookup_idx ON snapshot.entity_plane_compiled USING btree (compiled_hash);
 
--- Primary read: latest snapshot per entity, most-recent-first
-CREATE INDEX IF NOT EXISTS ds_entity_recent_idx
-    ON snapshot.document_snapshot (tenant_id, entity_type, entity_id, captured_at DESC);
+CREATE UNIQUE INDEX epc_version_plane_uq ON snapshot.entity_plane_compiled USING btree (entity_version_id, plane_key);
 
--- Audit-by-activity-log: drives v_p2p_audit_timeline join
-CREATE INDEX IF NOT EXISTS ds_activity_log_idx
-    ON snapshot.document_snapshot (tenant_id, activity_log_id)
-    WHERE activity_log_id IS NOT NULL;
+CREATE INDEX lv_lifecycle_latest_idx ON snapshot.lifecycle_version USING btree (lifecycle_id, version DESC);
 
--- Chain traversal: walk backwards from a snapshot
-CREATE INDEX IF NOT EXISTS ds_chain_idx
-    ON snapshot.document_snapshot (tenant_id, entity_id, chain_seq DESC);
+CREATE INDEX sr_hash_idx ON snapshot.status_route USING btree (tenant_id, entity_name, compiled_hash);
 
--- Gate-event filtering: e.g. all financial_post snapshots in a tenant
-CREATE INDEX IF NOT EXISTS ds_gate_kind_idx
-    ON snapshot.document_snapshot (tenant_id, gate_event_kind, captured_at DESC);
+CREATE INDEX template_version_effective_range_idx ON snapshot.template_version USING gist (tenant_id, template_id, daterange(effective_from, effective_to, '[)'::text));

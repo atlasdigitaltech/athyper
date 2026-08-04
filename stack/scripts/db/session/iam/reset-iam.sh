@@ -45,6 +45,16 @@ source "${SCRIPT_DIR}/../../../lib/resolve-iam-credentials.sh"
 GREEN="$CLR_GREEN"; YELLOW="$CLR_YELLOW"; RED="$CLR_RED"; CYAN="$CLR_CYAN"; NC="$CLR_NC"
 init_stack_env "$STACK_DIR"
 
+if [[ "${ATHYPER_DISPOSABLE_ENVIRONMENT:-}" != "I_UNDERSTAND_DATA_WILL_BE_DESTROYED" ]] \
+  || [[ "${ATHYPER_IDENTITY_RESET_ACKNOWLEDGEMENT:-}" != "RESET_KEYCLOAK_IAM" ]] \
+  || [[ -z "${IAM_EXPECTED_DATABASE:-}" ]] \
+  || [[ "${IAM_EXPECTED_DATABASE}" != "${DB_NAME_AUTH}" ]] \
+  || [[ ! "${ATHYPER_IDENTITY_RESTORE_EVIDENCE_SHA256:-}" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "REFUSED: IAM reset requires the disposable marker, RESET_KEYCLOAK_IAM acknowledgement,"
+  echo "the exact IAM_EXPECTED_DATABASE, and a SHA-256 restore-drill evidence receipt."
+  exit 64
+fi
+
 echo -e "${RED}=== Keycloak IAM FULL RESET ===${NC}"
 echo -e "${YELLOW}WARNING: This will DELETE ALL KC data and reimport from JSON seed files.${NC}"
 echo -e "${YELLOW}Press Ctrl+C to cancel, or wait 10 seconds to continue...${NC}"

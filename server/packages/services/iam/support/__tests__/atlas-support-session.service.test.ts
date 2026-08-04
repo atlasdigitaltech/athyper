@@ -32,7 +32,7 @@ class MemoryRepository implements AtlasSupportSessionRepository {
       targetTenantId: TARGET_TENANT,
       shadowPrincipalId: SHADOW_PRINCIPAL,
       shadowAuthEpoch: 11,
-      relationshipId: RELATIONSHIP_ID,
+      membershipId: RELATIONSHIP_ID,
     };
   }
 

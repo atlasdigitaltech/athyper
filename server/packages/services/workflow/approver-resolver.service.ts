@@ -162,9 +162,12 @@ export class ApproverResolverService {
     try {
       // Resolve role code → role UUID
       const roleRow = await trx
-        .selectFrom("shared.role as r" as never)
+        .selectFrom("master.auth_role as r" as never)
         .select("r.id" as never)
         .where("r.code" as never, "=", spec.value as never)
+        .where("r.tenant_id" as never, "=", tenantId as never)
+        .where("r.plane_code" as never, "=", "neon" as never)
+        .where("r.status" as never, "=", "active" as never)
         .executeTakeFirst() as Record<string, unknown> | undefined;
 
       if (!roleRow) {
@@ -176,9 +179,9 @@ export class ApproverResolverService {
 
       // Find all active principals in active groups with that role for this tenant.
       const members = await (trx as any)
-        .selectFrom("master.auth_group_role as agr" as never)
+        .selectFrom("master.auth_current_group_role_v as agr" as never)
         .innerJoin(
-          "master.auth_group_member as agm" as never,
+          "master.auth_current_group_member_v as agm" as never,
           "agm.group_id" as never,
           "agr.group_id" as never,
         )
@@ -192,14 +195,7 @@ export class ApproverResolverService {
         .where("agm.tenant_id" as never, "=", tenantId as never)
         .where("p.tenant_id" as never, "=", tenantId as never)
         .where("agr.role_id" as never, "=", roleId as never)
-        .where("agr.status" as never, "=", "active" as never)
         .where("p.status" as never, "=", "active" as never)
-        .where((eb: any) =>
-          eb.or([
-            eb("agr.expires_at" as never, "is", null as never),
-            eb("agr.expires_at" as never, ">", new Date() as never),
-          ]),
-        )
         .execute() as Record<string, unknown>[];
 
       const principalIds = members

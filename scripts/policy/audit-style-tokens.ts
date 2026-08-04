@@ -9,10 +9,10 @@ const SCAN_ROOTS = [
   "apps/neon",
   "apps/mesh",
   "apps/admin",
-  "packages/apps/admin",
-  "packages/apps/mesh",
+  "packages/products/admin",
+  "packages/products/mesh",
   "packages/shared",
-  "packages/product/design",
+  "packages/products/design",
   "packages/product-deprecated/runtime-ui",
   "packages/domain/finance",
 ] as const;
@@ -35,7 +35,7 @@ const ALLOWLIST = [
   /^packages\/shared\/theme\/src\/typography\.ts$/,
   /^packages\/shared\/theme\/src\/typography\.generated\.css$/,
   /^packages\/shared\/theme\/src\/presets\/registry\.ts$/,
-  /^packages\/product\/design\/icons\/src\/custom\//,
+  /^packages\/products\/design\/icons\/src\/custom\//,
   /^apps\/web\/components\/auth\/SocialLoginButtons\.tsx$/,
 ] as const;
 

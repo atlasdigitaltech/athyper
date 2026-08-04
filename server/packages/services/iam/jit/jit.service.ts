@@ -1,38 +1,4 @@
-/**
- * IAM JIT Provisioning Service — v4.2 (Phase 2 — binding primary)
- *
- * Creates a principal + profile + auth binding on first login for any
- * Keycloak user who has no pre-existing DB identity in a given tenant.
- *
- * Phase 2 change: principal_profile.keycloak_* columns are NO LONGER written
- * by this service. All IdP identity data is stored exclusively in
- * principal_identity_binding. The keycloak_* columns on principal_profile
- * are frozen for writes (controlled by app.iam_profile_kc_frozen setting).
- *
- * Design goals
- * ────────────
- *  • Idempotent — safe to call multiple times; ON CONFLICT guards every insert.
- *  • Handles pre-seeded principals — if a principal with the same `code`
- *    (username) already exists (e.g. seeded in demo data), we attach the
- *    auth binding to it rather than creating a duplicate principal.
- *  • Handles concurrent logins — ON CONFLICT (tenant_id, provider_code,
- *    subject_id) on principal_identity_binding prevents duplicate bindings under
- *    race conditions.
- *  • Single DB transaction — all three inserts (principal, profile, binding)
- *    succeed or fail together.
- *
- * Caller contract
- * ───────────────
- *  The caller (session.service.ts) must have already resolved tenant_id from
- *  the DB. This service takes tenant_id directly to avoid a redundant lookup.
- *
- * principal.code uniqueness
- * ─────────────────────────
- *  `code` is used for the principal's human-readable identifier and must be
- *  unique within the tenant. We use the KC `preferred_username`, but if that
- *  already exists for a *different* sub (KC UUID), we fall back to the KC
- *  `sub` UUID itself as the code — guaranteed unique.
- */
+import { createHash } from "node:crypto";
 
 import { sql, type Kysely } from "kysely";
 
@@ -42,296 +8,159 @@ type AnyDb = Record<string, any>;
 const SYSTEM_UUID = "00000000-0000-0000-0000-000000000000";
 
 export interface JitPrincipalInput {
-  /** KC JWT `sub` claim — the IdP-assigned user UUID. */
+  /** Validated provider subject; opaque and case-sensitive. */
   sub: string;
-  /** KC `preferred_username`. Used as principal.code when available. */
   username: string;
-  /** KC `name` claim — stored as principal.name and profile.display_name. */
   display_name: string;
-  /** KC `email` claim — optional, stored on auth binding. */
   email?: string;
-  /** Already-resolved tenant UUID from the session service. */
   tenant_id: string;
-  /** Realm that issued the JWT subject. */
   realm_key?: string;
+  issuer?: string;
+  audience?: string;
 }
 
 export interface JitPrincipalResult {
   principal_id: string;
-  /** true = newly created this call; false = binding already existed. */
   created: boolean;
 }
 
 /**
- * Ensure a principal + auth binding exists for the given KC user in the
- * given tenant. Returns the resolved principal_id.
- *
- * Algorithm
- * ─────────
- * 1. Check if the auth binding already exists → return early (fast path).
- * 2. Find a pre-existing principal by username (code) in this tenant.
- *    If found, create only the missing auth binding.
- * 3. If no principal exists:
- *    a. INSERT principal with code=username (ON CONFLICT: use sub UUID as fallback code).
- *    b. INSERT principal_profile.
- *    c. INSERT principal_identity_binding.
+ * Creates identity only. Plane membership and authorization are deliberately
+ * left to explicit reconciliation, so a newly provisioned actor has zero
+ * application access until approved authority exists.
  */
 export async function jitProvisionPrincipal(
   db: Kysely<AnyDb>,
   input: JitPrincipalInput,
 ): Promise<JitPrincipalResult | null> {
-  const { sub, username, display_name, email, tenant_id, realm_key = "athyper" } = input;
+  const subject = input.sub.trim();
+  const realmKey = (input.realm_key ?? "athyper").trim().toLowerCase();
+  if (!subject || !realmKey || !input.tenant_id) return null;
 
-  // ── Step 1: Fast path — binding already exists ─────────────────────────────
-  const existingBinding = await db
-    .selectFrom("master.principal_identity_binding")
-    .select("principal_id")
-    .where("tenant_id", "=", tenant_id)
-    .where("realm_key", "=", realm_key)
-    .where("provider_code", "=", "keycloak")
-    .where("subject_id", "=", sub)
-    .executeTakeFirst();
-
-  if (existingBinding) {
-    const principalId = existingBinding.principal_id as string;
-    // Backfill default persona for principals provisioned before persona
-    // assignment was wired into JIT. Without a master.principal_persona row,
-    // checkPermissionBatch resolves every permission to 'not_found' and the
-    // ActionBar renders empty.
-    await ensureDefaultPersona(db, tenant_id, principalId);
-    return { principal_id: principalId, created: false };
-  }
-
-  // All remaining work runs inside a single transaction.
-  // trg_set_updated_at reads app.current_principal_id to populate updated_by;
-  // without it the trigger sets updated_by=null while updated_at=now(), which
-  // violates pib_audit_pair_chk. Setting it to the system UUID here satisfies
-  // the constraint for all system-initiated writes in this flow.
   return db.transaction().execute(async (trx) => {
-    await sql`SELECT set_config('app.current_principal_id', ${SYSTEM_UUID}, true)`.execute(trx);
-
-    // ── Step 2: Look for pre-seeded principal by username ────────────────────
-    // Case-insensitive: the seed authors principal codes in upper case
-    // (e.g. `ACFB.OWNER`) while KC ships `preferred_username` in lower case
-    // (`acfb.owner`). A case-sensitive match would miss the seeded row and
-    // Step 3 below would create a duplicate principal with no group
-    // memberships, breaking the ActionBar for the user.
-    const existingPrincipal = await trx
-      .selectFrom("master.principal")
-      .select("id")
-      .where("tenant_id", "=", tenant_id)
-      .where(sql`lower(code)`, "=", username.toLowerCase())
-      .executeTakeFirst();
-
-    let principalId: string;
-
-    if (existingPrincipal) {
-      // Pre-seeded principal found. Check if it already has a keycloak binding —
-      // this happens when the seed used a placeholder UUID instead of the real KC sub.
-      // In that case we must UPDATE rather than INSERT to avoid a unique constraint
-      // violation on (tenant_id, principal_id, realm_key, provider_code).
-      principalId = existingPrincipal.id as string;
-
-      const existingKCBinding = await trx
-        .selectFrom("master.principal_identity_binding")
-        .select("subject_id")
-        .where("tenant_id", "=", tenant_id)
-        .where("principal_id", "=", principalId)
-        .where("realm_key", "=", realm_key)
-        .where("provider_code", "=", "keycloak")
-        .executeTakeFirst();
-
-      if (existingKCBinding) {
-        if (existingKCBinding.subject_id === sub) {
-          // Binding is already correct — only backfill persona if missing.
-          await insertDefaultPersonaIfMissing(trx, tenant_id, principalId);
-          return { principal_id: principalId, created: false };
-        }
-        // Wrong subject_id (seed mismatch) — update binding to the real KC UUID.
-        // principal_profile.keycloak_* is intentionally NOT updated here (Phase 2:
-        // binding table is the sole authority for IdP identity data).
-        await trx
-          .updateTable("master.principal_identity_binding")
-          .set({
-            subject_id: sub,
-            username: username || null,
-            sync_status: "synced",
-            synced_at: new Date(),
-          })
-          .where("tenant_id", "=", tenant_id)
-          .where("principal_id", "=", principalId)
-          .where("realm_key", "=", realm_key)
-          .where("provider_code", "=", "keycloak")
-          .execute();
-
-        await insertDefaultPersonaIfMissing(trx, tenant_id, principalId);
-        return { principal_id: principalId, created: false };
-      }
-      // No binding yet — fall through to Step 3c to insert it.
-    } else {
-      // ── Step 3a: Create the principal ────────────────────────────────────
-      // Try with username as code first. If a different user already claimed
-      // that code in this tenant, fall back to the KC sub UUID (always unique).
-      const nameParts = display_name.trim().split(/\s+/);
-      const safeCode = username.trim() || sub;
-
-      const inserted = await trx
-        .insertInto("master.principal")
-        .values({
-          tenant_id,
-          code: safeCode,
-          name: display_name || username || sub,
-          principal_type: "user",
-          is_locked: false,
-          is_service_account: false,
-          principal_source: "oidc_jit",
-          status: "active",
-          created_by: SYSTEM_UUID,
-        })
-        .onConflict((oc) =>
-          // Code already taken by a different user → use sub UUID as code instead.
-          // We can't DO NOTHING here because we need the id regardless of conflict.
-          oc.columns(["tenant_id", "code"]).doUpdateSet({
-            // Update the name in case the display name changed (idempotent intent).
-            // Only fires if code == safeCode matches an existing row for THIS sub.
-            // If it's a different sub, the conflict means we must use sub as code.
-            name: display_name || username || sub,
-          }),
+    await sql`
+      SELECT
+        set_config('app.current_tenant_id', ${input.tenant_id}, true),
+        set_config('app.current_principal_id', ${SYSTEM_UUID}, true),
+        pg_advisory_xact_lock(
+          hashtextextended(
+            ${`${input.tenant_id}|keycloak|${realmKey}|${subject}`},
+            0
+          )
         )
-        .returning("id")
-        .executeTakeFirst();
+    `.execute(trx);
 
-      if (!inserted) {
-        // Conflict — the same code exists for a DIFFERENT sub.
-        // Re-insert with sub UUID as the code.
-        const fallback = await trx
-          .insertInto("master.principal")
-          .values({
-            tenant_id,
-            code: sub,
-            name: display_name || username || sub,
-            principal_type: "user",
-            is_locked: false,
-            is_service_account: false,
-            principal_source: "oidc_jit",
-            status: "active",
-            created_by: SYSTEM_UUID,
-          })
-          .onConflict((oc) => oc.columns(["tenant_id", "code"]).doNothing())
-          .returning("id")
-          .executeTakeFirst();
+    const tenant = await sql<{ active: boolean }>`
+      SELECT EXISTS (
+        SELECT 1 FROM master.tenant
+        WHERE id = ${input.tenant_id}::uuid AND status = 'active'
+      ) AS active
+    `.execute(trx);
+    if (!tenant.rows[0]?.active) return null;
 
-        if (!fallback) return null; // Should not happen; concurrent insert already won.
-
-        principalId = fallback.id as string;
-      } else {
-        principalId = inserted.id as string;
-      }
-
-      // ── Step 3b: Create the principal_profile ────────────────────────────
-      const givenName = nameParts[0] ?? username;
-      const familyName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
-
-      // Phase 2: keycloak_* columns are NOT written here — principal_identity_binding
-      // is the sole authority for IdP identity data (inserted in Step 3c below).
-      await trx
-        .insertInto("master.principal_profile")
-        .values({
-          tenant_id,
-          principal_id: principalId,
-          given_name: givenName,
-          family_name: familyName || null,
-          display_name: display_name || username,
-          created_by: SYSTEM_UUID,
-        })
-        .onConflict((oc) => oc.columns(["tenant_id", "principal_id"]).doNothing())
-        .execute();
+    const existing = await sql<{ principal_id: string }>`
+      SELECT binding.principal_id::text
+      FROM master.principal_identity_binding AS binding
+      JOIN master.principal AS principal
+        ON principal.tenant_id = binding.tenant_id
+       AND principal.id = binding.principal_id
+      WHERE binding.tenant_id = ${input.tenant_id}::uuid
+        AND binding.provider_code = 'keycloak'
+        AND binding.realm_key = ${realmKey}
+        AND binding.subject_id = ${subject}
+        AND binding.status = 'active'
+        AND principal.status = 'active'
+      LIMIT 1
+    `.execute(trx);
+    if (existing.rows[0]) {
+      return { principal_id: existing.rows[0].principal_id, created: false };
     }
 
-    // ── Step 3c / Step 2b: Create the auth binding ──────────────────────────
+    // A revoked/disabled coordinate is retained as security history. JIT must
+    // not evade that decision by creating another principal for the same sub.
+    const retained = await sql<{ retained: boolean }>`
+      SELECT EXISTS (
+        SELECT 1
+        FROM master.principal_identity_binding
+        WHERE tenant_id = ${input.tenant_id}::uuid
+          AND provider_code = 'keycloak'
+          AND realm_key = ${realmKey}
+          AND subject_id = ${subject}
+      ) AS retained
+    `.execute(trx);
+    if (retained.rows[0]?.retained) return null;
+
+    const code = principalCode(input.username, subject);
+    const principal = await trx
+      .insertInto("master.principal")
+      .values({
+        tenant_id: input.tenant_id,
+        code,
+        name: normalizedDisplayName(input.display_name, input.username, subject),
+        principal_type: "user",
+        provisioning_source: "jit",
+        metadata: {},
+        status: "active",
+        created_by: SYSTEM_UUID,
+      })
+      .returning("id")
+      .executeTakeFirstOrThrow();
+    const principalId = principal.id as string;
+
+    await trx
+      .insertInto("master.principal_profile")
+      .values({
+        tenant_id: input.tenant_id,
+        principal_id: principalId,
+        display_name: normalizedDisplayName(input.display_name, input.username, subject),
+        attributes: {},
+        metadata: {},
+        created_by: SYSTEM_UUID,
+      })
+      .execute();
+
     await trx
       .insertInto("master.principal_identity_binding")
       .values({
-        tenant_id,
+        tenant_id: input.tenant_id,
         principal_id: principalId,
-        realm_key,
         provider_code: "keycloak",
-        subject_id: sub,
-        username: username || null,
-        sync_status: "synced",
-        idp_enabled: true,
-        idp_email_verified: !!email,
+        realm_key: realmKey,
+        subject_id: subject,
+        issuer: optionalText(input.issuer),
+        audience: optionalText(input.audience),
+        username: optionalText(input.username),
+        is_primary: true,
+        status: "active",
+        last_verified_at: new Date(),
         synced_at: new Date(),
+        sync_status: "synced",
+        provider_attributes: input.email ? { email: input.email } : {},
+        metadata: {},
         created_by: SYSTEM_UUID,
       })
-      .onConflict((oc) =>
-        oc.columns(["tenant_id", "realm_key", "provider_code", "subject_id"]).doNothing(),
-      )
       .execute();
-
-    // ── Step 3d: Assign default 'owner' persona ─────────────────────────────
-    // Without this, checkPermissionBatch resolves every permission to
-    // 'not_found' for this principal and the ActionBar renders empty.
-    await insertDefaultPersonaIfMissing(trx, tenant_id, principalId);
 
     return { principal_id: principalId, created: true };
   });
 }
 
-// ─── Persona helpers ────────────────────────────────────────────────────────────
-
-// Idempotent persona assignment for use inside an existing transaction.
-// Caller must have already set app.current_principal_id on the transaction
-// (jitProvisionPrincipal does this at the top of its main trx).
-async function insertDefaultPersonaIfMissing(
-  trx: Kysely<AnyDb>,
-  tenant_id: string,
-  principal_id: string,
-): Promise<void> {
-  const existing = await trx
-    .selectFrom("master.principal_persona")
-    .select("id")
-    .where("tenant_id", "=", tenant_id)
-    .where("principal_id", "=", principal_id)
-    .executeTakeFirst();
-  if (existing) return;
-
-  const persona = await trx
-    .selectFrom("shared.persona")
-    .select("id")
-    .where("code", "=", "owner")
-    .executeTakeFirst();
-  if (!persona) return;
-
-  await trx
-    .insertInto("master.principal_persona")
-    .values({
-      tenant_id,
-      principal_id,
-      persona_id: persona.id,
-      assigned_by: SYSTEM_UUID,
-      created_by: SYSTEM_UUID,
-    })
-    .onConflict((oc) => oc.columns(["tenant_id", "principal_id"]).doNothing())
-    .execute();
+function principalCode(username: string, subject: string): string {
+  const stem = username
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_.@-]+/g, "-")
+    .replace(/^[^a-z]+/, "")
+    .slice(0, 100) || "user";
+  const digest = createHash("sha256").update(subject).digest("hex").slice(0, 16);
+  return `${stem}-${digest}`.slice(0, 127);
 }
 
-// Standalone variant for the fast-path (binding-already-exists) branch.
-// Wraps the work in its own transaction so app.current_principal_id stays
-// in scope across the persona INSERT. Best-effort: any failure is logged
-// but doesn't fail the login.
-async function ensureDefaultPersona(
-  db: Kysely<AnyDb>,
-  tenant_id: string,
-  principal_id: string,
-): Promise<void> {
-  try {
-    await db.transaction().execute(async (trx) => {
-      await sql`SELECT set_config('app.current_principal_id', ${SYSTEM_UUID}, true)`.execute(trx);
-      await insertDefaultPersonaIfMissing(trx, tenant_id, principal_id);
-    });
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn("[jit] default persona backfill failed", err);
-  }
+function normalizedDisplayName(displayName: string, username: string, subject: string): string {
+  return (displayName.trim() || username.trim() || subject).slice(0, 256);
+}
+
+function optionalText(value: string | undefined): string | null {
+  const normalized = value?.trim();
+  return normalized || null;
 }

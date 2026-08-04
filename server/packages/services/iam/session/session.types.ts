@@ -47,14 +47,6 @@ export interface SessionQuery {
    *   ADMIN_USER        -> "admin" on Admin
    */
   workbenches: string[];
-  /**
-   * UUID of a delegation_grant the user wants to activate for this session.
-   * The delegate must be the current principal and the grant must be non-revoked
-   * and non-expired. Permissions from the grant are merged (unioned) with the
-   * principal's own persona permissions.
-   */
-  delegationId?: string;
-
   // ── JIT provisioning identity fields ──────────────────────────────────────
   // Forwarded from the verified JWT claims so the session service can
   // auto-provision a principal on first login when no principal_identity_binding
@@ -65,6 +57,9 @@ export interface SessionQuery {
   name?: string;
   /** KC `email` claim. Optional; controls idp_email_verified in JIT binding. */
   email?: string;
+  /** Assurance supplied by the authenticated request boundary. */
+  mfaSatisfied: boolean;
+  sodSatisfied: boolean;
 }
 
 export interface SessionEntityInfo {
@@ -110,46 +105,14 @@ export interface SessionPartner {
   linked_code: string;
 }
 
-export interface DelegationAvailable {
-  delegation_id: string;
-  delegator_name: string;
-  delegator_persona: string;
-  permissions: string[];
-  expires_at: string; // ISO 8601
-  /** master.delegation_scope lookup code: company_code | module | task | entity | workflow */
-  scope_type: string;
-  /** Scope reference value, e.g. "ATHQ" for company_code, "ACC" for module. Null = tenant-wide. */
-  scope_ref: string | null;
-}
-
-export interface ActiveDelegation {
-  delegation_id: string;
-  delegator_name: string;
-  merged_permissions: string[];
-}
-
-export interface SessionResponse {
-  persona: string;
-  workbench: "user" | "partner" | "admin";
-  entity: SessionEntityInfo;
-  modules: SessionModule[];
-  /** Platform-level workspace codes. First-pass: []. */
-  platform: { code: string }[];
-  /** All known permissions keyed by code. false = not granted by current persona. */
-  permissions: Record<string, boolean>;
-  scope: SessionScope;
-  partner?: SessionPartner;
-  delegations_available: DelegationAvailable[];
-  active_delegation?: ActiveDelegation;
-}
+export type SessionResponse =
+  import("../authorization-runtime/session-v2.js").AuthorizationSessionV2;
 
 /** Query params accepted by GET /api/session */
 export interface SessionRouteQuery {
   tenant?: string;
   entity?: string;
   workbench?: string;
-  /** UUID of a delegation_grant to activate. Merges delegated permissions into session. */
-  delegation?: string;
 }
 
 // ─── Internal cache format ────────────────────────────────────────────────────
@@ -191,7 +154,6 @@ export interface BootstrapEntity {
   country: string;         // legal_entity.country_code
   legal_entity: string;    // legal_entity.code (for LE grouping in UI)
   workbenches: ("user" | "partner" | "admin")[];
-  persona_summary: string; // resolved persona code for this entity
   module_count: number;
 }
 
@@ -205,7 +167,6 @@ export interface BootstrapTenant {
 export interface BootstrapResponse {
   principal: BootstrapPrincipal;
   tenants: BootstrapTenant[];
-  delegation_count: number;
 }
 
 /** Input passed from bootstrap route handler to bootstrap service */

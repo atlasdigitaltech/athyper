@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
-const brandSrc = path.join(repoRoot, "packages/apps/neon/brand/src");
+const brandSrc = path.join(repoRoot, "packages/products/neon/brand/src");
 const brandDist = path.join(repoRoot, "packages/shared/ui-platform/brand/dist");
 const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
 const kcImg = path.join(kcLogin, "resources/img");
@@ -39,9 +39,9 @@ type ProductCode = keyof typeof APP_TARGETS;
 type PublicAssetKey = keyof typeof PUBLIC_OUTPUT_FILES;
 
 const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  neon:  "packages/apps/neon/brand/src",
-  mesh:  "packages/apps/mesh/brand/src",
-  admin: "packages/apps/admin/brand/src",
+  neon:  "packages/products/neon/brand/src",
+  mesh:  "packages/products/mesh/brand/src",
+  admin: "packages/products/admin/brand/src",
 };
 
 interface KeycloakBrandManifest {
@@ -79,7 +79,7 @@ async function exists(p: string): Promise<boolean> {
 
 function generatedHeader(): string[] {
   return [
-    `<#-- Generated from packages/apps/neon/brand/src/ -->`,
+    `<#-- Generated from packages/products/neon/brand/src/ -->`,
     `<#-- DO NOT EDIT DIRECTLY - run: pnpm brand:refresh -->`,
   ];
 }

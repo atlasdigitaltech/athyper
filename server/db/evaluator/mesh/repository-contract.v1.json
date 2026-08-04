@@ -1,0 +1,34 @@
+{
+  "contractVersion": "wave4.canonical-evaluator.v1",
+  "repositoryId": "wave4.mesh.repository.v1",
+  "authority": "mesh",
+  "database": "mesh",
+  "planes": ["mesh"],
+  "facts": {
+    "identity": "mesh.principal_identity_binding",
+    "principal": "mesh.principal",
+    "planeMembership": "mesh.auth_current_plane_membership_v",
+    "operationPermission": "mesh_control.entity_operation plus mesh_control.auth_permission",
+    "permissionPlane": "mesh_control.auth_permission_plane",
+    "groupRole": "mesh.auth_current_group_member_v plus mesh.auth_current_group_role_v plus mesh.auth_published_role_permission_v",
+    "deny": "mesh.auth_deny_rule specialized subject bindings",
+    "override": "mesh.auth_override",
+    "recordAcl": "mesh.auth_record_acl plus mesh.auth_record_acl_permission",
+    "delegation": "mesh.auth_delegation plus permission-scoped scope children"
+  },
+  "entitlement": {
+    "mesh": "mesh.resolve_account_permission_entitlement"
+  },
+  "forbiddenReads": [
+    "master.*",
+    "control.*",
+    "shared.persona",
+    "shared.persona_permission",
+    "Neon plan tables"
+  ],
+  "connection": {
+    "explicitMeshDatabaseUrlRequired": true,
+    "neonFallbackAllowed": false
+  },
+  "consumerStatus": "shadow_until_wave5"
+}
