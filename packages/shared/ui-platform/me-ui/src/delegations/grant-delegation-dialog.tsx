@@ -6,8 +6,8 @@ import {
   Button, Checkbox, Dialog, DialogContent, DialogDescription,
   DialogFooter, DialogHeader, DialogTitle, Input, Label,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea,
-} from "@athyper/ui/primitives";
-import { DatePicker } from "@athyper/ui/composites";
+} from "@athyper/platform-ui/primitives";
+import { DatePicker } from "@athyper/platform-ui/composites";
 import { bffFetch, BffError } from "@athyper/runtime-shared/client";
 import type {
   DelegationGrantRequest,

@@ -1,15 +1,5 @@
 import { Redis, type Redis as RedisType, type RedisOptions } from "ioredis";
-
-// ─── AdapterLogger ────────────────────────────────────────────────────────────
-//
-// Defined inline to keep this package free of @athyper/core.
-// Structurally identical to InfraLogger — any InfraLogger instance satisfies it.
-
-interface AdapterLogger {
-  info(event: string, fields?: Record<string, unknown>): void;
-  warn(event: string, fields?: Record<string, unknown>): void;
-  error(event: string, fields?: Record<string, unknown>): void;
-}
+import type { InfraLogger } from "@athyper/platform-core/logger";
 
 // ─── Per-event throttle ───────────────────────────────────────────────────────
 //
@@ -42,7 +32,7 @@ export interface RedisClientOptions extends RedisOptions {
    * reconnects). When omitted, events are swallowed silently — the
    * caller's circuit-breaker protection layer handles them.
    */
-  logger?: AdapterLogger;
+  logger?: InfraLogger;
   /**
    * Minimum ms between error log emissions per event type (throttle, not TTL).
    * Prevents log floods on repeated reconnect attempts.

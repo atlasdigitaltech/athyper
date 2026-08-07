@@ -13,11 +13,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@athyper/collaboration-ui": "workspace:*",
+    "@athyper/platform-communications-collaboration-ui": "workspace:*",
     "@athyper/mesh-exchange-contracts": "workspace:*",
     "@athyper/runtime-list": "workspace:*",
-    "@athyper/session-plane": "workspace:*",
-    "@athyper/surface-kit": "workspace:*"
+    "@athyper/platform-iam-session-plane": "workspace:*",
+    "@athyper/platform-surface-kit": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

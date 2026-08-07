@@ -34,18 +34,18 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const databaseRoot = resolve(scriptDirectory, "../..");
 const repositoryRoot = resolve(databaseRoot, "../..");
 const orderedDdl = [
-  "ddl/control/01zzo_authorization_migration_controls.sql",
-  "ddl/event/01g_authorization_change_capture.sql",
-  "ddl/event/03_authorization_change_capture_constraints.sql",
-  "ddl/control/04_authorization_migration_controls_indexes.sql",
-  "ddl/event/04_authorization_change_capture_indexes.sql",
-  "ddl/event/05_authorization_change_capture_functions.sql",
-  "ddl/event/06_authorization_change_capture_triggers.sql",
-  "ddl/event/07_authorization_change_capture_views.sql",
-  "ddl/control/08_authorization_migration_controls_rls.sql",
-  "ddl/event/08_authorization_change_capture_rls.sql",
+  "ddl/planes/neon/authz/03_tables.sql",
+  "ddl/common/event/03_tables.sql",
+  "ddl/common/event/05_constraints.sql",
+  "ddl/planes/neon/authz/06_indexes.sql",
+  "ddl/common/event/06_indexes.sql",
+  "ddl/common/event/07_functions.sql",
+  "ddl/common/event/08_triggers.sql",
+  "ddl/common/event/09_views.sql",
+  "ddl/planes/neon/authz/10_rls.sql",
+  "ddl/common/event/10_rls.sql",
 ] as const;
-const triggerFile = "ddl/event/06_authorization_change_capture_triggers.sql";
+const triggerFile = "ddl/common/event/08_triggers.sql";
 const options = parseOptions(process.argv.slice(2));
 const ddl = await Promise.all(orderedDdl.map(async (path) => {
   const sql = await readFile(resolve(databaseRoot, path), "utf8");
@@ -58,7 +58,7 @@ const ddl = await Promise.all(orderedDdl.map(async (path) => {
 const captureSourcePattern =
   /\('(?<schema>shared|master|control)',\s*'(?<table>[^']+)'\s*,\s*'[^']+'\s*,\s*ARRAY\[[^\]]+\]\s*,\s*(?:NULL|'[^']+')/g;
 const controlDdl = ddl.find(
-  (file) => file.path === "ddl/control/01zzo_authorization_migration_controls.sql",
+  (file) => file.path === "ddl/planes/neon/authz/03_tables.sql",
 )?.sql ?? "";
 const expectedCaptureSources = [...controlDdl.matchAll(captureSourcePattern)]
   .map((match) => `${match.groups?.schema}.${match.groups?.table}`)

@@ -1,13 +1,6 @@
-// ─── AdapterLogger ────────────────────────────────────────────────────────────
-//
-// Defined inline to keep this package free of @athyper/core.
-// Structurally identical to InfraLogger — any InfraLogger instance satisfies it.
-
-export interface AdapterLogger {
-  info(event: string, fields?: Record<string, unknown>): void;
-  warn(event: string, fields?: Record<string, unknown>): void;
-  error(event: string, fields?: Record<string, unknown>): void;
-}
+import type { InfraLogger } from "@athyper/platform-core/logger";
+import type { BlobStore, StorageHealth, StorageProvisioner } from "@athyper/foundation-storage";
+export type { InfraLogger as AdapterLogger };
 
 export type ObjectStorageConfig = {
   endpoint: string;
@@ -60,7 +53,7 @@ export type ObjectMetadata = {
   contentType?: string;
 };
 
-export interface ObjectStorageAdapter {
+export interface ObjectStorageAdapter extends BlobStore, StorageHealth, StorageProvisioner {
   // Basic CRUD
   put(key: string, body: Buffer | string, opts?: PutOptions): Promise<void>;
 

@@ -35,7 +35,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { SearchInput } from "./search-input";
 
 export type AdvancedEntityChooserDensity = "mini" | "compact" | "comfortable" | "mobile";

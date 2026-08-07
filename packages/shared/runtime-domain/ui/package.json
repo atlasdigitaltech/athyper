@@ -25,7 +25,7 @@
   "dependencies": {
     "@athyper/finance-rules": "workspace:*",
     "@athyper/runtime-contracts": "workspace:*",
-    "@athyper/temporal": "workspace:*",
+    "@athyper/platform-temporal": "workspace:*",
     "@radix-ui/react-checkbox": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.0",
     "@radix-ui/react-dropdown-menu": "^2.1.0",
@@ -44,15 +44,15 @@
     "lucide-react": "^1.8.0"
   },
   "peerDependencies": {
-    "@athyper/icons": "workspace:*",
-    "@athyper/theme": "workspace:*",
+    "@athyper/platform-icons": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "@athyper/icons": "workspace:*",
-    "@athyper/theme": "workspace:*",
+    "@athyper/platform-icons": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",

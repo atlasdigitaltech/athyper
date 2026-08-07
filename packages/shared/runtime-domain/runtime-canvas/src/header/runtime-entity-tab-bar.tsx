@@ -2,7 +2,7 @@
 
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import type { HeaderTab, HeaderTabBadge, PlatformPanelIcon } from "./types";
 import {
   headerIconButtonActiveClass,

@@ -29,7 +29,7 @@ BEGIN
 
     -- Stage B: Stage the two operating COAs.
     CREATE TEMP TABLE tmp_coa (
-        seed_id        uuid DEFAULT shared.uuidv7(),
+        seed_id        uuid,
         code           text NOT NULL,
         name           text NOT NULL,
         description    text,
@@ -52,7 +52,8 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        t.seed_id, v_tid, t.code, t.name, t.description,
+        md5('wave5:coa-chart:' || v_tid::text || ':' || t.code)::uuid,
+        v_tid, t.code, t.name, t.description,
         t.framework, t.country_code, t.account_range,
         t.version, t.is_locked,
         v_meta, 'active', v_su

@@ -33,7 +33,7 @@ import {
   extractRequiredActionsFromClaims,
   loadMatrixFromEnv,
   matchRequiredActions,
-} from "@athyper/auth-common";
+} from "@athyper/platform-iam-auth-common";
 
 // Re-export shared primitives so existing consumers don't have to update
 // import paths — the server pipeline is still the single import surface
@@ -41,7 +41,7 @@ import {
 export {
   extractRequiredActionsFromClaims,
   isMutatingMethod,
-} from "@athyper/auth-common";
+} from "@athyper/platform-iam-auth-common";
 
 // ─── Error model ─────────────────────────────────────────────────────────────
 
@@ -355,7 +355,7 @@ export interface RequiredActionsInput {
 /**
  * Step 4 — block routes that match a pending KC required-action's prefix.
  *
- * Phase G: the matching algorithm lives in @athyper/auth-common so the BFF
+ * Phase G: the matching algorithm lives in @athyper/platform-iam-auth-common so the BFF
  * pipeline runs the same code. This wrapper translates the generic
  * MatrixMatch result into the server's AuthPipelineError shape.
  */

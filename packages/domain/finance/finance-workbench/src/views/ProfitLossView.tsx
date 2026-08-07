@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { fmtCompact } from "../components/format";
 import { StatementLayout, type StatementSummaryMetric } from "../components/StatementLayout";
 import { StatementMatrix, type StatementMatrixGroup, type StatementMatrixTotalRow } from "../components/StatementMatrix";

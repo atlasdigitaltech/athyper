@@ -6,9 +6,9 @@ import {
 } from "lucide-react";
 import {
   Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton,
-} from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
-import { cn } from "@athyper/theme/utils";
+} from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
+import { cn } from "@athyper/platform-theme/utils";
 import { WorkspaceHeader } from "../workspace/WorkspaceHeader";
 import { PostabilityChip } from "../company-hub/PostabilityChip";
 import { useCompanyHub } from "../../hooks/useCompanyHub";

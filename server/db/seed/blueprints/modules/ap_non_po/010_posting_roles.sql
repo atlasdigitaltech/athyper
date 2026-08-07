@@ -1,4 +1,0 @@
--- Retired ordering slot. The 5 AP Non-PO posting role values
--- (ap_trade_payable, input_tax_recoverable, wht_payable, ap_retention_payable,
--- ap_advance_recovery) are now seeded by
--- server/db/seed/platform/000_lookups/LookupDomain/control/payment_settlement_posting_role.sql.

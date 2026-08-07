@@ -3,7 +3,7 @@ import {
   createSessionDeleteHandler,
   createSessionGetHandler,
   createSessionPatchHandler,
-} from "@athyper/auth-bff";
+} from "@athyper/platform-iam-auth-bff";
 import { PLANE_KEY } from "@/lib/plane";
 
 export const GET = createSessionGetHandler(PLANE_KEY);

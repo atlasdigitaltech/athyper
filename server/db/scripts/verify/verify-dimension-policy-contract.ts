@@ -16,15 +16,22 @@ const expect = (name: string, ok: boolean): void => {
 const base = "server/db/ddl/planes/neon/control";
 const [domains, tables, constraints, indexes, functions, triggers, rls, grants] =
   await Promise.all([
-    read(`${base}/02_finance_policy_domains.sql`),
-    read(`${base}/03_finance_policy_tables.sql`),
-    read(`${base}/05_finance_policy_constraints.sql`),
-    read(`${base}/06_finance_policy_indexes.sql`),
-    read(`${base}/07_finance_policy_functions.sql`),
-    read(`${base}/08_finance_policy_triggers.sql`),
-    read(`${base}/10_finance_policy_rls.sql`),
-    read(`${base}/11_finance_policy_grants.sql`),
+    read(`${base}/02_domains.sql`),
+    read(`${base}/03_tables.sql`),
+    read(`${base}/05_constraints.sql`),
+    read(`${base}/06_indexes.sql`),
+    read(`${base}/07_functions.sql`),
+    read(`${base}/08_triggers.sql`),
+    read(`${base}/10_rls.sql`),
+    read(`${base}/11_grants.sql`),
   ]);
+
+const dimensionPolicyStart = tables.indexOf("CREATE TABLE control.dimension_policy (");
+const dimensionPolicyEnd = tables.indexOf("\nCREATE TABLE ", dimensionPolicyStart + 1);
+const dimensionPolicyDefinition = tables.slice(
+  dimensionPolicyStart,
+  dimensionPolicyEnd === -1 ? undefined : dimensionPolicyEnd,
+);
 
 expect(
   "dimension policy is validation-only",
@@ -32,7 +39,7 @@ expect(
     && ["required", "optional", "forbidden"].every((value) =>
       domains.includes(`'${value}'`))
     && !/derive_if_missing|inherit|fixed_value/i.test(
-      tables.slice(tables.indexOf("CREATE TABLE control.dimension_policy (")),
+      dimensionPolicyDefinition,
     ),
 );
 
@@ -102,14 +109,14 @@ expect(
 );
 
 const financePhases = [
-  "02_finance_policy_domains.sql",
-  "03_finance_policy_tables.sql",
-  "05_finance_policy_constraints.sql",
-  "06_finance_policy_indexes.sql",
-  "07_finance_policy_functions.sql",
-  "08_finance_policy_triggers.sql",
-  "10_finance_policy_rls.sql",
-  "11_finance_policy_grants.sql",
+  "02_domains.sql",
+  "03_tables.sql",
+  "05_constraints.sql",
+  "06_indexes.sql",
+  "07_functions.sql",
+  "08_triggers.sql",
+  "10_rls.sql",
+  "11_grants.sql",
 ];
 const [neonManifest, athyperManifest, meshManifest] = await Promise.all([
   read("server/db/ddl/planes/neon/_manifest.txt"),

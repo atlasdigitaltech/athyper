@@ -72,10 +72,10 @@ jobs:
         run: pnpm policy:docker-toolchain
 
       - name: Generate Prisma/Kysely types
-        run: pnpm --filter @athyper/adapter-db run prisma:generate
+        run: pnpm --filter @athyper/adapter-db-neon run prisma:generate
 
       - name: Check generated Kysely types are current
-        run: git diff --exit-code -- server/packages/adapters/db/src/generated/kysely/types.ts
+        run: git diff --exit-code -- server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts
 
       - name: Format check
         run: pnpm run format:check
@@ -89,7 +89,7 @@ jobs:
         run: pnpm run typecheck
 
       - name: Check generated typography CSS
-        run: pnpm --filter @athyper/theme run check:typography
+        run: pnpm --filter @athyper/platform-theme run check:typography
 
       - name: Workspace tests with coverage
         run: pnpm run test:workspace -- --coverage

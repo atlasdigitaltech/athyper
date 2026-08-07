@@ -14,37 +14,34 @@ export const meshAuthorizationV2AdvisoryLockKey =
   "athyper.mesh-authorization-v2.wave1";
 
 export const meshAuthorizationV2OrderedDdl = [
-  "ddl/mesh_control/01zz_authorization_v2_catalog.sql",
-  "ddl/mesh_control/01zzz_authorization_v2_migration_state.sql",
-  "ddl/mesh/01zz_authorization_v2_authority.sql",
-  "ddl/mesh_log/01zz_authorization_v2_runtime.sql",
+  "ddl/planes/mesh/authz/03_tables.sql",
+  "ddl/planes/mesh/authz/03_tables.sql",
+  "ddl/planes/mesh/authz/03_tables.sql",
+  "ddl/common/event/03_tables.sql",
 
-  "ddl/mesh_control/03_authorization_v2_catalog_constraints.sql",
-  "ddl/mesh/03_authorization_v2_authority_constraints.sql",
-  "ddl/mesh_log/03_authorization_v2_runtime_constraints.sql",
+  "ddl/planes/mesh/authz/05_constraints.sql",
+  "ddl/planes/mesh/authz/05_constraints.sql",
+  "ddl/common/event/05_constraints.sql",
 
-  "ddl/mesh_control/04_authorization_v2_catalog_indexes.sql",
-  "ddl/mesh/04_authorization_v2_authority_indexes.sql",
-  "ddl/mesh_log/04_authorization_v2_runtime_indexes.sql",
+  "ddl/planes/mesh/authz/06_indexes.sql",
+  "ddl/planes/mesh/authz/06_indexes.sql",
+  "ddl/common/event/06_indexes.sql",
 
-  "ddl/mesh_control/05_authorization_v2_catalog_functions.sql",
-  "ddl/mesh/05_authorization_v2_authority_functions.sql",
-  "ddl/mesh_log/05_authorization_v2_invalidation_functions.sql",
-  "ddl/mesh_log/05_authorization_v2_replay_functions.sql",
-  "ddl/mesh_log/05_authorization_v2_evidence_functions.sql",
+  "ddl/planes/mesh/authz/07_functions.sql",
+  "ddl/common/event/07_functions.sql",
 
-  "ddl/mesh_control/06_authorization_v2_catalog_triggers.sql",
-  "ddl/mesh/06_authorization_v2_authority_triggers.sql",
-  "ddl/mesh_log/06_authorization_v2_runtime_triggers.sql",
+  "ddl/planes/mesh/authz/08_triggers.sql",
+  "ddl/planes/mesh/authz/08_triggers.sql",
+  "ddl/common/event/08_triggers.sql",
 
-  "ddl/mesh_control/07_authorization_v2_catalog_views.sql",
-  "ddl/mesh/07_authorization_v2_authority_views.sql",
-  "ddl/mesh_log/07_authorization_v2_runtime_views.sql",
+  "ddl/planes/mesh/authz/09_views.sql",
+  "ddl/planes/mesh/authz/09_views.sql",
+  "ddl/common/event/09_views.sql",
 
-  "ddl/mesh_control/08_authorization_v2_catalog_rls.sql",
-  "ddl/mesh_control/08_authorization_v2_migration_state_rls.sql",
-  "ddl/mesh/08_authorization_v2_authority_rls.sql",
-  "ddl/mesh_log/08_authorization_v2_runtime_rls.sql",
+  "ddl/planes/mesh/authz/10_rls.sql",
+  "ddl/planes/mesh/authz/10_rls.sql",
+  "ddl/planes/mesh/authz/10_rls.sql",
+  "ddl/common/event/10_rls.sql",
 ] as const;
 
 export const meshAuthorizationV2RequiredSchemas = [

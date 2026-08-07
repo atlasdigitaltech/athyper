@@ -374,3 +374,59 @@ ALTER DOMAIN master.tax_jurisdiction_type_d ADD CONSTRAINT tax_jurisdiction_type
 ALTER DOMAIN master.tax_identity_status_d DROP CONSTRAINT IF EXISTS tax_identity_status_d_check;
 ALTER DOMAIN master.tax_identity_status_d ADD CONSTRAINT tax_identity_status_d_check
     CHECK (VALUE IN ('active', 'inactive', 'draft', 'retired', 'archived'));
+
+CREATE DOMAIN master.partner_role_d AS text
+    CHECK (VALUE IN ('supplier', 'customer'));
+
+CREATE DOMAIN master.partner_extension_status_d AS text
+    CHECK (VALUE IN ('draft', 'active', 'inactive', 'archived'));
+
+CREATE DOMAIN master.governance_member_type_d AS text
+    CHECK (VALUE IN (
+        'individual', 'organization', 'trust', 'public_float', 'other'
+    ));
+
+CREATE DOMAIN master.intercompany_settlement_mode_d AS text
+    CHECK (VALUE IN ('open_item', 'netting', 'cash', 'none'));
+
+CREATE DOMAIN master.intercompany_mirror_mode_d AS text
+    CHECK (VALUE IN ('manual', 'automatic', 'disabled'));
+
+CREATE DOMAIN master.product_type_d AS text
+    CHECK (VALUE IN ('good', 'service', 'digital', 'bundle'));
+
+CREATE DOMAIN master.catalog_record_status_d AS text
+    CHECK (VALUE IN ('draft', 'active', 'inactive', 'archived'));
+
+CREATE DOMAIN master.catalog_direction_d AS text
+    CHECK (VALUE IN ('buy', 'sell', 'internal'));
+
+CREATE DOMAIN master.bom_type_d AS text
+    CHECK (VALUE IN ('production', 'assembly', 'sales_kit', 'engineering'));
+
+CREATE DOMAIN master.bom_status_d AS text
+    CHECK (VALUE IN ('draft', 'review', 'released', 'retired'));
+
+CREATE DOMAIN master.classification_mapping_d AS text
+    CHECK (VALUE IN ('exact', 'broader', 'narrower', 'related'));
+
+CREATE DOMAIN master.classification_provenance_d AS text
+    CHECK (VALUE IN ('manual', 'supplier', 'verified', 'inferred', 'imported'));
+
+CREATE DOMAIN master.project_type_d AS text
+    CHECK (VALUE IN ('internal', 'customer', 'capital', 'research', 'implementation'));
+
+CREATE DOMAIN master.project_status_d AS text
+    CHECK (VALUE IN ('draft', 'planned', 'active', 'on_hold', 'completed', 'closed', 'cancelled'));
+
+CREATE DOMAIN master.project_wbs_type_d AS text
+    CHECK (VALUE IN ('summary', 'control_account', 'work_package'));
+
+CREATE DOMAIN master.project_item_type_d AS text
+    CHECK (VALUE IN ('material', 'service', 'asset', 'expense', 'deliverable'));
+
+CREATE DOMAIN master.project_record_status_d AS text
+    CHECK (VALUE IN ('draft', 'active', 'inactive', 'closed', 'cancelled'));
+
+CREATE DOMAIN master.compensation_assignment_status_d AS text
+    CHECK (VALUE IN ('planned','active','superseded','cancelled'));

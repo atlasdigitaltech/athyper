@@ -1,6 +1,6 @@
 import "server-only";
 
-import { buildRelayHandler } from "@athyper/bff-relay";
+import { buildRelayHandler } from "@athyper/platform-bff-relay";
 import { getAdminServerSession } from "@/lib/server/session";
 
 const RUNTIME_API_URL = process.env.RUNTIME_API_URL ?? "http://localhost:4000";

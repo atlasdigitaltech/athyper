@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { Badge, Button, Textarea } from "@athyper/ui";
+import { Badge, Button, Textarea } from "@athyper/platform-ui";
 import type {
   MetaEntityFieldDraft,
   MetaEntityFieldType,

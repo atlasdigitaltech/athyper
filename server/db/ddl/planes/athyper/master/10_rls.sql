@@ -1,3 +1,12 @@
+DO $$ DECLARE v_table text; BEGIN
+  FOREACH v_table IN ARRAY ARRAY['canonical_party','canonical_party_identifier','canonical_party_relationship','canonical_party_merge'] LOOP
+    EXECUTE format('ALTER TABLE master.%I ENABLE ROW LEVEL SECURITY',v_table);
+    EXECUTE format('ALTER TABLE master.%I FORCE ROW LEVEL SECURITY',v_table);
+    EXECUTE format('CREATE POLICY authority_tenant_read ON master.%I FOR SELECT USING (authority_tenant_id=shared.current_tenant_id_soft())',v_table);
+    EXECUTE format('CREATE POLICY authority_seed_write ON master.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)',v_table);
+  END LOOP;
+END $$;
+
 ALTER TABLE master.tenant ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.tenant FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.tenant_profile ENABLE ROW LEVEL SECURITY;

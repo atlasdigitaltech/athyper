@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, Database, Plus, RefreshCw } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import {
   useFinanceAggregateEntities,
   type AggregateEntityDefinition,

@@ -131,7 +131,7 @@ import { parseTokenClaims } from "@athyper/runtime-contracts";
 import {
   resolveRequiredActionsEnforcement,
   resolveTokenSchemaMode,
-} from "@athyper/auth-common";
+} from "@athyper/platform-iam-auth-common";
 import type { ServerDeps } from "../kernel/bootstrap.js";
 import { livenessHandler } from "./liveness.js";
 

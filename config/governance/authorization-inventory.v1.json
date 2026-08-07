@@ -446,8 +446,8 @@
         "config/governance/authorization-data-disposition-policy.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
         "config/governance/authorization-wave9-legacy-removal-manifest.v1.json",
-        "server/db/authority/neon-admin/authority.v1.json",
-        "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
         "server/db/ddl/master/01_tables_identity.sql",
         "server/db/ddl/master/03_constraints.sql",
         "server/db/ddl/master/04_indexes.sql",
@@ -1656,9 +1656,9 @@
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
         "packages/shared/ui-platform/me-ui/src/sections/profile-section.tsx",
         "scripts/policy/authorization-inventory.test.ts",
-        "server/db/authority/neon-admin/authority.v1.json",
-        "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
-        "server/db/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
         "server/db/ddl/aggregate/03_constraints.sql",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/03_constraints_finance_operations_setup.sql",
@@ -1694,7 +1694,7 @@
         "server/db/ddl/master/07_views.sql",
         "server/db/ddl/master/08_rls.sql",
         "server/db/ddl/snapshot/03_constraints.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/contracts/wave6-neon-identity-state.sql",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/migrate/migrate-preserved-identities.ts",
@@ -1825,7 +1825,7 @@
         "server/db/ddl/master/05_functions.sql",
         "server/db/ddl/master/06_triggers.sql",
         "server/db/ddl/master/08_rls.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/contracts/wave6-neon-identity-state.sql",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/migrate/migrate-preserved-identities.ts",
@@ -2300,7 +2300,7 @@
         "server/db/ddl/master/05_zz_authorization_scope.sql",
         "server/db/ddl/master/06_triggers.sql",
         "server/db/ddl/master/08_rls.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/migrations/contraction/neon/001_authorization_v2_wave9_tombstone.sql",
         "server/db/scripts/reports/capture-authorization-golden-corpus.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave4-live.ts",
@@ -2622,7 +2622,7 @@
         "server/db/ddl/master/04_indexes.sql",
         "server/db/ddl/master/06_triggers.sql",
         "server/db/ddl/master/08_rls.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/migrations/contraction/neon/001_authorization_v2_wave9_tombstone.sql",
         "server/db/scripts/verify/verify-authorization-v2-wave4-live.ts",
         "server/packages/adapters/db/src/generated/kysely-mesh/types.ts",
@@ -2831,8 +2831,8 @@
         "config/governance/authorization-data-disposition-policy.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
         "config/governance/authorization-wave9-legacy-removal-manifest.v1.json",
-        "server/db/authority/neon-admin/authority.v1.json",
-        "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
         "server/db/ddl/master/03_constraints.sql",
         "server/db/ddl/mesh/_shared/03_constraints.sql",
         "server/db/ddl/mesh/_shared/06_triggers.sql",
@@ -2841,8 +2841,8 @@
         "server/db/ddl/shared/04_indexes.sql",
         "server/db/ddl/shared/06_triggers.sql",
         "server/db/ddl/shared/08_rls.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/migrations/contraction/mesh/001_authorization_v2_wave9_tombstone.sql",
         "server/db/migrations/contraction/neon/001_authorization_v2_wave9_tombstone.sql",
         "server/db/scripts/authority/compile-authorization-authority.ts",
@@ -2894,7 +2894,7 @@
         "config/governance/authorization-data-disposition-policy.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
         "config/governance/authorization-wave9-legacy-removal-manifest.v1.json",
-        "server/db/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
         "server/db/ddl/master/01_tables_identity.sql",
         "server/db/ddl/master/05_functions.sql",
         "server/db/ddl/master/05_zz_authorization_scope.sql",
@@ -2903,8 +2903,8 @@
         "server/db/ddl/shared/03_constraints.sql",
         "server/db/ddl/shared/04_indexes.sql",
         "server/db/ddl/shared/08_rls.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/migrations/contraction/mesh/001_authorization_v2_wave9_tombstone.sql",
         "server/db/migrations/contraction/neon/001_authorization_v2_wave9_tombstone.sql",
         "server/db/scripts/reports/capture-authorization-golden-corpus.ts",
@@ -3075,7 +3075,7 @@
         "server/db/ddl/master/04_indexes.sql",
         "server/db/ddl/master/06_triggers.sql",
         "server/db/ddl/master/08_rls.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/migrations/contraction/neon/001_authorization_v2_wave9_tombstone.sql",
         "server/db/scripts/verify/verify-authorization-v2-wave4-live.ts",
         "server/packages/adapters/db/src/generated/kysely-mesh/types.ts",
@@ -3107,14 +3107,14 @@
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
         "config/governance/authorization-wave9-legacy-removal-manifest.v1.json",
         "packages/shared/ui-platform/me-ui/src/sections/identity-section.tsx",
-        "server/db/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
         "server/db/ddl/master/01_tables_identity.sql",
         "server/db/ddl/master/03_constraints.sql",
         "server/db/ddl/master/04_indexes.sql",
         "server/db/ddl/master/05_functions.sql",
         "server/db/ddl/master/06_triggers.sql",
         "server/db/ddl/master/08_rls.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/migrations/contraction/neon/001_authorization_v2_wave9_tombstone.sql",
         "server/db/scripts/reports/capture-authorization-golden-corpus.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave9.ts",
@@ -3163,7 +3163,7 @@
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
         "config/governance/authorization-wave9-legacy-removal-manifest.v1.json",
         "packages/shared/ui-platform/me-ui/src/sections/identity-section.tsx",
-        "server/db/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
         "server/db/ddl/log/03_constraints.sql",
         "server/db/ddl/master/03_constraints.sql",
         "server/db/ddl/master/04_indexes.sql",
@@ -3391,11 +3391,11 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
-        "server/db/authority/mesh/compiled/compiled-authority.v1.json",
-        "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
-        "server/db/catalog/mesh/catalog.v1.json",
-        "server/db/catalog/mesh/compiled/catalog-preflight.sql",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+        "server/db/seed/contracts/authorization/catalog/mesh/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql",
         "server/db/ddl/master/01r_tables_mesh_projection.sql",
         "server/db/ddl/mesh_control/01_tables.sql",
         "server/db/ddl/mesh_control/01zzz_authorization_v2_migration_state.sql",
@@ -3459,9 +3459,9 @@
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
         "config/governance/authorization-wave9-legacy-removal-manifest.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
-        "server/db/authority/mesh/compiled/compiled-authority.v1.json",
-        "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
         "server/db/ddl/mesh_control/01zzv_authorization_v4_entitlement_migration.sql",
         "server/db/ddl/mesh_control/01zzz_authorization_v2_migration_state.sql",
         "server/db/ddl/mesh/01_tables.sql",
@@ -4331,16 +4331,16 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
-        "server/db/authority/mesh/compiled/compiled-authority.v1.json",
-        "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
         "server/db/ddl/mesh_control/01zzz_authorization_v2_migration_state.sql",
         "server/db/ddl/mesh/01a_foundation_tables.sql",
         "server/db/ddl/mesh/03_constraints.sql",
         "server/db/ddl/mesh/04_indexes.sql",
         "server/db/ddl/mesh/06_triggers.sql",
         "server/db/ddl/mesh/08_rls.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/contracts/wave6-mesh-identity-state.sql",
         "server/db/scripts/migrate/migrate-preserved-identities.ts",
@@ -4375,9 +4375,9 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
-        "server/db/authority/mesh/compiled/compiled-authority.v1.json",
-        "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
         "server/db/ddl/mesh_control/01_tables.sql",
         "server/db/ddl/mesh_control/01zzz_authorization_v2_migration_state.sql",
         "server/db/ddl/mesh_control/03zu_authorization_v3_subject_scope_constraints.sql",
@@ -4391,7 +4391,7 @@
         "server/db/ddl/mesh/06_triggers.sql",
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
         "server/db/ddl/mesh/08_rls.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/contracts/wave6-mesh-identity-state.sql",
         "server/db/scripts/migrate/migrate-preserved-identities.ts",
@@ -4430,8 +4430,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/mesh/catalog.v1.json",
-        "server/db/catalog/mesh/compiled/catalog-preflight.sql",
+        "server/db/seed/contracts/authorization/catalog/mesh/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql",
         "server/db/ddl/mesh_control/01zzz_authorization_v2_migration_state.sql",
         "server/db/ddl/mesh/01_tables.sql",
         "server/db/ddl/mesh/01c_content_collaboration_tables.sql",
@@ -4496,9 +4496,9 @@
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
         "packages/shared/data-integration/metadata-client/src/entity-class-resolver.ts",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/catalog-preflight.sql",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/catalog-preflight.sql",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/01k_record_edit_lock.sql",
         "server/db/ddl/control/01y_meta_entity_contract_v2.sql",
@@ -4668,8 +4668,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01r_tables_document_runtime_action_rules.sql",
         "server/db/ddl/control/01zz_meta_entity_contract_m1.sql",
         "server/db/ddl/control/03zz_meta_entity_contract_m1.sql",
@@ -4826,8 +4826,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/04_indexes.sql",
         "server/db/ddl/control/05zz_meta_entity_contract_m1.sql",
@@ -4877,8 +4877,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/03_constraints.sql",
         "server/db/ddl/control/05zz_meta_entity_contract_m1.sql",
@@ -4922,8 +4922,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/01zz_meta_entity_contract_m1.sql",
         "server/db/ddl/control/03_constraints.sql",
@@ -5035,8 +5035,8 @@
         "config/governance/authorization-high-risk-action-catalog.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
         "config/governance/authorization-wave1-additive-contract.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/01y_meta_entity_contract_v2.sql",
         "server/db/ddl/control/01z_three_plane_tables.sql",
@@ -5060,7 +5060,7 @@
         "server/db/ddl/event/05_authorization_v2_invalidation_functions.sql",
         "server/db/ddl/event/06_authorization_v2_runtime_triggers.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/generated/authorization-catalog/neon-admin/compiled-catalog.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/provision.ts",
@@ -5183,8 +5183,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/01y_meta_entity_contract_v2.sql",
         "server/db/ddl/control/03_constraints.sql",
@@ -5252,8 +5252,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/01q_tables_document_runtime_registry.sql",
         "server/db/ddl/control/01y_meta_entity_contract_v2.sql",
@@ -5303,8 +5303,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/01z_three_plane_tables.sql",
         "server/db/ddl/control/01zz_meta_entity_contract_m1.sql",
@@ -5489,8 +5489,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/03_constraints.sql",
         "server/db/ddl/control/06z_three_plane_triggers.sql",
@@ -5661,8 +5661,8 @@
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "config/governance/authorization-legacy-freeze-baseline.v1.json",
-        "server/db/catalog/neon-admin/catalog.v1.json",
-        "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
         "server/db/ddl/control/01_tables.sql",
         "server/db/ddl/control/03_constraints.sql",
         "server/db/ddl/control/04_indexes.sql",
@@ -7836,7 +7836,7 @@
         "server/db/ddl/mesh/05_authorization_v2_authority_functions.sql",
         "server/db/ddl/mesh/05za_authorization_v4_entitlement_functions.sql",
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/contracts/wave6-mesh-seed-owned-state.sql",
         "server/db/scripts/reports/capture-wave9-clean-baseline.ts",
@@ -7904,7 +7904,7 @@
         "server/db/ddl/mesh/05_authorization_v2_authority_functions.sql",
         "server/db/ddl/mesh/05za_authorization_v4_entitlement_functions.sql",
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/contracts/wave6-mesh-seed-owned-state.sql",
         "server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs",
@@ -8161,8 +8161,8 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/catalog/mesh/catalog.v1.json",
-        "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/mesh/catalog.v1.json",
+        "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
         "server/db/ddl/mesh_control/01zz_authorization_v2_catalog.sql",
         "server/db/ddl/mesh_control/03_authorization_v2_catalog_constraints.sql",
         "server/db/ddl/mesh_control/03z_authorization_v2_wave2_catalog_constraints.sql",
@@ -8173,7 +8173,7 @@
         "server/db/ddl/mesh_control/08_authorization_v2_catalog_rls.sql",
         "server/db/ddl/mesh_log/03_authorization_v2_runtime_constraints.sql",
         "server/db/ddl/mesh_log/05_authorization_v2_invalidation_functions.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/generated/authorization-catalog/mesh/compiled-catalog.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs",
@@ -8596,14 +8596,14 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
         "server/db/ddl/mesh/01zz_authorization_v2_authority.sql",
         "server/db/ddl/mesh/03_authorization_v2_authority_constraints.sql",
         "server/db/ddl/mesh/04_authorization_v2_authority_indexes.sql",
         "server/db/ddl/mesh/05_authorization_v2_authority_functions.sql",
         "server/db/ddl/mesh/06_authorization_v2_authority_triggers.sql",
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs"
       ]
@@ -8685,7 +8685,7 @@
         "server/db/ddl/mesh/05_authorization_v2_authority_functions.sql",
         "server/db/ddl/mesh/06_authorization_v2_authority_triggers.sql",
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs",
         "server/db/scripts/verify/verify-authorization-v2-wave4-live.ts"
@@ -8881,7 +8881,7 @@
         "server/db/ddl/mesh/04_authorization_v2_authority_indexes.sql",
         "server/db/ddl/mesh/06_authorization_v2_authority_triggers.sql",
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/smoke-authorization-v2-wave3-authority.mjs",
         "server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs"
@@ -8962,9 +8962,9 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
-        "server/db/authority/mesh/compiled/compiled-authority.v1.json",
-        "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
         "server/db/ddl/mesh_control/03zu_authorization_v3_subject_scope_constraints.sql",
         "server/db/ddl/mesh_control/05zu_authorization_v3_mapping_functions.sql",
         "server/db/ddl/mesh/01zz_authorization_v2_authority.sql",
@@ -8997,13 +8997,13 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
         "server/db/ddl/mesh/01zz_authorization_v2_authority.sql",
         "server/db/ddl/mesh/03_authorization_v2_authority_constraints.sql",
         "server/db/ddl/mesh/04_authorization_v2_authority_indexes.sql",
         "server/db/ddl/mesh/05_authorization_v2_authority_functions.sql",
         "server/db/ddl/mesh/06_authorization_v2_authority_triggers.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs"
       ]
@@ -9032,7 +9032,7 @@
         "server/db/ddl/mesh/05_authorization_v2_authority_functions.sql",
         "server/db/ddl/mesh/06_authorization_v2_authority_triggers.sql",
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs"
       ]
@@ -9165,8 +9165,8 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
-        "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
         "server/db/ddl/mesh/01zz_authorization_v2_authority.sql",
         "server/db/ddl/mesh/03_authorization_v2_authority_constraints.sql",
         "server/db/ddl/mesh/05_authorization_v2_authority_functions.sql",
@@ -9193,8 +9193,8 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
-        "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
         "server/db/ddl/mesh/01zz_authorization_v2_authority.sql",
         "server/db/ddl/mesh/03_authorization_v2_authority_constraints.sql",
         "server/db/ddl/mesh/04_authorization_v2_authority_indexes.sql",
@@ -9222,8 +9222,8 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/mesh/authority.v1.json",
-        "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
         "server/db/ddl/mesh/01zz_authorization_v2_authority.sql",
         "server/db/ddl/mesh/03_authorization_v2_authority_constraints.sql",
         "server/db/ddl/mesh/04_authorization_v2_authority_indexes.sql",
@@ -9441,7 +9441,7 @@
       "files": [
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
         "server/db/ddl/mesh/08_authorization_v2_authority_rls.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave3-live.ts"
       ]
@@ -9466,7 +9466,7 @@
         "server/db/ddl/mesh_control/05zu_authorization_v3_mapping_functions.sql",
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
         "server/db/ddl/mesh/08_authorization_v2_authority_rls.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave3-live.ts"
       ]
@@ -9490,7 +9490,7 @@
       "files": [
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
         "server/db/ddl/mesh/08_authorization_v2_authority_rls.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave3-live.ts"
       ]
@@ -9536,7 +9536,7 @@
       "files": [
         "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
         "server/db/ddl/mesh/08_authorization_v2_authority_rls.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/contracts/mesh-authorization-v2-wave1.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave3-live.ts"
       ]
@@ -10830,7 +10830,7 @@
         "server/db/ddl/master/07_authorization_v2_views.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
         "server/db/ddl/shared/01zz_authorization_v2_catalog.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/contracts/wave6-neon-seed-owned-state.sql",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/reports/capture-wave9-clean-baseline.ts",
@@ -10873,7 +10873,7 @@
         "server/db/ddl/master/05zzd_authorization_v4_entitlement_functions.sql",
         "server/db/ddl/master/07_authorization_v2_views.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/contracts/wave6-neon-seed-owned-state.sql",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs",
@@ -11460,7 +11460,7 @@
         "server/db/ddl/master/06_authorization_v2_integrity_triggers.sql",
         "server/db/ddl/master/07_authorization_v2_views.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs",
         "server/db/scripts/verify/verify-authorization-v2-wave1.ts"
@@ -11555,7 +11555,7 @@
         "server/db/ddl/master/05_authorization_v2_functions.sql",
         "server/db/ddl/master/06_authorization_v2_integrity_triggers.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs",
         "server/db/scripts/verify/verify-authorization-v2-wave1.ts",
@@ -11785,7 +11785,7 @@
         "server/db/ddl/master/04_authorization_v2_indexes.sql",
         "server/db/ddl/master/06_authorization_v2_integrity_triggers.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/verify/smoke-authorization-v2-wave3-authority.mjs",
         "server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs",
@@ -11918,7 +11918,7 @@
         "server/db/ddl/master/05_authorization_v2_functions.sql",
         "server/db/ddl/master/06_authorization_v2_integrity_triggers.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs",
         "server/db/scripts/verify/verify-authorization-v2-wave1.ts"
@@ -11950,7 +11950,7 @@
         "server/db/ddl/master/05_authorization_v2_functions.sql",
         "server/db/ddl/master/06_authorization_v2_integrity_triggers.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs",
         "server/db/scripts/verify/verify-authorization-v2-wave1.ts"
@@ -12106,8 +12106,8 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/neon-admin/authority.v1.json",
-        "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
         "server/db/ddl/event/06_authorization_v2_runtime_triggers.sql",
         "server/db/ddl/master/01zzc_authorization_v2_expand.sql",
         "server/db/ddl/master/03_authorization_v2_constraints.sql",
@@ -12138,8 +12138,8 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/neon-admin/authority.v1.json",
-        "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
         "server/db/ddl/event/06_authorization_v2_runtime_triggers.sql",
         "server/db/ddl/master/01zzc_authorization_v2_expand.sql",
         "server/db/ddl/master/03_authorization_v2_constraints.sql",
@@ -12170,8 +12170,8 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/neon-admin/authority.v1.json",
-        "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
         "server/db/ddl/event/06_authorization_v2_runtime_triggers.sql",
         "server/db/ddl/master/01zzc_authorization_v2_expand.sql",
         "server/db/ddl/master/03_authorization_v2_constraints.sql",
@@ -12238,8 +12238,8 @@
       "executionCount": 0,
       "files": [
         "config/governance/authorization-data-disposition-inventory.v1.json",
-        "server/db/authority/neon-admin/authority.v1.json",
-        "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
+        "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
         "server/db/ddl/event/06_authorization_v2_runtime_triggers.sql",
         "server/db/ddl/master/01zzc_authorization_v2_expand.sql",
         "server/db/ddl/master/03_authorization_v2_constraints.sql",
@@ -12449,7 +12449,7 @@
       "files": [
         "server/db/ddl/master/07_authorization_v2_views.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave3-live.ts"
       ]
@@ -12475,7 +12475,7 @@
         "server/db/ddl/control/05zu_authorization_v3_mapping_functions.sql",
         "server/db/ddl/master/07_authorization_v2_views.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave3-live.ts"
       ]
@@ -12500,7 +12500,7 @@
       "files": [
         "server/db/ddl/master/07_authorization_v2_views.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave3-live.ts"
       ]
@@ -12525,7 +12525,7 @@
       "files": [
         "server/db/ddl/master/07_authorization_v2_views.sql",
         "server/db/ddl/security/805_authorization_v2_expansion_hardening.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/install/rollback-authorization-v2-expand.ts"
       ]
     },
@@ -12865,7 +12865,7 @@
       "executionCount": 5,
       "files": [
         "server/db/ddl/mesh/05za_authorization_v4_entitlement_functions.sql",
-        "server/db/evaluator/mesh/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
         "server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs",
         "server/db/scripts/verify/verify-authorization-v2-wave4.ts",
         "server/packages/services/iam/authorization-runtime/sql-repository.ts"
@@ -12983,7 +12983,7 @@
       "executionCount": 5,
       "files": [
         "server/db/ddl/master/05zzd_authorization_v4_entitlement_functions.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs",
         "server/db/scripts/verify/verify-authorization-v2-wave4.ts",
         "server/packages/services/iam/authorization-runtime/sql-repository.ts"
@@ -13009,7 +13009,7 @@
         "config/governance/authorization-data-disposition-inventory.v1.json",
         "server/db/ddl/control/01zzv_authorization_v4_entitlement_migration.sql",
         "server/db/ddl/control/05zv_authorization_v4_entitlement_functions.sql",
-        "server/db/evaluator/neon-admin/repository-contract.v1.json",
+        "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
         "server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs",
         "server/db/scripts/verify/verify-authorization-v2-wave4-live.ts",
         "server/db/scripts/verify/verify-authorization-v2-wave4.ts"
@@ -15051,7 +15051,7 @@
       "sha256": "463b6031d1366a58b1acb4005adbcbb8942a3e9fcbc04833a0efa1ac02da3339"
     },
     {
-      "path": "packages/shared/ui-platform/notifications-client/src/hooks/use-push-subscription.ts",
+      "path": "packages/platform/communications/notifications-client/src/hooks/use-push-subscription.ts",
       "artifactClass": "runtime",
       "sha256": "fcaef9cb7fa6fb0a4a6c869d291f2c2775bb594ced24d1618aa22af963e3c691"
     },
@@ -15096,102 +15096,102 @@
       "sha256": "bfb834a5aeee4e4989ea67d5ec0e3dd6364c101f721f2abda55cc2608db9466a"
     },
     {
-      "path": "server/db/authority/authorization-authority-semantic-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/authorization-authority-semantic-contract.v1.json",
       "artifactClass": "runtime",
       "sha256": "74f5c20aa16f48e2b9981b6fca73d388631426124eae6409a6b7673b7ebc03c6"
     },
     {
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "sha256": "39bcc923c446ceca4cd60cf4c867fcca5947d5893f0702e5fd7aea44c7bec960"
     },
     {
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "sha256": "6ce79c5045060b8b4214da34a766186b2b08faf1cfd4c19b48b56e20e3766e79"
     },
     {
-      "path": "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
       "artifactClass": "runtime",
       "sha256": "ab9a9af5e81b7d7789b6a097d0f17311105144af8d6e0e64334c0356e878e78e"
     },
     {
-      "path": "server/db/authority/mesh/compiled/reconciliation-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.v1.json",
       "artifactClass": "runtime",
       "sha256": "ea0ac5329214ac483c54a6bd4a6d5bd69464f256314d35ab7bd4949ce8847110"
     },
     {
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "sha256": "0837c562d3743c73c05d496ae39addb05cbc7a747781372782dda6451616f2b7"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "sha256": "d3a60e4b0cfbb788e026c483ac5ef73660c9dd50d545d43addd65a71af6a45ac"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
       "artifactClass": "runtime",
       "sha256": "fa57573dfcc8863dbcd48b438eea9f0586f83865973d79ac9d8bb776c281795a"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/reconciliation-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.v1.json",
       "artifactClass": "runtime",
       "sha256": "ac4826468da9390fe2bd8d5b5bfb48cd823b3f56f2acba5538597d33ba641dda"
     },
     {
-      "path": "server/db/catalog/authorization-catalog-semantic-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/authorization-catalog-semantic-contract.v1.json",
       "artifactClass": "runtime",
       "sha256": "aa2bdb972e91e67a86d929fe1d7fda6fb7eccb8ca42f910d68aa05f693f34823"
     },
     {
-      "path": "server/db/catalog/mesh/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/catalog.v1.json",
       "artifactClass": "runtime",
       "sha256": "e18c02cad67b9ae0bebdf504a51f46c6fc06be2edf83d226010e1a4a97ccd3fa"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql",
       "artifactClass": "runtime",
       "sha256": "3edd9df316754b9b625c07b60ee4292efecb5d2614b216f8821d6d7fc4832bf2"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "sha256": "e4dd18187ed8995aca93e404540ddffd04e405e150be7e4b7371ca04a915ed49"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/contextual-aliases.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/contextual-aliases.v1.json",
       "artifactClass": "runtime",
       "sha256": "5f590dd719a7a5b631c194cae5ae4810197fe5379463ca12a13779e9626a4610"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/verification-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json",
       "artifactClass": "runtime",
       "sha256": "ec67e842f9b6c69edd23a51a3e1e3ad8f3c7ad8005cd5bb5f5fa422b16484b3d"
     },
     {
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "sha256": "90421f7797c61104bb859b38a94d057775c378c28e363ff3433df8ebe2eb9a3b"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/catalog-preflight.sql",
       "artifactClass": "runtime",
       "sha256": "a484aae25fa30617a7892f040d03e62e6ea5635407dfa6e5252b8c7930fef769"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "sha256": "7c13456a04238d48de48f96b5f23958fe368dc8d0342521b1b12dd7ca2d3c2e3"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/contextual-aliases.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/contextual-aliases.v1.json",
       "artifactClass": "runtime",
       "sha256": "d12aec0688d7a357944b71d7ae2eb3faea8180b41e5c3ea0d53d37bb64586e2b"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/verification-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json",
       "artifactClass": "runtime",
       "sha256": "92a49cefc293e41343936cbac85283976ab7d3151d7a73be7672b9adae8021d0"
     },
@@ -16436,17 +16436,17 @@
       "sha256": "fb49e3b2f32ff1e8c61ca875ba8359fdf2e4e795e6552c26b6b8d8e8d4086312"
     },
     {
-      "path": "server/db/evaluator/authorization-evaluator-semantic-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/authorization-evaluator-semantic-contract.v1.json",
       "artifactClass": "runtime",
       "sha256": "595d7ab07015233fbb40223bc2048db0361f01d295c005322c6dc92710b9876b"
     },
     {
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "sha256": "ef2bbe3886e6b22fa81797c16c93e39d549c30f513acfcdebfee5b50db26f70c"
     },
     {
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "sha256": "cae1b70b27384d504e0c7145f5a303a613b3274f1a0d9def9603bf3503818682"
     },
@@ -16801,7 +16801,7 @@
       "sha256": "8b751f8533039f1f31103557d961671aa6ed98a748087c8f10e274706f4e73b0"
     },
     {
-      "path": "server/db/seed/_generated/resolver-contracts.json",
+      "path": "server/db/seed/contracts/generated/resolver-contracts.json",
       "artifactClass": "generated",
       "sha256": "e36f19a5890675c35f532392de0105507f5c1299286429215990085c2064adff"
     },
@@ -22264,7 +22264,7 @@
     {
       "objectId": "authorization.group_role",
       "qualifiedName": "master.auth_group_role",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 105,
@@ -22275,7 +22275,7 @@
     {
       "objectId": "authorization.group_role",
       "qualifiedName": "master.auth_group_role",
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 25514,
@@ -31945,7 +31945,7 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 71,
@@ -31956,7 +31956,7 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 25495,
@@ -31967,7 +31967,7 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
-      "path": "server/db/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 9,
@@ -32861,7 +32861,7 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 9,
@@ -34455,7 +34455,7 @@
     {
       "objectId": "identity.principal_binding",
       "qualifiedName": "master.principal_identity_binding",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 8,
@@ -39914,7 +39914,7 @@
     {
       "objectId": "legacy.access_grant",
       "qualifiedName": "master.access_grant",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 27,
@@ -42390,7 +42390,7 @@
     {
       "objectId": "legacy.group_feature_grant",
       "qualifiedName": "master.group_feature_grant",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 28,
@@ -44116,7 +44116,7 @@
     {
       "objectId": "legacy.persona",
       "qualifiedName": "shared.persona",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 14,
@@ -44127,7 +44127,7 @@
     {
       "objectId": "legacy.persona",
       "qualifiedName": "shared.persona",
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 93,
@@ -44285,7 +44285,7 @@
     {
       "objectId": "legacy.persona",
       "qualifiedName": "shared.persona",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 25,
@@ -44296,7 +44296,7 @@
     {
       "objectId": "legacy.persona",
       "qualifiedName": "shared.persona",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 24,
@@ -44652,7 +44652,7 @@
     {
       "objectId": "legacy.persona_permission",
       "qualifiedName": "shared.persona_permission",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 15,
@@ -44779,7 +44779,7 @@
     {
       "objectId": "legacy.persona_permission",
       "qualifiedName": "shared.persona_permission",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 26,
@@ -44790,7 +44790,7 @@
     {
       "objectId": "legacy.persona_permission",
       "qualifiedName": "shared.persona_permission",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 25,
@@ -46126,7 +46126,7 @@
     {
       "objectId": "legacy.principal_feature_grant",
       "qualifiedName": "master.principal_feature_grant",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 29,
@@ -46280,7 +46280,7 @@
     {
       "objectId": "legacy.principal_persona",
       "qualifiedName": "master.principal_persona",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 17,
@@ -46384,7 +46384,7 @@
     {
       "objectId": "legacy.principal_persona",
       "qualifiedName": "master.principal_persona",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 26,
@@ -46776,7 +46776,7 @@
     {
       "objectId": "legacy.role",
       "qualifiedName": "shared.role",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 16,
@@ -48579,7 +48579,7 @@
     {
       "objectId": "mesh.account",
       "qualifiedName": "mesh.network_account",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 14,
@@ -48590,7 +48590,7 @@
     {
       "objectId": "mesh.account",
       "qualifiedName": "mesh.network_account",
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 933,
@@ -48601,7 +48601,7 @@
     {
       "objectId": "mesh.account",
       "qualifiedName": "mesh.network_account",
-      "path": "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 9,
@@ -48612,7 +48612,7 @@
     {
       "objectId": "mesh.account",
       "qualifiedName": "mesh.network_account",
-      "path": "server/db/catalog/mesh/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 36,
@@ -48623,7 +48623,7 @@
     {
       "objectId": "mesh.account",
       "qualifiedName": "mesh.network_account",
-      "path": "server/db/catalog/mesh/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql",
       "artifactClass": "runtime",
       "access": "read",
       "line": 69,
@@ -49381,7 +49381,7 @@
     {
       "objectId": "mesh.account_grant",
       "qualifiedName": "mesh.account_grant",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 15,
@@ -49392,7 +49392,7 @@
     {
       "objectId": "mesh.account_grant",
       "qualifiedName": "mesh.account_grant",
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 934,
@@ -49403,7 +49403,7 @@
     {
       "objectId": "mesh.account_grant",
       "qualifiedName": "mesh.account_grant",
-      "path": "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 10,
@@ -52655,7 +52655,7 @@
     {
       "objectId": "mesh.identity.binding",
       "qualifiedName": "mesh.principal_identity_binding",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 16,
@@ -52666,7 +52666,7 @@
     {
       "objectId": "mesh.identity.binding",
       "qualifiedName": "mesh.principal_identity_binding",
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 935,
@@ -52677,7 +52677,7 @@
     {
       "objectId": "mesh.identity.binding",
       "qualifiedName": "mesh.principal_identity_binding",
-      "path": "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 11,
@@ -52776,7 +52776,7 @@
     {
       "objectId": "mesh.identity.binding",
       "qualifiedName": "mesh.principal_identity_binding",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 8,
@@ -52988,7 +52988,7 @@
     {
       "objectId": "mesh.identity.principal",
       "qualifiedName": "mesh.principal",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 13,
@@ -52999,7 +52999,7 @@
     {
       "objectId": "mesh.identity.principal",
       "qualifiedName": "mesh.principal",
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 932,
@@ -53010,7 +53010,7 @@
     {
       "objectId": "mesh.identity.principal",
       "qualifiedName": "mesh.principal",
-      "path": "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 8,
@@ -53193,7 +53193,7 @@
     {
       "objectId": "mesh.identity.principal",
       "qualifiedName": "mesh.principal",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 9,
@@ -53471,7 +53471,7 @@
     {
       "objectId": "mesh.relationship",
       "qualifiedName": "mesh.network_relationship",
-      "path": "server/db/catalog/mesh/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 41,
@@ -53482,7 +53482,7 @@
     {
       "objectId": "mesh.relationship",
       "qualifiedName": "mesh.network_relationship",
-      "path": "server/db/catalog/mesh/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql",
       "artifactClass": "runtime",
       "access": "read",
       "line": 70,
@@ -53996,7 +53996,7 @@
     {
       "objectId": "metadata.entity",
       "qualifiedName": "control.entity",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 39,
@@ -54011,7 +54011,7 @@
     {
       "objectId": "metadata.entity",
       "qualifiedName": "control.entity",
-      "path": "server/db/catalog/neon-admin/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/catalog-preflight.sql",
       "artifactClass": "runtime",
       "access": "read",
       "line": 654,
@@ -54023,7 +54023,7 @@
     {
       "objectId": "metadata.entity",
       "qualifiedName": "control.entity",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 19,
@@ -56938,7 +56938,7 @@
     {
       "objectId": "metadata.entity_action_rule",
       "qualifiedName": "control.entity_action_rule",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 55,
@@ -56949,7 +56949,7 @@
     {
       "objectId": "metadata.entity_action_rule",
       "qualifiedName": "control.entity_action_rule",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 37,
@@ -59429,7 +59429,7 @@
     {
       "objectId": "metadata.entity_flow",
       "qualifiedName": "control.entity_flow",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 73,
@@ -59441,7 +59441,7 @@
     {
       "objectId": "metadata.entity_flow",
       "qualifiedName": "control.entity_flow",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 61,
@@ -59975,7 +59975,7 @@
     {
       "objectId": "metadata.entity_flow_step",
       "qualifiedName": "control.entity_flow_step",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 82,
@@ -59986,7 +59986,7 @@
     {
       "objectId": "metadata.entity_flow_step",
       "qualifiedName": "control.entity_flow_step",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 72,
@@ -60435,7 +60435,7 @@
     {
       "objectId": "metadata.entity_lifecycle",
       "qualifiedName": "control.entity_lifecycle",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 66,
@@ -60446,7 +60446,7 @@
     {
       "objectId": "metadata.entity_lifecycle",
       "qualifiedName": "control.entity_lifecycle",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 54,
@@ -61559,7 +61559,7 @@
     {
       "objectId": "metadata.entity_operation",
       "qualifiedName": "control.entity_operation",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 15,
@@ -61571,7 +61571,7 @@
     {
       "objectId": "metadata.entity_operation",
       "qualifiedName": "control.entity_operation",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 15,
@@ -61912,7 +61912,7 @@
     {
       "objectId": "metadata.entity_operation",
       "qualifiedName": "control.entity_operation",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 11,
@@ -63402,7 +63402,7 @@
     {
       "objectId": "metadata.entity_relation",
       "qualifiedName": "control.entity_relation",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 109,
@@ -63413,7 +63413,7 @@
     {
       "objectId": "metadata.entity_relation",
       "qualifiedName": "control.entity_relation",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 105,
@@ -64124,7 +64124,7 @@
     {
       "objectId": "metadata.entity_surface",
       "qualifiedName": "control.entity_surface",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 46,
@@ -64135,7 +64135,7 @@
     {
       "objectId": "metadata.entity_surface",
       "qualifiedName": "control.entity_surface",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 26,
@@ -64700,7 +64700,7 @@
     {
       "objectId": "metadata.entity_version",
       "qualifiedName": "control.entity_version",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 75,
@@ -64712,7 +64712,7 @@
     {
       "objectId": "metadata.entity_version",
       "qualifiedName": "control.entity_version",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 65,
@@ -67394,7 +67394,7 @@
     {
       "objectId": "metadata.field_security_policy",
       "qualifiedName": "control.field_security_policy",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 100,
@@ -67405,7 +67405,7 @@
     {
       "objectId": "metadata.field_security_policy",
       "qualifiedName": "control.field_security_policy",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 94,
@@ -69313,7 +69313,7 @@
     {
       "objectId": "metadata.lifecycle_transition",
       "qualifiedName": "control.lifecycle_transition",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 64,
@@ -69324,7 +69324,7 @@
     {
       "objectId": "metadata.lifecycle_transition",
       "qualifiedName": "control.lifecycle_transition",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 50,
@@ -75592,7 +75592,7 @@
     {
       "objectId": "wave1.mesh.table.mesh_control.auth_permission",
       "qualifiedName": "mesh_control.auth_permission",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 11,
@@ -76012,7 +76012,7 @@
     {
       "objectId": "wave1.mesh.table.mesh_control.auth_permission_plane",
       "qualifiedName": "mesh_control.auth_permission_plane",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 12,
@@ -77204,7 +77204,7 @@
     {
       "objectId": "wave1.mesh.table.mesh_control.entity_operation",
       "qualifiedName": "mesh_control.entity_operation",
-      "path": "server/db/catalog/mesh/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 25,
@@ -77215,7 +77215,7 @@
     {
       "objectId": "wave1.mesh.table.mesh_control.entity_operation",
       "qualifiedName": "mesh_control.entity_operation",
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 14,
@@ -77367,7 +77367,7 @@
     {
       "objectId": "wave1.mesh.table.mesh_control.entity_operation",
       "qualifiedName": "mesh_control.entity_operation",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 11,
@@ -79346,7 +79346,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_delegation",
       "qualifiedName": "mesh.auth_delegation",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 92,
@@ -79441,7 +79441,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_delegation",
       "qualifiedName": "mesh.auth_delegation",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 17,
@@ -79763,7 +79763,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_deny_rule",
       "qualifiedName": "mesh.auth_deny_rule",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 14,
@@ -80529,7 +80529,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_override",
       "qualifiedName": "mesh.auth_override",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 15,
@@ -80840,7 +80840,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_plane_membership",
       "qualifiedName": "mesh.auth_plane_membership",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 17,
@@ -80851,7 +80851,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_plane_membership",
       "qualifiedName": "mesh.auth_plane_membership",
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 936,
@@ -80862,7 +80862,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_plane_membership",
       "qualifiedName": "mesh.auth_plane_membership",
-      "path": "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 12,
@@ -81082,7 +81082,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_record_acl",
       "qualifiedName": "mesh.auth_record_acl",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 91,
@@ -81169,7 +81169,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_record_acl",
       "qualifiedName": "mesh.auth_record_acl",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 16,
@@ -81295,7 +81295,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_record_acl_permission",
       "qualifiedName": "mesh.auth_record_acl_permission",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 16,
@@ -81809,7 +81809,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_scope_account",
       "qualifiedName": "mesh.auth_scope_account",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 85,
@@ -81820,7 +81820,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_scope_account",
       "qualifiedName": "mesh.auth_scope_account",
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 940,
@@ -81910,7 +81910,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_scope_network_relationship",
       "qualifiedName": "mesh.auth_scope_network_relationship",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 86,
@@ -81921,7 +81921,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_scope_network_relationship",
       "qualifiedName": "mesh.auth_scope_network_relationship",
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 941,
@@ -82022,7 +82022,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_scope_resource",
       "qualifiedName": "mesh.auth_scope_resource",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 87,
@@ -82033,7 +82033,7 @@
     {
       "objectId": "wave1.mesh.table.mesh.auth_scope_resource",
       "qualifiedName": "mesh.auth_scope_resource",
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 942,
@@ -82672,7 +82672,7 @@
     {
       "objectId": "wave1.mesh.view.mesh.auth_current_group_member_v",
       "qualifiedName": "mesh.auth_current_group_member_v",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 13,
@@ -82740,7 +82740,7 @@
     {
       "objectId": "wave1.mesh.view.mesh.auth_current_group_role_v",
       "qualifiedName": "mesh.auth_current_group_role_v",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 13,
@@ -82809,7 +82809,7 @@
     {
       "objectId": "wave1.mesh.view.mesh.auth_current_plane_membership_v",
       "qualifiedName": "mesh.auth_current_plane_membership_v",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 10,
@@ -82912,7 +82912,7 @@
     {
       "objectId": "wave1.mesh.view.mesh.auth_published_role_permission_v",
       "qualifiedName": "mesh.auth_published_role_permission_v",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 13,
@@ -85215,7 +85215,7 @@
     {
       "objectId": "wave1.neon.table.control.auth_permission",
       "qualifiedName": "control.auth_permission",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 11,
@@ -85537,7 +85537,7 @@
     {
       "objectId": "wave1.neon.table.control.auth_permission_plane",
       "qualifiedName": "control.auth_permission_plane",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 12,
@@ -88255,7 +88255,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_delegation",
       "qualifiedName": "master.auth_delegation",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 17,
@@ -88711,7 +88711,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_deny_rule",
       "qualifiedName": "master.auth_deny_rule",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 14,
@@ -89839,7 +89839,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_override",
       "qualifiedName": "master.auth_override",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 15,
@@ -90537,7 +90537,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_record_acl",
       "qualifiedName": "master.auth_record_acl",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 16,
@@ -90692,7 +90692,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_record_acl_permission",
       "qualifiedName": "master.auth_record_acl_permission",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 16,
@@ -91427,7 +91427,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_scope_company",
       "qualifiedName": "master.auth_scope_company",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 108,
@@ -91438,7 +91438,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_scope_company",
       "qualifiedName": "master.auth_scope_company",
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 25517,
@@ -91568,7 +91568,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_scope_legal_entity",
       "qualifiedName": "master.auth_scope_legal_entity",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 109,
@@ -91579,7 +91579,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_scope_legal_entity",
       "qualifiedName": "master.auth_scope_legal_entity",
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 25518,
@@ -91709,7 +91709,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_scope_operating_organization",
       "qualifiedName": "master.auth_scope_operating_organization",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 110,
@@ -91720,7 +91720,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_scope_operating_organization",
       "qualifiedName": "master.auth_scope_operating_organization",
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 25519,
@@ -92070,7 +92070,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_scope_tenant",
       "qualifiedName": "master.auth_scope_tenant",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 107,
@@ -92081,7 +92081,7 @@
     {
       "objectId": "wave1.neon.table.master.auth_scope_tenant",
       "qualifiedName": "master.auth_scope_tenant",
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 25516,
@@ -92761,7 +92761,7 @@
     {
       "objectId": "wave1.neon.view.master.auth_current_group_member_v",
       "qualifiedName": "master.auth_current_group_member_v",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 13,
@@ -92827,7 +92827,7 @@
     {
       "objectId": "wave1.neon.view.master.auth_current_group_role_v",
       "qualifiedName": "master.auth_current_group_role_v",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 13,
@@ -92894,7 +92894,7 @@
     {
       "objectId": "wave1.neon.view.master.auth_current_plane_membership_v",
       "qualifiedName": "master.auth_current_plane_membership_v",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 10,
@@ -92960,7 +92960,7 @@
     {
       "objectId": "wave1.neon.view.master.auth_published_role_permission_v",
       "qualifiedName": "master.auth_published_role_permission_v",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 13,
@@ -93921,7 +93921,7 @@
     {
       "objectId": "wave4.mesh.function.mesh.resolve_account_permission_entitlement",
       "qualifiedName": "mesh.resolve_account_permission_entitlement",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "execute",
       "line": 20,
@@ -94254,7 +94254,7 @@
     {
       "objectId": "wave4.neon.function.master.resolve_neon_permission_entitlement",
       "qualifiedName": "master.resolve_neon_permission_entitlement",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "execute",
       "line": 20,
@@ -94358,7 +94358,7 @@
     {
       "objectId": "wave4.neon.table.control.auth_admin_entitlement_policy",
       "qualifiedName": "control.auth_admin_entitlement_policy",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "access": "read",
       "line": 21,
@@ -100688,7 +100688,7 @@
     },
     {
       "field": "denied",
-      "path": "packages/shared/ui-platform/notifications-client/src/hooks/use-push-subscription.ts",
+      "path": "packages/platform/communications/notifications-client/src/hooks/use-push-subscription.ts",
       "artifactClass": "runtime",
       "lines": [
         52,
@@ -103374,7 +103374,7 @@
     },
     {
       "field": "permissions",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "lines": [
         22
@@ -103382,7 +103382,7 @@
     },
     {
       "field": "permissions",
-      "path": "server/db/catalog/mesh/compiled/verification-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json",
       "artifactClass": "runtime",
       "lines": [
         11
@@ -103390,7 +103390,7 @@
     },
     {
       "field": "permissions",
-      "path": "server/db/catalog/neon-admin/compiled/verification-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json",
       "artifactClass": "runtime",
       "lines": [
         11
@@ -104546,7 +104546,7 @@
     },
     {
       "field": "persona",
-      "path": "server/db/authority/authorization-authority-semantic-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/authorization-authority-semantic-contract.v1.json",
       "artifactClass": "runtime",
       "lines": [
         13
@@ -104554,7 +104554,7 @@
     },
     {
       "field": "persona",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "lines": [
         14,
@@ -104566,7 +104566,7 @@
     },
     {
       "field": "persona",
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "lines": [
         13,
@@ -104602,7 +104602,7 @@
     },
     {
       "field": "persona",
-      "path": "server/db/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
       "artifactClass": "runtime",
       "lines": [
         12
@@ -104610,7 +104610,7 @@
     },
     {
       "field": "persona",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "lines": [
         32
@@ -104685,7 +104685,7 @@
     },
     {
       "field": "persona",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "lines": [
         25
@@ -104693,7 +104693,7 @@
     },
     {
       "field": "persona",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "lines": [
         24
@@ -106577,7 +106577,7 @@
     },
     {
       "field": "required_permission",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "lines": [
         59
@@ -106585,7 +106585,7 @@
     },
     {
       "field": "required_permission",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "lines": [
         45
@@ -106815,7 +106815,7 @@
     },
     {
       "field": "required_permissions",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "lines": [
         49
@@ -106823,7 +106823,7 @@
     },
     {
       "field": "required_permissions",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "lines": [
         31
@@ -107351,7 +107351,7 @@
     },
     {
       "field": "roleIds",
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "lines": [
         282,
@@ -107363,7 +107363,7 @@
     },
     {
       "field": "roleIds",
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "artifactClass": "runtime",
       "lines": [
         5863,
@@ -109524,7 +109524,7 @@
     {
       "code": "accept",
       "riskLevel": "low",
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 680,
       "lines": [
@@ -109534,7 +109534,7 @@
     {
       "code": "accept",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 14597,
       "lines": [
@@ -109596,7 +109596,7 @@
     {
       "code": "accept_changes",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13449,
       "lines": [
@@ -109637,7 +109637,7 @@
     {
       "code": "add_attachment",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 1073,
       "lines": [
@@ -109704,7 +109704,7 @@
     {
       "code": "add_comment",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 2977,
       "lines": [
@@ -109767,7 +109767,7 @@
     {
       "code": "add_line",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12777,
       "lines": [
@@ -110375,7 +110375,7 @@
     {
       "code": "amend",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 7261,
       "lines": [
@@ -110501,7 +110501,7 @@
     {
       "code": "ap.promote_proforma",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 133,
       "lines": [
@@ -110511,7 +110511,7 @@
     {
       "code": "ap.promote_proforma",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/catalog-preflight.sql",
       "artifactClass": "runtime",
       "line": 458,
       "lines": [
@@ -110521,7 +110521,7 @@
     {
       "code": "ap.promote_proforma",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12161,
       "lines": [
@@ -110625,7 +110625,7 @@
     {
       "code": "approve",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 429,
       "lines": [
@@ -111057,7 +111057,7 @@
     {
       "code": "bulk_update",
       "riskLevel": "critical",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "line": 40,
       "lines": [
@@ -111067,7 +111067,7 @@
     {
       "code": "bulk_update",
       "riskLevel": "critical",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 1969,
       "lines": [
@@ -111178,7 +111178,7 @@
     {
       "code": "cancel",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 121,
       "lines": [
@@ -111576,7 +111576,7 @@
     {
       "code": "cancel_line",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12861,
       "lines": [
@@ -111638,7 +111638,7 @@
     {
       "code": "clear",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 9389,
       "lines": [
@@ -111689,7 +111689,7 @@
     {
       "code": "close",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 485,
       "lines": [
@@ -111850,7 +111850,7 @@
     {
       "code": "close_line",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12917,
       "lines": [
@@ -111913,7 +111913,7 @@
     {
       "code": "confirm",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13505,
       "lines": [
@@ -111974,7 +111974,7 @@
     {
       "code": "convert",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13757,
       "lines": [
@@ -112025,7 +112025,7 @@
     {
       "code": "copy",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 2249,
       "lines": [
@@ -112331,7 +112331,7 @@
     {
       "code": "create",
       "riskLevel": "low",
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 30,
       "lines": [
@@ -112343,7 +112343,7 @@
     {
       "code": "create",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 149,
       "lines": [
@@ -113005,7 +113005,7 @@
     {
       "code": "create_commitment",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13841,
       "lines": [
@@ -113056,7 +113056,7 @@
     {
       "code": "create_payment",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12301,
       "lines": [
@@ -113098,7 +113098,7 @@
     {
       "code": "create_receipt",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13029,
       "lines": [
@@ -113151,7 +113151,7 @@
     {
       "code": "create_service_sheet",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13057,
       "lines": [
@@ -113224,7 +113224,7 @@
     {
       "code": "del_others_comment",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 3033,
       "lines": [
@@ -113285,7 +113285,7 @@
     {
       "code": "delegate",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 6897,
       "lines": [
@@ -113489,7 +113489,7 @@
     {
       "code": "delete",
       "riskLevel": "high",
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 56,
       "lines": [
@@ -113499,7 +113499,7 @@
     {
       "code": "delete",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 177,
       "lines": [
@@ -114221,7 +114221,7 @@
     {
       "code": "delete_draft",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12665,
       "lines": [
@@ -114422,7 +114422,7 @@
     {
       "code": "deny",
       "riskLevel": "medium",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "line": 39,
       "lines": [
@@ -114432,7 +114432,7 @@
     {
       "code": "deny",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 2333,
       "lines": [
@@ -114584,7 +114584,7 @@
     {
       "code": "deny",
       "riskLevel": "medium",
-      "path": "server/db/evaluator/authorization-evaluator-semantic-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/authorization-evaluator-semantic-contract.v1.json",
       "artifactClass": "runtime",
       "line": 29,
       "lines": [
@@ -114595,7 +114595,7 @@
     {
       "code": "deny",
       "riskLevel": "medium",
-      "path": "server/db/evaluator/mesh/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json",
       "artifactClass": "runtime",
       "line": 14,
       "lines": [
@@ -114605,7 +114605,7 @@
     {
       "code": "deny",
       "riskLevel": "medium",
-      "path": "server/db/evaluator/neon-admin/repository-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json",
       "artifactClass": "runtime",
       "line": 14,
       "lines": [
@@ -115046,7 +115046,7 @@
     {
       "code": "dispatch",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 5721,
       "lines": [
@@ -115299,7 +115299,7 @@
     {
       "code": "edit",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 3565,
       "lines": [
@@ -115555,7 +115555,7 @@
     {
       "code": "edit_line",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13085,
       "lines": [
@@ -115679,7 +115679,7 @@
     {
       "code": "export",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 120,
       "lines": [
@@ -115689,7 +115689,7 @@
     {
       "code": "export",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 205,
       "lines": [
@@ -116227,7 +116227,7 @@
     {
       "code": "extend",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 2529,
       "lines": [
@@ -116536,7 +116536,7 @@
     {
       "code": "hold",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12385,
       "lines": [
@@ -116723,7 +116723,7 @@
     {
       "code": "import",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 373,
       "lines": [
@@ -117010,7 +117010,7 @@
     {
       "code": "mark_arrived",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 5777,
       "lines": [
@@ -117973,7 +117973,7 @@
     {
       "code": "PO.EXPIRE",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 157,
       "lines": [
@@ -117983,7 +117983,7 @@
     {
       "code": "PO.EXPIRE",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13154,
       "lines": [
@@ -118045,7 +118045,7 @@
     {
       "code": "PO.HOLD",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 157,
       "lines": [
@@ -118055,7 +118055,7 @@
     {
       "code": "PO.HOLD",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13182,
       "lines": [
@@ -118119,7 +118119,7 @@
     {
       "code": "PO.PLACE_ORDER",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 171,
       "lines": [
@@ -118129,7 +118129,7 @@
     {
       "code": "PO.PLACE_ORDER",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13210,
       "lines": [
@@ -118221,7 +118221,7 @@
     {
       "code": "PO.RELEASE_HOLD",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 157,
       "lines": [
@@ -118231,7 +118231,7 @@
     {
       "code": "PO.RELEASE_HOLD",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13238,
       "lines": [
@@ -118303,7 +118303,7 @@
     {
       "code": "PO.SHORT_CLOSE",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 157,
       "lines": [
@@ -118313,7 +118313,7 @@
     {
       "code": "PO.SHORT_CLOSE",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13266,
       "lines": [
@@ -118450,7 +118450,7 @@
     {
       "code": "post",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 8521,
       "lines": [
@@ -118665,7 +118665,7 @@
     {
       "code": "print",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 120,
       "lines": [
@@ -118675,7 +118675,7 @@
     {
       "code": "print",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 9585,
       "lines": [
@@ -118764,7 +118764,7 @@
     {
       "code": "propose_changes",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13561,
       "lines": [
@@ -120049,7 +120049,7 @@
     {
       "code": "read",
       "riskLevel": "low",
-      "path": "server/db/authority/mesh/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/authority.v1.json",
       "artifactClass": "runtime",
       "line": 29,
       "lines": [
@@ -120059,7 +120059,7 @@
     {
       "code": "read",
       "riskLevel": "low",
-      "path": "server/db/catalog/authorization-catalog-semantic-contract.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/authorization-catalog-semantic-contract.v1.json",
       "artifactClass": "runtime",
       "line": 22,
       "lines": [
@@ -120069,7 +120069,7 @@
     {
       "code": "read",
       "riskLevel": "low",
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 82,
       "lines": [
@@ -120087,7 +120087,7 @@
     {
       "code": "read",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 119,
       "lines": [
@@ -120098,7 +120098,7 @@
     {
       "code": "read",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 9081,
       "lines": [
@@ -120644,7 +120644,7 @@
     {
       "code": "receipt",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 5805,
       "lines": [
@@ -120904,7 +120904,7 @@
     {
       "code": "reject",
       "riskLevel": "medium",
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 810,
       "lines": [
@@ -120914,7 +120914,7 @@
     {
       "code": "reject",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13281,
       "lines": [
@@ -121040,7 +121040,7 @@
     {
       "code": "reject_acceptance",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 14821,
       "lines": [
@@ -121081,7 +121081,7 @@
     {
       "code": "reject_changes",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13617,
       "lines": [
@@ -121122,7 +121122,7 @@
     {
       "code": "release_hold",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12497,
       "lines": [
@@ -121192,7 +121192,7 @@
     {
       "code": "reopen",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 933,
       "lines": [
@@ -121525,7 +121525,7 @@
     {
       "code": "request_info",
       "riskLevel": "low",
-      "path": "server/db/authority/neon-admin/authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json",
       "artifactClass": "runtime",
       "line": 39,
       "lines": [
@@ -121535,7 +121535,7 @@
     {
       "code": "request_info",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12525,
       "lines": [
@@ -121616,7 +121616,7 @@
     {
       "code": "return",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 5833,
       "lines": [
@@ -121721,7 +121721,7 @@
     {
       "code": "reverse",
       "riskLevel": "critical",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 8549,
       "lines": [
@@ -121859,7 +121859,7 @@
     {
       "code": "revise",
       "riskLevel": "medium",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13337,
       "lines": [
@@ -122003,7 +122003,7 @@
     {
       "code": "share_read",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 4517,
       "lines": [
@@ -122105,7 +122105,7 @@
     {
       "code": "submit",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 625,
       "lines": [
@@ -122372,7 +122372,7 @@
     {
       "code": "submit_for_acceptance",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 14933,
       "lines": [
@@ -122577,7 +122577,7 @@
     {
       "code": "transmit",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 9669,
       "lines": [
@@ -122836,7 +122836,7 @@
     {
       "code": "update",
       "riskLevel": "low",
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 160,
       "lines": [
@@ -122848,7 +122848,7 @@
     {
       "code": "update",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 233,
       "lines": [
@@ -123589,7 +123589,7 @@
     {
       "code": "view_je",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 120,
       "lines": [
@@ -123599,7 +123599,7 @@
     {
       "code": "view_je",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12721,
       "lines": [
@@ -123663,7 +123663,7 @@
     {
       "code": "view_match",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json",
       "artifactClass": "runtime",
       "line": 120,
       "lines": [
@@ -123673,7 +123673,7 @@
     {
       "code": "view_match",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 12749,
       "lines": [
@@ -123728,7 +123728,7 @@
     {
       "code": "void",
       "riskLevel": "high",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 9725,
       "lines": [
@@ -123800,7 +123800,7 @@
     {
       "code": "withdraw",
       "riskLevel": "low",
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "artifactClass": "runtime",
       "line": 13421,
       "lines": [
@@ -138570,7 +138570,7 @@
   ],
   "generatedArtifacts": [
     {
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
       "owner": "mesh-platform",
       "generatorPath": "server/db/scripts/authority/compile-authorization-authority.ts",
@@ -138579,7 +138579,7 @@
       "sha256": "6ce79c5045060b8b4214da34a766186b2b08faf1cfd4c19b48b56e20e3766e79"
     },
     {
-      "path": "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
       "owner": "mesh-platform",
       "generatorPath": "server/db/scripts/authority/compile-authorization-authority.ts",
@@ -138588,7 +138588,7 @@
       "sha256": "ab9a9af5e81b7d7789b6a097d0f17311105144af8d6e0e64334c0356e878e78e"
     },
     {
-      "path": "server/db/authority/mesh/compiled/reconciliation-report.md",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.md",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
       "owner": "mesh-platform",
       "generatorPath": "server/db/scripts/authority/compile-authorization-authority.ts",
@@ -138597,7 +138597,7 @@
       "sha256": "51a12db18708d95761957021eb214f310b4d9e472f373530035f239300f30e2e"
     },
     {
-      "path": "server/db/authority/mesh/compiled/reconciliation-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
       "owner": "mesh-platform",
       "generatorPath": "server/db/scripts/authority/compile-authorization-authority.ts",
@@ -138606,7 +138606,7 @@
       "sha256": "ea0ac5329214ac483c54a6bd4a6d5bd69464f256314d35ab7bd4949ce8847110"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
       "owner": "platform-iam",
       "generatorPath": "server/db/scripts/authority/compile-authorization-authority.ts",
@@ -138615,7 +138615,7 @@
       "sha256": "d3a60e4b0cfbb788e026c483ac5ef73660c9dd50d545d43addd65a71af6a45ac"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
       "owner": "platform-iam",
       "generatorPath": "server/db/scripts/authority/compile-authorization-authority.ts",
@@ -138624,7 +138624,7 @@
       "sha256": "fa57573dfcc8863dbcd48b438eea9f0586f83865973d79ac9d8bb776c281795a"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/reconciliation-report.md",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.md",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
       "owner": "platform-iam",
       "generatorPath": "server/db/scripts/authority/compile-authorization-authority.ts",
@@ -138633,7 +138633,7 @@
       "sha256": "b8424760b0070f733120c4d038104e8a81d9d79f224038a7b275b8349c94e713"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/reconciliation-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
       "owner": "platform-iam",
       "generatorPath": "server/db/scripts/authority/compile-authorization-authority.ts",
@@ -138642,7 +138642,7 @@
       "sha256": "ac4826468da9390fe2bd8d5b5bfb48cd823b3f56f2acba5538597d33ba641dda"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
       "owner": "mesh-platform",
       "generatorPath": "server/db/scripts/catalog/compile-authorization-catalog.ts",
@@ -138651,7 +138651,7 @@
       "sha256": "3edd9df316754b9b625c07b60ee4292efecb5d2614b216f8821d6d7fc4832bf2"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
       "owner": "mesh-platform",
       "generatorPath": "server/db/scripts/catalog/compile-authorization-catalog.ts",
@@ -138660,7 +138660,7 @@
       "sha256": "e4dd18187ed8995aca93e404540ddffd04e405e150be7e4b7371ca04a915ed49"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/contextual-aliases.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/contextual-aliases.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
       "owner": "mesh-platform",
       "generatorPath": "server/db/scripts/catalog/compile-authorization-catalog.ts",
@@ -138669,7 +138669,7 @@
       "sha256": "5f590dd719a7a5b631c194cae5ae4810197fe5379463ca12a13779e9626a4610"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/verification-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
       "owner": "mesh-platform",
       "generatorPath": "server/db/scripts/catalog/compile-authorization-catalog.ts",
@@ -138678,7 +138678,7 @@
       "sha256": "ec67e842f9b6c69edd23a51a3e1e3ad8f3c7ad8005cd5bb5f5fa422b16484b3d"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/catalog-preflight.sql",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
       "owner": "platform-iam",
       "generatorPath": "server/db/scripts/catalog/compile-authorization-catalog.ts",
@@ -138687,7 +138687,7 @@
       "sha256": "a484aae25fa30617a7892f040d03e62e6ea5635407dfa6e5252b8c7930fef769"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
       "owner": "platform-iam",
       "generatorPath": "server/db/scripts/catalog/compile-authorization-catalog.ts",
@@ -138696,7 +138696,7 @@
       "sha256": "7c13456a04238d48de48f96b5f23958fe368dc8d0342521b1b12dd7ca2d3c2e3"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/contextual-aliases.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/contextual-aliases.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
       "owner": "platform-iam",
       "generatorPath": "server/db/scripts/catalog/compile-authorization-catalog.ts",
@@ -138705,7 +138705,7 @@
       "sha256": "d12aec0688d7a357944b71d7ae2eb3faea8180b41e5c3ea0d53d37bb64586e2b"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/verification-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
       "owner": "platform-iam",
       "generatorPath": "server/db/scripts/catalog/compile-authorization-catalog.ts",
@@ -138714,7 +138714,7 @@
       "sha256": "92a49cefc293e41343936cbac85283976ab7d3151d7a73be7672b9adae8021d0"
     },
     {
-      "path": "server/db/seed/_generated/resolver-contracts.json",
+      "path": "server/db/seed/contracts/generated/resolver-contracts.json",
       "generator": "server/scripts/export-resolver-contracts.ts",
       "owner": "metadata-platform",
       "generatorPath": "server/scripts/export-resolver-contracts.ts",

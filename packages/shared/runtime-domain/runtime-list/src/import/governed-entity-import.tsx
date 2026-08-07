@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, CircleAlert, Download, FileSpreadsheet, Upload } from "lucide-react";
-import { Button, Textarea } from "@athyper/ui";
+import { Button, Textarea } from "@athyper/platform-ui";
 
 export interface GovernedImportColumn {
   key:string;

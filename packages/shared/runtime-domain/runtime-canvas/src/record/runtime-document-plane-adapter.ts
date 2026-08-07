@@ -1,4 +1,4 @@
-import type { PlaneKey } from "@athyper/session-plane";
+import type { PlaneKey } from "@athyper/platform-iam-session-plane";
 import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import type { DocumentEditFetch } from "../document-runtime";

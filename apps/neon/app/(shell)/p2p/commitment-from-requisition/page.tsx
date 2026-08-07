@@ -25,7 +25,7 @@
  */
 
 import { redirect } from "next/navigation";
-import { PageFrame } from "@athyper/surface-kit";
+import { PageFrame } from "@athyper/platform-surface-kit";
 import { getNeonServerSession } from "@/lib/server/session";
 import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";
 import { getMetaEntityRecordDetail } from "@/lib/server/meta-entity-records";

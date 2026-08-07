@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { StatePanel } from "@athyper/surface-kit";
+import { StatePanel } from "@athyper/platform-surface-kit";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,9 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
   Textarea,
-} from "@athyper/ui";
+} from "@athyper/platform-ui";
 import { csrfFetch } from "@/lib/bff-fetch";
-import type { ColumnDef } from "@athyper/ui";
+import type { ColumnDef } from "@athyper/platform-ui";
 import type { LifecycleBinding, LifecycleCatalogueItem } from "./types";
 import { formatJson, parseJsonText } from "./metadataContract";
 

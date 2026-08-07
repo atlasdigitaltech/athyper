@@ -48,10 +48,10 @@ function sqlLiteral(value: string): string {
 }
 
 const contract = await readJson<{ contractVersion: string; rules: object }>(
-  resolve(databaseRoot, "authority/authorization-authority-semantic-contract.v1.json"),
+  resolve(databaseRoot, "seed/contracts/authorization/authority/authorization-authority-semantic-contract.v1.json"),
 );
 const manifest = await readJson<any>(
-  resolve(databaseRoot, `authority/${target}/authority.v1.json`),
+  resolve(databaseRoot, `seed/contracts/authorization/authority/${target}/authority.v1.json`),
 );
 const catalog = await readJson<{ operations: Permission[] }>(
   resolve(databaseRoot, manifest.catalogInput),
@@ -554,7 +554,10 @@ $canonical_authority$;
 `;
 }
 
-const output = resolve(databaseRoot, `authority/${target}/compiled`);
+const output = resolve(
+  databaseRoot,
+  `seed/contracts/authorization/authority/${target}/compiled`,
+);
 await mkdir(output, { recursive: true });
 await writeFile(
   resolve(output, "compiled-authority.v1.json"),

@@ -12,7 +12,7 @@
  */
 
 import { AlertCircle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
-import { Badge, Skeleton } from "@athyper/ui/primitives";
+import { Badge, Skeleton } from "@athyper/platform-ui/primitives";
 import { usePostingTrace, type PostingTraceLine } from "../hooks/usePostingTrace";
 import { openAppRecordFromContextMenu } from "../lib/recordLinks";
 import { fmtCurrency, fmtDate } from "../components/format";

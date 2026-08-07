@@ -29,11 +29,11 @@ authority.
 ## Checked-in deliverables
 
 - Shared rules:
-  `server/db/authority/authorization-authority-semantic-contract.v1.json`
+  `server/db/seed/contracts/authorization/authority/authorization-authority-semantic-contract.v1.json`
 - Neon/Admin source and compiled authority:
-  `server/db/authority/neon-admin/`
+  `server/db/seed/contracts/authorization/authority/neon-admin/`
 - Mesh-local source and compiled authority:
-  `server/db/authority/mesh/`
+  `server/db/seed/contracts/authorization/authority/mesh/`
 - Deterministic compiler:
   `server/db/scripts/authority/compile-authorization-authority.ts`
 - Subject and scope disposition evidence:

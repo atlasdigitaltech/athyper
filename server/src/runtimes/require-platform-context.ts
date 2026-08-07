@@ -30,7 +30,7 @@ import {
   normalizeFederatedAssurance,
   resolveRequiredActionsEnforcement,
   type TenantMfaTrustPolicy,
-} from "@athyper/auth-common";
+} from "@athyper/platform-iam-auth-common";
 
 // ─── Middleware factory ──────────────────────────────────────────────────────
 

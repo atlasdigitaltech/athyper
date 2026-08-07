@@ -73,8 +73,8 @@ type ReviewFile = {
 
 const repoRoot = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const dbRoot = resolve(repoRoot, "server/db");
-const outputPath = resolve(dbRoot, "seed-migration/wave0-ledger.v1.json");
-const reviewPath = resolve(dbRoot, "seed-migration/wave0-review.v1.json");
+const outputPath = resolve(dbRoot, "seed/migration/wave0-ledger.v1.json");
+const reviewPath = resolve(dbRoot, "seed/migration/wave0-review.v1.json");
 const checkOnly = process.argv.includes("--check");
 
 const sourceRoots = [
@@ -492,7 +492,7 @@ async function main(): Promise<void> {
     },
     deletionPolicy: "A source file is never deletion-eligible until targetReceiptStatus and validationStatus are complete.",
     generatedBy: "server/db/scripts/seed/build-wave0-migration-ledger.ts",
-    reviewedBy: "server/db/seed-migration/wave0-review.v1.json",
+    reviewedBy: "server/db/seed/migration/wave0-review.v1.json",
     summary,
     entries,
   };

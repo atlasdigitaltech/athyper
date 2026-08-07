@@ -37,3 +37,38 @@ BEGIN
     END IF;
 END;
 $$;
+
+REVOKE ALL ON control.network_document_type FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION control.trg_guard_network_document_type() FROM PUBLIC;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT ON control.network_document_type TO athyperapp;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON control.network_document_type TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION control.trg_guard_network_document_type()
+            TO athyperadmin;
+    END IF;
+END;
+$$;
+
+REVOKE ALL ON control.delivery_policy FROM PUBLIC;
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON control.delivery_policy TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON control.delivery_policy TO athyperadmin;
+    END IF;
+END;
+$$;
+
+REVOKE ALL ON control.routing_rule, control.retention_policy, control.quota_policy FROM PUBLIC;
+GRANT SELECT, INSERT, UPDATE, DELETE
+    ON control.routing_rule, control.retention_policy, control.quota_policy TO athyperapp;
+GRANT ALL PRIVILEGES
+    ON control.routing_rule, control.retention_policy, control.quota_policy TO athyperadmin;

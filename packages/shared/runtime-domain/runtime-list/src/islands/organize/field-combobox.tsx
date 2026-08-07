@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Search, X } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@athyper/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@athyper/platform-ui";
 import type { RuntimeField } from "../../core/types";
 import {
   ORGANIZE_ICON_BUTTON_CLASS,

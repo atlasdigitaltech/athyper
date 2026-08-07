@@ -1064,8 +1064,7 @@
         "packages/shared/data-integration/api-client/package.json",
         "packages/shared/data-integration/api-contracts/package.json",
         "packages/shared/data-integration/auth-bff/package.json",
-        "packages/shared/data-integration/bff-relay/package.json",
-        "packages/shared/data-integration/core/package.json",
+        "packages/platform/foundation/bff-relay/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -1114,7 +1113,7 @@
         "packages/shared/ui-platform/i18n/package.json",
         "packages/shared/ui-platform/icons/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -1243,7 +1242,7 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/theme",
+      "packageName": "@athyper/platform-theme",
       "physicalPath": "packages/shared/business-domain/theme/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -1314,7 +1313,7 @@
         "packages/shared/ui-platform/content-ui/package.json",
         "packages/shared/ui-platform/dashboard-ui/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -1387,7 +1386,7 @@
         "packages/shared/ui-platform/content-ui/package.json",
         "packages/shared/ui-platform/dashboard-ui/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/work-inbox-ui/package.json",
         "packages/shared/ui-platform/workflow-ui/package.json",
@@ -1407,13 +1406,13 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/auth-bff",
+      "packageName": "@athyper/platform-iam-auth-bff",
       "physicalPath": "packages/shared/data-integration/auth-bff/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
         "apps/mesh/package.json",
         "apps/neon/package.json",
-        "packages/shared/data-integration/bff-relay/package.json",
+        "packages/platform/foundation/bff-relay/package.json",
         "packages/shared/platform-auth/identity-gate/package.json",
         "packages/shared/ui-platform/app-foundation/package.json"
       ],
@@ -1427,20 +1426,20 @@
       "workspaceActive": false
     },
     {
-      "packageName": "@athyper/bff-relay",
-      "physicalPath": "packages/shared/data-integration/bff-relay/package.json",
+      "packageName": "@athyper/platform-bff-relay",
+      "physicalPath": "packages/platform/foundation/bff-relay/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
         "apps/mesh/package.json",
         "apps/neon/package.json"
       ],
-      "intendedOwner": "Data Integration",
+      "intendedOwner": "Platform Foundation",
       "runtimePlane": "Integration plane",
       "deploymentTargets": "neon, admin, mesh, server as consumed",
       "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/shared/data-integration/bff-relay/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Shared platform",
+      "proposedFinalLocation": "packages/platform/foundation/bff-relay/package.json",
+      "migrationStatus": "Migrated â€” Wave 4 Platform Foundation",
+      "classification": "Platform foundation",
       "workspaceActive": true
     },
     {
@@ -1487,8 +1486,7 @@
         "packages/shared/data-integration/api-client/package.json",
         "packages/shared/data-integration/api-contracts/package.json",
         "packages/shared/data-integration/auth-bff/package.json",
-        "packages/shared/data-integration/bff-relay/package.json",
-        "packages/shared/data-integration/core/package.json",
+        "packages/platform/foundation/bff-relay/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -1537,7 +1535,7 @@
         "packages/shared/ui-platform/i18n/package.json",
         "packages/shared/ui-platform/icons/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -1559,20 +1557,24 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/core",
-      "physicalPath": "packages/shared/data-integration/core/package.json",
+      "packageName": "@athyper/platform-core",
+      "physicalPath": "packages/platform/foundation/core/package.json",
       "currentConsumers": [
-        ".codex-phase6-deploy/packages/adapters/db/package.json",
+        ".codex-phase6-deploy/packages/adapters/auth/package.json",
+        ".codex-phase6-deploy/packages/adapters/memory-cache/package.json",
+        ".codex-phase6-deploy/packages/adapters/object-storage/package.json",
         ".codex-phase6-deploy/packages/adapters/telemetry/package.json",
-        "server/packages/adapters/db/package.json",
+        "server/packages/adapters/auth/package.json",
+        "server/packages/adapters/memory-cache/package.json",
+        "server/packages/adapters/object-storage/package.json",
         "server/packages/adapters/telemetry/package.json"
       ],
-      "intendedOwner": "Data Integration",
-      "runtimePlane": "Integration plane",
+      "intendedOwner": "Platform Foundation",
+      "runtimePlane": "All planes",
       "deploymentTargets": "neon, admin, mesh, server as consumed",
       "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/shared/data-integration/core/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "proposedFinalLocation": "packages/platform/foundation/core/package.json",
+      "migrationStatus": "Wave 2 foundation â€” active; replaced @athyper/core",
       "classification": "Shared platform",
       "workspaceActive": true
     },
@@ -1703,7 +1705,7 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/session-plane",
+      "packageName": "@athyper/platform-iam-session-plane",
       "physicalPath": "packages/shared/data-integration/session-plane/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -1764,13 +1766,13 @@
       "workspaceActive": false
     },
     {
-      "packageName": "@athyper/auth-bff",
+      "packageName": "@athyper/platform-iam-auth-bff",
       "physicalPath": "packages/shared/platform-auth/auth-bff/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
         "apps/mesh/package.json",
         "apps/neon/package.json",
-        "packages/shared/data-integration/bff-relay/package.json",
+        "packages/platform/foundation/bff-relay/package.json",
         "packages/shared/platform-auth/identity-gate/package.json",
         "packages/shared/ui-platform/app-foundation/package.json"
       ],
@@ -1784,7 +1786,7 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/auth-common",
+      "packageName": "@athyper/platform-iam-auth-common",
       "physicalPath": "packages/shared/platform-auth/auth-common/package.json",
       "currentConsumers": [
         ".codex-phase6-deploy/package.json",
@@ -1847,8 +1849,7 @@
         "packages/shared/data-integration/api-client/package.json",
         "packages/shared/data-integration/api-contracts/package.json",
         "packages/shared/data-integration/auth-bff/package.json",
-        "packages/shared/data-integration/bff-relay/package.json",
-        "packages/shared/data-integration/core/package.json",
+        "packages/platform/foundation/bff-relay/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -1897,7 +1898,7 @@
         "packages/shared/ui-platform/i18n/package.json",
         "packages/shared/ui-platform/icons/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -1919,7 +1920,7 @@
       "workspaceActive": false
     },
     {
-      "packageName": "@athyper/identity-gate",
+      "packageName": "@athyper/platform-iam-identity-gate",
       "physicalPath": "packages/shared/platform-auth/identity-gate/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -1937,7 +1938,7 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/session-plane",
+      "packageName": "@athyper/platform-iam-session-plane",
       "physicalPath": "packages/shared/platform-auth/session-plane/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -1973,7 +1974,7 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/session-store",
+      "packageName": "@athyper/platform-iam-session-store",
       "physicalPath": "packages/shared/platform-auth/session-store/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -1991,7 +1992,7 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/atlas-agent-runtime",
+      "packageName": "@athyper/platform-ai-agent-runtime",
       "physicalPath": "packages/shared/runtime-domain/atlas-agent-runtime/package.json",
       "currentConsumers": [
         ".codex-phase6-deploy/packages/services/ai/package.json",
@@ -2098,8 +2099,7 @@
         "packages/shared/data-integration/api-client/package.json",
         "packages/shared/data-integration/api-contracts/package.json",
         "packages/shared/data-integration/auth-bff/package.json",
-        "packages/shared/data-integration/bff-relay/package.json",
-        "packages/shared/data-integration/core/package.json",
+        "packages/platform/foundation/bff-relay/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -2148,7 +2148,7 @@
         "packages/shared/ui-platform/i18n/package.json",
         "packages/shared/ui-platform/icons/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -2476,7 +2476,7 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/session-plane",
+      "packageName": "@athyper/platform-iam-session-plane",
       "physicalPath": "packages/shared/runtime-domain/session-plane/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -2561,7 +2561,7 @@
       "workspaceActive": false
     },
     {
-      "packageName": "@athyper/theme",
+      "packageName": "@athyper/platform-theme",
       "physicalPath": "packages/shared/runtime-domain/theme/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -2632,7 +2632,7 @@
         "packages/shared/ui-platform/content-ui/package.json",
         "packages/shared/ui-platform/dashboard-ui/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -2708,8 +2708,7 @@
         "packages/shared/data-integration/api-client/package.json",
         "packages/shared/data-integration/api-contracts/package.json",
         "packages/shared/data-integration/auth-bff/package.json",
-        "packages/shared/data-integration/bff-relay/package.json",
-        "packages/shared/data-integration/core/package.json",
+        "packages/platform/foundation/bff-relay/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -2758,7 +2757,7 @@
         "packages/shared/ui-platform/i18n/package.json",
         "packages/shared/ui-platform/icons/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -2801,7 +2800,7 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/theme",
+      "packageName": "@athyper/platform-theme",
       "physicalPath": "packages/shared/theme/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -2862,7 +2861,7 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/atlas-agent-ui",
+      "packageName": "@athyper/platform-ai-agent-ui",
       "physicalPath": "packages/shared/ui-platform/atlas-agent-ui/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -2968,8 +2967,7 @@
         "packages/shared/data-integration/api-client/package.json",
         "packages/shared/data-integration/api-contracts/package.json",
         "packages/shared/data-integration/auth-bff/package.json",
-        "packages/shared/data-integration/bff-relay/package.json",
-        "packages/shared/data-integration/core/package.json",
+        "packages/platform/foundation/bff-relay/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -3018,7 +3016,7 @@
         "packages/shared/ui-platform/i18n/package.json",
         "packages/shared/ui-platform/icons/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -3187,20 +3185,20 @@
       "workspaceActive": true
     },
     {
-      "packageName": "@athyper/notifications-client",
-      "physicalPath": "packages/shared/ui-platform/notifications-client/package.json",
+      "packageName": "@athyper/platform-communications-notifications-client",
+      "physicalPath": "packages/platform/communications/notifications-client/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
         "apps/mesh/package.json",
         "apps/neon/package.json"
       ],
-      "intendedOwner": "UI Platform",
+      "intendedOwner": "Platform Communications",
       "runtimePlane": "UI platform plane",
       "deploymentTargets": "neon, admin, mesh, server as consumed",
       "duplicateStatus": "Unique active package",
-      "proposedFinalLocation": "packages/shared/ui-platform/notifications-client/package.json",
-      "migrationStatus": "Inventory complete; no move in Phase 1",
-      "classification": "Shared platform",
+      "proposedFinalLocation": "packages/platform/communications/notifications-client/package.json",
+      "migrationStatus": "Migrated to three-plane structure",
+      "classification": "Platform communications",
       "workspaceActive": true
     },
     {
@@ -3319,7 +3317,7 @@
       "workspaceActive": false
     },
     {
-      "packageName": "@athyper/theme",
+      "packageName": "@athyper/platform-theme",
       "physicalPath": "packages/shared/ui-platform/theme/package.json",
       "currentConsumers": [
         "apps/admin/package.json",
@@ -3390,7 +3388,7 @@
         "packages/shared/ui-platform/content-ui/package.json",
         "packages/shared/ui-platform/dashboard-ui/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -3466,7 +3464,7 @@
         "packages/shared/ui-platform/content-ui/package.json",
         "packages/shared/ui-platform/dashboard-ui/package.json",
         "packages/shared/ui-platform/me-ui/package.json",
-        "packages/shared/ui-platform/notifications-client/package.json",
+        "packages/platform/communications/notifications-client/package.json",
         "packages/shared/ui-platform/saved-views-ui/package.json",
         "packages/shared/ui-platform/setup-ui/package.json",
         "packages/shared/ui-platform/shell/package.json",
@@ -4125,3 +4123,4 @@
     }
   ]
 }
+

@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { validatePlaneServerSession } from "@athyper/auth-bff";
-import { getPlaneConfig, isSupportSession } from "@athyper/session-plane";
+import { validatePlaneServerSession } from "@athyper/platform-iam-auth-bff";
+import { getPlaneConfig, isSupportSession } from "@athyper/platform-iam-session-plane";
 import { AppShellClient } from "./AppShellClient";
 import { PreferencesDomHydrator } from "./PreferencesDomHydrator";
 import { RequiredActionBannerSlot } from "./RequiredActionBannerSlot";

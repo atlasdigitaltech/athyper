@@ -7,7 +7,7 @@
 // shared banner stays UI-only.
 
 import { useCallback } from "react";
-import { RequiredActionBanner } from "@athyper/identity-gate";
+import { RequiredActionBanner } from "@athyper/platform-iam-identity-gate";
 
 export function RequiredActionBannerSlot({ actions }: { actions: readonly string[] }) {
   const onComplete = useCallback((action: string) => {

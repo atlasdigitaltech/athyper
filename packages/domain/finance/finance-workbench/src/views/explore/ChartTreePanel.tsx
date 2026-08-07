@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Circle, CircleDot, Search } from "lucide-react";
-import { Badge, Input, Skeleton } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Input, Skeleton } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { useExploreChartTree, type ExploreChartNode } from "../../hooks/useFinanceExplore";
 
 interface TreeItem extends ExploreChartNode {

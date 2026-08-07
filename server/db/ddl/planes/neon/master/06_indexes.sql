@@ -649,3 +649,487 @@ CREATE INDEX bi_tenant_domain_pidx
 CREATE INDEX bi_visibility_pidx
     ON master.business_intent (tenant_id, visibility)
     WHERE is_active = true;
+
+CREATE INDEX person_name_idx
+    ON master.person (tenant_id, lower(COALESCE(display_name, name)));
+CREATE INDEX person_email_idx
+    ON master.person (tenant_id, lower(primary_email))
+    WHERE primary_email IS NOT NULL;
+CREATE INDEX person_sensitive_profile_person_idx
+    ON master.person_sensitive_profile (tenant_id, person_id);
+
+CREATE INDEX site_company_idx
+    ON master.site (tenant_id, company_code_id, status);
+CREATE INDEX site_parent_idx
+    ON master.site (tenant_id, parent_site_id)
+    WHERE parent_site_id IS NOT NULL;
+
+CREATE INDEX career_level_band_idx
+    ON master.career_level (tenant_id, career_band_id, level_no);
+CREATE INDEX job_function_family_idx
+    ON master.job_function (tenant_id, job_family_id)
+    WHERE job_family_id IS NOT NULL;
+CREATE INDEX job_classification_idx
+    ON master.job (tenant_id, job_family_id, job_function_id, status);
+CREATE INDEX job_grade_idx
+    ON master.job (tenant_id, pay_grade_id)
+    WHERE pay_grade_id IS NOT NULL;
+
+CREATE UNIQUE INDEX holiday_calendar_one_default_uq
+    ON master.holiday_calendar
+       (tenant_id, COALESCE(company_code_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        COALESCE(site_id, '00000000-0000-0000-0000-000000000000'::uuid))
+    WHERE is_default AND status = 'active';
+CREATE INDEX holiday_calendar_scope_idx
+    ON master.holiday_calendar
+       (tenant_id, country_code, company_code_id, legal_entity_id, site_id);
+CREATE INDEX holiday_calendar_day_year_idx
+    ON master.holiday_calendar_day
+       (tenant_id, holiday_calendar_id, calendar_year, holiday_date);
+
+CREATE INDEX pay_component_type_idx
+    ON master.pay_component (tenant_id, component_type, status);
+CREATE INDEX pay_component_formula_idx
+    ON master.pay_component (tenant_id, formula_expression_id)
+    WHERE formula_expression_id IS NOT NULL;
+CREATE INDEX pay_group_company_idx
+    ON master.pay_group (tenant_id, company_code_id, status);
+CREATE UNIQUE INDEX pay_structure_one_active_per_group_uq
+    ON master.pay_structure (tenant_id, pay_group_id, effective_from)
+    WHERE status = 'active' AND pay_group_id IS NOT NULL;
+CREATE INDEX pay_structure_line_component_idx
+    ON master.pay_structure_line (tenant_id, pay_component_id);
+CREATE INDEX statutory_scheme_country_idx
+    ON master.statutory_scheme (tenant_id, country_code, scheme_type, status);
+
+CREATE INDEX leave_plan_type_idx
+    ON master.leave_plan (tenant_id, leave_type_id, status);
+CREATE INDEX leave_plan_scope_idx
+    ON master.leave_plan (tenant_id, company_code_id, legal_entity_id, country_code);
+CREATE INDEX leave_plan_rule_priority_idx
+    ON master.leave_plan_rule (tenant_id, leave_plan_id, priority)
+    WHERE status = 'active';
+
+CREATE INDEX position_job_idx
+    ON master.position (tenant_id, job_id)
+    WHERE job_id IS NOT NULL;
+CREATE INDEX position_org_unit_idx
+    ON master.position (tenant_id, org_unit_id)
+    WHERE org_unit_id IS NOT NULL;
+CREATE INDEX position_reports_to_idx
+    ON master.position (tenant_id, reports_to_position_id)
+    WHERE reports_to_position_id IS NOT NULL;
+
+CREATE UNIQUE INDEX employee_principal_uq
+    ON master.employee (tenant_id, principal_id)
+    WHERE principal_id IS NOT NULL;
+CREATE INDEX employee_manager_idx
+    ON master.employee (tenant_id, manager_id)
+    WHERE manager_id IS NOT NULL;
+CREATE INDEX employee_company_idx
+    ON master.employee (tenant_id, company_code_id, status);
+
+CREATE INDEX employment_person_idx
+    ON master.employment (tenant_id, person_id);
+CREATE INDEX employment_employee_idx
+    ON master.employment (tenant_id, employee_id)
+    WHERE employee_id IS NOT NULL;
+CREATE UNIQUE INDEX employment_one_active_fulltime_per_company_uq
+    ON master.employment (tenant_id, person_id, company_code_id)
+    WHERE employment_status = 'active' AND employment_type = 'full_time';
+
+CREATE INDEX work_assignment_employee_idx
+    ON master.work_assignment (tenant_id, employee_id, effective_from DESC);
+CREATE INDEX work_assignment_position_idx
+    ON master.work_assignment (tenant_id, position_id)
+    WHERE position_id IS NOT NULL;
+CREATE UNIQUE INDEX work_assignment_one_primary_active_uq
+    ON master.work_assignment (tenant_id, employee_id)
+    WHERE assignment_type = 'primary' AND status = 'active' AND effective_until IS NULL;
+
+CREATE INDEX leave_enrollment_employee_idx
+    ON master.employee_leave_enrollment (tenant_id, employee_id, effective_from DESC);
+CREATE INDEX statutory_enrollment_employee_idx
+    ON master.employee_statutory_enrollment (tenant_id, employee_id, effective_from DESC);
+
+CREATE INDEX work_pattern_day_pattern_idx
+    ON master.work_pattern_day (tenant_id, work_pattern_id, day_no);
+
+CREATE INDEX warehouse_site_idx ON master.warehouse (tenant_id, site_id);
+CREATE INDEX warehouse_active_site_idx ON master.warehouse (tenant_id, site_id, code) WHERE status = 'active';
+CREATE INDEX warehouse_type_idx ON master.warehouse (tenant_id, warehouse_type);
+CREATE INDEX warehouse_manager_idx ON master.warehouse (tenant_id, manager_id) WHERE manager_id IS NOT NULL;
+CREATE INDEX warehouse_status_by_idx ON master.warehouse (tenant_id, status_changed_by) WHERE status_changed_by IS NOT NULL;
+CREATE INDEX warehouse_created_by_idx ON master.warehouse (tenant_id, created_by);
+CREATE INDEX warehouse_updated_by_idx ON master.warehouse (tenant_id, updated_by) WHERE updated_by IS NOT NULL;
+
+CREATE INDEX risk_dimension_category_idx
+    ON master.risk_dimension (category, ordinal)
+    WHERE status = 'active';
+
+CREATE INDEX risk_driver_registry_dimension_idx
+    ON master.risk_driver_registry (default_dimension_code)
+    WHERE default_dimension_code IS NOT NULL;
+
+CREATE INDEX risk_model_context_effective_idx
+    ON master.risk_model (applicable_context, effective_from DESC)
+    WHERE status = 'active';
+
+CREATE INDEX risk_model_dimension_order_idx
+    ON master.risk_model_dimension (model_code, model_version, ordinal);
+
+CREATE INDEX party_risk_assessment_business_partner_idx
+    ON master.party_risk_assessment (
+        tenant_id, business_partner_id, assessment_context
+    );
+CREATE UNIQUE INDEX party_risk_assessment_approved_context_uq
+    ON master.party_risk_assessment (
+        tenant_id, subject_type, subject_id, assessment_context
+    )
+    WHERE status = 'approved';
+CREATE INDEX party_risk_assessment_review_due_idx
+    ON master.party_risk_assessment (tenant_id, next_review_at)
+    WHERE status = 'approved' AND next_review_at IS NOT NULL;
+
+CREATE INDEX party_risk_dimension_score_assessment_idx
+    ON master.party_risk_dimension_score (tenant_id, assessment_id);
+
+CREATE INDEX party_risk_evidence_business_partner_idx
+    ON master.party_risk_evidence (tenant_id, business_partner_id, status);
+CREATE INDEX party_risk_evidence_subject_idx
+    ON master.party_risk_evidence (tenant_id, subject_type, subject_id);
+CREATE INDEX party_risk_evidence_source_date_idx
+    ON master.party_risk_evidence (
+        tenant_id, source_code, evidence_date DESC
+    );
+CREATE UNIQUE INDEX party_risk_evidence_source_reference_uq
+    ON master.party_risk_evidence (
+        tenant_id, business_partner_id, source_code, source_reference
+    )
+    WHERE source_reference IS NOT NULL AND status <> 'superseded';
+
+CREATE INDEX party_risk_driver_assessment_idx
+    ON master.party_risk_driver (tenant_id, assessment_id);
+CREATE INDEX party_risk_driver_dimension_score_idx
+    ON master.party_risk_driver (tenant_id, dimension_score_id)
+    WHERE dimension_score_id IS NOT NULL;
+CREATE INDEX party_risk_driver_evidence_idx
+    ON master.party_risk_driver (tenant_id, evidence_id)
+    WHERE evidence_id IS NOT NULL;
+
+CREATE INDEX party_risk_mitigation_business_partner_idx
+    ON master.party_risk_mitigation (tenant_id, business_partner_id, status);
+CREATE INDEX party_risk_mitigation_assessment_idx
+    ON master.party_risk_mitigation (tenant_id, assessment_id)
+    WHERE assessment_id IS NOT NULL;
+CREATE INDEX party_risk_mitigation_overdue_idx
+    ON master.party_risk_mitigation (tenant_id, due_date)
+    WHERE status IN ('approved', 'in_progress') AND due_date IS NOT NULL;
+
+CREATE INDEX party_risk_review_event_assessment_idx
+    ON master.party_risk_review_event (
+        tenant_id, assessment_id, created_at DESC
+    );
+CREATE INDEX party_risk_review_event_tenant_idx
+    ON master.party_risk_review_event (tenant_id, created_at DESC);
+
+CREATE INDEX commodity_category_parent_idx
+    ON master.commodity_category (tenant_id, parent_id)
+    WHERE parent_id IS NOT NULL;
+CREATE INDEX commodity_category_active_idx
+    ON master.commodity_category (tenant_id, status, sort_order, code);
+
+CREATE INDEX product_category_idx
+    ON master.product (tenant_id, commodity_category_id, status);
+CREATE INDEX product_uom_idx ON master.product (base_uom_code);
+CREATE INDEX product_type_idx
+    ON master.product (tenant_id, product_type, status);
+
+CREATE INDEX item_product_idx
+    ON master.item (tenant_id, product_id, status);
+CREATE INDEX item_company_capability_idx
+    ON master.item (
+        tenant_id,
+        company_code_id,
+        status,
+        is_purchasable,
+        is_sellable,
+        is_inventory_managed,
+        is_manufactured
+    );
+CREATE INDEX item_uom_idx ON master.item (base_uom_code);
+
+CREATE INDEX commodity_code_assignment_category_idx
+    ON master.commodity_code_assignment (tenant_id, commodity_category_id)
+    WHERE commodity_category_id IS NOT NULL;
+CREATE INDEX commodity_code_assignment_product_idx
+    ON master.commodity_code_assignment (tenant_id, product_id)
+    WHERE product_id IS NOT NULL;
+CREATE INDEX commodity_code_assignment_item_idx
+    ON master.commodity_code_assignment (tenant_id, item_id)
+    WHERE item_id IS NOT NULL;
+CREATE INDEX commodity_code_assignment_code_idx
+    ON master.commodity_code_assignment (
+        tenant_id, commodity_domain_code, commodity_code_id, status
+    );
+CREATE UNIQUE INDEX commodity_code_assignment_category_code_uq
+    ON master.commodity_code_assignment (
+        tenant_id, commodity_category_id, commodity_code_id
+    )
+    WHERE commodity_category_id IS NOT NULL AND status <> 'archived';
+CREATE UNIQUE INDEX commodity_code_assignment_product_code_uq
+    ON master.commodity_code_assignment (
+        tenant_id, product_id, commodity_code_id
+    )
+    WHERE product_id IS NOT NULL AND status <> 'archived';
+CREATE UNIQUE INDEX commodity_code_assignment_item_code_uq
+    ON master.commodity_code_assignment (
+        tenant_id, item_id, commodity_code_id
+    )
+    WHERE item_id IS NOT NULL AND status <> 'archived';
+CREATE UNIQUE INDEX commodity_code_assignment_category_primary_uq
+    ON master.commodity_code_assignment (
+        tenant_id, commodity_category_id, commodity_domain_code
+    )
+    WHERE commodity_category_id IS NOT NULL
+      AND is_owner_primary AND status = 'active';
+CREATE UNIQUE INDEX commodity_code_assignment_product_primary_uq
+    ON master.commodity_code_assignment (
+        tenant_id, product_id, commodity_domain_code
+    )
+    WHERE product_id IS NOT NULL
+      AND is_owner_primary AND status = 'active';
+CREATE UNIQUE INDEX commodity_code_assignment_item_primary_uq
+    ON master.commodity_code_assignment (
+        tenant_id, item_id, commodity_domain_code
+    )
+    WHERE item_id IS NOT NULL
+      AND is_owner_primary AND status = 'active';
+CREATE UNIQUE INDEX commodity_code_assignment_routing_default_uq
+    ON master.commodity_code_assignment (
+        tenant_id, commodity_domain_code, commodity_code_id
+    )
+    WHERE commodity_category_id IS NOT NULL
+      AND is_code_routing_default AND status = 'active';
+
+CREATE INDEX catalog_company_direction_idx
+    ON master.catalog (tenant_id, company_code_id, catalog_direction, status);
+CREATE INDEX catalog_supplier_idx
+    ON master.catalog (tenant_id, supplier_business_partner_id, status)
+    WHERE supplier_business_partner_id IS NOT NULL;
+CREATE INDEX catalog_source_publication_idx
+    ON master.catalog (source_system, source_publication_id)
+    WHERE source_publication_id IS NOT NULL;
+CREATE UNIQUE INDEX catalog_source_coordinate_uq
+    ON master.catalog (
+        tenant_id, company_code_id, source_system, source_publication_id
+    )
+    WHERE source_system IS NOT NULL;
+
+CREATE INDEX catalog_item_catalog_idx
+    ON master.catalog_item (tenant_id, catalog_id, status);
+CREATE INDEX catalog_item_item_idx
+    ON master.catalog_item (tenant_id, item_id, status);
+CREATE INDEX catalog_item_source_idx
+    ON master.catalog_item (source_catalog_item_id)
+    WHERE source_catalog_item_id IS NOT NULL;
+
+CREATE INDEX catalog_price_item_effective_idx
+    ON master.catalog_price (
+        tenant_id, catalog_item_id, status, valid_from, valid_until
+    );
+CREATE INDEX catalog_price_currency_idx
+    ON master.catalog_price (currency_code);
+CREATE INDEX catalog_price_uom_idx
+    ON master.catalog_price (price_uom_code);
+
+CREATE INDEX bom_output_item_idx
+    ON master.bom (tenant_id, company_code_id, output_item_id, status);
+CREATE INDEX bom_effective_idx
+    ON master.bom (
+        tenant_id, company_code_id, status, effective_from, effective_until
+    );
+CREATE UNIQUE INDEX bom_released_output_uq
+    ON master.bom (tenant_id, company_code_id, output_item_id, bom_type)
+    WHERE status = 'released';
+
+CREATE INDEX bom_component_bom_idx
+    ON master.bom_component (tenant_id, company_code_id, bom_id, status);
+CREATE INDEX bom_component_item_idx
+    ON master.bom_component (
+        tenant_id, company_code_id, component_item_id, status
+    );
+
+-- Audit-principal FKs are indexed because these tables can become high-volume
+-- and principal retirement checks must not scan them.
+CREATE INDEX commodity_category_created_by_idx
+    ON master.commodity_category (tenant_id, created_by);
+CREATE INDEX product_created_by_idx
+    ON master.product (tenant_id, created_by);
+CREATE INDEX item_created_by_idx
+    ON master.item (tenant_id, created_by);
+CREATE INDEX commodity_code_assignment_created_by_idx
+    ON master.commodity_code_assignment (tenant_id, created_by);
+CREATE INDEX catalog_created_by_idx
+    ON master.catalog (tenant_id, created_by);
+CREATE INDEX catalog_item_created_by_idx
+    ON master.catalog_item (tenant_id, created_by);
+CREATE INDEX catalog_price_created_by_idx
+    ON master.catalog_price (tenant_id, created_by);
+CREATE INDEX bom_created_by_idx
+    ON master.bom (tenant_id, created_by);
+CREATE INDEX bom_component_created_by_idx
+    ON master.bom_component (tenant_id, created_by);
+
+CREATE INDEX project_customer_idx
+    ON master.project (tenant_id, customer_id) WHERE customer_id IS NOT NULL;
+CREATE INDEX project_responsible_idx
+    ON master.project (tenant_id, responsible_principal_id)
+    WHERE responsible_principal_id IS NOT NULL;
+CREATE INDEX project_cost_center_idx
+    ON master.project (tenant_id, default_cost_center_id)
+    WHERE default_cost_center_id IS NOT NULL;
+CREATE INDEX project_status_idx
+    ON master.project (tenant_id, company_code_id, status);
+CREATE INDEX project_created_by_idx
+    ON master.project (tenant_id, created_by);
+
+CREATE INDEX project_wbs_parent_idx
+    ON master.project_wbs (tenant_id, project_id, parent_wbs_id)
+    WHERE parent_wbs_id IS NOT NULL;
+CREATE INDEX project_wbs_responsible_idx
+    ON master.project_wbs (tenant_id, responsible_principal_id)
+    WHERE responsible_principal_id IS NOT NULL;
+CREATE INDEX project_wbs_cost_center_idx
+    ON master.project_wbs (tenant_id, default_cost_center_id)
+    WHERE default_cost_center_id IS NOT NULL;
+CREATE INDEX project_wbs_status_idx
+    ON master.project_wbs (tenant_id, project_id, status, is_postable);
+CREATE INDEX project_wbs_created_by_idx
+    ON master.project_wbs (tenant_id, created_by);
+
+CREATE INDEX project_item_wbs_idx
+    ON master.project_item (tenant_id, project_id, project_wbs_id)
+    WHERE project_wbs_id IS NOT NULL;
+CREATE INDEX project_item_item_idx
+    ON master.project_item (tenant_id, item_id) WHERE item_id IS NOT NULL;
+CREATE INDEX project_item_status_idx
+    ON master.project_item (tenant_id, project_id, status);
+CREATE INDEX project_item_created_by_idx
+    ON master.project_item (tenant_id, created_by);
+
+CREATE INDEX compensation_assignment_employee_idx ON master.compensation_assignment(tenant_id,employee_id,effective_from DESC);
+CREATE INDEX compensation_assignment_employment_idx ON master.compensation_assignment(tenant_id,employment_id,effective_from DESC);
+CREATE INDEX compensation_assignment_pay_group_idx ON master.compensation_assignment(tenant_id,pay_group_id,status);
+CREATE INDEX compensation_assignment_structure_idx ON master.compensation_assignment(tenant_id,pay_structure_id) WHERE pay_structure_id IS NOT NULL;
+CREATE UNIQUE INDEX compensation_assignment_source_change_uq ON master.compensation_assignment(tenant_id,source_compensation_change_id) WHERE source_compensation_change_id IS NOT NULL;
+
+CREATE UNIQUE INDEX business_partner_relationship_current_uq
+    ON master.business_partner_relationship
+       (tenant_id, source_business_partner_id, target_business_partner_id,
+        relationship_type_code)
+    WHERE effective_until IS NULL AND status = 'active';
+CREATE INDEX business_partner_relationship_target_idx
+    ON master.business_partner_relationship
+       (tenant_id, target_business_partner_id, status);
+
+CREATE INDEX business_partner_governance_owner_idx
+    ON master.business_partner_governance_relation
+       (tenant_id, business_partner_id, relation_type_code, status);
+CREATE INDEX business_partner_governance_member_idx
+    ON master.business_partner_governance_relation
+       (tenant_id, member_business_partner_id)
+    WHERE member_business_partner_id IS NOT NULL;
+
+CREATE UNIQUE INDEX business_partner_identifier_active_uq
+    ON master.business_partner_identifier
+       (tenant_id, business_partner_id, scheme_code, identifier_value)
+    WHERE status = 'active';
+CREATE UNIQUE INDEX business_partner_identifier_primary_uq
+    ON master.business_partner_identifier
+       (tenant_id, business_partner_id, scheme_code)
+    WHERE is_primary AND status = 'active';
+CREATE INDEX business_partner_identifier_value_idx
+    ON master.business_partner_identifier
+       (tenant_id, scheme_code, identifier_value);
+
+CREATE UNIQUE INDEX business_partner_tax_registration_active_uq
+    ON master.business_partner_tax_registration
+       (tenant_id, business_partner_id, jurisdiction_id,
+        registration_type_code, registration_number)
+    WHERE status = 'active';
+CREATE UNIQUE INDEX business_partner_tax_registration_primary_uq
+    ON master.business_partner_tax_registration
+       (tenant_id, business_partner_id, jurisdiction_id, registration_type_code)
+    WHERE is_primary AND status = 'active';
+
+CREATE UNIQUE INDEX business_partner_commodity_capability_current_uq
+    ON master.business_partner_commodity_capability
+       (tenant_id, business_partner_id, commodity_category_id, partner_role)
+    WHERE effective_until IS NULL AND status = 'active';
+CREATE INDEX business_partner_commodity_capability_category_idx
+    ON master.business_partner_commodity_capability
+       (tenant_id, commodity_category_id, partner_role, status);
+
+CREATE UNIQUE INDEX business_partner_operating_org_assignment_current_uq
+    ON master.business_partner_operating_organization_assignment
+       (tenant_id, business_partner_id, operating_organization_id, partner_role)
+    WHERE effective_until IS NULL AND status = 'active';
+CREATE INDEX business_partner_operating_org_assignment_org_idx
+    ON master.business_partner_operating_organization_assignment
+       (tenant_id, operating_organization_id, partner_role, status);
+
+CREATE INDEX company_code_supplier_profile_company_idx
+    ON master.company_code_supplier_profile
+       (tenant_id, company_code_id, status, supplier_id);
+CREATE INDEX company_code_supplier_profile_bank_idx
+    ON master.company_code_supplier_profile
+       (tenant_id, preferred_remittance_bank_link_id)
+    WHERE preferred_remittance_bank_link_id IS NOT NULL;
+CREATE INDEX company_code_customer_profile_company_idx
+    ON master.company_code_customer_profile
+       (tenant_id, company_code_id, status, customer_id);
+
+CREATE UNIQUE INDEX legal_entity_business_partner_link_legal_uq
+    ON master.legal_entity_business_partner_link (tenant_id, legal_entity_id)
+    WHERE effective_until IS NULL AND status = 'active';
+CREATE UNIQUE INDEX legal_entity_business_partner_link_partner_uq
+    ON master.legal_entity_business_partner_link (tenant_id, business_partner_id)
+    WHERE effective_until IS NULL AND status = 'active';
+
+CREATE UNIQUE INDEX intercompany_trading_pair_current_uq
+    ON master.intercompany_trading_pair
+       (tenant_id, source_company_code_id, counterparty_company_code_id)
+    WHERE effective_until IS NULL AND status = 'active';
+CREATE INDEX intercompany_trading_pair_counterparty_idx
+    ON master.intercompany_trading_pair
+       (tenant_id, counterparty_company_code_id, status);
+
+CREATE INDEX contact_person_identity_link_person_idx
+    ON master.contact_person_identity_link (tenant_id, person_id)
+    WHERE effective_until IS NULL;
+
+CREATE UNIQUE INDEX certification_type_scope_code_uq
+  ON master.certification_type
+  USING btree (COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid), code);
+CREATE INDEX certification_type_category_idx
+  ON master.certification_type USING btree (category)
+  WHERE category IS NOT NULL;
+CREATE INDEX certification_type_tenant_idx
+  ON master.certification_type USING btree (tenant_id)
+  WHERE tenant_id IS NOT NULL;
+
+CREATE INDEX certification_expiry_idx
+  ON master.certification USING btree (tenant_id, effective_until)
+  WHERE effective_until IS NOT NULL AND status = 'active'::text;
+CREATE INDEX certification_owner_idx
+  ON master.certification USING btree (tenant_id, owner_type, owner_id);
+CREATE INDEX certification_type_idx
+  ON master.certification USING btree (tenant_id, certification_type_id)
+  WHERE certification_type_id IS NOT NULL;
+CREATE UNIQUE INDEX legal_entity_live_canonical_party_uq ON master.legal_entity(tenant_id,canonical_party_id) WHERE canonical_party_id IS NOT NULL AND status<>'retired';
+CREATE UNIQUE INDEX business_partner_live_canonical_purpose_uq ON master.business_partner(tenant_id,canonical_party_id,representation_purpose_code) WHERE canonical_party_id IS NOT NULL AND status<>'archived';
+
+
+CREATE INDEX organization_amendment_resource_idx ON master.organization_amendment(tenant_id,resource_kind,resource_id,revision_no DESC);
+CREATE INDEX organization_amendment_effective_idx ON master.organization_amendment(tenant_id,effective_at DESC);

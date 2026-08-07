@@ -9,7 +9,7 @@
 // scripts/policy/verify-runtime-api-paths.ts and server/scripts/
 // check-runtime-server-paths.ts so strict guards enforce true cleanliness.
 import { type NextRequest } from "next/server";
-import type { RelayParams } from "@athyper/bff-relay";
+import type { RelayParams } from "@athyper/platform-bff-relay";
 import { makeModuleRelay } from "@/lib/server/make-module-relay";
 
 const relay = makeModuleRelay("records", {

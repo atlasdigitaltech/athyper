@@ -2,7 +2,7 @@
    Period utilities — fiscal period labels, status helpers, navigation.
    --------------------------------------------------------------------------- */
 
-import { resolveSemanticColors } from "@athyper/theme";
+import { resolveSemanticColors } from "@athyper/platform-theme";
 
 export type FiscalPeriodStatus =
   | "future"

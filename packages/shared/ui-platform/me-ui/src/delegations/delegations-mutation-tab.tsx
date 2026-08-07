@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw, Trash2 } from "lucide-react";
-import { Badge, Button } from "@athyper/ui/primitives";
+import { Badge, Button } from "@athyper/platform-ui/primitives";
 import { bffFetch, BffError } from "@athyper/runtime-shared/client";
 import type { DelegationsMyList } from "@athyper/api-contracts/iam";
 

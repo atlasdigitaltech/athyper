@@ -8,10 +8,10 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 
 describe("Finance Setup Phase 2 Stage C tax contract", () => {
   it("versions Tax Groups and protects effective-date resolution", () => {
-    const aggregate = read("server/db/ddl/control/01w_finance_tax_setup.sql");
-    const indexes = read("server/db/ddl/control/04_indexes_finance_tax_setup.sql");
-    const guards = read("server/db/ddl/control/05_functions_finance_tax_setup.sql");
-    const triggers = read("server/db/ddl/control/06_triggers_finance_tax_setup.sql");
+    const aggregate = read("server/db/ddl/planes/neon/control/03_tables.sql");
+    const indexes = read("server/db/ddl/planes/neon/control/06_indexes.sql");
+    const guards = read("server/db/ddl/planes/neon/control/07_functions.sql");
+    const triggers = read("server/db/ddl/planes/neon/control/08_triggers.sql");
     const blueprint = read("server/db/seed/blueprints/universal/020_tax/323_tax_groups.sql");
 
     expect(aggregate).toContain("control.tax_group_version");
@@ -37,7 +37,7 @@ describe("Finance Setup Phase 2 Stage C tax contract", () => {
   });
 
   it("ships governed registration, WHT, test and editor interfaces without readiness cards", () => {
-    const registration = read("server/db/ddl/master/01x_finance_tax_setup.sql");
+    const registration = read("server/db/ddl/planes/neon/master/03_tables.sql");
     const route = read("server/packages/services/finance/routes/finance-tax-setup.route.ts");
     const company = read("packages/domain/finance/finance-workbench/src/views/tax/CompanyTaxProfileView.tsx");
     const workbench = read("packages/domain/finance/finance-workbench/src/views/tax/TaxConfigurationWorkbench.tsx");

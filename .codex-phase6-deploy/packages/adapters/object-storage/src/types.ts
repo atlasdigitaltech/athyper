@@ -1,13 +1,5 @@
-// ─── AdapterLogger ────────────────────────────────────────────────────────────
-//
-// Defined inline to keep this package free of @athyper/core.
-// Structurally identical to InfraLogger — any InfraLogger instance satisfies it.
-
-export interface AdapterLogger {
-  info(event: string, fields?: Record<string, unknown>): void;
-  warn(event: string, fields?: Record<string, unknown>): void;
-  error(event: string, fields?: Record<string, unknown>): void;
-}
+import type { InfraLogger } from "@athyper/platform-core/logger";
+export type { InfraLogger as AdapterLogger };
 
 export type ObjectStorageConfig = {
   endpoint: string;

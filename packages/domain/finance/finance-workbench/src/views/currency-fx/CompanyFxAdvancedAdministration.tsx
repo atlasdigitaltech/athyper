@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Eye, History, Settings2 } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import type {
   CurrencyFxSetupPayload,
   FxPolicy,

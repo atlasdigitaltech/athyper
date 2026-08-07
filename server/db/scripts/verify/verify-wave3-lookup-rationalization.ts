@@ -6,7 +6,7 @@ type Plane = "common" | "athyper" | "neon" | "mesh";
 type Entry = { sourceFile: string; domains: string[]; plane: Plane; disposition: string; sealedDomainMatches: Record<string, string>; targetPack: string };
 const root = resolve(import.meta.dirname, "../../../..");
 const db = resolve(root, "server/db");
-const ledger = JSON.parse(readFileSync(resolve(db, "seed-migration/wave3-lookup-ledger.v1.json"), "utf8")) as { sourceFiles: number; entries: Entry[] };
+const ledger = JSON.parse(readFileSync(resolve(db, "seed/migration/wave3-lookup-ledger.v1.json"), "utf8")) as { sourceFiles: number; entries: Entry[] };
 assert.equal(ledger.sourceFiles, 268, "all 268 lookup files must remain classified");
 assert.equal(new Set(ledger.entries.map((entry) => entry.sourceFile)).size, 268, "ledger source rows must be unique");
 assert.equal(ledger.entries.filter((entry) => entry.domains.length === 0 && entry.disposition !== "rewrite" && entry.disposition !== "retire").length, 0,

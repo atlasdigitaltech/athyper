@@ -42,7 +42,7 @@
 -- lines INSERTs below match the pattern from
 -- ap_non_po_demo/002_scenario_a1_plain_non_po.sql. The PC and AD INSERT
 -- blocks are marked with TODO and must be authored against the live DDL
--- in `server/db/ddl/document/` before the visual test can be activated.
+-- in `server/db/ddl/planes/neon/document/` before the visual test can be activated.
 --
 -- The skeleton is safe to APPLY today: the existence guard at the top
 -- means it no-ops on subsequent runs, and the missing PC/AD blocks only
@@ -155,7 +155,7 @@ BEGIN
      WHERE id = v_invoice_id;
 
     -- ── Pricing components — TODO(activation) ───────────────────────────
-    -- Author against `server/db/ddl/document/` DDL once the activation PR
+    -- Author against `server/db/ddl/planes/neon/document/` DDL once the activation PR
     -- is in flight. Required rows per the README:
     --   • Header-scope: freight charge, value-apportionment, INR
     --   • Line-scope L1: trade discount
@@ -171,7 +171,7 @@ BEGIN
     --   L1 gross 5000 → 60/40 between Exp-A and Exp-B
     --   L2 gross 3000 → 50/50
     --   L3 gross 2000 → 100/0
-    -- See `server/db/ddl/document/01b_tables_journal.sql` (§12) for the
+    -- See `server/db/ddl/planes/neon/document/03_tables.sql` (§12) for the
     -- column shape.
 
     RAISE NOTICE 'visual fixture PI %: header + 3 lines seeded (PC + AD pending activation)', v_invoice_id;

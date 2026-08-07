@@ -14,7 +14,7 @@ import {
 } from "react";
 import * as Popover from "@radix-ui/react-popover";
 
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 /**
  * Data-agnostic lookup picker for static arrays or debounced async loaders.

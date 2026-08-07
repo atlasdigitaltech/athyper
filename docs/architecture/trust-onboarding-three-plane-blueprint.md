@@ -1,34 +1,36 @@
 # Athyper Trust & Onboarding Studio: three-plane implementation blueprint
 
-Status: **proposed for implementation review**  
+Status: **Wave 1 implementation contract**  
 Architecture status: **frozen**  
 DDL baseline: `server/db/ddl/planes/{athyper,neon,mesh}/_manifest.txt`  
-Target Keycloak baseline: `26.6.1`
+TrustIAM authentication adapter baseline: Keycloak `26.6.1`
 
 ## 1. Decision and scope
 
 Athyper Trust & Onboarding Studio is the Admin-plane control surface for
 onboarding, expansion, subscription changes, reconciliation, and offboarding
-across Admin, Neon, Mesh, and Keycloak.
+across Admin, Neon, Mesh, and TrustIAM. Keycloak is the current authentication
+engine behind the TrustIAM adapter and is not an application data authority.
 
 The frozen architecture is:
 
-> Flexible Keycloak identity organizations + explicit plane-local application
+> Flexible TrustIAM identity organizations + explicit plane-local application
 > projections + fail-closed plane-local authorization.
 
-Keycloak authenticates and owns organization membership, domains, identity
-providers, and identity lifecycle. It does not own application tenancy,
-commercial subscription, Mesh participation, Neon organization structure, or
-authorization grants.
+TrustIAM owns the product contract for organization membership, domains,
+approved identity-provider connections, and identity lifecycle. Its Keycloak
+adapter performs authentication and provider federation. Neither TrustIAM nor
+Keycloak owns application tenancy, commercial subscription, Mesh participation,
+Neon organization structure, or authorization grants.
 
 Each application plane owns its physical database, tenant, application
 resources, authorization, audit, outbox, and the local materialization of an
-approved Keycloak-organization projection. Admin orchestrates the desired
+approved TrustIAM-organization projection. Admin orchestrates the desired
 state through APIs and events; it never writes another plane's database.
 
 This document defines:
 
-- the immutable contracts between Keycloak, Admin, Neon, and Mesh;
+- the immutable contracts between TrustIAM, Admin, Neon, and Mesh;
 - Express, Governed, expansion, subscription, and offboarding workflows;
 - the DDL to retain, amend, and add;
 - service, worker, UI, migration, test, cutover, and rollback work;
@@ -45,17 +47,18 @@ organization alias equals a plane tenant UUID. That assumption is superseded.
 
 The replacement contract is:
 
-- `(realm_key, keycloak_organization_id)` is the immutable identity-organization
-  coordinate.
+- `(realm_key, external_organization_id)` is the immutable TrustIAM
+  identity-organization adapter coordinate. For the current adapter,
+  `external_organization_id` is the Keycloak organization ID.
 - In the pinned Keycloak release the organization alias is immutable after
   creation, while the display name may change. Both remain Keycloak-owned,
   non-authoritative application snapshots; only the organization ID is used as
   the integration coordinate.
-- One Keycloak organization may project into zero, one, or several application
+- One TrustIAM organization may project into zero, one, or several application
   planes.
 - A plane projection selects exactly one plane-local tenant and one or more
   permitted scope ceilings.
-- Several Keycloak organizations may project into one plane tenant with
+- Several TrustIAM organizations may project into one plane tenant with
   different ceilings.
 - A projection is an admission ceiling. It is never a membership, role,
   permission, or subscription grant.
@@ -78,13 +81,14 @@ supplier, or customer is matched to a canonical party before a new network
 identity is created. Plane-local records carry the canonical party UUID as an
 opaque external coordinate; no cross-database foreign key is permitted.
 
-A canonical party is not a tenant, Keycloak organization, Neon business
+A canonical party is not a tenant, TrustIAM organization, Neon business
 partner, or Mesh network account. Those are projections or representations of
 the party in a bounded context.
 
-### C3. Keycloak organization
+### C3. TrustIAM organization
 
-A Keycloak organization is an identity administration boundary. It owns:
+A TrustIAM organization is an identity-administration boundary. Its current
+Keycloak adapter manages:
 
 - organization members;
 - verified login domains;
@@ -94,7 +98,7 @@ A Keycloak organization is an identity administration boundary. It owns:
 
 The default is one organization for each legal entity that needs its own users,
 domains, identity provider, or delegated identity administration. A legal party
-may own multiple Keycloak organizations. An organization need not be created
+may own multiple TrustIAM organizations. An organization need not be created
 for a supplier record that has no interactive users or collaboration identity.
 
 ### C4. Application projection
@@ -102,7 +106,7 @@ for a supplier record that has no interactive users or collaboration identity.
 An approved projection is identified by an immutable `projection_id` and
 contains:
 
-- realm and Keycloak organization ID;
+- realm/security-domain key and immutable external organization ID;
 - target plane and plane-local tenant ID;
 - one or more typed `authz.scope_target` ceilings;
 - effective interval, state, source version, and content hash.
@@ -117,21 +121,21 @@ and may additionally constrain the network role to `buyer`, `supplier`, or
 Login admission requires all of the following in the selected plane:
 
 1. a valid token from the expected realm, issuer, and client;
-2. one explicit Keycloak organization context;
+2. one explicit TrustIAM organization context;
 3. one active and effective local organization projection;
 4. an exact principal identity binding for
    `(tenant_id, provider_code, realm_key, subject_id)`;
 5. an active and effective `authz.plane_membership`;
 6. an explicitly selected scope within the projection ceiling;
 7. evaluated authorization grants for the requested operations;
-8. an effective subscription capability where the operation is commercially
-   gated.
+8. an effective subscription-plan module entitlement where the operation is
+   commercially gated.
 
 Missing, ambiguous, stale, suspended, or conflicting evidence fails closed.
 
 ### C6. Multi-organization users
 
-A user may belong to multiple Keycloak organizations. One authorization
+A user may belong to multiple TrustIAM organizations. One authorization
 session carries exactly one selected organization, one plane, one tenant, one
 projection version, and one selected root scope. Switching organization or
 plane creates a new canonical authorization session; permissions from different
@@ -147,13 +151,13 @@ all required plane-local evidence.
 
 ### C8. Authorization and entitlement
 
-Keycloak membership, an application projection, a subscription, and an
-authorization grant are four separate gates.
+TrustIAM membership, an application projection, a subscription-plan module
+entitlement, and an authorization grant are four separate gates.
 
-An upgrade may expose additional product capabilities, but it does not grant a
-user a role. A downgrade removes commercial eligibility at the effective time,
-invalidates affected authorization sessions, preserves business data, and does
-not silently delete authorization records.
+An upgrade may entitle additional modules, but it does not grant a user a role.
+A downgrade removes module eligibility at the effective time, invalidates
+affected authorization sessions, preserves business data, and does not silently
+delete authorization records.
 
 ### C9. Mesh account semantics
 
@@ -184,25 +188,47 @@ tables.
 Offboarding revokes admission and grants before destructive cleanup. It
 terminates sessions, ends memberships and projections, disables target
 resources according to retention policy, preserves business documents and
-audit evidence, and never deletes a Keycloak subject as an incidental side
-effect.
+audit evidence, and never deletes an external authentication subject as an
+incidental side effect.
 
 ## 4. Ownership model
 
 | Concern | Authoritative owner | Plane-local materialization |
 |---|---|---|
-| Organization members, domains, IdPs, invitations | Keycloak | Organization ID and safe display snapshots only |
+| Organization members, domains, IdPs, invitations | TrustIAM through its Keycloak adapter | External organization ID and safe display snapshots only |
 | Canonical legal/business party and dedupe | Admin | Opaque `canonical_party_id` on relevant records |
 | Desired application projections | Admin | Active projection header and typed scope ceilings |
 | Tenant, legal entity, operating organization | Neon | None outside Neon except opaque resource coordinates |
 | Network account, relationship, exchange envelope | Mesh | None outside Mesh except opaque resource coordinates |
-| Platform workspace/module | Admin | Admin `master` and `authz` |
-| Subscription plan and effective assignment | Each plane | Each plane only |
+| Workspace/module catalog | Admin | Published read model in each target plane's `control` schema |
+| Subscription-plan catalog | Admin | Published read model in each target plane's `control` schema |
+| Effective tenant subscription | Admin desired state and target-plane command | Plane-local `master.tenant_subscription`; no live cross-plane read |
 | Permissions, roles, memberships, scope grants | Each plane | Each plane only |
 | Onboarding case and orchestration state | Admin | Command execution and result in target plane |
-| Authentication token | Keycloak/BFF | Short-lived token store only |
+| Authentication token | TrustIAM/Keycloak adapter/BFF | Short-lived token store only |
 | Authorization session | Selected plane/BFF | Redis plus plane-local evidence coordinates |
 | Audit and outbox | Plane where action occurred | No cross-plane audit inserts |
+
+### 4.1 Physical schema and service-role boundary
+
+Only the Athyper database contains the mutable control-plane schemas:
+
+- `trustiam` for identity organizations, approved provider bindings, and
+  desired application projections;
+- `onboarding` for guest-safe organization case orchestration;
+- `publication` for signed releases and per-plane deployment evidence;
+- `metadata` for centralized Entity authoring.
+
+Neon and Mesh never receive those authoring schemas. They receive verified,
+read-only application projections under `authz`, published catalog/policy read
+models under `control`, and release receipts under `runtime_meta`.
+
+Database login identities are provisioned outside DDL. Least-privilege access
+is composed from the NOLOGIN roles `athyper_trustiam_service`,
+`athyper_onboarding_service`, `athyper_publication_service`, and
+`athyper_projection_applier`. None bypasses RLS, creates databases or roles, or
+receives implicit access through `PUBLIC`. Guest users never receive a database
+role.
 
 ## 5. Athyper Group operating and partner model
 
@@ -256,7 +282,7 @@ The three existing Neon master tables remain the authority:
 An operating-organization assignment is eligible scope, not user access. A
 user still needs a Keycloak organization projection ceiling, active plane
 membership, effective scope grant, selected company context, and the relevant
-subscription capability. Where `member_companies` propagation is enabled, its
+subscription-plan module entitlement. Where `member_companies` propagation is enabled, its
 resolver must read only active, effective assignments; until that resolver is
 certified, company-code grants remain explicit and fail closed.
 
@@ -342,8 +368,8 @@ without becoming those business records.
    IdP for Saudi.
 3. Keycloak returns a token containing the immutable organization context. The
    BFF validates issuer, audience, client, realm, signature, time, and nonce.
-4. The BFF resolves `(realm_key, keycloak_organization_id)` in the selected
-   plane's `master.identity_organization_projection`.
+4. The BFF resolves `(realm_key, external_organization_id)` in the selected
+   plane's `authz.application_projection`.
 5. The projection supplies the tenant and permitted scope ceilings. Alias,
    domain, email, and token display claims cannot select a tenant.
 6. The exact identity-admission repository resolves or JIT-creates the local
@@ -492,7 +518,7 @@ does not duplicate the tenant, legal entity, Keycloak organization, or BNA.
 ### 7.6 Subscription change
 
 1. Record the requested plan and effective time in an onboarding case target.
-2. Compile a before/after capability and limit impact report.
+2. Compile a before/after module-entitlement and limit impact report.
 3. Upgrades may be immediate or scheduled. New permissions still require
    explicit role/group changes.
 4. Downgrades are rejected or scheduled when current usage exceeds hard limits,
@@ -520,7 +546,7 @@ admission paths are closed.
 Offboarding is projection- and product-aware. Ending Neon does not delete a
 party's Mesh account when it still has an independently active supplier plan,
 relationships, or retained exchange documents; it removes/suspends only the
-Neon-caused buyer capability and its grants after impact approval.
+Neon-caused buyer module entitlement and its grants after impact approval.
 
 ### 7.8 Organization lifecycle catalog
 
@@ -675,7 +701,7 @@ replaced transactionally only after backfill assertions pass, and compatibility
 columns are removed in a later cleanup wave. The following is the minimum
 complete delta.
 
-### 10.1 Admin-only canonical registry
+### 10.1 Admin canonical-party and TrustIAM authority
 
 Add to the Athyper plane:
 
@@ -685,58 +711,81 @@ Add to the Athyper plane:
 | `master.canonical_party_identifier` | Party, scheme, issuer country/authority, normalized value, value hash, masked display, claim/verification state and evidence snapshot. Unique active claim on `(scheme, issuer, value_hash)` prevents duplicate parties. |
 | `master.canonical_party_relationship` | From/to canonical party, typed relationship kind (for example `group_member`, `subsidiary`, or `identity_admin_for`), direction, verification/evidence, status, and effective half-open interval. Tenant-safe FKs, no self-edge, non-overlap per typed coordinate, and a cycle guard for hierarchical kinds are required. This is the Admin authority for Athyper Group -> Malaysia/India/Saudi party membership; it is not an ownership percentage ledger. |
 | `master.canonical_party_merge` | Losing party, surviving party, approved case, reason, before/after snapshots, effective time, approver. No self-merge; merge chain cycles are rejected. |
-| `master.keycloak_organization` | Admin authority tenant, `realm_key`, immutable Keycloak organization ID, owning canonical party, alias/name snapshots, lifecycle state, observed source version and time. Unique `(realm_key, keycloak_organization_id)`; alias is not unique authority. |
-| `master.application_projection` | Keycloak organization, target plane, opaque target tenant UUID, desired version/hash, effective interval, lifecycle/reconciliation state, source case. Non-overlap on `(organization, plane, effective interval)` permits history but only one effective target tenant in a plane. |
-| `master.application_projection_scope` | Projection, typed scope kind, opaque target UUID, ceiling mode, optional Mesh network-role ceiling, desired version. Unique `(projection_id, scope_kind, target_id)`. |
+| `trustiam.organization` | Stable TrustIAM identity-organization authority linked to a canonical party, with realm/security-domain key, immutable external organization ID, safe alias/name snapshots, lifecycle, observed adapter version and observation time. Unique `(realm_key, external_organization_id)`; alias is descriptive and never a tenant key. |
+| `trustiam.organization_provider` | Organization-to-provider binding with protocol, stable provider code, opaque external provider ID, approved domain/routing contract, lifecycle and observation evidence. Secrets remain in the external secret provider. |
+| `trustiam.application_projection` | TrustIAM organization, target plane, opaque target tenant UUID, desired version/hash, effective interval, lifecycle/reconciliation state, and source onboarding case. Non-overlap permits history but only one effective target tenant per organization/plane coordinate. |
+| `trustiam.projection_scope` | Projection, typed scope kind, opaque target UUID, ceiling mode, optional Mesh network-role ceiling and desired version. Unique `(projection_id, scope_kind, target_id)`. |
 
 The canonical registry is global within the Admin authority tenant. All tables
 use forced RLS, explicit service grants, status/effective checks, audit-pair
 checks, and deterministic case correlation.
 
-### 10.2 Admin-only onboarding control and document state
+### 10.2 Admin-only onboarding authoring and runtime state
 
 | Table | Required content and constraints |
 |---|---|
-| `control.onboarding_blueprint` | Immutable published blueprint code/version, case kind, risk tier, input contract hash, compiler version, activation policy code, status. Only draft versions are mutable. |
-| `control.onboarding_blueprint_step` | Blueprint version, ordered step code, provisioner/command code, dependency list, compensation code where safe, retry policy, mandatory flag. Dependencies must be acyclic at publish time. |
-| `document.trust_onboarding_case` | Admin tenant, case number, case kind/track, blueprint/version, requester, canonical party, `root_case_id`, nullable `parent_case_id`, `causation_code`, correlation/idempotency coordinates, state, risk, timestamps, failure code, request snapshot. Parent/root must stay in one Admin tenant, a case cannot parent itself, and a cycle guard is required. |
-| `document.trust_onboarding_case_target` | Case, target plane, requested action/plan/effective time, opaque tenant/resource coordinates, desired version/hash, target state, impact snapshot. |
-| `document.trust_onboarding_check` | Case/target, check code, required flag, policy version, result, evidence snapshot, evaluator and completion time. Unique per case target/check/version. |
-| `document.trust_onboarding_resource` | Case target, resource kind/key, desired and applied versions/hashes, command ID, reconciliation state, last attempt/error, remote resource ID. Unique per target/resource key. |
+| `metadata.entity_flow`, `metadata.entity_flow_step` | Central authoring graph for the versioned onboarding journey and its ordered UI/process steps. Publication seals the compiled journey; these tables do not store a guest's case. |
+| `onboarding.case` | Admin tenant, case number/kind, entry mode, flow/version, requester, canonical party, root/parent/causation coordinates, correlation/idempotency, state, risk, timestamps, failure code and request snapshot. Parent/root stay in one Admin tenant and hierarchy cycles are rejected. |
+| `onboarding.case_revision` | Immutable submitted input revision, contract hash, applicant acknowledgement and replacement chain. Provisioning always pins one revision. |
+| `onboarding.case_product` | Case target plane/product, requested action/plan/effective time, opaque tenant/resource coordinates, desired version/hash, target state, activation criticality and impact snapshot. |
+| `onboarding.case_step` | Materialized execution step pinned to the flow revision, with dependency state, attempts, retry timing, compensation coordinate and terminal evidence. |
+| `onboarding.case_check` | Case/product check code, required flag, policy version, result, evidence snapshot, evaluator and completion time. Unique per case product/check/policy version. |
+| `onboarding.provisioning_resource` | Case product, resource kind/key, desired/applied versions and hashes, command ID, reconciliation state, last attempt/error and opaque remote resource ID. |
+| `onboarding.resource_dependency` | Explicit acyclic dependency between provisioning resources. No dependency arrays are authoritative JSON. |
+| `onboarding.decision` | Append-only approval, rejection or waiver evidence linked to the governing work item and immutable snapshot. |
 
 Approvals and remediation assignments reuse `document.work_item`. Immutable
 approval payloads use snapshots and audit; a second approval table would create
 competing task authority.
 
-### 10.3 Common plane-local identity projection
+The existing Neon `document.onboarding_case` remains employee onboarding and
+must never be reused for organization registration. Approvals and remediation
+assignments reuse `document.work_item`; immutable payloads use snapshots and
+audit so there is no competing task authority.
+
+Guest callers reach `onboarding` only through the Studio BFF/API. They never
+receive a database role or direct schema access.
+
+### 10.3 Common plane-local TrustIAM projection
 
 Add the same tables to all three manifests from a common DDL pack:
 
 | Table | Required content and constraints |
 |---|---|
-| `master.identity_organization_projection` | `tenant_id`, realm, immutable KC organization ID, alias/name snapshot, Admin source projection ID/version/hash, status, effective interval, reconciled time, audit. Non-overlap on `(realm_key, keycloak_organization_id, effective interval)` permits history but guarantees one effective tenant in the plane. |
-| `master.identity_organization_projection_scope` | Tenant, projection, `authz.scope_target_id`, ceiling mode, optional Mesh role ceiling, status/effective interval. Tenant-safe composite FKs to projection and scope target. |
+| `authz.application_projection` | `tenant_id`, realm/security-domain key, immutable external organization ID, safe alias/name snapshot, Admin source projection ID/version/hash, status, effective interval, reconciliation time and audit. Non-overlap guarantees one effective tenant for an external organization coordinate in the plane. |
+| `authz.projection_provider` | Projection-to-approved-provider coordinate used to admit the exact broker/native identity path. It carries no credential and grants no application access. |
+| `authz.projection_scope` | Tenant, projection, `authz.scope_target_id`, ceiling mode, optional Mesh role ceiling and effective lifecycle. Composite FKs enforce one tenant boundary. |
 
 The activation function must lock the projection, require at least one active
 scope, validate that every scope target belongs to the same tenant, and publish
 an authorization invalidation when the projection hash or state changes.
 
-### 10.4 Common plane-local product entitlement
+### 10.4 Common plane-local catalog and subscription entitlement
 
 Add to all three planes:
 
 | Table | Required content and constraints |
 |---|---|
-| `control.product_capability` | Seed-owned code/name, optional module, risk and lifecycle status. A capability is product availability, not a grant. |
-| `control.product_capability_permission` | Capability-to-`authz.permission` mapping. Unique pair; only active catalog permissions may be published. |
-| `control.subscription_plan_capability` | Plan-to-capability mapping with availability state. Unique plan/capability pair. |
+| `control.workspace` | Published plane workspace catalog used for UI grouping; it is not an authorization or commercial grant. |
+| `control.module` | Published independently entitled functional module catalog. |
+| `control.workspace_module` | Display/grouping association between workspace and module. |
+| `control.subscription_plan_module` | Effective plan-to-module entitlement. It exposes a module but never grants a role or permission. |
 | `master.tenant_subscription` | Tenant, plan, subscription code, source case/reference, status, effective half-open interval, predecessor, audit and snapshot coordinates. Exclusion constraint prevents overlapping scheduled/active intervals for one tenant. |
 
 During migration, `master.tenant.subscription_plan_id` is maintained as a
 compatibility cache of the currently effective subscription. It is removed
 from runtime reads after parity is proven and may then be dropped in a later
 DDL cleanup. `master.tenant_subscription` is the long-term assignment authority;
-snapshot remains the history of mutable plan definitions.
+snapshot remains the history of mutable plan definitions. Existing
+`master.workspace` and `master.module` are compatibility sources during
+backfill only and are removed after consumers switch to `control`.
+
+No `product_capability`, `product_feature`, or `subscription_plan_capability`
+table is introduced. The commercial chain is exactly
+`subscription_plan -> subscription_plan_module -> module`. Permissions remain
+separate user authorization, parameters remain typed behavior configuration,
+usage metrics remain quotas, and feature flags remain engineering release
+controls only.
 
 Add usage metrics at minimum for `active_user_count`, `legal_entity_count`,
 `network_account_count`, `relationship_count`, `document_count`, and
@@ -746,32 +795,48 @@ commercial exception mechanism.
 The minimum v1 plan natural keys are `finance_free` and `erp_enterprise` in
 Neon, and `supplier_free`, `neon_buyer_included`, and `network_enterprise` in
 Mesh. `neon_buyer_included` is the companion plan materialized by an entitled
-Neon child case; it retains the baseline supplier capability so an existing
+Neon child case; it retains the baseline supplier modules so an existing
 supplier account can safely become `both`. Existing generic
 `trial/base/starter/professional/enterprise` seed rows are not silently
 repurposed: map subscribed fixtures explicitly, then retire or retain those
 catalog rows through a separate commercial-catalog decision. Price, user, and
 usage-limit values may change without changing these data contracts.
 
-Both initial Neon plans include the `mesh_buyer_base` capability: one primary
+Both initial Neon plans include the Mesh buyer base module entitlement: one primary
 buyer-capable BNA for each active, entitled Neon legal entity, subject to the
 plan's `legal_entity_count` and Mesh network-account limits. The child case
 creates or changes the Mesh tenant's effective plane-local subscription to the
 approved companion/superset plan with source case/version evidence; it never
 authorizes from a live cross-plane subscription read. This freezes the agreed
 automatic buyer enablement as an entitlement-driven child case, not a database
-trigger. The capability creates no partner relationship and grants no user
+trigger. The entitlement creates no partner relationship and grants no user
 access by itself. If `network_enterprise` is already effective, the compiler
-retains that stronger capability set rather than downgrading it.
+retains that stronger module set rather than downgrading it.
 
-### 10.5 Athyper/Admin record amendments
+### 10.5 Admin publication authority and plane-local receipts
+
+| Table | Required content and constraints |
+|---|---|
+| `publication.release` | Append-only signed release coordinate, kind, compatibility, aggregate hash, signer, approval evidence, source change and publication time. Rollback is a new release. |
+| `publication.release_item` | Release artifact kind/key/version/hash, source authority coordinate, payload/schema version and target selector. Unique artifact coordinate within a release. |
+| `publication.deployment` | Release/target plane/optional tenant, desired and observed state, dispatch idempotency, attempt/failure data, activated version and acknowledgement evidence. |
+| `publication.deployment_event` | Append-only dispatch, receipt, stage, verify, activate, fail and rollback evidence with idempotency and correlation coordinates. |
+| `runtime_meta.applied_release` | Plane-local immutable receipt and verification result for one signed release. |
+| `runtime_meta.active_artifact` | Plane-local atomic pointer to the currently active verified artifact coordinate. |
+
+`metadata.entity_release` remains the Entity-specific release authority and is
+referenced as a `publication.release_item`; it is not replaced. Neon and Mesh
+continue from the last verified active release if Athyper is unavailable. Only
+the projection-applier service may install published read models.
+
+### 10.6 Athyper/Admin record amendments
 
 | Table | Required amendment |
 |---|---|
 | All `master.tenant` | Add nullable-then-required `canonical_party_id` for business tenants; allow NULL only for documented system tenants during migration. Replace the alias-equals-tenant comment. |
-| `document.trust_onboarding_case` | Add the root/parent/causation coordinates described above so enabling a Mesh buyer, creating a partner account, or adding a legal entity is an independently retryable child case with an auditable business cause. Index `(tenant_id, root_case_id)` and `(tenant_id, parent_case_id, state)`. |
-| `document.trust_onboarding_case_target` | Add `entry_mode`, `source_plane`, optional `source_resource_kind/id`, and activation criticality (`blocking` or `independent`). This distinguishes self, buyer-invited, Ops-governed, and Neon-caused flows without cloning case tables. |
-| `master.application_projection` | Retain source case and desired version/hash; add a source resource coordinate for projections compiled from a Neon legal entity or Mesh BNA. It is opaque and reconciled, not a cross-plane FK. |
+| `onboarding.case` | Include root/parent/causation coordinates so enabling a Mesh buyer, creating a partner account, or adding a legal entity is an independently retryable child case with an auditable cause. Index `(tenant_id, root_case_id)` and `(tenant_id, parent_case_id, status)`. |
+| `onboarding.case_product` | Include entry mode, source plane, optional source resource kind/ID and activation criticality. This distinguishes self, buyer-invited, Ops-governed, and Neon-caused flows without cloning case tables. |
+| `trustiam.application_projection` | Retain source case and desired version/hash; add a source resource coordinate for projections compiled from a Neon legal entity or Mesh BNA. It remains opaque and reconciled, never a cross-plane FK. |
 
 Do not duplicate Keycloak user, invitation, credential, domain, or IdP state in
 Admin. The case/resource ledger stores only safe coordinates, desired hashes,
@@ -779,7 +844,7 @@ observed state, and evidence snapshots. Existing `document.work_item`,
 `event.command_execution`, `event.outbox`, audit, and snapshot tables remain the
 workflow/evidence mechanisms.
 
-### 10.6 Neon required amendments
+### 10.7 Neon required amendments
 
 The current legal-entity, company-code, operating-organization, procurement
 profile, sales profile, and company-assignment tables remain. Apply this
@@ -809,7 +874,7 @@ coordinate is persisted only on process roots where processor/coordination
 ownership matters. PO-to-Mesh routing resolves the buyer canonical party from
 the company code/legal entity, never from the operating organization.
 
-### 10.7 Mesh required amendments
+### 10.8 Mesh required amendments
 
 | Table/domain | Required amendment |
 |---|---|
@@ -823,7 +888,7 @@ BNA provisioning never creates a relationship as a trigger side effect. Neon
 buyer enablement creates the account and scope; a buyer invitation is a later,
 separately authorized relationship command.
 
-### 10.8 Keycloak setup (configuration, not application DDL)
+### 10.9 TrustIAM Keycloak-adapter setup (configuration, not application DDL)
 
 Keycloak's own schema is never modified. Configure the pinned release through
 realm import/Admin API and record safe observed coordinates in Admin:
@@ -849,22 +914,24 @@ organization admission evidence.
 | Security | Configure SMTP, key rotation, brute-force protection, credential/password/passkey policy, MFA required actions, back-channel logout, admin event audit, and session lifetimes. Admin users require the strongest MFA/SoD policy. |
 | Provisioning service | Use a least-privilege confidential service account for organization, invitation/member, user required-action, domain, and approved IdP operations. Enable fine-grained admin permissions where supported; store credentials in the connector/secret system, never DDL or case JSON. |
 
-### 10.9 DDL and configuration file organization
+### 10.10 DDL and configuration file organization
 
 Use the established numbered DDL convention:
 
-- Admin-specific `02_*`, `03_*`, `05_*`, `06_*`, `07_*`, `08_*`, `10_*`, and
-  `11_*` files under `planes/athyper/{master,control,document}`;
-- common identity-projection and subscription files under `common/master`;
-- common product-capability files under `common/control`;
+- Athyper-only numbered files under
+  `planes/athyper/{master,trustiam,onboarding,publication,metadata}`;
+- common plane-local TrustIAM projection files under `common/authz`;
+- common workspace/module, plan-module, parameter, flag, and usage files under
+  `common/control`;
+- common applied-release receipt files under `common/runtime_meta`;
 - Neon operating-role catalog/seed, temporal constraint, resolver, process-root
   FK/validation, RLS, grant, and semantic assertion files in their existing
   numbered `control`, `master`, and `document` phases;
 - Mesh relationship-event/transition DDL, RLS/grants, and replay/state semantic
   assertions in the existing `mesh` phases;
 - explicit entries in all three `_manifest.txt` files at the matching phase;
-- `12_*` reference seeds for blueprint, capability, plan, and usage catalogs;
-- a versioned Keycloak realm export plus an idempotent Admin-API bootstrap for
+- `12_*` reference seeds for journeys, workspace/module, plan, and usage catalogs;
+- a versioned TrustIAM Keycloak-adapter realm export plus an idempotent Admin-API bootstrap for
   environment-specific organization/IdP coordinates; IdP secrets stay external;
 - fresh-database assertions for expected counts, natural-key uniqueness,
   orphans, state semantics, and cross-file deterministic IDs.
@@ -1078,7 +1145,7 @@ BNA.
 ### Phase 6 — Neon Finance Free release
 
 Implement the tenant/legal-entity baseline compiler and provisioner, Finance
-Accounting capability catalog, `legal_entity_count = 1`, identity projection,
+Accounting module entitlement, `legal_entity_count = 1`, identity projection,
 initial scoped Finance Admin authorization, and the independently reconciling
 Mesh buyer child case supplied by `mesh_buyer_base`.
 
@@ -1179,7 +1246,7 @@ approves the evidence bundle.
 ### Subscription and expansion
 
 - Neon Free creates one legal entity and Finance Accounting only;
-- upgrade exposes capability but grants no role;
+- upgrade exposes a module but grants no role;
 - immediate and future changes, retry at effective time, and no overlap;
 - downgrade with usage below, at, and above limit;
 - approved time-bounded override;

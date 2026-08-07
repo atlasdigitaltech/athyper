@@ -3,7 +3,7 @@
 /**
  * RuntimeSelectionBar — surface adapter for the runtime master/lookup list.
  *
- * Thin wrapper around the shared `@athyper/ui/composites/FloatingSelectionBar`.
+ * Thin wrapper around the shared `@athyper/platform-ui/composites/FloatingSelectionBar`.
  * Maps the bookmark-state callbacks into the data-driven `actions[]`
  * contract. The component's external prop shape is preserved so
  * `SelectionIsland.tsx` consumers do not need to change.
@@ -14,7 +14,7 @@ import { Star, StarOff } from "lucide-react";
 import {
   FloatingSelectionBar,
   type SelectionAction,
-} from "@athyper/ui/composites";
+} from "@athyper/platform-ui/composites";
 import { runtimeListText } from "../core/resources";
 
 interface RuntimeSelectionBarProps {

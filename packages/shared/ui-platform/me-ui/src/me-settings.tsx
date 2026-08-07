@@ -2,11 +2,11 @@
 
 import { useRef, useState, type ElementType } from "react";
 import { Building2, Palette, ShieldCheck, User } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   Badge,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 
 import { ProfileSection } from "./sections/profile-section";
 import { IdentitySection } from "./sections/identity-section";

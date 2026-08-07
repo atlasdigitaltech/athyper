@@ -1,4 +1,4 @@
-import { defineAtlasRelayContractSuite } from "@athyper/bff-relay/test-harness";
+import { defineAtlasRelayContractSuite } from "@athyper/platform-bff-relay/test-harness";
 import { afterEach, describe, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));

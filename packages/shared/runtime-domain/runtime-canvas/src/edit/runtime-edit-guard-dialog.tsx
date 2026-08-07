@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import type { EditGuardModalProps } from "@athyper/runtime-shared";
-import { DialogConfirmShell } from "@athyper/ui/surfaces/shells";
+import { DialogConfirmShell } from "@athyper/platform-ui/surfaces/shells";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RuntimeEditGuardDialog — Phase 3 migration of the unsaved-changes guard

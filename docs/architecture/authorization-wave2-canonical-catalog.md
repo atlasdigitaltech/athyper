@@ -5,8 +5,8 @@
 Wave 2 now has one shared semantic contract and two physically separate
 catalogs:
 
-- Neon/Admin: `server/db/catalog/neon-admin/catalog.v1.json`
-- Mesh: `server/db/catalog/mesh/catalog.v1.json`
+- Neon/Admin: `server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json`
+- Mesh: `server/db/seed/contracts/authorization/catalog/mesh/catalog.v1.json`
 
 The catalogs share field semantics, not data. The Mesh compiler is sealed to
 two reads: its own manifest and the shared semantic contract. It does not read

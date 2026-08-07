@@ -1,4 +1,4 @@
-import { BrandedAuthLoader } from "@athyper/identity-gate";
+import { BrandedAuthLoader } from "@athyper/platform-iam-identity-gate";
 import { PLANE_KEY } from "@/lib/plane";
 
 export default function Loading() {

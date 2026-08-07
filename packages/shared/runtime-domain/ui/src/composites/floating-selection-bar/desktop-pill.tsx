@@ -2,7 +2,7 @@
 
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { MoreHorizontal, X } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,

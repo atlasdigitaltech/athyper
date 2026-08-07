@@ -21,7 +21,7 @@
 import { useCallback, useId, useState } from "react";
 import { CalendarDays, Check, X } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   parseBusinessDate,
   parseInstant,
@@ -31,7 +31,7 @@ import {
   utcFromZoneWallClock,
   type TemporalKind,
   type WeekStart,
-} from "@athyper/temporal";
+} from "@athyper/platform-temporal";
 import { CalendarGrid } from "./calendar-grid";
 
 // ─── Legacy shape (kept for back-compat) ───────────────────────────────────

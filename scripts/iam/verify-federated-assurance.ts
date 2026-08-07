@@ -3,7 +3,7 @@
  * Phase 6 federated-assurance regression gate.
  *
  * The realm must publish broker provenance and the external OIDC/SAML
- * assurance evidence consumed by @athyper/auth-common. The application still
+ * assurance evidence consumed by @athyper/platform-iam-auth-common. The application still
  * evaluates the evidence against the tenant policy; these checks only prevent
  * a realm import from silently dropping the claims.
  */

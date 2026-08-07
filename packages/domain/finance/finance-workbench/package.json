@@ -19,7 +19,7 @@
     "@athyper/finance-rules": "workspace:*",
     "@athyper/runtime-contracts": "workspace:*",
     "@athyper/runtime-shared": "workspace:*",
-    "@athyper/surface-kit": "workspace:*"
+    "@athyper/platform-surface-kit": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -27,8 +27,8 @@
   },
   "peerDependencies": {
     "@athyper/api-contracts": "workspace:*",
-    "@athyper/theme": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "@tanstack/react-query": ">=5 <6",
     "lucide-react": "^1.8.0",
     "next": "^16.2.4",
@@ -37,8 +37,8 @@
   "devDependencies": {
     "@athyper/api-contracts": "workspace:*",
     "@athyper/config": "workspace:*",
-    "@athyper/theme": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "@tanstack/react-query": "^5.99.0",
     "lucide-react": "^1.8.0",
     "next": "^16.2.4",

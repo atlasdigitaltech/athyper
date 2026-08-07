@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Check, CircleAlert, Mail, MapPin, Phone, Plus, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
-import { Button, Input } from "@athyper/ui/primitives";
+import { Button, Input } from "@athyper/platform-ui/primitives";
 import { csrfFetch } from "@athyper/runtime-shared/client";
 
 type OwnerType = "tenant" | "legal_entity" | "company_code";

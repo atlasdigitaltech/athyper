@@ -1,5 +1,0 @@
--- ============================================================================
--- log/00_bootstrap.sql
--- Pre-table schema types and sequences.
--- Generated from the live Neon database log schema. Do not hand-edit.
--- ============================================================================

@@ -1,0 +1,78 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "people-payroll",
+  "version": "2.0.0",
+  "executionOrder": 80,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [
+    "organization-templates",
+    "payment-holiday",
+    "coa-frameworks"
+  ],
+  "checksumAlgorithm": "sha256",
+  "checksum": "b2325e4c100632593461d4fd79ce0344056d0edf94d5ea732c46c6240f79fdf8",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/universal/070_people/310_job_classification.sql",
+      "sha256": "95bc4919b538920838d60302db5d5219243c94d72c3f4efdf2ba901d67e9bb09",
+      "bytes": 78545,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/universal/070_people/320_work_schedules.sql",
+      "sha256": "913eee6546fa28c41721ea7332817b47c51c051062a7a25bb13596a3220a73cc",
+      "bytes": 30952,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 3,
+      "path": "server/db/seed/blueprints/universal/070_people/330_leave_management.sql",
+      "sha256": "3793222d72599ac5606d86871d54d25bf823eb0a7e47f9e140de793073d80709",
+      "bytes": 33430,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 4,
+      "path": "server/db/seed/blueprints/universal/070_people/340_payroll_masters.sql",
+      "sha256": "acc56ce9594c2697ec1ec2b7deab36167a63959c166149245500dcdf284fa01b",
+      "bytes": 82391,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "master.employee",
+      "master.pay_group"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed/packs/blueprints-v2/receipts/80-people-payroll.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

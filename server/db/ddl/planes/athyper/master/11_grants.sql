@@ -1,3 +1,17 @@
+REVOKE ALL ON master.canonical_party,master.canonical_party_identifier,master.canonical_party_relationship,master.canonical_party_merge FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_onboarding_service') THEN
+  GRANT SELECT,INSERT,UPDATE ON master.canonical_party,master.canonical_party_identifier,master.canonical_party_relationship TO athyper_onboarding_service;
+  GRANT SELECT,INSERT ON master.canonical_party_merge TO athyper_onboarding_service;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_trustiam_service') THEN
+  GRANT SELECT ON master.canonical_party,master.canonical_party_identifier,master.canonical_party_relationship TO athyper_trustiam_service;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+  GRANT ALL ON master.canonical_party,master.canonical_party_identifier,master.canonical_party_relationship,master.canonical_party_merge TO athyperadmin;
+ END IF;
+END $$;
+
 REVOKE ALL ON SCHEMA master FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA master FROM PUBLIC;
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA master FROM PUBLIC;

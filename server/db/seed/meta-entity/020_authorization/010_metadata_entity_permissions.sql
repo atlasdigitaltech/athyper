@@ -8,11 +8,11 @@ DECLARE
     v_module_id uuid;
 BEGIN
     SELECT id INTO v_module_id
-      FROM master.module
+      FROM control.module
      WHERE lower(code) = 'meta';
 
     IF v_module_id IS NULL THEN
-        RAISE EXCEPTION '[meta-entity P2.7] prerequisite master.module META is missing';
+        RAISE EXCEPTION '[meta-entity P2.7] prerequisite control.module META is missing';
     END IF;
 
     INSERT INTO authz.permission (

@@ -16,7 +16,7 @@ async function main(): Promise<void> {
     source("server/packages/services/iam/providers/tenant-identity-provider.ts"),
     source("server/packages/services/iam/providers/keycloak-provider.contract.ts"),
     source("server/packages/services/iam/providers/tenant-identity-provider.service.ts"),
-    source("server/db/ddl/master/01w_tables_tenant_identity_registry.sql"),
+    source("server/db/ddl/planes/neon/master/03_tables.sql"),
     source("server/packages/services/iam/routes/identity-provider.routes.ts"),
     source("stack/config/iam/realm-athyper.json"),
     source("stack/env/.env.example"),

@@ -16,7 +16,7 @@
  *
  * This package intentionally has no named exports — it is an entrypoint
  * container, not a library. All wiring lives in the consuming app (src/api.ts).
- * Service packages import from their own adapters (@athyper/adapter-db, etc.)
+ * Service packages import from their own adapters (@athyper/adapter-db-neon, etc.)
  * rather than from here.
  */
 

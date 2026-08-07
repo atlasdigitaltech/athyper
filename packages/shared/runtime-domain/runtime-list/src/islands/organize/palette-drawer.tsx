@@ -11,7 +11,7 @@ import {
   SheetClose,
   SheetContent,
   SheetTitle,
-} from "@athyper/ui";
+} from "@athyper/platform-ui";
 
 interface PaletteDrawerProps {
   anchorRef: React.RefObject<HTMLButtonElement | null>;

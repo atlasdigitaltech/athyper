@@ -9,8 +9,8 @@ import {
   useState,
 } from "react";
 import { GripHorizontal, MoreVertical, X } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { getActionIcon } from "@athyper/icons";
+import { cn } from "@athyper/platform-theme/utils";
+import { getActionIcon } from "@athyper/platform-icons";
 import type { HeaderAction } from "./types";
 
 const PANEL_WIDTH = 280;

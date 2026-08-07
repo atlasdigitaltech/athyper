@@ -9,7 +9,7 @@
 import type { ReactNode } from "react";
 import type { EntityField } from "@athyper/api-contracts/metadata";
 import { Lock, Info, AlertTriangle } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { CurrencyTriad } from "../../money/currency-triad";
 import type { PricingComponent } from "../../../purchase-invoice/types";
 

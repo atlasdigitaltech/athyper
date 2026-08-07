@@ -52,8 +52,8 @@ function walk(dir: string, hits: Hit[]): void {
     // The DDL file that defines the function and its security grant are
     // expected — they're the function's home schema, not call sites.
     const rel = relative(REPO_ROOT, full).split(sep).join("/");
-    if (rel === "server/db/ddl/ledger/05_functions.sql")            continue;
-    if (rel === "server/db/ddl/security/800_security_hardening.sql") continue;
+    if (rel === "server/db/ddl/planes/neon/ledger/07_accounting_functions.sql")            continue;
+    if (rel === "server/db/ddl/common/shared/09_function_search_path_hardening.sql") continue;
     if (rel === "server/scripts/verify-gl-single-source.ts")        continue;
     if (rel === "docs/architecture/p2p.md")                         continue;
 

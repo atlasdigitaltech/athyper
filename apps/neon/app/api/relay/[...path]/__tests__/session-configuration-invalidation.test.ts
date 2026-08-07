@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   invalidate: vi.fn(),
 }));
 
-vi.mock("@athyper/bff-relay", () => ({
+vi.mock("@athyper/platform-bff-relay", () => ({
   buildRelayHandler: vi.fn(() => mocks.relay),
 }));
 vi.mock("@/lib/server/session", () => ({

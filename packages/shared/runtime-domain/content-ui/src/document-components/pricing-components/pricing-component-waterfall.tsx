@@ -31,8 +31,8 @@ import {
   RefreshCw,
   Info,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { type SemanticIntent, resolveSemanticColors } from "@athyper/theme/semantic-colors";
+import { cn } from "@athyper/platform-theme/utils";
+import { type SemanticIntent, resolveSemanticColors } from "@athyper/platform-theme/semantic-colors";
 import { CurrencyTriad } from "../money/currency-triad";
 import type {
   PricingComponent,

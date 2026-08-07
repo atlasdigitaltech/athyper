@@ -1,5 +1,0 @@
--- ============================================================================
--- governance/07_views.sql
--- Views and materialized views reconstructed from the live catalog.
--- Generated from the live Neon database governance schema. Do not hand-edit.
--- ============================================================================

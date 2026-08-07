@@ -1,7 +1,7 @@
 ALTER TABLE authz.permission
     ADD CONSTRAINT permission_module_fk
     FOREIGN KEY (module_id)
-    REFERENCES master.module (id)
+    REFERENCES control.module (id)
     ON DELETE RESTRICT;
 
 ALTER TABLE authz.permission_scope_policy

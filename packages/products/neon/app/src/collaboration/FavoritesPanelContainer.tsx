@@ -6,7 +6,7 @@ import {
   type FavoriteBookmarkItem,
   type FavoriteRecentItem,
   type FavoritesPanelContainerProps as SharedFavoritesPanelContainerProps,
-} from "@athyper/collaboration-ui/bookmarks";
+} from "@athyper/platform-communications-collaboration-ui/bookmarks";
 import {
   useBookmarksList,
   useRecentItems,

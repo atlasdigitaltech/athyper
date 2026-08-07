@@ -2,7 +2,9 @@
   "name": "@athyper/tsconfig",
   "version": "0.1.0",
   "private": true,
-  "files": [
-    "base.json"
-  ]
+  "files": ["*.json"],
+  "exports": {
+    "./base.json": "./base.json",
+    "./package.json": "./package.json"
+  }
 }

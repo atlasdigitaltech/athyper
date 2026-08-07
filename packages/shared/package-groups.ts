@@ -1,6 +1,5 @@
-export type SharedPackageGroup = "api" | "auth" | "contract" | "navigation" | "runtime" | "session" | "ui" | "other";
+export type SharedPackageGroup = "api" | "contract" | "navigation" | "runtime" | "ui" | "other";
 export type SharedBusinessGroup =
-  | "platform-auth"
   | "data-integration"
   | "ui-platform"
   | "runtime-domain"
@@ -8,8 +7,7 @@ export type SharedBusinessGroup =
   | "shared-infrastructure";
 
 export const sharedPackageGroups: Record<SharedPackageGroup, string[]> = {
-  api: ["api-client", "api-contracts", "route-manifest-core", "bff-relay"],
-  auth: ["auth-common", "auth-bff", "identity-gate"],
+  api: ["api-client", "api-contracts", "route-manifest-core"],
   contract: ["mesh-exchange-contracts", "metadata-client", "runtime-shared", "finance-rules"],
   navigation: ["navigation-core"],
   runtime: [
@@ -21,7 +19,6 @@ export const sharedPackageGroups: Record<SharedPackageGroup, string[]> = {
     "runtime-line-item",
     "shell-runtime",
   ],
-  session: ["session-store", "session-plane"],
   ui: [
     "app-foundation",
     "atlas-agent-ui",
@@ -44,7 +41,6 @@ export const sharedPackageGroups: Record<SharedPackageGroup, string[]> = {
 };
 
 export const sharedBusinessGroups: Record<SharedBusinessGroup, string[]> = {
-  "platform-auth": ["auth-bff", "auth-common", "identity-gate", "session-plane", "session-store"],
   "data-integration": [
     "api-client",
     "api-contracts",
@@ -52,7 +48,6 @@ export const sharedBusinessGroups: Record<SharedBusinessGroup, string[]> = {
     "metadata-client",
     "mesh-exchange-contracts",
     "query",
-    "bff-relay",
     "core",
     "config",
     "navigation-core",
@@ -64,12 +59,10 @@ export const sharedBusinessGroups: Record<SharedBusinessGroup, string[]> = {
 };
 
 export const sharedPackageGroupAliases: Array<{ from: SharedPackageGroup; to: SharedBusinessGroup }> = [
-  { from: "auth", to: "platform-auth" },
   { from: "api", to: "data-integration" },
   { from: "contract", to: "data-integration" },
   { from: "navigation", to: "ui-platform" },
   { from: "runtime", to: "runtime-domain" },
-  { from: "session", to: "platform-auth" },
   { from: "ui", to: "ui-platform" },
   { from: "other", to: "business-domain" },
 ];
@@ -79,9 +72,6 @@ export const sharedPackageCatalog = [
   "api-contracts",
   "app-foundation",
   "atlas-agent-ui",
-  "auth-bff",
-  "auth-common",
-  "bff-relay",
   "brand",
   "cascade",
   "collaboration-ui",
@@ -95,7 +85,6 @@ export const sharedPackageCatalog = [
   "finance-rules",
   "i18n",
   "icons",
-  "identity-gate",
   "runtime-line-item",
   "me-ui",
   "saved-views-ui",
@@ -112,8 +101,6 @@ export const sharedPackageCatalog = [
   "runtime-contracts",
   "runtime-list",
   "runtime-shared",
-  "session-plane",
-  "session-store",
   "shell",
   "shell-runtime",
   "surface-kit",

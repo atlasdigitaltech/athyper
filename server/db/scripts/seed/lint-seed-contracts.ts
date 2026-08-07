@@ -28,9 +28,9 @@ type Baseline = {
 
 const repoRoot = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const dbRoot = resolve(repoRoot, "server/db");
-const contractPath = resolve(dbRoot, "seed-contract/seed-contract.v1.json");
-const baselinePath = resolve(dbRoot, "seed-contract/pre-contract-baseline.v1.json");
-const legacyReportPath = resolve(dbRoot, "seed-migration/wave1-legacy-lint-report.v1.json");
+const contractPath = resolve(dbRoot, "seed/contracts/base/seed-contract.v1.json");
+const baselinePath = resolve(dbRoot, "seed/contracts/base/pre-contract-baseline.v1.json");
+const legacyReportPath = resolve(dbRoot, "seed/migration/wave1-legacy-lint-report.v1.json");
 const contract = JSON.parse(readFileSync(contractPath, "utf8")) as Contract;
 
 function sha256(source: string): string {
@@ -247,7 +247,7 @@ async function filesUnder(directory: string): Promise<string[]> {
 }
 
 async function strictSeedFiles(): Promise<string[]> {
-  const packFiles = await filesUnder(resolve(dbRoot, "seed-packs"));
+  const packFiles = await filesUnder(resolve(dbRoot, "seed/packs"));
   const ddlFiles = [
     ...await filesUnder(resolve(dbRoot, "ddl/common")),
     ...await filesUnder(resolve(dbRoot, "ddl/planes")),

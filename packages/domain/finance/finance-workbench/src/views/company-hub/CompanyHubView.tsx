@@ -13,8 +13,8 @@ import {
   Search,
   Settings2,
 } from "lucide-react";
-import { Button, Input, Skeleton } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
+import { Button, Input, Skeleton } from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
 import {
   useScopeOptions,
   type CompanyOption,

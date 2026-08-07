@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "@athyper/theme": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",
     "typescript": "^6.0.3",

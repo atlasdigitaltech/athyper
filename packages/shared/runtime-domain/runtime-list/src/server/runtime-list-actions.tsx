@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@athyper/ui";
+import { Button } from "@athyper/platform-ui";
 import type { ResolvedToolbarAction } from "../core/types";
 import { runtimeListText } from "../core/resources";
 

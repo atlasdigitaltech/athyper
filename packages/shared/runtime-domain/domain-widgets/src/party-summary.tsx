@@ -1,4 +1,4 @@
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface PartyData {
   code: string;

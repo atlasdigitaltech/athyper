@@ -15,7 +15,7 @@ import {
 import {
   NotificationStreamProvider,
   useNotificationStream,
-} from "@athyper/notifications-client";
+} from "@athyper/platform-communications-notifications-client";
 import { createNotificationsConfig } from "@/lib/notifications-config";
 
 const MESH_INBOX_ADAPTER: InboxCountAdapter = {

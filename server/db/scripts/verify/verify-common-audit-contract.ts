@@ -202,7 +202,7 @@ for (const plane of ["athyper", "neon", "mesh"]) {
 }
 
 const envelope = await read(
-  "packages/shared/data-integration/core/src/index.ts",
+  "packages/platform/foundation/core/src/telemetry/envelope.ts",
 );
 const alloy = await read(
   "stack/config/telemetry/logging/alloy.alloy",

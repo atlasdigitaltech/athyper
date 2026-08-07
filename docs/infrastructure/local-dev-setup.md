@@ -1100,7 +1100,7 @@ incorrect title and may silently fail entity lookups.
 ### 4. Session cookie name is `neon_sid`
 
 The API sets the cookie `neon_sid`. Middleware in `apps/neon` reads `neon_sid`.
-Plane-specific cookie names are owned by `@athyper/session-plane`; do not add a
+Plane-specific cookie names are owned by `@athyper/platform-iam-session-plane`; do not add a
 parallel auth package or hardcoded cookie helper for manual testing.
 
 If you see a permanent login redirect loop after a code change, check that nothing

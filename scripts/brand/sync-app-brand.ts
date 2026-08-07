@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
-const distRoot = path.join(repoRoot, "packages/shared/ui-platform/brand/dist");
+const distRoot = path.join(repoRoot, "packages/platform/foundation/brand/dist");
 
 const APP_TARGETS = {
   neon: "apps/neon/public/brand",

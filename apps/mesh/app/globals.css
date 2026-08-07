@@ -1,7 +1,7 @@
 @config "../tailwind.config.ts";
 @source "../../../packages/shared";
 
-@import "@athyper/theme/all.css";
+@import "@athyper/platform-theme/all.css";
 /* Keep this resolvable during workspace development before pnpm links the
    newly-added package dependency into apps/mesh/node_modules. */
 @import "../../../packages/shared/ui-platform/atlas-agent-ui/src/styles.css";

@@ -11,9 +11,11 @@ interface MetaEntitySeedPack {
   readonly version: string;
   readonly databasePlane: "athyper";
   readonly manifest: string;
+  readonly defaultProfile: "core";
   readonly legacyDiscovery: false;
   readonly targetSchemas: readonly string[];
   readonly files: readonly string[];
+  readonly profiles: Readonly<Record<"core" | "validation", readonly string[]>>;
 }
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
@@ -41,7 +43,7 @@ function parseManifest(source: string): string[] {
 
 async function main(): Promise<void> {
   const config = JSON.parse(
-    await readFile(resolve(packRoot, "seed-pack.json"), "utf8"),
+    await readFile(resolve(packRoot, "pack.v1.json"), "utf8"),
   ) as MetaEntitySeedPack;
   if (config.packId !== "athyper.meta-entity"
       || config.databasePlane !== "athyper"
@@ -52,14 +54,27 @@ async function main(): Promise<void> {
   const manifestSource = await readFile(resolve(packRoot, config.manifest), "utf8");
   const manifestFiles = parseManifest(manifestSource);
   if (JSON.stringify(manifestFiles) !== JSON.stringify(config.files)) {
-    throw new Error("seed-pack.json files must exactly match the ordered manifest.");
+    throw new Error("pack.v1.json files must exactly match the ordered manifest.");
   }
   if (new Set(manifestFiles).size !== manifestFiles.length) {
     throw new Error("Meta Entity seed manifest contains duplicate paths.");
   }
 
+  const profile = argument("--profile") ?? config.defaultProfile;
+  if (profile !== "core" && profile !== "validation") {
+    throw new Error("Meta Entity --profile must be core or validation.");
+  }
+  const selectedFiles = config.profiles[profile];
+  if (!selectedFiles?.length
+      || selectedFiles.some((path) => !manifestFiles.includes(path))
+      || JSON.stringify(selectedFiles) !== JSON.stringify(
+        manifestFiles.filter((path) => selectedFiles.includes(path)),
+      )) {
+    throw new Error(`Meta Entity ${profile} profile is not an ordered manifest subset.`);
+  }
+
   const sources: Array<{ path: string; sql: string }> = [];
-  for (const manifestPath of manifestFiles) {
+  for (const manifestPath of selectedFiles) {
     const absolutePath = resolve(packRoot, manifestPath);
     const relativePath = normalizedPath(absolutePath);
     if (relativePath !== manifestPath || relativePath.startsWith("../")) {
@@ -73,12 +88,14 @@ async function main(): Promise<void> {
 
   const manifestSha256 = sha256(manifestSource);
   const contentSha256 = sha256(
-    sources.map((source) => `${source.path}\0${source.sql}`).join("\0"),
+    [`profile=${profile}`, ...sources.map((source) => `${source.path}\0${source.sql}`)].join("\0"),
   );
+  const effectiveVersion = `${config.version}-${profile}`;
   if (process.argv.includes("--dry-run")) {
     process.stdout.write(JSON.stringify({
       packId: config.packId,
-      version: config.version,
+      version: effectiveVersion,
+      profile,
       files: sources.length,
       manifestSha256,
       contentSha256,
@@ -174,15 +191,15 @@ async function main(): Promise<void> {
       SELECT manifest_sha256, content_sha256, source_path
         FROM public.meta_entity_seed_pack_ledger
        WHERE pack_id = $1 AND pack_version = $2
-    `, [config.packId, config.version]);
+    `, [config.packId, effectiveVersion]);
     const registered = existing.rows[0];
     if (registered && (
       registered.manifest_sha256 !== manifestSha256
       || registered.content_sha256 !== contentSha256
-      || registered.source_path !== "server/db/seed/meta-entity"
+      || registered.source_path !== `server/db/seed/meta-entity#${profile}`
     )) {
       throw new Error(
-        `Immutable Meta Entity seed-pack drift: ${config.packId}@${config.version}.`,
+        `Immutable Meta Entity seed-pack drift: ${config.packId}@${effectiveVersion}.`,
       );
     }
     if (!registered) {
@@ -192,10 +209,10 @@ async function main(): Promise<void> {
         ) VALUES ($1, $2, $3, $4, $5)
       `, [
         config.packId,
-        config.version,
+        effectiveVersion,
         manifestSha256,
         contentSha256,
-        "server/db/seed/meta-entity",
+        `server/db/seed/meta-entity#${profile}`,
       ]);
     }
 
@@ -206,10 +223,10 @@ async function main(): Promise<void> {
       INSERT INTO public.meta_entity_seed_pack_execution (
         execution_id, pack_id, pack_version, content_sha256
       ) VALUES ($1, $2, $3, $4)
-    `, [randomUUID(), config.packId, config.version, contentSha256]);
+    `, [randomUUID(), config.packId, effectiveVersion, contentSha256]);
     await client.query("COMMIT");
     process.stdout.write(
-      `META_ENTITY_SEED_OK ${config.packId}@${config.version} files=${sources.length} sha256=${contentSha256}\n`,
+      `META_ENTITY_SEED_OK ${config.packId}@${effectiveVersion} profile=${profile} files=${sources.length} sha256=${contentSha256}\n`,
     );
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);

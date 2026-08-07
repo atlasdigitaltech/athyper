@@ -81,7 +81,6 @@
         "packages/shared/data-integration/auth-bff/package.json",
         "packages/shared/data-integration/bff-relay/package.json",
         "packages/shared/data-integration/config/package.json",
-        "packages/shared/data-integration/core/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -140,10 +139,10 @@
       "deletionEligible": false
     },
     {
-      "packageName": "@athyper/theme",
+      "packageName": "@athyper/platform-theme",
       "path": "packages/shared/business-domain/theme",
       "workspaceActive": false,
-      "replacementRequired": "@athyper/theme",
+      "replacementRequired": "@athyper/platform-theme",
       "externalReferences": [
         "apps/admin/next.config.mjs",
         "apps/admin/package.json",
@@ -1063,10 +1062,10 @@
       "deletionEligible": false
     },
     {
-      "packageName": "@athyper/auth-bff",
+      "packageName": "@athyper/platform-iam-auth-bff",
       "path": "packages/shared/data-integration/auth-bff",
       "workspaceActive": false,
-      "replacementRequired": "@athyper/auth-bff",
+      "replacementRequired": "@athyper/platform-iam-auth-bff",
       "externalReferences": [
         "apps/admin/app/(shell)/layout.tsx",
         "apps/admin/app/api/auth/backchannel-logout/route.ts",
@@ -1208,10 +1207,10 @@
       "deletionEligible": false
     },
     {
-      "packageName": "@athyper/session-plane",
+      "packageName": "@athyper/platform-iam-session-plane",
       "path": "packages/shared/data-integration/session-plane",
       "workspaceActive": false,
-      "replacementRequired": "@athyper/session-plane",
+      "replacementRequired": "@athyper/platform-iam-session-plane",
       "externalReferences": [
         "apps/admin/app/(shell)/layout.tsx",
         "apps/admin/app/(shell)/settings/SettingsClient.tsx",
@@ -1392,7 +1391,6 @@
         "packages/shared/data-integration/auth-bff/package.json",
         "packages/shared/data-integration/bff-relay/package.json",
         "packages/shared/data-integration/config/package.json",
-        "packages/shared/data-integration/core/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -1572,7 +1570,6 @@
         "packages/shared/data-integration/auth-bff/package.json",
         "packages/shared/data-integration/bff-relay/package.json",
         "packages/shared/data-integration/config/package.json",
-        "packages/shared/data-integration/core/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -1905,10 +1902,10 @@
       "deletionEligible": false
     },
     {
-      "packageName": "@athyper/session-plane",
+      "packageName": "@athyper/platform-iam-session-plane",
       "path": "packages/shared/runtime-domain/session-plane",
       "workspaceActive": false,
-      "replacementRequired": "@athyper/session-plane",
+      "replacementRequired": "@athyper/platform-iam-session-plane",
       "externalReferences": [
         "apps/admin/app/(shell)/layout.tsx",
         "apps/admin/app/(shell)/settings/SettingsClient.tsx",
@@ -2064,10 +2061,10 @@
       "deletionEligible": false
     },
     {
-      "packageName": "@athyper/theme",
+      "packageName": "@athyper/platform-theme",
       "path": "packages/shared/runtime-domain/theme",
       "workspaceActive": false,
-      "replacementRequired": "@athyper/theme",
+      "replacementRequired": "@athyper/platform-theme",
       "externalReferences": [
         "apps/admin/next.config.mjs",
         "apps/admin/package.json",
@@ -3065,7 +3062,6 @@
         "packages/shared/data-integration/auth-bff/package.json",
         "packages/shared/data-integration/bff-relay/package.json",
         "packages/shared/data-integration/config/package.json",
-        "packages/shared/data-integration/core/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",
@@ -3123,10 +3119,10 @@
       "deletionEligible": false
     },
     {
-      "packageName": "@athyper/theme",
+      "packageName": "@athyper/platform-theme",
       "path": "packages/shared/theme",
       "workspaceActive": false,
-      "replacementRequired": "@athyper/theme",
+      "replacementRequired": "@athyper/platform-theme",
       "externalReferences": [
         "apps/admin/next.config.mjs",
         "apps/admin/package.json",
@@ -4102,7 +4098,6 @@
         "packages/shared/data-integration/auth-bff/package.json",
         "packages/shared/data-integration/bff-relay/package.json",
         "packages/shared/data-integration/config/package.json",
-        "packages/shared/data-integration/core/package.json",
         "packages/shared/data-integration/icons/package.json",
         "packages/shared/data-integration/mesh-exchange-contracts/package.json",
         "packages/shared/data-integration/metadata-client/package.json",

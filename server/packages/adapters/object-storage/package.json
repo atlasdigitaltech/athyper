@@ -29,6 +29,8 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@athyper/foundation-storage": "workspace:*",
+    "@athyper/platform-core": "workspace:*",
     "@aws-sdk/client-s3": "^3.1032.0",
     "@aws-sdk/lib-storage": "^3.1032.0",
     "@aws-sdk/s3-request-presigner": "^3.1032.0"

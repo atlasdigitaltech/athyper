@@ -13,23 +13,23 @@ const [controlDomains, controlTables, controlConstraints, controlFunctions,
   ledgerTables, ledgerConstraints, ledgerFunctions, ledgerTriggers,
   neonManifest, athyperManifest, meshManifest, neonPrisma, meshPrisma,
   dispositionPolicy, dispositionInventory] = await Promise.all([
-  read("server/db/ddl/planes/neon/control/02_budget_control_domains.sql"),
-  read("server/db/ddl/planes/neon/control/03_budget_control_tables.sql"),
-  read("server/db/ddl/planes/neon/control/05_budget_control_constraints.sql"),
-  read("server/db/ddl/planes/neon/control/07_budget_control_functions.sql"),
-  read("server/db/ddl/planes/neon/control/10_budget_control_rls.sql"),
-  read("server/db/ddl/planes/neon/control/11_budget_control_grants.sql"),
-  read("server/db/ddl/planes/neon/document/02_planning_scenario_domains.sql"),
-  read("server/db/ddl/planes/neon/document/03_planning_scenario_tables.sql"),
-  read("server/db/ddl/planes/neon/document/05_planning_scenario_constraints.sql"),
-  read("server/db/ddl/planes/neon/document/07_planning_scenario_functions.sql"),
-  read("server/db/ddl/planes/neon/document/08_planning_scenario_triggers.sql"),
-  read("server/db/ddl/planes/neon/document/10_planning_scenario_rls.sql"),
-  read("server/db/ddl/planes/neon/document/11_planning_scenario_grants.sql"),
-  read("server/db/ddl/planes/neon/ledger/03_planning_budget_tables.sql"),
-  read("server/db/ddl/planes/neon/ledger/05_planning_budget_constraints.sql"),
-  read("server/db/ddl/planes/neon/ledger/07_planning_budget_functions.sql"),
-  read("server/db/ddl/planes/neon/ledger/08_planning_budget_triggers.sql"),
+  read("server/db/ddl/planes/neon/control/02_domains.sql"),
+  read("server/db/ddl/planes/neon/control/03_tables.sql"),
+  read("server/db/ddl/planes/neon/control/05_constraints.sql"),
+  read("server/db/ddl/planes/neon/control/07_functions.sql"),
+  read("server/db/ddl/planes/neon/control/10_rls.sql"),
+  read("server/db/ddl/planes/neon/control/11_grants.sql"),
+  read("server/db/ddl/planes/neon/document/02_domains.sql"),
+  read("server/db/ddl/planes/neon/document/03_tables.sql"),
+  read("server/db/ddl/planes/neon/document/05_constraints.sql"),
+  read("server/db/ddl/planes/neon/document/07_functions.sql"),
+  read("server/db/ddl/planes/neon/document/08_triggers.sql"),
+  read("server/db/ddl/planes/neon/document/10_rls.sql"),
+  read("server/db/ddl/planes/neon/document/11_grants.sql"),
+  read("server/db/ddl/planes/neon/ledger/03_tables.sql"),
+  read("server/db/ddl/planes/neon/ledger/05_constraints.sql"),
+  read("server/db/ddl/planes/neon/ledger/07_functions.sql"),
+  read("server/db/ddl/planes/neon/ledger/08_triggers.sql"),
   read("server/db/ddl/planes/neon/_manifest.txt"),
   read("server/db/ddl/planes/athyper/_manifest.txt"),
   read("server/db/ddl/planes/mesh/_manifest.txt"),
@@ -70,10 +70,15 @@ expect("planning scenario domains are sealed",
 expect("scenario header and normalized period line are document owned",
   documentTables.includes("CREATE TABLE document.planning_scenario (")
   && documentTables.includes("CREATE TABLE document.planning_scenario_line ("));
+const planningLineStart = documentTables.indexOf("CREATE TABLE document.planning_scenario_line (");
+const planningLineEnd = documentTables.indexOf("\nCREATE TABLE ", planningLineStart + 1);
+const planningLineDefinition = documentTables.slice(
+  planningLineStart,
+  planningLineEnd === -1 ? undefined : planningLineEnd,
+);
 expect("planning lines have no period JSON or independent lifecycle",
   !/\n\s+period_amounts\s/.test(documentTables)
-  && !documentTables.slice(documentTables.indexOf("CREATE TABLE document.planning_scenario_line"))
-    .match(/status_changed_at|is_active/));
+  && !planningLineDefinition.match(/status_changed_at|is_active/));
 expect("scenario business and actor references are tenant composite",
   documentConstraints.includes("planning_scenario_line_scenario_fk")
   && documentConstraints.includes("FOREIGN KEY (tenant_id, planning_model_id, planning_scenario_id)")
@@ -87,7 +92,8 @@ expect("scenario input hashing is canonical",
   && documentFunctions.includes("digest(")
   && documentFunctions.includes("ORDER BY line.line_no"));
 expect("scenario tables have forced RLS and explicit grants",
-  (documentRls.match(/FORCE ROW LEVEL SECURITY/g)?.length ?? 0) === 2
+  documentRls.includes("ALTER TABLE document.planning_scenario FORCE ROW LEVEL SECURITY")
+  && documentRls.includes("ALTER TABLE document.planning_scenario_line FORCE ROW LEVEL SECURITY")
   && documentGrants.includes("document.planning_scenario_line"));
 
 expect("planning runs reference approved scenario identity",
@@ -118,14 +124,14 @@ expect("Mesh Prisma exposes no Neon planning/budget replacements",
   && !/model\s+planning_scenario_line\b/.test(meshPrisma));
 
 const requiredFiles = [
-  "control/02_budget_control_domains.sql", "control/03_budget_control_tables.sql",
-  "control/05_budget_control_constraints.sql", "control/06_budget_control_indexes.sql",
-  "control/07_budget_control_functions.sql", "control/08_budget_control_triggers.sql",
-  "control/10_budget_control_rls.sql", "control/11_budget_control_grants.sql",
-  "document/02_planning_scenario_domains.sql", "document/03_planning_scenario_tables.sql",
-  "document/05_planning_scenario_constraints.sql", "document/06_planning_scenario_indexes.sql",
-  "document/07_planning_scenario_functions.sql", "document/08_planning_scenario_triggers.sql",
-  "document/10_planning_scenario_rls.sql", "document/11_planning_scenario_grants.sql",
+  "control/02_domains.sql", "control/03_tables.sql",
+  "control/05_constraints.sql", "control/06_indexes.sql",
+  "control/07_functions.sql", "control/08_triggers.sql",
+  "control/10_rls.sql", "control/11_grants.sql",
+  "document/02_domains.sql", "document/03_tables.sql",
+  "document/05_constraints.sql", "document/06_indexes.sql",
+  "document/07_functions.sql", "document/08_triggers.sql",
+  "document/10_rls.sql", "document/11_grants.sql",
 ];
 expect("Neon installs every replacement phase exactly once",
   requiredFiles.every((path) => neonManifest.split(`planes/neon/${path}`).length === 2));

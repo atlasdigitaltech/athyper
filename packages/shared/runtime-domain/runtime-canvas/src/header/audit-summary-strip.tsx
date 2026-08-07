@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, ChevronUp, Copy, Hash, Pencil, Plus } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { formatRecordValue, toNonBlankString } from "@athyper/runtime-shared/meta-entity";
 import type { HeaderIdentity } from "./types";
 

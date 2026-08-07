@@ -1,5 +1,5 @@
 import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
-import type { TenantMfaTrustPolicy } from "@athyper/auth-common";
+import type { TenantMfaTrustPolicy } from "@athyper/platform-iam-auth-common";
 
 type AnyDb = Record<string, any>;
 

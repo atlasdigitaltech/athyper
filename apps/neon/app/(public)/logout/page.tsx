@@ -1,4 +1,4 @@
-import { LogoutPage } from "@athyper/identity-gate";
+import { LogoutPage } from "@athyper/platform-iam-identity-gate";
 import { PLANE_KEY } from "@/lib/plane";
 
 export default function LogoutRoute() {

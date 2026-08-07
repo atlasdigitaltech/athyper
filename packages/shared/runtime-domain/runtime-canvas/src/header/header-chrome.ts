@@ -1,5 +1,5 @@
-import { buttonVariants } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { buttonVariants } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 
 export const entityHeaderShellClass = "overflow-hidden rounded-xl border border-border bg-card shadow-sm";
 export const entityHeaderEditClass = "ring-1 ring-inset ring-primary/30";

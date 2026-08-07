@@ -11,7 +11,7 @@
  */
 "use client";
 
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface ReadinessCheck {
   id:        string;

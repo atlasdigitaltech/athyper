@@ -30,7 +30,7 @@ describe("fiscal calendar templates", () => {
 
 describe("fiscal calendar DDL contract", () => {
   const tableDdl = readFileSync(
-    new URL("../../../../db/ddl/planes/neon/control/03_fiscal_calendar_tables.sql", import.meta.url), "utf8",
+    new URL("../../../../db/ddl/planes/neon/control/03_tables.sql", import.meta.url), "utf8",
   );
   const functionDdl = readFileSync(
     new URL("../../../../db/ddl/planes/neon/control/07_fiscal_calendar_functions.sql", import.meta.url), "utf8",
@@ -39,7 +39,7 @@ describe("fiscal calendar DDL contract", () => {
     new URL("../../../../db/ddl/planes/neon/master/03_tables.sql", import.meta.url), "utf8",
   );
   const rlsDdl = readFileSync(
-    new URL("../../../../db/ddl/planes/neon/control/10_fiscal_calendar_rls.sql", import.meta.url), "utf8",
+    new URL("../../../../db/ddl/planes/neon/control/10_rls.sql", import.meta.url), "utf8",
   );
 
   it("separates reusable definitions, rules, and company assignments", () => {

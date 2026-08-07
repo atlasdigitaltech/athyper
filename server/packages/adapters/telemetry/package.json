@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/otel/index.js",
+    "./dist/sentry/index.js"
+  ],
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -11,6 +14,21 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./otel": {
+      "types": "./dist/otel/index.d.ts",
+      "import": "./dist/otel/index.js",
+      "default": "./dist/otel/index.js"
+    },
+    "./sentry": {
+      "types": "./dist/sentry/index.d.ts",
+      "import": "./dist/sentry/index.js",
+      "default": "./dist/sentry/index.js"
+    },
+    "./cronwatch": {
+      "types": "./dist/cronwatch/index.d.ts",
+      "import": "./dist/cronwatch/index.js",
+      "default": "./dist/cronwatch/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -20,8 +38,8 @@
   ],
   "scripts": {
     "clean": "rimraf dist",
-    "build": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --external @opentelemetry/api",
-    "dev": "tsup src/index.ts --format esm --dts --sourcemap --outDir dist --watch",
+    "build": "tsup src/index.ts src/otel/index.ts src/sentry/index.ts src/cronwatch/index.ts --format esm --dts --sourcemap --outDir dist --external @opentelemetry/api",
+    "dev": "tsup src/index.ts src/otel/index.ts src/sentry/index.ts src/cronwatch/index.ts --format esm --dts --sourcemap --outDir dist --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest",
@@ -29,8 +47,14 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@athyper/core": "workspace:*",
-    "@opentelemetry/api": "^1.9.0"
+    "@athyper/platform-core": "workspace:*",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.73.0",
+    "@opentelemetry/exporter-trace-otlp-grpc": "^0.215.0",
+    "@opentelemetry/resources": "^2.7.0",
+    "@opentelemetry/sdk-node": "^0.215.0",
+    "@opentelemetry/semantic-conventions": "^1.29.0",
+    "@sentry/node": "^10.49.0"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",

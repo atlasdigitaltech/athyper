@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { QueryClient, hydrate } from "@tanstack/react-query";
-import type { V4Session } from "@athyper/auth-bff";
+import type { V4Session } from "@athyper/platform-iam-auth-bff";
 import { queryKeys } from "@athyper/api-contracts/query-keys";
 import { compileMetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import {

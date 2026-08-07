@@ -26,7 +26,7 @@ async function main(): Promise<void> {
   const [routes, sync, ddl, realmText, sessionPlane, challenge, mfaSection, authBff, otpFactory, stepUpCondition] = await Promise.all([
     source("server/packages/services/iam/routes/mfa.routes.ts"),
     source("server/packages/services/iam/mfa/mfa-sync.service.ts"),
-    source("server/db/ddl/control/01_tables.sql"),
+    source("server/db/ddl/planes/neon/control/03_tables.sql"),
     source("stack/config/iam/realm-athyper.json"),
     source("packages/shared/platform-auth/session-plane/src/index.ts"),
     source("packages/shared/platform-auth/identity-gate/src/mfa-challenge-client.tsx"),

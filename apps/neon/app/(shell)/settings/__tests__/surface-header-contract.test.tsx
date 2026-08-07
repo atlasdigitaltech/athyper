@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { SurfaceHeader } from "@athyper/surface-kit";
+import { SurfaceHeader } from "@athyper/platform-surface-kit";
 import { MeUIProvider, ProfileSection } from "@athyper/me-ui";
 
 describe("SurfaceHeader contract", () => {

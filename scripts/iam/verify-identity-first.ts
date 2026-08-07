@@ -16,7 +16,7 @@ async function main(): Promise<void> {
     source("packages/shared/platform-auth/identity-gate/src/login-gate-client.tsx"),
     source("packages/shared/platform-auth/auth-bff/src/index.ts"),
     source("server/packages/services/iam/discovery/discovery.service.ts"),
-    source("server/db/ddl/master/01w_tables_tenant_identity_registry.sql"),
+    source("server/db/ddl/planes/neon/master/03_tables.sql"),
   ]);
 
   requireText("identity gate", gate, "Work email or user ID");

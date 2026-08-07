@@ -104,7 +104,7 @@ INSERT INTO master.principal (
     '10000000-0000-0000-0000-000000000002'
 );
 
-INSERT INTO master.workspace (
+INSERT INTO control.workspace (
     id, code, name, created_by
 ) VALUES (
     '10000000-0000-0000-0000-000000000003',
@@ -112,12 +112,20 @@ INSERT INTO master.workspace (
     '10000000-0000-0000-0000-000000000002'
 );
 
-INSERT INTO master.module (
-    id, code, name, workspace_id, created_by
+INSERT INTO control.module (
+    id, code, name, created_by
 ) VALUES (
     '10000000-0000-0000-0000-000000000004',
     'meta_p2_module', 'Meta Entity Phase 2 Module',
+    '10000000-0000-0000-0000-000000000002'
+);
+
+INSERT INTO control.workspace_module (
+    workspace_id, module_id, is_primary, created_by
+) VALUES (
     '10000000-0000-0000-0000-000000000003',
+    '10000000-0000-0000-0000-000000000004',
+    true,
     '10000000-0000-0000-0000-000000000002'
 );
 

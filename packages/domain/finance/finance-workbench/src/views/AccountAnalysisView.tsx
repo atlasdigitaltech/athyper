@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { fmtFull, fmtCompact } from "../components/format";
 import type { FinanceScope } from "../lib/scope";
 import { useAccountAnalysis } from "../hooks/useAccountAnalysis";

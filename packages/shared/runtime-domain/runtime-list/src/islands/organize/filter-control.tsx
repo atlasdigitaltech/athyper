@@ -3,8 +3,8 @@
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ChevronDown, ChevronRight, Filter, Loader2, Plus, Search, X } from "lucide-react";
-import { DatePicker, DateRangePicker, FISCAL_PRESETS, type DateRangePresetKey } from "@athyper/ui/composites";
-import { ActiveFilterCard } from "@athyper/ui/organize";
+import { DatePicker, DateRangePicker, FISCAL_PRESETS, type DateRangePresetKey } from "@athyper/platform-ui/composites";
+import { ActiveFilterCard } from "@athyper/platform-ui/organize";
 import type { RuntimeField, RuntimeFilterKind, RuntimeFilterOperator, RuntimeFilterOption } from "../../core/types";
 import { PaletteButton } from "./palette-button";
 import { PaletteDrawerActions } from "./palette-drawer-actions";
@@ -459,7 +459,7 @@ const DATE_EMPTY_FILTERS = [
 ] as const;
 
 // Legacy DATE_SHORTCUT_FILTERS retired in favour of the DateRangePicker's
-// unified preset sidebar (@athyper/ui/composites::FISCAL_PRESETS). The wire
+// unified preset sidebar (@athyper/platform-ui/composites::FISCAL_PRESETS). The wire
 // format is unchanged — the picker emits "@<key>" tokens when a preset is
 // selected, and the server resolves those against @athyper/finance-rules.
 // Saved views continue to persist "@<key>" strings and re-resolve on load.

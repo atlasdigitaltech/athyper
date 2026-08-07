@@ -1,4 +1,4 @@
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { Button } from "../primitives/button";
 
 export interface FilterPillItem<T extends string = string> {

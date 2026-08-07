@@ -28,7 +28,7 @@ describe("Finance Setup Phase 2 Stage D payments contract",()=>{
   expect(result.ambiguous).toBe(true);expect(result.winner).toBeNull();
  });
  it("ships aggregate, routing, and settlement settings while keeping readiness out of the page",()=>{
-  const service=read("server/packages/services/finance/services/finance-payments-setup.service.ts"),route=read("server/packages/services/finance/routes/finance-payments-setup.route.ts"),guards=read("server/db/ddl/control/05_functions_finance_payments_settlement.sql"),term=read("packages/domain/finance/finance-workbench/src/views/payments/PaymentTermWorkbench.tsx"),company=read("packages/domain/finance/finance-workbench/src/views/payments/CompanyPaymentsSetupView.tsx");
+  const service=read("server/packages/services/finance/services/finance-payments-setup.service.ts"),route=read("server/packages/services/finance/routes/finance-payments-setup.route.ts"),guards=read("server/db/ddl/planes/neon/control/07_functions.sql"),term=read("packages/domain/finance/finance-workbench/src/views/payments/PaymentTermWorkbench.tsx"),company=read("packages/domain/finance/finance-workbench/src/views/payments/CompanyPaymentsSetupView.tsx");
   expect(service).toContain("HOUSE_BANK_INELIGIBLE");expect(service).toContain("POSTING_ROLE_COVERAGE_INCOMPLETE");
   expect(route).toContain("/payments/interface-trace");expect(route).toContain("/payments/settlement-rules");
   expect(guards).toContain("guard_payment_interface_binding_conflict");expect(guards).toContain("guard_payment_settlement_book");

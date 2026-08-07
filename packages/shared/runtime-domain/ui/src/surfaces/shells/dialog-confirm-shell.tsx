@@ -1,7 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { overlayScrimVariants } from "../../primitives/overlay";
 import { useStackFrame } from "../stack";
 import type { ControlledOpenProps, SlotNode } from "./types";

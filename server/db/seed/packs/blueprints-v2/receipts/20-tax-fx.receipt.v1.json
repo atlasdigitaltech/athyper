@@ -1,0 +1,16 @@
+{
+    "contractVersion":  "athyper.blueprint-application-receipt.v1",
+    "packCode":  "tax-fx",
+    "packVersion":  "2.0.0",
+    "packChecksum":  "36c2df3207a7e3145694540ab9cdd19d7fdea65efe27fca79b8486d629b50bd2",
+    "plane":  "neon",
+    "tenantId":  "f5000000-0000-0000-0000-000000000001",
+    "status":  "pending-validation",
+    "appliedAt":  null,
+    "payloadResults":  [
+
+                       ],
+    "assertionResults":  [
+
+                         ]
+}

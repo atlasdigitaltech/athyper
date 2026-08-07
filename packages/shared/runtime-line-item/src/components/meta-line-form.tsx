@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   editableLineFields,
   fieldLabel,

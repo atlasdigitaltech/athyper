@@ -3,9 +3,9 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const repoRoot = resolve(import.meta.dirname, "../../../../..");
-const tables = readFileSync(resolve(repoRoot, "server/db/ddl/control/01u_tables_posting_role.sql"), "utf8");
-const functions = readFileSync(resolve(repoRoot, "server/db/ddl/control/05_functions_posting_role.sql"), "utf8");
-const rls = readFileSync(resolve(repoRoot, "server/db/ddl/control/08_rls_posting_role.sql"), "utf8");
+const tables = readFileSync(resolve(repoRoot, "server/db/ddl/planes/neon/control/03_tables.sql"), "utf8");
+const functions = readFileSync(resolve(repoRoot, "server/db/ddl/planes/neon/control/07_functions.sql"), "utf8");
+const rls = readFileSync(resolve(repoRoot, "server/db/ddl/planes/neon/control/10_rls.sql"), "utf8");
 const service = readFileSync(resolve(repoRoot, "server/packages/services/finance/services/posting-role.service.ts"), "utf8");
 
 describe("posting-role foundation contract", () => {

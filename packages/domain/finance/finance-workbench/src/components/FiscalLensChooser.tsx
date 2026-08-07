@@ -8,13 +8,13 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@athyper/ui/primitives";
-import { DatePicker } from "@athyper/ui/composites";
+} from "@athyper/platform-ui/primitives";
+import { DatePicker } from "@athyper/platform-ui/composites";
 import type { FinanceScope } from "../lib/scope";
 import {
   periodLabel,

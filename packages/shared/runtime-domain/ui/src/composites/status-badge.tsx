@@ -8,9 +8,9 @@
  * `withIcon` and `dot` are opt-in for surfaces that need a glyph or marker;
  * the default is icon-less to keep the pill quiet.
  */
-import { type SemanticIntent, resolveSemanticColors } from "@athyper/theme/semantic-colors";
-import { getStatusIcon } from "@athyper/icons/statuses";
-import { cn } from "@athyper/theme/utils";
+import { type SemanticIntent, resolveSemanticColors } from "@athyper/platform-theme/semantic-colors";
+import { getStatusIcon } from "@athyper/platform-icons/statuses";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface StatusBadgeProps {
   intent: SemanticIntent;

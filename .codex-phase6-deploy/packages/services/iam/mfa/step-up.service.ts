@@ -33,7 +33,7 @@ import {
   meetsAssurance,
   normalizeFederatedAssurance,
   type NormalizedFederatedAssurance,
-} from "@athyper/auth-common";
+} from "@athyper/platform-iam-auth-common";
 
 // ─── Action classes ───────────────────────────────────────────────────────────
 

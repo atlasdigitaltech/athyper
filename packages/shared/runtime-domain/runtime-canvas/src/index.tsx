@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import type { PlaneKey } from "@athyper/session-plane";
-import { getPlaneConfig } from "@athyper/session-plane";
-import { ToolbarButton, WorkPanel } from "@athyper/surface-kit";
+import type { PlaneKey } from "@athyper/platform-iam-session-plane";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
+import { ToolbarButton, WorkPanel } from "@athyper/platform-surface-kit";
 import { ArrowLeft } from "lucide-react";
 import {
   entityHeaderShellClass,

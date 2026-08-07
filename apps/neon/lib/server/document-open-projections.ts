@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { V4Session } from "@athyper/auth-bff";
+import type { V4Session } from "@athyper/platform-iam-auth-bff";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { runtimeServerPath } from "@athyper/api-contracts/runtime-server-paths";
 import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";

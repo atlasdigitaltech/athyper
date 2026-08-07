@@ -22,14 +22,14 @@
 import { useCallback, useId, useState, useMemo } from "react";
 import { CalendarDays, Check, X } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   parseZonedDateTime,
   formatZonedDateTime,
   todayInZone,
   type ZonedDateTimeValue,
   type WeekStart,
-} from "@athyper/temporal";
+} from "@athyper/platform-temporal";
 import { CalendarGrid } from "./calendar-grid";
 
 export interface ZonedDateTimePickerProps {

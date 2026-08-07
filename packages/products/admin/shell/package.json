@@ -13,13 +13,13 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@athyper/atlas-agent-runtime": "workspace:*",
+    "@athyper/platform-ai-agent-runtime": "workspace:*",
     "@athyper/app-admin-route-manifest": "workspace:*",
-    "@athyper/brand": "workspace:*",
-    "@athyper/session-plane": "workspace:*",
+    "@athyper/platform-brand": "workspace:*",
+    "@athyper/platform-iam-session-plane": "workspace:*",
     "@athyper/shell": "workspace:*",
     "@athyper/shell-runtime": "workspace:*",
-    "@athyper/surface-kit": "workspace:*"
+    "@athyper/platform-surface-kit": "workspace:*"
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5 <6",

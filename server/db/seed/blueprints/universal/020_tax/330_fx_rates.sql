@@ -174,7 +174,7 @@ BEGIN
     SELECT b.from_curr, ROUND(b.rate * 0.99540, 10), DATE '2026-05-15', 'SPOT'
     FROM tmp_base b;
 
-    -- ── LAYER 3 — FY2025 quarterly PERIOD_END for the 13 demo-driver currencies
+    -- ── LAYER 3 — FY2025 quarterly PERIOD_END for the 13 supported currencies
     -- (USD, QAR, SAR, AED, SGD, INR, CAD, EUR, TWD, ZAR, GBP, JPY, PHP).
     -- Used by FY2025 month-end revaluation, consolidation, and KPI demos.
     INSERT INTO tmp_fx (from_curr, rate, eff_date, rate_type) VALUES

@@ -91,7 +91,10 @@ expect(
 );
 const authorities = new Map<string, CompiledAuthority>();
 for (const target of ["neon-admin", "mesh"] as const) {
-  const root = resolve(databaseRoot, `authority/${target}/compiled`);
+  const root = resolve(
+    databaseRoot,
+    `seed/contracts/authorization/authority/${target}/compiled`,
+  );
   const authority = await json<CompiledAuthority>(
     resolve(root, "compiled-authority.v1.json"),
   );
@@ -239,7 +242,7 @@ expect(
 
 for (const [relativePath, tokens] of [
   [
-    "ddl/control/01zzu_authorization_v3_subject_scope_migration.sql",
+    "ddl/planes/neon/authz/03_tables.sql",
     [
       "cardinality(target_group_ids) > 0",
       "legacy_scope_kind IS NOT NULL",
@@ -248,7 +251,7 @@ for (const [relativePath, tokens] of [
     ],
   ],
   [
-    "ddl/mesh_control/01zzu_authorization_v3_subject_scope_migration.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
     [
       "cardinality(target_group_ids) > 0",
       "legacy_scope_ref_id IS NOT NULL",
@@ -257,7 +260,7 @@ for (const [relativePath, tokens] of [
     ],
   ],
   [
-    "ddl/control/05zu_authorization_v3_mapping_functions.sql",
+    "ddl/planes/neon/authz/07_functions.sql",
     [
       "membership.principal_id = NEW.principal_id",
       "member.principal_id = NEW.principal_id",
@@ -267,7 +270,7 @@ for (const [relativePath, tokens] of [
     ],
   ],
   [
-    "ddl/mesh_control/05zu_authorization_v3_mapping_functions.sql",
+    "ddl/planes/mesh/authz/07_functions.sql",
     [
       "membership.principal_id = NEW.principal_id",
       "member.principal_id = NEW.principal_id",
@@ -289,7 +292,7 @@ const forbiddenInference = [
   /\bempty\b[^\n]{0,120}\btenant[-_ ]wide\b/i,
 ];
 for (const root of [
-  resolve(databaseRoot, "authority"),
+  resolve(databaseRoot, "seed/contracts/authorization/authority"),
   resolve(databaseRoot, "scripts/authority"),
 ]) {
   for (const path of await collect(root)) {

@@ -26,7 +26,7 @@ import {
   type TenantTemporalProfile,
   type UserTemporalProfile,
 } from "./temporal-context";
-import type { WeekStart } from "@athyper/temporal";
+import type { WeekStart } from "@athyper/platform-temporal";
 
 interface CompanyCodeProfileWire {
   companyCodeId: string;

@@ -22,7 +22,7 @@
 // requires --expected-database and --approval-ticket.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import pg from "pg";
@@ -59,16 +59,16 @@ type MeshOptions = {
 };
 
 const AUTHORIZATION_CAPTURE_DDL = new Set([
-  "ddl/mesh_control/01z_authorization_migration_controls.sql",
-  "ddl/mesh_log/01z_authorization_change_capture.sql",
-  "ddl/mesh_log/03z_authorization_change_capture_constraints.sql",
-  "ddl/mesh_control/04z_authorization_migration_controls_indexes.sql",
-  "ddl/mesh_log/04z_authorization_change_capture_indexes.sql",
-  "ddl/mesh_log/05z_authorization_change_capture_functions.sql",
-  "ddl/mesh_log/06z_authorization_change_capture_triggers.sql",
-  "ddl/mesh_log/07z_authorization_change_capture_views.sql",
-  "ddl/mesh_control/08z_authorization_migration_controls_rls.sql",
-  "ddl/mesh_log/08z_authorization_change_capture_rls.sql",
+  "ddl/planes/mesh/authz/03_tables.sql",
+  "ddl/common/event/03_tables.sql",
+  "ddl/common/event/05_constraints.sql",
+  "ddl/planes/mesh/authz/06_indexes.sql",
+  "ddl/common/event/06_indexes.sql",
+  "ddl/common/event/07_functions.sql",
+  "ddl/common/event/08_triggers.sql",
+  "ddl/common/event/09_views.sql",
+  "ddl/planes/mesh/authz/10_rls.sql",
+  "ddl/common/event/10_rls.sql",
 ]);
 
 const AUTHORIZATION_CAPTURE_SOURCES = [
@@ -187,102 +187,136 @@ function collectSqlFiles(dir: string): string[] {
   return results;
 }
 
+function collectManifestSqlFiles(plane: "mesh"): string[] {
+  const ddlRoot = resolve(DB_ROOT, "ddl");
+  const manifestPath = resolve(ddlRoot, "planes", plane, "_manifest.txt");
+  if (!existsSync(manifestPath)) throw new Error(`DDL manifest not found: ${manifestPath}`);
+  return readFileSync(manifestPath, "utf8")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"))
+    .map((entry) => {
+      const absPath = resolve(ddlRoot, entry);
+      if (!entry.endsWith(".sql") || relative(ddlRoot, absPath).startsWith("..") || !existsSync(absPath)) {
+        throw new Error(`Invalid or missing DDL manifest entry: ${entry}`);
+      }
+      return absPath;
+    });
+}
+
+function readExpandedSql(absPath: string, includeStack = new Set<string>()): string {
+  const resolvedPath = resolve(absPath);
+  if (includeStack.has(resolvedPath)) throw new Error(`Recursive SQL include: ${resolvedPath}`);
+  includeStack.add(resolvedPath);
+  try {
+    return readFileSync(resolvedPath, "utf8")
+      .split(/\r?\n/)
+      .map((line) => {
+        const match = line.match(/^\s*\\ir\s+(.+?)\s*$/);
+        if (!match?.[1]) return line;
+        const includeValue = match[1].trim().replace(/^['"]|['"]$/g, "");
+        return readExpandedSql(resolve(dirname(resolvedPath), includeValue), includeStack);
+      })
+      .join("\n");
+  } finally {
+    includeStack.delete(resolvedPath);
+  }
+}
+
+function readMeshSql(file: MeshSqlFile): string {
+  return file.phase === "DDL" ? readExpandedSql(file.absPath) : readFileSync(file.absPath, "utf8");
+}
+
 export function discoverMeshSqlFiles(): MeshSqlFile[] {
   const ddlRelPaths = [
-    "ddl/mesh/00_bootstrap.sql",
-    "ddl/mesh_log/00_bootstrap.sql",
-    "ddl/mesh_control/00_bootstrap.sql",
-    "ddl/shared/00_bootstrap.sql",
-    "ddl/000_bootstrap/003_domains.sql",
-    "ddl/shared/01_tables.sql",
-    "ddl/mesh/_shared/03_constraints.sql",
-    "ddl/shared/04_indexes.sql",
-    "ddl/mesh/_shared/04_indexes.sql",
-    "ddl/shared/05_functions.sql",
-    "ddl/mesh/_shared/06_triggers.sql",
-    "ddl/shared/08_rls.sql",
-    "ddl/mesh/_shared/08_rls.sql",
-    "ddl/mesh/01_tables.sql",
-    "ddl/mesh/01a_foundation_tables.sql",
-    "ddl/mesh/01b_participant_profile_tables.sql",
-    "ddl/mesh/01c_content_collaboration_tables.sql",
-    "ddl/mesh/01d_utility_tables.sql",
-    "ddl/mesh/01e_commerce_tables.sql",
-    "ddl/mesh_log/01_tables.sql",
-    "ddl/mesh_control/01_tables.sql",
-    "ddl/mesh_control/01z_authorization_migration_controls.sql",
-    "ddl/mesh_log/01z_authorization_change_capture.sql",
-    "ddl/mesh_control/01zz_authorization_v2_catalog.sql",
-    "ddl/mesh_control/01zzz_authorization_v2_migration_state.sql",
-    "ddl/mesh/01zz_authorization_v2_authority.sql",
-    "ddl/mesh_control/01zzu_authorization_v3_subject_scope_migration.sql",
-    "ddl/mesh/01zza_authorization_v4_account_entitlement.sql",
-    "ddl/mesh_control/01zzv_authorization_v4_entitlement_migration.sql",
-    "ddl/mesh_control/01zzw_authorization_v5_runtime.sql",
-    "ddl/mesh_control/01zzx_preserved_identity_migration_receipt.sql",
-    "ddl/mesh_control/01zzy_authorization_v7_shadow_cutover.sql",
-    "ddl/mesh_log/01zz_authorization_v2_runtime.sql",
-    "ddl/mesh_log/01zzy_authorization_v7_shadow_cutover.sql",
-    "ddl/mesh/03_constraints.sql",
-    "ddl/mesh_control/03_authorization_v2_catalog_constraints.sql",
-    "ddl/mesh/03_authorization_v2_authority_constraints.sql",
-    "ddl/mesh_control/03zu_authorization_v3_subject_scope_constraints.sql",
-    "ddl/mesh_control/03_authorization_v7_shadow_cutover_constraints.sql",
-    "ddl/mesh/03za_authorization_v4_account_entitlement_constraints.sql",
-    "ddl/mesh_log/03z_authorization_change_capture_constraints.sql",
-    "ddl/mesh_log/03_authorization_v2_runtime_constraints.sql",
-    "ddl/mesh/04_indexes.sql",
-    "ddl/mesh/04_authorization_v2_authority_indexes.sql",
-    "ddl/mesh_log/04_indexes.sql",
-    "ddl/mesh_control/04_indexes.sql",
-    "ddl/mesh_control/04_authorization_v2_catalog_indexes.sql",
-    "ddl/mesh_control/04z_authorization_migration_controls_indexes.sql",
-    "ddl/mesh_log/04z_authorization_change_capture_indexes.sql",
-    "ddl/mesh_log/04_authorization_v2_runtime_indexes.sql",
-    "ddl/mesh/05_functions.sql",
-    "ddl/mesh_log/05_functions.sql",
-    "ddl/mesh_control/05_functions.sql",
-    "ddl/mesh_control/05_authorization_v2_catalog_functions.sql",
-    "ddl/mesh_control/05_authorization_v5_runtime_functions.sql",
-    "ddl/mesh_control/05zu_authorization_v3_mapping_functions.sql",
-    "ddl/mesh_control/05_authorization_v7_shadow_cutover_functions.sql",
-    "ddl/mesh/05_authorization_v2_authority_functions.sql",
-    "ddl/mesh/05za_authorization_v4_entitlement_functions.sql",
-    "ddl/mesh_log/05z_authorization_change_capture_functions.sql",
-    "ddl/mesh_log/05_authorization_v2_invalidation_functions.sql",
-    "ddl/mesh_log/05_authorization_v2_replay_functions.sql",
-    "ddl/mesh_log/05_authorization_v2_evidence_functions.sql",
-    "ddl/mesh/06_triggers.sql",
-    "ddl/mesh_log/06_triggers.sql",
-    "ddl/mesh_control/06_triggers.sql",
-    "ddl/mesh_control/06_authorization_v2_catalog_triggers.sql",
-    "ddl/mesh_control/06_authorization_v5_runtime_triggers.sql",
-    "ddl/mesh_control/06zu_authorization_v3_mapping_triggers.sql",
-    "ddl/mesh_control/06_authorization_v7_shadow_cutover_triggers.sql",
-    "ddl/mesh/06_authorization_v2_authority_triggers.sql",
-    "ddl/mesh_log/06z_authorization_change_capture_triggers.sql",
-    "ddl/mesh_log/06_authorization_v2_runtime_triggers.sql",
-    "ddl/mesh_control/07_authorization_v2_catalog_views.sql",
-    "ddl/mesh/07_authorization_v2_authority_views.sql",
-    "ddl/mesh_log/07z_authorization_change_capture_views.sql",
-    "ddl/mesh_log/07_authorization_v2_runtime_views.sql",
-    "ddl/mesh_log/07_authorization_v7_shadow_cutover_views.sql",
-    "ddl/mesh/08_rls.sql",
-    "ddl/mesh/08_authorization_v2_authority_rls.sql",
-    "ddl/mesh_log/08_rls.sql",
-    "ddl/mesh_control/08_rls.sql",
-    "ddl/mesh_control/08_authorization_v2_catalog_rls.sql",
-    "ddl/mesh_control/08z_authorization_migration_controls_rls.sql",
-    "ddl/mesh_control/08_authorization_v2_migration_state_rls.sql",
-    "ddl/mesh_log/08z_authorization_change_capture_rls.sql",
-    "ddl/mesh_control/08_authorization_v5_runtime_rls.sql",
-    "ddl/mesh_control/08_authorization_v7_shadow_cutover_rls.sql",
-    "ddl/mesh_log/08_authorization_v2_runtime_rls.sql",
+    "ddl/planes/mesh/mesh/00_schema.sql",
+    "ddl/common/log/00_schema.sql",
+    "ddl/planes/mesh/control/00_schema.sql",
+    "ddl/common/shared/00_schema.sql",
+    "ddl/common/shared/02_domains.sql",
+    "ddl/common/shared/03_tables.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/common/shared/06_indexes.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/common/shared/07_functions.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/common/shared/10_rls.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/planes/mesh/mesh/03_tables.sql",
+    "ddl/common/log/03_tables.sql",
+    "ddl/planes/mesh/control/03_tables.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
+    "ddl/common/event/03_tables.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
+    "ddl/planes/mesh/control/03_tables.sql",
+    "ddl/common/ops/03_tables.sql",
+    "ddl/common/event/03_tables.sql",
+    "ddl/common/ops/03_tables.sql",
+    "ddl/planes/mesh/mesh/05_constraints.sql",
+    "ddl/planes/mesh/authz/05_constraints.sql",
+    "ddl/planes/mesh/authz/05_constraints.sql",
+    "ddl/planes/mesh/authz/05_constraints.sql",
+    "ddl/common/ops/05_constraints.sql",
+    "ddl/planes/mesh/authz/05_constraints.sql",
+    "ddl/common/event/05_constraints.sql",
+    "ddl/common/event/05_constraints.sql",
+    "ddl/planes/mesh/mesh/06_indexes.sql",
+    "ddl/planes/mesh/authz/06_indexes.sql",
+    "ddl/common/log/06_indexes.sql",
+    "ddl/planes/mesh/control/06_indexes.sql",
+    "ddl/planes/mesh/authz/06_indexes.sql",
+    "ddl/planes/mesh/authz/06_indexes.sql",
+    "ddl/common/event/06_indexes.sql",
+    "ddl/common/event/06_indexes.sql",
+    "ddl/planes/mesh/mesh/07_functions.sql",
+    "ddl/common/log/07_functions.sql",
+    "ddl/planes/mesh/control/07_functions.sql",
+    "ddl/planes/mesh/authz/07_functions.sql",
+    "ddl/common/ops/07_functions.sql",
+    "ddl/planes/mesh/authz/07_functions.sql",
+    "ddl/common/event/07_functions.sql",
+    "ddl/planes/mesh/mesh/08_triggers.sql",
+    "ddl/common/log/08_triggers.sql",
+    "ddl/planes/mesh/control/08_triggers.sql",
+    "ddl/planes/mesh/authz/08_triggers.sql",
+    "ddl/planes/mesh/authz/08_triggers.sql",
+    "ddl/planes/mesh/authz/08_triggers.sql",
+    "ddl/common/ops/08_triggers.sql",
+    "ddl/planes/mesh/authz/08_triggers.sql",
+    "ddl/common/event/08_triggers.sql",
+    "ddl/common/event/08_triggers.sql",
+    "ddl/planes/mesh/authz/09_views.sql",
+    "ddl/planes/mesh/authz/09_views.sql",
+    "ddl/common/event/09_views.sql",
+    "ddl/common/event/09_views.sql",
+    "ddl/common/ops/09_views.sql",
+    "ddl/planes/mesh/mesh/10_rls.sql",
+    "ddl/planes/mesh/authz/10_rls.sql",
+    "ddl/common/log/10_rls.sql",
+    "ddl/planes/mesh/control/10_rls.sql",
+    "ddl/planes/mesh/authz/10_rls.sql",
+    "ddl/planes/mesh/authz/10_rls.sql",
+    "ddl/planes/mesh/authz/10_rls.sql",
+    "ddl/common/event/10_rls.sql",
+    "ddl/planes/mesh/authz/10_rls.sql",
+    "ddl/common/ops/10_rls.sql",
+    "ddl/common/event/10_rls.sql",
     "ddl/planes/mesh/master/12_platform_catalog_reference_seed.sql",
   ];
 
-  const ddlFiles = ddlRelPaths.map((relPath) => {
-    const absPath = join(DB_ROOT, ...relPath.split("/"));
+  const ddlFiles = collectManifestSqlFiles("mesh").map((absPath) => {
+    const relPath = relative(DB_ROOT, absPath).replace(/\\/g, "/");
     return {
       relPath,
       key: relPath.replace(/\.sql$/, ""),
@@ -309,15 +343,7 @@ export function discoverMeshSqlFiles(): MeshSqlFile[] {
     "ddl/common/shared/reference-data/009e_industry_code_keywords.sql",
   ];
 
-  const referenceSeedFiles = referenceSeedRelPaths.map((relPath) => {
-    const absPath = join(DB_ROOT, ...relPath.split("/"));
-    return {
-      relPath,
-      key: relPath.replace(/\.sql$/, ""),
-      absPath,
-      phase: "Seed" as const,
-    };
-  });
+  const referenceSeedFiles: MeshSqlFile[] = [];
 
   const seedRoot = join(DB_ROOT, "seed", "tenants", "mesh", "000_exchange");
   const seedFiles = collectSqlFiles(seedRoot).map((absPath) => {
@@ -356,7 +382,7 @@ function checksum(sql: string): string {
 
 function isSharedProvisionFile(file: MeshSqlFile): boolean {
   return (
-    file.relPath.startsWith("ddl/shared/")
+    file.relPath.startsWith("ddl/common/")
     || file.relPath.startsWith("ddl/common/shared/reference-data/")
   );
 }
@@ -453,7 +479,7 @@ async function runStatus(client: pg.Client, files: MeshSqlFile[]): Promise<void>
   console.log("Mesh DB provision status");
   console.log("------------------------");
   for (const file of files) {
-    const sql = readFileSync(file.absPath, "utf8");
+    const sql = readMeshSql(file);
     const hash = checksum(sql);
     const previous = executed.get(file.key);
     const status = previous === undefined ? "PENDING" : previous === hash ? "OK" : "CHANGED";
@@ -472,7 +498,7 @@ async function runFiles(client: pg.Client, files: MeshSqlFile[], opts: MeshOptio
     selectedFiles
       .filter((file) => file.phase === "Seed")
       .map((file) => {
-        const source = readFileSync(file.absPath, "utf8");
+        const source = readMeshSql(file);
         const receipt = seedReceipt({
           plane: "mesh",
           packKey: file.key,
@@ -499,7 +525,7 @@ async function runFiles(client: pg.Client, files: MeshSqlFile[], opts: MeshOptio
   });
 
   for (const file of selectedFiles) {
-    const sql = readFileSync(file.absPath, "utf8");
+    const sql = readMeshSql(file);
     const hash = checksum(sql);
     const previousHash = executed.get(file.key);
 
@@ -565,7 +591,7 @@ async function runAuthorizationCaptureFiles(
   await ensureTrackingTable(client);
   const executed = await getExecuted(client);
   const pending = captureFiles.filter((file) => {
-    const sql = readFileSync(file.absPath, "utf8");
+    const sql = readMeshSql(file);
     return force || executed.get(file.key) !== checksum(sql);
   });
 
@@ -628,7 +654,7 @@ async function runAuthorizationCaptureFiles(
     );
 
     for (const file of captureFiles) {
-      const sql = readFileSync(file.absPath, "utf8");
+      const sql = readMeshSql(file);
       const hash = checksum(sql);
       if (!force && executed.get(file.key) === hash) {
         log({

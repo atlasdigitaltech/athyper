@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   AssetPicker,
   DimensionPicker,
@@ -10,9 +10,9 @@ import {
   ReasonCodePicker,
 } from "@athyper/runtime-shared/entity-search";
 import { AccountingDistributionEditor, AccountingSplitRowEditor } from "@athyper/runtime-shared/accounting-ui";
-import { DrawerFormShell } from "@athyper/ui/surfaces/shells";
+import { DrawerFormShell } from "@athyper/platform-ui/surfaces/shells";
 import { MoneySummaryStrip } from "../pricing-components/money-summary-strip";
-import { BODY_SM_MEDIUM, LABEL_SM, META_SM } from "@athyper/ui/typography";
+import { BODY_SM_MEDIUM, LABEL_SM, META_SM } from "@athyper/platform-ui/typography";
 import { ErrorList } from "../pricing-components/drawers/_shared";
 import type { AccountingDistribution } from "../../purchase-invoice/types";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";

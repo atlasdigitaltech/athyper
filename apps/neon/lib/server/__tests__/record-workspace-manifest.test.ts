@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { V4Session } from "@athyper/auth-bff";
+import type { V4Session } from "@athyper/platform-iam-auth-bff";
 import { compileMetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import {
   buildRecordWorkspaceCacheScope,

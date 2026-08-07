@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Badge, Button, Input, Label, Switch, Textarea } from "@athyper/ui";
+import { Badge, Button, Input, Label, Switch, Textarea } from "@athyper/platform-ui";
 import type { ContractIssue, JsonRecord } from "./contract-state";
 import { jsonPointer } from "./contract-state";
 

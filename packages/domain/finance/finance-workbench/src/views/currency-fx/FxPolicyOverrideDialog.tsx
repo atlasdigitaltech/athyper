@@ -12,7 +12,7 @@ import {
   DialogTitle,
   Input,
   Label,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import {
   useEndBookFxOverride,
   useEndCompanyFxOverride,

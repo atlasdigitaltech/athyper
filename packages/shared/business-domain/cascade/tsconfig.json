@@ -1,5 +1,0 @@
-{
-  "extends": "@athyper/config/tsconfig-base",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist" },
-  "include": ["src"]
-}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@athyper/ui";
+import { Button } from "@athyper/platform-ui";
 
 interface PaletteDrawerActionsProps {
   onApply:        () => void;

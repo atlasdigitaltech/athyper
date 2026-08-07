@@ -7,7 +7,7 @@
 --
 -- Blueprint selection:
 --   COA framework   -> exactly one of: coa_ifrs | coa_gaap
---   Industry packs  → one or more from blueprints/industry/100_industry_packs/
+--   Industry packs  → one or more from blueprints/100_industry_packs/
 --   Module packs    → per subscription from blueprints/modules/
 -- ============================================================================
 

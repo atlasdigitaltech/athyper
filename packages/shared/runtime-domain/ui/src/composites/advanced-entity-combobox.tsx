@@ -27,7 +27,7 @@
 import { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { ChevronDown, X } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   AdvancedEntityChooserPanel,
   type AdvancedEntityChooserControl,

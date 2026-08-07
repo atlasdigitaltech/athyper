@@ -216,7 +216,7 @@ async function run() {
 
   if (failed > 0) {
     console.log(
-      `\n  \x1b[31mFix failures in server/db/ddl/security/800_security_hardening.sql\x1b[0m`
+      `\n  \x1b[31mFix failures in server/db/ddl/common/shared/09_function_search_path_hardening.sql`
     );
     console.log(
       `  \x1b[90m  (ALTER FUNCTION ... OWNER TO ${EXPECTED_OWNER}; REVOKE EXECUTE FROM PUBLIC;\x1b[0m`

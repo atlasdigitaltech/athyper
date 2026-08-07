@@ -29,6 +29,7 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@athyper/platform-core": "workspace:*",
     "jose": "^6.2.2"
   },
   "devDependencies": {

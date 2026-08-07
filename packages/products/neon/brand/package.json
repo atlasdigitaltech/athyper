@@ -13,7 +13,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@athyper/brand": "workspace:*"
+    "@athyper/platform-brand": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

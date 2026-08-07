@@ -1,6 +1,0 @@
--- ============================================================================
--- public/04_indexes.sql
--- Concept: Public Schema Indexes — no additional indexes required
--- Depends on: 04_tables/000_public.sql
--- Note: No additional indexes required for the public schema.
--- ============================================================================

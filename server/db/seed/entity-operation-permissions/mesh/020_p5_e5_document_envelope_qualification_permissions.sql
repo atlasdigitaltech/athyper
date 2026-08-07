@@ -1,7 +1,7 @@
 DO $p5e5_mesh_permissions$
 DECLARE v_actor uuid:='00000000-0000-0000-0000-000000000000'; v_module uuid;
 BEGIN
-  SELECT id INTO v_module FROM master.module WHERE lower(code)='int' AND status='active';
+  SELECT id INTO v_module FROM control.module WHERE lower(code)='int' AND status='active';
   INSERT INTO authz.permission (id,canonical_code,permission_kind,resource_code,operation_code,module_id,risk_tier,
     requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,provenance_ref,metadata,status,created_by)
   SELECT md5('athyper:p5-e5:mesh:'||code)::uuid,'mesh.document_envelope.'||code,'entity_operation',

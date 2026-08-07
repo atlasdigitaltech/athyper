@@ -74,7 +74,7 @@ function parseOptions(args: string[]): Options {
 const options = parseOptions(process.argv.slice(2));
 const databaseRoot = fileURLToPath(new URL("../../", import.meta.url));
 const captureSourceDdl = await readFile(
-  resolve(databaseRoot, "ddl/control/01zzo_authorization_migration_controls.sql"),
+  resolve(databaseRoot, "ddl/planes/neon/authz/03_tables.sql"),
   "utf8",
 );
 const captureSourcePattern =

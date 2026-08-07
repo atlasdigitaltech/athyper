@@ -1,7 +1,7 @@
 "use client";
 
 import { Building2, Globe, Layers } from "lucide-react";
-import { Badge } from "@athyper/ui/primitives";
+import { Badge } from "@athyper/platform-ui/primitives";
 import type { MeTenantContext } from "@athyper/api-contracts/me";
 import {
   InfoRow, SectionCard, Banner, SkeletonCard,

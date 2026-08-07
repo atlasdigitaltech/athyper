@@ -15,7 +15,7 @@ import {
   CollapsibleTrigger,
   Input,
   Label,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import {
   useSaveTenantFxPolicy,
   type FxPolicy,

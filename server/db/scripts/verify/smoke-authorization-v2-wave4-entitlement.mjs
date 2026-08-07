@@ -104,13 +104,13 @@ async function smokeNeon() {
     );
   `);
   await db.exec(await source(
-    "server/db/ddl/control/01zzv_authorization_v4_entitlement_migration.sql",
+    "server/db/ddl/planes/neon/authz/03_tables.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/control/05zv_authorization_v4_entitlement_functions.sql",
+    "server/db/ddl/planes/neon/authz/07_functions.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/master/05zzd_authorization_v4_entitlement_functions.sql",
+    "server/db/ddl/planes/neon/authz/07_functions.sql",
   ));
   const admin = await db.query(`
     SELECT count(*)::int AS count
@@ -243,16 +243,16 @@ async function smokeMesh() {
     );
   `);
   await db.exec(await source(
-    "server/db/ddl/mesh_control/01zzv_authorization_v4_entitlement_migration.sql",
+    "server/db/ddl/planes/mesh/authz/03_tables.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/mesh/01zza_authorization_v4_account_entitlement.sql",
+    "server/db/ddl/planes/mesh/authz/03_tables.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/mesh/03za_authorization_v4_account_entitlement_constraints.sql",
+    "server/db/ddl/planes/mesh/authz/05_constraints.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/mesh/05za_authorization_v4_entitlement_functions.sql",
+    "server/db/ddl/planes/mesh/authz/07_functions.sql",
   ));
   await mustFail(db, "Mesh entitlement requires product code", `
     INSERT INTO mesh.account_entitlement (

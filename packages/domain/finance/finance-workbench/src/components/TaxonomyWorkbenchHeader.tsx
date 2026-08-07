@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { WorkbenchMetaShell, type WorkbenchModeItem } from "@athyper/ui/composites";
+import { WorkbenchMetaShell, type WorkbenchModeItem } from "@athyper/platform-ui/composites";
 import {
   getTaxonomyWorkbenchDefinition,
   type TaxonomyWorkbenchId,

@@ -10,7 +10,7 @@
  */
 "use client";
 
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface JurisdictionChipProps {
   /** master.tax_jurisdiction.code (e.g. "TJ-AE", "TJ-IN-TN"). */

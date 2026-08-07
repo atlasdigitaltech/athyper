@@ -23,7 +23,7 @@ import {
   startOfWeekISO,
   startOfYearISO,
   type WeekStart,
-} from "@athyper/temporal";
+} from "@athyper/platform-temporal";
 import { dateToFiscalPoint } from "./period-gate";
 
 // ─── Locale-aware preset labels ──────────────────────────────────────────────

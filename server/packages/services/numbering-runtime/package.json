@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@athyper/numbering-policy-contracts": "workspace:*",
+    "@athyper/numbering-contracts": "workspace:*",
     "kysely": "^0.28.16"
   },
   "devDependencies": {

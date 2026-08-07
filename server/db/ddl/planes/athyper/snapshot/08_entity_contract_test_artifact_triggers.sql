@@ -1,8 +1,0 @@
-CREATE TRIGGER trg_entity_contract_test_run_10_validate BEFORE INSERT ON snapshot.entity_contract_test_run
-FOR EACH ROW EXECUTE FUNCTION snapshot.trg_validate_entity_contract_test_run();
-CREATE TRIGGER trg_entity_contract_test_run_90_immutable BEFORE UPDATE OR DELETE ON snapshot.entity_contract_test_run
-FOR EACH ROW EXECUTE FUNCTION snapshot.trg_reject_entity_contract_test_artifact_mutation();
-CREATE TRIGGER trg_entity_contract_test_result_10_validate BEFORE INSERT ON snapshot.entity_contract_test_result
-FOR EACH ROW EXECUTE FUNCTION snapshot.trg_validate_entity_contract_test_result();
-CREATE TRIGGER trg_entity_contract_test_result_90_immutable BEFORE UPDATE OR DELETE ON snapshot.entity_contract_test_result
-FOR EACH ROW EXECUTE FUNCTION snapshot.trg_reject_entity_contract_test_artifact_mutation();

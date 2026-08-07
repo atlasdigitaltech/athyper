@@ -3,8 +3,8 @@ import type {
   NumberingPolicyCoordinate,
   NumberingPreviewContext,
   NumberingPreviewResult,
-} from "@athyper/numbering-policy-contracts";
-export type { NumberingPolicyTestCommand, NumberingPolicyTestResult } from "@athyper/numbering-policy-contracts";
+} from "@athyper/numbering-contracts";
+export type { NumberingPolicyTestCommand, NumberingPolicyTestResult } from "@athyper/numbering-contracts";
 
 export type MetaEntityClass =
   | "business"

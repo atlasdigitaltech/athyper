@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import type { SelectionAction } from "./types";
 import { BadgePill, partitionActions } from "./internals";
 

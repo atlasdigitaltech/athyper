@@ -24,7 +24,7 @@ import {
   type PeriodCalendar,
   type FiscalPeriodStatus,
 } from "@athyper/finance-rules";
-import { todayInZone } from "@athyper/temporal";
+import { todayInZone } from "@athyper/platform-temporal";
 
 interface PeriodStatusWire {
   companyCode: string;

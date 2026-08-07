@@ -23,6 +23,7 @@ vi.mock("@athyper/svc-iam", () => ({
 }));
 
 vi.mock("@athyper/svc-metadata", () => ({ registerMetadataRoutes: vi.fn() }));
+vi.mock("@athyper/svc-onboarding", () => ({ registerOnboardingRoutes: vi.fn() }));
 vi.mock("@athyper/svc-records", () => ({ registerRecordsRoutes: vi.fn() }));
 vi.mock("@athyper/svc-documents", () => ({ registerDocumentsRoutes: vi.fn() }));
 vi.mock("@athyper/svc-collab", () => ({ registerCollabRoutes: vi.fn() }));
@@ -80,7 +81,7 @@ vi.mock("@athyper/svc-ai", () => ({
   })),
   registerAiRoutes: vi.fn(),
 }));
-vi.mock("@athyper/server-foundation/openapi/openapi-generator", () => ({
+vi.mock("@athyper/runtime-http", () => ({
   createOpenApiRouter: vi.fn(() => vi.fn()),
 }));
 vi.mock("@athyper/server-foundation/monitoring/platform-metrics", () => ({
@@ -255,4 +256,3 @@ describe("startApi (Phase 2B — HTTP-only)", () => {
     expect(deps.auth.warmUp).toHaveBeenCalledTimes(1);
   });
 });
-

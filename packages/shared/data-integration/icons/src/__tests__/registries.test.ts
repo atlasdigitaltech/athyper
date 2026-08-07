@@ -16,7 +16,7 @@ import { getEntityIcon, hasEntityIcon } from "../entity-icons";
 import { getEntityColorClasses } from "../color-tokens";
 import { getActionIcon, getHandlerTypeIcon, getRegisteredActions } from "../action-icons";
 import { getStatusIcon } from "../status-icons";
-import { type SemanticIntent } from "@athyper/theme/semantic-colors";
+import { type SemanticIntent } from "@athyper/platform-theme/semantic-colors";
 
 function expectIconComponent(icon: unknown): void {
   expect(icon).toBeDefined();

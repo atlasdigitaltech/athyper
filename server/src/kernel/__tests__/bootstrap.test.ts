@@ -32,8 +32,32 @@ const mockDbRoleQuery = vi.fn(() =>
 const ORIGINAL_MODE = process.env["MODE"];
 const ORIGINAL_DOCPARSER_URL = process.env["DOCPARSER_URL"];
 
-vi.mock("@athyper/adapter-db", () => ({
+vi.mock("@athyper/adapter-db-neon", () => ({
+  createNeonDbAdapter: vi.fn(() => ({
+    kysely: {},
+    health: vi.fn(() => Promise.resolve({ healthy: true })),
+    close: mockDbClose,
+    getPool: vi.fn(() => ({ query: mockDbRoleQuery })),
+  })),
   createDbAdapter: vi.fn(() => ({
+    kysely: {},
+    health: vi.fn(() => Promise.resolve({ healthy: true })),
+    close: mockDbClose,
+    getPool: vi.fn(() => ({ query: mockDbRoleQuery })),
+  })),
+}));
+
+vi.mock("@athyper/adapter-db-athyper", () => ({
+  createAthyperDbAdapter: vi.fn(() => ({
+    kysely: {},
+    health: vi.fn(() => Promise.resolve({ healthy: true })),
+    close: mockDbClose,
+    getPool: vi.fn(() => ({ query: mockDbRoleQuery })),
+  })),
+}));
+
+vi.mock("@athyper/adapter-db-mesh", () => ({
+  createMeshDbAdapter: vi.fn(() => ({
     kysely: {},
     health: vi.fn(() => Promise.resolve({ healthy: true })),
     close: mockDbClose,

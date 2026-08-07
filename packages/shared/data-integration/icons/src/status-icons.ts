@@ -2,12 +2,12 @@
  * @athyper/icons — Status Icon Registry
  *
  * Maps semantic intents to Lucide icons.
- * Pairs with @athyper/theme/semantic-colors which provides the color classes.
+ * Pairs with @athyper/platform-theme/semantic-colors which provides the color classes.
  *
  * Usage:
  *   import { getStatusIcon } from "@athyper/icons/statuses";
- *   import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
- *   import { cn } from "@athyper/theme/utils";
+ *   import { resolveSemanticColors } from "@athyper/platform-theme/semantic-colors";
+ *   import { cn } from "@athyper/platform-theme/utils";
  *
  *   const Icon = getStatusIcon("success");
  *   const colors = resolveSemanticColors("success");
@@ -29,7 +29,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { type SemanticIntent } from "@athyper/theme/semantic-colors";
+import { type SemanticIntent } from "@athyper/platform-theme/semantic-colors";
 
 const STATUS_ICON_MAP: Record<SemanticIntent, LucideIcon> = {
   neutral: Circle,

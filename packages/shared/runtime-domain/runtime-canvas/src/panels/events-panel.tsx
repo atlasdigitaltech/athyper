@@ -1,7 +1,7 @@
 "use client";
 
-import { Skeleton } from "@athyper/ui/primitives";
-import { ActivityFeed } from "@athyper/collaboration-ui";
+import { Skeleton } from "@athyper/platform-ui/primitives";
+import { ActivityFeed } from "@athyper/platform-communications-collaboration-ui";
 import type { ActivityEntry } from "@athyper/api-contracts/workflow";
 import type { MetaEntityField } from "@athyper/runtime-contracts";
 import { useRecordWorkspaceActivity } from "../record-query";

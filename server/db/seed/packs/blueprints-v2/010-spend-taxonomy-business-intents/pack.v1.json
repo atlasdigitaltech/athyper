@@ -1,0 +1,124 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "spend-taxonomy-business-intents",
+  "version": "2.0.0",
+  "executionOrder": 10,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [],
+  "checksumAlgorithm": "sha256",
+  "checksum": "80fddfc8b5446f1e7ad957ac87895375f24a2f8ea4f76d906675ba21f72b7b72",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/019_pre_seed_foundation.sql",
+      "sha256": "4eb9f0b2a1d2cc9be769ffafabe97d19059338a1f2652ab7aa2f804bf608b953",
+      "bytes": 4194,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/021_business_intents.sql",
+      "sha256": "7414d3fa6f71fd124a7f9a8a9c16216bf3854392731010643f94fa6a9a2c5654",
+      "bytes": 3677,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 3,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/023_commodity_category.sql",
+      "sha256": "b9a1b670238e342bbbf5de467d69d8243833281fc2c0e874f649658cdd952e6c",
+      "bytes": 17715,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 4,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/023b_spend_category.sql",
+      "sha256": "5b8342ab0d8e20b5a5c1a2ef33012104a7d040d650adf4b1a6346f7435e1c115",
+      "bytes": 252,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 5,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/024_commodity_classification.sql",
+      "sha256": "8a86727ac5c286671af52b71bfbdc5f203bafd270bd1000a36991c9becf28dec",
+      "bytes": 931,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 6,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/025_classification_to_intent_rule.sql",
+      "sha256": "564889ba307cee00d9ad156330da39fec5fd3cc941685dc856a1ffe7b48bbf62",
+      "bytes": 552,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 7,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/026_commodity_code_to_category_rule.sql",
+      "sha256": "cce38f0b5960af6c18ee370e60f540186fdbb14d294021337922644d14894e97",
+      "bytes": 754,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 8,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/027_commodity_category_buy_policy.sql",
+      "sha256": "70b35bd70eda339a35b0a9bc8efb39e0c3eb7ab5a1aa1e9f77a78cec17aa0158",
+      "bytes": 5388,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 9,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/028_commodity_category_sell_policy.sql",
+      "sha256": "c4482d65091c2ef690ae3f7e93dda3197167c6668d3ed6ed91a945acbd6444f5",
+      "bytes": 458,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 10,
+      "path": "server/db/seed/blueprints/universal/010_spend_taxonomy/029_commodity_category_inventory_policy.sql",
+      "sha256": "a57ddcaba6f8a76379848723546cb70d6b23f2d8923771ead11ac81b2a6d254c",
+      "bytes": 4790,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "master.tenant",
+      "shared.commodity_code",
+      "master.business_intent",
+      "control.commodity_code_classification_policy"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed/packs/blueprints-v2/receipts/10-spend-taxonomy-business-intents.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

@@ -53,7 +53,7 @@ FROM (VALUES
     ('metadata.overlay.edit','metadata.overlay','edit','meta','system_action','high',true,'Edit Metadata Tenant Overlay','metadata.overlay.edit','tenant'),
     ('metadata.contract.break_glass','metadata.contract','break_glass','meta','system_action','critical',true,'Break-glass Metadata Approval','metadata.contract.break_glass','tenant')
 ) AS s(canonical_code,resource_code,operation_code,module_code,permission_kind,risk_tier,requires_mfa,name,legacy_code,scope_type)
-JOIN master.module m ON m.code=s.module_code
+JOIN control.module m ON m.code=s.module_code
 ON CONFLICT (canonical_code) DO UPDATE SET permission_kind=excluded.permission_kind,resource_code=excluded.resource_code,
  operation_code=excluded.operation_code,module_id=excluded.module_id,risk_tier=excluded.risk_tier,requires_mfa=excluded.requires_mfa,
  provenance_ref=excluded.provenance_ref,metadata=excluded.metadata,status='suspended',status_changed_at=now(),status_changed_by=excluded.created_by,
@@ -81,6 +81,6 @@ WHERE provenance_ref LIKE 'wave4:legacy-permission:%'
 DO $assertions$ BEGIN
  IF (SELECT count(*) FROM authz.permission WHERE provenance_ref LIKE 'wave4:legacy-permission:%' AND status='published') <> 24 THEN
    RAISE EXCEPTION 'athyper compiled permission count mismatch'; END IF;
- IF EXISTS (SELECT 1 FROM authz.permission p LEFT JOIN master.module m ON m.id=p.module_id WHERE p.provenance_ref LIKE 'wave4:legacy-permission:%' AND m.id IS NULL) THEN
+ IF EXISTS (SELECT 1 FROM authz.permission p LEFT JOIN control.module m ON m.id=p.module_id WHERE p.provenance_ref LIKE 'wave4:legacy-permission:%' AND m.id IS NULL) THEN
    RAISE EXCEPTION 'athyper compiled permission module orphan'; END IF;
 END $assertions$;

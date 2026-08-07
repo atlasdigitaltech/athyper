@@ -30,11 +30,11 @@ BEGIN
     END IF;
 
     INSERT INTO master.legal_entity (
-        id, tenant_id, code, name, display_name, legal_name, entity_type,
+        id, tenant_id, canonical_party_id, code, name, display_name, legal_name, entity_type,
         registration_country_code, functional_currency, reporting_currency,
         metadata, status, created_by
     ) VALUES (
-        'dd000030-0000-0000-0000-000000000001', v_tid, 'catl',
+        'dd000030-0000-0000-0000-000000000001', v_tid, md5('athyper:canonical-party:cirrusatlantic')::uuid, 'catl',
         'CirrusAtlantic Ltd', 'CirrusAtlantic Limited', 'CirrusAtlantic Limited',
         'company', 'GB', 'GBP', 'GBP', v_metadata, 'active', v_su
     )
@@ -42,6 +42,7 @@ BEGIN
         name                      = EXCLUDED.name,
         display_name              = EXCLUDED.display_name,
         legal_name                = EXCLUDED.legal_name,
+        canonical_party_id        = EXCLUDED.canonical_party_id,
         entity_type               = EXCLUDED.entity_type,
         registration_country_code = EXCLUDED.registration_country_code,
         functional_currency       = EXCLUDED.functional_currency,
@@ -54,6 +55,7 @@ BEGIN
         master.legal_entity.name,
         master.legal_entity.display_name,
         master.legal_entity.legal_name,
+        master.legal_entity.canonical_party_id,
         master.legal_entity.entity_type,
         master.legal_entity.registration_country_code,
         master.legal_entity.functional_currency,
@@ -64,6 +66,7 @@ BEGIN
         EXCLUDED.name,
         EXCLUDED.display_name,
         EXCLUDED.legal_name,
+        EXCLUDED.canonical_party_id,
         EXCLUDED.entity_type,
         EXCLUDED.registration_country_code,
         EXCLUDED.functional_currency,

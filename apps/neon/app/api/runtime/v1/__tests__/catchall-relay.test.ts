@@ -30,7 +30,7 @@ const mocks = vi.hoisted(() => ({
   descriptor: vi.fn(),
 }));
 
-vi.mock("@athyper/bff-relay", () => ({
+vi.mock("@athyper/platform-bff-relay", () => ({
   buildRelayHandler: mocks.buildRelayHandler,
 }));
 

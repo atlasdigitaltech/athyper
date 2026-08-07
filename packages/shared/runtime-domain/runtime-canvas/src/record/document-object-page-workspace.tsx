@@ -8,8 +8,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@athyper/ui/primitives";
-import { Button } from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import {
   DocumentObjectPage,
   EditDraftProvider,

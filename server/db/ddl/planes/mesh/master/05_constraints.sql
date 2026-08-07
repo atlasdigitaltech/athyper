@@ -1,4 +1,5 @@
 ALTER TABLE master.tenant
+    ADD CONSTRAINT tenant_canonical_party_uq UNIQUE (canonical_party_id),
     ADD CONSTRAINT tenant_subscription_plan_fk
     FOREIGN KEY (subscription_plan_id)
     REFERENCES control.subscription_plan (id)

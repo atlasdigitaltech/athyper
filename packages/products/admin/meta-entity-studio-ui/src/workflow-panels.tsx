@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ArrowRightLeft, CheckCircle2, Clock3, GitCommitHorizontal, Rocket, RotateCcw, ShieldCheck } from "lucide-react";
-import { Badge, Button, Input, Textarea } from "@athyper/ui";
+import { Badge, Button, Input, Textarea } from "@athyper/platform-ui";
 import type {
   MetaEntityActivityItem,
   MetaEntityCapabilities,

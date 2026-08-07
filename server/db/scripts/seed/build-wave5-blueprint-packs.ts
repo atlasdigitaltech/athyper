@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const db = resolve(root, "server/db");
 const blueprintRoot = resolve(db, "seed/blueprints");
-const outputRoot = resolve(db, "seed-packs/blueprints-v2");
+const outputRoot = resolve(db, "seed/packs/blueprints-v2");
 const check = process.argv.includes("--check");
 const sha = (value: string) => createHash("sha256").update(value.replace(/\r\n?/g, "\n")).digest("hex");
 const repoPath = (path: string) => relative(root, path).replace(/\\/g, "/");
@@ -21,7 +21,7 @@ const domains: Domain[] = [
   { order: 60, code: "coa-frameworks", roots: ["universal/200_coa_frameworks"], dependencies: ["spend-taxonomy-business-intents", "tax-fx"], preconditions: ["master.chart_of_account", "master.gl_account"] },
   { order: 70, code: "organization-templates", roots: ["universal/060_org_structure", "200_industry_org_structure"], dependencies: ["coa-frameworks", "tax-fx"], preconditions: ["master.legal_entity", "master.company_code", "master.org_unit"] },
   { order: 80, code: "people-payroll", roots: ["universal/070_people"], dependencies: ["organization-templates", "payment-holiday", "coa-frameworks"], preconditions: ["master.employee", "master.pay_group"] },
-  { order: 90, code: "party-risk-defaults", roots: ["universal/080_party_risk"], dependencies: [], preconditions: [], tenantScope: "none", requiredSetting: "app.database_plane" },
+  { order: 90, code: "party-risk-defaults", roots: [], dependencies: [], preconditions: [], tenantScope: "none", requiredSetting: "app.database_plane" },
   { order: 100, code: "industry-packs", roots: ["100_industry_packs"], dependencies: ["organization-templates", "people-payroll", "coa-frameworks"], preconditions: ["master.tenant", "master.company_code"] },
   { order: 110, code: "governance", roots: ["modules/governance"], dependencies: ["organization-templates", "coa-frameworks"], preconditions: ["control.cycle_type", "control.cycle_phase", "control.cycle_task_template"] },
   { order: 120, code: "ap-non-po", roots: ["modules/ap_non_po"], dependencies: ["spend-taxonomy-business-intents", "tax-fx", "payment-holiday", "coa-frameworks", "governance"], preconditions: ["master.accounting_profile", "control.accounting_profile_policy", "authz.permission"] },
@@ -73,7 +73,7 @@ async function renderDomain(domain: Domain) {
     plane: domain.plane ?? "neon", tenantScope: domain.tenantScope ?? "tenant", compatibleDdl: { contract: "foundation-v2", layers: "02-11" },
     dependencies: domain.dependencies, checksumAlgorithm: "sha256", checksum: packChecksum,
     payloads, preconditions: { requiredSetting: domain.requiredSetting ?? "app.seed_tenant_id", requiredRelations: domain.preconditions, permanentDdlAllowed: false },
-    applicationReceipt: { contract: "athyper.blueprint-application-receipt.v1", status: blocked ? "blocked-pending-rewrite" : "pending-validation", receiptPath: `server/db/seed-packs/blueprints-v2/receipts/${domain.order}-${domain.code}.receipt.v1.json` },
+    applicationReceipt: { contract: "athyper.blueprint-application-receipt.v1", status: blocked ? "blocked-pending-rewrite" : "pending-validation", receiptPath: `server/db/seed/packs/blueprints-v2/receipts/${domain.order}-${domain.code}.receipt.v1.json` },
     postApplicationAssertions: finalValidationAssertions,
     registryIntegration: { mode: "immutable-pack-metadata", controlTableIntegration: "pending" },
   };

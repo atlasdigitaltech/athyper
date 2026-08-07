@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import type { EntityHeaderModel, HeaderFact, HeaderMode } from "./types";
 import { RuntimeEntityActionBar } from "./runtime-entity-action-bar";
 import { RuntimeEntityIdentityBar } from "./runtime-entity-identity-bar";

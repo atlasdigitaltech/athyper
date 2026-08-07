@@ -1,4 +1,4 @@
-import { buildRuntimeHeaders } from "@athyper/bff-relay";
+import { buildRuntimeHeaders } from "@athyper/platform-bff-relay";
 import { describe, expect, it } from "vitest";
 
 describe("Admin relay runtime context headers", () => {

@@ -11,10 +11,10 @@
  */
 
 import { Trash2, type LucideIcon } from "lucide-react";
-import { getActionIcon } from "@athyper/icons/actions";
+import { getActionIcon } from "@athyper/platform-icons/actions";
 import type { ResolvedAction } from "@athyper/metadata-client";
 import type { BulkPreflightResult } from "@athyper/api-contracts/entity-list";
-import type { SelectionAction } from "@athyper/ui/composites";
+import type { SelectionAction } from "@athyper/platform-ui/composites";
 
 const DESTRUCTIVE_ACTIONS = new Set(["delete", "cancel", "deny", "reject", "void"]);
 const NON_SELECTION_ACTIONS = new Set(["bulk_update", "create", "import"]);

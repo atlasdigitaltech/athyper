@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ArrowUpRight, CheckCircle2, Clock3, Search } from "lucide-react";
 import type { ResolvedSetupScope, SetupDomainState, SetupWorkspaceContract } from "@athyper/runtime-contracts";
 import { emitSurfaceEvent } from "@athyper/runtime-shared/observability";
-import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from "@athyper/ui/primitives";
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from "@athyper/platform-ui/primitives";
 
 export type SetupPlane = "admin" | "neon" | "mesh";
 export type SetupFetch = <T = unknown>(path: string, init?: { method?: "GET" | "POST"; body?: unknown }) => Promise<T>;

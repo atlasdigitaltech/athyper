@@ -5,8 +5,8 @@
  * Static source assets live in src/ (built by pnpm brand:refresh).
  */
 
-import type { LogoProps, ProductBrandEntry, PublicBrandAssets } from "@athyper/brand";
-import { getPublicBrandAssets } from "@athyper/brand";
+import type { LogoProps, ProductBrandEntry, PublicBrandAssets } from "@athyper/platform-brand";
+import { getPublicBrandAssets } from "@athyper/platform-brand";
 
 // ─── SVG Components ────────────────────────────────────────────────────────────
 

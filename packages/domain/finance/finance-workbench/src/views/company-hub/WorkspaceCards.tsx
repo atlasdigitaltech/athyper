@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { ArrowRight, ClipboardList, Compass, SearchCode, type LucideIcon } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import type { WorkspaceCardCounts } from "../../lib/finance-setup.types";
 
 interface CardSpec {

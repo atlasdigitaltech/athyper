@@ -35,12 +35,12 @@ BEGIN
     SELECT id
       INTO v_plan_id
       FROM control.subscription_plan
-     WHERE code = 'enterprise'
+     WHERE code = 'erp_enterprise'
        AND status = 'active';
 
     IF v_plan_id IS NULL THEN
         RAISE EXCEPTION
-            '[000_tenant] active Neon subscription plan enterprise is required';
+            '[000_tenant] active Neon subscription plan erp_enterprise is required';
     END IF;
 
     INSERT INTO master.tenant (
@@ -49,6 +49,7 @@ BEGIN
         name,
         display_name,
         realm_key,
+        canonical_party_id,
         subscription_plan_id,
         metadata,
         status,
@@ -59,6 +60,7 @@ BEGIN
         'CirrusAtlantic Ltd',
         'CirrusAtlantic Limited',
         'athyper',
+        md5('athyper:canonical-party:cirrusatlantic')::uuid,
         v_plan_id,
         v_metadata,
         'active',
@@ -67,6 +69,7 @@ BEGIN
     ON CONFLICT (realm_key, code) DO UPDATE SET
         name                 = EXCLUDED.name,
         display_name         = EXCLUDED.display_name,
+        canonical_party_id   = EXCLUDED.canonical_party_id,
         subscription_plan_id = EXCLUDED.subscription_plan_id,
         metadata             = master.tenant.metadata || EXCLUDED.metadata,
         status               = EXCLUDED.status,
@@ -75,12 +78,14 @@ BEGIN
     WHERE (
         master.tenant.name,
         master.tenant.display_name,
+        master.tenant.canonical_party_id,
         master.tenant.subscription_plan_id,
         master.tenant.metadata,
         master.tenant.status
     ) IS DISTINCT FROM (
         EXCLUDED.name,
         EXCLUDED.display_name,
+        EXCLUDED.canonical_party_id,
         EXCLUDED.subscription_plan_id,
         master.tenant.metadata || EXCLUDED.metadata,
         EXCLUDED.status
@@ -133,7 +138,7 @@ BEGIN
          WHERE tenant_row.realm_key = 'athyper'
            AND tenant_row.code = 'cirrusatlantic'
            AND tenant_row.status = 'active'
-           AND plan.code = 'enterprise'
+           AND plan.code = 'erp_enterprise'
            AND plan.status = 'active'
            AND EXISTS (
                SELECT 1 FROM master.principal principal_row

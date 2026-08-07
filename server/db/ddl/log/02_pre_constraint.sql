@@ -1,5 +1,0 @@
--- ============================================================================
--- log/02_pre_constraint.sql
--- No pre-constraint routines are required by the live schema.
--- Generated from the live Neon database log schema. Do not hand-edit.
--- ============================================================================

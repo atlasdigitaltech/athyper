@@ -190,7 +190,7 @@ describe("active lifecycle operation seed contract", () => {
   });
 
   it("uses one canonical effective-hook resolver in runtime and verification", () => {
-    const ddl = readFileSync(resolve(process.cwd(), "db/ddl/control/05_functions.sql"), "utf8");
+    const ddl = readFileSync(resolve(process.cwd(), "db/ddl/planes/neon/control/07_functions.sql"), "utf8");
     const runner = readFileSync(resolve(
       process.cwd(),
       "packages/services/business/lifecycle/hook-runner.service.ts",

@@ -8,7 +8,7 @@
  *   inline  — inline badge beside a list item label (pinned items, modules)
  */
 
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface NavBadgeProps {
   count: number;

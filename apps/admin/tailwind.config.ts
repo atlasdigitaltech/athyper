@@ -1,5 +1,5 @@
 import type { Config } from "tailwindcss";
-import { athyperTheme } from "@athyper/theme/tailwind-preset";
+import { athyperTheme } from "@athyper/platform-theme/tailwind-preset";
 
 const config: Config = {
   content: [

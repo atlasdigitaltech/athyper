@@ -1,6 +1,6 @@
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 const Switch = forwardRef<
   HTMLButtonElement,

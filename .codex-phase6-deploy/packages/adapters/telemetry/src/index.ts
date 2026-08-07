@@ -1,41 +1,31 @@
 // server/packages/adapters/telemetry/src/index.ts
 //
 // OpenTelemetry telemetry adapter. Formats log payloads as structured
-// TelemetryEnvelope objects via @athyper/core and emits them through a
+// TelemetryEnvelope objects via @athyper/platform-core and emits them through a
 // caller-supplied emit() callback (wired to pino in the runtime).
 
-import { createLogEnvelope } from "@athyper/core";
+import { createLogEnvelope } from "@athyper/platform-core/telemetry";
+import type { TelemetryAdapter, TelemetryLogger, LogEnvelope } from "@athyper/platform-core/telemetry";
 
 import { getOtelTraceContext } from "./trace-context.js";
 
-import type { TelemetryAdapter, TelemetryLogger } from "@athyper/core";
-
 export type OTelTelemetryAdapterOptions = {
-  emit: (json: unknown) => void;
+  emit: (envelope: LogEnvelope) => void;
 };
 
 export function createTelemetryAdapter(
   opts: OTelTelemetryAdapterOptions,
 ): TelemetryAdapter {
+  const envelope = (level: LogEnvelope["level"], input: Record<string, unknown>) =>
+    opts.emit(createLogEnvelope({ ...input, level }, getOtelTraceContext));
+
   const logger: TelemetryLogger = {
-    emit(envelope) {
-      opts.emit(envelope);
-    },
-    info(input) {
-      opts.emit(
-        createLogEnvelope({ ...input, level: "info" }, getOtelTraceContext),
-      );
-    },
-    warn(input) {
-      opts.emit(
-        createLogEnvelope({ ...input, level: "warn" }, getOtelTraceContext),
-      );
-    },
-    error(input) {
-      opts.emit(
-        createLogEnvelope({ ...input, level: "error" }, getOtelTraceContext),
-      );
-    },
+    emit(e) { opts.emit(e); },
+    debug(input) { envelope("debug", input); },
+    info(input)  { envelope("info",  input); },
+    warn(input)  { envelope("warn",  input); },
+    error(input) { envelope("error", input); },
+    fatal(input) { envelope("fatal", input); },
   };
 
   return {

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type React from "react";
 import { GripHorizontal } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@athyper/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@athyper/platform-ui";
 
 interface PalettePanelProps {
   trigger:    React.ReactElement;

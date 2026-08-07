@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { ChevronRight } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
+import { cn } from "@athyper/platform-theme/utils";
+import { resolveSemanticColors, type SemanticIntent } from "@athyper/platform-theme/semantic-colors";
 import { fmtAmount } from "@athyper/runtime-shared/core";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { resolveListConfig } from "@athyper/metadata-client/compiled-reader";
@@ -16,8 +16,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@athyper/ui";
-import type { RowSelectionState } from "@athyper/ui/data";
+} from "@athyper/platform-ui";
+import type { RowSelectionState } from "@athyper/platform-ui/data";
 import type { MetaEntityCollectionConfig } from "@athyper/runtime-contracts";
 import { recordId, resolveCopyFields, useCompiledEntityMetadata } from "../meta";
 import type {

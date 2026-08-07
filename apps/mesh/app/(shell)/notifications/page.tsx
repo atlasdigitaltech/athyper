@@ -1,4 +1,4 @@
-import { NotificationsPage } from "@athyper/notifications-client";
+import { NotificationsPage } from "@athyper/platform-communications-notifications-client";
 
 export default function NotificationsRoute() {
   return (

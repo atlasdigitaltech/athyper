@@ -1,0 +1,1 @@
+// @athyper/contracts-foundation-pagination

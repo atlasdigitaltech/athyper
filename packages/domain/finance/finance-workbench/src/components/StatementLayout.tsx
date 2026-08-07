@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { fmtCompact } from "./format";
 import { PeriodStatusBar } from "./PeriodStatusBar";
 import { ReportLiveBadge, ReportTitle } from "./ReportScaffold";

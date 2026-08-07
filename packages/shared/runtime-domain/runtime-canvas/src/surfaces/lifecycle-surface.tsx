@@ -2,8 +2,8 @@
 
 import { Fragment, useState } from "react";
 import { Clock, ChevronDown, ChevronUp } from "lucide-react";
-import { WorkPanel } from "@athyper/surface-kit";
-import { cn } from "@athyper/theme/utils";
+import { WorkPanel } from "@athyper/platform-surface-kit";
+import { cn } from "@athyper/platform-theme/utils";
 import { resolveLifecycleRuntime } from "@athyper/runtime-contracts";
 import type { LifecycleStep } from "@athyper/runtime-contracts";
 import type { RuntimeSurfaceRendererProps } from "./types";

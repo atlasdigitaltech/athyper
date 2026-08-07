@@ -17,7 +17,7 @@
 
 import { type ReactNode } from "react";
 import { ChevronLeft, type LucideIcon } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { Badge } from "../primitives/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../primitives/tooltip";
 

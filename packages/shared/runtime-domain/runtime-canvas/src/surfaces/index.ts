@@ -23,8 +23,8 @@ export { LineItemsSurfaceRenderer, ChildRecordsSurfaceRenderer } from "./line-it
 export { RichSummarySurfaceRenderer } from "./rich-summary-surface";
 
 // Interaction-surface shells + SurfaceStackController moved down to
-// @athyper/ui/surfaces so runtime-line-item (and any other upstream package)
+// @athyper/platform-ui/surfaces so runtime-line-item (and any other upstream package)
 // can consume them without creating a circular dependency on runtime-canvas.
 // Re-exported here for backward compatibility with existing
 // `@athyper/runtime-canvas/surfaces` imports.
-export * from "@athyper/ui/surfaces";
+export * from "@athyper/platform-ui/surfaces";

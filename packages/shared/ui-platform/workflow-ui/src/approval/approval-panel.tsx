@@ -1,9 +1,9 @@
 import { Users } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   Card, CardContent, CardHeader, CardTitle,
   Badge, Separator, Skeleton,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import {
   type ApprovalContext,
   type WorkflowStageDetail,

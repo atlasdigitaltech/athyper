@@ -1,7 +1,7 @@
 "use client";
 
 import { Lock, Unlock } from "lucide-react";
-import { Badge, Skeleton } from "@athyper/ui/primitives";
+import { Badge, Skeleton } from "@athyper/platform-ui/primitives";
 import type { ChartOfAccount } from "../data/types";
 import { TierBadge } from "../components/ChartBadge";
 import { useCharts } from "../hooks/useCharts";

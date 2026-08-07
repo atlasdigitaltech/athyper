@@ -7,8 +7,8 @@ const read = (relativePath: string) => readFileSync(resolve(repoRoot, relativePa
 
 describe("Phase 6 and Phase 7 database/domain contracts", () => {
   it("defines tenant-safe Procurement sourcing ownership and outputs", () => {
-    const ddl = read("server/db/ddl/document/01w_tables_sourcing.sql");
-    const rls = read("server/db/ddl/document/08y_rls_sourcing.sql");
+    const ddl = read("server/db/ddl/planes/neon/document/03_tables.sql");
+    const rls = read("server/db/ddl/planes/neon/document/10_rls.sql");
     const auth = read("server/packages/services/business/procurement/sourcing/sourcing-authorization.service.ts");
     const document = read("server/packages/services/business/procurement/sourcing/sourcing-document.service.ts");
 
@@ -24,8 +24,8 @@ describe("Phase 6 and Phase 7 database/domain contracts", () => {
   });
 
   it("defines tenant-safe Sales ownership and federated/principal-seller outputs", () => {
-    const ddl = read("server/db/ddl/document/01x_tables_sales.sql");
-    const rls = read("server/db/ddl/document/08z_rls_sales.sql");
+    const ddl = read("server/db/ddl/planes/neon/document/03_tables.sql");
+    const rls = read("server/db/ddl/planes/neon/document/10_rls.sql");
     const auth = read("server/packages/services/business/sales/sales-authorization.service.ts");
     const document = read("server/packages/services/business/sales/sales-document.service.ts");
 

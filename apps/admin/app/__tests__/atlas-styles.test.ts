@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 
 const ADMIN_GLOBALS_URL = new URL("../globals.css", import.meta.url);
 const ATLAS_STYLES_URL = new URL(
-  import.meta.resolve("@athyper/atlas-agent-ui/styles.css"),
+  import.meta.resolve("@athyper/platform-ai-agent-ui/styles.css"),
 );
 const ATLAS_PACKAGE_URL = new URL(
-  import.meta.resolve("@athyper/atlas-agent-ui/package.json"),
+  import.meta.resolve("@athyper/platform-ai-agent-ui/package.json"),
 );
 
 describe("Admin Atlas style contract", () => {
@@ -20,7 +20,7 @@ describe("Admin Atlas style contract", () => {
       exports?: Record<string, string>;
     };
 
-    expect(adminGlobals).toContain('@import "@athyper/atlas-agent-ui/styles.css";');
+    expect(adminGlobals).toContain('@import "@athyper/platform-ai-agent-ui/styles.css";');
     expect(atlasPackage.exports?.["./styles.css"]).toBe("./src/styles.css");
     expect(atlasStyles).toContain(".atlas-shimmer");
     expect(atlasStyles).toContain(".atlas-spark");

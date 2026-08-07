@@ -14,7 +14,7 @@ describe("Phase 8 typed tenant/work-context cutover", () => {
   });
 
   it("keeps legacy tenant routing and typed work-context headers aligned at the relay boundary", () => {
-    const relay = read("packages/shared/data-integration/bff-relay/src/index.ts");
+    const relay = read("packages/platform/foundation/bff-relay/src/index.ts");
     expect(relay).toContain('headers["X-Org"]');
     expect(relay).toContain('headers["X-Tenant-ID"]');
     expect(relay).toContain('headers["X-Work-Context-Type"]');

@@ -1,5 +1,5 @@
 import type { RequestHandler, Router } from "express";
-import { normalizeFederatedAssurance } from "@athyper/auth-common";
+import { normalizeFederatedAssurance } from "@athyper/platform-iam-auth-common";
 
 import {
   createPlaneContextResolver,

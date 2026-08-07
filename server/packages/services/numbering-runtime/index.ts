@@ -1,5 +1,7 @@
+export { NumberingAllocationService } from "./src/numbering-allocation.service.js";
+export { NumberingPolicyTester } from "./src/numbering-policy-tester.service.js";
 export {
   NumberingAllocationError,
-  PostgresNumberingAllocationService,
-} from "./src/postgres-numbering-allocation.service.js";
-export { PostgresNumberingPolicyTester } from "./src/postgres-numbering-policy-tester.service.js";
+  NumberingConflictError,
+  NumberingExhaustedError,
+} from "@athyper/numbering-contracts";

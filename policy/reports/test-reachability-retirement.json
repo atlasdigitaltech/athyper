@@ -67,7 +67,7 @@
     },
     {
       "package": "packages/shared/data-integration/auth-bff",
-      "packageName": "@athyper/auth-bff",
+      "packageName": "@athyper/platform-iam-auth-bff",
       "testFiles": [
         "packages/shared/data-integration/auth-bff/src/__tests__/error-codes-parity.test.ts",
         "packages/shared/data-integration/auth-bff/src/__tests__/required-actions-translation.test.ts",

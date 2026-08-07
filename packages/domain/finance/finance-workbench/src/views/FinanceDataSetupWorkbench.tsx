@@ -30,8 +30,8 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { PageFrame } from "@athyper/ui/layout";
+import { cn } from "@athyper/platform-theme/utils";
+import { PageFrame } from "@athyper/platform-ui/layout";
 import {
   Badge,
   Button,
@@ -44,7 +44,7 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import type { ChartOfAccount, LegalEntity } from "../data/types";
 import { useCharts, useCompanyList } from "../hooks/useCharts";
 import { useFiscalPeriods, type FiscalPeriodRow } from "../hooks/useFiscalPeriods";

@@ -57,11 +57,11 @@ async function main(): Promise<void> {
     ]);
   assert(!athyperManifest.includes("certification"), "Athyper manifest has no certification tables");
   assert(
-    neonManifest.includes("planes/neon/master/03_certification_tables.sql"),
+    neonManifest.includes("planes/neon/master/03_tables.sql"),
     "Neon manifest owns certification under master",
   );
   assert(
-    meshManifest.includes("planes/mesh/mesh/03_certification_tables.sql"),
+    meshManifest.includes("planes/mesh/mesh/03_tables.sql"),
     "Mesh manifest owns certification under mesh",
   );
   assert(

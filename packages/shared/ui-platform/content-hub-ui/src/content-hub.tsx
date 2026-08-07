@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, Grid2X2, History, List, Paperclip, Search, ShieldCheck } from "lucide-react";
-import { Button, Input, Skeleton } from "@athyper/ui/primitives";
+import { Button, Input, Skeleton } from "@athyper/platform-ui/primitives";
 import { emitSurfaceEvent } from "@athyper/runtime-shared/observability";
 
 export type ContentPlane = "admin" | "neon" | "mesh";

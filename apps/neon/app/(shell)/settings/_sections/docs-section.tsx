@@ -1,7 +1,7 @@
 "use client";
 
 import { ExternalLink, FileText } from "lucide-react";
-import { Button, Card, CardContent } from "@athyper/ui/primitives";
+import { Button, Card, CardContent } from "@athyper/platform-ui/primitives";
 
 export function DocsSection() {
   return (

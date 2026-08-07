@@ -45,37 +45,37 @@ const combinedDdl = [...sourceByPath.values()].join("\n");
 const executableDdl = stripSqlComments(combinedDdl);
 
 const paths = {
-  catalogTables: "ddl/mesh_control/01zz_authorization_v2_catalog.sql",
+  catalogTables: "ddl/planes/mesh/authz/03_tables.sql",
   migrationTables:
-    "ddl/mesh_control/01zzz_authorization_v2_migration_state.sql",
-  authorityTables: "ddl/mesh/01zz_authorization_v2_authority.sql",
-  runtimeTables: "ddl/mesh_log/01zz_authorization_v2_runtime.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
+  authorityTables: "ddl/planes/mesh/authz/03_tables.sql",
+  runtimeTables: "ddl/common/event/03_tables.sql",
   catalogConstraints:
-    "ddl/mesh_control/03_authorization_v2_catalog_constraints.sql",
+    "ddl/planes/mesh/authz/05_constraints.sql",
   authorityConstraints:
-    "ddl/mesh/03_authorization_v2_authority_constraints.sql",
+    "ddl/planes/mesh/authz/05_constraints.sql",
   runtimeConstraints:
-    "ddl/mesh_log/03_authorization_v2_runtime_constraints.sql",
+    "ddl/common/event/05_constraints.sql",
   catalogFunctions:
-    "ddl/mesh_control/05_authorization_v2_catalog_functions.sql",
+    "ddl/planes/mesh/authz/07_functions.sql",
   authorityFunctions:
-    "ddl/mesh/05_authorization_v2_authority_functions.sql",
+    "ddl/planes/mesh/authz/07_functions.sql",
   invalidationFunctions:
-    "ddl/mesh_log/05_authorization_v2_invalidation_functions.sql",
+    "ddl/common/event/07_functions.sql",
   replayFunctions:
-    "ddl/mesh_log/05_authorization_v2_replay_functions.sql",
+    "ddl/common/event/07_functions.sql",
   evidenceFunctions:
-    "ddl/mesh_log/05_authorization_v2_evidence_functions.sql",
+    "ddl/common/event/07_functions.sql",
   runtimeTriggers:
-    "ddl/mesh_log/06_authorization_v2_runtime_triggers.sql",
-  catalogViews: "ddl/mesh_control/07_authorization_v2_catalog_views.sql",
-  authorityViews: "ddl/mesh/07_authorization_v2_authority_views.sql",
-  runtimeViews: "ddl/mesh_log/07_authorization_v2_runtime_views.sql",
-  catalogRls: "ddl/mesh_control/08_authorization_v2_catalog_rls.sql",
+    "ddl/common/event/08_triggers.sql",
+  catalogViews: "ddl/planes/mesh/authz/09_views.sql",
+  authorityViews: "ddl/planes/mesh/authz/09_views.sql",
+  runtimeViews: "ddl/common/event/09_views.sql",
+  catalogRls: "ddl/planes/mesh/authz/10_rls.sql",
   migrationRls:
-    "ddl/mesh_control/08_authorization_v2_migration_state_rls.sql",
-  authorityRls: "ddl/mesh/08_authorization_v2_authority_rls.sql",
-  runtimeRls: "ddl/mesh_log/08_authorization_v2_runtime_rls.sql",
+    "ddl/planes/mesh/authz/10_rls.sql",
+  authorityRls: "ddl/planes/mesh/authz/10_rls.sql",
+  runtimeRls: "ddl/common/event/10_rls.sql",
 } as const;
 const read = (path: string): string => sourceByPath.get(path) ?? "";
 
@@ -110,7 +110,7 @@ const contract = await readFile(
 const wave0Registry = await readFile(
   resolve(
     databaseRoot,
-    "ddl/mesh_control/01z_authorization_migration_controls.sql",
+    "ddl/planes/mesh/authz/03_tables.sql",
   ),
   "utf8",
 );
@@ -249,7 +249,7 @@ expect(
 const catalogConstraints = read(paths.catalogConstraints);
 const catalogFunctions = read(paths.catalogFunctions);
 const catalogTriggers = read(
-  "ddl/mesh_control/06_authorization_v2_catalog_triggers.sql",
+  "ddl/planes/mesh/authz/08_triggers.sql",
 );
 expect(
   catalogConstraints.includes(
@@ -337,7 +337,7 @@ expect(
     && read(paths.authorityFunctions).includes(
       "trg_auth_v2_retention_guard",
     )
-    && read("ddl/mesh/06_authorization_v2_authority_triggers.sql").includes(
+    && read("ddl/planes/mesh/authz/08_triggers.sql").includes(
       "ENABLE ALWAYS TRIGGER",
     ),
   "permission-set/role publication and lifecycle/retention guards are installed",

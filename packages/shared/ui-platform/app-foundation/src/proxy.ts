@@ -5,7 +5,7 @@ import {
   LOCALE_COOKIE_MAX_AGE_SECONDS,
   readCookieWithHostPrefix,
   type PlaneConfig,
-} from "@athyper/session-plane";
+} from "@athyper/platform-iam-session-plane";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 

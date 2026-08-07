@@ -1,0 +1,4 @@
+DO $$ DECLARE v_table text; BEGIN FOREACH v_table IN ARRAY ARRAY['organization','organization_provider','application_projection','projection_scope'] LOOP EXECUTE format('CREATE TRIGGER %I BEFORE UPDATE ON trustiam.%I FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()',v_table||'_updated_at',v_table); END LOOP; END $$;
+CREATE TRIGGER trustiam_organization_status_changed BEFORE UPDATE OF status ON trustiam.organization FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+CREATE TRIGGER trustiam_organization_provider_status_changed BEFORE UPDATE OF status ON trustiam.organization_provider FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+CREATE TRIGGER trustiam_application_projection_status_changed BEFORE UPDATE OF status ON trustiam.application_projection FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();

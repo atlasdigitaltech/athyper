@@ -21,7 +21,7 @@ import { resolveLineSelectionActions } from "./resolve-line-selection-actions";
 import {
   FloatingSelectionBar,
   type SelectionAction,
-} from "@athyper/ui/composites";
+} from "@athyper/platform-ui/composites";
 
 interface LineItemsSelectionBarProps {
   selectionCount:    number;

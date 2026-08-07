@@ -1,5 +1,0 @@
--- ============================================================================
--- public/03_constraints.sql
--- Concept: Public Schema Constraints — no FK constraints required
--- Depends on: 04_tables/000_public.sql
--- ============================================================================

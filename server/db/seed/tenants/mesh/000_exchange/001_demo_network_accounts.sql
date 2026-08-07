@@ -7,16 +7,17 @@ BEGIN
   PERFORM set_config('app.database_plane', 'mesh', true);
 
   INSERT INTO master.tenant (
-    id, code, name, display_name, realm_key, status, metadata, created_by
+    id, code, name, display_name, realm_key, canonical_party_id, status, metadata, created_by
   ) VALUES
     ('11111111-1111-4111-8111-111111111111', 'athyper', 'Athyper Group',
-     'Athyper Group', 'athyper', 'active',
+     'Athyper Group', 'athyper', md5('athyper:canonical-party:athyper-group')::uuid, 'active',
      '{"keycloak_organization_alias":"11111111-1111-4111-8111-111111111111"}', v_su),
     ('33333333-3333-4333-8333-333333333333', 'nimubus', 'Nimubus Solutions',
-     'Nimubus Solutions', 'athyper', 'active',
+     'Nimubus Solutions', 'athyper', md5('athyper:canonical-party:nimubus')::uuid, 'active',
      '{"keycloak_organization_alias":"33333333-3333-4333-8333-333333333333"}', v_su)
   ON CONFLICT (id) DO UPDATE SET
     name=excluded.name, display_name=excluded.display_name,
+    canonical_party_id=excluded.canonical_party_id,
     status=excluded.status, metadata=excluded.metadata,
     updated_at=now(), updated_by=v_su;
 
@@ -54,19 +55,20 @@ BEGIN
   WHERE master.principal_identity_binding.principal_id=excluded.principal_id;
 
   INSERT INTO mesh.network_account (
-    id, tenant_id, account_code, display_name, legal_name, network_role,
+    id, tenant_id, canonical_party_id, account_purpose_code, account_code, display_name, legal_name, network_role,
     country_code, default_currency, capabilities, status, metadata, created_by
   ) VALUES
     ('a1111111-1111-4111-8111-111111111111',
-     '11111111-1111-4111-8111-111111111111', 'bna-1000000001',
+     '11111111-1111-4111-8111-111111111111', md5('athyper:canonical-party:athyper-group')::uuid, 'primary', 'bna-1000000001',
      'Athyper Buyer', 'Athyper Group', 'buyer', 'MY', 'MYR',
      '{"documents":["purchase_order"]}', 'active', '{"seed":"mesh-native"}', v_su),
     ('b3333333-3333-4333-8333-333333333333',
-     '33333333-3333-4333-8333-333333333333', 'bna-3000000001',
+     '33333333-3333-4333-8333-333333333333', md5('athyper:canonical-party:nimubus')::uuid, 'primary', 'bna-3000000001',
      'Nimubus Supplier', 'Nimubus Solutions', 'supplier', 'SG', 'SGD',
      '{"documents":["invoice"]}', 'active', '{"seed":"mesh-native"}', v_su)
   ON CONFLICT (id) DO UPDATE SET
     display_name=excluded.display_name, capabilities=excluded.capabilities,
+    canonical_party_id=excluded.canonical_party_id,account_purpose_code=excluded.account_purpose_code,
     status=excluded.status, updated_at=now(), updated_by=v_su;
 
   INSERT INTO authz.scope_target (

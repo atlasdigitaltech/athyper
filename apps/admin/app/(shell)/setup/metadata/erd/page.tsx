@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { PageFrame, StatePanel } from "@athyper/surface-kit";
-import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Badge } from "@athyper/ui";
+import { PageFrame, StatePanel } from "@athyper/platform-surface-kit";
+import { Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Badge } from "@athyper/platform-ui";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

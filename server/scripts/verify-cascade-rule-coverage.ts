@@ -275,7 +275,7 @@ interface ResolverContractFile {
 async function verifyOnSourceChange(pool: import("pg").Pool): Promise<Violation[]> {
   const violations: Violation[] = [];
 
-  // Load resolver contracts (CI artifact — committed at server/db/seed/_generated/).
+  // Load resolver contracts (CI artifact committed under seed/contracts/generated/).
   let resolverContracts: ResolverContractFile["contracts"] = [];
   try {
     const fs   = await import("node:fs");
@@ -283,7 +283,7 @@ async function verifyOnSourceChange(pool: import("pg").Pool): Promise<Violation[
     const url  = await import("node:url");
     const __filename = url.fileURLToPath(import.meta.url);
     const __dirname  = path.dirname(__filename);
-    const contractsPath = path.join(__dirname, "..", "db", "seed", "_generated", "resolver-contracts.json");
+    const contractsPath = path.join(__dirname, "..", "db", "seed", "contracts", "generated", "resolver-contracts.json");
     if (fs.existsSync(contractsPath)) {
       const data = JSON.parse(fs.readFileSync(contractsPath, "utf-8")) as ResolverContractFile;
       resolverContracts = data.contracts;

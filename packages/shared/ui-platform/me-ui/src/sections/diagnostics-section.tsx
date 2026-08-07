@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Activity, Check, Copy, Download, Loader2, RefreshCw, Trash2 } from "lucide-react";
-import { Badge, Button } from "@athyper/ui/primitives";
+import { Badge, Button } from "@athyper/platform-ui/primitives";
 import { useMeUI } from "../me-ui-provider";
 import { Banner, InfoRow, SectionCard } from "../_shared";
 

@@ -10,7 +10,7 @@ import {
   ProjectPicker,
   resolveEntityPickerOptionConfig,
 } from "@athyper/runtime-shared/entity-search";
-import { DatePicker } from "@athyper/ui/composites";
+import { DatePicker } from "@athyper/platform-ui/composites";
 import { isUomLikeField, fieldOptions } from "../meta";
 
 type FieldOption = { value: string; label: string };

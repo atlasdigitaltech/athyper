@@ -24,7 +24,7 @@ const editRouting = readFileSync(
   resolve(repoRoot, "apps/neon/lib/server/meta-entity-edit-routing.ts"),
   "utf8",
 );
-const ledgerDdl = readFileSync(resolve(repoRoot, "server/db/ddl/ledger/01_tables.sql"), "utf8");
+const ledgerDdl = readFileSync(resolve(repoRoot, "server/db/ddl/planes/neon/ledger/03_tables.sql"), "utf8");
 
 function section(source: string, start: string, end: string): string {
   const from = source.indexOf(start);

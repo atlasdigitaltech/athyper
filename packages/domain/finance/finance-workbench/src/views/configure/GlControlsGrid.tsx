@@ -8,8 +8,8 @@ import {
   Input,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Skeleton,
-} from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+} from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { useConfigureGlControls, type ConfigureGlControlRow } from "../../hooks/useFinanceConfigure";
 import { GlControlAssignDialog, GlControlEditDialog } from "./GlControlDialogs";
 import { useBulkGlControls } from "../../hooks/useFinanceSetupMutations";

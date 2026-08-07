@@ -5,7 +5,7 @@
  * repeating raw Tailwind class strings. Every constant maps to a named role so
  * readers understand intent, not just appearance.
  *
- * Import: `import { LABEL_XS, BODY_SM_MEDIUM } from "@athyper/ui/typography"`
+ * Import: `import { LABEL_XS, BODY_SM_MEDIUM } from "@athyper/platform-ui/typography"`
  */
 
 // ── Field & form labels ───────────────────────────────────────────────────────

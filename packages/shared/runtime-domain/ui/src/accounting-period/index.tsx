@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { type FiscalPeriodStatus, type PeriodGateDecision } from "@athyper/finance-rules";
-import { type SemanticIntent } from "@athyper/theme/semantic-colors";
-import { cn } from "@athyper/theme/utils";
+import { type SemanticIntent } from "@athyper/platform-theme/semantic-colors";
+import { cn } from "@athyper/platform-theme/utils";
 import { Badge } from "../primitives";
 import { StatusBadge } from "../composites";
 

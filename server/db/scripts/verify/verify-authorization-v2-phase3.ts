@@ -60,7 +60,7 @@ function stripCommentsPreservingLines(value: string): string {
 
 const manifest = JSON.parse(await readFile(resolve(
   databaseRoot,
-  "authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
+  "seed/contracts/authorization/authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
 ), "utf8")) as UserManifest;
 const mappings = Object.values(manifest.subjectMappings);
 const mappingComplete =

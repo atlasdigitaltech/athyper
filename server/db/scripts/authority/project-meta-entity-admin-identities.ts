@@ -194,21 +194,12 @@ async function main(): Promise<void> {
       }
     }
 
-    await target.query(`
-      INSERT INTO master.workspace (id,code,name,description,is_shared_infrastructure,metadata,created_by)
-      VALUES (md5('athyper:workspace:core')::uuid,'core','Core Platform','Canonical platform workspace',true,
-              '{"seed_owner":"athyper.meta-entity-authority"}'::jsonb,
-              '00000000-0000-0000-0000-000000000000')
-      ON CONFLICT (code) DO NOTHING
+    const catalog = await target.query<{ id: string }>(`
+      SELECT id FROM control.module WHERE code='meta' AND status='active'
     `);
-    await target.query(`
-      INSERT INTO master.module (id,code,name,description,workspace_id,metadata,created_by)
-      SELECT md5('athyper:module:meta')::uuid,'meta','Metadata Studio','Canonical Meta Entity Studio',workspace.id,
-             '{"seed_owner":"athyper.meta-entity-authority"}'::jsonb,
-             '00000000-0000-0000-0000-000000000000'
-        FROM master.workspace WHERE code='core'
-      ON CONFLICT (code) DO NOTHING
-    `);
+    if (catalog.rowCount !== 1) {
+      throw new Error("Active control.module META is required before identity projection.");
+    }
 
     const verified = await target.query<{ principal_count: number; binding_count: number }>(`
       SELECT

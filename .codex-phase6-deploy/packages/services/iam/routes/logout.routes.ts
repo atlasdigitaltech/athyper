@@ -27,7 +27,7 @@ import { createSessionService } from "../session/session.service.js";
 import { createBootstrapService } from "../bootstrap/bootstrap.service.js";
 import { terminateFrontendSessions } from "../session/termination.service.js";
 
-// Key helpers mirrored from @athyper/session-plane — keep in sync.
+// Key helpers mirrored from @athyper/platform-iam-session-plane — keep in sync.
 const sessKey = (ns: string, sid: string) => `sess:${ns}:${sid}`;
 const userSessionsKey = (ns: string, userId: string) => `user_sessions:${ns}:${userId}`;
 

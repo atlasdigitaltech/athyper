@@ -1,27 +1,27 @@
 /**
- * @athyper/theme
+ * @athyper/platform-theme
  *
  * Multi-preset theme system for Athyper.
  *
  * Import paths (locked — see package.json exports):
  *
  *   CSS:
- *     import "@athyper/theme/base.css";
- *     import "@athyper/theme/presets/base.css";
- *     import "@athyper/theme/presets/modern-minimal.css";
+ *     import "@athyper/platform-theme/base.css";
+ *     import "@athyper/platform-theme/presets/base.css";
+ *     import "@athyper/platform-theme/presets/modern-minimal.css";
  *
  *   Tailwind config:
- *     import athyperPreset from "@athyper/theme/tailwind-preset";
+ *     import athyperPreset from "@athyper/platform-theme/tailwind-preset";
  *
  *   TypeScript:
- *     import { cn } from "@athyper/theme/utils";
- *     import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
- *     import { themePresets, DEFAULT_PRESET } from "@athyper/theme/presets";
- *     import { THEME_CONTRACT_VERSION, REQUIRED_THEME_VARIABLES } from "@athyper/theme/contracts";
- *     import { validatePresetCSS } from "@athyper/theme/validator";
+ *     import { cn } from "@athyper/platform-theme/utils";
+ *     import { resolveSemanticColors } from "@athyper/platform-theme/semantic-colors";
+ *     import { themePresets, DEFAULT_PRESET } from "@athyper/platform-theme/presets";
+ *     import { THEME_CONTRACT_VERSION, REQUIRED_THEME_VARIABLES } from "@athyper/platform-theme/contracts";
+ *     import { validatePresetCSS } from "@athyper/platform-theme/validator";
  *
  *   Or from this barrel:
- *     import { cn, resolveSemanticColors, themePresets } from "@athyper/theme";
+ *     import { cn, resolveSemanticColors, themePresets } from "@athyper/platform-theme";
  */
 
 // Contract

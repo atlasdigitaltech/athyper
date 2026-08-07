@@ -155,7 +155,7 @@ FROM (VALUES
     ('legacy.pi.discard_session','legacy.pi','discard_session','fnd','capability','medium',false,'Legacy Revert To Baseline Alias','PI.DISCARD_SESSION','record'),
     ('legacy.pi.revert_to_baseline','legacy.pi','revert_to_baseline','fnd','capability','high',false,'Revert Invoice To Baseline','PI.REVERT_TO_BASELINE','record')
 ) AS s(canonical_code,resource_code,operation_code,module_code,permission_kind,risk_tier,requires_mfa,name,legacy_code,scope_type)
-JOIN master.module m ON m.code=s.module_code
+JOIN control.module m ON m.code=s.module_code
 ON CONFLICT (canonical_code) DO UPDATE SET permission_kind=excluded.permission_kind,resource_code=excluded.resource_code,
  operation_code=excluded.operation_code,module_id=excluded.module_id,risk_tier=excluded.risk_tier,requires_mfa=excluded.requires_mfa,
  provenance_ref=excluded.provenance_ref,metadata=excluded.metadata,status='suspended',status_changed_at=now(),status_changed_by=excluded.created_by,
@@ -183,6 +183,6 @@ WHERE provenance_ref LIKE 'wave4:legacy-permission:%'
 DO $assertions$ BEGIN
  IF (SELECT count(*) FROM authz.permission WHERE provenance_ref LIKE 'wave4:legacy-permission:%' AND status='published') <> 126 THEN
    RAISE EXCEPTION 'neon compiled permission count mismatch'; END IF;
- IF EXISTS (SELECT 1 FROM authz.permission p LEFT JOIN master.module m ON m.id=p.module_id WHERE p.provenance_ref LIKE 'wave4:legacy-permission:%' AND m.id IS NULL) THEN
+ IF EXISTS (SELECT 1 FROM authz.permission p LEFT JOIN control.module m ON m.id=p.module_id WHERE p.provenance_ref LIKE 'wave4:legacy-permission:%' AND m.id IS NULL) THEN
    RAISE EXCEPTION 'neon compiled permission module orphan'; END IF;
 END $assertions$;

@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const db = resolve(root, "server/db");
-const packsRoot = resolve(db, "seed-packs/blueprints-v2");
+const packsRoot = resolve(db, "seed/packs/blueprints-v2");
 const sha = (value: string) => createHash("sha256").update(value.replace(/\r\n?/g, "\n")).digest("hex");
 
 async function main() {
@@ -43,7 +43,7 @@ async function main() {
   const apFiles = await readdir(resolve(db, "seed/blueprints/modules/ap_non_po"));
   if (apFiles.includes("005_accounting_profile_ddl.sql")) failures.push("005_accounting_profile_ddl.sql was not removed");
   const ddl = await readFile(resolve(db, "ddl/planes/neon/master/03_tables.sql"), "utf8");
-  const policyDdl = await readFile(resolve(db, "ddl/planes/neon/control/03_accounting_policy_tables.sql"), "utf8");
+  const policyDdl = await readFile(resolve(db, "ddl/planes/neon/control/03_tables.sql"), "utf8");
   if (!/CREATE TABLE master\.accounting_profile/.test(ddl) || !/CREATE TABLE control\.accounting_profile_policy/.test(policyDdl)) failures.push("accounting policy structure is missing from DDL layers");
   if (failures.length) throw new Error(`Wave 5 verification failed:\n- ${failures.join("\n- ")}`);
   console.log(`Wave 5 blueprint framework verified: ${ledger.packs.length} ordered packs, checksums and receipts current; AP Non-PO DDL removed.`);

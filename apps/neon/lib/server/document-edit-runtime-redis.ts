@@ -39,9 +39,9 @@ export async function createDocumentEditRedisClient(
   const importPackage = new Function("packageName", "return import(packageName)") as (
     packageName: string,
   ) => Promise<unknown>;
-  const mod = await importPackage("@athyper/session-store") as SessionStoreModule;
+  const mod = await importPackage("@athyper/platform-iam-session-store") as SessionStoreModule;
   if (typeof mod.createSessionRedisClient !== "function") {
-    throw new Error("@athyper/session-store does not export createSessionRedisClient.");
+    throw new Error("@athyper/platform-iam-session-store does not export createSessionRedisClient.");
   }
   return mod.createSessionRedisClient(options);
 }

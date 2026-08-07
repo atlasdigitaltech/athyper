@@ -65,16 +65,16 @@ const tests = await text(
   "server/packages/services/iam/authorization-runtime/__tests__/canonical-runtime.test.ts",
 );
 const neonDdl = await text(
-  "server/db/ddl/control/01zzw_authorization_v5_runtime.sql",
+  "server/db/ddl/planes/neon/authz/03_tables.sql",
 );
 const meshDdl = await text(
-  "server/db/ddl/mesh_control/01zzw_authorization_v5_runtime.sql",
+  "server/db/ddl/planes/mesh/authz/03_tables.sql",
 );
 const neonPublicationGuard = await text(
-  "server/db/ddl/control/05_authorization_v5_runtime_functions.sql",
+  "server/db/ddl/planes/neon/authz/07_functions.sql",
 );
 const meshPublicationGuard = await text(
-  "server/db/ddl/mesh_control/05_authorization_v5_runtime_functions.sql",
+  "server/db/ddl/planes/mesh/authz/07_functions.sql",
 );
 
 expect(

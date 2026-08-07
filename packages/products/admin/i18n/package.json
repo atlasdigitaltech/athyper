@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@athyper/i18n": "workspace:*"
+    "@athyper/platform-i18n": "workspace:*"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { PageFrame, StatePanel } from "@athyper/surface-kit";
-import { DataTable, Badge, Button, Input, Label, Checkbox, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@athyper/ui";
+import { PageFrame, StatePanel } from "@athyper/platform-surface-kit";
+import { DataTable, Badge, Button, Input, Label, Checkbox, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@athyper/platform-ui";
 import { csrfFetch } from "@/lib/bff-fetch";
-import type { ColumnDef } from "@athyper/ui";
+import type { ColumnDef } from "@athyper/platform-ui";
 
 interface FieldGroupRow {
   group_key: string;

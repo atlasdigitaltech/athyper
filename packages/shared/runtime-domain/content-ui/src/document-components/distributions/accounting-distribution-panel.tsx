@@ -17,8 +17,8 @@
 
 import type { ComponentType } from "react";
 import { CheckCircle2, AlertCircle, Info, Pencil, Plus, Trash2 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
+import { cn } from "@athyper/platform-theme/utils";
+import { resolveSemanticColors } from "@athyper/platform-theme/semantic-colors";
 import { CurrencyTriad } from "../money/currency-triad";
 import type {
   AccountingDistribution,

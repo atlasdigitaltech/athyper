@@ -1,6 +1,0 @@
--- ============================================================================
--- public/05_functions.sql
--- Concept: Public Schema Functions — no business functions defined
--- Depends on: 01_schemas/001_schemas.sql
--- Note: No business functions defined for the public schema.
--- ============================================================================

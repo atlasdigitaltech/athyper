@@ -65,7 +65,7 @@ import {
   SYSTEM_PRINCIPAL_UUID,
 } from "@athyper/svc-shared";
 import { checkPermissionBatch } from "@athyper/svc-iam";
-import type { SyncPdfRenderer } from "@athyper/server-foundation/render/pdf-renderer-client";
+import type { SyncPdfRenderer } from "@athyper/platform-rendering";
 import { resolveEntityPrintSections, resolvePrintIdentity } from "@athyper/entity-print/core";
 import { buildEntityPrintHtml } from "../lib/build-entity-print-html.js";
 import { mapProfileToRenderOptions, DEFAULT_RENDER_OPTIONS } from "../lib/print-profile-mapper.js";

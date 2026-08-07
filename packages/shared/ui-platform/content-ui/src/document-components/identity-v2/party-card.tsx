@@ -7,7 +7,7 @@
  */
 "use client";
 
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { JurisdictionChip } from "./jurisdiction-chip";
 
 export interface PartyCardProps {

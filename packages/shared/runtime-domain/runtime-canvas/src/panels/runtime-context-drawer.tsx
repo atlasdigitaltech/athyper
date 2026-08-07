@@ -3,8 +3,8 @@
 import type { ReactNode } from "react";
 import { Clock, Lock, MessageSquare, Paperclip, type LucideIcon } from "lucide-react";
 import { formatBytes } from "@athyper/runtime-shared/core";
-import { DrawerHeaderTitle } from "@athyper/ui";
-import { DrawerPeekShell } from "@athyper/ui/surfaces/shells";
+import { DrawerHeaderTitle } from "@athyper/platform-ui";
+import { DrawerPeekShell } from "@athyper/platform-ui/surfaces/shells";
 
 const PANEL_META: Record<string, { label: string; Icon: LucideIcon }> = {
   comments:    { label: "Comments",    Icon: MessageSquare },

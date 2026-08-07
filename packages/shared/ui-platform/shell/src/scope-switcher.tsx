@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Loader2, Search } from "lucide-react";
-import type { PlaneKey } from "@athyper/session-plane";
+import type { PlaneKey } from "@athyper/platform-iam-session-plane";
 import type { OrgOption, ScopeSwitchStatus } from "@athyper/shell-runtime";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 
 // Search box appears once the list gets long enough that scanning wins over glancing.
 const SEARCH_THRESHOLD = 5;

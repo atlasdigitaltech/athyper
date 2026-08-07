@@ -1,7 +1,7 @@
 "use client";
 
-import { WorkPanel } from "@athyper/surface-kit";
-import { Badge } from "@athyper/ui";
+import { WorkPanel } from "@athyper/platform-surface-kit";
+import { Badge } from "@athyper/platform-ui";
 import type { EntityDetail } from "./types";
 
 export function WorkflowTab({ entity }: { entity: EntityDetail }) {

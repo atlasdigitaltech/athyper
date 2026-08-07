@@ -11,8 +11,8 @@ import {
   Button, Badge, Card, CardContent,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Input, Label, Skeleton,
-} from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+} from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { getCsrfToken } from "@/lib/bff-fetch";
 
 // â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

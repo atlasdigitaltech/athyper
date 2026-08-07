@@ -6,13 +6,13 @@ import {
   Loader2, Lock, Moon, Palette, RotateCcw, Save, Settings,
   Sun, SunMoon, XCircle,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { DEFAULT_PRESET, getPresetMeta, themePresets } from "@athyper/theme/presets";
+import { cn } from "@athyper/platform-theme/utils";
+import { DEFAULT_PRESET, getPresetMeta, themePresets } from "@athyper/platform-theme/presets";
 import {
   Badge, Button,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Separator,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import { bffFetch, BffError } from "@athyper/runtime-shared/client";
 import type {
   AppearanceMode,

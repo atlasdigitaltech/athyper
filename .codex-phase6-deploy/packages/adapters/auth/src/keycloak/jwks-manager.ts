@@ -4,17 +4,9 @@
 // and optional Redis warm-start for cold boot safety.
 
 import * as jose from "jose";
+import type { InfraLogger } from "@athyper/platform-core/logger";
 
-// ─── AdapterLogger ────────────────────────────────────────────────────────────
-//
-// Defined inline to keep this package free of @athyper/core.
-// Structurally identical to InfraLogger — any InfraLogger instance satisfies it.
-
-export interface AdapterLogger {
-  info(event: string, fields?: Record<string, unknown>): void;
-  warn(event: string, fields?: Record<string, unknown>): void;
-  error(event: string, fields?: Record<string, unknown>): void;
-}
+export type { InfraLogger as AdapterLogger };
 
 export interface JwksHealthStatus {
   healthy: boolean;

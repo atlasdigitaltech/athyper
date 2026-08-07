@@ -14,7 +14,7 @@
  */
 
 import { type ReactNode } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface EmptyStateProps {
   /** Icon node — pass a pre-sized JSX element, e.g. <Inbox className="h-10 w-10 text-muted-foreground/30" /> */

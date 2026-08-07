@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Building2, Check, ChevronDown, Clock, Search } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import type { FinanceScope, ScopeType } from "../lib/scope";
 import type { CompanyOption, EntityOption, ScopeOptionsData } from "../hooks/useScopeOptions";
 

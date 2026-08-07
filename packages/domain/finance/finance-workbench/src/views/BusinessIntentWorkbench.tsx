@@ -10,8 +10,8 @@ import {
   ShieldCheck,
   SlidersHorizontal,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { Badge, Button } from "@athyper/ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
+import { Badge, Button } from "@athyper/platform-ui/primitives";
 import { ReportMetricCard, ReportMetricGrid } from "../components/ReportScaffold";
 import { TaxonomyWorkbenchHeader } from "../components/TaxonomyWorkbenchHeader";
 import {

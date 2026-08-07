@@ -1,10 +1,10 @@
 /**
- * @athyper/theme — Preset Validator CLI
+ * @athyper/platform-theme — Preset Validator CLI
  *
  * Standalone Node CLI that validates all shipped presets.
  *
  * Usage:
- *   pnpm --filter @athyper/theme validate-presets
+ *   pnpm --filter @athyper/platform-theme validate-presets
  *
  * Kept separate from preset-validator.ts so consumers don't transitively
  * pull Node types into their typecheck graph.

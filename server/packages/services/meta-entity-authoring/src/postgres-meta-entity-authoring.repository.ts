@@ -176,8 +176,12 @@ export class PostgresMetaEntityAuthoringRepository implements MetaEntityAuthorin
                module_row.name AS module_name, module_row.description AS module_description,
                workspace_row.id AS workspace_id, workspace_row.code AS workspace_code,
                workspace_row.name AS workspace_name
-          FROM master.module AS module_row
-          JOIN master.workspace AS workspace_row ON workspace_row.id = module_row.workspace_id
+          FROM control.module AS module_row
+          JOIN control.workspace_module AS placement
+            ON placement.module_id = module_row.id
+           AND placement.is_primary
+           AND placement.status = 'active'
+          JOIN control.workspace AS workspace_row ON workspace_row.id = placement.workspace_id
          WHERE module_row.status = 'active'
            AND workspace_row.status = 'active'
          ORDER BY workspace_row.sort_order, workspace_row.code, module_row.code
@@ -363,7 +367,7 @@ export class PostgresMetaEntityAuthoringRepository implements MetaEntityAuthorin
                count(cs.id) FILTER (WHERE cs.status IN ('draft','in_review','rejected'))::int AS open_change_set_count,
                max(r.release_no)::int AS current_release_no
         FROM metadata.entity e
-        JOIN master.module m ON m.id = e.module_id
+        JOIN control.module m ON m.id = e.module_id
         LEFT JOIN metadata.entity_change_set cs ON cs.entity_id = e.id
         LEFT JOIN metadata.entity_release r ON r.entity_id = e.id
         WHERE e.tenant_id IS NULL OR e.tenant_id = ${context.tenantId}::uuid
@@ -388,8 +392,12 @@ export class PostgresMetaEntityAuthoringRepository implements MetaEntityAuthorin
       }>`
         WITH coordinate AS (
           SELECT module_row.id
-            FROM master.module AS module_row
-            JOIN master.workspace AS workspace_row ON workspace_row.id = module_row.workspace_id
+            FROM control.module AS module_row
+            JOIN control.workspace_module AS placement
+              ON placement.module_id = module_row.id
+             AND placement.is_primary
+             AND placement.status = 'active'
+            JOIN control.workspace AS workspace_row ON workspace_row.id = placement.workspace_id
            WHERE module_row.code = ${command.moduleCoordinate.moduleCode}
              AND workspace_row.code = ${command.moduleCoordinate.workspaceCode}
              AND module_row.status = 'active'
@@ -402,7 +410,7 @@ export class PostgresMetaEntityAuthoringRepository implements MetaEntityAuthorin
           FROM coordinate
           RETURNING *
         ) SELECT i.id,i.tenant_id,m.code AS module_code,i.entity_code,i.entity_class,i.ownership_model,i.status
-          FROM inserted i JOIN master.module m ON m.id=i.module_id
+          FROM inserted i JOIN control.module m ON m.id=i.module_id
       `.execute(tx);
       const row = result.rows[0];
       if (!row) {

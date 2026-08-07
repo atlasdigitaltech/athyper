@@ -2,8 +2,8 @@
 
 import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Plus, Trash2, X, XCircle } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { LABEL_SM } from "@athyper/ui/typography";
+import { cn } from "@athyper/platform-theme/utils";
+import { LABEL_SM } from "@athyper/platform-ui/typography";
 import type { DocumentLine, AccountingDistribution } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import { appEntityDetailHref, fmtAmount } from "@athyper/runtime-shared/core";

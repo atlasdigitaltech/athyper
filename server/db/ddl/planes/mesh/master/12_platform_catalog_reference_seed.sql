@@ -50,13 +50,13 @@ FROM (VALUES
     ('cms', 'Content Services', 'Document storage', '{"tier":"Core"}'::jsonb, 'core'),
     ('act', 'Activity & Commentary', 'Comments and timelines', '{"tier":"Core"}'::jsonb, 'core'),
     ('rel', 'Reference & Shared Data', 'Reference & Shared Data', '{"tier":"Core"}'::jsonb, 'core'),
-    ('pcon', 'Proposal & Contract Collaboration', 'Partner-facing collaboration for proposals, commercial terms, and contract exchange', '{"tier":"Base","dependencies":["contract","rel"]}'::jsonb, 'ptr'),
-    ('omi', 'Order Intake', 'Inbound partner orders and order acknowledgements received from external parties', '{"tier":"Base","dependencies":["buy","rel"]}'::jsonb, 'ptr'),
-    ('imo', 'Invoice Delivery', 'Outbound invoices and invoice delivery to customers or partner channels', '{"tier":"Base","dependencies":["acc","rel"]}'::jsonb, 'ptr'),
-    ('ccon', 'Customer Contract Portal', 'Customer-visible contract access, commercial documents, and renewal interaction', '{"tier":"Base","dependencies":["contract","crm"]}'::jsonb, 'ptr'),
-    ('soo', 'Sales Order Delivery', 'Outbound sales orders sent to fulfillment, distributors, or trading partners', '{"tier":"Base","dependencies":["sale","rel"]}'::jsonb, 'ptr'),
-    ('sii', 'Sales Invoice Intake', 'Inbound customer-side sales invoice intake and validation from connected channels', '{"tier":"Base","dependencies":["acc","sale"]}'::jsonb, 'ptr'),
-    ('logx', 'Logistics Collaboration', 'Shipment visibility, transport milestone exchange, and logistics partner coordination', '{"tier":"Base","dependencies":["logistics","rel"]}'::jsonb, 'ptr')
+    ('pcon', 'Proposal & Contract Collaboration', 'Partner-facing collaboration for proposals, commercial terms, and contract exchange', '{"tier":"Base","dependencies":["fnd","rel","doc","wfl"]}'::jsonb, 'ptr'),
+    ('omi', 'Order Intake', 'Inbound partner orders and order acknowledgements received from external parties', '{"tier":"Base","dependencies":["fnd","rel","int"]}'::jsonb, 'ptr'),
+    ('imo', 'Invoice Delivery', 'Outbound invoices and invoice delivery to customers or partner channels', '{"tier":"Base","dependencies":["fnd","rel","doc","int"]}'::jsonb, 'ptr'),
+    ('ccon', 'Customer Contract Portal', 'Customer-visible contract access, commercial documents, and renewal interaction', '{"tier":"Base","dependencies":["fnd","rel","doc","wfl"]}'::jsonb, 'ptr'),
+    ('soo', 'Sales Order Delivery', 'Outbound sales orders sent to fulfillment, distributors, or trading partners', '{"tier":"Base","dependencies":["fnd","rel","int"]}'::jsonb, 'ptr'),
+    ('sii', 'Sales Invoice Intake', 'Inbound customer-side sales invoice intake and validation from connected channels', '{"tier":"Base","dependencies":["fnd","rel","doc","int"]}'::jsonb, 'ptr'),
+    ('logx', 'Logistics Collaboration', 'Shipment visibility, transport milestone exchange, and logistics partner coordination', '{"tier":"Base","dependencies":["fnd","rel","int","ntf"]}'::jsonb, 'ptr')
 ) AS seed_rows(code,name,description,config,workspace_code)
 JOIN master.workspace ON workspace.code=seed_rows.workspace_code
 ON CONFLICT (code) DO UPDATE SET

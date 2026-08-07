@@ -27,6 +27,7 @@
   "dependencies": {
     "@athyper/api-contracts": "workspace:*",
     "@athyper/entity-print": "workspace:*",
+    "@athyper/platform-rendering": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-shared": "workspace:*"

@@ -60,7 +60,7 @@ try {
   if (!examples.some((entity) => entity.entityCode === "business_partner" && entity.tenantId === null)) {
     throw new Error("Global business_partner example is not readable to the tenant app role.");
   }
-  const module = await sql<{ id: string }>`SELECT id FROM master.module WHERE code='meta'`.execute(admin);
+  const module = await sql<{ id: string }>`SELECT id FROM control.module WHERE code='meta'`.execute(admin);
   const entity = await service.createEntity(context, {
     moduleId: module.rows[0]!.id,
     entityCode: `authority_smoke_${randomUUID().slice(0, 8)}`,

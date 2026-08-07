@@ -10,8 +10,8 @@ import { useRouter } from "next/navigation";
 import {
   AuthFailureBridge,
   type AuthFailureEvent,
-} from "@athyper/identity-gate";
-import { ToastProvider, useToast } from "@athyper/ui/composites";
+} from "@athyper/platform-iam-identity-gate";
+import { ToastProvider, useToast } from "@athyper/platform-ui/composites";
 
 export interface PlaneProvidersProps {
   children: ReactNode;

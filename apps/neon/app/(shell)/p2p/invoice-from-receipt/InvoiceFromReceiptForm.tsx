@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { DatePicker } from "@athyper/ui/composites";
+import { DatePicker } from "@athyper/platform-ui/composites";
 import { csrfFetch } from "@athyper/runtime-shared/client";
 
 export interface ReceiptHeaderDto {

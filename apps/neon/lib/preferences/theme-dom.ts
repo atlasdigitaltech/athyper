@@ -1,7 +1,7 @@
 "use client";
 
-import { getLocaleDir, isValidLocale, type Locale } from "@athyper/i18n/config";
-import { DEFAULT_PRESET, getPresetMeta, type ThemePresetMeta } from "@athyper/theme/presets";
+import { getLocaleDir, isValidLocale, type Locale } from "@athyper/platform-i18n/config";
+import { DEFAULT_PRESET, getPresetMeta, type ThemePresetMeta } from "@athyper/platform-theme/presets";
 
 export const THEME_PRESET_COOKIE = "theme_preset";
 const THEME_PRESET_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;

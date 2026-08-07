@@ -1,5 +1,5 @@
 @config "../tailwind.config.ts";
 @source "../../../packages/shared";
 
-@import "@athyper/theme/all.css";
+@import "@athyper/platform-theme/all.css";
 @import "@athyper/atlas-agent-ui/styles.css";

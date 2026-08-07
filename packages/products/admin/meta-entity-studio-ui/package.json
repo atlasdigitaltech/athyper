@@ -16,7 +16,7 @@
   "dependencies": {
     "@athyper/meta-entity-authoring-contracts": "workspace:*",
     "@athyper/meta-entity-runtime": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "lucide-react": "1.8.0"
   },
   "peerDependencies": {

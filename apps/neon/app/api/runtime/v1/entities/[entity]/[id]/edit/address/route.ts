@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHash, randomUUID } from "node:crypto";
-import type { V4Session } from "@athyper/auth-bff";
+import type { V4Session } from "@athyper/platform-iam-auth-bff";
 import { loadDocumentEditRuntimeRouteContext } from "@/lib/server/document-edit-runtime-route-context";
 import {
   createDocumentEditRedisClient,

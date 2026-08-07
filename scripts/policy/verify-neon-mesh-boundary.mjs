@@ -53,8 +53,8 @@ for (const meshDdlDir of ["mesh", "mesh_log", "mesh_control"]) {
 }
 
 const athyperNetworkAllowed = [
-  "server/db/ddl/master/01i_tables_party_master.sql",
-  "server/db/ddl/master/01m_bp_core_hardening.sql",
+  "server/db/ddl/planes/neon/master/03_tables.sql",
+  "server/db/ddl/planes/neon/master/03_tables.sql",
   "server/db/seed/tenants/neon/010_demo/network/001_buyer_networks.sql",
   "server/db/seed/tenants/neon/020_technostat/network/001_buyer_networks.sql",
   "server/db/seed/tenants/neon/030_cirrusatlantic/network/001_buyer_networks.sql",

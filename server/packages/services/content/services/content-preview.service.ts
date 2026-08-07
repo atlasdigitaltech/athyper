@@ -23,7 +23,7 @@
  */
 
 import type { ObjectStorageAdapter } from "@athyper/adapter-object-storage";
-import type { PdfRendererClient } from "@athyper/server-foundation/render/pdf-renderer-client";
+import type { PdfRendererClient } from "@athyper/adapter-rendering-legacy";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

@@ -7,7 +7,7 @@ import {
   SESSION_POLICY_DEFAULTS,
   type PlaneKey,
   type SessionPolicyDefaults,
-} from "@athyper/session-plane";
+} from "@athyper/platform-iam-session-plane";
 
 export type FavoritesPanelTab = "bookmarks" | "recent";
 

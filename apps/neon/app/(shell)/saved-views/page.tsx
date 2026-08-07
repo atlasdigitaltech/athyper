@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { SavedViewsManager } from "@athyper/saved-views-ui";
-import { PageFrame } from "@athyper/surface-kit";
+import { PageFrame } from "@athyper/platform-surface-kit";
 import { bffFetch } from "@/lib/bff-fetch";
 
 export default function SavedViewsRoute() {

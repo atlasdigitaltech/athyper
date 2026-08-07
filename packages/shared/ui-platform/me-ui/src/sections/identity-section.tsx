@@ -1,8 +1,8 @@
 "use client";
 
 import { Layers, RefreshCw, ShieldCheck, Users } from "lucide-react";
-import { Badge } from "@athyper/ui/primitives";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@athyper/ui/primitives";
+import { Badge } from "@athyper/platform-ui/primitives";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@athyper/platform-ui/primitives";
 import type {
   MeIdentity,
   MeIdentityAccessibleCompany,

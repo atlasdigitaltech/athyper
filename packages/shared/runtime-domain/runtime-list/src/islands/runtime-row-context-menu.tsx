@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@athyper/ui";
+} from "@athyper/platform-ui";
 
 export interface RuntimeRowContextCopyItem {
   key: string;

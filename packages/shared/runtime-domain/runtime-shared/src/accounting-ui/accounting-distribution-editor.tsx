@@ -2,8 +2,8 @@
 
 import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { META_SM } from "@athyper/ui/typography";
+import { cn } from "@athyper/platform-theme/utils";
+import { META_SM } from "@athyper/platform-ui/typography";
 
 export type AccountingDistributionMode = "single" | "split";
 

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Save } from "lucide-react";
-import { Button,Input,Label } from "@athyper/ui/primitives";
+import { Button,Input,Label } from "@athyper/platform-ui/primitives";
 import { useCompanyPaymentsSetup,useSavePaymentPolicy } from "../../hooks/usePaymentsSetup";
 
 export function PaymentPolicyControls({companyCode}:{companyCode:string}){

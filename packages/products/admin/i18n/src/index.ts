@@ -6,5 +6,5 @@
  * dictionaries under lang/{locale}/*.json as modules are localised.
  */
 
-export { i18nConfig, isValidLocale, isRtlLocale, getLocaleDir } from "@athyper/i18n/config";
-export type { Locale } from "@athyper/i18n/config";
+export { i18nConfig, isValidLocale, isRtlLocale, getLocaleDir } from "@athyper/platform-i18n/config";
+export type { Locale } from "@athyper/platform-i18n/config";

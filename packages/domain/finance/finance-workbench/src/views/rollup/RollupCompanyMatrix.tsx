@@ -5,8 +5,8 @@ import Link from "next/link";
 import {
   ArrowRight, CheckCircle2, Circle, CircleAlert, MinusCircle, Search,
 } from "lucide-react";
-import { Badge, Button, Input, Skeleton } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Button, Input, Skeleton } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import type { JourneyStepKey, JourneyStepState, JourneyStep } from "../../lib/finance-setup.types";
 import type { RollupCompanyRow } from "../../hooks/useFinanceRollup";
 

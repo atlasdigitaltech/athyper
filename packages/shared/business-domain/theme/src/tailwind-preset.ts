@@ -1,5 +1,5 @@
 /**
- * @athyper/theme Tailwind integration.
+ * @athyper/platform-theme Tailwind integration.
  *
  * The concrete token values for typography come from typography.ts. This file
  * maps CSS variables and generated typography fragments into Tailwind theme

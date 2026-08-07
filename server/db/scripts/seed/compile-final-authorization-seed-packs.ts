@@ -35,25 +35,25 @@ interface UserManifest {
 
 const here = dirname(fileURLToPath(import.meta.url));
 const databaseRoot = resolve(here, "../..");
-const outputRoot = resolve(databaseRoot, "seed-packs/authorization-v2");
+const outputRoot = resolve(databaseRoot, "seed/packs/authorization-v2");
 const semantic = await json<Record<string, unknown>>(resolve(
   databaseRoot,
-  "authority/authorization-authority-semantic-contract.v1.json",
+  "seed/contracts/authorization/authority/authorization-authority-semantic-contract.v1.json",
 ));
 const users = await json<UserManifest>(resolve(
   databaseRoot,
-  "authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
+  "seed/contracts/authorization/authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
 ));
 
 const packs = [];
 for (const target of ["neon-admin", "mesh"] as const) {
   const catalog = await json<Catalog>(resolve(
     databaseRoot,
-    `catalog/${target}/compiled/compiled-catalog.v1.json`,
+    `seed/contracts/authorization/catalog/${target}/compiled/compiled-catalog.v1.json`,
   ));
   const authority = await json<Authority>(resolve(
     databaseRoot,
-    `authority/${target}/compiled/compiled-authority.v1.json`,
+    `seed/contracts/authorization/authority/${target}/compiled/compiled-authority.v1.json`,
   ));
   const acceptedPlanes = target === "mesh" ? new Set(["mesh"]) : new Set(["neon", "admin"]);
   const subjectAssignments = Object.values(users.subjectMappings)
@@ -125,7 +125,7 @@ for (const target of ["neon-admin", "mesh"] as const) {
   await writeFile(resolve(output, "seed-pack.sha256"), `${contentSha256}\n`);
   packs.push({
     target,
-    path: `seed-packs/authorization-v2/${target}/seed-pack.v1.json`,
+    path: `seed/packs/authorization-v2/${target}/seed-pack.v1.json`,
     contentSha256,
     permissionCount: catalog.operations.length,
     roleCount: authority.roles.length,

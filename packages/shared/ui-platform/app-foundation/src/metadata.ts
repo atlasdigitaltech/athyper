@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { getPublicBrandAssets } from "@athyper/brand";
-import { getPlaneConfig, type PlaneKey } from "@athyper/session-plane";
+import { getPublicBrandAssets } from "@athyper/platform-brand";
+import { getPlaneConfig, type PlaneKey } from "@athyper/platform-iam-session-plane";
 
 export function createPlaneMetadata(plane: PlaneKey): Metadata {
   const config = getPlaneConfig(plane);

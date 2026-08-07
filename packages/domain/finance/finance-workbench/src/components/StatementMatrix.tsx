@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { fmtCompact } from "./format";
 import { openAppRecordFromContextMenu } from "../lib/recordLinks";
 import type { StatementBucket, StatementSection as StatementSectionData } from "../hooks/useFinancialStatements";

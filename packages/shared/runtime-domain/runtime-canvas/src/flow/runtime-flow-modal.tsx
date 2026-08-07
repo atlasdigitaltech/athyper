@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, ChevronLeft, ChevronRight, Loader2, Send } from "lucide-react";
 import type { FlowBundle, FlowFieldBinding, FlowStep } from "@athyper/api-contracts/documents";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   ControlledRichComposer,
   EMPTY_RICH_VALUE,
   type RichComposerValue,
   type RichVisibility,
-} from "@athyper/collaboration-ui";
+} from "@athyper/platform-communications-collaboration-ui";
 import {
   Button,
   Dialog,
@@ -19,8 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
   Separator,
-} from "@athyper/ui/primitives";
-import { DatePicker } from "@athyper/ui/composites";
+} from "@athyper/platform-ui/primitives";
+import { DatePicker } from "@athyper/platform-ui/composites";
 
 export interface FlowModalProps {
   open: boolean;

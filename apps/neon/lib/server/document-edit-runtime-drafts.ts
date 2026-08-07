@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
-import type { V4Session } from "@athyper/auth-bff";
+import type { V4Session } from "@athyper/platform-iam-auth-bff";
 import type { DocumentEditRuntimeRouteContext } from "@/lib/server/document-edit-runtime-route-context";
 import { buildDocumentEditCoordinatorIdentity } from "@/lib/server/document-edit-coordinator-identity";
 import {

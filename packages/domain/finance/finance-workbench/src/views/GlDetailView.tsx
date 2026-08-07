@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { fmtCompact } from "../components/format";
 import { AmountCell } from "../components/AmountCell";
 import { PeriodStatusBar } from "../components/PeriodStatusBar";

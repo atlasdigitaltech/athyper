@@ -1,6 +1,6 @@
 "use client";
 
-import { CommentList, type CommentsPage } from "@athyper/collaboration-ui";
+import { CommentList, type CommentsPage } from "@athyper/platform-communications-collaboration-ui";
 import { useRecordWorkspaceComments } from "../record-query";
 
 export interface CommentsPanelProps {

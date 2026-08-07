@@ -50,12 +50,15 @@ try {
   await sql`INSERT INTO master.principal (id,tenant_id,code,name,principal_type,created_by)
     VALUES (${principalId}::uuid,${tenantId}::uuid,${`meta.${suffix}.admin`},'Meta Service Admin','user',${principalId}::uuid)
     ON CONFLICT (id) DO NOTHING`.execute(admin);
-  await sql`INSERT INTO master.workspace (id,code,name,created_by)
+  await sql`INSERT INTO control.workspace (id,code,name,created_by)
     VALUES (${workspaceId}::uuid,${`meta_${suffix}_workspace`},'Meta Service Workspace',${principalId}::uuid)
     ON CONFLICT (id) DO NOTHING`.execute(admin);
-  await sql`INSERT INTO master.module (id,code,name,workspace_id,created_by)
-    VALUES (${moduleId}::uuid,${`meta_${suffix}_module`},'Meta Service Module',${workspaceId}::uuid,${principalId}::uuid)
+  await sql`INSERT INTO control.module (id,code,name,created_by)
+    VALUES (${moduleId}::uuid,${`meta_${suffix}_module`},'Meta Service Module',${principalId}::uuid)
     ON CONFLICT (id) DO NOTHING`.execute(admin);
+  await sql`INSERT INTO control.workspace_module (workspace_id,module_id,is_primary,created_by)
+    VALUES (${workspaceId}::uuid,${moduleId}::uuid,true,${principalId}::uuid)
+    ON CONFLICT (workspace_id,module_id) DO NOTHING`.execute(admin);
 
   const service = new MetaEntityAuthoringService(new PostgresMetaEntityAuthoringRepository(app));
   const context = { tenantId, principalId, correlationId: randomUUID(), requestId: "meta-service-smoke" };

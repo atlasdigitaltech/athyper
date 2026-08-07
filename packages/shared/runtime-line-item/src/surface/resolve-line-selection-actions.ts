@@ -1,6 +1,6 @@
 import { BadgePercent, Calculator, Copy, Pencil, Plus, ReceiptText, ShieldMinus, Tag, Trash2 } from "lucide-react";
 import type { MetaEntityOperation } from "@athyper/runtime-contracts";
-import type { SelectionAction, SelectionActionItem } from "@athyper/ui/composites";
+import type { SelectionAction, SelectionActionItem } from "@athyper/platform-ui/composites";
 import type { LinePricingComponentKind } from "../types";
 
 export interface LineSelectionActionHandlers {

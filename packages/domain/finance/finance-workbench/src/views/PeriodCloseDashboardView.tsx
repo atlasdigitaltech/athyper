@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import type { FinanceScope } from "../lib/scope";
 import { fmtDate } from "../components/format";
 import {

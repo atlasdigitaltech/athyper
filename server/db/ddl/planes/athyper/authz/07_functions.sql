@@ -259,7 +259,7 @@ BEGIN
        AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
         IF NOT EXISTS (
             SELECT 1
-              FROM master.module
+              FROM control.module
              WHERE id = NEW.module_id
                AND status = 'active'
         ) THEN

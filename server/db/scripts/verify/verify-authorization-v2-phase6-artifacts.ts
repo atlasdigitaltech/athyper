@@ -33,7 +33,9 @@ const staleContractFields = await scan(
   (await Promise.all(contractRoots.map(walk))).flat(),
   legacy,
 );
-const aliasArtifacts = (await walk(resolve(databaseRoot, "catalog")))
+const aliasArtifacts = (await walk(
+  resolve(databaseRoot, "seed/contracts/authorization/catalog"),
+))
   .filter((path) => /contextual-aliases\..*\.json$/i.test(path))
   .map((path) => normalize(relative(repositoryRoot, path)));
 const legacyMapperTools = (await walk(resolve(

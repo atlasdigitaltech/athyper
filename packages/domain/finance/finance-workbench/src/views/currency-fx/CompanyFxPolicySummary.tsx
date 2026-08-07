@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { History, Settings2 } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import type { CurrencyFxSetupPayload, FxPolicy } from "../../hooks/useCurrencyFxSetup";
 import { FxPolicyOverrideDialog } from "./FxPolicyOverrideDialog";
 

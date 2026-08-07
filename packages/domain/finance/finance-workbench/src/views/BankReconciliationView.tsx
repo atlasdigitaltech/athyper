@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cn, resolveSemanticColors, paymentDirectionIntent } from "@athyper/theme";
+import { cn, resolveSemanticColors, paymentDirectionIntent } from "@athyper/platform-theme";
 import type { FinanceScope } from "../lib/scope";
 import { fmtCurrency, fmtDate } from "../components/format";
 import {

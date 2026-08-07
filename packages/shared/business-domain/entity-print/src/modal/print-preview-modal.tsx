@@ -7,15 +7,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@athyper/ui/primitives";
-import { Button } from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import type { EntityPrintConfig } from "@athyper/runtime-contracts";
 import { resolveEntityPrintSections } from "../core/resolve-entity-print-sections";

@@ -1,3 +1,14 @@
+CREATE DOMAIN master.canonical_party_kind_d AS text
+  CHECK (VALUE IN ('platform','business_group','legal_entity','sole_proprietor','government','nonprofit'));
+CREATE DOMAIN master.party_verification_status_d AS text
+  CHECK (VALUE IN ('unverified','pending','verified','rejected','expired'));
+CREATE DOMAIN master.party_lifecycle_status_d AS text
+  CHECK (VALUE IN ('draft','active','suspended','merged','retired'));
+CREATE DOMAIN master.party_identifier_claim_status_d AS text
+  CHECK (VALUE IN ('claimed','verified','disputed','released','revoked'));
+CREATE DOMAIN master.party_relationship_status_d AS text
+  CHECK (VALUE IN ('pending','active','suspended','terminated'));
+
 -- Sealed principal/IAM/UI protocol values.
 -- These domains are identical in Athyper, Neon, and Mesh.
 -- Extensible registry keys (event_code, preference_code, surface_code) remain

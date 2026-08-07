@@ -20,7 +20,7 @@ if (!adminUrl || !adminDatabase || !meshUrl || !meshDatabase) {
 
 const config = JSON.parse(await readFile(resolve(
   import.meta.dirname,
-  "../../config/qualification/p5-h-mesh-consumer-certification.v1.json",
+  "config/p5-h-mesh-consumer-certification.v1.json",
 ), "utf8")) as {
   contractVersion: string;
   entityCode: string;

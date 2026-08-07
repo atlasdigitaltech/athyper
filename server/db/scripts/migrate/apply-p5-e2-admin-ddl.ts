@@ -5,20 +5,20 @@ import pg from "pg";
 
 const databaseRoot = resolve(import.meta.dirname, "../..");
 const files = [
-  "ddl/planes/athyper/metadata/03_phase5_operation_scope_tables.sql",
-  "ddl/planes/athyper/snapshot/03_entity_release_artifact_tables.sql",
-  "ddl/planes/athyper/metadata/05_phase5_operation_scope_constraints.sql",
-  "ddl/planes/athyper/snapshot/05_entity_release_artifact_constraints.sql",
-  "ddl/planes/athyper/metadata/06_phase5_operation_scope_indexes.sql",
-  "ddl/planes/athyper/snapshot/06_entity_release_artifact_indexes.sql",
-  "ddl/planes/athyper/metadata/07_phase5_operation_scope_functions.sql",
-  "ddl/planes/athyper/snapshot/07_entity_release_artifact_functions.sql",
-  "ddl/planes/athyper/metadata/08_phase5_operation_scope_triggers.sql",
-  "ddl/planes/athyper/snapshot/08_entity_release_artifact_triggers.sql",
-  "ddl/planes/athyper/metadata/10_phase5_operation_scope_rls.sql",
-  "ddl/planes/athyper/snapshot/10_entity_release_artifact_rls.sql",
-  "ddl/planes/athyper/metadata/11_phase5_operation_scope_grants.sql",
-  "ddl/planes/athyper/snapshot/11_entity_release_artifact_grants.sql",
+  "ddl/planes/athyper/metadata/03_tables.sql",
+  "ddl/planes/athyper/snapshot/03_tables.sql",
+  "ddl/planes/athyper/metadata/05_constraints.sql",
+  "ddl/planes/athyper/snapshot/05_constraints.sql",
+  "ddl/planes/athyper/metadata/06_indexes.sql",
+  "ddl/planes/athyper/snapshot/06_indexes.sql",
+  "ddl/planes/athyper/metadata/07_functions.sql",
+  "ddl/planes/athyper/snapshot/07_functions.sql",
+  "ddl/planes/athyper/metadata/08_triggers.sql",
+  "ddl/planes/athyper/snapshot/08_triggers.sql",
+  "ddl/planes/athyper/metadata/10_rls.sql",
+  "ddl/planes/athyper/snapshot/10_rls.sql",
+  "ddl/planes/athyper/metadata/11_grants.sql",
+  "ddl/planes/athyper/snapshot/11_grants.sql",
 ] as const;
 
 function argument(name: string): string | undefined {

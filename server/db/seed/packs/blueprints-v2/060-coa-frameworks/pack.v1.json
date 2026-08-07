@@ -1,0 +1,85 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "coa-frameworks",
+  "version": "2.0.0",
+  "executionOrder": 60,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [
+    "spend-taxonomy-business-intents",
+    "tax-fx"
+  ],
+  "checksumAlgorithm": "sha256",
+  "checksum": "cdc0644dc48ce8e7d69e5a1e267721d27d4430af475aa43c02ae7b573f68983f",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/universal/200_coa_frameworks/200_chart_catalog.sql",
+      "sha256": "b2e8322056b5aaa68158eb051b11ccb872fc914ca4f34e4c709a1e38532098f1",
+      "bytes": 6352,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/universal/200_coa_frameworks/210_group_chart_accounts.sql",
+      "sha256": "7408ca168f397ec512d08706d4557cefb9e604cf8b1753a03811bedc7e3af9bd",
+      "bytes": 39273,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 3,
+      "path": "server/db/seed/blueprints/universal/200_coa_frameworks/211_framework_ifrs_accounts.sql",
+      "sha256": "c0905563b4a0bf333452a7ddaee5798f09cee3b61dfacca6f1914582db696297",
+      "bytes": 62941,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 4,
+      "path": "server/db/seed/blueprints/universal/200_coa_frameworks/212_framework_gaap_accounts.sql",
+      "sha256": "997f68e4eb60fd8fc7937a190ae0172944e5e773afb4a3ce344244306830ba31",
+      "bytes": 55506,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 5,
+      "path": "server/db/seed/blueprints/universal/200_coa_frameworks/213_business_intent_coa_defaults.sql",
+      "sha256": "d0333985af697e1234887f4809b5bf10e721c417d953f010c6f5ee97855d4f55",
+      "bytes": 318,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "master.chart_of_account",
+      "master.gl_account"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed/packs/blueprints-v2/receipts/60-coa-frameworks.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

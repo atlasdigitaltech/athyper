@@ -1,5 +1,0 @@
--- ============================================================================
--- master/00_bootstrap.sql
--- Pre-table schema types and sequences.
--- Generated from the live Neon database master schema. Do not hand-edit.
--- ============================================================================

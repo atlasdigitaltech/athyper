@@ -3,10 +3,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Fragment } from "react";
 import { CheckCircle2, ChevronRight, Circle, Clock, Clock3, Eye, GitCompare, XCircle } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
-import { WorkPanel } from "@athyper/surface-kit";
-import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
+import { Button } from "@athyper/platform-ui/primitives";
+import { WorkPanel } from "@athyper/platform-surface-kit";
+import { cn } from "@athyper/platform-theme/utils";
+import { resolveSemanticColors, type SemanticIntent } from "@athyper/platform-theme/semantic-colors";
 import type {
   EffectiveRecordWorkspaceManifest,
   LifecycleStep,

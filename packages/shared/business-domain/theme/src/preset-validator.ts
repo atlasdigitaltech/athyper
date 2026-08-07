@@ -1,10 +1,10 @@
 /**
- * @athyper/theme — Preset Validator
+ * @athyper/platform-theme — Preset Validator
  *
  * Validates that a CSS preset file defines all required theme variables.
  * Used in two contexts:
  *
- *   1. CI: `pnpm --filter @athyper/theme validate-presets`
+ *   1. CI: `pnpm --filter @athyper/platform-theme validate-presets`
  *      Checks all shipped presets against the contract.
  *
  *   2. Runtime: when a tenant uploads a custom preset CSS file,

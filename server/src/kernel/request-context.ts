@@ -19,6 +19,12 @@ export type PlaneKey = "neon" | "mesh" | "admin";
 export interface RequestContext {
   /** Unique identifier for this request or job invocation. Always present. */
   requestId: string;
+  /**
+   * Correlation ID for distributed tracing and support lookups.
+   * Resolved in priority order: X-Correlation-ID header → OTel traceId (when
+   * sampled) → requestId. Always set; surfaces in PlatformErrorResponse as requestId.
+   */
+  correlationId?: string;
   /** Product plane for this request. Used as a trust boundary, not a backend silo. */
   planeKey?: PlaneKey;
   /** Keycloak realm key for this request. */

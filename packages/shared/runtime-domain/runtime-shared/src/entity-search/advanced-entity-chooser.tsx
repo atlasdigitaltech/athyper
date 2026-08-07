@@ -10,4 +10,4 @@ export {
   type AdvancedEntityChooserSection,
   type AdvancedEntityChooserTreeConfig,
   type AdvancedEntityChooserTone,
-} from "@athyper/ui/composites";
+} from "@athyper/platform-ui/composites";

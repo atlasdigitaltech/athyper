@@ -5,8 +5,8 @@
  * Consumes WorkspaceNode + ModuleNode from api-contracts/platform.
  */
 import { type WorkspaceNode, type ModuleNode } from "@athyper/api-contracts/platform";
-import { getWorkspaceIcon } from "@athyper/icons/workspaces";
-import { getModuleIcon } from "@athyper/icons/modules";
+import { getWorkspaceIcon } from "@athyper/platform-icons/workspaces";
+import { getModuleIcon } from "@athyper/platform-icons/modules";
 import { type LucideIcon } from "lucide-react";
 
 export interface MenuModuleItem {

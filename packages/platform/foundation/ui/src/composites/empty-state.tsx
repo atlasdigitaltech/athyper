@@ -1,0 +1,76 @@
+/**
+ * EmptyState — centered empty-region panel with icon, title, description, and CTA.
+ *
+ * Two sizes: "default" (full-page region, py-12) and "sm" (card-embedded, py-6).
+ * All props are optional — render only what you need.
+ *
+ * Usage:
+ *   <EmptyState
+ *     icon={<Inbox className="h-10 w-10 text-muted-foreground/30" />}
+ *     title="No invoices yet"
+ *     description="Invoices you receive will appear here."
+ *     action={<Button onClick={handleNew}>Create invoice</Button>}
+ *   />
+ */
+
+import { type ReactNode } from "react";
+import { cn } from "@athyper/platform-theme/utils";
+
+export interface EmptyStateProps {
+  /** Icon node — pass a pre-sized JSX element, e.g. <Inbox className="h-10 w-10 text-muted-foreground/30" /> */
+  icon?: ReactNode;
+  /** Primary message line. Renders in muted-foreground weight-medium. */
+  title?: string;
+  /** Secondary hint. Accepts ReactNode so inline <code> / <strong> markup works. */
+  description?: ReactNode;
+  /** Optional call-to-action below the text. */
+  action?: ReactNode;
+  /**
+   * size="default" — full-page empty region (py-12 default, override with className)
+   * size="sm"      — card-embedded (py-6, smaller gap)
+   */
+  size?: "sm" | "default";
+  className?: string;
+}
+
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  size = "default",
+  className,
+}: EmptyStateProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center text-center",
+        size === "default" ? "gap-3 py-12" : "gap-2 py-6",
+        className,
+      )}
+    >
+      {icon}
+      {title && (
+        <p
+          className={cn(
+            "font-medium text-muted-foreground",
+            size === "default" ? "text-sm" : "text-xs",
+          )}
+        >
+          {title}
+        </p>
+      )}
+      {description && (
+        <p
+          className={cn(
+            "text-muted-foreground/70",
+            size === "default" ? "max-w-xs text-xs" : "text-xs",
+          )}
+        >
+          {description}
+        </p>
+      )}
+      {action}
+    </div>
+  );
+}

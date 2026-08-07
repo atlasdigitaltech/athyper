@@ -9,7 +9,7 @@ import {
   Gauge,
   Upload,
 } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import type { TenantCurrencyFxSummary } from "../../hooks/useCurrencyFxSetup";
 
 export function TenantFxSummaryPanels({summary}:{summary:TenantCurrencyFxSummary}) {

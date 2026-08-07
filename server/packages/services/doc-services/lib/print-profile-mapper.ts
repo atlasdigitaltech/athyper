@@ -1,4 +1,4 @@
-import type { PdfRenderOptions } from "@athyper/server-foundation/render/pdf-renderer-client";
+import type { PdfRenderOptions } from "@athyper/platform-rendering";
 
 const PAPER_SIZES: Record<string, { width: number; height: number }> = {
   A3:     { width: 11.69, height: 16.54 },

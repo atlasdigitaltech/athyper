@@ -1,6 +1,0 @@
--- ============================================================================
--- public/07_views.sql
--- Concept: Public Schema Views — no views required
--- Depends on: 04_tables/000_public.sql
--- Note: No views required for the public schema.
--- ============================================================================

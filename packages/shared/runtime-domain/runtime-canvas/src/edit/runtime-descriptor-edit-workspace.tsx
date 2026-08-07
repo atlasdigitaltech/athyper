@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { runtimePath } from "@athyper/api-contracts/runtime-paths";
-import { WorkPanel } from "@athyper/surface-kit";
+import { WorkPanel } from "@athyper/platform-surface-kit";
 import type { EntityFieldDefaults } from "@athyper/cascade";
 import type { MetaEntityField, MetaEntityLineItemsSurface, MetaEntityRuntimeDescriptor, ProcessRuntimeState } from "@athyper/runtime-contracts";
 import type { EntityEditableField } from "@athyper/runtime-shared";

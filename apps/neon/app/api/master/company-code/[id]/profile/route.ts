@@ -7,7 +7,7 @@
  */
 
 import "server-only";
-import { buildRelayHandler } from "@athyper/bff-relay";
+import { buildRelayHandler } from "@athyper/platform-bff-relay";
 import { getNeonServerSession } from "@/lib/server/session";
 
 const handler = buildRelayHandler({

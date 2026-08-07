@@ -347,6 +347,7 @@ function Get-ExpandedSqlContent {
 function Invoke-DockerSqlFile {
     param(
         [string] $DatabaseName,
+        [string] $PlaneName,
         [pscustomobject] $File
     )
 
@@ -356,8 +357,16 @@ function Invoke-DockerSqlFile {
     $sqlContent = Get-ExpandedSqlContent `
         -SqlFilePath $File.FullPath `
         -IncludeStack $includeStack
+    $sessionPrelude = @"
+SELECT set_config('app.database_plane', '$PlaneName', false);
+SELECT set_config(
+    'app.current_principal_id',
+    '00000000-0000-0000-0000-000000000000',
+    false
+);
+"@
 
-    $sqlContent |
+    ($sessionPrelude + [Environment]::NewLine + $sqlContent) |
         & docker exec -i $DockerContainer psql `
             --username $DatabaseUser `
             --dbname $DatabaseName `
@@ -418,10 +427,28 @@ function Invoke-PlaneBuild {
     foreach ($file in $files) {
         Write-Host "  $($file.RelativePath)"
         if ($Docker) {
-            Invoke-DockerSqlFile -DatabaseName $Definition.Database -File $file
+            Invoke-DockerSqlFile `
+                -DatabaseName $Definition.Database `
+                -PlaneName $PlaneName `
+                -File $file
         } else {
-            & psql $connectionUrl --single-transaction --no-psqlrc `
-                --set ON_ERROR_STOP=1 --file $file.FullPath
+            $includeStack = [System.Collections.Generic.HashSet[string]]::new(
+                [StringComparer]::OrdinalIgnoreCase
+            )
+            $sqlContent = Get-ExpandedSqlContent `
+                -SqlFilePath $file.FullPath `
+                -IncludeStack $includeStack
+            $sessionPrelude = @"
+SELECT set_config('app.database_plane', '$PlaneName', false);
+SELECT set_config(
+    'app.current_principal_id',
+    '00000000-0000-0000-0000-000000000000',
+    false
+);
+"@
+            ($sessionPrelude + [Environment]::NewLine + $sqlContent) |
+                & psql $connectionUrl --single-transaction --no-psqlrc `
+                    --set ON_ERROR_STOP=1 --file -
             if ($LASTEXITCODE -ne 0) {
                 throw "DDL failed: $($file.RelativePath)"
             }

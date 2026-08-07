@@ -7,8 +7,8 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
   Input,
   Label,
-} from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+} from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   useAssignGlControl,
   useUpdateGlControl,

@@ -2,7 +2,7 @@
 
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import type { FinanceScope, ScopeType } from "../lib/scope";
 
 export interface ScopeOption {

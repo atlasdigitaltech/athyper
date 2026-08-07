@@ -10,7 +10,7 @@ import {
   Tags,
   type LucideIcon,
 } from "lucide-react";
-import type { WorkbenchModeItem } from "@athyper/ui/composites";
+import type { WorkbenchModeItem } from "@athyper/platform-ui/composites";
 
 export type TaxonomyWorkbenchId = "spend" | "intent" | "accountingProfile";
 export type TaxonomyWorkbenchMode = "overview" | "profile" | "explorer" | "classification" | "simulator" | "editor" | "matrix";

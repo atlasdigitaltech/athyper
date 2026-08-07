@@ -1,0 +1,5 @@
+{
+  "extends": "../../../packages/tooling/config/tsconfig-base.json",
+  "compilerOptions": { "rootDir": "src", "lib": ["ES2022"] },
+  "include": ["src"]
+}

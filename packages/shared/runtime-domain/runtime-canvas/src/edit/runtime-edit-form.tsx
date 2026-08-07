@@ -16,7 +16,7 @@ import {
   readRecordValue as readMetaEntityRecordValue,
   type RuntimeFieldGroupModel,
 } from "@athyper/runtime-shared/meta-entity";
-import { WorkPanel } from "@athyper/surface-kit";
+import { WorkPanel } from "@athyper/platform-surface-kit";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { csrfFetch, invalidateRuntimeListEntity } from "@athyper/runtime-shared/client";
 import {
@@ -38,8 +38,8 @@ import {
   incrementDocumentEditTelemetryCounter,
   useOptionalDocumentEditCoordinator,
 } from "../document-runtime/document-edit-coordinator";
-import { DatePicker, ZonedDateTimePicker } from "@athyper/ui/composites";
-import { resolveTemporalKind, type ZonedDateTimeValue } from "@athyper/temporal";
+import { DatePicker, ZonedDateTimePicker } from "@athyper/platform-ui/composites";
+import { resolveTemporalKind, type ZonedDateTimeValue } from "@athyper/platform-temporal";
 import {
   RuntimeTemporalProvider,
   useRuntimeTemporalContextOptional,

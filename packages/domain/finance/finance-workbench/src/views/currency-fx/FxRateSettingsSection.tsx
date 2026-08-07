@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Download, ExternalLink, FilePlus2, Upload } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import type { FxNavigation, TenantFxPermissions } from "../../hooks/useCurrencyFxSetup";
 
 export function FxRateSettingsSection({

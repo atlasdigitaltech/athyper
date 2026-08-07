@@ -12,8 +12,8 @@ import {
   SlidersHorizontal,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@athyper/ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
+import { Badge, Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@athyper/platform-ui/primitives";
 import type { ChartOfAccount } from "../data/types";
 import { useCharts } from "../hooks/useCharts";
 import { parseFinanceScope, type FinanceScope } from "../lib/scope";

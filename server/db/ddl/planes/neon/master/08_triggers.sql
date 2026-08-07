@@ -1099,3 +1099,378 @@ CREATE TRIGGER trg_bi_status_changed
 CREATE TRIGGER trg_bi_updated_at
     BEFORE UPDATE ON master.business_intent
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_business_partner_relationship_lookup
+BEFORE INSERT OR UPDATE OF relationship_type_code
+ON master.business_partner_relationship
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_partner_lookup();
+CREATE TRIGGER trg_business_partner_governance_lookup
+BEFORE INSERT OR UPDATE OF relation_type_code
+ON master.business_partner_governance_relation
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_partner_lookup();
+CREATE TRIGGER trg_business_partner_identifier_lookup
+BEFORE INSERT OR UPDATE OF scheme_code, identifier_value
+ON master.business_partner_identifier
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_partner_lookup();
+CREATE TRIGGER trg_business_partner_tax_registration_lookup
+BEFORE INSERT OR UPDATE OF registration_type_code, registration_number
+ON master.business_partner_tax_registration
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_partner_lookup();
+
+CREATE TRIGGER trg_business_partner_commodity_capability_role
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, partner_role
+ON master.business_partner_commodity_capability
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_business_partner_role();
+CREATE TRIGGER trg_business_partner_operating_org_assignment_role
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id,
+    operating_organization_id, partner_role
+ON master.business_partner_operating_organization_assignment
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_business_partner_role();
+
+CREATE TRIGGER trg_legal_entity_business_partner_link_validate
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id
+ON master.legal_entity_business_partner_link
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_legal_entity_partner_link();
+
+CREATE TRIGGER trg_company_code_supplier_profile_remittance
+BEFORE INSERT OR UPDATE OF tenant_id, supplier_id, company_code_id,
+    preferred_remittance_bank_link_id
+ON master.company_code_supplier_profile
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_supplier_remittance_link();
+
+CREATE TRIGGER trg_intercompany_trading_pair_validate
+BEFORE INSERT OR UPDATE OF source_company_code_id,
+    counterparty_company_code_id, counterparty_supplier_profile_id,
+    mirror_customer_profile_id, status
+ON master.intercompany_trading_pair
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_intercompany_pair();
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'business_partner_relationship',
+        'business_partner_governance_relation',
+        'business_partner_identifier',
+        'business_partner_tax_registration',
+        'business_partner_commodity_capability',
+        'business_partner_operating_organization_assignment',
+        'company_code_supplier_profile',
+        'company_code_customer_profile',
+        'legal_entity_business_partner_link',
+        'intercompany_trading_pair'
+    ] LOOP
+        EXECUTE format(
+            'CREATE TRIGGER trg_%I_10_guard BEFORE UPDATE ON master.%I '
+            'FOR EACH ROW EXECUTE FUNCTION master.trg_guard_partner_extension_identity()',
+            v_table, v_table
+        );
+        EXECUTE format(
+            'CREATE TRIGGER trg_%I_20_status BEFORE UPDATE OF status ON master.%I '
+            'FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed()',
+            v_table, v_table
+        );
+        EXECUTE format(
+            'CREATE TRIGGER trg_%I_30_updated BEFORE UPDATE ON master.%I '
+            'FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()',
+            v_table, v_table
+        );
+    END LOOP;
+END;
+$$;
+
+CREATE TRIGGER trg_contact_person_identity_link_guard
+BEFORE UPDATE ON master.contact_person_identity_link
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_partner_extension_identity();
+
+CREATE TRIGGER trg_person_status_changed
+BEFORE UPDATE OF status ON master.person
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+CREATE TRIGGER trg_site_hierarchy
+BEFORE INSERT OR UPDATE OF tenant_id, company_code_id, parent_site_id
+ON master.site
+FOR EACH ROW EXECUTE FUNCTION master.trg_set_site_hierarchy();
+
+CREATE TRIGGER trg_site_status_changed
+BEFORE UPDATE OF status ON master.site
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+CREATE TRIGGER trg_holiday_calendar_status_changed
+BEFORE UPDATE OF status ON master.holiday_calendar
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+CREATE TRIGGER trg_employee_status_changed
+BEFORE UPDATE OF status ON master.employee
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+CREATE TRIGGER trg_work_assignment_contract
+BEFORE INSERT OR UPDATE OF tenant_id, employee_id, employment_id, company_code_id
+ON master.work_assignment
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_work_assignment_contract();
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'person', 'person_sensitive_profile', 'site',
+        'career_band', 'career_level', 'designation', 'job_family',
+        'job_function', 'pay_grade', 'job', 'holiday_calendar',
+        'holiday_calendar_day', 'shift_type', 'work_pattern',
+        'work_pattern_day', 'pay_component', 'pay_group', 'pay_structure',
+        'pay_structure_line', 'statutory_scheme', 'leave_type', 'leave_plan',
+        'leave_plan_rule', 'position', 'employee', 'employment',
+        'work_assignment', 'employee_leave_enrollment',
+        'employee_statutory_enrollment'
+    ]
+    LOOP
+        EXECUTE format(
+            'CREATE TRIGGER %I BEFORE UPDATE ON master.%I '
+            'FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()',
+            'trg_' || v_table || '_updated_at',
+            v_table
+        );
+    END LOOP;
+END;
+$$;
+
+CREATE TRIGGER warehouse_10_identity_guard
+BEFORE UPDATE ON master.warehouse
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_warehouse_identity();
+
+CREATE TRIGGER warehouse_20_type_lookup
+BEFORE INSERT OR UPDATE OF warehouse_type ON master.warehouse
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_warehouse_type();
+
+CREATE TRIGGER warehouse_30_status_changed
+BEFORE UPDATE OF status ON master.warehouse
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+CREATE TRIGGER warehouse_90_updated
+BEFORE UPDATE ON master.warehouse
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_risk_model_immutable
+BEFORE UPDATE ON master.risk_model
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_risk_model_immutable();
+
+CREATE TRIGGER trg_risk_model_dimension_immutable
+BEFORE UPDATE OR DELETE ON master.risk_model_dimension
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_risk_model_dimension_immutable();
+
+CREATE CONSTRAINT TRIGGER trg_risk_model_weight_sum
+AFTER INSERT OR UPDATE OR DELETE ON master.risk_model_dimension
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_risk_model_weight_sum();
+
+CREATE TRIGGER trg_party_risk_assessment_subject
+BEFORE INSERT OR UPDATE OF
+    tenant_id, subject_type, subject_id, business_partner_id
+ON master.party_risk_assessment
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_risk_subject_binding();
+
+CREATE TRIGGER trg_party_risk_assessment_immutable
+BEFORE UPDATE ON master.party_risk_assessment
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_party_risk_assessment_immutable();
+
+CREATE TRIGGER trg_party_risk_evidence_subject
+BEFORE INSERT OR UPDATE OF
+    tenant_id, subject_type, subject_id, business_partner_id
+ON master.party_risk_evidence
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_risk_subject_binding();
+
+CREATE TRIGGER trg_party_risk_evidence_immutable
+BEFORE UPDATE ON master.party_risk_evidence
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_party_risk_evidence_immutable();
+
+CREATE TRIGGER trg_party_risk_driver_consistency
+BEFORE INSERT OR UPDATE OF
+    tenant_id, assessment_id, dimension_score_id, evidence_id, dimension_code
+ON master.party_risk_driver
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_party_risk_driver_consistency();
+
+CREATE TRIGGER trg_party_risk_mitigation_consistency
+BEFORE INSERT OR UPDATE OF
+    tenant_id, business_partner_id, assessment_id, driver_id
+ON master.party_risk_mitigation
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_party_risk_mitigation_consistency();
+
+CREATE TRIGGER trg_party_risk_review_event_immutable
+BEFORE UPDATE OR DELETE ON master.party_risk_review_event
+FOR EACH ROW
+EXECUTE FUNCTION master.trg_party_risk_review_event_immutable();
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'party_risk_assessment',
+        'party_risk_evidence',
+        'party_risk_mitigation'
+    ]
+    LOOP
+        EXECUTE format(
+            'CREATE TRIGGER %I BEFORE UPDATE ON master.%I '
+            'FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()',
+            'trg_' || v_table || '_updated_at',
+            v_table
+        );
+    END LOOP;
+END;
+$$;
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'commodity_category', 'product', 'item', 'commodity_code_assignment',
+        'catalog', 'catalog_item', 'catalog_price', 'bom', 'bom_component'
+    ]
+    LOOP
+        EXECUTE format(
+            'CREATE TRIGGER trg_%1$s_00_created_by BEFORE INSERT ON master.%1$I '
+            'FOR EACH ROW EXECUTE FUNCTION master.trg_set_master_created_by()',
+            v_table
+        );
+        EXECUTE format(
+            'CREATE TRIGGER trg_%1$s_10_identity_guard BEFORE UPDATE ON master.%1$I '
+            'FOR EACH ROW EXECUTE FUNCTION master.trg_guard_product_catalog_identity()',
+            v_table
+        );
+        EXECUTE format(
+            'CREATE TRIGGER trg_%1$s_20_status_evidence BEFORE UPDATE ON master.%1$I '
+            'FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed()',
+            v_table
+        );
+        EXECUTE format(
+            'CREATE TRIGGER trg_%1$s_90_updated_at BEFORE UPDATE ON master.%1$I '
+            'FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()',
+            v_table
+        );
+    END LOOP;
+END;
+$$;
+
+CREATE TRIGGER trg_commodity_category_15_parent
+BEFORE INSERT OR UPDATE OF parent_id, tenant_id
+ON master.commodity_category
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_commodity_category_parent();
+
+CREATE TRIGGER trg_item_15_product_uom
+BEFORE INSERT OR UPDATE OF tenant_id, product_id, base_uom_code
+ON master.item
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_item_product_uom();
+
+CREATE TRIGGER trg_catalog_item_15_company
+BEFORE INSERT OR UPDATE OF tenant_id, catalog_id, item_id
+ON master.catalog_item
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_catalog_item_company();
+
+CREATE TRIGGER trg_bom_15_header
+BEFORE INSERT OR UPDATE OF tenant_id, company_code_id, output_item_id, uom_code
+ON master.bom
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_bom_header();
+
+CREATE TRIGGER trg_bom_component_15_contract
+BEFORE INSERT OR UPDATE OF tenant_id, company_code_id, bom_id, component_item_id
+ON master.bom_component
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_bom_component();
+
+CREATE TRIGGER trg_bom_component_16_released_guard
+BEFORE INSERT OR UPDATE OR DELETE ON master.bom_component
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_released_bom();
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY['project', 'project_wbs', 'project_item']
+    LOOP
+        EXECUTE format(
+            'CREATE TRIGGER trg_%I_00_created_by BEFORE INSERT ON master.%I '
+            'FOR EACH ROW EXECUTE FUNCTION master.trg_set_master_created_by()',
+            v_table, v_table
+        );
+        EXECUTE format(
+            'CREATE TRIGGER trg_%I_10_identity BEFORE UPDATE ON master.%I '
+            'FOR EACH ROW EXECUTE FUNCTION master.trg_guard_product_catalog_identity()',
+            v_table, v_table
+        );
+        EXECUTE format(
+            'CREATE TRIGGER trg_%I_80_status BEFORE UPDATE OF status ON master.%I '
+            'FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed()',
+            v_table, v_table
+        );
+        EXECUTE format(
+            'CREATE TRIGGER trg_%I_90_updated_at BEFORE UPDATE ON master.%I '
+            'FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()',
+            v_table, v_table
+        );
+    END LOOP;
+END;
+$$;
+
+CREATE TRIGGER trg_project_wbs_20_validate
+BEFORE INSERT OR UPDATE OF parent_wbs_id, project_id, level_no, is_postable
+ON master.project_wbs
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_project_wbs();
+
+CREATE TRIGGER trg_project_item_20_validate
+BEFORE INSERT OR UPDATE OF project_id, item_id, uom_code
+ON master.project_item
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_project_item();
+
+CREATE TRIGGER trg_compensation_assignment_00_created_by BEFORE INSERT ON master.compensation_assignment
+FOR EACH ROW EXECUTE FUNCTION master.trg_set_master_created_by();
+CREATE TRIGGER trg_compensation_assignment_05_evidence BEFORE UPDATE ON master.compensation_assignment
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_master_evidence();
+CREATE TRIGGER trg_compensation_assignment_10_contract BEFORE INSERT OR UPDATE ON master.compensation_assignment
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_compensation_assignment();
+CREATE TRIGGER trg_compensation_assignment_15_state BEFORE INSERT OR UPDATE ON master.compensation_assignment
+FOR EACH ROW EXECUTE FUNCTION master.trg_manage_compensation_assignment();
+CREATE TRIGGER trg_compensation_assignment_20_status BEFORE UPDATE OF status ON master.compensation_assignment
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+CREATE TRIGGER trg_compensation_assignment_90_updated BEFORE UPDATE ON master.compensation_assignment
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER certification_type_updated_at
+  BEFORE UPDATE ON master.certification_type
+  FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER certification_updated_at
+  BEFORE UPDATE ON master.certification
+  FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER certification_status_changed
+  BEFORE UPDATE ON master.certification
+  FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+CREATE TRIGGER certification_validate_type_scope
+  BEFORE INSERT OR UPDATE OF tenant_id, certification_type_id
+  ON master.certification
+  FOR EACH ROW EXECUTE FUNCTION master.trg_validate_certification_type_scope();
+
+
+CREATE TRIGGER wave6_legal_entity_lifecycle BEFORE UPDATE OF status ON master.legal_entity FOR EACH ROW EXECUTE FUNCTION master.trg_guard_organization_lifecycle();
+CREATE TRIGGER wave6_operating_organization_lifecycle BEFORE UPDATE OF status ON master.operating_organization FOR EACH ROW EXECUTE FUNCTION master.trg_guard_organization_lifecycle();
+CREATE TRIGGER wave6_legal_entity_amendment AFTER UPDATE ON master.legal_entity FOR EACH ROW EXECUTE FUNCTION master.trg_record_organization_amendment('legal_entity');
+CREATE TRIGGER wave6_operating_organization_amendment AFTER UPDATE ON master.operating_organization FOR EACH ROW EXECUTE FUNCTION master.trg_record_organization_amendment('operating_organization');
+CREATE TRIGGER wave6_operating_assignment_amendment AFTER UPDATE ON master.operating_organization_company_assignment FOR EACH ROW EXECUTE FUNCTION master.trg_record_organization_amendment('operating_organization_company_assignment');
+CREATE TRIGGER wave6_business_partner_amendment AFTER UPDATE ON master.business_partner FOR EACH ROW EXECUTE FUNCTION master.trg_record_organization_amendment('business_partner');
+CREATE TRIGGER wave6_legal_entity_scope AFTER INSERT OR UPDATE OF parent_legal_entity_id,name,display_name,status ON master.legal_entity FOR EACH ROW EXECUTE FUNCTION master.trg_sync_organization_scope_target('legal_entity');
+CREATE TRIGGER wave6_operating_organization_scope AFTER INSERT OR UPDATE OF parent_operating_organization_id,name,display_name,status ON master.operating_organization FOR EACH ROW EXECUTE FUNCTION master.trg_sync_organization_scope_target('operating_organization');
+CREATE TRIGGER wave6_operating_assignment_invalidation AFTER INSERT OR UPDATE OR DELETE ON master.operating_organization_company_assignment FOR EACH ROW EXECUTE FUNCTION master.trg_emit_operating_assignment_invalidation();
+CREATE TRIGGER wave6_organization_amendment_immutable BEFORE UPDATE OR DELETE ON master.organization_amendment FOR EACH ROW EXECUTE FUNCTION master.trg_reject_organization_amendment_mutation();

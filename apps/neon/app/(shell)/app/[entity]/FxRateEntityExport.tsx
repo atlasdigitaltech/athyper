@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 
 export function FxRateEntityExport({tenantCode}:{tenantCode:string}) {
   const [status,setStatus]=useState<"idle"|"loading"|"done">("idle");

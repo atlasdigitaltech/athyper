@@ -159,7 +159,7 @@ const RULES: Rule[] = [
     description: "source_doc_type polymorphic values must be lowercase entity_code, not the legacy uppercase enum",
     scope: [
       `${SEED_DIR}/*.sql`,
-      "server/db/ddl/document/*.sql",
+      "server/db/ddl/planes/neon/document/03_tables.sql",
       "server/db/seed/tenants/neon/010_demo/ap_non_po_demo/*.sql",
       "server/db/seed/blueprints/modules/ap_non_po/*.sql",
     ],
@@ -279,7 +279,6 @@ function run(): number {
 }
 
 process.exit(run());
-
 
 
 

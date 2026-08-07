@@ -16,7 +16,7 @@ const urls:{plane:Plane;url:string|undefined;database:string|undefined}[]=[
 ];
 const adminUrl=argument("--admin-url"),adminDatabase=argument("--admin-database");
 if(!adminUrl||!adminDatabase||urls.some(item=>!item.url||!item.database))throw new Error("Explicit Admin/Neon/Mesh URLs and database guards are required");
-const configDir=resolve(import.meta.dirname,"../../config/qualification");
+const configDir=resolve(import.meta.dirname,"config");
 const activationText=await readFile(resolve(configDir,"p5-e6-operation-activation-manifest.v1.json"),"utf8");
 const activationManifestSha256=createHash("sha256").update(activationText).digest("hex");
 const activation=JSON.parse(activationText) as ActivationManifest;

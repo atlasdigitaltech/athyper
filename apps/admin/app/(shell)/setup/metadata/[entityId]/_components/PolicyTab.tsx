@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { StatePanel, WorkPanel } from "@athyper/surface-kit";
-import { Badge, Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from "@athyper/ui";
+import { StatePanel, WorkPanel } from "@athyper/platform-surface-kit";
+import { Badge, Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Textarea } from "@athyper/platform-ui";
 import { csrfFetch } from "@/lib/bff-fetch";
 import type { EntityOperation, EntityPolicy } from "./types";
 import { ACCESS_MODES, AUDIT_MODES, COMPANY_SCOPE_MODES, formatJson, parseJsonText } from "./metadataContract";

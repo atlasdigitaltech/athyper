@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CheckCircle2, MessageSquare } from "lucide-react";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@athyper/ui/primitives";
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@athyper/platform-ui/primitives";
 import { ToggleGroup } from "../_shared";
 
 export function FeedbackSection() {

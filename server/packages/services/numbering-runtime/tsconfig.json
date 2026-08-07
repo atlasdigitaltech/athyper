@@ -5,7 +5,7 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@athyper/numbering-policy-contracts": ["../../../../packages/shared/data-integration/numbering-policy-contracts/src/index.ts"]
+      "@athyper/numbering-contracts": ["../../../../packages/contracts/numbering/src/index.ts"]
     }
   },
   "include": ["./**/*.ts"],

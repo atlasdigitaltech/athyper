@@ -7,7 +7,7 @@ import {
   notificationEntityHref,
   type BffFetch,
   type NotificationsClientConfig,
-} from "@athyper/notifications-client";
+} from "@athyper/platform-communications-notifications-client";
 import { resolveRouteEntry } from "@athyper/app-neon-route-manifest";
 
 export function createNotificationsConfig(navigate: (href: string) => void): NotificationsClientConfig {

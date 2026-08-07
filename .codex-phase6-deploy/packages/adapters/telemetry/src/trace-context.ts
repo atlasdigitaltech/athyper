@@ -5,7 +5,7 @@
 
 import { trace, SpanStatusCode } from "@opentelemetry/api";
 
-import type { TelemetryTraceContext } from "@athyper/core";
+import type { TelemetryTraceContext } from "@athyper/platform-core/telemetry";
 
 /**
  * Extract OpenTelemetry trace context from active span

@@ -1,0 +1,94 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "tax-fx",
+  "version": "2.0.0",
+  "executionOrder": 20,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [
+    "spend-taxonomy-business-intents"
+  ],
+  "checksumAlgorithm": "sha256",
+  "checksum": "36c2df3207a7e3145694540ab9cdd19d7fdea65efe27fca79b8486d629b50bd2",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/universal/020_tax/320_tax_jurisdictions.sql",
+      "sha256": "cb303497c9017c1c8c3bf96055bac718614519b0e616f5d75ebe51cf346c0335",
+      "bytes": 10106,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/universal/020_tax/321_tax_types.sql",
+      "sha256": "80f26eed685efda43ab2af1ae54a213fc26164d95929e4afac56d1e298b6457d",
+      "bytes": 21452,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 3,
+      "path": "server/db/seed/blueprints/universal/020_tax/322_tax_rate_schedules.sql",
+      "sha256": "0f77b5c1f80b1eb2a3787f0f0cbd0d13237fd9b8077c8a8293a5e568cd8e8d8d",
+      "bytes": 21414,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 4,
+      "path": "server/db/seed/blueprints/universal/020_tax/323_tax_groups.sql",
+      "sha256": "24d9a8e7aa3176529522ba11ea9df1263efd76b882f60dc5ad6168eedde94746",
+      "bytes": 13277,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 5,
+      "path": "server/db/seed/blueprints/universal/020_tax/324_tax_resolution_rules.sql",
+      "sha256": "c0d532e1a2e0a8645b389b7d631c7fc092e0b227d8d801b991c82dec1911103f",
+      "bytes": 10520,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 6,
+      "path": "server/db/seed/blueprints/universal/020_tax/330_fx_rates.sql",
+      "sha256": "4e79da548ab56943436fb72eafcf0ba1bc4bf5388dbb42079e61bb289a5174a6",
+      "bytes": 22828,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "master.tax_jurisdiction",
+      "master.tax_type",
+      "control.tax_group",
+      "master.fx_rate"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed/packs/blueprints-v2/receipts/20-tax-fx.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

@@ -5,7 +5,7 @@ import {
   Archive, Copy, ExternalLink, Loader2, Pin, RefreshCw, Share2, Star, Trash2,
 } from "lucide-react";
 import type { MeSavedView, MeSavedViewAction } from "@athyper/api-contracts/me";
-import { Badge, Button, Skeleton } from "@athyper/ui/primitives";
+import { Badge, Button, Skeleton } from "@athyper/platform-ui/primitives";
 import { emitSurfaceEvent } from "@athyper/runtime-shared/observability";
 
 export type SavedViewsFetch = <T = unknown>(

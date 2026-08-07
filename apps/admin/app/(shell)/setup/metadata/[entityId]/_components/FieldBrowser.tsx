@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, DataTable, Input, Label, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@athyper/ui";
-import type { ColumnDef } from "@athyper/ui";
+import { Badge, DataTable, Input, Label, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@athyper/platform-ui";
+import type { ColumnDef } from "@athyper/platform-ui";
 import type { EntityField } from "./types";
 
 function TypeBadge({ type }: { type: string }) {

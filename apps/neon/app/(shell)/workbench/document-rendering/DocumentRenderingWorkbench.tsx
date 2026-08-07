@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileText, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
-import { PageFrame } from "@athyper/surface-kit";
+import { PageFrame } from "@athyper/platform-surface-kit";
 import {
   Badge,
   Button,
@@ -24,7 +24,7 @@ import {
   TabsList,
   TabsTrigger,
   Textarea,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import { csrfFetch } from "@/lib/bff-fetch";
 
 type Row = Record<string, unknown> & { id: string; code?: string; name?: string; status?: string };

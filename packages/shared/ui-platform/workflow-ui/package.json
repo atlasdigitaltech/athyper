@@ -20,17 +20,17 @@
     "@athyper/api-contracts": "workspace:*"
   },
   "peerDependencies": {
-    "@athyper/icons": "workspace:*",
-    "@athyper/theme": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-icons": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "@athyper/icons": "workspace:*",
-    "@athyper/theme": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-icons": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",
     "typescript": "^6.0.3"

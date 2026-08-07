@@ -1,3 +1,9 @@
+CREATE TRIGGER canonical_party_graph_guard BEFORE INSERT OR UPDATE OF merged_into_party_id ON master.canonical_party FOR EACH ROW EXECUTE FUNCTION master.trg_guard_canonical_party_graph();
+CREATE TRIGGER canonical_party_merge_graph_guard BEFORE INSERT OR UPDATE OF losing_party_id,surviving_party_id ON master.canonical_party_merge FOR EACH ROW EXECUTE FUNCTION master.trg_guard_canonical_party_graph();
+CREATE TRIGGER canonical_party_relationship_graph_guard BEFORE INSERT OR UPDATE OF from_party_id,to_party_id,relationship_kind,status ON master.canonical_party_relationship FOR EACH ROW EXECUTE FUNCTION master.trg_guard_canonical_party_graph();
+CREATE TRIGGER canonical_party_updated_at BEFORE UPDATE ON master.canonical_party FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER canonical_party_status_changed BEFORE UPDATE OF status ON master.canonical_party FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
 CREATE TRIGGER trg_tenant_identity_immutable
 BEFORE UPDATE OF id, code, realm_key ON master.tenant
 FOR EACH ROW EXECUTE FUNCTION master.trg_guard_tenant_identity();

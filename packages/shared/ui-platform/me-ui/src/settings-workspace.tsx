@@ -8,8 +8,8 @@ import type {
   SettingsScopeKind,
   SettingsScopeRef,
 } from "@athyper/api-contracts/me";
-import { Badge, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { emitSurfaceEvent } from "@athyper/runtime-shared/observability";
 import { useMeUI } from "./me-ui-provider";
 import { IdentitySection } from "./sections/identity-section";

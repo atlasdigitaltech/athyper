@@ -18,9 +18,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
-import { DrawerFormShell } from "@athyper/ui/surfaces/shells";
+import { cn } from "@athyper/platform-theme/utils";
+import { resolveSemanticColors } from "@athyper/platform-theme/semantic-colors";
+import { DrawerFormShell } from "@athyper/platform-ui/surfaces/shells";
 import { CurrencyTriad } from "../../money/currency-triad";
 import { MoneySummaryStrip } from "../money-summary-strip";
 import {

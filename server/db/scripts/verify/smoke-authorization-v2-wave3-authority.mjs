@@ -68,16 +68,16 @@ async function smokeNeon() {
     );
   `);
   await db.exec(await source(
-    "server/db/ddl/control/01zzu_authorization_v3_subject_scope_migration.sql",
+    "server/db/ddl/planes/neon/authz/03_tables.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/control/03zu_authorization_v3_subject_scope_constraints.sql",
+    "server/db/ddl/planes/neon/authz/05_constraints.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/control/05zu_authorization_v3_mapping_functions.sql",
+    "server/db/ddl/planes/neon/authz/07_functions.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/control/06zu_authorization_v3_mapping_triggers.sql",
+    "server/db/ddl/planes/neon/authz/08_triggers.sql",
   ));
   await db.exec(`
     INSERT INTO master.principal VALUES (
@@ -169,16 +169,16 @@ async function smokeMesh() {
     );
   `);
   await db.exec(await source(
-    "server/db/ddl/mesh_control/01zzu_authorization_v3_subject_scope_migration.sql",
+    "server/db/ddl/planes/mesh/authz/03_tables.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/mesh_control/03zu_authorization_v3_subject_scope_constraints.sql",
+    "server/db/ddl/planes/mesh/authz/05_constraints.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/mesh_control/05zu_authorization_v3_mapping_functions.sql",
+    "server/db/ddl/planes/mesh/authz/07_functions.sql",
   ));
   await db.exec(await source(
-    "server/db/ddl/mesh_control/06zu_authorization_v3_mapping_triggers.sql",
+    "server/db/ddl/planes/mesh/authz/08_triggers.sql",
   ));
   await mustFail(db, "Mesh scope can never be implicit account-wide", `
     INSERT INTO mesh_control.authorization_v3_scope_mapping (

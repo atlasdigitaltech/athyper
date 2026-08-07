@@ -12,7 +12,12 @@ import { type AdapterLogger, type JwksHealthStatus, JwksManager } from "./jwks-m
 export interface AuthAdapterConfig {
   issuerUrl: string;
   clientId: string;
-  clientSecret: string;
+  /**
+   * Client secret for confidential-client operations (token exchange, client-credentials flow).
+   * Not used by JWT verification — JWKS-based verification requires only the issuer URL.
+   * Optional here so token-verification-only callers are not forced to supply a secret.
+   */
+  clientSecret?: string;
   /** Additional realm configs for multi-realm setups. Map of realmKey → { issuerUrl, clientId }. */
   additionalRealms?: Record<string, { issuerUrl: string; clientId: string }>;
   /** Optional Redis-like client for JWKS warm-start (ioredis-compatible: get/setex). */
@@ -61,6 +66,7 @@ export function createAuthAdapter(config: AuthAdapterConfig): AuthAdapter {
     throw new Error(`AuthAdapterConfig.issuerUrl is not a valid URL: "${config.issuerUrl}"`);
   }
   if (!config.clientId) throw new Error("AuthAdapterConfig.clientId is required");
+  // clientSecret is intentionally not required here — JWT verification is JWKS-based.
 
   const defaultRealmKey = "__default__";
   const realms = new Map<string, RealmEntry>();
@@ -94,9 +100,12 @@ export function createAuthAdapter(config: AuthAdapterConfig): AuthAdapter {
   }
 
   function getRealmEntry(realmKey: string): RealmEntry {
-    const entry = realms.get(realmKey) ?? realms.get(defaultRealmKey);
+    // Fail closed for explicit realm lookups: an unknown realmKey must never
+    // silently fall through to the default realm's JWKS, which would accept
+    // tokens from a completely different issuer.
+    const entry = realms.get(realmKey);
     if (!entry) {
-      throw new Error(`Unknown realm: ${realmKey}`);
+      throw new Error(`Unknown realm: "${realmKey}"`);
     }
     return entry;
   }

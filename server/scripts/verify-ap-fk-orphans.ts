@@ -4,8 +4,8 @@
  *
  * Runs BEFORE the operator validation script. For each of the 18 FK candidates
  * declared in:
- *   server/db/ddl/document/03b_constraints_ap_closure.sql   (initial set)
- *   server/db/ddl/document/03f_constraints_pea_pta_restrict.sql (HF2-2 reshape)
+ *   server/db/ddl/planes/neon/document/05_constraints.sql   (initial set)
+ *   server/db/ddl/planes/neon/document/05_constraints.sql (HF2-2 reshape)
  * executes a LEFT JOIN to detect rows that point at non-existent parents.
  * Reports counts per FK + sample IDs.
  *

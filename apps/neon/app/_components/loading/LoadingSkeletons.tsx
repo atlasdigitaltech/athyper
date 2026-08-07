@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { PlaneAppBootstrapSkeleton } from "@athyper/app-foundation";
-import { Skeleton } from "@athyper/ui/primitives";
+import { Skeleton } from "@athyper/platform-ui/primitives";
 import { DelayedLoadingMessage } from "./DelayedLoadingMessage";
 
 function LoadingProgressBar() {

@@ -87,6 +87,11 @@ x-athyper-shared-env: &athyper-shared-env
   # Subject-wide logout cleanup is enabled by default; set to off for staged
   # rollout while monitoring auth-audit cleanup outcomes.
   AUTH_SUBJECT_CLEANUP_ENABLED: "${AUTH_SUBJECT_CLEANUP_ENABLED:-on}"
+  IAM_LOGIN_CUTOVER_MODE: "${IAM_LOGIN_CUTOVER_MODE:-legacy}"
+  IAM_SESSION_CUTOVER_MODE: "${IAM_SESSION_CUTOVER_MODE:-legacy}"
+  IAM_LOGOUT_CUTOVER_MODE: "${IAM_LOGOUT_CUTOVER_MODE:-legacy}"
+  IAM_PROVISIONING_CUTOVER_MODE: "${IAM_PROVISIONING_CUTOVER_MODE:-legacy}"
+  IAM_IDENTITY_RESOLVER_REVISION: "${IAM_IDENTITY_RESOLVER_REVISION:-unpublished}"
   # Signed document-edit workspace capability. API and Neon BFF must receive
   # the same values. TOKEN_KEYS is a JSON object; ACTIVE_KID selects the minting key.
   DOCUMENT_EDIT_WORKSPACE_TOKEN_SECRET: "${DOCUMENT_EDIT_WORKSPACE_TOKEN_SECRET:-}"

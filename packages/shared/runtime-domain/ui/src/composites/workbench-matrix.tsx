@@ -18,7 +18,7 @@
  */
 
 import { useMemo, type ReactNode } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { Badge } from "../primitives/badge";
 import { Button, buttonVariants } from "../primitives/button";
 

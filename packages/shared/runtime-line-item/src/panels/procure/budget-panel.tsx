@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { cn } from "@athyper/theme/utils";
-import { LABEL_SM } from "@athyper/ui/typography";
+import { cn } from "@athyper/platform-theme/utils";
+import { LABEL_SM } from "@athyper/platform-ui/typography";
 import { fieldLabel, formatFieldValue, isEditableLineField } from "../../meta";
 import { MetaFieldInput } from "../../components/meta-field-input";
 import type { LineItemPanelProps } from "../../types";

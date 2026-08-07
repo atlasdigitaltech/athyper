@@ -30,10 +30,10 @@ describe("Finance Setup Stage B delivery contract",()=>{
  });
 
  it("locks rate and policy correction to append-only lineage",()=>{
-  const rateTable=read("server/db/ddl/master/01c_tables_extended.sql");
-  const rateIndex=read("server/db/ddl/master/04_indexes.sql");
-  const rateGuard=read("server/db/ddl/master/05_functions_finance_setup_phase2.sql");
-  const policyGuard=read("server/db/ddl/control/05_functions_finance_operations_setup.sql");
+  const rateTable=read("server/db/ddl/planes/neon/master/03_tables.sql");
+  const rateIndex=read("server/db/ddl/planes/neon/master/06_indexes.sql");
+  const rateGuard=read("server/db/ddl/planes/neon/master/07_functions.sql");
+  const policyGuard=read("server/db/ddl/planes/neon/control/07_functions.sql");
   const rateService=read("server/packages/services/finance/services/finance-fx-rate-import.service.ts");
   const policyService=read("server/packages/services/finance/services/finance-fx-policy.service.ts");
   const operations=read("server/db/seed/platform/003_control/044_control_entity_operation_contract.sql");

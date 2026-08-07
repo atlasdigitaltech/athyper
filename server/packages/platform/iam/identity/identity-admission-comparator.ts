@@ -1,0 +1,8 @@
+import { createHash } from "node:crypto";
+import type { AdmittedIdentity } from "./identity-admission.repository.js";
+
+export type IdentityMismatchArea="tenant"|"principal"|"binding"|"membership";
+export interface ComparableAdmission {tenantId:string|null;principalId:string|null;identityBindingId:string|null;membershipId:string|null;membershipKind:string|null;bindingStatus:string|null;membershipStatus:string|null;}
+export function normalizeAdmission(value:AdmittedIdentity|null):ComparableAdmission{return value?{tenantId:value.tenantId,principalId:value.principalId,identityBindingId:value.identityBindingId,membershipId:value.membershipId,membershipKind:value.membershipKind,bindingStatus:value.bindingStatus??null,membershipStatus:value.membershipStatus??null}:{tenantId:null,principalId:null,identityBindingId:null,membershipId:null,membershipKind:null,bindingStatus:null,membershipStatus:null};}
+export function compareAdmissions(legacy:AdmittedIdentity|null,candidate:AdmittedIdentity|null):IdentityMismatchArea[]{const a=normalizeAdmission(legacy),b=normalizeAdmission(candidate),out:IdentityMismatchArea[]=[];if(a.tenantId!==b.tenantId)out.push("tenant");if(a.principalId!==b.principalId)out.push("principal");if(a.identityBindingId!==b.identityBindingId||a.bindingStatus!==b.bindingStatus)out.push("binding");if(a.membershipId!==b.membershipId||a.membershipKind!==b.membershipKind||a.membershipStatus!==b.membershipStatus)out.push("membership");return out;}
+export function admissionFingerprint(value:AdmittedIdentity|null):string{return createHash("sha256").update(JSON.stringify(normalizeAdmission(value))).digest("hex");}

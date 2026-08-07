@@ -37,7 +37,7 @@ describe("Finance Setup Books foundation", () => {
   it("uses explicit Company default CRUD and removes priority-driven default synchronization", () => {
     const routes = read("server/packages/services/finance/routes/finance-setup.route.ts");
     const mutations = read("server/packages/services/finance/services/finance-setup-mutations.service.ts");
-    const hardening = read("server/db/ddl/master/01m_bp_core_hardening.sql");
+    const hardening = read("server/db/ddl/planes/neon/master/03_tables.sql");
     expect(routes).toContain('/finance/setup/company/:companyCode/book-assignments');
     expect(routes).toContain('/finance/setup/company/:companyCode/book-assignments/:assignmentId');
     expect(routes).toContain('/finance/setup/company/:companyCode/book-assignments/:bookId/set-default');

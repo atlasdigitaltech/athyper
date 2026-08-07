@@ -3,7 +3,7 @@ import "server-only";
 import {
   buildRelayHandler,
   isNotificationEventStreamRequest,
-} from "@athyper/bff-relay";
+} from "@athyper/platform-bff-relay";
 import { getMeshServerSession } from "@/lib/server/session";
 
 const RUNTIME_API_URL = process.env.RUNTIME_API_URL ?? "http://localhost:4000";

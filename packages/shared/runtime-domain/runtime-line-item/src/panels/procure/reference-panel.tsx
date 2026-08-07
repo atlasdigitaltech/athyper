@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { ExternalLink, AlertCircle, CheckCircle2 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { resolveReferenceTabConfig, resolveLineQuantityProgress } from "../../variants/procure";
 import { recordValue } from "../../meta";
 import type { LineItemPanelProps } from "../../types";

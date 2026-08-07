@@ -10,9 +10,9 @@
  * available, replace the call site in AppNavRail with buildMenuTree() instead.
  */
 
-import type { RuntimeModule } from "@athyper/session-plane";
-import { getWorkspaceIcon } from "@athyper/icons/workspaces";
-import { getModuleIcon } from "@athyper/icons/modules";
+import type { RuntimeModule } from "@athyper/platform-iam-session-plane";
+import { getWorkspaceIcon } from "@athyper/platform-icons/workspaces";
+import { getModuleIcon } from "@athyper/platform-icons/modules";
 import {
   MODULE_WORKSPACE_MAP,
   WORKSPACE_LABELS,

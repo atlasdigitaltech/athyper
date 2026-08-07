@@ -15,7 +15,7 @@ import {
   type FavoritesPanelSlotProps,
   type FavoritesPanelTab,
 } from "@athyper/shell-runtime";
-import type { PlaneKey } from "@athyper/session-plane";
+import type { PlaneKey } from "@athyper/platform-iam-session-plane";
 import { NavRail, type NavRailWorkspace } from "./nav-rail";
 import {
   ResponsiveNavigationDrawer,
@@ -26,6 +26,7 @@ import { ScopeSwitcher } from "./scope-switcher";
 import { ShellLayout } from "./shell-layout";
 import { Topbar } from "./topbar";
 import { AccountMenu } from "./account-menu";
+import { PlaneWordmark } from "@athyper/platform-brand/logos";
 
 export interface ShellNavigationItem {
   key: string;
@@ -39,7 +40,8 @@ export interface ShellExperienceDefinition {
   plane: PlaneKey;
   productName: string;
   brandAlt: string;
-  brandWordmarkSrc: string;
+  /** Light wordmark URL (dark-coloured, for light backgrounds) and dark variant. */
+  brandWordmark: { light: string; dark: string };
   defaultPath: string;
   logoutPath: string;
   navigation: readonly ShellNavigationItem[];
@@ -222,11 +224,11 @@ export function CanonicalShell({
               onClick={(event) => navigateAnchor(event, experience.defaultPath, navigateTo)}
               className="flex items-center rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <img
+              <PlaneWordmark
+                light={experience.brandWordmark.light}
+                dark={experience.brandWordmark.dark}
                 alt={experience.brandAlt}
                 className="h-5 w-auto max-w-36 object-contain"
-                draggable={false}
-                src={experience.brandWordmarkSrc}
               />
             </a>
           }
@@ -280,7 +282,7 @@ export function CanonicalShell({
             pending={continuePending}
             onContinue={() => { void continueSession(); }}
             onLogout={logoutNow}
-            brandWordmarkSrc={experience.brandWordmarkSrc}
+            brandWordmark={experience.brandWordmark}
             brandAlt={experience.brandAlt}
           />
         ) : null}

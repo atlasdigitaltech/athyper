@@ -12,9 +12,9 @@
  * `columnsOverride` (the line-items grid does exactly this via the
  * variant catalogs + `metaLineColumnsToColumnDefs`).
  */
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import type { ReactElement, ReactNode } from "react";
-import type { ColumnDef } from "@athyper/ui/data";
+import type { ColumnDef } from "@athyper/platform-ui/data";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import { resolveListConfig } from "@athyper/metadata-client/compiled-reader";
 import { formatFieldValue, isQuantityLikeFieldName } from "../meta";

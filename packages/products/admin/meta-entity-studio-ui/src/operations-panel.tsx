@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { Button } from "@athyper/ui";
+import { Button } from "@athyper/platform-ui";
 import type { MetaEntityOperationDraft, MetaEntitySurfaceDraft } from "@athyper/meta-entity-authoring-contracts";
 import {
   EditorCheckbox,

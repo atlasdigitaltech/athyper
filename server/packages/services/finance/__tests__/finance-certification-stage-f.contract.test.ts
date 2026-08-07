@@ -47,8 +47,8 @@ describe("Finance certification readiness", () => {
     const service = read("server/packages/services/finance/services/finance-certification-readiness.service.ts");
     const review = read("packages/domain/finance/finance-workbench/src/views/FinanceReadinessWorkbench.tsx");
     const defaults = read("server/db/seed/platform/003_control/110_finance_phase2_stage_f_rollout.sql");
-    const invalidation = read("server/db/ddl/governance/09z_finance_phase2_domain_invalidation.sql");
-    const gate = read("server/db/ddl/document/07z_finance_certification_rollout.sql");
+    const invalidation = read("server/db/ddl/common/governance/07_functions.sql");
+    const gate = read("server/db/ddl/planes/neon/document/09_views.sql");
 
     expect(route).toContain("/finance/setup/certification-readiness");
     for (const key of ["currency_fx", "tax", "payments_settlement", "banking_treasury"]) {

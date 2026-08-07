@@ -1,6 +1,6 @@
 import { Info } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { Badge } from "@athyper/ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
+import { Badge } from "@athyper/platform-ui/primitives";
 import { formatDate } from "../utils/format-date";
 
 export interface StatusTooltipData {

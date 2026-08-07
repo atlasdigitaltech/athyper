@@ -32,7 +32,7 @@ import {
 import { RuntimeRecordChrome } from "./runtime-record-chrome";
 import type { RuntimeRecordChromeModel } from "./runtime-header-model";
 import { useContainingScrollRoot } from "./use-containing-scroll-root";
-import { SurfaceStackProvider } from "@athyper/ui/surfaces/stack";
+import { SurfaceStackProvider } from "@athyper/platform-ui/surfaces/stack";
 import type { RuntimeCanvasFlags } from "../surfaces/types";
 import { useRecordWorkspaceObservability } from "./use-record-workspace-observability";
 import { RecordWorkspaceQueryBoundary } from "../record-query";

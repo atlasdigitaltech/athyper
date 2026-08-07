@@ -1,6 +1,6 @@
 "use client";
 
-import { useAtlasContextBinding } from "@athyper/atlas-agent-ui";
+import { useAtlasContextBinding } from "@athyper/platform-ai-agent-ui";
 
 /**
  * Identifier-only bridge for Atlas. The provider snapshots these identifiers

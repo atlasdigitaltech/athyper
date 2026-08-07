@@ -13,7 +13,7 @@ describe("Finance FX Slice 7 certification, migration, and rollout",()=>{
   it("certifies deterministic setup while reporting rate health separately",()=>{
     const service=read("server/packages/services/finance/services/finance-certification-readiness.service.ts");
     const ui=read("packages/domain/finance/finance-workbench/src/views/company-hub/CertificationReadinessPanel.tsx");
-    const invalidation=read("server/db/ddl/governance/09z_finance_phase2_domain_invalidation.sql");
+    const invalidation=read("server/db/ddl/common/governance/07_functions.sql");
     expect(service).toContain("loadCompanyFxSummary");
     expect(service).toContain("fx.setupStatus.complete");
     expect(service).toContain("fx.postingAccounts.ready");

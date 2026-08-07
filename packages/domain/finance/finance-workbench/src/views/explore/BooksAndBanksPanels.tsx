@@ -1,8 +1,8 @@
 "use client";
 
 import { CheckCircle2, Power, XCircle } from "lucide-react";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Skeleton } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   useExploreBooks,
   useExploreHouseBanks,

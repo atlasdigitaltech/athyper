@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPlaneConfig } from "@athyper/session-plane";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
 import { PLANE_KEY } from "@/lib/plane";
 
 export function GET() {

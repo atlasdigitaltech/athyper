@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
 import { WorkspaceHeader } from "../workspace/WorkspaceHeader";
 import { ChartTreePanel } from "./ChartTreePanel";
 import { GlAccountsListPanel } from "./GlAccountsListPanel";

@@ -1,9 +1,0 @@
-ALTER TABLE runtime_meta.tenant_usage_counter
-    ADD CONSTRAINT tenant_usage_counter_tenant_fk
-    FOREIGN KEY (tenant_id)
-    REFERENCES master.tenant (id)
-    ON DELETE CASCADE,
-    ADD CONSTRAINT tenant_usage_counter_metric_fk
-    FOREIGN KEY (usage_metric_id)
-    REFERENCES control.usage_metric_catalog (id)
-    ON DELETE RESTRICT;

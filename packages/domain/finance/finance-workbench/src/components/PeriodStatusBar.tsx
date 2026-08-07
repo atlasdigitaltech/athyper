@@ -1,7 +1,7 @@
 "use client";
 
-import { cn } from "@athyper/theme/utils";
-import { AccountingPeriodStatusChip } from "@athyper/ui";
+import { cn } from "@athyper/platform-theme/utils";
+import { AccountingPeriodStatusChip } from "@athyper/platform-ui";
 import { periodLabel, type FiscalPeriodStatus } from "../lib/period";
 
 interface PeriodStatusBarProps {

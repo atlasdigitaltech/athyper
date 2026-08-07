@@ -5,9 +5,9 @@ DECLARE
     v_module_id uuid;
 BEGIN
     PERFORM set_config('app.current_principal_id', v_actor::text, true);
-    SELECT id INTO v_module_id FROM master.module WHERE lower(code) = 'int' AND status = 'active';
+    SELECT id INTO v_module_id FROM control.module WHERE lower(code) = 'int' AND status = 'active';
     IF v_module_id IS NULL THEN
-        RAISE EXCEPTION '[P5-E2 Mesh] active master.module INT is required before consumer permission seeding';
+        RAISE EXCEPTION '[P5-E2 Mesh] active control.module INT is required before consumer permission seeding';
     END IF;
 
     INSERT INTO authz.permission (
@@ -56,4 +56,3 @@ BEGIN
     END IF;
 END
 $p5e2_mesh_document_envelope_permissions$;
-

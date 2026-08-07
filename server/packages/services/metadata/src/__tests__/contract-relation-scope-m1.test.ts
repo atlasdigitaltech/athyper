@@ -6,7 +6,7 @@ const root = resolve(import.meta.dirname, "../../../../../..");
 
 describe("M1 contract projection ownership guard", () => {
   it("validates has_many foreign keys on the target effective version", () => {
-    const ddl = source("server/db/ddl/control/05zz_meta_entity_contract_m1.sql");
+    const ddl = source("server/db/ddl/planes/athyper/metadata/07_functions.sql");
     expect(ddl).toContain("IF NEW.relation_kind = 'has_many'");
     expect(ddl).toContain(
       "NEW.resolution_kind IS DISTINCT FROM 'array_fk'",
@@ -53,7 +53,7 @@ describe("M1 contract projection ownership guard", () => {
   });
 
   it("retrofits the relation natural key for upgraded databases", () => {
-    const ddl = source("server/db/ddl/control/03zz_meta_entity_contract_m1.sql");
+    const ddl = source("server/db/ddl/planes/athyper/metadata/05_constraints.sql");
     expect(ddl).toContain("conname = 'er_name_uq'");
     expect(ddl).toContain(
       "ADD CONSTRAINT er_name_uq UNIQUE (entity_version_id, name)",
@@ -99,7 +99,7 @@ describe("M1 contract projection ownership guard", () => {
   });
 
   it("guards polymorphic NEW fields behind table-specific branches", () => {
-    const ddl = source("server/db/ddl/control/05zz_meta_entity_contract_m1.sql");
+    const ddl = source("server/db/ddl/planes/athyper/metadata/07_functions.sql");
     expect(ddl).toContain(
       "IF TG_TABLE_NAME IN ('entity_surface','entity_policy','entity_numbering_config') THEN",
     );
@@ -110,7 +110,7 @@ describe("M1 contract projection ownership guard", () => {
   });
 
   it("allows composite flow fields only through an explicitly owned section", () => {
-    const ddl = source("server/db/ddl/control/05zz_meta_entity_contract_m1.sql");
+    const ddl = source("server/db/ddl/planes/athyper/metadata/07_functions.sql");
     const seed = source(
       "server/db/seed/platform/003_control/046_control_entity_flow_contract.sql",
     );

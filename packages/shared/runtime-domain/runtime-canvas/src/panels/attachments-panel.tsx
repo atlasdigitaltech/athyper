@@ -9,9 +9,9 @@ import {
   ShieldCheck, ShieldX, Search, Shield, Clock, AlertTriangle, ExternalLink,
   CheckCircle, Check, MoreHorizontal, Trash2, Link2, Info,
 } from "lucide-react";
-import { Skeleton, Button } from "@athyper/ui/primitives";
-import { DRAWER_CONTROL, DRAWER_DETAIL_SURFACE, DRAWER_ITEM_TITLE, DRAWER_LABEL, DRAWER_META, DRAWER_SECTION_HEADING, DRAWER_VALUE } from "@athyper/ui/typography";
-import { cn } from "@athyper/theme/utils";
+import { Skeleton, Button } from "@athyper/platform-ui/primitives";
+import { DRAWER_CONTROL, DRAWER_DETAIL_SURFACE, DRAWER_ITEM_TITLE, DRAWER_LABEL, DRAWER_META, DRAWER_SECTION_HEADING, DRAWER_VALUE } from "@athyper/platform-ui/typography";
+import { cn } from "@athyper/platform-theme/utils";
 import { formatBytes } from "@athyper/runtime-shared/core";
 import { getCsrfToken } from "@athyper/runtime-shared/client";
 import { queryKeys } from "@athyper/api-contracts/query-keys";

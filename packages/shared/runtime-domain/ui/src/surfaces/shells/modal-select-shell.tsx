@@ -3,7 +3,7 @@
 import { type ReactNode } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { overlayScrimVariants } from "../../primitives/overlay";
 import { useStackFrame } from "../stack";
 import type { ControlledOpenProps, ShellWidth, SlotNode } from "./types";

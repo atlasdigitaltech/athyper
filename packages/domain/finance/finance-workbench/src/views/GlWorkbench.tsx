@@ -20,7 +20,7 @@ import {
   MoreHorizontal,
   Search,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   Button,
   DrawerShell,
@@ -28,7 +28,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import { parseFinanceScope, scopeToParams, type FinanceScope } from "../lib/scope";
 import { periodLabel as formatFiscalPeriodLabel } from "../lib/period";
 import { FinanceContextBar } from "../components/FinanceContextBar";

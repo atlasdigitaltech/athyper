@@ -6,7 +6,7 @@ export function SessionWarningDialog({
   pending,
   onContinue,
   onLogout,
-  brandWordmarkSrc,
+  brandWordmark,
   brandAlt,
 }: {
   secondsRemaining: number;
@@ -14,7 +14,8 @@ export function SessionWarningDialog({
   pending: boolean;
   onContinue: () => void;
   onLogout: () => void;
-  brandWordmarkSrc?: string;
+  /** Light + dark wordmark URLs for the plane. Pass both for correct dark-mode rendering. */
+  brandWordmark?: { light: string; dark: string };
   brandAlt?: string;
 }) {
   const remaining = Math.max(secondsRemaining, 0);
@@ -32,14 +33,14 @@ export function SessionWarningDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 px-4 font-sans text-foreground backdrop-blur-sm"
     >
       <div className="w-full max-w-md rounded-lg border bg-card p-4 text-card-foreground shadow-sm sm:p-6">
-        {brandWordmarkSrc ? (
+        {brandWordmark ? (
           <div className="mb-4 flex items-center">
-            <img
-              alt={brandAlt ?? ""}
-              className="h-5 w-auto max-w-36 object-contain"
-              draggable={false}
-              src={brandWordmarkSrc}
-            />
+            <span className="relative inline-flex shrink-0">
+              <img alt={brandAlt ?? ""} src={brandWordmark.light} draggable={false}
+                   className="block dark:hidden h-5 w-auto max-w-36 object-contain" />
+              <img alt="" src={brandWordmark.dark} aria-hidden draggable={false}
+                   className="hidden dark:block h-5 w-auto max-w-36 object-contain" />
+            </span>
           </div>
         ) : null}
         <div className="mb-4 grid gap-1">

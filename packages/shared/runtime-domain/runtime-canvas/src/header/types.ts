@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { SemanticIntent } from "@athyper/theme/semantic-colors";
+import type { SemanticIntent } from "@athyper/platform-theme/semantic-colors";
 
 export type HeaderMode = "expanded" | "collapsed" | "pinned";
 

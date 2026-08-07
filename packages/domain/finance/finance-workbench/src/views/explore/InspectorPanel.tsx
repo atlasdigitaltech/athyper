@@ -2,8 +2,8 @@
 
 import { CheckCircle2, ExternalLink, Info } from "lucide-react";
 import Link from "next/link";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { useCompanyHub } from "../../hooks/useCompanyHub";
 import { useAccountPostability } from "../../hooks/useAccountPostability";
 import { PostabilityChip } from "../company-hub/PostabilityChip";

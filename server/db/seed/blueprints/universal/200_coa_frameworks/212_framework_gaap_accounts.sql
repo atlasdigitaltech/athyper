@@ -44,7 +44,7 @@ BEGIN
 
     -- Stage B: Stage the account hierarchy.
     CREATE TEMP TABLE tmp_gl (
-        seed_id        uuid DEFAULT shared.uuidv7(),
+        seed_id        uuid,
         code           text NOT NULL,
         name           text NOT NULL,
         parent_code    text,
@@ -369,7 +369,8 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        t.seed_id, v_tid, v_coa_id, t.code, t.name,
+        md5('wave5:coa-gaap-account:' || v_tid::text || ':' || t.code)::uuid,
+        v_tid, v_coa_id, t.code, t.name,
         NULL, t.level_no, t.code, t.description,
         t.account_class, t.node_type, t.normal_balance, upper(t.subledger_type),
         t.sort_order,
@@ -419,7 +420,8 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        t.seed_id, v_tid, v_coa_id, t.code, t.name,
+        md5('wave5:coa-gaap-account:' || v_tid::text || ':' || t.code)::uuid,
+        v_tid, v_coa_id, t.code, t.name,
         p.id, t.level_no, p.code || '/' || t.code, t.description,
         t.account_class, t.node_type, t.normal_balance, upper(t.subledger_type),
         t.sort_order,
@@ -473,7 +475,8 @@ BEGIN
         metadata, status, created_by
     )
     SELECT
-        t.seed_id, v_tid, v_coa_id, t.code, t.name,
+        md5('wave5:coa-gaap-account:' || v_tid::text || ':' || t.code)::uuid,
+        v_tid, v_coa_id, t.code, t.name,
         p.id, t.level_no, p.path || '/' || t.code, t.description,
         t.account_class, t.node_type, t.normal_balance, upper(t.subledger_type),
         t.sort_order,

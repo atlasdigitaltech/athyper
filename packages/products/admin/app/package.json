@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@athyper/collaboration-ui": "workspace:*",
+    "@athyper/platform-communications-collaboration-ui": "workspace:*",
     "@athyper/runtime-list": "workspace:*"
   },
   "peerDependencies": {

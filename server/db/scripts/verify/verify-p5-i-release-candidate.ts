@@ -19,7 +19,7 @@ type Manifest = {
 const root = resolve(import.meta.dirname, "../../../..");
 const manifestPath = resolve(
   root,
-  "server/db/config/qualification/p5-i-release-candidate.v1.json",
+  "server/db/scripts/verify/config/p5-i-release-candidate.v1.json",
 );
 const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as Manifest;
 const capture = process.argv.includes("--capture");

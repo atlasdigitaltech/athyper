@@ -6,7 +6,7 @@ import {
   Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, Input, Label, Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue, Skeleton,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import {
   usePostingRoleCoverage,
   usePostingRoleResolutionTrace,

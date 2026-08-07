@@ -116,7 +116,7 @@ const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const databaseRoot = resolve(scriptDirectory, "../..");
 const contractPath = resolve(
   databaseRoot,
-  "catalog/authorization-catalog-semantic-contract.v1.json",
+  "seed/contracts/authorization/catalog/authorization-catalog-semantic-contract.v1.json",
 );
 
 const targetArgument = process.argv.find((argument) =>
@@ -131,10 +131,13 @@ if (target !== "neon-admin" && target !== "mesh") {
   throw new Error("Use --catalog=neon-admin or --catalog=mesh");
 }
 
-const manifestPath = resolve(databaseRoot, `catalog/${target}/catalog.v1.json`);
+const manifestPath = resolve(
+  databaseRoot,
+  `seed/contracts/authorization/catalog/${target}/catalog.v1.json`,
+);
 const outputDirectory = resolve(
   databaseRoot,
-  `catalog/${target}/compiled`,
+  `seed/contracts/authorization/catalog/${target}/compiled`,
 );
 const readAudit: string[] = [];
 
@@ -280,7 +283,7 @@ function loadMeshManifestTuples(): LegacyTuple[] {
       entityCode: entity.entityCode,
       legacyCode: operation,
       surface: null,
-      sourcePath: "catalog/mesh/catalog.v1.json",
+      sourcePath: "seed/contracts/authorization/catalog/mesh/catalog.v1.json",
     }))
   );
 }
@@ -485,7 +488,9 @@ if (target === "mesh") {
     `Mesh compiler read outside sealed roots: ${unexpectedReads.join(", ")}`,
   );
   assert(
-    readAudit.every((path) => !path.includes("catalog/neon-admin/")),
+    readAudit.every((path) =>
+      !path.includes("seed/contracts/authorization/catalog/neon-admin/")
+    ),
     "Mesh compiler must not read the Neon/Admin manifest",
   );
   const forbiddenSchemas = manifest.forbiddenSchemas ?? [];
@@ -696,9 +701,8 @@ if (!checkOnly) {
 | Mesh has no Neon catalog read | ${report.gates.meshCompiledWithoutNeonCatalogRead ? "PASS" : "FAIL"} |
 
 The static compiler report does not claim that a database backfill has run.
-Run \`db:verify:authorization-v2-wave2:live\` after snapshot/replay/backfill; every
-row-level source reference must then be exact and the live anomaly count must be
-zero.
+Run \`db:verify:ddl-model\` after changing canonical DDL manifests; every
+manifest entry must resolve to an existing common or plane-owned SQL file.
 `,
   );
   await writeFile(

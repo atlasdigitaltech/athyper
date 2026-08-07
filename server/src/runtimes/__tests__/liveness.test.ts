@@ -65,7 +65,10 @@ describe("F4 — /livez liveness handler", () => {
     const forbidden = [
       "ServerDeps",
       "kernel/bootstrap",
-      "@athyper/adapter-db",
+      "@athyper/adapter-db-core",
+      "@athyper/adapter-db-neon",
+      "@athyper/adapter-db-athyper",
+      "@athyper/adapter-db-mesh",
       "@athyper/adapter-memory-cache",
       "@athyper/adapter-auth",
       "healthChecks",

@@ -6,12 +6,12 @@ function source(relativeUrl: string): string {
   return readFileSync(fileURLToPath(new URL(relativeUrl, import.meta.url)), "utf8");
 }
 
-const tableDdl = source("../../../../../db/ddl/control/01zz_meta_entity_contract_m1.sql");
-const constraintDdl = source("../../../../../db/ddl/control/03zz_meta_entity_contract_m1.sql");
-const indexDdl = source("../../../../../db/ddl/control/04zz_meta_entity_contract_m1.sql");
-const functionDdl = source("../../../../../db/ddl/control/05zz_meta_entity_contract_m1.sql");
-const triggerDdl = source("../../../../../db/ddl/control/06zz_meta_entity_contract_m1.sql");
-const rlsDdl = source("../../../../../db/ddl/control/08zz_meta_entity_contract_m1.sql");
+const tableDdl = source("../../../../../db/ddl/planes/athyper/metadata/03_tables.sql");
+const constraintDdl = source("../../../../../db/ddl/planes/athyper/metadata/05_constraints.sql");
+const indexDdl = source("../../../../../db/ddl/planes/athyper/metadata/06_indexes.sql");
+const functionDdl = source("../../../../../db/ddl/planes/athyper/metadata/07_functions.sql");
+const triggerDdl = source("../../../../../db/ddl/planes/athyper/metadata/08_triggers.sql");
+const rlsDdl = source("../../../../../db/ddl/planes/athyper/metadata/10_rls.sql");
 const finalSeed = source("../../../../../db/seed/platform/003_control/101_control_meta_entity_contract_v2.sql");
 const permissionSeed = source("../../../../../db/ddl/planes/athyper/authz/12_compiled_permission_reference_seed.sql");
 const contractRoute = source("../../routes/studio-contract-v2.route.ts");

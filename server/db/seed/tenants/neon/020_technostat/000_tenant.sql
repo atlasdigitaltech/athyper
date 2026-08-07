@@ -59,6 +59,7 @@ BEGIN
           name,
           display_name,
           realm_key,
+          canonical_party_id,
           metadata,
           status,
           created_by
@@ -68,6 +69,7 @@ BEGIN
           'Technostat Group',
           'Technostat Group Holdings',
           'athyper',
+          md5('athyper:canonical-party:technostat')::uuid,
           v_payload,
           'active',
           v_su
@@ -76,6 +78,7 @@ BEGIN
       UPDATE master.tenant
          SET name = 'Technostat Group',
              display_name = 'Technostat Group Holdings',
+             canonical_party_id = md5('athyper:canonical-party:technostat')::uuid,
              metadata = COALESCE(metadata, '{}'::jsonb) || v_payload,
              status = 'active',
              updated_at = now(),

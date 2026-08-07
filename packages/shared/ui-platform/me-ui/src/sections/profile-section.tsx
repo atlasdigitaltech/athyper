@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, Fingerprint, Key, User, Briefcase, Pencil } from "lucide-react";
-import { Badge, Button, Card, CardContent } from "@athyper/ui/primitives";
+import { Badge, Button, Card, CardContent } from "@athyper/platform-ui/primitives";
 import type { MeProfile, MeAuthBinding } from "@athyper/api-contracts/me";
 import {
   InfoRow, SectionCard, Banner, SkeletonCard,

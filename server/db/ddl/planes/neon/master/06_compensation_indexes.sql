@@ -1,5 +1,0 @@
-CREATE INDEX compensation_assignment_employee_idx ON master.compensation_assignment(tenant_id,employee_id,effective_from DESC);
-CREATE INDEX compensation_assignment_employment_idx ON master.compensation_assignment(tenant_id,employment_id,effective_from DESC);
-CREATE INDEX compensation_assignment_pay_group_idx ON master.compensation_assignment(tenant_id,pay_group_id,status);
-CREATE INDEX compensation_assignment_structure_idx ON master.compensation_assignment(tenant_id,pay_structure_id) WHERE pay_structure_id IS NOT NULL;
-CREATE UNIQUE INDEX compensation_assignment_source_change_uq ON master.compensation_assignment(tenant_id,source_compensation_change_id) WHERE source_compensation_change_id IS NOT NULL;

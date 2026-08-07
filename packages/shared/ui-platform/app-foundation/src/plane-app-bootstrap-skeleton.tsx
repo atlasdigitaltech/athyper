@@ -1,7 +1,7 @@
-import { getPublicBrandAssets } from "@athyper/brand";
-import { BrandedAuthLoader } from "@athyper/identity-gate";
-import { getPlaneConfig, type PlaneKey } from "@athyper/session-plane";
-import { Skeleton } from "@athyper/ui/primitives";
+import { getPublicBrandAssets } from "@athyper/platform-brand";
+import { BrandedAuthLoader } from "@athyper/platform-iam-identity-gate";
+import { getPlaneConfig, type PlaneKey } from "@athyper/platform-iam-session-plane";
+import { Skeleton } from "@athyper/platform-ui/primitives";
 import { DelayedLoadingMessage } from "./delayed-loading-message";
 
 export type PlaneLoadingSurface = "bootstrap" | "shell";

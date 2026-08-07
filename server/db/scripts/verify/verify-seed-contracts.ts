@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   const sql = postgres(DATABASE_URL!, { max: 1, onnotice: () => undefined });
   try {
     const assertionPathCandidates = [
-      resolve(process.cwd(), "ddl/planes/athyper/control/12_control_reference_seed.sql"),
+      resolve(process.cwd(), "ddl/planes/athyper/control/12_reference_seed.sql"),
       resolve(process.cwd(), "ddl/planes/athyper/control/12_lookup_reference_entrypoint.sql"),
       resolve(process.cwd(), "ddl/planes/neon/control/12_lookup_reference_entrypoint.sql"),
       resolve(process.cwd(), "seed/blueprints/990_validation/100_control_seed_contract_assertions.sql"),

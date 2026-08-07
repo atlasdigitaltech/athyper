@@ -43,10 +43,10 @@ const source = JSON.parse(await readFile(sourcePath, "utf8")) as {
   organizations: Organization[];
 };
 const neonAuthority = await json<Authority>(
-  resolve(databaseRoot, "authority/neon-admin/compiled/compiled-authority.v1.json"),
+  resolve(databaseRoot, "seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json"),
 );
 const meshAuthority = await json<Authority>(
-  resolve(databaseRoot, "authority/mesh/compiled/compiled-authority.v1.json"),
+  resolve(databaseRoot, "seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json"),
 );
 const enabledUsers = source.users.filter((user) => user.enabled !== false);
 const subjectMappings: Record<string, unknown> = {};
@@ -155,7 +155,7 @@ const manifest = {
   subjectMappings,
 };
 await writeFile(
-  resolve(databaseRoot, "authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json"),
+  resolve(databaseRoot, "seed/contracts/authorization/authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json"),
   `${JSON.stringify(manifest, null, 2)}\n`,
 );
 process.stdout.write(

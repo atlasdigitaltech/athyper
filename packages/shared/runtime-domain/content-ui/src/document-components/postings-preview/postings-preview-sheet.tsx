@@ -16,9 +16,9 @@
 "use client";
 
 import { ChevronRight, Lock, AlertTriangle, CheckCircle2, FileSearch } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { type SemanticIntent, resolveSemanticColors } from "@athyper/theme/semantic-colors";
-import { DrawerFormShell } from "@athyper/ui/surfaces/shells";
+import { cn } from "@athyper/platform-theme/utils";
+import { type SemanticIntent, resolveSemanticColors } from "@athyper/platform-theme/semantic-colors";
+import { DrawerFormShell } from "@athyper/platform-ui/surfaces/shells";
 import { CurrencyTriad } from "../money/currency-triad";
 import {
   buildPostingsPreview,

@@ -1,6 +1,0 @@
--- ============================================================================
--- public/06_triggers.sql
--- Concept: Public Schema Triggers — no triggers required
--- Depends on: 04_tables/000_public.sql
--- Note: No triggers required for the public schema.
--- ============================================================================

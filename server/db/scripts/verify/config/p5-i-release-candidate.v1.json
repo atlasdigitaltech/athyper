@@ -1,0 +1,75 @@
+{
+  "contractVersion": "p5-i.release-candidate.v1",
+  "candidateId": "p5-i-rc2",
+  "frozenAt": "2026-08-03T14:30:00.0000000+08:00",
+  "repositoryHead": "9feaa3442f7e1cd1564cffc156f5f281d6f1d453",
+  "workspaceContentAddressed": true,
+  "artifactFormat": "athyper.meta-entity-plane-artifact@1.1",
+  "activationContract": "athyper.operation-scope-activation@1.0",
+  "coordinates": {
+    "neon": {
+      "entityCode": "business_partner",
+      "releaseHash": "51d3d9e07643fe0f0e37850298fa71c508890f4d179a71928ea3bb8e504dc824",
+      "installedArtifactHash": "9d9d1c3b9dbee8fcba488a6fdd73f9e4957e265230c763a8928903bb46689c6c",
+      "successorArtifactHash": "9d9d1c3b9dbee8fcba488a6fdd73f9e4957e265230c763a8928903bb46689c6c"
+    },
+    "mesh": {
+      "entityCode": "document_envelope",
+      "releaseHash": "b0dd1de6c470c780c94d336d9338c8c057f0098d58f899a1ae1615a438deedea",
+      "installedArtifactHash": "d2f60dd5f9f4c8cbc4d83d59bd01ce3c725677c184a8cd95ab29cceb192cc03a",
+      "successorArtifactHash": "d2f60dd5f9f4c8cbc4d83d59bd01ce3c725677c184a8cd95ab29cceb192cc03a"
+    }
+  },
+  "components": [
+    { "code": "shared_contracts", "paths": [
+      "packages/contracts/numbering",
+      "packages/shared/data-integration/entity-operation-scope-contracts"
+    ], "sha256": "8ba15d3e4796d9300f80cade91f2df647a41e35d2c605cd2fe6c28b3e16696ca" },
+    { "code": "admin_metadata_ddl", "paths": [
+      "server/db/ddl/planes/athyper/metadata",
+      "server/db/ddl/planes/athyper/snapshot",
+      "server/db/ddl/planes/athyper/audit",
+      "server/db/ddl/common/snapshot",
+      "server/db/ddl/common/audit"
+    ], "sha256": "5cbfc7f94e419d8ecdf1567163de5343f2a4943e45937a02a512ff1b53784ef3" },
+    { "code": "consumer_control_runtime_ddl", "paths": [
+      "server/db/ddl/common/authz",
+      "server/db/ddl/common/ops",
+      "server/db/ddl/common/runtime_meta",
+      "server/db/ddl/planes/neon/control",
+      "server/db/ddl/planes/neon/runtime_meta",
+      "server/db/ddl/planes/mesh/control",
+      "server/db/ddl/planes/mesh/runtime_meta"
+    ], "sha256": "53ee394def73eeb6970e9fb7d81c091bf5be9d126ff58155a391b9b498732b0c" },
+    { "code": "mesh_exchange_ddl", "paths": [
+      "server/db/ddl/planes/mesh/mesh"
+    ], "sha256": "26c5339f14451e381674c35270072da2e99ebca4aed4c0a89aef183e077d395d" },
+    { "code": "authoring_and_compiler", "paths": [
+      "server/packages/services/meta-entity-authoring"
+    ], "sha256": "57650561a8cb7bbb6619cd7d624fc83ff756d5bf33aeabf519137951958e7483" },
+    { "code": "numbering_runtime", "paths": [
+      "server/packages/services/numbering-runtime"
+    ], "sha256": "3c15d53bbb13934b33d8ae68824971bfbd261a7a67355684ccf1ef29cdbcbe85" },
+    { "code": "authorization_runtime", "paths": [
+      "server/packages/services/iam/authorization-runtime"
+    ], "sha256": "4e352ccd3ff3190b8a83c9fef90a4199ab1ddd3ef79cdba2ec89f4687dbe4f77" },
+    { "code": "consumer_roots", "paths": [
+      "server/src/runtimes/api.ts",
+      "server/packages/services/iam/permission/permission.service.ts",
+      "apps/neon/lib/server/meta-entity-runtime.ts",
+      "apps/mesh/lib/server/mesh-runtime.ts"
+    ], "sha256": "9495c21269a15c284526203febd643a8bb9cca0677e420d6a66c3abdd4c7580b" },
+    { "code": "phase5_seeds", "paths": [
+      "server/db/seed/meta-entity",
+      "server/db/seed/entity-operation-permissions"
+    ], "sha256": "eb30da16f5bd7d85a83437c0456b882785584f2202f8cb6c57c41770d93c538d" },
+    { "code": "phase5_qualification", "paths": [
+      "server/db/scripts/verify/config",
+      "server/db/scripts/verify",
+      "server/db/scripts/migrate/publish-import-p5-i-successors.ts"
+    ], "exclude": [
+      "server/db/scripts/verify/config/p5-i-release-candidate.v1.json"
+    ], "sha256": "93f43a9cd2b3b2218098fc1d0197781f069ea07a216199f0958ce4731d6d94ae" }
+  ],
+  "aggregateSha256": "38246071027634fae6bf1c2c88001f33c21d93858ebaf830b96d6b3f1445b020"
+}

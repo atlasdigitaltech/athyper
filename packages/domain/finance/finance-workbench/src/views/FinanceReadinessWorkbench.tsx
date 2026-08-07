@@ -11,9 +11,9 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import { Button, Skeleton } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
-import { cn } from "@athyper/theme/utils";
+import { Button, Skeleton } from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
+import { cn } from "@athyper/platform-theme/utils";
 import { useCompanyHub } from "../hooks/useCompanyHub";
 import { useFinanceSetupConflicts } from "../hooks/useFinanceSetupConflicts";
 import { useCompanyCertificationReadiness } from "../hooks/useCertificationReadiness";

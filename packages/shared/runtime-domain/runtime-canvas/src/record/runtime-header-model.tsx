@@ -1,5 +1,5 @@
 import { Clock, MessageSquare, Paperclip, Printer } from "lucide-react";
-import type { SemanticIntent } from "@athyper/theme/semantic-colors";
+import type { SemanticIntent } from "@athyper/platform-theme/semantic-colors";
 import type {
   EntityHeaderModel,
   HeaderAction,

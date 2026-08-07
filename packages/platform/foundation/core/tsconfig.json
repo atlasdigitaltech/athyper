@@ -1,0 +1,10 @@
+{
+  "extends": "@athyper/config/tsconfig",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src", "tsup.config.ts"]
+}

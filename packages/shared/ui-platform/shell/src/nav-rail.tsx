@@ -20,7 +20,7 @@
 
 import { type MouseEvent } from "react";
 import { type LucideIcon, Home, Inbox, Search, Settings, Star, Clock, Server } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { NavBadge } from "./nav-badge";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

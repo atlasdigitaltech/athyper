@@ -7,7 +7,7 @@
  * stays in lockstep with:
  *
  *   1. The DDL trigger fn_pc_supersede_only_update in
- *      server/db/ddl/document/01u_tables_pricing_component.sql
+ *      server/db/ddl/planes/neon/document/03_tables.sql
  *      (free-edit set, blocked set, supersede-only fall-through)
  *
  *   2. The AP route status-set declarations (legacy, may be removed in

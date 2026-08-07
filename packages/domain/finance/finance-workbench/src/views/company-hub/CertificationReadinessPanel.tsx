@@ -1,8 +1,8 @@
 "use client";
 
 import { CheckCircle2,CircleAlert,RefreshCw,ShieldCheck } from "lucide-react";
-import { Button,Skeleton } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Button,Skeleton } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { useCompanyCertificationReadiness } from "../../hooks/useCertificationReadiness";
 
 export function CertificationReadinessPanel({companyCode}:{companyCode:string}) {

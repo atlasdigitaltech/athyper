@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Save } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import { useSavePostingRoleAccountMap } from "../../hooks/usePostingRoleCoverage";
 import type {
   CompanyFxPostingCell,

@@ -37,7 +37,7 @@
     "@athyper/svc-policy": "workspace:*",
     "@athyper/svc-shared": "workspace:*",
     "@athyper/svc-workflow": "workspace:*",
-    "@athyper/temporal": "workspace:*",
+    "@athyper/platform-temporal": "workspace:*",
     "busboy": "^1.6.0"
   },
   "devDependencies": {

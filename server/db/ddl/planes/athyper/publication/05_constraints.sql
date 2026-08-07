@@ -1,0 +1,11 @@
+ALTER TABLE publication.entity_release_link
+    ADD CONSTRAINT publication_entity_release_link_release_fk FOREIGN KEY (publication_release_id) REFERENCES publication.release(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT publication_entity_release_link_entity_fk FOREIGN KEY (entity_release_id) REFERENCES metadata.entity_release(id) ON DELETE RESTRICT;
+ALTER TABLE publication.artifact
+    ADD CONSTRAINT publication_artifact_release_fk FOREIGN KEY (publication_release_id) REFERENCES publication.release(id) ON DELETE RESTRICT;
+ALTER TABLE publication.deployment
+    ADD CONSTRAINT publication_deployment_artifact_fk FOREIGN KEY (artifact_id) REFERENCES publication.artifact(id) ON DELETE RESTRICT;
+ALTER TABLE publication.deployment_event
+    ADD CONSTRAINT publication_deployment_event_deployment_fk FOREIGN KEY (deployment_id) REFERENCES publication.deployment(id) ON DELETE RESTRICT;
+ALTER TABLE publication.deployment_acknowledgement
+    ADD CONSTRAINT publication_deployment_ack_deployment_fk FOREIGN KEY (deployment_id) REFERENCES publication.deployment(id) ON DELETE RESTRICT;

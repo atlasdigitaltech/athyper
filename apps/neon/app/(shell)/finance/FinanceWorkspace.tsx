@@ -3,7 +3,7 @@ import {
   ArrowRight, BookOpenCheck, CalendarCheck2, CircleDollarSign, FileCheck2,
   Landmark, Plus, ReceiptText, Settings2, ShieldCheck,
 } from "lucide-react";
-import { WorkspaceCardGrid, WorkspaceDashboard, WorkspaceDashboardHeader, WorkspaceDashboardSection } from "@athyper/ui/layout";
+import { WorkspaceCardGrid, WorkspaceDashboard, WorkspaceDashboardHeader, WorkspaceDashboardSection } from "@athyper/platform-ui/layout";
 
 export function FinanceWorkspace({ organizationName, periodLabel }: { organizationName: string; periodLabel: string }) {
   return (

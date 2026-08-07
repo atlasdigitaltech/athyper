@@ -1,7 +1,7 @@
 "use client";
 
-import { Badge } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import type { DefinitionState, DefinitionStateVocabulary } from "../../lib/finance-setup.types";
 
 const STATE_VARIANT: Record<DefinitionState, "muted" | "success" | "outline"> = {

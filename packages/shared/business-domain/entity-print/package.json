@@ -22,16 +22,16 @@
     "@athyper/runtime-shared": "workspace:*"
   },
   "peerDependencies": {
-    "@athyper/theme": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "@tanstack/react-query": ">=5 <6",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "@athyper/theme": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "@tanstack/react-query": "^5.99.0",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",

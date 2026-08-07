@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Loader2, RotateCcw, Save } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { useEntityEdit } from "@athyper/runtime-shared";
 import type { UseOperationDispatchReturn } from "../actions";
 import type { EntityOperation } from "@athyper/api-contracts/metadata";

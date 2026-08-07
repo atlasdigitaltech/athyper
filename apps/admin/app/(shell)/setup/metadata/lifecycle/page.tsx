@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { PageFrame, StatePanel } from "@athyper/surface-kit";
+import { PageFrame, StatePanel } from "@athyper/platform-surface-kit";
 import {
   Badge,
   Button,
@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
   type ColumnDef,
-} from "@athyper/ui";
+} from "@athyper/platform-ui";
 import type { LifecycleBinding } from "../[entityId]/_components/types";
 
 interface EntityCatalogueItem {

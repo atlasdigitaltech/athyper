@@ -5,5 +5,19 @@
     "outDir": "dist"
   },
   "include": ["./**/*.ts"],
-  "exclude": ["dist", "node_modules", ".turbo", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": [
+    "dist",
+    "node_modules",
+    ".turbo",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "cache/src",
+    "context/src",
+    "crypto/src",
+    "kernel/src",
+    "observability/src",
+    "storage/src",
+    "tenancy/src",
+    "transaction/src"
+  ]
 }

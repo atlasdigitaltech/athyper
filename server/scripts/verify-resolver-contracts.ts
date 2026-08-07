@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * CI drift check for server/db/seed/_generated/resolver-contracts.json.
+ * CI drift check for server/db/seed/contracts/generated/resolver-contracts.json.
  *
  * (1) The exported JSON file must match the runtime registry (register all
  *     resolvers, then compare code sets).
@@ -27,7 +27,7 @@ const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const CONTRACTS_FILE = path.join(
-  __dirname, "..", "db", "seed", "_generated", "resolver-contracts.json",
+  __dirname, "..", "db", "seed", "contracts", "generated", "resolver-contracts.json",
 );
 
 const DATABASE_URL = process.env["DATABASE_URL"];

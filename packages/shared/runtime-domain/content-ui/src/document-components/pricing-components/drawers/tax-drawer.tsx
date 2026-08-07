@@ -18,8 +18,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { cn } from "@athyper/theme/utils";
-import { DrawerFormShell } from "@athyper/ui/surfaces/shells";
+import { cn } from "@athyper/platform-theme/utils";
+import { DrawerFormShell } from "@athyper/platform-ui/surfaces/shells";
 import { CurrencyTriad } from "../../money/currency-triad";
 import { MoneySummaryStrip } from "../money-summary-strip";
 import {

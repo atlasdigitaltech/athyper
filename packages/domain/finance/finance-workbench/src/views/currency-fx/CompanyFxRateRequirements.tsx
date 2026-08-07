@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, CircleAlert, Plus } from "lucide-react";
-import { Badge, Button } from "@athyper/ui/primitives";
+import { Badge, Button } from "@athyper/platform-ui/primitives";
 import type {
   CompanyFxRateRequirement,
   CurrencyFxSetupPayload,

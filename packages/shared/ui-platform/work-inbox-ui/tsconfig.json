@@ -1,5 +1,5 @@
 {
-  "extends": "@athyper/config/tsconfig.base.json",
+  "extends": "@athyper/config/tsconfig-base",
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["DOM", "ES2022"],

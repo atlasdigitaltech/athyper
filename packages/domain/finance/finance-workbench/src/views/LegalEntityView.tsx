@@ -5,8 +5,8 @@ import { ChevronDown } from "lucide-react";
 import {
   Badge, Separator,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+} from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { useLegalEntities } from "../hooks/useScopeOptions";
 import { useCompanyList } from "../hooks/useCharts";
 import type { LegalEntity } from "../data/types";

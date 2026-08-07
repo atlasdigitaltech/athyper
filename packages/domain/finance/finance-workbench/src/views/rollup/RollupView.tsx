@@ -1,9 +1,9 @@
 "use client";
 
 import { AlertTriangle, Building, Globe, RefreshCw } from "lucide-react";
-import { Badge, Button, Skeleton } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Button, Skeleton } from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
+import { cn } from "@athyper/platform-theme/utils";
 import { useFinanceRollup, type RollupScopeType } from "../../hooks/useFinanceRollup";
 import { NeedsAttentionInbox } from "../company-hub/NeedsAttentionInbox";
 import { RollupAggregateStrip } from "./RollupAggregateStrip";

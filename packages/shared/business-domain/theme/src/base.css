@@ -1,10 +1,10 @@
 /*
- * @athyper/theme global base styles.
+ * @athyper/platform-theme global base styles.
  *
  * Import in the root app stylesheet after the active preset CSS files:
  *
- *   @import "@athyper/theme/presets/base.css";
- *   @import "@athyper/theme/base.css";
+ *   @import "@athyper/platform-theme/presets/base.css";
+ *   @import "@athyper/platform-theme/base.css";
  */
 
 @import "tailwindcss";

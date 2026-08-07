@@ -30,7 +30,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   firstDayOfWeekFor,
   formatDayNumber,
@@ -38,7 +38,7 @@ import {
   localeUsesAlternativeCalendar,
   todayInZone,
   type WeekStart,
-} from "@athyper/temporal";
+} from "@athyper/platform-temporal";
 
 export interface CalendarGridProps {
   value?: string | null;

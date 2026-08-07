@@ -14,9 +14,9 @@ Reference-free candidates (pre-gate): 0
 | @athyper/config | packages/shared/business-domain/config | Excluded | 97 | Blocked; references remain |
 | @athyper/theme | packages/shared/business-domain/theme | Excluded | 592 | Blocked; references remain |
 | @athyper/ui | packages/shared/business-domain/ui | Excluded | 313 | Blocked; references remain |
-| @athyper/auth-bff | packages/shared/data-integration/auth-bff | Excluded | 73 | Blocked; references remain |
+| @athyper/platform-iam-auth-bff | packages/shared/data-integration/auth-bff | Excluded | 73 | Blocked; references remain |
 | @athyper/icons | packages/shared/data-integration/icons | Excluded | 54 | Blocked; references remain |
-| @athyper/session-plane | packages/shared/data-integration/session-plane | Excluded | 81 | Blocked; references remain |
+| @athyper/platform-iam-session-plane | packages/shared/data-integration/session-plane | Excluded | 81 | Blocked; references remain |
 | @athyper/finance-rules | packages/shared/finance-rules | Excluded | 37 | Blocked; references remain |
 | @athyper/config | packages/shared/platform-auth/config | Excluded | 97 | Blocked; references remain |
 | @athyper/cascade | packages/shared/runtime-domain/cascade | Excluded | 36 | Blocked; references remain |
@@ -28,7 +28,7 @@ Reference-free candidates (pre-gate): 0
 | @athyper/finance-rules | packages/shared/runtime-domain/finance-rules | Excluded | 37 | Blocked; references remain |
 | @athyper/icons | packages/shared/runtime-domain/icons | Excluded | 54 | Blocked; references remain |
 | @athyper/query | packages/shared/runtime-domain/query | Excluded | 40 | Blocked; references remain |
-| @athyper/session-plane | packages/shared/runtime-domain/session-plane | Excluded | 81 | Blocked; references remain |
+| @athyper/platform-iam-session-plane | packages/shared/runtime-domain/session-plane | Excluded | 81 | Blocked; references remain |
 | @athyper/temporal | packages/shared/runtime-domain/temporal | Excluded | 60 | Blocked; references remain |
 | @athyper/theme | packages/shared/runtime-domain/theme | Excluded | 592 | Blocked; references remain |
 | @athyper/ui | packages/shared/runtime-domain/ui | Excluded | 313 | Blocked; references remain |

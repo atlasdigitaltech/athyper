@@ -9,7 +9,7 @@ import type {
   DashboardQueueData,
   DashboardWidgetResult,
 } from "@athyper/api-contracts/dashboard";
-import { Button, Skeleton } from "@athyper/ui/primitives";
+import { Button, Skeleton } from "@athyper/platform-ui/primitives";
 import { emitSurfaceEvent } from "@athyper/runtime-shared/observability";
 
 export type DashboardFetch = <T = unknown>(

@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { Badge, Button } from "@athyper/ui";
+import { Badge, Button } from "@athyper/platform-ui";
 import type { MetaEntityFieldDraft, MetaEntityLifecycleBindingDraft, MetaEntityLifecycleOperationBindingDraft, MetaEntityOperationDraft } from "@athyper/meta-entity-authoring-contracts";
 import { EditorCheckbox, EditorInput, EditorSelect, PanelHeader, selectClassName } from "./editor-controls";
 

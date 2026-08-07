@@ -33,7 +33,7 @@ const semantic = await json<{
   rules: Record<string, string>;
   scopeAlgebra: Record<string, string>;
   capabilityStatus: Record<string, string>;
-}>("server/db/evaluator/authorization-evaluator-semantic-contract.v1.json");
+}>("server/db/seed/contracts/authorization/evaluator/authorization-evaluator-semantic-contract.v1.json");
 expect(
   semantic.contractVersion === "wave4.canonical-evaluator.v1",
   "shared evaluator contract version is exact",
@@ -162,7 +162,7 @@ const neonContract = await json<{
   entitlement: Record<string, string>;
   forbiddenReads: string[];
   consumerStatus: string;
-}>("server/db/evaluator/neon-admin/repository-contract.v1.json");
+}>("server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json");
 const meshContract = await json<{
   contractVersion: string;
   authority: string;
@@ -170,7 +170,7 @@ const meshContract = await json<{
   forbiddenReads: string[];
   connection: Record<string, boolean>;
   consumerStatus: string;
-}>("server/db/evaluator/mesh/repository-contract.v1.json");
+}>("server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json");
 expect(
   neonContract.contractVersion === semantic.contractVersion
   && meshContract.contractVersion === semantic.contractVersion,
@@ -197,22 +197,22 @@ expect(
 );
 
 const controlDdl = await text(
-  "server/db/ddl/control/01zzv_authorization_v4_entitlement_migration.sql",
+  "server/db/ddl/planes/neon/authz/03_tables.sql",
 );
 const neonEntitlement = await text(
-  "server/db/ddl/master/05zzd_authorization_v4_entitlement_functions.sql",
+  "server/db/ddl/planes/neon/authz/07_functions.sql",
 );
 const adminEntitlement = await text(
-  "server/db/ddl/control/05zv_authorization_v4_entitlement_functions.sql",
+  "server/db/ddl/planes/neon/authz/07_functions.sql",
 );
 const meshControlDdl = await text(
-  "server/db/ddl/mesh_control/01zzv_authorization_v4_entitlement_migration.sql",
+  "server/db/ddl/planes/mesh/authz/03_tables.sql",
 );
 const meshEntitlementDdl = await text(
-  "server/db/ddl/mesh/01zza_authorization_v4_account_entitlement.sql",
+  "server/db/ddl/planes/mesh/authz/03_tables.sql",
 );
 const meshEntitlement = await text(
-  "server/db/ddl/mesh/05za_authorization_v4_entitlement_functions.sql",
+  "server/db/ddl/planes/mesh/authz/07_functions.sql",
 );
 const liveGate = await text(
   "server/db/scripts/verify/verify-authorization-v2-wave4-live.ts",

@@ -2,7 +2,7 @@
 
 import { type ChangeEvent } from "react";
 import type { DraftLine } from "@athyper/runtime-contracts";
-import { ModalSelectShell } from "@athyper/ui/surfaces/shells";
+import { ModalSelectShell } from "@athyper/platform-ui/surfaces/shells";
 import { useSourceAdapterPicker } from "./use-source-adapter-picker";
 import { SourceAdapterPickerGrid } from "./source-adapter-picker-grid";
 import type { SourceAdapterPickerProps } from "./types";

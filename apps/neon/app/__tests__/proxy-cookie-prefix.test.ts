@@ -1,5 +1,5 @@
 import { definePlaneProxyContractSuite } from "@athyper/app-foundation/test-harness";
-import { getPlaneConfig } from "@athyper/session-plane";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
 
 import { PLANE_KEY } from "@/lib/plane";
 

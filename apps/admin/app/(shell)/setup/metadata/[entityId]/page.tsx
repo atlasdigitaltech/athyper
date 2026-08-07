@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { PageFrame } from "@athyper/surface-kit";
-import { Badge } from "@athyper/ui";
+import { PageFrame } from "@athyper/platform-surface-kit";
+import { Badge } from "@athyper/platform-ui";
 import { getAdminServerSession } from "@/lib/server/session";
 import { buildRuntimeHeaders, RUNTIME_API_URL } from "@/lib/server/runtime-headers";
 import { MetaEntityContractWorkspace } from "./_components/MetaEntityContractWorkspace";

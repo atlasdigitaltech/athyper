@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { PartyCard, type PartyCardProps } from "./party-card";
 import { JurisdictionChip } from "./jurisdiction-chip";
 

@@ -132,7 +132,7 @@ There are NO pure-client resolvers in v1. All resolution flows through the BFF s
 `server/scripts/export-resolver-contracts.ts` dumps `listResolverContracts()` to:
 
 ```
-server/db/seed/_generated/resolver-contracts.json
+server/db/seed/contracts/generated/resolver-contracts.json
 ```
 
 Committed. The cascade-rule verifier reads this file (no server boot needed) to validate `on_source_change[].resolver` codes against the registry.

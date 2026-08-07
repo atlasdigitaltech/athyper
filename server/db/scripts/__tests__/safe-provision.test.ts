@@ -106,12 +106,12 @@ describe("Wave 6 safe provision contract", () => {
 
   it("rejects opposite-plane discovery", () => {
     assert.throws(() => assertPlaneFileBoundary("neon", [
-      "ddl/master/01_tables.sql",
+      "ddl/planes/neon/master/03_tables.sql",
       "seed/tenants/mesh/001.sql",
     ]), /opposite-plane/);
     assert.throws(() => assertPlaneFileBoundary("mesh", [
-      "ddl/mesh/01_tables.sql",
-      "ddl/control/01_tables.sql",
+      "ddl/planes/mesh/mesh/03_tables.sql",
+      "ddl/planes/neon/control/03_tables.sql",
     ]), /opposite-plane/);
   });
 

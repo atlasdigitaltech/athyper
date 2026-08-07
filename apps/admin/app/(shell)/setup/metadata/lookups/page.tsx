@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { PageFrame, StatePanel } from "@athyper/surface-kit";
-import { DataTable, Badge, Button, Input, Label, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Switch } from "@athyper/ui";
+import { PageFrame, StatePanel } from "@athyper/platform-surface-kit";
+import { DataTable, Badge, Button, Input, Label, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Switch } from "@athyper/platform-ui";
 import { csrfFetch } from "@/lib/bff-fetch";
-import type { ColumnDef } from "@athyper/ui";
+import type { ColumnDef } from "@athyper/platform-ui";
 
 interface DomainRow {
   id: string;

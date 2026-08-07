@@ -1,4 +1,4 @@
-import { getPlaneConfig, type PlaneKey } from "@athyper/session-plane";
+import { getPlaneConfig, type PlaneKey } from "@athyper/platform-iam-session-plane";
 
 export type RouteSurface =
   | "public"

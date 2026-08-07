@@ -8,8 +8,8 @@ const read = (path: string) => readFileSync(resolve(root, path), "utf8");
 describe("cross-book posting contracts", () => {
   it("uses durable source/rule idempotency and one-hop loop prevention", () => {
     const service = read("server/packages/services/finance/services/cross-book-posting.service.ts");
-    const ddl = read("server/db/ddl/document/01z_cross_book_posting.sql");
-    const trigger = read("server/db/ddl/document/05_functions.sql");
+    const ddl = read("server/db/ddl/planes/neon/document/03_tables.sql");
+    const trigger = read("server/db/ddl/planes/neon/document/07_functions.sql");
     expect(ddl).toContain("bpd_source_rule_version_uq");
     expect(ddl).toContain("bpd_idempotency_uq");
     expect(service).toContain("pg_advisory_xact_lock");

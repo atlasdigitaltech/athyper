@@ -5,7 +5,7 @@
 // (action-dispatcher, lines, distributions, versions, etc.)
 // forward straight to the runtime under their canonical URL.
 import { type NextRequest, NextResponse } from "next/server";
-import type { RelayParams } from "@athyper/bff-relay";
+import type { RelayParams } from "@athyper/platform-bff-relay";
 import { makeModuleRelay } from "@/lib/server/make-module-relay";
 import { getMetaEntityRuntimeDescriptor } from "@/lib/server/meta-entity-runtime";
 import { rejectPublicLedgerMutation } from "@/lib/server/meta-entity-mutation-gates";

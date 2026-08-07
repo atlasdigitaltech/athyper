@@ -38,7 +38,7 @@
     "@athyper/adapter-object-storage": "workspace:*",
     "@athyper/adapter-telemetry": "workspace:*",
     "@athyper/api-contracts": "workspace:*",
-    "@athyper/auth-common": "workspace:*",
+    "@athyper/platform-iam-auth-common": "workspace:*",
     "@athyper/runtime-contracts": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/svc-ai": "workspace:*",

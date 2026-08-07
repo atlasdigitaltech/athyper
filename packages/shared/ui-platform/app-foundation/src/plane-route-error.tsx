@@ -3,8 +3,8 @@
 import {
   authFailurePresentation,
   isAuthFailureCode,
-} from "@athyper/auth-bff/error-codes";
-import { AuthFailurePage } from "@athyper/identity-gate";
+} from "@athyper/platform-iam-auth-bff/error-codes";
+import { AuthFailurePage } from "@athyper/platform-iam-identity-gate";
 import {
   readErrorDigest,
   type ApplicationErrorBoundaryProps,

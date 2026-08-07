@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { WorkPanel } from "@athyper/surface-kit";
+import { WorkPanel } from "@athyper/platform-surface-kit";
 import {
   Badge,
   Button,
@@ -9,7 +9,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@athyper/ui";
+} from "@athyper/platform-ui";
 import { csrfFetch } from "@/lib/bff-fetch";
 import {
   CONTRACT_OWNER_SECTIONS,

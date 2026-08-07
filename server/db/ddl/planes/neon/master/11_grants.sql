@@ -192,3 +192,210 @@ BEGIN
     END IF;
 END;
 $$;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT, INSERT, UPDATE ON
+            master.business_partner_relationship,
+            master.business_partner_governance_relation,
+            master.business_partner_identifier,
+            master.business_partner_tax_registration,
+            master.business_partner_commodity_capability,
+            master.business_partner_operating_organization_assignment,
+            master.company_code_supplier_profile,
+            master.company_code_customer_profile,
+            master.legal_entity_business_partner_link,
+            master.intercompany_trading_pair
+        TO athyperapp;
+        GRANT SELECT, INSERT, DELETE ON
+            master.contact_person_identity_link
+        TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON
+            master.business_partner_relationship,
+            master.business_partner_governance_relation,
+            master.business_partner_identifier,
+            master.business_partner_tax_registration,
+            master.business_partner_commodity_capability,
+            master.business_partner_operating_organization_assignment,
+            master.company_code_supplier_profile,
+            master.company_code_customer_profile,
+            master.legal_entity_business_partner_link,
+            master.intercompany_trading_pair,
+            master.contact_person_identity_link
+        TO athyperadmin;
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON
+            master.person,
+            master.site,
+            master.career_band,
+            master.career_level,
+            master.designation,
+            master.job_family,
+            master.job_function,
+            master.pay_grade,
+            master.job,
+            master.holiday_calendar,
+            master.holiday_calendar_day,
+            master.shift_type,
+            master.work_pattern,
+            master.work_pattern_day,
+            master.pay_component,
+            master.pay_group,
+            master.pay_structure,
+            master.pay_structure_line,
+            master.statutory_scheme,
+            master.leave_type,
+            master.leave_plan,
+            master.leave_plan_rule,
+            master.position,
+            master.employee,
+            master.employment,
+            master.work_assignment,
+            master.employee_leave_enrollment,
+            master.employee_statutory_enrollment
+        TO athyperapp;
+
+        -- Sensitive attributes are read-only to the generic runtime role.
+        -- A future dedicated HR writer role may receive narrowly scoped writes.
+        GRANT SELECT ON master.person_sensitive_profile TO athyperapp;
+        GRANT SELECT ON master.v_employee TO athyperapp;
+
+        GRANT EXECUTE ON FUNCTION master.trg_set_site_hierarchy() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION master.trg_validate_work_assignment_contract() TO athyperapp;
+    END IF;
+END;
+$$;
+
+REVOKE ALL ON master.warehouse FROM PUBLIC;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT, INSERT, UPDATE, DELETE ON master.warehouse TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON master.warehouse TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION master.trg_guard_warehouse_identity() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION master.trg_validate_warehouse_type() TO athyperadmin;
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT ON
+            master.risk_dimension,
+            master.risk_driver_registry,
+            master.risk_model,
+            master.risk_model_dimension,
+            master.risk_source
+        TO athyperapp;
+
+        GRANT SELECT, INSERT, UPDATE ON
+            master.party_risk_assessment,
+            master.party_risk_dimension_score,
+            master.party_risk_evidence
+        TO athyperapp;
+
+        GRANT SELECT, INSERT, UPDATE, DELETE ON
+            master.party_risk_driver,
+            master.party_risk_mitigation
+        TO athyperapp;
+
+        GRANT SELECT, INSERT ON
+            master.party_risk_review_event
+        TO athyperapp;
+
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT USAGE ON SCHEMA master TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE ON
+            master.commodity_category,
+            master.product,
+            master.item,
+            master.commodity_code_assignment,
+            master.catalog,
+            master.catalog_item,
+            master.catalog_price,
+            master.bom,
+            master.bom_component
+        TO athyperapp;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT USAGE ON SCHEMA master TO athyperadmin;
+        GRANT ALL PRIVILEGES ON
+            master.commodity_category,
+            master.product,
+            master.item,
+            master.commodity_code_assignment,
+            master.catalog,
+            master.catalog_item,
+            master.catalog_price,
+            master.bom,
+            master.bom_component
+        TO athyperadmin;
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT USAGE ON SCHEMA master TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE ON
+            master.project, master.project_wbs, master.project_item
+        TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT USAGE ON SCHEMA master TO athyperadmin;
+        GRANT ALL PRIVILEGES ON
+            master.project, master.project_wbs, master.project_item
+        TO athyperadmin;
+    END IF;
+END;
+$$;
+
+DO $$ BEGIN
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+        GRANT SELECT,INSERT,UPDATE ON master.compensation_assignment TO athyperapp;
+    END IF;
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON master.compensation_assignment TO athyperadmin;
+    END IF;
+END $$;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON master.certification_type TO athyperapp;
+GRANT SELECT, INSERT, UPDATE, DELETE
+  ON master.certification TO athyperapp;
+GRANT ALL PRIVILEGES
+  ON master.certification_type TO athyperadmin;
+GRANT ALL PRIVILEGES
+  ON master.certification TO athyperadmin;
+GRANT EXECUTE
+  ON FUNCTION master.trg_validate_certification_type_scope()
+  TO athyperapp, athyperadmin;
+
+
+REVOKE ALL ON master.organization_amendment FROM PUBLIC;
+REVOKE ALL ON FUNCTION master.trg_guard_organization_lifecycle(),master.trg_record_organization_amendment(),master.trg_sync_organization_scope_target(),master.trg_emit_operating_assignment_invalidation(),master.trg_reject_organization_amendment_mutation() FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT ON master.organization_amendment TO athyperapp; END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON master.organization_amendment TO athyperadmin; END IF;
+END $$;

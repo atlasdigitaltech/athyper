@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle2, FlaskConical, Plus, Trash2, TriangleAlert } from "lucide-react";
-import { Badge, Button, Input } from "@athyper/ui";
+import { Badge, Button, Input } from "@athyper/platform-ui";
 import type {
   MetaEntityFieldDraft,
   MetaEntityNumberingBindingDraft,

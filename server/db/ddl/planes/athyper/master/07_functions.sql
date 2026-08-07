@@ -1,3 +1,30 @@
+CREATE OR REPLACE FUNCTION master.trg_guard_canonical_party_graph() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,master AS $$
+DECLARE v_cursor uuid; v_origin uuid; v_seen uuid[]:=ARRAY[]::uuid[];
+BEGIN
+  IF TG_TABLE_NAME='canonical_party' AND NEW.merged_into_party_id IS NOT NULL THEN v_origin:=NEW.id; v_cursor:=NEW.merged_into_party_id;
+  ELSIF TG_TABLE_NAME='canonical_party_merge' THEN v_origin:=NEW.losing_party_id; v_cursor:=NEW.surviving_party_id;
+  ELSIF TG_TABLE_NAME='canonical_party_relationship' AND NEW.relationship_kind IN ('group_member','subsidiary') AND NEW.status IN ('pending','active') THEN
+    IF EXISTS (
+      WITH RECURSIVE edge(from_id,to_id) AS (
+        SELECT from_party_id,to_party_id FROM master.canonical_party_relationship
+         WHERE authority_tenant_id=NEW.authority_tenant_id AND relationship_kind IN ('group_member','subsidiary')
+           AND status IN ('pending','active') AND id<>NEW.id
+        UNION ALL SELECT NEW.from_party_id,NEW.to_party_id
+      ), walk(id,path) AS (
+        SELECT NEW.to_party_id,ARRAY[NEW.to_party_id]
+        UNION ALL SELECT edge.to_id,walk.path||edge.to_id FROM walk JOIN edge ON edge.from_id=walk.id WHERE NOT edge.to_id=ANY(walk.path)
+      ) SELECT 1 FROM walk WHERE id=NEW.from_party_id
+    ) THEN RAISE EXCEPTION 'canonical party hierarchy cycle detected'; END IF;
+    RETURN NEW;
+  ELSE RETURN NEW; END IF;
+  WHILE v_cursor IS NOT NULL LOOP
+    IF v_cursor=v_origin OR v_cursor=ANY(v_seen) THEN RAISE EXCEPTION 'canonical party graph cycle detected'; END IF;
+    v_seen:=array_append(v_seen,v_cursor);
+    SELECT merged_into_party_id INTO v_cursor FROM master.canonical_party WHERE id=v_cursor;
+  END LOOP;
+  RETURN NEW;
+END $$;
+
 CREATE OR REPLACE FUNCTION master.trg_guard_tenant_identity()
 RETURNS trigger
 LANGUAGE plpgsql

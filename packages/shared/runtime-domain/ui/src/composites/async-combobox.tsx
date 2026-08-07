@@ -15,7 +15,7 @@
 import { forwardRef, useEffect, useId, useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { ChevronDown, ExternalLink, Loader2, X } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface ComboboxOption {
   value: string;

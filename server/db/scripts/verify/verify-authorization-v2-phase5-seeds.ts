@@ -29,7 +29,7 @@ const beforeInventoryPath = option("--identity-before");
 const afterInventoryPath = option("--identity-after");
 const packs: Record<string, { hash: string; subjects: number }> = {};
 for (const target of ["neon-admin", "mesh"]) {
-  const root = resolve(databaseRoot, `seed-packs/authorization-v2/${target}`);
+  const root = resolve(databaseRoot, `seed/packs/authorization-v2/${target}`);
   const pack = JSON.parse(await readFile(resolve(root, "seed-pack.v1.json"), "utf8")) as Pack;
   const expected = (await readFile(resolve(root, "seed-pack.sha256"), "utf8")).trim();
   const actual = sha256(canonical(pack));
@@ -94,7 +94,7 @@ if (invalidOrganizationAliases.length > 0) {
 
 const userManifest = JSON.parse(await readFile(resolve(
   databaseRoot,
-  "authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
+  "seed/contracts/authorization/authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
 ), "utf8")) as {
   enabledSubjectCount: number;
   mappedSubjectCount: number;

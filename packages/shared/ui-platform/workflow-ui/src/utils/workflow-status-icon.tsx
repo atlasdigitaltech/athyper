@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { CheckCircle, XCircle, Clock, Forward, AlertTriangle } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 interface IconConfig {
   Icon: React.ElementType;

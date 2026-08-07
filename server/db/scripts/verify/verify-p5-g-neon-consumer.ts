@@ -3,7 +3,7 @@ import{readFile}from"node:fs/promises";import{resolve}from"node:path";import pg 
 import{compileEntityPlaneArtifact}from"../../../packages/services/meta-entity-authoring/src/entity-plane-artifact-compiler.js";
 function argument(name:string){return process.argv.find(value=>value.startsWith(`${name}=`))?.slice(name.length+1)}
 const adminUrl=argument("--admin-url"),adminDatabase=argument("--admin-database"),neonUrl=argument("--neon-url"),neonDatabase=argument("--neon-database");if(!adminUrl||!adminDatabase||!neonUrl||!neonDatabase)throw new Error("Explicit Admin/Neon URLs and database guards required");
-const config=JSON.parse(await readFile(resolve(import.meta.dirname,"../../config/qualification/p5-g-neon-consumer-certification.v1.json"),"utf8")) as {contractVersion:string;entityCode:string;expectedOperations:string[];currentReleaseHash:string;currentArtifactHash:string;requiredRolloutMode:string};
+const config=JSON.parse(await readFile(resolve(import.meta.dirname,"config/p5-g-neon-consumer-certification.v1.json"),"utf8")) as {contractVersion:string;entityCode:string;expectedOperations:string[];currentReleaseHash:string;currentArtifactHash:string;requiredRolloutMode:string};
 const[runtimeSource,permissionSource,auditSinkSource]=await Promise.all([
  readFile(resolve(import.meta.dirname,"../../../src/runtimes/api.ts"),"utf8"),
  readFile(resolve(import.meta.dirname,"../../../packages/services/iam/permission/permission.service.ts"),"utf8"),

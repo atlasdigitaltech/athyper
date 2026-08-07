@@ -16,7 +16,9 @@
 //   - Object storage adapter may asynchronously null itself if bucket validation
 //     fails — callers read objectStorageRef.current, never the raw adapter.
 
-import { createDbAdapter } from "@athyper/adapter-db";
+import { createNeonDbAdapter } from "@athyper/adapter-db-neon";
+import { createAthyperDbAdapter } from "@athyper/adapter-db-athyper";
+import { createMeshDbAdapter } from "@athyper/adapter-db-mesh";
 
 // Phase D — the realm-default setter is exposed only through the bootstrap
 // subpath. Route packages resolve `@athyper/svc-shared` and never see it, so
@@ -62,15 +64,11 @@ import {
 } from "@athyper/svc-ai";
 import { createFinanceOutboxHandler } from "@athyper/svc-finance";
 
-import {
-  CircuitBreaker,
-  DB_RETRY_POLICY,
-  REDIS_RETRY_POLICY,
-} from "@athyper/server-foundation/resilience";
-import { pingSuccess, pingFail } from "@athyper/server-foundation/monitoring/healthchecks";
-import { Sentry } from "@athyper/server-foundation/monitoring/sentry";
-import { createCredentialEncryptionService } from "@athyper/server-foundation/crypto/credential-encryption.service";
-import { ServiceRegistry, type HealthCheck, type HealthContribution } from "@athyper/server-foundation/registry/service-registry";
+import { CircuitBreaker } from "@athyper/foundation-kernel/resilience";
+import { pingSuccess, pingFail } from "@athyper/adapter-telemetry/cronwatch";
+import { Sentry } from "@athyper/adapter-telemetry/sentry";
+import { createCredentialEncryptionService } from "@athyper/adapter-crypto-local";
+import { ServiceRegistry, type HealthCheck, type HealthContribution } from "@athyper/foundation-observability";
 import { createFeatureFlagService } from "../../packages/services/platform/feature-flag.service.js";
 import { createMetadataApprovalBridge } from "../../packages/services/metadata/src/metadata-approval-bridge.js";
 import { createEntityCompilerService } from "../../packages/services/metadata/src/entity-compiler.service.js";
@@ -78,8 +76,8 @@ import { getRecordsCapabilityHandlerManifest } from "@athyper/svc-records";
 import { createEntityMutationOutboxHandler } from "../services/entity-mutation-outbox.handler.js";
 import { invalidateDescriptorCache } from "../../packages/services/metadata/index.js";
 import { WorkflowEngine, ApproverResolverService } from "@athyper/svc-workflow";
-import { createPdfRendererClient } from "@athyper/server-foundation/render/pdf-renderer-client";
-import { createGotenbergClient } from "@athyper/server-foundation/render/gotenberg-client";
+import { createPdfRendererClient } from "@athyper/adapter-rendering-legacy";
+import { createGotenbergClient } from "@athyper/adapter-rendering-gotenberg";
 import {
   createMeilisearchClient,
   createSearchService,
@@ -91,7 +89,7 @@ import {
   type EntityDocumentOverride,
   type SearchService,
 } from "@athyper/svc-search";
-import { createRenderService } from "@athyper/server-foundation/render/render.service";
+import { createRenderService } from "@athyper/plane-neon-document-rendering";
 import { createHttpConnectorClient, createOAuth2TokenCache } from "@athyper/svc-integration";
 import { createMentionService } from "../../packages/services/collab/mention.service.js";
 import { createNotificationOrchestrator } from "../../packages/services/platform/notification-orchestrator.js";
@@ -357,7 +355,7 @@ export async function bootstrap(
     });
   };
 
-  const db = createDbAdapter({
+  const db = createNeonDbAdapter({
     connectionString: config.db.url,
     poolMax: config.db.poolMax,
     tenantIdProvider: () => tryGetContext()?.tenantId,
@@ -368,30 +366,24 @@ export async function bootstrap(
       onQuery: observeFrameworkSql,
       onTransaction: observeFrameworkTransaction,
     },
-    // Phase 1.5: wrap pool with retry policy (connection-level errors only)
-    ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
-  } as never);
+  });
   lifecycle.onShutdown(() => db.close());
 
   const platformDb = config.platformDb?.url
-    ? createDbAdapter({
+    ? createAthyperDbAdapter({
         connectionString: config.platformDb.url,
         poolMax: config.platformDb.poolMax ?? 2,
-        tenantIdProvider: () => tryGetContext()?.tenantId,
-        onSkippedStamp: onTenantStampSkipped,
-        onRollbackFailure: onTenantStampRollbackFailure,
         performanceObserver: {
           onPoolAcquire: observeFrameworkPoolWait,
           onQuery: observeFrameworkSql,
           onTransaction: observeFrameworkTransaction,
         },
-        ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
-      } as never)
+      })
     : null;
   if (platformDb) lifecycle.onShutdown(() => platformDb.close());
 
   const meshDb = config.meshDb?.url
-      ? createDbAdapter({
+    ? createMeshDbAdapter({
         connectionString: config.meshDb.url,
         poolMax: config.meshDb.poolMax ?? 2,
         performanceObserver: {
@@ -399,8 +391,7 @@ export async function bootstrap(
           onQuery: observeFrameworkSql,
           onTransaction: observeFrameworkTransaction,
         },
-        ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
-      } as never)
+      })
     : null;
   if (meshDb) lifecycle.onShutdown(() => meshDb.close());
 
@@ -772,7 +763,7 @@ export async function bootstrap(
         runtimeMode,
       });
     } else {
-      const maintenanceDb = createDbAdapter({
+      const maintenanceDb = createNeonDbAdapter({
         connectionString: maintenanceDatabaseUrl,
         poolMax: 1,
         performanceObserver: {
@@ -780,8 +771,7 @@ export async function bootstrap(
           onQuery: observeFrameworkSql,
           onTransaction: observeFrameworkTransaction,
         },
-        ...(config.env !== "local" ? { retryPolicy: DB_RETRY_POLICY } : {}),
-      } as never);
+      });
       try {
         const identity = await maintenanceDb.getPool().query<{
           role_name: string;

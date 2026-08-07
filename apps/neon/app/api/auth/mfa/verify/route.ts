@@ -1,5 +1,5 @@
 // GET|POST /api/auth/mfa/verify — read the Keycloak-owned MFA gate and start re-authentication when required.
-import { createMfaVerifyGetHandler, createMfaVerifyPostHandler } from "@athyper/auth-bff";
+import { createMfaVerifyGetHandler, createMfaVerifyPostHandler } from "@athyper/platform-iam-auth-bff";
 import { PLANE_KEY } from "@/lib/plane";
 
 export const GET = createMfaVerifyGetHandler(PLANE_KEY);

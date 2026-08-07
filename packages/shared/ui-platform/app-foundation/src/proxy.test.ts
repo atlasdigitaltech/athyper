@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 
-import { getPlaneConfig } from "@athyper/session-plane";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
 import {
   createPlaneProxy,
   createPlaneProxyHostGuardSettings,

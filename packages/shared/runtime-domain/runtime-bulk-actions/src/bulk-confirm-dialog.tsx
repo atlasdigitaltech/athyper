@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, ChevronRight, Loader2, XCircle } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import type { BulkRunnerState } from "./use-bulk-action-runner";
 import { Stat } from "./internal/stat";
 

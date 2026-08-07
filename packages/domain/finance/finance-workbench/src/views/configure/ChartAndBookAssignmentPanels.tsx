@@ -6,8 +6,8 @@ import { ExternalLink, Pencil, Plus, Star } from "lucide-react";
 import {
   Badge, Button, Checkbox, Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, Input, Label, Skeleton,
-} from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+} from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { DefinitionStateChip } from "../company-hub/DefinitionStateChip";
 import {
   useConfigureChartAssignments,

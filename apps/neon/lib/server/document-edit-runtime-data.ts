@@ -9,7 +9,7 @@ import type {
   MetaEntityRuntimeDescriptor,
   SectionBatchResponse,
 } from "@athyper/runtime-contracts";
-import type { V4Session } from "@athyper/auth-bff";
+import type { V4Session } from "@athyper/platform-iam-auth-bff";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import {
   getChildRuntimeProjection,

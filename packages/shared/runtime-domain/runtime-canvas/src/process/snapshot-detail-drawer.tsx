@@ -27,9 +27,9 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
-import { DrawerPeekShell, DialogConfirmShell } from "@athyper/ui/surfaces/shells";
+import { cn } from "@athyper/platform-theme/utils";
+import { resolveSemanticColors, type SemanticIntent } from "@athyper/platform-theme/semantic-colors";
+import { DrawerPeekShell, DialogConfirmShell } from "@athyper/platform-ui/surfaces/shells";
 import type { MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import type {
   SnapshotDetail,

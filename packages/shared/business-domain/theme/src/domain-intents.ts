@@ -1,13 +1,13 @@
 /**
- * @athyper/theme — Domain Intent Mappings
+ * @athyper/platform-theme — Domain Intent Mappings
  *
  * Maps business-domain status/class/type values to the generic SemanticIntent
  * understood by resolveSemanticColors(). This keeps palette knowledge in one
  * place and ensures every domain badge responds to theme-preset switching.
  *
  * USAGE:
- *   import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
- *   import { adminStatusIntent, accountClassIntent } from "@athyper/theme/domain-intents";
+ *   import { resolveSemanticColors } from "@athyper/platform-theme/semantic-colors";
+ *   import { adminStatusIntent, accountClassIntent } from "@athyper/platform-theme/domain-intents";
  *
  *   const colors = resolveSemanticColors(adminStatusIntent(status));
  *   <span className={cn("...", colors.subtleBadge)}>{status}</span>

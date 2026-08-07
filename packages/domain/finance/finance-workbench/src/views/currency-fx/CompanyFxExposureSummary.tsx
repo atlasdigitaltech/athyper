@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Banknote, BookOpen, Building2, CreditCard } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import type { CurrencyFxSetupPayload } from "../../hooks/useCurrencyFxSetup";
 
 const SOURCE_LABELS={

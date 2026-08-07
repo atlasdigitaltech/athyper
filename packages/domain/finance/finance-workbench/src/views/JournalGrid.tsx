@@ -28,8 +28,8 @@ import {
   Badge, Button, Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
   Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Skeleton,
-} from "@athyper/ui/primitives";
-import { DatePicker } from "@athyper/ui/composites";
+} from "@athyper/platform-ui/primitives";
+import { DatePicker } from "@athyper/platform-ui/composites";
 import { useJournalList, type JournalEntry } from "../hooks/useJournalList";
 import { useCreateJournal, type CreateJournalLine } from "../hooks/useCreateJournal";
 import { useReverseJournal } from "../hooks/useReverseJournal";

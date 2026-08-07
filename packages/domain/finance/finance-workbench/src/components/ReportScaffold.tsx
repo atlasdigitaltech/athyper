@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { fmtCompact } from "./format";
 
 type ReportTone = "neutral" | "success" | "warning" | "danger";

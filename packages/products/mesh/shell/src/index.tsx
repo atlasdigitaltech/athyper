@@ -17,8 +17,8 @@ import {
   type ShellNavigationItem,
 } from "@athyper/shell";
 import { MESH_NAV_ITEMS, type NavItem } from "@athyper/app-mesh-route-manifest";
-import { getPlaneConfig } from "@athyper/session-plane";
-import { getPublicBrandAssets } from "@athyper/brand";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
+import { getPublicBrandAssets } from "@athyper/platform-brand";
 import type { FavoritesPanelSlotProps } from "@athyper/shell-runtime";
 
 export type { FavoritesPanelTab, FavoritesPanelSlotProps } from "@athyper/shell-runtime";
@@ -68,7 +68,7 @@ export function PlaneShell({
       href: `/app/${item.entityCode}`,
       category: "workspace",
     }));
-  const experience = createMeshShellExperience(brand.wordmarkBlack, catalogNavigation);
+  const experience = createMeshShellExperience({ light: brand.wordmarkBlack, dark: brand.wordmarkWhite }, catalogNavigation);
 
   return (
     <CanonicalShell
@@ -88,14 +88,14 @@ export function PlaneShell({
 }
 
 export function createMeshShellExperience(
-  brandWordmarkSrc: string,
+  brandWordmark: { light: string; dark: string },
   catalogNavigation: readonly ShellNavigationItem[] = [],
 ): ShellExperienceDefinition {
   return {
     plane: PLANE,
     productName: "Mesh",
     brandAlt: "Mesh",
-    brandWordmarkSrc,
+    brandWordmark,
     defaultPath: planeConfig.defaultPath,
     logoutPath: planeConfig.logoutPath,
     navigation: [

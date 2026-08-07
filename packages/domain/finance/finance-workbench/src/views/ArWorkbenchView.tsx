@@ -5,9 +5,9 @@ import { ChevronDown, ChevronRight, PlusCircle, Receipt } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
   Skeleton,
-} from "@athyper/ui/primitives";
-import { DatePicker } from "@athyper/ui/composites";
-import { cn } from "@athyper/theme/utils";
+} from "@athyper/platform-ui/primitives";
+import { DatePicker } from "@athyper/platform-ui/composites";
+import { cn } from "@athyper/platform-theme/utils";
 import type { FinanceScope } from "../lib/scope";
 import { statusTextClass } from "../lib/statusColors";
 import { fmtCurrency, fmtDate, fmtFull, fmtCompact } from "../components/format";

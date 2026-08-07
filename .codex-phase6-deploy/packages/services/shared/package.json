@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@athyper/cascade": "workspace:*",
-    "@athyper/temporal": "workspace:*"
+    "@athyper/platform-temporal": "workspace:*"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",

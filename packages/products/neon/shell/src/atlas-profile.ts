@@ -1,4 +1,4 @@
-import type { AtlasPlaneProfile } from "@athyper/atlas-agent-runtime";
+import type { AtlasPlaneProfile } from "@athyper/platform-ai-agent-runtime";
 
 export const neonAtlasProfile = {
   plane: "neon",

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { createPlaneMetadata } from "@athyper/app-foundation";
-import { getPlaneConfig } from "@athyper/session-plane";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
 import { PLANE_KEY } from "@/lib/plane";
 import { MeshProviders } from "./providers";
 import "./globals.css";

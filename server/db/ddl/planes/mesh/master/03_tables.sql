@@ -7,6 +7,7 @@ CREATE TABLE master.tenant (
     name                  text        NOT NULL,
     display_name          text        NOT NULL,
     realm_key             text        NOT NULL,
+    canonical_party_id    uuid,
     subscription_plan_id  uuid,
     metadata              jsonb       NOT NULL DEFAULT '{}'::jsonb,
     status                text        NOT NULL DEFAULT 'provisioning',
@@ -39,7 +40,10 @@ CREATE TABLE master.tenant (
 );
 
 COMMENT ON TABLE master.tenant IS
-  'Plane-local tenant root and RLS authority. Keycloak organization alias equals tenant id; authentication configuration remains in Keycloak.';
+  'Plane-local Mesh participant tenant and RLS root. It is not a buyer relationship or TrustIAM identity organization; organization aliases never identify tenants.';
+
+COMMENT ON COLUMN master.tenant.canonical_party_id IS
+  'Opaque Admin canonical-party coordinate. NULL is transitional and permitted for documented infrastructure tenants; no cross-database foreign key is allowed.';
 
 COMMENT ON COLUMN master.tenant.subscription_plan_id IS
   'Current plane-local commercial plan. References control.subscription_plan; NULL is allowed during provisioning and for system tenants.';
@@ -169,6 +173,7 @@ CREATE TABLE master.workspace (
     code                     text                NOT NULL,
     name                     text                NOT NULL,
     description              text,
+    icon_key                 text,
     sort_order               smallint            NOT NULL DEFAULT 0,
     is_shared_infrastructure boolean             NOT NULL DEFAULT false,
     metadata                 jsonb               NOT NULL DEFAULT '{}'::jsonb,
@@ -186,6 +191,8 @@ CREATE TABLE master.workspace (
     CONSTRAINT workspace_code_fmt_chk
         CHECK (code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
     CONSTRAINT workspace_name_nonempty CHECK (btrim(name) <> ''),
+    CONSTRAINT workspace_icon_key_chk
+        CHECK (icon_key IS NULL OR icon_key ~ '^[a-z][a-z0-9-]*$'),
     CONSTRAINT workspace_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object'),
     CONSTRAINT workspace_status_audit_pair_chk
@@ -202,6 +209,7 @@ CREATE TABLE master.module (
     code              text                NOT NULL,
     name              text                NOT NULL,
     description       text,
+    icon_key          text,
     workspace_id      uuid                NOT NULL,
     config            jsonb               NOT NULL DEFAULT '{}'::jsonb,
     metadata          jsonb               NOT NULL DEFAULT '{}'::jsonb,
@@ -219,6 +227,8 @@ CREATE TABLE master.module (
     CONSTRAINT module_code_fmt_chk
         CHECK (code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
     CONSTRAINT module_name_nonempty CHECK (btrim(name) <> ''),
+    CONSTRAINT module_icon_key_chk
+        CHECK (icon_key IS NULL OR icon_key ~ '^[a-z][a-z0-9-]*$'),
     CONSTRAINT module_config_object_chk
         CHECK (jsonb_typeof(config) = 'object'),
     CONSTRAINT module_metadata_object_chk

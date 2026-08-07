@@ -29,13 +29,13 @@ if (process.env.NODE_ENV !== "production") {
 // OTel must init BEFORE any codebase imports so auto-instrumentations can
 // patch express / pg / ioredis / http / undici at require time. No-op when
 // OTEL_EXPORTER_OTLP_ENDPOINT is unset.
-import { initOtel, getOtelShutdown } from "@athyper/server-foundation/monitoring/otel";
+import { initOtel, getOtelShutdown } from "@athyper/adapter-telemetry/otel";
 initOtel({ mode: process.env.MODE ?? "api" });
 
 // Sentry must init BEFORE any codebase imports so it can instrument them
 // and capture boot-time errors (including a malformed config file).
 // No-op when GLITCHTIP_DSN is unset.
-import { initSentry } from "@athyper/server-foundation/monitoring/sentry";
+import { initSentry } from "@athyper/adapter-telemetry/sentry";
 initSentry({ mode: process.env.MODE ?? "api" });
 
 import { loadConfig } from "./config.js";
@@ -82,7 +82,7 @@ void bootstrap(config, kernelConfig)
     // Report to Sentry before exiting — logger may not exist yet if bootstrap
     // failed before creating it. Sentry.captureException is a silent no-op
     // when GLITCHTIP_DSN is unset.
-    void import("@athyper/server-foundation/monitoring/sentry").then(({ Sentry }) => {
+    void import("@athyper/adapter-telemetry/sentry").then(({ Sentry }) => {
       Sentry.captureException(err, { tags: { phase: "boot" } });
       return Sentry.flush(2000);
     }).catch(() => { /* swallow — we're exiting anyway */ });

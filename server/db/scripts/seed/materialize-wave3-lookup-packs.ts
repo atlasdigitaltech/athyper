@@ -10,7 +10,7 @@ type ValueRow = { code: string; name: string; domain_code: string; description: 
 
 const root = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const db = resolve(root, "server/db");
-const ledger = JSON.parse(await readFile(resolve(db, "seed-migration/wave3-lookup-ledger.v1.json"), "utf8")) as { entries: LedgerEntry[] };
+const ledger = JSON.parse(await readFile(resolve(db, "seed/migration/wave3-lookup-ledger.v1.json"), "utf8")) as { entries: LedgerEntry[] };
 const connectionString = process.env.WAVE3_LOOKUP_DATABASE_URL;
 if (!connectionString) throw new Error("WAVE3_LOOKUP_DATABASE_URL is required");
 

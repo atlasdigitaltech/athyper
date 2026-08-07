@@ -1,5 +1,5 @@
 /**
- * @athyper/theme — Theme Variable Contract
+ * @athyper/platform-theme — Theme Variable Contract
  *
  * Canonical list of CSS custom properties every theme preset must define.
  * Derived from the union of all 11 shipped presets, audited for completeness.

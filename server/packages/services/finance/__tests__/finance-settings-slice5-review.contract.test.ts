@@ -129,7 +129,7 @@ describe("Finance Settings Slice 5 Review configuration", () => {
   });
 
   it("keeps posting authorization in the backend gate", () => {
-    const gate = read("server/db/ddl/document/07z_finance_certification_rollout.sql");
+    const gate = read("server/db/ddl/planes/neon/document/09_views.sql");
     const review = read("packages/domain/finance/finance-workbench/src/views/FinanceReadinessWorkbench.tsx");
     expect(gate).toContain("fourDomainReadiness");
     expect(gate).toContain("rollout_mode");

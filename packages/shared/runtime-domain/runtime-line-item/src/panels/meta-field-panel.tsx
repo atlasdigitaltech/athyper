@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { fieldsForGroups } from "../variants/procure";
 import { fieldLabel, isEditableLineField } from "../meta";
 import { MetaFieldInput } from "../components/meta-field-input";

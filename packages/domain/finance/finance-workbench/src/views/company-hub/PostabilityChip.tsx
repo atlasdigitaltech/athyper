@@ -1,7 +1,7 @@
 "use client";
 
-import { Badge } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   useReasonCodeCatalog,
   resolveReasonEntry,

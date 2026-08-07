@@ -8,7 +8,7 @@ interface Manifest{contractVersion:string;operations:Coordinate[]}
 const url=arg("--database-url"),expected=arg("--expected-database"),plane=arg("--plane") as Plane,action=(arg("--action")??"status") as Action,operation=arg("--operation"),reason=arg("--reason")??`P5-E6 ${action}`,ticket=arg("--ticket")??null;
 if(!url||!expected||!["neon","mesh"].includes(plane)||!["prepare","certify","activate","rollback","status"].includes(action))throw new Error("Explicit URL/database/plane and valid action required");
 if(["activate","rollback"].includes(action)&&!operation)throw new Error(`${action} requires --operation`);
-const manifest=JSON.parse(await readFile(resolve(import.meta.dirname,"../../config/qualification/p5-e6-operation-activation-manifest.v1.json"),"utf8")) as Manifest;
+const manifest=JSON.parse(await readFile(resolve(import.meta.dirname,"../verify/config/p5-e6-operation-activation-manifest.v1.json"),"utf8")) as Manifest;
 const selected=manifest.operations.filter(x=>x.plane===plane&&(!operation||x.operationKey===operation));if(!selected.length)throw new Error("manifest coordinate not found");
 const client=new pg.Client({connectionString:url});await client.connect();
 try{const identity=await client.query<{database_name:string}>("select current_database() database_name");if(identity.rows[0]?.database_name!==expected)throw new Error("P5-E6 database guard rejected target");await client.query("begin");await client.query("select set_config('app.database_plane',$1,true)",[plane]);

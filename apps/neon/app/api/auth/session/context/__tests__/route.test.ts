@@ -1,11 +1,11 @@
-﻿import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   patchHandler: vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 })),
   createPatch: vi.fn(),
 }));
 
-vi.mock("@athyper/auth-bff", () => ({
+vi.mock("@athyper/platform-iam-auth-bff", () => ({
   createSessionPatchHandler: mocks.createPatch.mockReturnValue(mocks.patchHandler),
 }));
 vi.mock("@/lib/plane", () => ({ PLANE_KEY: "neon" }));

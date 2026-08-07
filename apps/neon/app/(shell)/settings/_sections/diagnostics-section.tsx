@@ -6,8 +6,8 @@ import {
   Clock, Copy, Loader2, RefreshCw, Server, Shield, ShieldAlert,
   Trash2, User, XCircle, Zap,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@athyper/ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@athyper/platform-ui/primitives";
 import { bffFetch, BffError } from "@/lib/bff-fetch";
 import {
   Banner, ConfirmDialog, SectionCard, str,

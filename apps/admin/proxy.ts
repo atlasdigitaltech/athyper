@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { createPlaneProxy, createPlaneProxyHostGuardSettings } from "@athyper/app-foundation/proxy";
-import { i18nConfig } from "@athyper/i18n/config";
+import { i18nConfig } from "@athyper/platform-i18n/config";
 import { isForbiddenPath, isPublicPath } from "@athyper/app-admin-route-manifest";
-import { getPlaneConfig } from "@athyper/session-plane";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
 
 import { PLANE_KEY } from "./lib/plane";
 

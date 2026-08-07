@@ -18,13 +18,18 @@
     "sourceMap": true,
     "resolveJsonModule": true,
     "paths": {
+      "@athyper/adapter-db-core": ["./packages/adapters/database/core/src/index.ts"],
+      "@athyper/adapter-db-neon": ["./packages/adapters/database/neon-postgres/src/index.ts"],
+      "@athyper/adapter-db-athyper": ["./packages/adapters/database/athyper-postgres/src/index.ts"],
+      "@athyper/adapter-db-mesh": ["./packages/adapters/database/mesh-postgres/src/index.ts"],
       "@athyper/server-foundation": ["./packages/foundation/index.ts"],
-      "@athyper/server-foundation/resilience": ["./packages/foundation/resilience/index.ts"],
       "@athyper/server-foundation/*": ["./packages/foundation/*.ts"],
       "@athyper/svc-shared":    ["./packages/services/shared/index.ts"],
       "@athyper/svc-iam":       ["./packages/services/iam/index.ts"],
       "@athyper/svc-metadata":  ["./packages/services/metadata/index.ts"],
       "@athyper/svc-meta-entity-authoring": ["./packages/services/meta-entity-authoring/index.ts"],
+      "@athyper/svc-onboarding": ["./packages/services/onboarding/index.ts"],
+      "@athyper/svc-publication": ["./packages/services/publication/index.ts"],
       "@athyper/svc-records":   ["./packages/services/records/index.ts"],
       "@athyper/svc-documents": ["./packages/services/documents/index.ts"],
       "@athyper/svc-collab":    ["./packages/services/collab/index.ts"],
@@ -58,4 +63,3 @@
     "**/*.spec.ts"
   ]
 }
-

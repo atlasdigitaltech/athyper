@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MoreVertical, Plus, RefreshCw } from "lucide-react";
-import { Button } from "@athyper/ui";
+import { Button } from "@athyper/platform-ui";
 import type { RuntimeListPresenterProps } from "../adapter/types";
 import type { ResolvedToolbarAction } from "../core/types";
 import { SearchControl } from "./organize/search-control";

@@ -5,7 +5,7 @@ import { AlertTriangle, CalendarDays, CheckCircle2, Database, Loader2, Plus, Sav
 import {
   Badge, Button, Input, Label, Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue, Skeleton,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import {
   useAssignFiscalCalendar,
   useFiscalCalendarDesigner,

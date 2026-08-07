@@ -400,3 +400,3150 @@ BEGIN
         USING ERRCODE = 'check_violation';
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION document.trg_increment_row_version()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    NEW.row_version := OLD.row_version + 1;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_company_period()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE
+    v_company uuid := (to_jsonb(NEW)->>'company_code_id')::uuid;
+    v_period  uuid := nullif(to_jsonb(NEW)->>'fiscal_period_id', '')::uuid;
+BEGIN
+    IF v_period IS NULL THEN
+        RETURN NEW;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1
+          FROM master.fiscal_period p
+         WHERE p.tenant_id = NEW.tenant_id
+           AND p.id = v_period
+           AND p.company_code_id = v_company
+    ) THEN
+        RAISE EXCEPTION 'Fiscal period does not belong to the document company'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_commitment_terminal()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF OLD.status IN ('closed','cancelled','expired') THEN
+        RAISE EXCEPTION 'Terminal commitment cannot be modified'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_invoice_terminal()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF OLD.status IN ('posted','cancelled','rejected') THEN
+        RAISE EXCEPTION 'Posted or terminal purchase invoice cannot be modified'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_journal_posted()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF OLD.status = 'posted' THEN
+        RAISE EXCEPTION 'Posted journal entry is immutable; create a reversal journal'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_payment_posted()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF OLD.status IN ('posted','transmitted','cleared') AND (
+        NEW.id IS DISTINCT FROM OLD.id
+        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.payment_number IS DISTINCT FROM OLD.payment_number
+        OR NEW.payment_type IS DISTINCT FROM OLD.payment_type
+        OR NEW.payment_direction IS DISTINCT FROM OLD.payment_direction
+        OR NEW.supplier_id IS DISTINCT FROM OLD.supplier_id
+        OR NEW.payment_method_code IS DISTINCT FROM OLD.payment_method_code
+        OR NEW.bank_account_id IS DISTINCT FROM OLD.bank_account_id
+        OR NEW.document_date IS DISTINCT FROM OLD.document_date
+        OR NEW.posting_date IS DISTINCT FROM OLD.posting_date
+        OR NEW.value_date IS DISTINCT FROM OLD.value_date
+        OR NEW.currency_code IS DISTINCT FROM OLD.currency_code
+        OR NEW.base_currency_code IS DISTINCT FROM OLD.base_currency_code
+        OR NEW.exchange_rate IS DISTINCT FROM OLD.exchange_rate
+        OR NEW.payment_amount IS DISTINCT FROM OLD.payment_amount
+        OR NEW.base_amount IS DISTINCT FROM OLD.base_amount
+        OR NEW.bank_currency_code IS DISTINCT FROM OLD.bank_currency_code
+        OR NEW.bank_exchange_rate IS DISTINCT FROM OLD.bank_exchange_rate
+        OR NEW.bank_currency_amount IS DISTINCT FROM OLD.bank_currency_amount
+        OR NEW.fiscal_period_id IS DISTINCT FROM OLD.fiscal_period_id
+        OR NEW.journal_entry_id IS DISTINCT FROM OLD.journal_entry_id
+        OR NEW.reversal_of_payment_id IS DISTINCT FROM OLD.reversal_of_payment_id
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at
+        OR NEW.created_by IS DISTINCT FROM OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'Posted payment financial identity is immutable; create a reversal payment'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_commitment_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_parent document.commitment%ROWTYPE;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        SELECT * INTO v_parent
+          FROM document.commitment
+         WHERE tenant_id = OLD.tenant_id AND id = OLD.commitment_id;
+        IF v_parent.status NOT IN ('draft','pending_approval','rejected') THEN
+            RAISE EXCEPTION 'Commitment lines are editable only before approval'
+                USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+        RETURN OLD;
+    END IF;
+    SELECT * INTO v_parent
+      FROM document.commitment
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.commitment_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Unknown commitment' USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    IF v_parent.company_code_id <> NEW.company_code_id
+       OR v_parent.currency_code <> NEW.currency_code THEN
+        RAISE EXCEPTION 'Commitment line company and currency must match its header'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.site_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM master.site s
+         WHERE s.tenant_id = NEW.tenant_id
+           AND s.id = NEW.site_id
+           AND s.company_code_id = NEW.company_code_id
+    ) THEN
+        RAISE EXCEPTION 'Commitment line site must belong to its company code'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF v_parent.status NOT IN ('draft','pending_approval','rejected') THEN
+        RAISE EXCEPTION 'Commitment lines are editable only before approval'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_sync_commitment_total()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_tenant uuid := COALESCE(NEW.tenant_id, OLD.tenant_id);
+    v_parent uuid := COALESCE(NEW.commitment_id, OLD.commitment_id);
+BEGIN
+    UPDATE document.commitment c
+       SET total_amount = COALESCE((
+               SELECT sum(l.gross_amount)
+                 FROM document.commitment_line l
+                WHERE l.tenant_id = v_tenant AND l.commitment_id = v_parent
+           ), 0),
+           updated_at = now(),
+           updated_by = COALESCE(
+               nullif(current_setting('app.current_principal_id', true), '')::uuid,
+               c.updated_by,
+               c.created_by
+           )
+     WHERE c.tenant_id = v_tenant AND c.id = v_parent;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_release_allocation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+          FROM document.commitment_line parent_line
+          JOIN document.commitment_line release_line
+            ON release_line.tenant_id = parent_line.tenant_id
+         WHERE parent_line.tenant_id = NEW.tenant_id
+           AND parent_line.id = NEW.parent_line_id
+           AND parent_line.commitment_id = NEW.parent_commitment_id
+           AND release_line.id = NEW.release_line_id
+           AND release_line.commitment_id = NEW.release_commitment_id
+           AND parent_line.currency_code = NEW.currency_code
+           AND release_line.currency_code = NEW.currency_code
+    ) THEN
+        RAISE EXCEPTION 'Release allocation lines must belong to their stated headers and currency'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_purchase_invoice_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_parent document.purchase_invoice%ROWTYPE;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        SELECT * INTO v_parent
+          FROM document.purchase_invoice
+         WHERE tenant_id = OLD.tenant_id AND id = OLD.purchase_invoice_id;
+        IF v_parent.status NOT IN ('proforma','draft','pending_approval') THEN
+            RAISE EXCEPTION 'Invoice lines are editable only before approval'
+                USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+        RETURN OLD;
+    END IF;
+    SELECT * INTO v_parent
+      FROM document.purchase_invoice
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.purchase_invoice_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Unknown purchase invoice' USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    IF v_parent.company_code_id <> NEW.company_code_id
+       OR v_parent.currency_code <> NEW.currency_code THEN
+        RAISE EXCEPTION 'Invoice line company and currency must match its header'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.site_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM master.site s
+         WHERE s.tenant_id = NEW.tenant_id
+           AND s.id = NEW.site_id
+           AND s.company_code_id = NEW.company_code_id
+    ) THEN
+        RAISE EXCEPTION 'Invoice line site must belong to its company code'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF v_parent.status NOT IN ('proforma','draft','pending_approval') THEN
+        RAISE EXCEPTION 'Invoice lines are editable only before approval'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF NEW.commitment_line_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1
+          FROM document.commitment_line l
+         WHERE l.tenant_id = NEW.tenant_id
+           AND l.id = NEW.commitment_line_id
+           AND l.commitment_id = v_parent.commitment_id
+    ) THEN
+        RAISE EXCEPTION 'Invoice commitment line must belong to the header commitment'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_sync_purchase_invoice_total()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_tenant uuid := COALESCE(NEW.tenant_id, OLD.tenant_id);
+    v_parent uuid := COALESCE(NEW.purchase_invoice_id, OLD.purchase_invoice_id);
+BEGIN
+    UPDATE document.purchase_invoice h
+       SET net_amount = COALESCE((
+               SELECT sum(l.net_amount)
+                 FROM document.purchase_invoice_line l
+                WHERE l.tenant_id = v_tenant AND l.purchase_invoice_id = v_parent
+           ), 0),
+           tax_amount = COALESCE((
+               SELECT sum(l.tax_amount)
+                 FROM document.purchase_invoice_line l
+                WHERE l.tenant_id = v_tenant AND l.purchase_invoice_id = v_parent
+           ), 0),
+           withholding_tax_amount = COALESCE((
+               SELECT sum(l.withholding_tax_amount)
+                 FROM document.purchase_invoice_line l
+                WHERE l.tenant_id = v_tenant AND l.purchase_invoice_id = v_parent
+           ), 0),
+           updated_at = now(),
+           updated_by = COALESCE(
+               nullif(current_setting('app.current_principal_id', true), '')::uuid,
+               h.updated_by,
+               h.created_by
+           )
+     WHERE h.tenant_id = v_tenant AND h.id = v_parent;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_invoice_match_case()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+          FROM document.purchase_invoice i
+         WHERE i.tenant_id = NEW.tenant_id
+           AND i.id = NEW.purchase_invoice_id
+           AND i.company_code_id = NEW.company_code_id
+           AND (NEW.commitment_id IS NULL OR i.commitment_id = NEW.commitment_id)
+    ) THEN
+        RAISE EXCEPTION 'Match case company/commitment must match its invoice'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_distribution_posted()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF OLD.amount_status = 'posted' THEN
+        RAISE EXCEPTION 'Posted accounting distribution is immutable'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_term_application()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+BEGIN
+    IF NEW.purchase_invoice_line_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM document.purchase_invoice_line l
+         WHERE l.tenant_id = NEW.tenant_id
+           AND l.id = NEW.purchase_invoice_line_id
+           AND l.purchase_invoice_id = NEW.purchase_invoice_id
+    ) THEN
+        RAISE EXCEPTION 'Payment-term application line must belong to its invoice'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.payment_term_clause_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM master.payment_term_clause c
+         WHERE c.tenant_id = NEW.tenant_id
+           AND c.id = NEW.payment_term_clause_id
+           AND c.payment_term_id = NEW.payment_term_id
+    ) THEN
+        RAISE EXCEPTION 'Payment-term clause must belong to the selected payment term'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_payment_allocation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_payment document.payment_entry%ROWTYPE;
+BEGIN
+    SELECT * INTO v_payment
+      FROM document.payment_entry
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.payment_entry_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Unknown payment entry' USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    IF v_payment.status NOT IN ('draft','pending_approval','approved') THEN
+        RAISE EXCEPTION 'Payment allocations are immutable after posting'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF NEW.purchase_invoice_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM document.purchase_invoice i
+         WHERE i.tenant_id = NEW.tenant_id
+           AND i.id = NEW.purchase_invoice_id
+           AND i.company_code_id = v_payment.company_code_id
+           AND i.supplier_id = v_payment.supplier_id
+           AND i.currency_code = NEW.currency_code
+    ) THEN
+        RAISE EXCEPTION 'Payment allocation invoice must match payment company, supplier and currency'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_journal_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_header document.journal_entry%ROWTYPE;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        SELECT * INTO v_header
+          FROM document.journal_entry
+         WHERE tenant_id = OLD.tenant_id AND id = OLD.journal_entry_id;
+        IF v_header.status NOT IN ('draft','pending_approval','approved') THEN
+            RAISE EXCEPTION 'Journal lines are immutable after posting'
+                USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+        RETURN OLD;
+    END IF;
+    SELECT * INTO v_header
+      FROM document.journal_entry
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.journal_entry_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Unknown journal entry' USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    IF v_header.status NOT IN ('draft','pending_approval','approved') THEN
+        RAISE EXCEPTION 'Journal lines are immutable after posting'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF v_header.transaction_currency_code <> NEW.transaction_currency_code
+       OR v_header.base_currency_code <> NEW.base_currency_code THEN
+        RAISE EXCEPTION 'Journal-line currencies must match the journal header'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_sync_journal_total()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_tenant uuid := COALESCE(NEW.tenant_id, OLD.tenant_id);
+    v_parent uuid := COALESCE(NEW.journal_entry_id, OLD.journal_entry_id);
+BEGIN
+    UPDATE document.journal_entry h
+       SET total_debit = COALESCE((
+               SELECT sum(l.base_debit) FROM document.journal_line l
+                WHERE l.tenant_id = v_tenant AND l.journal_entry_id = v_parent
+           ), 0),
+           total_credit = COALESCE((
+               SELECT sum(l.base_credit) FROM document.journal_line l
+                WHERE l.tenant_id = v_tenant AND l.journal_entry_id = v_parent
+           ), 0),
+           line_count = (
+               SELECT count(*) FROM document.journal_line l
+                WHERE l.tenant_id = v_tenant AND l.journal_entry_id = v_parent
+           ),
+           updated_at = now(),
+           updated_by = COALESCE(
+               nullif(current_setting('app.current_principal_id', true), '')::uuid,
+               h.updated_by,
+               h.created_by
+           )
+     WHERE h.tenant_id = v_tenant AND h.id = v_parent;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_journal_posting()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master, ledger
+AS $$
+DECLARE
+    v_period master.fiscal_period%ROWTYPE;
+BEGIN
+    IF NEW.status <> 'posted' OR OLD.status = 'posted' THEN
+        RETURN NEW;
+    END IF;
+    SELECT * INTO v_period
+      FROM master.fiscal_period p
+     WHERE p.tenant_id = NEW.tenant_id
+       AND p.id = NEW.fiscal_period_id
+       AND p.company_code_id = NEW.company_code_id;
+    IF NOT FOUND OR NEW.posting_date NOT BETWEEN v_period.start_date AND v_period.end_date THEN
+        RAISE EXCEPTION 'Journal posting date is outside the selected company fiscal period'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM master.company_code_book_assignment a
+         WHERE a.tenant_id = NEW.tenant_id
+           AND a.company_code_id = NEW.company_code_id
+           AND a.book_id = NEW.ledger_book_id
+           AND a.status = 'active'
+           AND NEW.posting_date >= a.effective_from
+           AND (a.effective_to IS NULL OR NEW.posting_date <= a.effective_to)
+    ) THEN
+        RAISE EXCEPTION 'Ledger book is not active for the journal company and posting date'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM ledger.book_period_status gate
+         WHERE gate.tenant_id = NEW.tenant_id
+           AND gate.ledger_book_id = NEW.ledger_book_id
+           AND gate.fiscal_period_id = NEW.fiscal_period_id
+           AND gate.status IN ('open','soft_close')
+    ) THEN
+        RAISE EXCEPTION 'Ledger book period is not open for posting'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF NEW.line_count < 2 OR NEW.total_debit <= 0 OR NEW.total_debit <> NEW.total_credit THEN
+        RAISE EXCEPTION 'Posted journal requires at least two balanced non-zero lines'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.posted_at IS NULL OR NEW.posted_by IS NULL THEN
+        RAISE EXCEPTION 'Posted journal requires posting evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_p2p_header()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_commitment document.commitment%ROWTYPE;
+BEGIN
+    IF TG_OP = 'UPDATE' AND (
+        NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.code IS DISTINCT FROM OLD.code
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at OR NEW.created_by IS DISTINCT FROM OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'P2P_HEADER_IDENTITY_IMMUTABLE';
+    END IF;
+
+    IF TG_OP IN ('UPDATE','DELETE') THEN
+        IF TG_TABLE_NAME = 'purchase_requisition' AND OLD.status IN ('fully_converted','closed','cancelled')
+           OR TG_TABLE_NAME = 'purchase_order_confirmation' AND OLD.status IN ('confirmed','changes_accepted','changes_rejected','rejected','cancelled')
+           OR TG_TABLE_NAME = 'delivery_note' AND OLD.status IN ('fully_receipted','returned','cancelled')
+           OR TG_TABLE_NAME = 'receipt' AND OLD.status IN ('posted','reversed','cancelled')
+           OR TG_TABLE_NAME = 'service_sheet' AND OLD.status IN ('posted','reversed','cancelled') THEN
+            IF TG_OP = 'DELETE' OR (
+                to_jsonb(NEW) - ARRAY['status','status_changed_at','status_changed_by','updated_at','updated_by','row_version']::text[]
+                IS DISTINCT FROM
+                to_jsonb(OLD) - ARRAY['status','status_changed_at','status_changed_by','updated_at','updated_by','row_version']::text[]
+            ) THEN
+                RAISE EXCEPTION 'P2P_DOCUMENT_TERMINAL: document.% is immutable in status %', TG_TABLE_NAME, OLD.status;
+            END IF;
+        END IF;
+        IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
+    END IF;
+
+    IF TG_TABLE_NAME IN ('purchase_order_confirmation','delivery_note','receipt','service_sheet') THEN
+        IF NEW.commitment_id IS NOT NULL THEN
+            SELECT * INTO v_commitment
+              FROM document.commitment
+             WHERE tenant_id = NEW.tenant_id AND id = NEW.commitment_id;
+            IF NOT FOUND THEN
+                RAISE EXCEPTION 'P2P_COMMITMENT_NOT_FOUND';
+            END IF;
+            IF v_commitment.company_code_id <> NEW.company_code_id
+               OR v_commitment.supplier_id IS DISTINCT FROM NEW.supplier_id
+               OR v_commitment.currency_code <> NEW.currency_code THEN
+                RAISE EXCEPTION 'P2P_HEADER_SOURCE_MISMATCH: company, supplier, and currency must match commitment';
+            END IF;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_p2p_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_company uuid;
+    v_currency character(3);
+    v_status text;
+    v_commitment_id uuid;
+    v_commitment_line document.commitment_line%ROWTYPE;
+    v_line_currency character(3);
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        IF TG_TABLE_NAME = 'purchase_requisition_line' THEN
+            SELECT company_code_id, currency_code, status::text INTO v_company, v_currency, v_status
+              FROM document.purchase_requisition WHERE tenant_id = OLD.tenant_id AND id = OLD.purchase_requisition_id;
+        ELSIF TG_TABLE_NAME = 'delivery_note_line' THEN
+            SELECT company_code_id, currency_code, status::text, commitment_id INTO v_company, v_currency, v_status, v_commitment_id
+              FROM document.delivery_note WHERE tenant_id = OLD.tenant_id AND id = OLD.delivery_note_id;
+        ELSIF TG_TABLE_NAME = 'receipt_line' THEN
+            SELECT company_code_id, currency_code, status::text, commitment_id INTO v_company, v_currency, v_status, v_commitment_id
+              FROM document.receipt WHERE tenant_id = OLD.tenant_id AND id = OLD.receipt_id;
+        ELSE
+            SELECT company_code_id, currency_code, status::text, commitment_id INTO v_company, v_currency, v_status, v_commitment_id
+              FROM document.service_sheet WHERE tenant_id = OLD.tenant_id AND id = OLD.service_sheet_id;
+        END IF;
+        IF (TG_TABLE_NAME = 'purchase_requisition_line' AND v_status NOT IN ('draft','pending_approval','rejected'))
+           OR (TG_TABLE_NAME = 'delivery_note_line' AND v_status NOT IN ('draft','in_transit','arrived'))
+           OR (TG_TABLE_NAME = 'receipt_line' AND v_status NOT IN ('draft','pending_approval','rejected'))
+           OR (TG_TABLE_NAME = 'service_sheet_line' AND v_status NOT IN ('draft','pending_acceptance','rejected')) THEN
+            RAISE EXCEPTION 'P2P_LINE_PARENT_LOCKED: % status is %', TG_TABLE_NAME, v_status;
+        END IF;
+        RETURN OLD;
+    END IF;
+
+    IF TG_TABLE_NAME = 'purchase_requisition_line' THEN
+        SELECT company_code_id, currency_code, status::text INTO v_company, v_currency, v_status
+          FROM document.purchase_requisition WHERE tenant_id = NEW.tenant_id AND id = NEW.purchase_requisition_id;
+    ELSIF TG_TABLE_NAME = 'delivery_note_line' THEN
+        SELECT company_code_id, currency_code, status::text, commitment_id INTO v_company, v_currency, v_status, v_commitment_id
+          FROM document.delivery_note WHERE tenant_id = NEW.tenant_id AND id = NEW.delivery_note_id;
+    ELSIF TG_TABLE_NAME = 'receipt_line' THEN
+        SELECT company_code_id, currency_code, status::text, commitment_id INTO v_company, v_currency, v_status, v_commitment_id
+          FROM document.receipt WHERE tenant_id = NEW.tenant_id AND id = NEW.receipt_id;
+    ELSE
+        SELECT company_code_id, currency_code, status::text, commitment_id INTO v_company, v_currency, v_status, v_commitment_id
+          FROM document.service_sheet WHERE tenant_id = NEW.tenant_id AND id = NEW.service_sheet_id;
+    END IF;
+    v_line_currency := nullif(to_jsonb(NEW)->>'currency_code', '')::character(3);
+    IF v_company IS NULL OR v_company <> NEW.company_code_id
+       OR (v_line_currency IS NOT NULL AND v_currency <> v_line_currency) THEN
+        RAISE EXCEPTION 'P2P_LINE_HEADER_MISMATCH: tenant, company, or currency differs from header';
+    END IF;
+    IF (TG_TABLE_NAME = 'purchase_requisition_line' AND v_status NOT IN ('draft','pending_approval','rejected'))
+       OR (TG_TABLE_NAME = 'delivery_note_line' AND v_status NOT IN ('draft','in_transit','arrived'))
+       OR (TG_TABLE_NAME = 'receipt_line' AND v_status NOT IN ('draft','pending_approval','rejected'))
+       OR (TG_TABLE_NAME = 'service_sheet_line' AND v_status NOT IN ('draft','pending_acceptance','rejected')) THEN
+        RAISE EXCEPTION 'P2P_LINE_PARENT_LOCKED: % status is %', TG_TABLE_NAME, v_status;
+    END IF;
+
+    IF TG_TABLE_NAME <> 'purchase_requisition_line' THEN
+        SELECT * INTO v_commitment_line
+          FROM document.commitment_line
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.commitment_line_id;
+        IF NOT FOUND OR (v_commitment_id IS NOT NULL AND v_commitment_line.commitment_id <> v_commitment_id) THEN
+            RAISE EXCEPTION 'P2P_LINE_COMMITMENT_MISMATCH';
+        END IF;
+        IF v_commitment_line.company_code_id <> NEW.company_code_id THEN
+            RAISE EXCEPTION 'P2P_LINE_COMPANY_MISMATCH';
+        END IF;
+        IF TG_TABLE_NAME = 'receipt_line' AND v_commitment_line.procurement_type <> 'goods' THEN
+            RAISE EXCEPTION 'RECEIPT_REQUIRES_GOODS_LINE';
+        END IF;
+        IF TG_TABLE_NAME = 'service_sheet_line' AND v_commitment_line.procurement_type <> 'services' THEN
+            RAISE EXCEPTION 'SERVICE_SHEET_REQUIRES_SERVICE_LINE';
+        END IF;
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND (
+        NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.line_no IS DISTINCT FROM OLD.line_no
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at OR NEW.created_by IS DISTINCT FROM OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'P2P_LINE_IDENTITY_IMMUTABLE';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_sync_p2p_total()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_tenant uuid := COALESCE(NEW.tenant_id, OLD.tenant_id);
+    v_parent uuid;
+    v_actor uuid := COALESCE(
+        nullif(to_jsonb(NEW)->>'updated_by', '')::uuid,
+        nullif(to_jsonb(NEW)->>'created_by', '')::uuid,
+        nullif(to_jsonb(OLD)->>'updated_by', '')::uuid,
+        nullif(to_jsonb(OLD)->>'created_by', '')::uuid
+    );
+BEGIN
+    IF TG_TABLE_NAME = 'purchase_requisition_line' THEN
+        v_parent := COALESCE(NEW.purchase_requisition_id, OLD.purchase_requisition_id);
+        UPDATE document.purchase_requisition h SET total_amount = x.total, updated_at = now(), updated_by = v_actor
+          FROM (SELECT COALESCE(sum(gross_amount),0) total FROM document.purchase_requisition_line WHERE tenant_id=v_tenant AND purchase_requisition_id=v_parent) x
+         WHERE h.tenant_id=v_tenant AND h.id=v_parent;
+    ELSIF TG_TABLE_NAME = 'receipt_line' THEN
+        v_parent := COALESCE(NEW.receipt_id, OLD.receipt_id);
+        UPDATE document.receipt h SET total_amount = x.total, updated_at = now(), updated_by = v_actor
+          FROM (SELECT COALESCE(sum(gross_amount),0) total FROM document.receipt_line WHERE tenant_id=v_tenant AND receipt_id=v_parent) x
+         WHERE h.tenant_id=v_tenant AND h.id=v_parent;
+    ELSIF TG_TABLE_NAME = 'service_sheet_line' THEN
+        v_parent := COALESCE(NEW.service_sheet_id, OLD.service_sheet_id);
+        UPDATE document.service_sheet h SET total_amount = x.total, updated_at = now(), updated_by = v_actor
+          FROM (SELECT COALESCE(sum(gross_amount),0) total FROM document.service_sheet_line WHERE tenant_id=v_tenant AND service_sheet_id=v_parent) x
+         WHERE h.tenant_id=v_tenant AND h.id=v_parent;
+    ELSIF TG_TABLE_NAME = 'purchase_order_confirmation_line' THEN
+        v_parent := COALESCE(NEW.confirmation_id, OLD.confirmation_id);
+        UPDATE document.purchase_order_confirmation h SET confirmed_total_amount = x.total, updated_at = now(), updated_by = v_actor
+          FROM (SELECT COALESCE(sum(confirmed_quantity * confirmed_unit_price),0) total FROM document.purchase_order_confirmation_line WHERE tenant_id=v_tenant AND confirmation_id=v_parent) x
+         WHERE h.tenant_id=v_tenant AND h.id=v_parent;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_fulfillment_capacity()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_tenant uuid := COALESCE(NEW.tenant_id, OLD.tenant_id);
+    v_line uuid := COALESCE(NEW.commitment_line_id, OLD.commitment_line_id);
+    v_limit numeric(18,4);
+    v_used numeric(18,4);
+BEGIN
+    SELECT quantity INTO v_limit FROM document.commitment_line WHERE tenant_id=v_tenant AND id=v_line;
+    IF v_limit IS NULL THEN RETURN NULL; END IF;
+    IF TG_TABLE_NAME = 'receipt_line' THEN
+        SELECT COALESCE(sum(received_quantity),0) INTO v_used FROM document.receipt_line WHERE tenant_id=v_tenant AND commitment_line_id=v_line;
+    ELSE
+        SELECT COALESCE(sum(quantity),0) INTO v_used FROM document.service_sheet_line WHERE tenant_id=v_tenant AND commitment_line_id=v_line;
+    END IF;
+    IF v_used > v_limit THEN
+        RAISE EXCEPTION 'P2P_FULFILLMENT_EXCEEDED: fulfilled % exceeds commitment quantity %', v_used, v_limit;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_confirmation_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_commitment_id uuid;
+    v_status text;
+    v_line_commitment_id uuid;
+BEGIN
+    SELECT commitment_id, status::text INTO v_commitment_id, v_status
+      FROM document.purchase_order_confirmation
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.confirmation_id;
+    SELECT commitment_id INTO v_line_commitment_id
+      FROM document.commitment_line
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.commitment_line_id;
+    IF v_commitment_id IS NULL OR v_line_commitment_id IS NULL OR v_commitment_id <> v_line_commitment_id THEN
+        RAISE EXCEPTION 'CONFIRMATION_LINE_COMMITMENT_MISMATCH';
+    END IF;
+    IF v_status NOT IN ('received','changes_proposed') THEN
+        RAISE EXCEPTION 'CONFIRMATION_PARENT_LOCKED: status is %', v_status;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.recompute_commitment_schedule(
+    p_tenant_id uuid,
+    p_commitment_line_id uuid,
+    p_actor_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_consumed numeric(18,4);
+    v_remaining numeric(18,4);
+    v_row record;
+    v_allocated numeric(18,4);
+BEGIN
+    SELECT COALESCE((SELECT sum(received_quantity) FROM document.receipt_line
+                     WHERE tenant_id=p_tenant_id AND commitment_line_id=p_commitment_line_id),0)
+         + COALESCE((SELECT sum(quantity) FROM document.service_sheet_line
+                     WHERE tenant_id=p_tenant_id AND commitment_line_id=p_commitment_line_id),0)
+      INTO v_consumed;
+    v_remaining := v_consumed;
+    FOR v_row IN
+        SELECT id, scheduled_quantity
+          FROM document.schedule_line
+         WHERE tenant_id=p_tenant_id AND source_doc_type='commitment_line'
+           AND source_line_id=p_commitment_line_id
+           AND is_current_version AND terminal_status IS NULL
+         ORDER BY scheduled_date, schedule_no, id
+    LOOP
+        v_allocated := LEAST(v_row.scheduled_quantity, GREATEST(v_remaining,0));
+        UPDATE document.schedule_line
+           SET fulfilled_quantity = v_allocated,
+               fulfillment_status = CASE
+                   WHEN v_allocated = 0 THEN 'open'::document.schedule_fulfillment_status_d
+                   WHEN v_allocated = v_row.scheduled_quantity THEN 'fulfilled'::document.schedule_fulfillment_status_d
+                   ELSE 'partial'::document.schedule_fulfillment_status_d
+               END,
+               row_version = row_version + 1,
+               updated_by = p_actor_id
+         WHERE id=v_row.id AND tenant_id=p_tenant_id;
+        v_remaining := v_remaining - v_allocated;
+    END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_refresh_commitment_schedule()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_actor uuid := COALESCE(
+        nullif(to_jsonb(NEW)->>'updated_by','')::uuid,
+        nullif(to_jsonb(NEW)->>'created_by','')::uuid,
+        nullif(to_jsonb(OLD)->>'updated_by','')::uuid,
+        nullif(to_jsonb(OLD)->>'created_by','')::uuid
+    );
+BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        PERFORM document.recompute_commitment_schedule(OLD.tenant_id, OLD.commitment_line_id, v_actor);
+    END IF;
+    IF TG_OP <> 'DELETE' AND (
+        TG_OP = 'INSERT' OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.commitment_line_id IS DISTINCT FROM OLD.commitment_line_id
+        OR to_jsonb(NEW)->>'received_quantity' IS DISTINCT FROM to_jsonb(OLD)->>'received_quantity'
+        OR to_jsonb(NEW)->>'quantity' IS DISTINCT FROM to_jsonb(OLD)->>'quantity'
+    ) THEN
+        PERFORM document.recompute_commitment_schedule(NEW.tenant_id, NEW.commitment_line_id, v_actor);
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_pricing_component()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_company_id uuid;
+    v_parent_status text;
+    v_condition_term master.pricing_term_type_d;
+    v_condition_status master.pricing_condition_status_d;
+    v_condition_classes text[];
+    v_required_class text;
+    v_tax_kind control.tax_group_kind_d;
+BEGIN
+    IF NEW.source_doc_type = 'purchase_requisition_line' THEN
+        IF NEW.source_line_id IS NULL THEN
+            SELECT company_code_id, status::text INTO v_company_id, v_parent_status
+              FROM document.purchase_requisition
+             WHERE tenant_id=NEW.tenant_id AND id=NEW.source_doc_id;
+        ELSE
+            SELECT h.company_code_id, h.status::text INTO v_company_id, v_parent_status
+              FROM document.purchase_requisition_line l
+              JOIN document.purchase_requisition h ON h.tenant_id=l.tenant_id AND h.id=l.purchase_requisition_id
+             WHERE l.tenant_id=NEW.tenant_id AND l.id=NEW.source_line_id AND l.purchase_requisition_id=NEW.source_doc_id;
+        END IF;
+    ELSIF NEW.source_doc_type = 'commitment_line' THEN
+        IF NEW.source_line_id IS NULL THEN
+            SELECT company_code_id, status::text
+              INTO v_company_id, v_parent_status
+              FROM document.commitment
+             WHERE tenant_id = NEW.tenant_id AND id = NEW.source_doc_id;
+        ELSE
+            SELECT c.company_code_id, c.status::text
+              INTO v_company_id, v_parent_status
+              FROM document.commitment_line l
+              JOIN document.commitment c
+                ON c.tenant_id = l.tenant_id AND c.id = l.commitment_id
+             WHERE l.tenant_id = NEW.tenant_id
+               AND l.id = NEW.source_line_id
+               AND l.commitment_id = NEW.source_doc_id;
+        END IF;
+    ELSIF NEW.source_doc_type = 'purchase_invoice_line' THEN
+        IF NEW.source_line_id IS NULL THEN
+            SELECT company_code_id, status::text
+              INTO v_company_id, v_parent_status
+              FROM document.purchase_invoice
+             WHERE tenant_id = NEW.tenant_id AND id = NEW.source_doc_id;
+        ELSE
+            SELECT i.company_code_id, i.status::text
+              INTO v_company_id, v_parent_status
+              FROM document.purchase_invoice_line l
+              JOIN document.purchase_invoice i
+                ON i.tenant_id = l.tenant_id AND i.id = l.purchase_invoice_id
+             WHERE l.tenant_id = NEW.tenant_id
+               AND l.id = NEW.source_line_id
+               AND l.purchase_invoice_id = NEW.source_doc_id;
+        END IF;
+    ELSIF NEW.source_doc_type = 'receipt_line' THEN
+        IF NEW.source_line_id IS NULL THEN
+            SELECT company_code_id, status::text INTO v_company_id, v_parent_status
+              FROM document.receipt WHERE tenant_id=NEW.tenant_id AND id=NEW.source_doc_id;
+        ELSE
+            SELECT h.company_code_id, h.status::text INTO v_company_id, v_parent_status
+              FROM document.receipt_line l JOIN document.receipt h ON h.tenant_id=l.tenant_id AND h.id=l.receipt_id
+             WHERE l.tenant_id=NEW.tenant_id AND l.id=NEW.source_line_id AND l.receipt_id=NEW.source_doc_id;
+        END IF;
+    ELSIF NEW.source_doc_type = 'service_sheet_line' THEN
+        IF NEW.source_line_id IS NULL THEN
+            SELECT company_code_id, status::text INTO v_company_id, v_parent_status
+              FROM document.service_sheet WHERE tenant_id=NEW.tenant_id AND id=NEW.source_doc_id;
+        ELSE
+            SELECT h.company_code_id, h.status::text INTO v_company_id, v_parent_status
+              FROM document.service_sheet_line l JOIN document.service_sheet h ON h.tenant_id=l.tenant_id AND h.id=l.service_sheet_id
+             WHERE l.tenant_id=NEW.tenant_id AND l.id=NEW.source_line_id AND l.service_sheet_id=NEW.source_doc_id;
+        END IF;
+    END IF;
+
+    IF v_company_id IS NULL THEN
+        RAISE EXCEPTION 'PRICING_SOURCE_NOT_FOUND: %.% in tenant %',
+            NEW.source_doc_type, COALESCE(NEW.source_line_id, NEW.source_doc_id), NEW.tenant_id;
+    END IF;
+    IF v_company_id <> NEW.company_code_id THEN
+        RAISE EXCEPTION 'PRICING_COMPANY_MISMATCH: source company % differs from component company %',
+            v_company_id, NEW.company_code_id;
+    END IF;
+
+    SELECT term_type, status, applies_to_classes
+      INTO v_condition_term, v_condition_status, v_condition_classes
+      FROM master.condition_type
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.condition_type_id;
+    IF v_condition_term IS NULL THEN
+        RAISE EXCEPTION 'PRICING_CONDITION_NOT_FOUND: % in tenant %', NEW.condition_type_id, NEW.tenant_id;
+    END IF;
+    IF v_condition_status <> 'active' THEN
+        RAISE EXCEPTION 'PRICING_CONDITION_NOT_ACTIVE: % has status %', NEW.condition_type_id, v_condition_status;
+    END IF;
+    IF v_condition_term <> NEW.term_type THEN
+        RAISE EXCEPTION 'PRICING_CONDITION_TERM_MISMATCH: condition term % differs from row %',
+            v_condition_term, NEW.term_type;
+    END IF;
+    v_required_class := CASE NEW.source_doc_type
+        WHEN 'purchase_requisition_line' THEN 'purchase_requisition'
+        WHEN 'commitment_line' THEN 'purchase_order'
+        WHEN 'purchase_invoice_line' THEN 'purchase_invoice'
+        WHEN 'receipt_line' THEN 'goods_receipt'
+        WHEN 'service_sheet_line' THEN 'service_sheet'
+    END;
+    IF NEW.source_doc_type IN ('commitment_line','purchase_invoice_line')
+       AND NOT (v_required_class = ANY(v_condition_classes)) THEN
+        RAISE EXCEPTION 'PRICING_CONDITION_NOT_APPLICABLE: condition % does not apply to %',
+            NEW.condition_type_id, v_required_class;
+    END IF;
+
+    IF NEW.tax_group_id IS NOT NULL THEN
+        SELECT group_kind INTO v_tax_kind
+          FROM control.tax_group
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.tax_group_id
+           AND status = 'active'
+           AND effective_from <= CURRENT_DATE
+           AND (effective_to IS NULL OR effective_to >= CURRENT_DATE);
+        IF v_tax_kind IS NULL THEN
+            RAISE EXCEPTION 'PRICING_TAX_GROUP_NOT_ACTIVE: %', NEW.tax_group_id;
+        END IF;
+        IF (NEW.term_type = 'withholding' AND v_tax_kind <> 'withholding')
+           OR (NEW.term_type = 'tax' AND v_tax_kind = 'withholding') THEN
+            RAISE EXCEPTION 'PRICING_TAX_GROUP_KIND_MISMATCH: term % cannot use group kind %',
+                NEW.term_type, v_tax_kind;
+        END IF;
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND (
+        NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.source_doc_type IS DISTINCT FROM OLD.source_doc_type
+        OR NEW.source_doc_id IS DISTINCT FROM OLD.source_doc_id
+        OR NEW.source_line_id IS DISTINCT FROM OLD.source_line_id
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at
+        OR NEW.created_by IS DISTINCT FROM OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'PRICING_IDENTITY_IMMUTABLE';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_pricing_component_write()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_row document.pricing_component%ROWTYPE;
+    v_parent_status text;
+BEGIN
+    v_row := CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+    IF v_row.source_doc_type = 'purchase_requisition_line' THEN
+        SELECT status::text INTO v_parent_status FROM document.purchase_requisition
+         WHERE tenant_id=v_row.tenant_id AND id=v_row.source_doc_id;
+        IF v_parent_status NOT IN ('draft','rejected') THEN
+            RAISE EXCEPTION 'PRICING_PARENT_LOCKED: requisition status is %', v_parent_status;
+        END IF;
+    ELSIF v_row.source_doc_type = 'commitment_line' THEN
+        SELECT status::text INTO v_parent_status
+          FROM document.commitment
+         WHERE tenant_id = v_row.tenant_id AND id = v_row.source_doc_id;
+        IF v_parent_status NOT IN ('draft','rejected') THEN
+            RAISE EXCEPTION 'PRICING_PARENT_LOCKED: commitment status is %', v_parent_status;
+        END IF;
+    ELSIF v_row.source_doc_type = 'purchase_invoice_line' THEN
+        SELECT status::text INTO v_parent_status
+          FROM document.purchase_invoice
+         WHERE tenant_id = v_row.tenant_id AND id = v_row.source_doc_id;
+        IF v_parent_status NOT IN ('proforma','draft','rejected') THEN
+            RAISE EXCEPTION 'PRICING_PARENT_LOCKED: invoice status is %', v_parent_status;
+        END IF;
+    ELSIF v_row.source_doc_type = 'receipt_line' THEN
+        SELECT status::text INTO v_parent_status FROM document.receipt
+         WHERE tenant_id=v_row.tenant_id AND id=v_row.source_doc_id;
+        IF v_parent_status NOT IN ('draft','rejected') THEN
+            RAISE EXCEPTION 'PRICING_PARENT_LOCKED: receipt status is %', v_parent_status;
+        END IF;
+    ELSE
+        SELECT status::text INTO v_parent_status FROM document.service_sheet
+         WHERE tenant_id=v_row.tenant_id AND id=v_row.source_doc_id;
+        IF v_parent_status NOT IN ('draft','rejected') THEN
+            RAISE EXCEPTION 'PRICING_PARENT_LOCKED: service sheet status is %', v_parent_status;
+        END IF;
+    END IF;
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_schedule_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_parent_id uuid;
+    v_parent_qty numeric(18,4);
+    v_parent_currency character(3);
+BEGIN
+    IF TG_OP = 'UPDATE'
+       AND OLD.is_current_version
+       AND NOT NEW.is_current_version
+       AND NEW.terminal_status IS NOT NULL THEN
+        NEW.supersedes_at := COALESCE(NEW.supersedes_at, now());
+        IF NEW.status = 'active' THEN
+            NEW.status := CASE WHEN NEW.terminal_status = 'CLOSED' THEN 'retired' ELSE 'cancelled' END;
+        END IF;
+        NEW.status_source := 'terminal';
+    END IF;
+
+    IF NEW.source_doc_type = 'purchase_requisition_line' THEN
+        SELECT purchase_requisition_id, quantity, currency_code
+          INTO v_parent_id, v_parent_qty, v_parent_currency
+          FROM document.purchase_requisition_line
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.source_line_id;
+    ELSIF NEW.source_doc_type = 'commitment_line' THEN
+        SELECT commitment_id, quantity, currency_code
+          INTO v_parent_id, v_parent_qty, v_parent_currency
+          FROM document.commitment_line
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.source_line_id;
+    ELSE
+        SELECT purchase_invoice_id, quantity, currency_code
+          INTO v_parent_id, v_parent_qty, v_parent_currency
+          FROM document.purchase_invoice_line
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.source_line_id;
+    END IF;
+
+    IF v_parent_id IS NULL THEN
+        RAISE EXCEPTION 'SCHEDULE_SOURCE_NOT_FOUND: %.% in tenant %',
+            NEW.source_doc_type, NEW.source_line_id, NEW.tenant_id;
+    END IF;
+    IF v_parent_id <> NEW.source_doc_id THEN
+        RAISE EXCEPTION 'SCHEDULE_SOURCE_HEADER_MISMATCH: expected %, received %',
+            v_parent_id, NEW.source_doc_id;
+    END IF;
+    IF NEW.currency_code IS NOT NULL AND NEW.currency_code <> v_parent_currency THEN
+        RAISE EXCEPTION 'SCHEDULE_CURRENCY_MISMATCH: parent %, schedule %',
+            v_parent_currency, NEW.currency_code;
+    END IF;
+
+    IF TG_OP = 'UPDATE' AND (
+        NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.source_doc_type IS DISTINCT FROM OLD.source_doc_type
+        OR NEW.source_doc_id IS DISTINCT FROM OLD.source_doc_id
+        OR NEW.source_line_id IS DISTINCT FROM OLD.source_line_id
+        OR NEW.schedule_no IS DISTINCT FROM OLD.schedule_no
+        OR NEW.version_number IS DISTINCT FROM OLD.version_number
+        OR NEW.previous_version_id IS DISTINCT FROM OLD.previous_version_id
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at
+        OR NEW.created_by IS DISTINCT FROM OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'SCHEDULE_IDENTITY_IMMUTABLE';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_schedule_capacity()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_row document.schedule_line%ROWTYPE;
+    v_parent_quantity numeric(18,4);
+    v_scheduled_quantity numeric(18,4);
+BEGIN
+    v_row := CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+    IF v_row.source_doc_type = 'purchase_requisition_line' THEN
+        SELECT quantity INTO v_parent_quantity
+          FROM document.purchase_requisition_line
+         WHERE tenant_id = v_row.tenant_id AND id = v_row.source_line_id;
+    ELSIF v_row.source_doc_type = 'commitment_line' THEN
+        SELECT quantity INTO v_parent_quantity
+          FROM document.commitment_line
+         WHERE tenant_id = v_row.tenant_id AND id = v_row.source_line_id;
+    ELSE
+        SELECT quantity INTO v_parent_quantity
+          FROM document.purchase_invoice_line
+         WHERE tenant_id = v_row.tenant_id AND id = v_row.source_line_id;
+    END IF;
+
+    IF v_parent_quantity IS NULL THEN
+        RETURN NULL;
+    END IF;
+    SELECT COALESCE(sum(scheduled_quantity), 0)
+      INTO v_scheduled_quantity
+      FROM document.schedule_line
+     WHERE tenant_id = v_row.tenant_id
+       AND source_doc_type = v_row.source_doc_type
+       AND source_line_id = v_row.source_line_id
+       AND is_current_version
+       AND terminal_status IS NULL;
+    IF v_scheduled_quantity > v_parent_quantity THEN
+        RAISE EXCEPTION 'SCHEDULE_QUANTITY_EXCEEDED: scheduled % exceeds source-line quantity %',
+            v_scheduled_quantity, v_parent_quantity;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_set_commerce_created_by()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_actor uuid := nullif(
+        current_setting('app.current_principal_id', true), ''
+    )::uuid;
+BEGIN
+    IF current_user = 'athyperapp' AND v_actor IS NULL THEN
+        RAISE EXCEPTION 'Current principal context is required'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    IF v_actor IS NOT NULL THEN
+        NEW.created_by := v_actor;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sales_order_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE
+    v_company  uuid;
+    v_currency character(3);
+    v_item_company uuid;
+BEGIN
+    SELECT company_code_id, currency_code
+      INTO v_company, v_currency
+      FROM document.sales_order
+     WHERE tenant_id = NEW.tenant_id
+       AND id = NEW.sales_order_id;
+
+    SELECT company_code_id INTO v_item_company
+      FROM master.item
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.item_id;
+
+    IF v_currency IS NOT NULL AND NEW.currency_code <> v_currency THEN
+        RAISE EXCEPTION 'Sales-order line currency must match its header'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF v_company IS NOT NULL
+       AND v_item_company IS NOT NULL
+       AND v_company <> v_item_company THEN
+        RAISE EXCEPTION 'Sales-order item must belong to the order company code'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_production_order()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, snapshot
+AS $$
+DECLARE
+    v_company uuid;
+    v_item    uuid;
+    v_uom     text;
+BEGIN
+    SELECT company_code_id, output_item_id, uom_code
+      INTO v_company, v_item, v_uom
+      FROM snapshot.bom
+     WHERE tenant_id = NEW.tenant_id
+       AND id = NEW.bom_snapshot_id;
+
+    IF FOUND AND (
+        v_company <> NEW.company_code_id
+        OR v_item <> NEW.output_item_id
+        OR v_uom <> NEW.uom_code
+    ) THEN
+        RAISE EXCEPTION
+            'Production order company, output item, and UOM must match its BOM snapshot'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_production_order_component()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, snapshot
+AS $$
+DECLARE
+    v_order_snapshot uuid;
+    v_component_snapshot snapshot.bom_component%ROWTYPE;
+BEGIN
+    IF NEW.bom_component_snapshot_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT bom_snapshot_id INTO v_order_snapshot
+      FROM document.production_order
+     WHERE tenant_id = NEW.tenant_id
+       AND id = NEW.production_order_id;
+
+    SELECT * INTO v_component_snapshot
+      FROM snapshot.bom_component
+     WHERE tenant_id = NEW.tenant_id
+       AND id = NEW.bom_component_snapshot_id;
+
+    IF FOUND AND (
+        v_component_snapshot.bom_snapshot_id <> v_order_snapshot
+        OR v_component_snapshot.component_item_id <> NEW.component_item_id
+        OR v_component_snapshot.uom_code <> NEW.uom_code
+    ) THEN
+        RAISE EXCEPTION
+            'Production component must match a component of the order BOM snapshot'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_stocktake_completion()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_actor uuid := nullif(current_setting('app.current_principal_id', true), '')::uuid;
+    v_missing_count integer;
+    v_missing_movement integer;
+BEGIN
+    IF TG_OP = 'UPDATE' AND OLD.status IN ('completed', 'cancelled') AND NEW IS DISTINCT FROM OLD THEN
+        RAISE EXCEPTION 'Completed or cancelled stocktake is immutable'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    IF NEW.status = 'completed' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF v_actor IS NULL THEN
+            RAISE EXCEPTION 'Current principal context is required to complete a stocktake'
+                USING ERRCODE = 'insufficient_privilege';
+        END IF;
+
+        SELECT count(*) FILTER (WHERE counted_quantity IS NULL),
+               count(*) FILTER (
+                   WHERE counted_quantity IS NOT NULL
+                     AND counted_quantity <> system_quantity
+                     AND posted_inventory_movement_id IS NULL
+               )
+          INTO v_missing_count, v_missing_movement
+          FROM document.stocktake_line
+         WHERE tenant_id = NEW.tenant_id AND stocktake_id = NEW.id;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM document.stocktake_line
+             WHERE tenant_id = NEW.tenant_id AND stocktake_id = NEW.id
+        ) THEN
+            RAISE EXCEPTION 'A stocktake cannot be completed without lines'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        IF v_missing_count > 0 THEN
+            RAISE EXCEPTION 'Every stocktake line must be counted before completion'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        IF v_missing_movement > 0 THEN
+            RAISE EXCEPTION 'Every non-zero stocktake variance must reference its inventory movement'
+                USING ERRCODE = 'check_violation';
+        END IF;
+
+        NEW.completed_at := statement_timestamp();
+        NEW.completed_by := v_actor;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_stocktake_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master, ledger
+AS $$
+DECLARE
+    v_header document.stocktake%ROWTYPE;
+    v_item_company uuid;
+    v_actor uuid := nullif(current_setting('app.current_principal_id', true), '')::uuid;
+    v_movement ledger.inventory_movement%ROWTYPE;
+BEGIN
+    SELECT * INTO v_header
+      FROM document.stocktake
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.stocktake_id;
+
+    IF FOUND AND v_header.status NOT IN ('planned', 'in_progress') THEN
+        RAISE EXCEPTION 'Stocktake lines can only be changed while the stocktake is planned or in progress'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    SELECT company_code_id INTO v_item_company
+      FROM master.item
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.item_id;
+    IF FOUND AND v_item_company <> v_header.company_code_id THEN
+        RAISE EXCEPTION 'Stocktake item and warehouse must belong to the same company code'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_OP = 'INSERT' OR NEW.counted_quantity IS DISTINCT FROM OLD.counted_quantity THEN
+        IF NEW.counted_quantity IS NULL THEN
+            NEW.counted_at := NULL;
+            NEW.counted_by := NULL;
+        ELSE
+            IF v_actor IS NULL THEN
+                RAISE EXCEPTION 'Current principal context is required to record a count'
+                    USING ERRCODE = 'insufficient_privilege';
+            END IF;
+            NEW.counted_at := statement_timestamp();
+            NEW.counted_by := v_actor;
+        END IF;
+    END IF;
+
+    IF NEW.posted_inventory_movement_id IS NOT NULL THEN
+        SELECT * INTO v_movement
+          FROM ledger.inventory_movement
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.posted_inventory_movement_id;
+        IF FOUND AND (
+            v_movement.company_code_id <> v_header.company_code_id
+            OR v_movement.warehouse_id <> v_header.warehouse_id
+            OR v_movement.item_id <> NEW.item_id
+            OR v_movement.uom_code <> NEW.uom_code
+            OR v_movement.currency_code <> NEW.currency_code
+            OR v_movement.source_entity_type <> 'document.stocktake'
+            OR v_movement.source_entity_id <> NEW.stocktake_id
+            OR v_movement.source_line_id IS DISTINCT FROM NEW.id
+            OR v_movement.quantity <> (NEW.counted_quantity - NEW.system_quantity)
+        ) THEN
+            RAISE EXCEPTION 'Posted inventory movement does not match the stocktake variance line'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_stocktake_line_delete()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE v_status document.stocktake_status_d;
+BEGIN
+    SELECT status INTO v_status FROM document.stocktake
+     WHERE tenant_id = OLD.tenant_id AND id = OLD.stocktake_id;
+    IF v_status NOT IN ('planned', 'in_progress') THEN
+        RAISE EXCEPTION 'Stocktake lines cannot be deleted after completion or cancellation'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    RETURN OLD;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sales_header()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+          FROM master.sales_organization_profile p
+         WHERE p.tenant_id = NEW.tenant_id
+           AND p.operating_organization_id = NEW.operating_organization_id
+    ) THEN
+        RAISE EXCEPTION 'Operating organization does not have a sales profile'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF NEW.principal_seller_company_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1
+          FROM master.operating_organization_company_assignment a
+         WHERE a.tenant_id = NEW.tenant_id
+           AND a.operating_organization_id = NEW.operating_organization_id
+           AND a.company_code_id = NEW.principal_seller_company_id
+           AND a.status = 'active'
+           AND a.effective_from <= CURRENT_DATE
+           AND (a.effective_until IS NULL OR a.effective_until > CURRENT_DATE)
+    ) THEN
+        RAISE EXCEPTION 'Principal seller company is not active in the sales operating organization'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sales_company()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE
+    v_org uuid;
+BEGIN
+    IF TG_ARGV[0] = 'opportunity' THEN
+        SELECT operating_organization_id INTO v_org
+          FROM document.sales_opportunity
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.opportunity_id;
+    ELSE
+        SELECT operating_organization_id INTO v_org
+          FROM document.sales_quotation
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.quotation_id;
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1
+          FROM master.operating_organization_company_assignment a
+         WHERE a.tenant_id = NEW.tenant_id
+           AND a.operating_organization_id = v_org
+           AND a.company_code_id = NEW.company_code_id
+           AND a.status = 'active'
+           AND a.effective_from <= CURRENT_DATE
+           AND (a.effective_until IS NULL OR a.effective_until > CURRENT_DATE)
+    ) THEN
+        RAISE EXCEPTION 'Participating company is not active in the sales operating organization'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sales_quotation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE v_opp document.sales_opportunity%ROWTYPE;
+BEGIN
+    IF NEW.opportunity_id IS NOT NULL THEN
+        SELECT * INTO v_opp FROM document.sales_opportunity
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.opportunity_id;
+        IF FOUND AND (
+            v_opp.customer_id <> NEW.customer_id
+            OR v_opp.operating_organization_id <> NEW.operating_organization_id
+            OR v_opp.selling_model <> NEW.selling_model
+            OR v_opp.principal_seller_company_id IS DISTINCT FROM NEW.principal_seller_company_id
+        ) THEN
+            RAISE EXCEPTION 'Quotation commercial context must match its opportunity'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sales_allocation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_order document.sales_order%ROWTYPE;
+    v_total numeric(18,6);
+BEGIN
+    SELECT total_amount INTO v_total FROM document.sales_quotation
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.quotation_id;
+    IF NEW.allocation_amount IS NOT NULL AND NEW.allocation_amount > v_total THEN
+        RAISE EXCEPTION 'Quotation allocation amount cannot exceed quotation total'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.output_sales_order_id IS NOT NULL THEN
+        SELECT * INTO v_order FROM document.sales_order
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.output_sales_order_id;
+        IF FOUND AND (
+            v_order.quotation_id IS DISTINCT FROM NEW.quotation_id
+            OR v_order.company_code_id <> NEW.company_code_id
+        ) THEN
+            RAISE EXCEPTION 'Converted sales order must belong to the allocation quotation and company'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_intercompany_fulfillment()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE v_order document.sales_order%ROWTYPE;
+BEGIN
+    SELECT * INTO v_order FROM document.sales_order
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.sales_order_id;
+    IF FOUND AND (
+        v_order.company_code_id <> NEW.selling_company_code_id
+        OR v_order.currency_code <> NEW.currency_code
+        OR NEW.allocation_amount > v_order.total_amount
+        OR (NEW.status = 'posted' AND v_order.status NOT IN ('confirmed', 'partially_fulfilled', 'fulfilled'))
+    ) THEN
+        RAISE EXCEPTION 'Intercompany fulfilment must match the sales-order owner, currency, and value ceiling'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sales_order_quotation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE v_quote document.sales_quotation%ROWTYPE;
+BEGIN
+    IF NEW.quotation_id IS NULL THEN RETURN NEW; END IF;
+    SELECT * INTO v_quote FROM document.sales_quotation
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.quotation_id;
+    IF FOUND AND (
+        v_quote.customer_id <> NEW.customer_id
+        OR v_quote.currency_code <> NEW.currency_code
+        OR NOT EXISTS (
+            SELECT 1 FROM document.sales_quotation_company c
+             WHERE c.tenant_id = NEW.tenant_id
+               AND c.quotation_id = NEW.quotation_id
+               AND c.company_code_id = NEW.company_code_id
+               AND c.status = 'active'
+        )
+    ) THEN
+        RAISE EXCEPTION 'Sales order must match the originating quotation customer, currency, and active company'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.assert_intercompany_fulfillment_total(
+    p_tenant_id uuid,
+    p_sales_order_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE v_order_total numeric(18,6); v_allocated numeric(18,6);
+BEGIN
+    SELECT total_amount INTO v_order_total FROM document.sales_order
+     WHERE tenant_id = p_tenant_id AND id = p_sales_order_id;
+    IF NOT FOUND THEN RETURN; END IF;
+    SELECT coalesce(sum(allocation_amount), 0) INTO v_allocated
+      FROM document.sales_order_intercompany_fulfillment
+     WHERE tenant_id = p_tenant_id AND sales_order_id = p_sales_order_id
+       AND status <> 'cancelled';
+    IF v_allocated > v_order_total THEN
+        RAISE EXCEPTION 'Active intercompany fulfilment allocations exceed sales-order total'
+            USING ERRCODE = 'check_violation';
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_assert_intercompany_fulfillment_total()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+BEGIN
+    PERFORM document.assert_intercompany_fulfillment_total(
+        coalesce(NEW.tenant_id, OLD.tenant_id),
+        coalesce(
+            (to_jsonb(NEW)->>'sales_order_id')::uuid,
+            (to_jsonb(OLD)->>'sales_order_id')::uuid,
+            (to_jsonb(NEW)->>'id')::uuid,
+            (to_jsonb(OLD)->>'id')::uuid
+        )
+    );
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.assert_sales_opportunity_structure(
+    p_tenant_id uuid,
+    p_opportunity_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE v_header document.sales_opportunity%ROWTYPE;
+BEGIN
+    SELECT * INTO v_header FROM document.sales_opportunity
+     WHERE tenant_id = p_tenant_id AND id = p_opportunity_id;
+    IF NOT FOUND THEN RETURN; END IF;
+
+    IF v_header.status NOT IN ('draft', 'cancelled') AND NOT EXISTS (
+        SELECT 1 FROM document.sales_opportunity_company c
+         WHERE c.tenant_id = p_tenant_id AND c.opportunity_id = p_opportunity_id
+           AND c.status = 'active'
+    ) THEN
+        RAISE EXCEPTION 'Active sales opportunity requires at least one participating company'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF v_header.principal_seller_company_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM document.sales_opportunity_company c
+         WHERE c.tenant_id = p_tenant_id AND c.opportunity_id = p_opportunity_id
+           AND c.company_code_id = v_header.principal_seller_company_id
+           AND c.participation_role = 'lead_seller' AND c.status = 'active'
+    ) THEN
+        RAISE EXCEPTION 'Principal seller must be the active lead company on the opportunity'
+            USING ERRCODE = 'check_violation';
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.assert_sales_quotation_structure(
+    p_tenant_id uuid,
+    p_quotation_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_header document.sales_quotation%ROWTYPE;
+    v_rows integer;
+    v_percent_rows integer;
+    v_amount_rows integer;
+    v_percent numeric;
+    v_amount numeric;
+    v_unconverted integer;
+BEGIN
+    SELECT * INTO v_header FROM document.sales_quotation
+     WHERE tenant_id = p_tenant_id AND id = p_quotation_id;
+    IF NOT FOUND THEN RETURN; END IF;
+
+    IF v_header.status NOT IN ('draft', 'cancelled') AND NOT EXISTS (
+        SELECT 1 FROM document.sales_quotation_company c
+         WHERE c.tenant_id = p_tenant_id AND c.quotation_id = p_quotation_id
+           AND c.status = 'active'
+    ) THEN
+        RAISE EXCEPTION 'Submitted sales quotation requires at least one participating company'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF v_header.principal_seller_company_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM document.sales_quotation_company c
+         WHERE c.tenant_id = p_tenant_id AND c.quotation_id = p_quotation_id
+           AND c.company_code_id = v_header.principal_seller_company_id
+           AND c.participation_role = 'lead_seller' AND c.status = 'active'
+    ) THEN
+        RAISE EXCEPTION 'Principal seller must be the active lead company on the quotation'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    SELECT count(*), count(allocation_percent), count(allocation_amount),
+           coalesce(sum(allocation_percent), 0), coalesce(sum(allocation_amount), 0),
+           count(*) FILTER (WHERE status <> 'converted')
+      INTO v_rows, v_percent_rows, v_amount_rows, v_percent, v_amount, v_unconverted
+      FROM document.sales_quotation_allocation
+     WHERE tenant_id = p_tenant_id AND quotation_id = p_quotation_id
+       AND status <> 'cancelled';
+
+    IF v_header.status IN ('submitted', 'approved', 'converted') AND v_rows > 0 THEN
+        IF v_percent_rows > 0 AND (v_percent_rows <> v_rows OR v_percent <> 100) THEN
+            RAISE EXCEPTION 'Active quotation percentage allocations must total exactly 100'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        IF v_amount_rows > 0 AND (v_amount_rows <> v_rows OR v_amount <> v_header.total_amount) THEN
+            RAISE EXCEPTION 'Active quotation amount allocations must total the quotation amount'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+    IF v_header.status = 'converted' AND (v_rows = 0 OR v_unconverted > 0) THEN
+        RAISE EXCEPTION 'Converted quotation requires converted company allocations'
+            USING ERRCODE = 'check_violation';
+    END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_assert_sales_opportunity_structure()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+BEGIN
+    PERFORM document.assert_sales_opportunity_structure(
+        coalesce(NEW.tenant_id, OLD.tenant_id),
+        coalesce(
+            (to_jsonb(NEW)->>'opportunity_id')::uuid,
+            (to_jsonb(OLD)->>'opportunity_id')::uuid,
+            (to_jsonb(NEW)->>'id')::uuid,
+            (to_jsonb(OLD)->>'id')::uuid
+        )
+    );
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_assert_sales_quotation_structure()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+BEGIN
+    PERFORM document.assert_sales_quotation_structure(
+        coalesce(NEW.tenant_id, OLD.tenant_id),
+        coalesce(
+            (to_jsonb(NEW)->>'quotation_id')::uuid,
+            (to_jsonb(OLD)->>'quotation_id')::uuid,
+            (to_jsonb(NEW)->>'id')::uuid,
+            (to_jsonb(OLD)->>'id')::uuid
+        )
+    );
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_bank_statement()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE v_account_currency character(3);
+BEGIN
+    SELECT currency_code INTO v_account_currency
+      FROM master.bank_account
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.bank_account_id;
+    IF FOUND AND v_account_currency <> NEW.currency_code THEN
+        RAISE EXCEPTION 'Bank statement currency must match the bank account currency'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM master.bank_account_link l
+         WHERE l.tenant_id = NEW.tenant_id
+           AND l.bank_account_id = NEW.bank_account_id
+           AND (l.company_code_id = NEW.company_code_id
+                OR (l.owner_type = 'company_code' AND l.owner_id = NEW.company_code_id))
+           AND l.effective_from <= NEW.period_end_date
+           AND (l.effective_until IS NULL OR l.effective_until > NEW.period_start_date)
+    ) THEN
+        RAISE EXCEPTION 'Bank account is not linked to the statement company for this period'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_bank_statement_state()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_actor uuid := nullif(current_setting('app.current_principal_id', true), '')::uuid;
+    v_line_count integer;
+    v_open_count integer;
+    v_net numeric(20,4);
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'imported' THEN
+        RAISE EXCEPTION 'Bank statement must be created as imported' USING ERRCODE='check_violation';
+    END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NOT (
+        (OLD.status='imported' AND NEW.status IN ('matching','rejected')) OR
+        (OLD.status='matching' AND NEW.status IN ('reconciled','rejected')) OR
+        (OLD.status='reconciled' AND NEW.status IN ('matching','signed_off')) OR
+        (OLD.status='signed_off' AND NEW.status='archived')
+    ) THEN
+        RAISE EXCEPTION 'Invalid bank statement status transition: % -> %',OLD.status,NEW.status USING ERRCODE='check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND OLD.status IN ('archived', 'rejected') AND NEW IS DISTINCT FROM OLD THEN
+        RAISE EXCEPTION 'Finalized bank statement is immutable'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP='UPDATE' AND OLD.status='signed_off' AND NEW.status='archived'
+       AND (to_jsonb(NEW)-ARRAY['status','status_changed_at','status_changed_by','updated_at','updated_by'])
+           IS DISTINCT FROM (to_jsonb(OLD)-ARRAY['status','status_changed_at','status_changed_by','updated_at','updated_by']) THEN
+        RAISE EXCEPTION 'Archiving cannot alter signed-off bank statement facts' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.status IN ('reconciled', 'signed_off')
+       AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        SELECT count(*),
+               count(*) FILTER (WHERE recon_status NOT IN ('matched', 'excluded')),
+               coalesce(sum(amount), 0)
+          INTO v_line_count, v_open_count, v_net
+          FROM document.bank_statement_line
+         WHERE tenant_id = NEW.tenant_id AND bank_statement_id = NEW.id;
+        IF v_line_count = 0 OR v_open_count > 0 THEN
+            RAISE EXCEPTION 'Reconciled bank statement requires lines and no unresolved reconciliation statuses'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        IF NEW.opening_balance + v_net <> NEW.closing_balance THEN
+            RAISE EXCEPTION 'Bank statement opening balance plus signed line amounts must equal closing balance'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+    IF NEW.status = 'signed_off' AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF v_actor IS NULL THEN
+            RAISE EXCEPTION 'Current principal context is required to sign off a bank statement'
+                USING ERRCODE = 'insufficient_privilege';
+        END IF;
+        NEW.signed_off_at := statement_timestamp();
+        NEW.signed_off_by := v_actor;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_bank_statement_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE v_header_status document.bank_statement_status_d;
+BEGIN
+    SELECT status INTO v_header_status FROM document.bank_statement
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.bank_statement_id;
+    IF v_header_status IN ('signed_off', 'archived', 'rejected') THEN
+        RAISE EXCEPTION 'Lines of a finalized bank statement are immutable'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        IF NEW.tenant_id <> OLD.tenant_id OR NEW.bank_statement_id <> OLD.bank_statement_id
+           OR NEW.line_no <> OLD.line_no OR NEW.transaction_date <> OLD.transaction_date
+           OR NEW.value_date IS DISTINCT FROM OLD.value_date OR NEW.description <> OLD.description
+           OR NEW.reference_number IS DISTINCT FROM OLD.reference_number
+           OR NEW.counterparty_name IS DISTINCT FROM OLD.counterparty_name
+           OR NEW.counterparty_account IS DISTINCT FROM OLD.counterparty_account
+           OR NEW.amount <> OLD.amount OR NEW.running_balance IS DISTINCT FROM OLD.running_balance
+           OR NEW.currency_code <> OLD.currency_code OR NEW.transaction_type <> OLD.transaction_type
+           OR NEW.idempotency_key <> OLD.idempotency_key OR NEW.raw_data <> OLD.raw_data
+           OR NEW.created_at <> OLD.created_at OR NEW.created_by <> OLD.created_by THEN
+            RAISE EXCEPTION 'Imported bank-statement facts and creation evidence are immutable'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        IF NEW.recon_status IS DISTINCT FROM OLD.recon_status AND pg_trigger_depth() < 2 THEN
+            IF NOT (
+                NEW.recon_status IN ('excluded', 'unmatched')
+                AND OLD.recon_status IN ('excluded', 'unmatched')
+                AND NOT EXISTS (
+                    SELECT 1 FROM document.bank_recon_case_line l
+                    JOIN document.bank_recon_case c
+                      ON c.tenant_id=l.tenant_id AND c.id=l.bank_recon_case_id
+                   WHERE l.tenant_id=NEW.tenant_id AND l.bank_statement_line_id=NEW.id
+                     AND c.status <> 'voided'
+                )
+            ) THEN
+                RAISE EXCEPTION 'Reconciliation status is maintained from active reconciliation cases'
+                    USING ERRCODE = 'check_violation';
+            END IF;
+        END IF;
+    ELSE
+        IF NEW.currency_code <> (
+            SELECT currency_code FROM document.bank_statement
+             WHERE tenant_id=NEW.tenant_id AND id=NEW.bank_statement_id
+        ) THEN
+            RAISE EXCEPTION 'Bank-statement line currency must match its header'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.refresh_bank_reconciliation_projections(
+    p_tenant_id uuid,
+    p_case_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE v_book numeric(20,4); v_bank numeric(20,4); v_line record; v_alloc numeric(20,4); v_amount numeric(20,4);
+BEGIN
+    SELECT coalesce(sum(amount) FILTER (WHERE side='payment'),0),
+           coalesce(sum(amount) FILTER (WHERE side='statement'),0)
+      INTO v_book, v_bank
+      FROM document.bank_recon_case_line
+     WHERE tenant_id=p_tenant_id AND bank_recon_case_id=p_case_id;
+    UPDATE document.bank_recon_case
+       SET book_amount=v_book, bank_amount=v_bank
+     WHERE tenant_id=p_tenant_id AND id=p_case_id
+       AND (book_amount IS DISTINCT FROM v_book OR bank_amount IS DISTINCT FROM v_bank);
+
+    FOR v_line IN
+        SELECT DISTINCT bank_statement_line_id AS id
+          FROM document.bank_recon_case_line
+         WHERE tenant_id=p_tenant_id AND bank_recon_case_id=p_case_id
+           AND bank_statement_line_id IS NOT NULL
+    LOOP
+        SELECT abs(amount) INTO v_amount FROM document.bank_statement_line
+         WHERE tenant_id=p_tenant_id AND id=v_line.id;
+        SELECT coalesce(sum(l.amount),0) INTO v_alloc
+          FROM document.bank_recon_case_line l
+          JOIN document.bank_recon_case c ON c.tenant_id=l.tenant_id AND c.id=l.bank_recon_case_id
+         WHERE l.tenant_id=p_tenant_id AND l.bank_statement_line_id=v_line.id
+           AND c.status <> 'voided';
+        UPDATE document.bank_statement_line
+           SET recon_status = CASE WHEN v_alloc=0 THEN 'unmatched'
+                                   WHEN v_alloc<v_amount THEN 'partially_matched'
+                                   ELSE 'matched' END
+         WHERE tenant_id=p_tenant_id AND id=v_line.id
+           AND recon_status IS DISTINCT FROM CASE WHEN v_alloc=0 THEN 'unmatched'
+                                                  WHEN v_alloc<v_amount THEN 'partially_matched'
+                                                  ELSE 'matched' END;
+    END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_bank_recon_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_case document.bank_recon_case%ROWTYPE;
+    v_source_amount numeric(20,4);
+    v_currency character(3);
+    v_company uuid;
+    v_existing numeric(20,4);
+BEGIN
+    SELECT * INTO v_case FROM document.bank_recon_case
+     WHERE tenant_id=NEW.tenant_id AND id=NEW.bank_recon_case_id;
+    IF v_case.status <> 'open' THEN
+        RAISE EXCEPTION 'Reconciliation lines can only be added to an open case'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    IF NEW.side='payment' THEN
+        PERFORM pg_advisory_xact_lock(hashtextextended(NEW.tenant_id::text || ':payment:' || NEW.payment_entry_id::text,0));
+        SELECT abs(coalesce(bank_currency_amount,payment_amount)),
+               coalesce(bank_currency_code,currency_code), company_code_id
+          INTO v_source_amount,v_currency,v_company
+          FROM document.payment_entry
+         WHERE tenant_id=NEW.tenant_id AND id=NEW.payment_entry_id;
+        SELECT coalesce(sum(l.amount),0) INTO v_existing
+          FROM document.bank_recon_case_line l
+          JOIN document.bank_recon_case c ON c.tenant_id=l.tenant_id AND c.id=l.bank_recon_case_id
+         WHERE l.tenant_id=NEW.tenant_id AND l.payment_entry_id=NEW.payment_entry_id
+           AND c.status <> 'voided';
+        IF EXISTS (
+            SELECT 1 FROM document.bank_recon_case_line l
+            JOIN document.bank_recon_case c ON c.tenant_id=l.tenant_id AND c.id=l.bank_recon_case_id
+             WHERE l.tenant_id=NEW.tenant_id AND l.payment_entry_id=NEW.payment_entry_id
+               AND l.bank_recon_case_id<>NEW.bank_recon_case_id AND c.status<>'voided'
+        ) THEN RAISE EXCEPTION 'Payment is already allocated to another active reconciliation case' USING ERRCODE='unique_violation'; END IF;
+    ELSE
+        PERFORM pg_advisory_xact_lock(hashtextextended(NEW.tenant_id::text || ':statement:' || NEW.bank_statement_line_id::text,0));
+        SELECT abs(l.amount),l.currency_code,s.company_code_id
+          INTO v_source_amount,v_currency,v_company
+          FROM document.bank_statement_line l
+          JOIN document.bank_statement s ON s.tenant_id=l.tenant_id AND s.id=l.bank_statement_id
+         WHERE l.tenant_id=NEW.tenant_id AND l.id=NEW.bank_statement_line_id;
+        SELECT coalesce(sum(l.amount),0) INTO v_existing
+          FROM document.bank_recon_case_line l
+          JOIN document.bank_recon_case c ON c.tenant_id=l.tenant_id AND c.id=l.bank_recon_case_id
+         WHERE l.tenant_id=NEW.tenant_id AND l.bank_statement_line_id=NEW.bank_statement_line_id
+           AND c.status <> 'voided';
+        IF EXISTS (
+            SELECT 1 FROM document.bank_recon_case_line l
+            JOIN document.bank_recon_case c ON c.tenant_id=l.tenant_id AND c.id=l.bank_recon_case_id
+             WHERE l.tenant_id=NEW.tenant_id AND l.bank_statement_line_id=NEW.bank_statement_line_id
+               AND l.bank_recon_case_id<>NEW.bank_recon_case_id AND c.status<>'voided'
+        ) THEN RAISE EXCEPTION 'Statement line is already allocated to another active reconciliation case' USING ERRCODE='unique_violation'; END IF;
+    END IF;
+    IF v_company <> v_case.company_code_id OR v_currency <> v_case.currency_code THEN
+        RAISE EXCEPTION 'Reconciliation source company and currency must match its case'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF v_existing + NEW.amount > v_source_amount THEN
+        RAISE EXCEPTION 'Active reconciliation allocations exceed the source amount'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_after_bank_recon_line()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+BEGIN
+    PERFORM document.refresh_bank_reconciliation_projections(NEW.tenant_id,NEW.bank_recon_case_id);
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_bank_recon_case()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE v_actor uuid:=nullif(current_setting('app.current_principal_id',true),'')::uuid; v_journal document.journal_entry%ROWTYPE;
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'open' THEN RAISE EXCEPTION 'Reconciliation case must be created open' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NOT (
+        (OLD.status='open' AND NEW.status IN ('matched','voided')) OR
+        (OLD.status='matched' AND NEW.status IN ('open','signed_off','voided'))
+    ) THEN RAISE EXCEPTION 'Invalid reconciliation case status transition: % -> %',OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND (NEW.book_amount IS DISTINCT FROM OLD.book_amount OR NEW.bank_amount IS DISTINCT FROM OLD.bank_amount)
+       AND pg_trigger_depth()<2 THEN
+        RAISE EXCEPTION 'Reconciliation totals are database-maintained from case lines'
+            USING ERRCODE='check_violation';
+    END IF;
+    IF TG_OP='UPDATE' AND OLD.status IN ('signed_off','voided') AND NEW IS DISTINCT FROM OLD THEN
+        RAISE EXCEPTION 'Signed-off or voided reconciliation case is immutable'
+            USING ERRCODE='object_not_in_prerequisite_state';
+    END IF;
+    IF NEW.status='matched' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF NEW.book_amount=0 OR NEW.bank_amount=0 THEN RAISE EXCEPTION 'Matched case requires both book and bank allocations' USING ERRCODE='check_violation'; END IF;
+        IF NEW.case_type IN ('exact_match','amount_match') AND NEW.book_amount-NEW.bank_amount<>0 THEN RAISE EXCEPTION 'Exact and amount matches must balance' USING ERRCODE='check_violation'; END IF;
+        NEW.matched_at:=statement_timestamp();
+    END IF;
+    IF NEW.status='signed_off' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF TG_OP='INSERT' OR OLD.status IS DISTINCT FROM 'matched' OR v_actor IS NULL THEN RAISE EXCEPTION 'Only a matched case with actor context can be signed off' USING ERRCODE='check_violation'; END IF;
+        IF NEW.book_amount-NEW.bank_amount<>0 AND NEW.sign_off_journal_entry_id IS NULL THEN RAISE EXCEPTION 'Non-zero reconciliation difference requires an adjustment journal' USING ERRCODE='check_violation'; END IF;
+        IF NEW.sign_off_journal_entry_id IS NOT NULL THEN
+            SELECT * INTO v_journal FROM document.journal_entry WHERE tenant_id=NEW.tenant_id AND id=NEW.sign_off_journal_entry_id;
+            IF FOUND AND (v_journal.company_code_id<>NEW.company_code_id OR v_journal.transaction_currency_code<>NEW.currency_code OR v_journal.source_entity_type<>'document.bank_recon_case' OR v_journal.source_entity_id IS DISTINCT FROM NEW.id OR v_journal.status<>'posted') THEN
+                RAISE EXCEPTION 'Adjustment journal must be posted for this reconciliation case, company, and currency' USING ERRCODE='check_violation';
+            END IF;
+        END IF;
+        NEW.signed_off_at:=statement_timestamp(); NEW.signed_off_by:=v_actor;
+    END IF;
+    IF NEW.status='voided' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF OLD.status='signed_off' OR v_actor IS NULL OR NEW.void_reason IS NULL THEN RAISE EXCEPTION 'Unsigned case and actor/reason are required to void reconciliation' USING ERRCODE='check_violation'; END IF;
+        NEW.voided_at:=statement_timestamp(); NEW.voided_by:=v_actor;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_depreciation_run()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path=pg_catalog,document,master
+AS $$
+DECLARE v_period master.fiscal_period%ROWTYPE; v_book master.ledger_book%ROWTYPE; v_effective_currency character(3); v_original document.depreciation_run%ROWTYPE;
+BEGIN
+    SELECT * INTO v_period FROM master.fiscal_period WHERE tenant_id=NEW.tenant_id AND id=NEW.fiscal_period_id;
+    SELECT * INTO v_book FROM master.ledger_book WHERE tenant_id=NEW.tenant_id AND id=NEW.ledger_book_id;
+    IF FOUND AND v_period.company_code_id<>NEW.company_code_id THEN RAISE EXCEPTION 'Depreciation fiscal period must belong to the run company' USING ERRCODE='check_violation'; END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM master.company_code_book_assignment a
+         WHERE a.tenant_id=NEW.tenant_id AND a.company_code_id=NEW.company_code_id AND a.book_id=NEW.ledger_book_id
+           AND a.status='active' AND a.effective_from<=v_period.end_date
+           AND (a.effective_to IS NULL OR a.effective_to>=v_period.start_date)
+    ) THEN RAISE EXCEPTION 'Ledger book is not actively assigned to the run company and fiscal period' USING ERRCODE='foreign_key_violation'; END IF;
+    SELECT coalesce(a.override_currency_code,v_book.base_currency_code) INTO v_effective_currency
+      FROM master.company_code_book_assignment a
+     WHERE a.tenant_id=NEW.tenant_id AND a.company_code_id=NEW.company_code_id AND a.book_id=NEW.ledger_book_id
+       AND a.status='active' AND a.effective_from<=v_period.end_date AND (a.effective_to IS NULL OR a.effective_to>=v_period.start_date)
+     ORDER BY a.priority DESC,a.effective_from DESC LIMIT 1;
+    IF v_effective_currency<>NEW.currency_code THEN RAISE EXCEPTION 'Depreciation run currency must match the effective company book currency' USING ERRCODE='check_violation'; END IF;
+    IF NEW.reversal_of_run_id IS NOT NULL THEN
+        SELECT * INTO v_original FROM document.depreciation_run WHERE tenant_id=NEW.tenant_id AND id=NEW.reversal_of_run_id;
+        IF FOUND AND (v_original.status<>'posted' OR v_original.company_code_id<>NEW.company_code_id OR v_original.ledger_book_id<>NEW.ledger_book_id OR v_original.fiscal_period_id<>NEW.fiscal_period_id OR v_original.currency_code<>NEW.currency_code) THEN
+            RAISE EXCEPTION 'Depreciation reversal must mirror a posted run in the same accounting coordinates' USING ERRCODE='check_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_depreciation_run()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path=pg_catalog,document,ledger
+AS $$
+DECLARE v_actor uuid:=nullif(current_setting('app.current_principal_id',true),'')::uuid; v_bad integer; v_journal document.journal_entry%ROWTYPE;
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'planned' THEN RAISE EXCEPTION 'Depreciation run must be created planned' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IN ('posted','failed','cancelled') AND NEW IS DISTINCT FROM OLD THEN
+        RAISE EXCEPTION 'Finalized depreciation run is immutable' USING ERRCODE='object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NOT (
+        (OLD.status='planned' AND NEW.status IN ('running','cancelled')) OR
+        (OLD.status='running' AND NEW.status IN ('calculated','failed','cancelled')) OR
+        (OLD.status='calculated' AND NEW.status IN ('posted','failed','cancelled'))
+    ) THEN RAISE EXCEPTION 'Invalid depreciation run status transition: % -> %',OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND v_actor IS NULL THEN
+        RAISE EXCEPTION 'Current principal context is required for depreciation transitions' USING ERRCODE='insufficient_privilege';
+    END IF;
+    IF NEW.status='running' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN NEW.started_at:=statement_timestamp(); NEW.started_by:=v_actor; END IF;
+    IF NEW.status IN ('calculated','failed') AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        NEW.completed_at:=statement_timestamp(); NEW.completed_by:=v_actor;
+    END IF;
+    IF NEW.status='calculated' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        SELECT count(*) FILTER (WHERE status='error') INTO v_bad FROM document.depreciation_run_line WHERE tenant_id=NEW.tenant_id AND run_id=NEW.id;
+        IF NOT EXISTS (SELECT 1 FROM document.depreciation_run_line WHERE tenant_id=NEW.tenant_id AND run_id=NEW.id) OR v_bad>0 THEN
+            RAISE EXCEPTION 'Calculated depreciation run requires lines without errors' USING ERRCODE='check_violation';
+        END IF;
+    END IF;
+    IF NEW.status='posted' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF NEW.reference_journal_entry_id IS NULL THEN RAISE EXCEPTION 'Posted depreciation run requires its journal entry' USING ERRCODE='check_violation'; END IF;
+        IF NOT EXISTS (SELECT 1 FROM ledger.book_period_status b WHERE b.tenant_id=NEW.tenant_id AND b.ledger_book_id=NEW.ledger_book_id AND b.fiscal_period_id=NEW.fiscal_period_id AND b.status='open') THEN
+            RAISE EXCEPTION 'Depreciation can only post to an open ledger-book period' USING ERRCODE='object_not_in_prerequisite_state';
+        END IF;
+        SELECT * INTO v_journal FROM document.journal_entry WHERE tenant_id=NEW.tenant_id AND id=NEW.reference_journal_entry_id;
+        IF FOUND AND (v_journal.company_code_id<>NEW.company_code_id OR v_journal.ledger_book_id<>NEW.ledger_book_id OR v_journal.fiscal_period_id<>NEW.fiscal_period_id OR v_journal.transaction_currency_code<>NEW.currency_code OR v_journal.source_entity_type<>'document.depreciation_run' OR v_journal.source_entity_id IS DISTINCT FROM NEW.id OR v_journal.status<>'posted') THEN
+            RAISE EXCEPTION 'Depreciation journal must be posted for this run and its accounting coordinates' USING ERRCODE='check_violation';
+        END IF;
+        SELECT count(*) FILTER (WHERE status<>'calculated') INTO v_bad FROM document.depreciation_run_line WHERE tenant_id=NEW.tenant_id AND run_id=NEW.id;
+        IF NOT EXISTS (SELECT 1 FROM document.depreciation_run_line WHERE tenant_id=NEW.tenant_id AND run_id=NEW.id) OR v_bad>0 THEN RAISE EXCEPTION 'Only a fully calculated depreciation run can post' USING ERRCODE='check_violation'; END IF;
+        NEW.posted_at:=statement_timestamp(); NEW.posted_by:=v_actor;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_depreciation_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path=pg_catalog,document,master
+AS $$
+DECLARE v_run document.depreciation_run%ROWTYPE; v_book master.asset_book%ROWTYPE; v_schedule document.depreciation_schedule%ROWTYPE; v_original document.depreciation_run_line%ROWTYPE;
+BEGIN
+    SELECT * INTO v_run FROM document.depreciation_run WHERE tenant_id=NEW.tenant_id AND id=NEW.run_id;
+    IF TG_OP='INSERT' AND v_run.status<>'running' THEN RAISE EXCEPTION 'Depreciation lines can only be calculated while the run is running' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    SELECT * INTO v_book FROM master.asset_book WHERE tenant_id=NEW.tenant_id AND id=NEW.asset_book_id;
+    IF FOUND AND (v_book.asset_id<>NEW.asset_id OR v_book.company_code_id<>v_run.company_code_id OR v_book.ledger_book_id<>v_run.ledger_book_id OR v_book.currency_code<>NEW.currency_code OR v_book.depreciation_method<>NEW.depreciation_method OR v_book.useful_life_months<>NEW.useful_life_months) THEN
+        RAISE EXCEPTION 'Depreciation line must match its asset-book and run coordinates' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.depreciation_schedule_id IS NOT NULL THEN
+        SELECT * INTO v_schedule FROM document.depreciation_schedule WHERE tenant_id=NEW.tenant_id AND id=NEW.depreciation_schedule_id;
+        IF FOUND AND (v_schedule.asset_id<>NEW.asset_id OR v_schedule.asset_book_id<>NEW.asset_book_id OR v_schedule.fiscal_period_id<>v_run.fiscal_period_id OR v_schedule.currency_code<>NEW.currency_code) THEN
+            RAISE EXCEPTION 'Depreciation line schedule must match its asset book, fiscal period, and currency' USING ERRCODE='check_violation';
+        END IF;
+    END IF;
+    IF NEW.reversal_of_line_id IS NOT NULL THEN
+        SELECT * INTO v_original FROM document.depreciation_run_line WHERE tenant_id=NEW.tenant_id AND id=NEW.reversal_of_line_id;
+        IF FOUND AND (v_run.reversal_of_run_id IS DISTINCT FROM v_original.run_id OR v_original.asset_id<>NEW.asset_id OR v_original.asset_book_id<>NEW.asset_book_id OR v_original.depreciation_amount<>NEW.depreciation_amount) THEN
+            RAISE EXCEPTION 'Depreciation reversal line must mirror a line of the reversed run' USING ERRCODE='check_violation';
+        END IF;
+    ELSIF v_run.reversal_of_run_id IS NOT NULL THEN
+        RAISE EXCEPTION 'Every line in a reversal run must reference its original line' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_depreciation_line()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+BEGIN
+    IF TG_OP='DELETE' OR pg_trigger_depth()<2 OR NEW.status IS NOT DISTINCT FROM OLD.status THEN
+        RAISE EXCEPTION 'Depreciation run lines are append-only; only posting may advance line status internally' USING ERRCODE='object_not_in_prerequisite_state';
+    END IF;
+    IF NEW.status<>'posted'
+       OR (to_jsonb(NEW)-ARRAY['status','posted_at','posted_by'])
+          IS DISTINCT FROM (to_jsonb(OLD)-ARRAY['status','posted_at','posted_by'])
+       OR NEW.posted_at IS NULL OR NEW.posted_by IS NULL THEN
+        RAISE EXCEPTION 'Invalid depreciation line mutation' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_depreciation_schedule()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path=pg_catalog,document,master
+AS $$
+DECLARE v_book master.asset_book%ROWTYPE; v_period master.fiscal_period%ROWTYPE; v_line document.depreciation_run_line%ROWTYPE;
+BEGIN
+    SELECT * INTO v_book FROM master.asset_book WHERE tenant_id=NEW.tenant_id AND id=NEW.asset_book_id;
+    SELECT * INTO v_period FROM master.fiscal_period WHERE tenant_id=NEW.tenant_id AND id=NEW.fiscal_period_id;
+    IF v_book.asset_id<>NEW.asset_id OR v_book.company_code_id<>v_period.company_code_id OR v_book.currency_code<>NEW.currency_code THEN
+        RAISE EXCEPTION 'Depreciation schedule must match asset-book, company fiscal period, and currency' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.actual_run_line_id IS NOT NULL THEN
+        SELECT * INTO v_line FROM document.depreciation_run_line WHERE tenant_id=NEW.tenant_id AND id=NEW.actual_run_line_id;
+        IF FOUND AND (v_line.depreciation_schedule_id IS DISTINCT FROM NEW.id OR v_line.status<>'posted') THEN
+            RAISE EXCEPTION 'Actual depreciation evidence must be a posted line for this schedule' USING ERRCODE='check_violation';
+        END IF;
+    END IF;
+    IF TG_OP='UPDATE' AND OLD.status IN ('posted','cancelled') AND pg_trigger_depth()<2 AND NEW IS DISTINCT FROM OLD THEN
+        RAISE EXCEPTION 'Posted or cancelled depreciation schedule is immutable' USING ERRCODE='object_not_in_prerequisite_state';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_post_depreciation_run()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path=pg_catalog,document
+AS $$
+DECLARE v_line document.depreciation_run_line%ROWTYPE;
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status AND NEW.status='posted' THEN
+        UPDATE document.depreciation_run_line
+           SET status='posted', posted_at=NEW.posted_at, posted_by=NEW.posted_by
+         WHERE tenant_id=NEW.tenant_id AND run_id=NEW.id AND status='calculated';
+        FOR v_line IN SELECT * FROM document.depreciation_run_line WHERE tenant_id=NEW.tenant_id AND run_id=NEW.id AND status='posted' LOOP
+            IF v_line.depreciation_schedule_id IS NOT NULL THEN
+                UPDATE document.depreciation_schedule
+                   SET actual_amount = CASE WHEN v_line.reversal_of_line_id IS NULL THEN v_line.depreciation_amount ELSE actual_amount-v_line.depreciation_amount END,
+                       actual_run_line_id=v_line.id,
+                       status='posted'
+                 WHERE tenant_id=NEW.tenant_id AND id=v_line.depreciation_schedule_id;
+            END IF;
+        END LOOP;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_after_bank_recon_case_state()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_line record;
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        FOR v_line IN SELECT DISTINCT bank_statement_line_id AS id FROM document.bank_recon_case_line WHERE tenant_id=NEW.tenant_id AND bank_recon_case_id=NEW.id AND bank_statement_line_id IS NOT NULL LOOP
+            PERFORM document.refresh_bank_reconciliation_projections(NEW.tenant_id,NEW.id);
+            EXIT;
+        END LOOP;
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sourcing_event()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM master.procurement_organization_profile p WHERE p.tenant_id=NEW.tenant_id AND p.operating_organization_id=NEW.operating_organization_id) THEN
+        RAISE EXCEPTION 'Sourcing event requires a procurement operating-organization profile' USING ERRCODE='foreign_key_violation';
+    END IF;
+    IF NEW.central_buyer_company_id IS NOT NULL AND NOT EXISTS(
+        SELECT 1 FROM master.operating_organization_company_assignment a
+         WHERE a.tenant_id=NEW.tenant_id AND a.operating_organization_id=NEW.operating_organization_id
+           AND a.company_code_id=NEW.central_buyer_company_id AND a.status='active'
+           AND a.effective_from<=CURRENT_DATE AND (a.effective_until IS NULL OR a.effective_until>CURRENT_DATE)
+    ) THEN RAISE EXCEPTION 'Central buyer must actively participate in the procurement organization' USING ERRCODE='foreign_key_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_sourcing_event()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_actor uuid:=nullif(current_setting('app.current_principal_id',true),'')::uuid;
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'draft' THEN RAISE EXCEPTION 'Sourcing event must be created draft' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IN('closed','cancelled') AND NEW IS DISTINCT FROM OLD THEN RAISE EXCEPTION 'Closed or cancelled sourcing event is immutable' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NOT(
+        (OLD.status='draft' AND NEW.status IN('published','cancelled')) OR
+        (OLD.status='published' AND NEW.status IN('evaluation','cancelled')) OR
+        (OLD.status='evaluation' AND NEW.status IN('awarded','cancelled')) OR
+        (OLD.status='awarded' AND NEW.status='closed')
+    ) THEN RAISE EXCEPTION 'Invalid sourcing-event transition: % -> %',OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND v_actor IS NULL THEN RAISE EXCEPTION 'Current principal context is required for sourcing transitions' USING ERRCODE='insufficient_privilege'; END IF;
+    IF NEW.status='published' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF NEW.evaluation_currency_code IS NULL OR NEW.open_at IS NULL OR NEW.close_at IS NULL THEN RAISE EXCEPTION 'Published event requires evaluation currency and open/close times' USING ERRCODE='check_violation'; END IF;
+        IF NOT EXISTS(SELECT 1 FROM document.sourcing_event_company c WHERE c.tenant_id=NEW.tenant_id AND c.sourcing_event_id=NEW.id AND c.status='active' AND c.participation_role='lead_buyer') THEN RAISE EXCEPTION 'Published event requires one active lead buyer company' USING ERRCODE='check_violation'; END IF;
+        IF NOT EXISTS(SELECT 1 FROM document.sourcing_event_demand d WHERE d.tenant_id=NEW.tenant_id AND d.sourcing_event_id=NEW.id AND d.status='included') THEN RAISE EXCEPTION 'Published event requires included demand' USING ERRCODE='check_violation'; END IF;
+        IF EXISTS(SELECT 1 FROM document.sourcing_event_demand d WHERE d.tenant_id=NEW.tenant_id AND d.sourcing_event_id=NEW.id AND d.status='included' AND d.evaluation_currency_code<>NEW.evaluation_currency_code) THEN RAISE EXCEPTION 'All included demand must use the event evaluation currency' USING ERRCODE='check_violation'; END IF;
+        IF NEW.central_buyer_company_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM document.sourcing_event_company c WHERE c.tenant_id=NEW.tenant_id AND c.sourcing_event_id=NEW.id AND c.company_code_id=NEW.central_buyer_company_id AND c.status='active' AND c.participation_role='lead_buyer') THEN RAISE EXCEPTION 'Central buyer must be the active lead buyer' USING ERRCODE='check_violation'; END IF;
+        NEW.published_at:=statement_timestamp(); NEW.published_by:=v_actor;
+    END IF;
+    IF NEW.status='evaluation' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) AND clock_timestamp()<NEW.close_at THEN RAISE EXCEPTION 'Evaluation cannot start before the event closes' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    IF NEW.status='awarded' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF NOT EXISTS(SELECT 1 FROM document.sourcing_event_award a WHERE a.tenant_id=NEW.tenant_id AND a.sourcing_event_id=NEW.id AND a.status IN('approved','converted')) THEN RAISE EXCEPTION 'Awarded event requires an approved award' USING ERRCODE='check_violation'; END IF;
+        NEW.awarded_at:=statement_timestamp(); NEW.awarded_by:=v_actor;
+    END IF;
+    IF NEW.status='closed' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN NEW.closed_at:=statement_timestamp(); NEW.closed_by:=v_actor; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sourcing_company()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+DECLARE v_event document.sourcing_event%ROWTYPE;
+BEGIN
+    SELECT * INTO v_event FROM document.sourcing_event WHERE tenant_id=NEW.tenant_id AND id=NEW.sourcing_event_id;
+    IF v_event.status<>'draft' THEN RAISE EXCEPTION 'Event companies are fixed after publication' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    IF NOT EXISTS(SELECT 1 FROM master.operating_organization_company_assignment a WHERE a.tenant_id=NEW.tenant_id AND a.operating_organization_id=v_event.operating_organization_id AND a.company_code_id=NEW.company_code_id AND a.status='active' AND a.effective_from<=CURRENT_DATE AND (a.effective_until IS NULL OR a.effective_until>CURRENT_DATE)) THEN
+        RAISE EXCEPTION 'Event company must actively participate in its procurement organization' USING ERRCODE='foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sourcing_demand()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_event document.sourcing_event%ROWTYPE; v_line document.purchase_requisition_line%ROWTYPE; v_used_qty numeric(20,6);
+BEGIN
+    SELECT * INTO v_event FROM document.sourcing_event WHERE tenant_id=NEW.tenant_id AND id=NEW.sourcing_event_id;
+    IF v_event.status NOT IN('draft','published') THEN RAISE EXCEPTION 'Demand can only be assembled before evaluation' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    SELECT * INTO v_line FROM document.purchase_requisition_line WHERE tenant_id=NEW.tenant_id AND id=NEW.purchase_requisition_line_id;
+    IF FOUND AND (v_line.company_code_id<>NEW.demand_company_code_id OR v_line.uom_code<>NEW.uom_code OR v_line.currency_code<>NEW.source_currency_code OR NEW.requested_quantity>v_line.quantity OR NEW.requested_amount>v_line.net_amount) THEN
+        RAISE EXCEPTION 'Sourcing demand must remain within its requisition line company, UOM, currency, quantity, and amount' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.evaluation_currency_code IS DISTINCT FROM v_event.evaluation_currency_code AND v_event.evaluation_currency_code IS NOT NULL THEN RAISE EXCEPTION 'Demand evaluation currency must match the event' USING ERRCODE='check_violation'; END IF;
+    IF NOT EXISTS(SELECT 1 FROM document.sourcing_event_company c WHERE c.tenant_id=NEW.tenant_id AND c.sourcing_event_id=NEW.sourcing_event_id AND c.company_code_id=NEW.demand_company_code_id AND c.status='active') THEN RAISE EXCEPTION 'Demand company must actively participate in the event' USING ERRCODE='foreign_key_violation'; END IF;
+    PERFORM pg_advisory_xact_lock(hashtextextended(NEW.tenant_id::text||':sourcing-demand:'||NEW.purchase_requisition_line_id::text,0));
+    SELECT coalesce(sum(d.requested_quantity),0) INTO v_used_qty FROM document.sourcing_event_demand d JOIN document.sourcing_event e ON e.tenant_id=d.tenant_id AND e.id=d.sourcing_event_id WHERE d.tenant_id=NEW.tenant_id AND d.purchase_requisition_line_id=NEW.purchase_requisition_line_id AND d.id<>NEW.id AND d.status<>'withdrawn' AND e.status<>'cancelled';
+    IF v_used_qty+NEW.requested_quantity>v_line.quantity THEN RAISE EXCEPTION 'Active sourcing events exceed the requisition-line quantity' USING ERRCODE='check_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_sourcing_award()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_actor uuid:=nullif(current_setting('app.current_principal_id',true),'')::uuid; v_event document.sourcing_event%ROWTYPE; v_bad integer;
+BEGIN
+    SELECT * INTO v_event FROM document.sourcing_event WHERE tenant_id=NEW.tenant_id AND id=NEW.sourcing_event_id;
+    IF TG_OP='INSERT' AND (NEW.status<>'recommended' OR v_event.status<>'evaluation') THEN RAISE EXCEPTION 'Awards must be recommended during event evaluation' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    IF NEW.currency_code<>v_event.evaluation_currency_code THEN RAISE EXCEPTION 'Award currency must match the event evaluation currency' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='INSERT' AND NOT EXISTS(SELECT 1 FROM master.supplier s WHERE s.tenant_id=NEW.tenant_id AND s.id=NEW.supplier_id AND s.status='active') THEN RAISE EXCEPTION 'Sourcing award requires an active supplier' USING ERRCODE='foreign_key_violation'; END IF;
+    IF TG_OP='UPDATE' AND NEW.award_amount IS DISTINCT FROM OLD.award_amount AND pg_trigger_depth()<2 THEN RAISE EXCEPTION 'Award amount is maintained from active demand allocations' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IN('rejected','converted','cancelled') AND NEW IS DISTINCT FROM OLD THEN RAISE EXCEPTION 'Finalized sourcing award is immutable' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NOT((OLD.status='recommended' AND NEW.status IN('approved','rejected','cancelled')) OR (OLD.status='approved' AND NEW.status IN('converted','cancelled'))) THEN RAISE EXCEPTION 'Invalid sourcing-award transition: % -> %',OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND v_actor IS NULL THEN RAISE EXCEPTION 'Current principal context is required for award transitions' USING ERRCODE='insufficient_privilege'; END IF;
+    IF NEW.status='approved' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        IF NEW.award_amount<=0 OR NOT EXISTS(SELECT 1 FROM document.sourcing_event_award_allocation x WHERE x.tenant_id=NEW.tenant_id AND x.award_id=NEW.id AND x.status='planned') THEN RAISE EXCEPTION 'Approved award requires positive planned demand allocations' USING ERRCODE='check_violation'; END IF;
+        NEW.approved_at:=statement_timestamp(); NEW.approved_by:=v_actor;
+    END IF;
+    IF NEW.status='converted' AND (TG_OP='INSERT' OR OLD.status IS DISTINCT FROM NEW.status) THEN
+        SELECT count(*) FILTER(WHERE status<>'converted') INTO v_bad FROM document.sourcing_event_award_allocation WHERE tenant_id=NEW.tenant_id AND award_id=NEW.id AND status<>'cancelled';
+        IF NOT EXISTS(SELECT 1 FROM document.sourcing_event_award_allocation WHERE tenant_id=NEW.tenant_id AND award_id=NEW.id AND status='converted') OR v_bad>0 THEN RAISE EXCEPTION 'Converted award requires all active allocations converted' USING ERRCODE='check_violation'; END IF;
+        IF v_event.buying_model='central_buyer' AND EXISTS(
+            SELECT 1 FROM document.sourcing_event_award_allocation x
+             WHERE x.tenant_id=NEW.tenant_id AND x.award_id=NEW.id AND x.status='converted'
+               AND x.company_code_id<>v_event.central_buyer_company_id
+               AND NOT EXISTS(SELECT 1 FROM document.sourcing_event_intercompany_allocation i WHERE i.tenant_id=x.tenant_id AND i.award_allocation_id=x.id AND i.status<>'cancelled')
+        ) THEN RAISE EXCEPTION 'Converted central-buyer award requires an intercompany allocation for every beneficiary company' USING ERRCODE='check_violation'; END IF;
+        NEW.converted_at:=statement_timestamp(); NEW.converted_by:=v_actor;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sourcing_award_allocation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_award document.sourcing_event_award%ROWTYPE; v_event document.sourcing_event%ROWTYPE; v_demand document.sourcing_event_demand%ROWTYPE; v_commitment document.commitment%ROWTYPE; v_qty numeric(20,6); v_amount numeric(20,4);
+BEGIN
+    SELECT * INTO v_award FROM document.sourcing_event_award WHERE tenant_id=NEW.tenant_id AND id=NEW.award_id;
+    SELECT * INTO v_event FROM document.sourcing_event WHERE tenant_id=NEW.tenant_id AND id=v_award.sourcing_event_id;
+    SELECT * INTO v_demand FROM document.sourcing_event_demand WHERE tenant_id=NEW.tenant_id AND id=NEW.sourcing_event_demand_id;
+    IF v_award.status NOT IN('recommended','approved') THEN RAISE EXCEPTION 'Award allocations are fixed after award finalization' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    IF v_demand.sourcing_event_id<>v_award.sourcing_event_id OR v_demand.demand_company_code_id<>NEW.company_code_id OR v_demand.evaluation_currency_code<>NEW.currency_code OR (NEW.awarded_quantity IS NOT NULL AND (v_demand.uom_code<>NEW.uom_code OR NEW.awarded_quantity>v_demand.requested_quantity)) THEN
+        RAISE EXCEPTION 'Award allocation must match its event demand, beneficiary company, currency, UOM, and quantity' USING ERRCODE='check_violation';
+    END IF;
+    PERFORM pg_advisory_xact_lock(hashtextextended(NEW.tenant_id::text||':sourcing-award-demand:'||NEW.sourcing_event_demand_id::text,0));
+    SELECT coalesce(sum(x.awarded_quantity),0),coalesce(sum(x.awarded_amount),0) INTO v_qty,v_amount FROM document.sourcing_event_award_allocation x JOIN document.sourcing_event_award a ON a.tenant_id=x.tenant_id AND a.id=x.award_id WHERE x.tenant_id=NEW.tenant_id AND x.sourcing_event_demand_id=NEW.sourcing_event_demand_id AND x.id<>NEW.id AND x.status<>'cancelled' AND a.status NOT IN('rejected','cancelled');
+    IF (NEW.awarded_quantity IS NOT NULL AND v_qty+NEW.awarded_quantity>v_demand.requested_quantity) OR v_amount+NEW.awarded_amount>v_demand.evaluation_amount THEN RAISE EXCEPTION 'Active awards exceed demand quantity or evaluation amount' USING ERRCODE='check_violation'; END IF;
+    IF NEW.output_commitment_id IS NOT NULL THEN
+        SELECT * INTO v_commitment FROM document.commitment WHERE tenant_id=NEW.tenant_id AND id=NEW.output_commitment_id;
+        IF FOUND AND (v_commitment.supplier_id<>v_award.supplier_id OR v_commitment.currency_code<>NEW.currency_code OR v_commitment.company_code_id<>CASE WHEN v_event.buying_model='central_buyer' THEN v_event.central_buyer_company_id ELSE NEW.company_code_id END) THEN RAISE EXCEPTION 'Output commitment must match award supplier, currency, and buying company' USING ERRCODE='check_violation'; END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.refresh_sourcing_award_projections(p_tenant_id uuid,p_award_id uuid)
+RETURNS void LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_total numeric(20,4); v_event uuid; v_demand record; v_qty numeric(20,6); v_amount numeric(20,4); v_converted integer; v_active integer;
+BEGIN
+    SELECT coalesce(sum(awarded_amount),0) INTO v_total FROM document.sourcing_event_award_allocation WHERE tenant_id=p_tenant_id AND award_id=p_award_id AND status<>'cancelled';
+    UPDATE document.sourcing_event_award SET award_amount=v_total WHERE tenant_id=p_tenant_id AND id=p_award_id AND award_amount IS DISTINCT FROM v_total;
+    SELECT sourcing_event_id INTO v_event FROM document.sourcing_event_award WHERE tenant_id=p_tenant_id AND id=p_award_id;
+    FOR v_demand IN SELECT id,requested_quantity,evaluation_amount FROM document.sourcing_event_demand WHERE tenant_id=p_tenant_id AND sourcing_event_id=v_event LOOP
+        SELECT coalesce(sum(x.awarded_quantity),0),coalesce(sum(x.awarded_amount),0),count(*) FILTER(WHERE x.status='converted'),count(*)
+          INTO v_qty,v_amount,v_converted,v_active
+          FROM document.sourcing_event_award_allocation x JOIN document.sourcing_event_award a ON a.tenant_id=x.tenant_id AND a.id=x.award_id
+         WHERE x.tenant_id=p_tenant_id AND x.sourcing_event_demand_id=v_demand.id AND x.status<>'cancelled' AND a.status NOT IN('rejected','cancelled');
+        UPDATE document.sourcing_event_demand SET status=CASE WHEN v_active=0 THEN 'included' WHEN v_converted=v_active AND (v_qty>=v_demand.requested_quantity OR v_amount>=v_demand.evaluation_amount) THEN 'converted' WHEN v_qty>=v_demand.requested_quantity OR v_amount>=v_demand.evaluation_amount THEN 'awarded' ELSE 'partially_awarded' END
+         WHERE tenant_id=p_tenant_id AND id=v_demand.id AND status<>'withdrawn' AND status IS DISTINCT FROM CASE WHEN v_active=0 THEN 'included' WHEN v_converted=v_active AND (v_qty>=v_demand.requested_quantity OR v_amount>=v_demand.evaluation_amount) THEN 'converted' WHEN v_qty>=v_demand.requested_quantity OR v_amount>=v_demand.evaluation_amount THEN 'awarded' ELSE 'partially_awarded' END;
+    END LOOP;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_refresh_sourcing_award()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_new jsonb:=CASE WHEN TG_OP='DELETE' THEN '{}'::jsonb ELSE to_jsonb(NEW) END;
+        v_old jsonb:=CASE WHEN TG_OP='INSERT' THEN '{}'::jsonb ELSE to_jsonb(OLD) END;
+        v_tenant uuid; v_award uuid;
+BEGIN
+    v_tenant:=coalesce(nullif(v_new->>'tenant_id','')::uuid,nullif(v_old->>'tenant_id','')::uuid);
+    v_award:=coalesce(nullif(v_new->>'award_id','')::uuid,nullif(v_old->>'award_id','')::uuid,nullif(v_new->>'id','')::uuid,nullif(v_old->>'id','')::uuid);
+    PERFORM document.refresh_sourcing_award_projections(v_tenant,v_award);
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_sourcing_intercompany()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_alloc document.sourcing_event_award_allocation%ROWTYPE; v_award document.sourcing_event_award%ROWTYPE; v_event document.sourcing_event%ROWTYPE; v_journal document.journal_entry%ROWTYPE;
+BEGIN
+    SELECT * INTO v_alloc FROM document.sourcing_event_award_allocation WHERE tenant_id=NEW.tenant_id AND id=NEW.award_allocation_id;
+    SELECT * INTO v_award FROM document.sourcing_event_award WHERE tenant_id=NEW.tenant_id AND id=v_alloc.award_id;
+    SELECT * INTO v_event FROM document.sourcing_event WHERE tenant_id=NEW.tenant_id AND id=v_award.sourcing_event_id;
+    IF v_event.buying_model<>'central_buyer' OR NEW.source_company_code_id<>v_event.central_buyer_company_id OR NEW.beneficiary_company_code_id<>v_alloc.company_code_id OR NEW.commitment_id<>v_alloc.output_commitment_id OR NEW.allocation_amount<>v_alloc.awarded_amount OR NEW.currency_code<>v_alloc.currency_code THEN
+        RAISE EXCEPTION 'Intercompany sourcing allocation must mirror its central-buyer award allocation' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.status='posted' THEN
+        SELECT * INTO v_journal FROM document.journal_entry WHERE tenant_id=NEW.tenant_id AND id=NEW.posting_journal_entry_id;
+        IF FOUND AND (v_journal.company_code_id<>NEW.source_company_code_id OR v_journal.transaction_currency_code<>NEW.currency_code OR v_journal.source_entity_type<>'document.sourcing_event_intercompany_allocation' OR v_journal.source_entity_id IS DISTINCT FROM NEW.id OR v_journal.status<>'posted') THEN RAISE EXCEPTION 'Intercompany journal must be posted for this allocation, source company, and currency' USING ERRCODE='check_violation'; END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_sourcing_intercompany()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'planned' THEN RAISE EXCEPTION 'Intercompany sourcing allocation must be created planned' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IN('posted','cancelled') AND NEW IS DISTINCT FROM OLD THEN RAISE EXCEPTION 'Posted or cancelled intercompany sourcing allocation is immutable' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NOT(OLD.status='planned' AND NEW.status IN('posted','cancelled')) THEN RAISE EXCEPTION 'Invalid intercompany sourcing-allocation transition: % -> %',OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_hr_approval()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+DECLARE v_actor uuid:=nullif(current_setting('app.current_principal_id',true),'')::uuid;
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'draft' THEN RAISE EXCEPTION 'HR approval document must be created draft' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status THEN
+        IF v_actor IS NULL THEN RAISE EXCEPTION 'Current principal context is required for HR approval transitions' USING ERRCODE='insufficient_privilege'; END IF;
+        IF NOT(
+            (OLD.status='draft' AND NEW.status IN('submitted','cancelled')) OR
+            (OLD.status='submitted' AND NEW.status IN('approved','rejected','withdrawn','cancelled')) OR
+            (TG_TABLE_NAME='employee_tax_declaration' AND OLD.status='approved' AND NEW.status='superseded')
+        ) THEN RAISE EXCEPTION 'Invalid % transition: % -> %',TG_TABLE_NAME,OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+        IF NEW.status='submitted' THEN NEW.submitted_at:=statement_timestamp(); NEW.submitted_by:=v_actor; END IF;
+        IF NEW.status='approved' THEN
+            IF TG_TABLE_NAME='employee_tax_declaration' AND NOT EXISTS(SELECT 1 FROM document.employee_tax_declaration_line l WHERE l.tenant_id=NEW.tenant_id AND l.employee_tax_declaration_id=NEW.id) THEN RAISE EXCEPTION 'Approved tax declaration requires at least one line' USING ERRCODE='check_violation'; END IF;
+            IF TG_TABLE_NAME='leave_request' AND (NEW.approved_quantity IS NULL OR NEW.approved_quantity>NEW.requested_quantity) THEN RAISE EXCEPTION 'Approved leave quantity is required and cannot exceed requested quantity' USING ERRCODE='check_violation'; END IF;
+            IF TG_TABLE_NAME='attendance_adjustment_request' AND NEW.approved_values='{}'::jsonb THEN RAISE EXCEPTION 'Approved attendance adjustment requires approved values' USING ERRCODE='check_violation'; END IF;
+            NEW.approved_at:=statement_timestamp(); NEW.approved_by:=v_actor;
+        END IF;
+        IF NEW.status IN('rejected','cancelled') AND nullif(btrim(NEW.decision_reason),'') IS NULL THEN RAISE EXCEPTION 'Rejected or cancelled HR request requires a decision reason' USING ERRCODE='check_violation'; END IF;
+    END IF;
+    IF TG_OP='UPDATE' AND OLD.status IN('rejected','cancelled','withdrawn','superseded') AND NEW IS DISTINCT FROM OLD THEN RAISE EXCEPTION 'Final HR approval document is immutable' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_compensation_change()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+DECLARE v_group master.pay_group%ROWTYPE; v_structure master.pay_structure%ROWTYPE; v_current master.compensation_assignment%ROWTYPE; v_approved master.compensation_assignment%ROWTYPE;
+BEGIN
+    SELECT * INTO v_group FROM master.pay_group WHERE tenant_id=NEW.tenant_id AND id=NEW.proposed_pay_group_id;
+    IF v_group.currency_code<>NEW.proposed_currency_code THEN RAISE EXCEPTION 'Proposed compensation currency must match pay group' USING ERRCODE='check_violation'; END IF;
+    IF NEW.proposed_pay_structure_id IS NOT NULL THEN
+        SELECT * INTO v_structure FROM master.pay_structure WHERE tenant_id=NEW.tenant_id AND id=NEW.proposed_pay_structure_id;
+        IF v_structure.currency_code<>NEW.proposed_currency_code OR (v_structure.pay_group_id IS NOT NULL AND v_structure.pay_group_id<>NEW.proposed_pay_group_id) THEN RAISE EXCEPTION 'Proposed pay structure must match pay group and currency' USING ERRCODE='check_violation'; END IF;
+    END IF;
+    IF NEW.current_assignment_id IS NOT NULL THEN
+        SELECT * INTO v_current FROM master.compensation_assignment WHERE tenant_id=NEW.tenant_id AND id=NEW.current_assignment_id;
+        IF v_current.employee_id<>NEW.employee_id OR (v_current.status<>'active' AND NOT(NEW.status='approved' AND v_current.status='superseded')) THEN RAISE EXCEPTION 'Current compensation assignment must be active (or just superseded by this approval) and belong to the employee' USING ERRCODE='check_violation'; END IF;
+    END IF;
+    IF NEW.approved_assignment_id IS NOT NULL THEN
+        SELECT * INTO v_approved FROM master.compensation_assignment WHERE tenant_id=NEW.tenant_id AND id=NEW.approved_assignment_id;
+        IF v_approved.source_compensation_change_id<>NEW.id OR v_approved.employee_id<>NEW.employee_id THEN RAISE EXCEPTION 'Approved compensation assignment must materialize this change' USING ERRCODE='check_violation'; END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_tax_declaration()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM master.employment e WHERE e.tenant_id=NEW.tenant_id AND e.id=NEW.employment_id AND e.employee_id=NEW.employee_id) THEN RAISE EXCEPTION 'Tax declaration employment must belong to employee' USING ERRCODE='foreign_key_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_tax_declaration_line()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+BEGIN
+    IF TG_OP='DELETE' OR NOT EXISTS(SELECT 1 FROM document.employee_tax_declaration d WHERE d.tenant_id=coalesce(NEW.tenant_id,OLD.tenant_id) AND d.id=coalesce(NEW.employee_tax_declaration_id,OLD.employee_tax_declaration_id) AND d.status='draft') THEN
+        RAISE EXCEPTION 'Tax declaration lines can only change while the declaration is draft' USING ERRCODE='object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP='UPDATE' AND (NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id OR NEW.employee_tax_declaration_id IS DISTINCT FROM OLD.employee_tax_declaration_id OR NEW.created_at IS DISTINCT FROM OLD.created_at OR NEW.created_by IS DISTINCT FROM OLD.created_by) THEN RAISE EXCEPTION 'Tax declaration line identity and creation evidence are immutable' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_leave_contract()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+DECLARE v_plan master.leave_plan%ROWTYPE; v_type master.leave_type%ROWTYPE;
+BEGIN
+    SELECT * INTO v_plan FROM master.leave_plan WHERE tenant_id=NEW.tenant_id AND id=NEW.leave_plan_id;
+    SELECT * INTO v_type FROM master.leave_type WHERE tenant_id=NEW.tenant_id AND id=NEW.leave_type_id;
+    IF v_plan.leave_type_id<>NEW.leave_type_id OR v_type.unit<>NEW.quantity_unit THEN RAISE EXCEPTION 'Leave plan, type and quantity unit must agree' USING ERRCODE='check_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_shift_assignment()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM master.shift_type s WHERE s.tenant_id=NEW.tenant_id AND s.id=NEW.shift_type_id AND s.status='active') THEN RAISE EXCEPTION 'Shift assignment requires an active shift type' USING ERRCODE='foreign_key_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_attendance_reference()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_shift document.shift_assignment%ROWTYPE;
+BEGIN
+    IF NEW.shift_assignment_id IS NOT NULL THEN
+        SELECT * INTO v_shift FROM document.shift_assignment WHERE tenant_id=NEW.tenant_id AND id=NEW.shift_assignment_id;
+        IF v_shift.employee_id<>NEW.employee_id OR (TG_TABLE_NAME='attendance_day' AND v_shift.work_date<>NEW.attendance_date) THEN RAISE EXCEPTION 'Attendance record must match shift employee and work date' USING ERRCODE='check_violation'; END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_hr_operational_state()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_ok boolean:=false;
+BEGIN
+    IF TG_OP='INSERT' THEN RETURN NEW; END IF;
+    IF OLD.status IS NOT DISTINCT FROM NEW.status THEN RETURN NEW; END IF;
+    v_ok:=CASE TG_TABLE_NAME
+        WHEN 'shift_assignment' THEN (OLD.status='scheduled' AND NEW.status IN('worked','adjusted','cancelled')) OR (OLD.status='worked' AND NEW.status='adjusted')
+        WHEN 'time_punch' THEN OLD.status='accepted' AND NEW.status='voided'
+        WHEN 'attendance_day' THEN (OLD.status='open' AND NEW.status IN('approved','voided')) OR (OLD.status='approved' AND NEW.status IN('locked','voided'))
+        WHEN 'payroll_period' THEN (OLD.status='open' AND NEW.status='processing') OR (OLD.status='processing' AND NEW.status IN('open','closed')) OR (OLD.status='closed' AND NEW.status='locked')
+        WHEN 'payroll_run_employee' THEN (OLD.status='included' AND NEW.status IN('excluded','calculated','error')) OR (OLD.status='error' AND NEW.status IN('included','excluded','calculated'))
+        WHEN 'payroll_result' THEN (OLD.status='calculating' AND NEW.status='calculated') OR (OLD.status='calculated' AND NEW.status IN('approved','voided')) OR (OLD.status='approved' AND NEW.status IN('posted','voided'))
+        ELSE false END;
+    IF NOT v_ok THEN RAISE EXCEPTION 'Invalid % transition: % -> %',TG_TABLE_NAME,OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_time_punch()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+BEGIN
+    IF TG_OP='UPDATE' AND (NEW.id,NEW.tenant_id,NEW.employee_id,NEW.shift_assignment_id,NEW.punch_at,NEW.punch_type,NEW.source_type,NEW.device_ref,NEW.idempotency_key,NEW.geo_payload,NEW.raw_payload,NEW.created_at,NEW.created_by)
+        IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.employee_id,OLD.shift_assignment_id,OLD.punch_at,OLD.punch_type,OLD.source_type,OLD.device_ref,OLD.idempotency_key,OLD.geo_payload,OLD.raw_payload,OLD.created_at,OLD.created_by) THEN
+        RAISE EXCEPTION 'Accepted punch evidence is immutable; void it and append a replacement' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_people_case()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'draft' THEN RAISE EXCEPTION 'People case must be created draft' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status THEN
+        IF NOT((OLD.status='draft' AND NEW.status IN('active','cancelled')) OR (OLD.status='active' AND NEW.status IN('completed','cancelled'))) THEN RAISE EXCEPTION 'Invalid % transition: % -> %',TG_TABLE_NAME,OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+        IF NEW.status='active' THEN NEW.activated_at:=statement_timestamp(); END IF;
+        IF NEW.status='completed' THEN NEW.completed_at:=statement_timestamp(); END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_hr_case()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'open' THEN RAISE EXCEPTION 'HR case must be created open' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NOT(
+        (OLD.status='open' AND NEW.status IN('in_progress','pending','resolved','cancelled')) OR
+        (OLD.status IN('in_progress','pending') AND NEW.status IN('in_progress','pending','resolved','cancelled')) OR
+        (OLD.status='resolved' AND NEW.status IN('closed','in_progress'))
+    ) THEN RAISE EXCEPTION 'Invalid HR case transition: % -> %',OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.status='resolved' THEN NEW.resolved_at:=statement_timestamp(); END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.status='closed' THEN NEW.closed_at:=statement_timestamp(); END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_manage_payroll_run()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_actor uuid:=nullif(current_setting('app.current_principal_id',true),'')::uuid;
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'draft' THEN RAISE EXCEPTION 'Payroll run must be created draft' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status THEN
+        IF v_actor IS NULL THEN RAISE EXCEPTION 'Current principal context is required for payroll transitions' USING ERRCODE='insufficient_privilege'; END IF;
+        IF NOT((OLD.status='draft' AND NEW.status IN('calculating','cancelled')) OR (OLD.status='calculating' AND NEW.status IN('calculated','cancelled')) OR (OLD.status='calculated' AND NEW.status IN('draft','approved','cancelled')) OR (OLD.status='approved' AND NEW.status IN('posted','cancelled')) OR (OLD.status='posted' AND NEW.status='reversed')) THEN RAISE EXCEPTION 'Invalid payroll run transition: % -> %',OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+        IF NEW.status='calculating' THEN NEW.calculation_started_at:=statement_timestamp(); END IF;
+        IF NEW.status='calculated' THEN NEW.calculation_completed_at:=statement_timestamp(); END IF;
+        IF NEW.status='approved' THEN NEW.approved_at:=statement_timestamp(); NEW.approved_by:=v_actor; END IF;
+        IF NEW.status='posted' THEN NEW.posted_at:=statement_timestamp(); NEW.posted_by:=v_actor; END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_payroll_run_employee()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+DECLARE v_period document.payroll_period%ROWTYPE; v_assignment master.compensation_assignment%ROWTYPE;
+BEGIN
+    SELECT p.* INTO v_period FROM document.payroll_period p JOIN document.payroll_run r ON r.tenant_id=p.tenant_id AND r.payroll_period_id=p.id WHERE r.tenant_id=NEW.tenant_id AND r.id=NEW.payroll_run_id;
+    SELECT * INTO v_assignment FROM master.compensation_assignment WHERE tenant_id=NEW.tenant_id AND id=NEW.compensation_assignment_id;
+    IF v_assignment.employee_id<>NEW.employee_id OR v_assignment.status<>'active' OR v_assignment.effective_from>v_period.period_end OR (v_assignment.effective_until IS NOT NULL AND v_assignment.effective_until<v_period.period_start) THEN RAISE EXCEPTION 'Payroll employee requires an active compensation assignment effective in the period' USING ERRCODE='check_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_payroll_result()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+DECLARE v_run_employee document.payroll_run_employee%ROWTYPE; v_assignment master.compensation_assignment%ROWTYPE;
+BEGIN
+    SELECT * INTO v_run_employee FROM document.payroll_run_employee WHERE tenant_id=NEW.tenant_id AND id=NEW.payroll_run_employee_id;
+    SELECT * INTO v_assignment FROM master.compensation_assignment WHERE tenant_id=NEW.tenant_id AND id=v_run_employee.compensation_assignment_id;
+    IF v_run_employee.payroll_run_id<>NEW.payroll_run_id OR v_run_employee.employee_id<>NEW.employee_id OR v_assignment.currency_code<>NEW.currency_code THEN RAISE EXCEPTION 'Payroll result must match run employee and compensation currency' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND pg_trigger_depth()<2 AND (NEW.gross_amount,NEW.employee_deduction_amount,NEW.employer_contribution_amount,NEW.net_amount) IS DISTINCT FROM (OLD.gross_amount,OLD.employee_deduction_amount,OLD.employer_contribution_amount,OLD.net_amount) THEN RAISE EXCEPTION 'Payroll result totals are maintained from result lines' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NEW.status='calculated' AND NOT EXISTS(SELECT 1 FROM document.payroll_result_line l WHERE l.tenant_id=NEW.tenant_id AND l.payroll_result_id=NEW.id) THEN RAISE EXCEPTION 'Calculated payroll result requires result lines' USING ERRCODE='check_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_payroll_result_line()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+DECLARE v_result document.payroll_result%ROWTYPE; v_component master.pay_component%ROWTYPE;
+BEGIN
+    SELECT * INTO v_result FROM document.payroll_result WHERE tenant_id=NEW.tenant_id AND id=NEW.payroll_result_id;
+    SELECT * INTO v_component FROM master.pay_component WHERE tenant_id=NEW.tenant_id AND id=NEW.pay_component_id;
+    IF v_result.status<>'calculating' OR NEW.currency_code<>v_result.currency_code OR NEW.component_code_snapshot<>v_component.code OR NEW.component_type_snapshot<>v_component.component_type OR NEW.is_employer_cost_snapshot<>v_component.is_employer_cost THEN RAISE EXCEPTION 'Payroll result line must freeze its active component and result currency while calculating' USING ERRCODE='check_violation'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.refresh_payroll_result_totals(p_tenant_id uuid,p_result_id uuid)
+RETURNS void LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+DECLARE v_gross numeric(18,4); v_deduction numeric(18,4); v_employer numeric(18,4);
+BEGIN
+    SELECT coalesce(sum(amount) FILTER(WHERE component_type_snapshot='earning'),0),
+           coalesce(sum(amount) FILTER(WHERE component_type_snapshot IN('deduction','statutory') AND NOT is_employer_cost_snapshot),0),
+           coalesce(sum(amount) FILTER(WHERE component_type_snapshot='employer_contribution' OR is_employer_cost_snapshot),0)
+      INTO v_gross,v_deduction,v_employer FROM document.payroll_result_line WHERE tenant_id=p_tenant_id AND payroll_result_id=p_result_id;
+    UPDATE document.payroll_result SET gross_amount=v_gross,employee_deduction_amount=v_deduction,employer_contribution_amount=v_employer,net_amount=v_gross-v_deduction
+     WHERE tenant_id=p_tenant_id AND id=p_result_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_refresh_payroll_result()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+BEGIN PERFORM document.refresh_payroll_result_totals(NEW.tenant_id,NEW.payroll_result_id); RETURN NULL; END;
+$$;
+CREATE OR REPLACE FUNCTION document.trg_validate_policy_acknowledgment()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_policy_tenant uuid;
+    v_policy_code text;
+    v_policy_name text;
+    v_policy_version integer;
+BEGIN
+    SELECT tenant_id,entity_type,name,version_no
+      INTO v_policy_tenant,v_policy_code,v_policy_name,v_policy_version
+      FROM control.policy_definition
+     WHERE id=NEW.policy_definition_id
+       AND status='active';
+    IF NOT FOUND OR (v_policy_tenant IS NOT NULL AND v_policy_tenant<>NEW.tenant_id) THEN
+        RAISE EXCEPTION 'active acknowledgment policy does not belong to the tenant'
+            USING ERRCODE='foreign_key_violation';
+    END IF;
+    IF NEW.policy_code_snapshot<>v_policy_code
+       OR NEW.policy_name_snapshot<>v_policy_name
+       OR NEW.policy_version_snapshot<>v_policy_version THEN
+        RAISE EXCEPTION 'policy acknowledgment snapshot does not match the active policy definition'
+            USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_project_task()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE
+    v_wbs master.project_wbs%ROWTYPE;
+BEGIN
+    SELECT * INTO v_wbs
+      FROM master.project_wbs
+     WHERE tenant_id = NEW.tenant_id
+       AND project_id = NEW.project_id
+       AND id = NEW.project_wbs_id;
+    IF FOUND AND (
+        NOT v_wbs.is_postable
+        OR v_wbs.wbs_type <> 'work_package'
+        OR EXISTS (
+            SELECT 1 FROM master.project_wbs c
+             WHERE c.tenant_id = v_wbs.tenant_id
+               AND c.project_id = v_wbs.project_id
+               AND c.parent_wbs_id = v_wbs.id
+        )
+    ) THEN
+        RAISE EXCEPTION 'Project tasks require a postable leaf work-package WBS'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_project_task_requirement()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE
+    v_uom text;
+BEGIN
+    SELECT uom_code INTO v_uom
+      FROM master.project_item
+     WHERE tenant_id = NEW.tenant_id
+       AND project_id = NEW.project_id
+       AND id = NEW.project_item_id;
+    IF FOUND AND v_uom <> NEW.uom_code THEN
+        RAISE EXCEPTION 'Task requirement UOM must match its project item UOM'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_budget_profile()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE
+    v_currency character(3);
+BEGIN
+    SELECT currency_code INTO v_currency
+      FROM master.project
+     WHERE tenant_id = NEW.tenant_id
+       AND company_code_id = NEW.company_code_id
+       AND id = NEW.project_id;
+    IF FOUND AND v_currency <> NEW.currency_code THEN
+        RAISE EXCEPTION 'Budget currency must match the project currency'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM master.company_code_book_assignment a
+         WHERE a.tenant_id = NEW.tenant_id
+           AND a.company_code_id = NEW.company_code_id
+           AND a.book_id = NEW.ledger_book_id
+           AND a.status = 'active'
+    ) THEN
+        RAISE EXCEPTION 'Budget ledger book must be actively assigned to the project company'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_budget_allocation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE
+    v_profile document.budget_profile%ROWTYPE;
+    v_postable boolean;
+    v_existing_allocated numeric(18,4);
+    v_proposed_allocated numeric(18,4);
+BEGIN
+    SELECT * INTO v_profile
+      FROM document.budget_profile
+     WHERE tenant_id = NEW.tenant_id
+       AND project_id = NEW.project_id
+       AND id = NEW.budget_profile_id
+     FOR UPDATE;
+
+    IF FOUND AND NEW.fiscal_year NOT BETWEEN
+       v_profile.fiscal_year_from AND v_profile.fiscal_year_to THEN
+        RAISE EXCEPTION 'Allocation fiscal year falls outside the budget profile'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    SELECT is_postable INTO v_postable
+      FROM master.project_wbs
+     WHERE tenant_id = NEW.tenant_id
+       AND project_id = NEW.project_id
+       AND id = NEW.project_wbs_id;
+    IF FOUND AND NOT v_postable THEN
+        RAISE EXCEPTION 'Budget allocations require a postable WBS'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    SELECT COALESCE(sum(a.allocated_amount), 0)
+      INTO v_existing_allocated
+      FROM document.budget_allocation a
+    WHERE a.tenant_id = NEW.tenant_id
+       AND a.budget_profile_id = NEW.budget_profile_id
+       AND a.status <> 'cancelled'
+       AND a.id <> NEW.id;
+
+    v_proposed_allocated := v_existing_allocated;
+    IF NEW.status <> 'cancelled' THEN
+        v_proposed_allocated := v_proposed_allocated + NEW.allocated_amount;
+    END IF;
+
+    IF v_profile.id IS NOT NULL
+       AND v_proposed_allocated > v_profile.authorized_amount THEN
+        RAISE EXCEPTION 'Active allocations exceed the budget authorized amount'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_planning_scenario()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_base document.planning_scenario%ROWTYPE;
+BEGIN
+    IF NEW.based_on_scenario_id IS NULL THEN
+        IF NEW.version_no <> 1 THEN
+            RAISE EXCEPTION 'A planning scenario lineage must start at version 1'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    ELSE
+        SELECT * INTO v_base
+          FROM document.planning_scenario
+         WHERE tenant_id = NEW.tenant_id
+           AND planning_model_id = NEW.planning_model_id
+           AND id = NEW.based_on_scenario_id;
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'Base planning scenario is outside the model or tenant'
+                USING ERRCODE = 'foreign_key_violation';
+        END IF;
+        IF v_base.status NOT IN ('approved', 'superseded')
+           OR v_base.code <> NEW.code
+           OR NEW.version_no <> v_base.version_no + 1 THEN
+            RAISE EXCEPTION 'Planning scenario replacement requires an approved prior version and sequential version number'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+
+    IF NEW.status IN ('approved', 'superseded') AND NOT EXISTS (
+        SELECT 1 FROM document.planning_scenario_line AS line
+         WHERE line.tenant_id = NEW.tenant_id
+           AND line.planning_scenario_id = NEW.id
+    ) THEN
+        RAISE EXCEPTION 'An approved planning scenario requires at least one line'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_planning_scenario()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        IF OLD.status <> 'draft' THEN
+            RAISE EXCEPTION 'Submitted planning scenarios cannot be deleted'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        RETURN OLD;
+    END IF;
+
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.planning_model_id IS DISTINCT FROM OLD.planning_model_id
+       OR NEW.code IS DISTINCT FROM OLD.code
+       OR NEW.version_no IS DISTINCT FROM OLD.version_no
+       OR NEW.based_on_scenario_id IS DISTINCT FROM OLD.based_on_scenario_id
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION 'Planning scenario identity, lineage and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.status IN ('approved', 'superseded', 'cancelled') AND (
+        NEW.name IS DISTINCT FROM OLD.name
+        OR NEW.description IS DISTINCT FROM OLD.description
+        OR NEW.probability_weight IS DISTINCT FROM OLD.probability_weight
+        OR NEW.approved_at IS DISTINCT FROM OLD.approved_at
+        OR NEW.approved_by IS DISTINCT FROM OLD.approved_by
+        OR NEW.metadata IS DISTINCT FROM OLD.metadata
+    ) THEN
+        RAISE EXCEPTION 'Approved, superseded and cancelled planning scenarios are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status IS DISTINCT FROM OLD.status AND NOT (
+        OLD.status = 'draft' AND NEW.status IN ('in_review', 'cancelled')
+        OR OLD.status = 'in_review' AND NEW.status IN ('draft', 'approved', 'cancelled')
+        OR OLD.status = 'approved' AND NEW.status = 'superseded'
+    ) THEN
+        RAISE EXCEPTION 'Invalid planning scenario status transition'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_planning_scenario_line()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_scenario_id uuid;
+    v_status document.planning_scenario_status_d;
+BEGIN
+    v_scenario_id := CASE WHEN TG_OP = 'DELETE'
+                          THEN OLD.planning_scenario_id
+                          ELSE NEW.planning_scenario_id END;
+    SELECT status INTO v_status
+      FROM document.planning_scenario
+     WHERE tenant_id = CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END
+       AND id = v_scenario_id
+     FOR UPDATE;
+    IF NOT FOUND OR v_status <> 'draft' THEN
+        RAISE EXCEPTION 'Planning scenario lines can only change while the scenario is draft'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND (
+        NEW.id IS DISTINCT FROM OLD.id
+        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.planning_scenario_id IS DISTINCT FROM OLD.planning_scenario_id
+        OR NEW.planning_model_id IS DISTINCT FROM OLD.planning_model_id
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at
+        OR NEW.created_by IS DISTINCT FROM OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'Planning scenario line ownership and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.planning_scenario_input_hash(
+    p_tenant_id uuid,
+    p_planning_scenario_id uuid
+)
+RETURNS text
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog, document, public
+AS $$
+    SELECT encode(
+        digest(
+            COALESCE(
+                jsonb_agg(
+                    jsonb_build_object(
+                        'line_no', line.line_no,
+                        'planning_driver_id', line.planning_driver_id,
+                        'gl_account_id', line.gl_account_id,
+                        'cost_center_id', line.cost_center_id,
+                        'profit_center_id', line.profit_center_id,
+                        'project_id', line.project_id,
+                        'project_wbs_id', line.project_wbs_id,
+                        'fiscal_year', line.fiscal_year,
+                        'period_number', line.period_number,
+                        'currency_code', line.currency_code,
+                        'planned_amount', line.planned_amount,
+                        'baseline_amount', line.baseline_amount,
+                        'source_type', line.source_type,
+                        'source_reference_id', line.source_reference_id,
+                        'confidence', line.confidence,
+                        'metadata', line.metadata
+                    ) ORDER BY line.line_no
+                )::text,
+                '[]'
+            ),
+            'sha256'
+        ),
+        'hex'
+    )
+      FROM document.planning_scenario_line AS line
+     WHERE line.tenant_id = p_tenant_id
+       AND line.planning_scenario_id = p_planning_scenario_id
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_validate_asset_transaction()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE
+    v_asset_id uuid;
+    v_company_id uuid;
+    v_book_category text;
+    v_line_run_id uuid;
+    v_line_asset_id uuid;
+    v_line_book_id uuid;
+BEGIN
+    IF NEW.asset_book_id IS NOT NULL THEN
+        SELECT ab.asset_id, ab.company_code_id, lb.category::text
+          INTO v_asset_id, v_company_id, v_book_category
+          FROM master.asset_book ab
+          JOIN master.ledger_book lb
+            ON lb.tenant_id=ab.tenant_id AND lb.id=ab.ledger_book_id
+         WHERE ab.tenant_id=NEW.tenant_id AND ab.id=NEW.asset_book_id;
+        IF NOT FOUND OR v_asset_id<>NEW.asset_id OR v_company_id<>NEW.company_code_id THEN
+            RAISE EXCEPTION 'Asset book does not belong to the transaction asset and company'
+                USING ERRCODE='foreign_key_violation';
+        END IF;
+        IF NEW.book_type IS NULL THEN
+            NEW.book_type := v_book_category;
+        ELSIF NEW.book_type<>v_book_category THEN
+            RAISE EXCEPTION 'asset_transaction.book_type must match ledger book category'
+                USING ERRCODE='check_violation';
+        END IF;
+    END IF;
+
+    IF NEW.depreciation_run_line_id IS NOT NULL THEN
+        SELECT l.run_id,l.asset_id,l.asset_book_id
+          INTO v_line_run_id,v_line_asset_id,v_line_book_id
+          FROM document.depreciation_run_line l
+         WHERE l.tenant_id=NEW.tenant_id AND l.id=NEW.depreciation_run_line_id;
+        IF NOT FOUND OR v_line_asset_id<>NEW.asset_id
+           OR (NEW.asset_book_id IS NOT NULL AND v_line_book_id<>NEW.asset_book_id)
+           OR (NEW.depreciation_run_id IS NOT NULL AND v_line_run_id<>NEW.depreciation_run_id) THEN
+            RAISE EXCEPTION 'Depreciation line does not belong to the transaction coordinates'
+                USING ERRCODE='foreign_key_violation';
+        END IF;
+        NEW.depreciation_run_id := COALESCE(NEW.depreciation_run_id,v_line_run_id);
+        NEW.asset_book_id := COALESCE(NEW.asset_book_id,v_line_book_id);
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_rollup_match_exceptions()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_tenant_id uuid := COALESCE(NEW.tenant_id,OLD.tenant_id);
+    v_case_id uuid := COALESCE(NEW.invoice_match_case_id,OLD.invoice_match_case_id);
+    v_actor uuid;
+BEGIN
+    v_actor := nullif(current_setting('app.current_principal_id',true),'')::uuid;
+    IF v_actor IS NULL THEN
+        IF TG_OP='DELETE' THEN v_actor := COALESCE(OLD.updated_by,OLD.created_by);
+        ELSE v_actor := COALESCE(NEW.updated_by,NEW.created_by); END IF;
+    END IF;
+    UPDATE document.invoice_match_case c
+       SET exception_count=(
+               SELECT count(*)::smallint
+                 FROM document.match_exception e
+                WHERE e.tenant_id=v_tenant_id
+                  AND e.invoice_match_case_id=v_case_id
+                  AND e.status IN ('open','pending_approval')
+           ),
+           updated_at=now(),
+           updated_by=v_actor
+     WHERE c.tenant_id=v_tenant_id AND c.id=v_case_id;
+    IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_import_request_chunk()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+BEGIN
+    IF ROW(
+        NEW.id,NEW.tenant_id,NEW.import_request_id,NEW.chunk_index,
+        NEW.row_start,NEW.row_end,NEW.created_at,NEW.created_by
+    ) IS DISTINCT FROM ROW(
+        OLD.id,OLD.tenant_id,OLD.import_request_id,OLD.chunk_index,
+        OLD.row_start,OLD.row_end,OLD.created_at,OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'import chunk identity, row range, and creation evidence are immutable'
+            USING ERRCODE='integrity_constraint_violation';
+    END IF;
+    IF OLD.status IN ('completed','cancelled') AND NEW.status<>OLD.status THEN
+        RAISE EXCEPTION 'completed or cancelled import chunk is immutable'
+            USING ERRCODE='object_not_in_prerequisite_state';
+    END IF;
+    IF (OLD.status='pending' AND NEW.status NOT IN ('pending','queued','cancelled'))
+       OR (OLD.status='queued' AND NEW.status NOT IN ('queued','processing','cancelled'))
+       OR (OLD.status='processing' AND NEW.status NOT IN ('processing','completed','failed','cancelled'))
+       OR (OLD.status='failed' AND NEW.status NOT IN ('failed','queued','cancelled')) THEN
+        RAISE EXCEPTION 'invalid import chunk transition: % -> %',OLD.status,NEW.status
+            USING ERRCODE='invalid_parameter_value';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_render_output_state()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $$
+BEGIN
+    IF OLD.status IN ('ARCHIVED','REVOKED') AND NEW.status<>OLD.status THEN
+        RAISE EXCEPTION 'archived or revoked render output is immutable'
+            USING ERRCODE='object_not_in_prerequisite_state';
+    END IF;
+    IF (OLD.status='QUEUED' AND NEW.status NOT IN ('QUEUED','RENDERING','FAILED','REVOKED'))
+       OR (OLD.status='RENDERING' AND NEW.status NOT IN ('RENDERING','RENDERED','FAILED','REVOKED'))
+       OR (OLD.status='RENDERED' AND NEW.status NOT IN ('RENDERED','DELIVERED','ARCHIVED','REVOKED'))
+       OR (OLD.status='DELIVERED' AND NEW.status NOT IN ('DELIVERED','ARCHIVED','REVOKED'))
+       OR (OLD.status='FAILED' AND NEW.status NOT IN ('FAILED','QUEUED','REVOKED')) THEN
+        RAISE EXCEPTION 'invalid render output transition: % -> %',OLD.status,NEW.status
+            USING ERRCODE='invalid_parameter_value';
+    END IF;
+    RETURN NEW;
+END;
+$$;

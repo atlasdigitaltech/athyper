@@ -15,7 +15,7 @@ try {
   if(identity.rows[0]?.database_name!==expected) throw new Error("P5-E5 database guard rejected target");
   await client.query("BEGIN");
   await client.query("SELECT set_config('app.database_plane',$1,true)",[plane]);
-  for(const file of ["ddl/_migration/p5_e5_cohort_qualification.sql","ddl/common/ops/09_authorization_shadow_comparison_views.sql","ddl/common/ops/07_authorization_operation_rollout_functions.sql"])
+  for(const file of ["scripts/verify/sql/p5_e5_cohort_qualification.sql","ddl/common/ops/09_views.sql","ddl/common/ops/07_functions.sql"])
     await client.query(await readFile(resolve(root,file),"utf8"));
   await client.query("COMMIT");
   process.stdout.write(`P5_E5_COHORT_DDL_OK plane=${plane} database=${expected}\n`);

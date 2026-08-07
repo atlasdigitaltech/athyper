@@ -1,7 +1,7 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
-import type { V4Session } from "@athyper/auth-bff";
+import type { V4Session } from "@athyper/platform-iam-auth-bff";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { buildDocumentEditCoordinatorIdentity } from "@/lib/server/document-edit-coordinator-identity";
 

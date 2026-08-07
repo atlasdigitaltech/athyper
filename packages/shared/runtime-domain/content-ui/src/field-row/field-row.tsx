@@ -1,6 +1,6 @@
 import { type ReactNode, type CSSProperties } from "react";
 import { Lock, EyeOff, ShieldAlert, Sparkles, Cpu } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   FIELD_ROW_SPACING,
   type FieldRowDensity,

@@ -8,9 +8,9 @@
  */
 import { type ReactNode } from "react";
 import { ChevronLeft } from "lucide-react";
-import { AthyperLogo } from "@athyper/icons";
-import { Separator } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { AthyperLogo } from "@athyper/platform-brand";
+import { Separator } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface SidebarProps {
   navigation: ReactNode;

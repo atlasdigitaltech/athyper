@@ -1,0 +1,62 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "governance",
+  "version": "2.0.0",
+  "executionOrder": 110,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [
+    "organization-templates",
+    "coa-frameworks"
+  ],
+  "checksumAlgorithm": "sha256",
+  "checksum": "34115e9cf7f9357ad8808e67ec5bb3e6a4c2cf43cda63ce1fc512aa497999d72",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/modules/governance/010_finance_close_governance_templates.sql",
+      "sha256": "3a4bddb10c469fcf468b827e99b2ccdcef9e60d00ea37346a2e4729eae024a75",
+      "bytes": 74722,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/modules/governance/099_apply.sql",
+      "sha256": "d83af0d4984f3b2e78d0eafdff97b9fdf305d38f9eadb3b57c69c13ef27debd1",
+      "bytes": 5603,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "control.cycle_type",
+      "control.cycle_phase",
+      "control.cycle_task_template"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed/packs/blueprints-v2/receipts/110-governance.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

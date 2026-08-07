@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const governanceRls = [
-  readFileSync(new URL("../../../../../db/ddl/governance/08_rls.sql", import.meta.url), "utf8"),
-  readFileSync(new URL("../../../../../db/ddl/governance/08z_legal_hold_rls.sql", import.meta.url), "utf8"),
-  readFileSync(new URL("../../../../../db/ddl/master/08_rls.sql", import.meta.url), "utf8"),
+  readFileSync(new URL("../../../../../db/ddl/common/governance/10_rls.sql", import.meta.url), "utf8"),
+  readFileSync(new URL("../../../../../db/ddl/common/governance/10_rls.sql", import.meta.url), "utf8"),
+  readFileSync(new URL("../../../../../db/ddl/planes/neon/master/10_rls.sql", import.meta.url), "utf8"),
 ].join("\n");
 
 const governanceTables = [

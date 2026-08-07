@@ -1,4 +1,4 @@
-import { Skeleton } from "@athyper/ui/primitives";
+import { Skeleton } from "@athyper/platform-ui/primitives";
 import { resolveColumns } from "../core/columns";
 import type { ResolvedColumn, RuntimeDescriptor } from "../core/types";
 

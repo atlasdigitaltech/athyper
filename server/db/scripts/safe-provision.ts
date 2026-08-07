@@ -144,17 +144,12 @@ export function assertPlaneFileBoundary(
   const normalized = paths.map((path) => path.replace(/\\/g, "/"));
   const forbidden = normalized.filter((path) => {
     if (plane === "neon") {
-      return path.startsWith("ddl/mesh/")
-        || path.startsWith("ddl/mesh_log/")
-        || path.startsWith("ddl/mesh_control/")
+      return path.startsWith("ddl/planes/mesh/")
         || path.startsWith("mesh/")
         || path.startsWith("seed/tenants/mesh/");
     }
-    return path.startsWith("ddl/master/")
-      || path.startsWith("ddl/control/")
-      || path.startsWith("ddl/document/")
-      || path.startsWith("ddl/event/")
-      || path.startsWith("ddl/log/")
+    return path.startsWith("ddl/planes/neon/")
+      || path.startsWith("ddl/planes/athyper/")
       || path.startsWith("seed/tenants/neon/")
       || path.startsWith("seed/tenants/admin/")
       || path.startsWith("neon/")

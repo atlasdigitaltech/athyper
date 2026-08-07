@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { Badge, Button } from "@athyper/ui";
+import { Badge, Button } from "@athyper/platform-ui";
 import type {
   MetaEntityFieldDraft,
   MetaEntityKeyDraft,

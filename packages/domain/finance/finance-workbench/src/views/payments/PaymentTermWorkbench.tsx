@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowDown, ArrowUp, Plus, RefreshCw, Save, Trash2 } from "lucide-react";
-import { Button, Input, Label, Skeleton } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
+import { Button, Input, Label, Skeleton } from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
 import {
   usePaymentTerms,
   useSavePaymentTerm,

@@ -3,7 +3,7 @@
  * Resolver Contracts Export
  *
  * Dumps the registered resolver contracts to
- * `server/db/seed/_generated/resolver-contracts.json` so the cascade-rule
+ * `server/db/seed/contracts/generated/resolver-contracts.json` so the cascade-rule
  * verifier can validate `on_source_change[].resolver` references without
  * booting the full server.
  *
@@ -21,7 +21,7 @@ import { listResolverContracts, registerAllResolvers } from "@athyper/svc-shared
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
-const OUT_DIR    = path.join(__dirname, "..", "db", "seed", "_generated");
+const OUT_DIR    = path.join(__dirname, "..", "db", "seed", "contracts", "generated");
 const OUT_FILE   = path.join(OUT_DIR, "resolver-contracts.json");
 
 function main(): void {

@@ -14,7 +14,7 @@
 "use client";
 
 import { Info } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface CurrencyTriadProps {
   /** Amount expressed in the document (transaction) currency. */

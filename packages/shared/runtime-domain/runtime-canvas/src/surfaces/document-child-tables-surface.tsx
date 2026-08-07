@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge } from "@athyper/ui/primitives";
+import { Badge } from "@athyper/platform-ui/primitives";
 import { ChildCollectionGrid } from "@athyper/runtime-line-item/embedded";
 import { useCompiledEntity } from "@athyper/query";
 import {

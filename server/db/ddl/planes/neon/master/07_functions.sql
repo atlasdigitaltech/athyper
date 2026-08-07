@@ -3406,3 +3406,1176 @@ $$;
 
 COMMENT ON FUNCTION master.trg_bi_parent_guard() IS
     'Validates same-tenant and same-domain parentage in the Neon business-intent hierarchy.';
+
+CREATE OR REPLACE FUNCTION master.trg_validate_partner_lookup()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master, control
+AS $$
+DECLARE
+    v_domain text;
+    v_code text;
+BEGIN
+    IF TG_TABLE_NAME = 'business_partner_relationship' THEN
+        NEW.relationship_type_code := lower(btrim(NEW.relationship_type_code));
+        v_domain := 'master.business_partner_relationship_type';
+        v_code := NEW.relationship_type_code;
+    ELSIF TG_TABLE_NAME = 'business_partner_governance_relation' THEN
+        NEW.relation_type_code := lower(btrim(NEW.relation_type_code));
+        v_domain := 'master.business_partner_governance_role';
+        v_code := NEW.relation_type_code;
+    ELSIF TG_TABLE_NAME = 'business_partner_identifier' THEN
+        NEW.scheme_code := lower(btrim(NEW.scheme_code));
+        NEW.identifier_value := upper(regexp_replace(
+            btrim(NEW.identifier_value), '\s+', '', 'g'
+        ));
+        v_domain := 'master.business_partner_identifier_scheme';
+        v_code := NEW.scheme_code;
+    ELSE
+        NEW.registration_type_code := lower(btrim(NEW.registration_type_code));
+        NEW.registration_number := upper(regexp_replace(
+            btrim(NEW.registration_number), '\s+', '', 'g'
+        ));
+        v_domain := 'master.business_partner_tax_registration_type';
+        v_code := NEW.registration_type_code;
+    END IF;
+
+    IF NOT control.lookup_value_is_active(v_domain, v_code, NEW.tenant_id) THEN
+        RAISE EXCEPTION 'Unknown or inactive lookup value %/%', v_domain, v_code
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_guard_partner_extension_identity()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_new jsonb := to_jsonb(NEW);
+    v_old jsonb := to_jsonb(OLD);
+    v_key text;
+BEGIN
+    FOREACH v_key IN ARRAY ARRAY[
+        'id', 'tenant_id', 'business_partner_id',
+        'source_business_partner_id', 'target_business_partner_id',
+        'supplier_id', 'customer_id', 'company_code_id',
+        'legal_entity_id', 'source_company_code_id',
+        'counterparty_company_code_id', 'contact_person_id', 'person_id'
+    ] LOOP
+        IF v_new ? v_key AND (v_new -> v_key) IS DISTINCT FROM (v_old -> v_key) THEN
+            RAISE EXCEPTION '%.% identity coordinate % is immutable',
+                TG_TABLE_SCHEMA, TG_TABLE_NAME, v_key
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END LOOP;
+    IF v_new ? 'created_at'
+       AND ((v_new -> 'created_at') IS DISTINCT FROM (v_old -> 'created_at')
+            OR (v_new -> 'created_by') IS DISTINCT FROM (v_old -> 'created_by')) THEN
+        RAISE EXCEPTION '%.% creation evidence is immutable',
+            TG_TABLE_SCHEMA, TG_TABLE_NAME
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_business_partner_role()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_partner_id uuid;
+    v_role master.partner_role_d;
+    v_domain master.operating_organization_domain_d;
+BEGIN
+    v_partner_id := NEW.business_partner_id;
+    v_role := NEW.partner_role;
+
+    IF v_role = 'supplier' AND NOT EXISTS (
+        SELECT 1 FROM master.supplier
+         WHERE tenant_id = NEW.tenant_id
+           AND business_partner_id = v_partner_id
+           AND status <> 'archived'
+    ) THEN
+        RAISE EXCEPTION 'Business partner % has no supplier role', v_partner_id
+            USING ERRCODE = 'check_violation';
+    ELSIF v_role = 'customer' AND NOT EXISTS (
+        SELECT 1 FROM master.customer
+         WHERE tenant_id = NEW.tenant_id
+           AND business_partner_id = v_partner_id
+           AND status <> 'archived'
+    ) THEN
+        RAISE EXCEPTION 'Business partner % has no customer role', v_partner_id
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_TABLE_NAME = 'business_partner_operating_organization_assignment' THEN
+        SELECT domain INTO v_domain
+          FROM master.operating_organization
+         WHERE tenant_id = NEW.tenant_id
+           AND id = NEW.operating_organization_id;
+        IF (v_role = 'supplier' AND v_domain NOT IN ('procurement', 'both'))
+           OR (v_role = 'customer' AND v_domain NOT IN ('sales', 'both')) THEN
+            RAISE EXCEPTION 'Partner role % is incompatible with organization domain %',
+                v_role, v_domain
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_legal_entity_partner_link()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_category master.business_partner_category_d;
+BEGIN
+    SELECT partner_category INTO v_category
+      FROM master.business_partner
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.business_partner_id;
+    IF v_category IS DISTINCT FROM 'internal'::master.business_partner_category_d THEN
+        RAISE EXCEPTION 'Legal entity self mapping requires an internal business partner'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_supplier_remittance_link()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_partner_id uuid;
+    v_owner_id uuid;
+    v_owner_type text;
+    v_company_id uuid;
+    v_account_status master.bank_account_status_d;
+BEGIN
+    IF NEW.preferred_remittance_bank_link_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+    SELECT business_partner_id INTO v_partner_id
+      FROM master.supplier
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.supplier_id;
+    SELECT link.owner_id, link.owner_type, link.company_code_id, account.status
+      INTO v_owner_id, v_owner_type, v_company_id, v_account_status
+      FROM master.bank_account_link link
+      JOIN master.bank_account account
+        ON account.tenant_id = link.tenant_id
+       AND account.id = link.bank_account_id
+     WHERE link.tenant_id = NEW.tenant_id
+       AND link.id = NEW.preferred_remittance_bank_link_id
+       AND link.relationship_role = 'beneficiary';
+    IF NOT FOUND OR v_account_status <> 'active'
+       OR v_owner_type <> 'business_partner'
+       OR v_owner_id <> v_partner_id
+       OR (v_company_id IS NOT NULL AND v_company_id <> NEW.company_code_id) THEN
+        RAISE EXCEPTION 'Preferred remittance link is not an active compatible supplier-beneficiary account'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_intercompany_pair()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF NEW.counterparty_supplier_profile_id IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+             FROM master.company_code_supplier_profile profile
+            WHERE profile.tenant_id = NEW.tenant_id
+              AND profile.id = NEW.counterparty_supplier_profile_id
+              AND profile.company_code_id = NEW.source_company_code_id
+       ) THEN
+        RAISE EXCEPTION 'Counterparty supplier profile must belong to source company'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.mirror_customer_profile_id IS NOT NULL
+       AND NOT EXISTS (
+           SELECT 1
+             FROM master.company_code_customer_profile profile
+            WHERE profile.tenant_id = NEW.tenant_id
+              AND profile.id = NEW.mirror_customer_profile_id
+              AND profile.company_code_id = NEW.counterparty_company_code_id
+       ) THEN
+        RAISE EXCEPTION 'Mirror customer profile must belong to counterparty company'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_set_site_hierarchy()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_parent_company uuid;
+    v_parent_level   smallint;
+    v_cycle          boolean;
+BEGIN
+    IF NEW.parent_site_id IS NULL THEN
+        NEW.level_no := 1;
+        RETURN NEW;
+    END IF;
+
+    SELECT s.company_code_id, s.level_no
+      INTO v_parent_company, v_parent_level
+      FROM master.site s
+     WHERE s.tenant_id = NEW.tenant_id
+       AND s.id = NEW.parent_site_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Parent site % does not exist in tenant %',
+            NEW.parent_site_id, NEW.tenant_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF v_parent_company <> NEW.company_code_id THEN
+        RAISE EXCEPTION 'Parent and child sites must belong to the same company code'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    WITH RECURSIVE ancestors AS (
+        SELECT s.id, s.parent_site_id
+          FROM master.site s
+         WHERE s.tenant_id = NEW.tenant_id
+           AND s.id = NEW.parent_site_id
+        UNION ALL
+        SELECT p.id, p.parent_site_id
+          FROM master.site p
+          JOIN ancestors a ON p.id = a.parent_site_id
+         WHERE p.tenant_id = NEW.tenant_id
+    )
+    SELECT EXISTS (SELECT 1 FROM ancestors WHERE id = NEW.id)
+      INTO v_cycle;
+
+    IF v_cycle THEN
+        RAISE EXCEPTION 'Site hierarchy cycle detected for site %', NEW.id
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    NEW.level_no := v_parent_level + 1;
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_set_site_hierarchy() IS
+  'Derives site level and rejects cross-company parents and hierarchy cycles.';
+
+CREATE OR REPLACE FUNCTION master.trg_validate_work_assignment_contract()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_employee_id uuid;
+    v_company_id  uuid;
+BEGIN
+    IF NEW.employment_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT e.employee_id, e.company_code_id
+      INTO v_employee_id, v_company_id
+      FROM master.employment e
+     WHERE e.tenant_id = NEW.tenant_id
+       AND e.id = NEW.employment_id;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Employment % does not exist in tenant %',
+            NEW.employment_id, NEW.tenant_id
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+
+    IF v_employee_id IS NOT NULL AND v_employee_id <> NEW.employee_id THEN
+        RAISE EXCEPTION 'Work assignment employee does not match employment employee'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    IF v_company_id <> NEW.company_code_id THEN
+        RAISE EXCEPTION 'Work assignment company does not match employment company'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_validate_work_assignment_contract() IS
+  'Requires an assignment employment, employee, and company code to describe the same workforce contract.';
+
+CREATE OR REPLACE FUNCTION master.trg_guard_warehouse_identity()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.site_id IS DISTINCT FROM OLD.site_id
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION 'warehouse tenant, site and creation evidence are immutable'
+            USING ERRCODE = '22000';
+    END IF;
+    IF OLD.status = 'active' AND NEW.status <> 'active' AND (
+        EXISTS (
+            SELECT 1 FROM ledger.inventory_balance
+             WHERE tenant_id = OLD.tenant_id AND warehouse_id = OLD.id
+               AND quantity_on_hand <> 0
+        )
+        OR EXISTS (
+            SELECT 1 FROM ledger.inventory_valuation_layer
+             WHERE tenant_id = OLD.tenant_id AND warehouse_id = OLD.id
+               AND remaining_quantity > 0
+        )
+    ) THEN
+        RAISE EXCEPTION 'warehouse with on-hand stock or open valuation layers cannot be deactivated'
+            USING ERRCODE = '55000';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_warehouse_type()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master, control
+AS $$
+BEGIN
+    IF NOT control.lookup_value_is_active(
+        'master.warehouse_type',
+        NEW.warehouse_type,
+        NEW.tenant_id
+    ) THEN
+        RAISE EXCEPTION 'unknown or inactive warehouse type %', NEW.warehouse_type
+            USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_risk_subject_binding()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_business_partner_id uuid;
+BEGIN
+    IF NEW.subject_type = 'business_partner' THEN
+        IF NEW.subject_id IS DISTINCT FROM NEW.business_partner_id THEN
+            RAISE EXCEPTION
+                'risk subject business_partner requires subject_id = business_partner_id'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    ELSIF NEW.subject_type = 'supplier' THEN
+        SELECT business_partner_id
+          INTO v_business_partner_id
+          FROM master.supplier
+         WHERE tenant_id = NEW.tenant_id
+           AND id = NEW.subject_id;
+        IF NOT FOUND OR v_business_partner_id IS DISTINCT FROM NEW.business_partner_id THEN
+            RAISE EXCEPTION
+                'risk subject supplier % is missing or belongs to another business partner',
+                NEW.subject_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    ELSIF NEW.subject_type = 'customer' THEN
+        SELECT business_partner_id
+          INTO v_business_partner_id
+          FROM master.customer
+         WHERE tenant_id = NEW.tenant_id
+           AND id = NEW.subject_id;
+        IF NOT FOUND OR v_business_partner_id IS DISTINCT FROM NEW.business_partner_id THEN
+            RAISE EXCEPTION
+                'risk subject customer % is missing or belongs to another business partner',
+                NEW.subject_id
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_risk_subject_binding() IS
+  'Validates business-partner, supplier, and customer polymorphic subject bindings. Project engagement resolution remains capability-owned until its canonical aggregate is extracted.';
+
+CREATE OR REPLACE FUNCTION master.trg_risk_model_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_weight numeric;
+BEGIN
+    IF OLD.status = 'active'
+       AND (
+           OLD.code IS DISTINCT FROM NEW.code
+           OR OLD.version IS DISTINCT FROM NEW.version
+           OR OLD.name IS DISTINCT FROM NEW.name
+           OR OLD.description IS DISTINCT FROM NEW.description
+           OR OLD.applicable_context IS DISTINCT FROM NEW.applicable_context
+           OR OLD.scoring_algorithm IS DISTINCT FROM NEW.scoring_algorithm
+           OR OLD.risk_band_thresholds IS DISTINCT FROM NEW.risk_band_thresholds
+           OR OLD.config IS DISTINCT FROM NEW.config
+           OR OLD.effective_from IS DISTINCT FROM NEW.effective_from
+       ) THEN
+        RAISE EXCEPTION
+            'active risk model %.% is immutable; publish a new version',
+            OLD.code, OLD.version
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    IF OLD.status <> 'active' AND NEW.status = 'active' THEN
+        SELECT COALESCE(sum(weight), 0)
+          INTO v_weight
+          FROM master.risk_model_dimension
+         WHERE model_code = NEW.code
+           AND model_version = NEW.version;
+        IF v_weight <> 1.0000 THEN
+            RAISE EXCEPTION
+                'risk model %.% cannot be activated: weights total %, expected 1.0000',
+                NEW.code, NEW.version, v_weight
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_risk_model_weight_sum()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_model_code text := COALESCE(NEW.model_code, OLD.model_code);
+    v_model_version text := COALESCE(NEW.model_version, OLD.model_version);
+    v_status text;
+    v_weight numeric;
+BEGIN
+    SELECT status
+      INTO v_status
+      FROM master.risk_model
+     WHERE code = v_model_code
+       AND version = v_model_version;
+
+    IF NOT FOUND OR v_status <> 'active' THEN
+        RETURN NULL;
+    END IF;
+
+    SELECT COALESCE(sum(weight), 0)
+      INTO v_weight
+      FROM master.risk_model_dimension
+     WHERE model_code = v_model_code
+       AND model_version = v_model_version;
+
+    IF v_weight <> 1.0000 THEN
+        RAISE EXCEPTION
+            'active risk model %.% dimension weights must total 1.0000; found %',
+            v_model_code, v_model_version, v_weight
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_risk_model_dimension_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_status text;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        RETURN NEW;
+    END IF;
+
+    SELECT status
+      INTO v_status
+      FROM master.risk_model
+     WHERE code = OLD.model_code
+       AND version = OLD.model_version;
+
+    IF v_status = 'active' THEN
+        RAISE EXCEPTION
+            'dimensions of active risk model %.% are immutable',
+            OLD.model_code, OLD.model_version
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_party_risk_assessment_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog
+AS $$
+BEGIN
+    IF OLD.status = 'approved' AND (
+        OLD.tenant_id IS DISTINCT FROM NEW.tenant_id
+        OR OLD.subject_type IS DISTINCT FROM NEW.subject_type
+        OR OLD.subject_id IS DISTINCT FROM NEW.subject_id
+        OR OLD.business_partner_id IS DISTINCT FROM NEW.business_partner_id
+        OR OLD.assessment_context IS DISTINCT FROM NEW.assessment_context
+        OR OLD.model_code IS DISTINCT FROM NEW.model_code
+        OR OLD.model_version IS DISTINCT FROM NEW.model_version
+        OR OLD.overall_score IS DISTINCT FROM NEW.overall_score
+    ) THEN
+        RAISE EXCEPTION
+            'approved party risk assessment is structurally immutable; supersede it'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    IF OLD.status = 'approved'
+       AND OLD.risk_band IS DISTINCT FROM NEW.risk_band
+       AND (
+           NOT NEW.is_override
+           OR NEW.override_reason IS NULL
+           OR NEW.override_score IS NULL
+       ) THEN
+        RAISE EXCEPTION
+            'changing an approved risk band requires override reason and score'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_party_risk_evidence_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog
+AS $$
+BEGIN
+    IF (
+        OLD.tenant_id IS DISTINCT FROM NEW.tenant_id
+        OR OLD.subject_type IS DISTINCT FROM NEW.subject_type
+        OR OLD.subject_id IS DISTINCT FROM NEW.subject_id
+        OR OLD.business_partner_id IS DISTINCT FROM NEW.business_partner_id
+        OR OLD.source_code IS DISTINCT FROM NEW.source_code
+        OR OLD.source_reference IS DISTINCT FROM NEW.source_reference
+        OR OLD.evidence_type IS DISTINCT FROM NEW.evidence_type
+        OR OLD.evidence_date IS DISTINCT FROM NEW.evidence_date
+        OR OLD.received_at IS DISTINCT FROM NEW.received_at
+        OR OLD.valid_from IS DISTINCT FROM NEW.valid_from
+        OR OLD.ingested_by IS DISTINCT FROM NEW.ingested_by
+        OR OLD.ingested_via IS DISTINCT FROM NEW.ingested_via
+        OR OLD.created_at IS DISTINCT FROM NEW.created_at
+        OR OLD.created_by IS DISTINCT FROM NEW.created_by
+    ) THEN
+        RAISE EXCEPTION
+            'party risk evidence identity and source fields are immutable'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    IF OLD.raw_payload IS NOT NULL
+       AND OLD.raw_payload IS DISTINCT FROM NEW.raw_payload THEN
+        RAISE EXCEPTION
+            'party risk evidence raw_payload is immutable once written'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_party_risk_driver_consistency()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_score_assessment_id uuid;
+    v_score_dimension_code text;
+    v_assessment_business_partner_id uuid;
+    v_evidence_business_partner_id uuid;
+BEGIN
+    IF NEW.dimension_score_id IS NOT NULL THEN
+        SELECT assessment_id, dimension_code
+          INTO v_score_assessment_id, v_score_dimension_code
+          FROM master.party_risk_dimension_score
+         WHERE tenant_id = NEW.tenant_id
+           AND id = NEW.dimension_score_id;
+
+        IF NOT FOUND
+           OR v_score_assessment_id IS DISTINCT FROM NEW.assessment_id
+           OR v_score_dimension_code IS DISTINCT FROM NEW.dimension_code THEN
+            RAISE EXCEPTION
+                'risk driver dimension score does not match its assessment and dimension'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    IF NEW.evidence_id IS NOT NULL THEN
+        SELECT business_partner_id
+          INTO v_assessment_business_partner_id
+          FROM master.party_risk_assessment
+         WHERE tenant_id = NEW.tenant_id
+           AND id = NEW.assessment_id;
+
+        SELECT business_partner_id
+          INTO v_evidence_business_partner_id
+          FROM master.party_risk_evidence
+         WHERE tenant_id = NEW.tenant_id
+           AND id = NEW.evidence_id;
+
+        IF v_evidence_business_partner_id IS DISTINCT FROM
+           v_assessment_business_partner_id THEN
+            RAISE EXCEPTION
+                'risk driver evidence belongs to another business partner'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_party_risk_mitigation_consistency()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog
+AS $$
+DECLARE
+    v_assessment_business_partner_id uuid;
+    v_driver_assessment_id uuid;
+BEGIN
+    IF NEW.assessment_id IS NOT NULL THEN
+        SELECT business_partner_id
+          INTO v_assessment_business_partner_id
+          FROM master.party_risk_assessment
+         WHERE tenant_id = NEW.tenant_id
+           AND id = NEW.assessment_id;
+        IF v_assessment_business_partner_id IS DISTINCT FROM
+           NEW.business_partner_id THEN
+            RAISE EXCEPTION
+                'risk mitigation assessment belongs to another business partner'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    IF NEW.driver_id IS NOT NULL THEN
+        SELECT assessment_id
+          INTO v_driver_assessment_id
+          FROM master.party_risk_driver
+         WHERE tenant_id = NEW.tenant_id
+           AND id = NEW.driver_id;
+        IF NOT FOUND
+           OR (
+               NEW.assessment_id IS NOT NULL
+               AND v_driver_assessment_id IS DISTINCT FROM NEW.assessment_id
+           ) THEN
+            RAISE EXCEPTION
+                'risk mitigation driver does not match its assessment'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_party_risk_review_event_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = master, pg_catalog
+AS $$
+BEGIN
+    RAISE EXCEPTION
+        'party risk review events are append-only'
+        USING ERRCODE = 'object_not_in_prerequisite_state';
+END;
+$$;
+
+-- Cross-row invariants for the Neon product, catalog, and BOM foundation.
+
+CREATE OR REPLACE FUNCTION master.trg_guard_product_catalog_identity()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION
+            'master.% identity, tenant, and creation evidence are immutable',
+            TG_TABLE_NAME USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_commodity_category_parent()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF NEW.parent_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    IF EXISTS (
+        WITH RECURSIVE ancestors AS (
+            SELECT c.id, c.parent_id
+              FROM master.commodity_category c
+             WHERE c.tenant_id = NEW.tenant_id
+               AND c.id = NEW.parent_id
+            UNION ALL
+            SELECT c.id, c.parent_id
+              FROM master.commodity_category c
+              JOIN ancestors a ON a.parent_id = c.id
+             WHERE c.tenant_id = NEW.tenant_id
+        )
+        SELECT 1 FROM ancestors WHERE id = NEW.id
+    ) THEN
+        RAISE EXCEPTION 'Commodity category hierarchy cannot contain a cycle'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_item_product_uom()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_product_uom text;
+BEGIN
+    SELECT p.base_uom_code
+      INTO v_product_uom
+      FROM master.product p
+     WHERE p.tenant_id = NEW.tenant_id
+       AND p.id = NEW.product_id;
+
+    IF FOUND AND NEW.base_uom_code <> v_product_uom THEN
+        RAISE EXCEPTION
+            'Item base UOM % must match product base UOM %',
+            NEW.base_uom_code, v_product_uom
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_catalog_item_company()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_catalog_company uuid;
+    v_item_company    uuid;
+BEGIN
+    SELECT company_code_id INTO v_catalog_company
+      FROM master.catalog
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.catalog_id;
+
+    SELECT company_code_id INTO v_item_company
+      FROM master.item
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.item_id;
+
+    IF v_catalog_company IS NOT NULL
+       AND v_item_company IS NOT NULL
+       AND v_catalog_company <> v_item_company THEN
+        RAISE EXCEPTION 'Catalog item must belong to the catalog company code'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_bom_header()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_company       uuid;
+    v_uom           text;
+    v_manufactured  boolean;
+BEGIN
+    SELECT company_code_id, base_uom_code, is_manufactured
+      INTO v_company, v_uom, v_manufactured
+      FROM master.item
+     WHERE tenant_id = NEW.tenant_id
+       AND id = NEW.output_item_id;
+
+    IF FOUND AND (
+        v_company <> NEW.company_code_id
+        OR v_uom <> NEW.uom_code
+        OR NOT v_manufactured
+    ) THEN
+        RAISE EXCEPTION
+            'BOM output must be a manufactured item in the same company and base UOM'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_bom_component()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_output_item uuid;
+    v_item_company uuid;
+BEGIN
+    SELECT output_item_id
+      INTO v_output_item
+      FROM master.bom
+     WHERE tenant_id = NEW.tenant_id
+       AND company_code_id = NEW.company_code_id
+       AND id = NEW.bom_id;
+
+    SELECT company_code_id
+      INTO v_item_company
+      FROM master.item
+     WHERE tenant_id = NEW.tenant_id
+       AND id = NEW.component_item_id;
+
+    IF v_output_item = NEW.component_item_id THEN
+        RAISE EXCEPTION 'A BOM cannot directly consume its output item'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF v_item_company IS NOT NULL AND v_item_company <> NEW.company_code_id THEN
+        RAISE EXCEPTION 'BOM component must belong to the BOM company code'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF v_output_item IS NOT NULL AND EXISTS (
+        WITH RECURSIVE descendants(item_id) AS (
+            SELECT NEW.component_item_id
+            UNION
+            SELECT bc.component_item_id
+              FROM descendants d
+              JOIN master.bom b
+                ON b.tenant_id = NEW.tenant_id
+               AND b.company_code_id = NEW.company_code_id
+               AND b.output_item_id = d.item_id
+              JOIN master.bom_component bc
+                ON bc.tenant_id = b.tenant_id
+               AND bc.company_code_id = b.company_code_id
+               AND bc.bom_id = b.id
+             WHERE bc.id <> NEW.id
+        )
+        SELECT 1 FROM descendants WHERE item_id = v_output_item
+    ) THEN
+        RAISE EXCEPTION 'BOM component graph cannot contain a cycle'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_guard_released_bom()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_status master.bom_status_d;
+BEGIN
+    SELECT status INTO v_status
+      FROM master.bom
+     WHERE tenant_id = COALESCE(NEW.tenant_id, OLD.tenant_id)
+       AND id = COALESCE(NEW.bom_id, OLD.bom_id);
+
+    IF v_status IN ('released', 'retired') THEN
+        RAISE EXCEPTION
+            'Components of a released or retired BOM are immutable; create a new BOM revision'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_project_wbs()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master, document
+AS $$
+DECLARE
+    v_parent master.project_wbs%ROWTYPE;
+BEGIN
+    IF TG_OP = 'UPDATE'
+       AND NEW.parent_wbs_id IS DISTINCT FROM OLD.parent_wbs_id
+       AND EXISTS (
+           SELECT 1 FROM master.project_wbs c
+            WHERE c.tenant_id = OLD.tenant_id
+              AND c.project_id = OLD.project_id
+              AND c.parent_wbs_id = OLD.id
+       ) THEN
+        RAISE EXCEPTION 'Reparenting a WBS with children is not allowed'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.parent_wbs_id IS NULL THEN
+        IF NEW.level_no <> 1 THEN
+            RAISE EXCEPTION 'Root WBS level must be 1' USING ERRCODE = 'check_violation';
+        END IF;
+    ELSE
+        SELECT * INTO v_parent
+          FROM master.project_wbs
+         WHERE tenant_id = NEW.tenant_id
+           AND project_id = NEW.project_id
+           AND id = NEW.parent_wbs_id;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'WBS parent does not belong to the project'
+                USING ERRCODE = 'foreign_key_violation';
+        END IF;
+        IF v_parent.is_postable THEN
+            RAISE EXCEPTION 'A postable WBS cannot receive child WBS elements'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        NEW.level_no := v_parent.level_no + 1;
+    END IF;
+
+    IF NEW.parent_wbs_id IS NOT NULL AND EXISTS (
+        WITH RECURSIVE ancestors AS (
+            SELECT w.id, w.parent_wbs_id
+              FROM master.project_wbs w
+             WHERE w.tenant_id = NEW.tenant_id
+               AND w.project_id = NEW.project_id
+               AND w.id = NEW.parent_wbs_id
+            UNION ALL
+            SELECT w.id, w.parent_wbs_id
+              FROM master.project_wbs w
+              JOIN ancestors a ON a.parent_wbs_id = w.id
+             WHERE w.tenant_id = NEW.tenant_id
+               AND w.project_id = NEW.project_id
+        )
+        SELECT 1 FROM ancestors WHERE id = NEW.id
+    ) THEN
+        RAISE EXCEPTION 'WBS hierarchy cannot contain a cycle'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+       AND NOT OLD.is_postable
+       AND NEW.is_postable
+       AND EXISTS (
+           SELECT 1 FROM master.project_wbs c
+            WHERE c.tenant_id = NEW.tenant_id
+              AND c.project_id = NEW.project_id
+              AND c.parent_wbs_id = NEW.id
+       ) THEN
+        RAISE EXCEPTION 'A WBS with children cannot become postable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_project_item()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_company uuid;
+    v_uom text;
+    v_project_company uuid;
+BEGIN
+    SELECT company_code_id INTO v_project_company
+      FROM master.project
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.project_id;
+
+    IF NEW.item_id IS NOT NULL THEN
+        SELECT company_code_id, base_uom_code INTO v_company, v_uom
+          FROM master.item
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.item_id;
+        IF FOUND AND (v_company <> v_project_company OR v_uom <> NEW.uom_code) THEN
+            RAISE EXCEPTION 'Project item must match the project company and item base UOM'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_compensation_assignment()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,master,document AS $$
+DECLARE v_employment master.employment%ROWTYPE; v_group master.pay_group%ROWTYPE; v_structure master.pay_structure%ROWTYPE; v_change document.compensation_change%ROWTYPE;
+BEGIN
+    SELECT * INTO v_employment FROM master.employment WHERE tenant_id=NEW.tenant_id AND id=NEW.employment_id;
+    SELECT * INTO v_group FROM master.pay_group WHERE tenant_id=NEW.tenant_id AND id=NEW.pay_group_id;
+    IF v_employment.employee_id IS DISTINCT FROM NEW.employee_id OR v_employment.company_code_id IS DISTINCT FROM v_group.company_code_id THEN
+        RAISE EXCEPTION 'Compensation employee, employment and pay group must resolve to one company' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.currency_code<>v_group.currency_code THEN RAISE EXCEPTION 'Compensation currency must match the pay group' USING ERRCODE='check_violation'; END IF;
+    IF NEW.pay_structure_id IS NOT NULL THEN
+        SELECT * INTO v_structure FROM master.pay_structure WHERE tenant_id=NEW.tenant_id AND id=NEW.pay_structure_id;
+        IF v_structure.currency_code<>NEW.currency_code OR (v_structure.pay_group_id IS NOT NULL AND v_structure.pay_group_id<>NEW.pay_group_id) THEN
+            RAISE EXCEPTION 'Compensation pay structure must match pay group and currency' USING ERRCODE='check_violation';
+        END IF;
+    END IF;
+    IF NEW.source_compensation_change_id IS NOT NULL THEN
+        SELECT * INTO v_change FROM document.compensation_change WHERE tenant_id=NEW.tenant_id AND id=NEW.source_compensation_change_id;
+        IF v_change.employee_id<>NEW.employee_id OR v_change.effective_date<>NEW.effective_from OR v_change.proposed_pay_group_id<>NEW.pay_group_id OR v_change.proposed_currency_code<>NEW.currency_code OR v_change.proposed_base_amount<>NEW.base_amount OR v_change.proposed_annualized_amount IS DISTINCT FROM NEW.annualized_amount THEN
+            RAISE EXCEPTION 'Compensation assignment must materialize its approved change exactly' USING ERRCODE='check_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_manage_compensation_assignment()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,master AS $$
+BEGIN
+    IF TG_OP='INSERT' AND NEW.status<>'planned' THEN RAISE EXCEPTION 'Compensation assignment must be created planned' USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status<>'planned' AND (
+        NEW.employee_id IS DISTINCT FROM OLD.employee_id OR NEW.employment_id IS DISTINCT FROM OLD.employment_id OR
+        NEW.pay_group_id IS DISTINCT FROM OLD.pay_group_id OR NEW.pay_structure_id IS DISTINCT FROM OLD.pay_structure_id OR
+        NEW.currency_code IS DISTINCT FROM OLD.currency_code OR NEW.base_amount IS DISTINCT FROM OLD.base_amount OR
+        NEW.annualized_amount IS DISTINCT FROM OLD.annualized_amount OR NEW.effective_from IS DISTINCT FROM OLD.effective_from OR
+        NEW.source_compensation_change_id IS DISTINCT FROM OLD.source_compensation_change_id
+    ) THEN RAISE EXCEPTION 'Effective compensation facts are immutable; create a successor assignment' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    IF TG_OP='UPDATE' AND NEW.effective_until IS DISTINCT FROM OLD.effective_until AND NOT(
+        OLD.status='active' AND NEW.status='superseded' AND OLD.effective_until IS NULL AND NEW.effective_until>=OLD.effective_from
+    ) THEN RAISE EXCEPTION 'Compensation end date may only be set while superseding an active assignment' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IS DISTINCT FROM NEW.status AND NOT(
+        (OLD.status='planned' AND NEW.status IN('active','cancelled')) OR
+        (OLD.status='active' AND NEW.status IN('superseded','cancelled'))
+    ) THEN RAISE EXCEPTION 'Invalid compensation assignment transition: % -> %',OLD.status,NEW.status USING ERRCODE='check_violation'; END IF;
+    IF TG_OP='UPDATE' AND OLD.status IN('superseded','cancelled') AND NEW IS DISTINCT FROM OLD THEN RAISE EXCEPTION 'Final compensation assignment is immutable' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_certification_type_scope()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_type_tenant_id uuid;
+BEGIN
+  IF NEW.certification_type_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT tenant_id
+    INTO v_type_tenant_id
+    FROM master.certification_type
+   WHERE id = NEW.certification_type_id;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Unknown certification type: %', NEW.certification_type_id
+      USING ERRCODE = '23503';
+  END IF;
+
+  IF v_type_tenant_id IS NOT NULL AND v_type_tenant_id <> NEW.tenant_id THEN
+    RAISE EXCEPTION
+      'Certification type % belongs to another tenant',
+      NEW.certification_type_id
+      USING ERRCODE = '23514';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION master.trg_guard_organization_lifecycle() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,master AS $$
+DECLARE v_old text:=OLD.status::text; v_new text:=NEW.status::text;
+BEGIN
+  IF v_old=v_new THEN RETURN NEW; END IF;
+  IF NOT ((v_old='draft' AND v_new IN ('active','archived')) OR
+          (v_old='active' AND v_new IN ('inactive','retired','archived')) OR
+          (v_old='inactive' AND v_new IN ('active','retired','archived'))) THEN
+    RAISE EXCEPTION 'INVALID_ORGANIZATION_LIFECYCLE: % -> %',v_old,v_new USING ERRCODE='object_not_in_prerequisite_state';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION master.trg_record_organization_amendment() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,master AS $$
+DECLARE v_kind text:=TG_ARGV[0]; v_revision bigint; v_actor uuid;
+BEGIN
+  IF to_jsonb(OLD)=to_jsonb(NEW) THEN RETURN NEW; END IF;
+  v_actor:=COALESCE(NEW.updated_by,NEW.status_changed_by,NEW.created_by);
+  SELECT COALESCE(max(revision_no),0)+1 INTO v_revision FROM master.organization_amendment
+   WHERE tenant_id=NEW.tenant_id AND resource_kind=v_kind AND resource_id=NEW.id;
+  INSERT INTO master.organization_amendment(tenant_id,resource_kind,resource_id,revision_no,amendment_kind,before_state,after_state,recorded_by)
+  VALUES(NEW.tenant_id,v_kind,NEW.id,v_revision,CASE WHEN OLD.status IS DISTINCT FROM NEW.status THEN 'lifecycle' ELSE 'profile' END,to_jsonb(OLD),to_jsonb(NEW),v_actor);
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION master.trg_sync_organization_scope_target() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,master,authz,event
+AS $$
+DECLARE v_kind authz.scope_kind_d:=TG_ARGV[0]::authz.scope_kind_d; v_parent uuid; v_status authz.scope_status_d; v_scope_id uuid; v_actor uuid;
+BEGIN
+  v_actor:=COALESCE(NEW.updated_by,NEW.status_changed_by,NEW.created_by);
+  IF v_kind='legal_entity' AND NEW.parent_legal_entity_id IS NOT NULL THEN
+    SELECT id INTO v_parent FROM authz.scope_target WHERE tenant_id=NEW.tenant_id AND scope_kind='legal_entity' AND target_id=NEW.parent_legal_entity_id;
+  ELSIF v_kind='operating_organization' AND NEW.parent_operating_organization_id IS NOT NULL THEN
+    SELECT id INTO v_parent FROM authz.scope_target WHERE tenant_id=NEW.tenant_id AND scope_kind='operating_organization' AND target_id=NEW.parent_operating_organization_id;
+  END IF;
+  IF v_parent IS NULL THEN SELECT id INTO v_parent FROM authz.scope_target WHERE tenant_id=NEW.tenant_id AND scope_kind='tenant' AND target_id=NEW.tenant_id; END IF;
+  IF v_parent IS NULL THEN
+    INSERT INTO authz.scope_target(id,tenant_id,scope_kind,scope_key,target_id,parent_scope_target_id,display_name,metadata,status,created_by)
+    SELECT md5(NEW.tenant_id::text||':scope:tenant')::uuid,NEW.tenant_id,'tenant',NEW.tenant_id::text,NEW.tenant_id,NULL,t.display_name,jsonb_build_object('authority_table','master.tenant'),'active',v_actor
+      FROM master.tenant t WHERE t.id=NEW.tenant_id RETURNING id INTO v_parent;
+  END IF;
+  IF v_parent IS NULL THEN RAISE EXCEPTION 'TENANT_SCOPE_TARGET_REQUIRED' USING ERRCODE='foreign_key_violation'; END IF;
+  v_status:=CASE WHEN NEW.status::text='active' THEN 'active'::authz.scope_status_d WHEN NEW.status::text IN ('retired','archived') THEN 'retired'::authz.scope_status_d ELSE 'suspended'::authz.scope_status_d END;
+  INSERT INTO authz.scope_target(id,tenant_id,scope_kind,scope_key,target_id,parent_scope_target_id,display_name,metadata,status,created_by)
+  VALUES(md5(NEW.tenant_id::text||':scope:'||replace(v_kind::text,'_','-')||':'||NEW.id::text)::uuid,NEW.tenant_id,v_kind,v_kind::text||':'||NEW.code,NEW.id,v_parent,COALESCE(NEW.display_name,NEW.name),jsonb_build_object('authority_table',TG_TABLE_SCHEMA||'.'||TG_TABLE_NAME),v_status,v_actor)
+  ON CONFLICT(tenant_id,scope_kind,target_id) DO UPDATE SET parent_scope_target_id=EXCLUDED.parent_scope_target_id,display_name=EXCLUDED.display_name,metadata=EXCLUDED.metadata,status=EXCLUDED.status,updated_by=v_actor
+  RETURNING id INTO v_scope_id;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION master.trg_emit_operating_assignment_invalidation() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,event AS $$
+DECLARE v_tenant uuid:=COALESCE(NEW.tenant_id,OLD.tenant_id); v_id uuid:=COALESCE(NEW.id,OLD.id); v_op char(1):=substr(TG_OP,1,1);
+BEGIN
+  PERFORM event.fn_authorization_emit_invalidation('wave6:operating_assignment:'||v_id||':'||pg_current_xact_id()::text,'tenant',v_tenant,NULL,'master.operating_organization_company_assignment',v_op,jsonb_build_object('id',v_id));
+  IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION master.trg_reject_organization_amendment_mutation() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'organization_amendment is append-only' USING ERRCODE='integrity_constraint_violation'; END $$;

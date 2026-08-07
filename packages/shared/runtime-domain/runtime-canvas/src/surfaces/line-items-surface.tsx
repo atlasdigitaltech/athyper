@@ -19,7 +19,7 @@ import type { DocumentWorkspaceLineSubmit, LineFieldChangeResolver, LineRecord }
 import { ChildCollectionGrid } from "@athyper/runtime-line-item/embedded";
 import { useEditDraftContext } from "@athyper/content-ui";
 import { flattenRuntimeRecord } from "@athyper/runtime-shared/core";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { useOptionalDocumentEditCoordinator } from "../document-runtime/document-edit-coordinator";
 import { useOptionalDocumentRuntimeContext } from "../document-runtime/document-runtime-context";
 import { headerPrimaryActionClass } from "../header/header-chrome";

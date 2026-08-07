@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { ChevronLeft, Search } from "lucide-react";
-import { Badge, Input, Skeleton } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Input, Skeleton } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import type { ChartOfAccount, GlAccountNode } from "../data/types";
 import { findNode, collectPostings } from "../data/demo-data";
 import { useAccountTree } from "../hooks/useAccountTree";

@@ -2,8 +2,8 @@
 
 import { Fragment } from "react";
 import { Loader2, MoreHorizontal } from "lucide-react";
-import { getActionIcon } from "@athyper/icons";
-import { cn } from "@athyper/theme/utils";
+import { getActionIcon } from "@athyper/platform-icons";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import type { HeaderAction } from "./types";
 import {
   headerDangerActionClass,

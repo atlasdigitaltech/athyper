@@ -30,7 +30,7 @@ describe("Phase 0 tenant and work-context contracts", () => {
 
   it("fails closed for domain mismatch and stale context versions", () => {
     const bff = read("packages/shared/platform-auth/auth-bff/src/index.ts");
-    const relay = read("packages/shared/data-integration/bff-relay/src/index.ts");
+    const relay = read("packages/platform/foundation/bff-relay/src/index.ts");
 
     expect(bff).toContain("runtimeHeadersMatchSession");
     expect(bff).toContain("activeWorkContext");
@@ -41,7 +41,7 @@ describe("Phase 0 tenant and work-context contracts", () => {
 
   it("implements scoped deny subtraction and member-company propagation", () => {
     const permission = read("server/packages/services/iam/permission/permission.service.ts");
-    const authorizationScope = read("server/db/ddl/master/05_zz_authorization_scope.sql");
+    const authorizationScope = read("server/db/ddl/planes/neon/authz/07_functions.sql");
     const policy = read("server/db/ddl/planes/neon/authz/12_compiled_permission_reference_seed.sql");
 
     expect(permission).toContain("grant_denies");
@@ -53,7 +53,7 @@ describe("Phase 0 tenant and work-context contracts", () => {
 
   it("keeps activeOrg compatibility while carrying the legacy tenant route contract", () => {
     const bff = read("packages/shared/platform-auth/auth-bff/src/index.ts");
-    const relay = read("packages/shared/data-integration/bff-relay/src/index.ts");
+    const relay = read("packages/platform/foundation/bff-relay/src/index.ts");
 
     expect(bff).toContain("activeOrg");
     expect(bff).toContain("activeWorkContext");
@@ -63,8 +63,8 @@ describe("Phase 0 tenant and work-context contracts", () => {
   });
 
   it("contains the RLS and tenant-safe FK contract for domain ownership", () => {
-    const ddl = read("server/db/ddl/master/01v_operating_organization_domain_integration.sql");
-    const rls = read("server/db/ddl/document/08x_rls_operating_organization_domain.sql");
+    const ddl = read("server/db/ddl/planes/neon/master/03_tables.sql");
+    const rls = read("server/db/ddl/planes/neon/document/10_rls.sql");
 
     expect(ddl).toContain("FOREIGN KEY (tenant_id, operating_organization_id)");
     expect(ddl).toContain("FOREIGN KEY (tenant_id, company_code_id)");

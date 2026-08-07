@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { LoginGatePage } from "@athyper/identity-gate";
+import { LoginGatePage } from "@athyper/platform-iam-identity-gate";
 import { PLANE_KEY } from "@/lib/plane";
 import { getAdminServerSession } from "@/lib/server/session";
 

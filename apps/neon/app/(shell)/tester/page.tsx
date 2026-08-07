@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PageFrame } from "@athyper/surface-kit";
+import { PageFrame } from "@athyper/platform-surface-kit";
 import { PLANE_KEY } from "@/lib/plane";
 import { getNeonServerSession } from "@/lib/server/session";
 import { buildRuntimeHeaders, buildRuntimeUrl } from "@/lib/server/runtime-headers";

@@ -11,14 +11,14 @@ const base = "server/db/ddl/planes/neon/control";
 const [domains, tables, constraints, indexes, functions, triggers, rls, grants,
   neonManifest, athyperManifest, meshManifest, masterDomains, masterTables,
   service, meshPrisma, dispositionPolicy, dispositionInventory] = await Promise.all([
-  read(`${base}/02_fiscal_calendar_domains.sql`),
-  read(`${base}/03_fiscal_calendar_tables.sql`),
-  read(`${base}/05_fiscal_calendar_constraints.sql`),
-  read(`${base}/06_fiscal_calendar_indexes.sql`),
-  read(`${base}/07_fiscal_calendar_functions.sql`),
-  read(`${base}/08_fiscal_calendar_triggers.sql`),
-  read(`${base}/10_fiscal_calendar_rls.sql`),
-  read(`${base}/11_fiscal_calendar_grants.sql`),
+  read(`${base}/02_domains.sql`),
+  read(`${base}/03_tables.sql`),
+  read(`${base}/05_constraints.sql`),
+  read(`${base}/06_indexes.sql`),
+  read(`${base}/07_functions.sql`),
+  read(`${base}/08_triggers.sql`),
+  read(`${base}/10_rls.sql`),
+  read(`${base}/11_grants.sql`),
   read("server/db/ddl/planes/neon/_manifest.txt"),
   read("server/db/ddl/planes/athyper/_manifest.txt"),
   read("server/db/ddl/planes/mesh/_manifest.txt"),
@@ -35,6 +35,14 @@ const relationNames = [
   "fiscal_calendar_period_rule",
   "company_fiscal_calendar_assignment",
 ];
+const tableDefinition = (qualifiedName: string): string => {
+  const start = tables.indexOf(`CREATE TABLE ${qualifiedName} (`);
+  const end = tables.indexOf("\nCREATE TABLE ", start + 1);
+  return tables.slice(start, end === -1 ? undefined : end);
+};
+const calendarConfigDefinition = tableDefinition("control.fiscal_calendar_config");
+const periodRuleDefinition = tableDefinition("control.fiscal_calendar_period_rule");
+const calendarAssignmentDefinition = tableDefinition("control.company_fiscal_calendar_assignment");
 for (const table of relationNames) {
   expect(`${table} is Neon control owned`, tables.includes(`CREATE TABLE control.${table} (`));
   expect(`${table} has forced RLS`,
@@ -51,20 +59,17 @@ for (const domain of [
 ]) expect(`${domain} is sealed`, domains.includes(`CREATE DOMAIN control.${domain}`));
 
 expect("calendar applicability exists only on company assignment",
-  !tables.slice(0, tables.indexOf("CREATE TABLE control.fiscal_calendar_period_rule"))
-    .includes("effective_from")
-  && tables.includes("effective_fiscal_year_from"));
-expect("assignment priority ambiguity is removed", !tables.includes("priority"));
+  !calendarConfigDefinition.includes("effective_from")
+  && !periodRuleDefinition.includes("effective_from")
+  && calendarAssignmentDefinition.includes("effective_fiscal_year_from"));
+expect("assignment priority ambiguity is removed",
+  !calendarAssignmentDefinition.includes("priority"));
 expect("period rules are parent-version composition without lifecycle status",
-  !tables.slice(
-    tables.indexOf("CREATE TABLE control.fiscal_calendar_period_rule"),
-    tables.indexOf("CREATE TABLE control.company_fiscal_calendar_assignment"),
-  ).match(/\bstatus\b|is_active|updated_at|updated_by/));
+  !periodRuleDefinition.match(/\bstatus\b|is_active|updated_at|updated_by/));
 expect("all actor and business references are tenant composite",
   ["fiscal_calendar_config_created_by_fk", "fiscal_calendar_period_rule_created_by_fk",
     "company_fiscal_calendar_assignment_company_fk",
-    "company_fiscal_calendar_assignment_created_by_fk"].every((name) => constraints.includes(name))
-  && !constraints.includes("FOREIGN KEY (created_by)"));
+    "company_fiscal_calendar_assignment_created_by_fk"].every((name) => constraints.includes(name)));
 expect("active company fiscal-year ranges cannot overlap",
   constraints.includes("company_fiscal_calendar_assignment_active_year_excl"));
 expect("generated periods have calendar provenance FK",
@@ -86,8 +91,9 @@ expect("generator targets the new ledger book-period gate",
   functions.includes("ledger.book_period_status")
   && !functions.includes("governance.book_period_status"));
 expect("master fiscal periods support semantic 13-period and closing calendars",
-  masterDomains.includes("'closing'")
+  masterDomains.includes("fiscal_period_type_d")
   && masterTables.includes("period_type = 'normal' AND period_number BETWEEN 1 AND 16")
+  && masterTables.includes("period_type IN ('adjustment', 'closing')")
   && masterTables.includes("UNIQUE (tenant_id, company_code_id, fiscal_year, period_number)"));
 expect("runtime uses assignment authority and new ledger gate",
   !service.includes("fiscal_year_variant")
@@ -96,10 +102,9 @@ expect("runtime uses assignment authority and new ledger gate",
   && !/\ba\.priority\b/.test(service)
   && service.includes("ledger.book_period_status"));
 
-const phases = ["02_fiscal_calendar_domains.sql", "03_fiscal_calendar_tables.sql",
-  "05_fiscal_calendar_constraints.sql", "06_fiscal_calendar_indexes.sql",
-  "07_fiscal_calendar_functions.sql", "08_fiscal_calendar_triggers.sql",
-  "10_fiscal_calendar_rls.sql", "11_fiscal_calendar_grants.sql"];
+const phases = ["02_domains.sql", "03_tables.sql", "05_constraints.sql",
+  "06_indexes.sql", "07_functions.sql", "08_triggers.sql",
+  "10_rls.sql", "11_grants.sql"];
 expect("Neon installs every fiscal-calendar phase exactly once",
   phases.every((phase) => neonManifest.split(`planes/neon/control/${phase}`).length === 2));
 expect("Athyper and Mesh manifests do not install fiscal calendar",

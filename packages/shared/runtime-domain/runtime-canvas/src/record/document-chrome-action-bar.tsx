@@ -8,15 +8,15 @@ import {
   RotateCcw,
   Save,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   Button,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@athyper/ui/primitives";
-import { DialogConfirmShell } from "@athyper/ui/surfaces/shells";
+} from "@athyper/platform-ui/primitives";
+import { DialogConfirmShell } from "@athyper/platform-ui/surfaces/shells";
 import { useEditDraftContext } from "@athyper/content-ui";
 import {
   headerPrimaryActionClass,

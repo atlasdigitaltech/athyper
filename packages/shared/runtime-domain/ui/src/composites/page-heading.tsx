@@ -16,7 +16,7 @@
  */
 
 import { type ReactNode } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { Breadcrumb, type BreadcrumbItem } from "./breadcrumb";
 
 export interface PageHeadingProps {

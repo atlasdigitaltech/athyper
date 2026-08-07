@@ -2,7 +2,7 @@
 
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import { periodLabel } from "../lib/period";
 
 interface PeriodSelectorProps {

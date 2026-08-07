@@ -1,2 +1,0 @@
-CREATE INDEX entity_lifecycle_binding_resolve_ix ON metadata.entity_lifecycle_binding (change_set_id,target_plane,lifecycle_code,lifecycle_revision) WHERE status='active';
-CREATE INDEX entity_lifecycle_operation_binding_resolve_ix ON metadata.entity_lifecycle_operation_binding (entity_lifecycle_binding_id,transition_code) WHERE status='active';

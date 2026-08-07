@@ -21,7 +21,7 @@
  */
 
 import { type ReactNode } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface PageShellProps {
   /** Region 1 — identity row + actions (always present). */

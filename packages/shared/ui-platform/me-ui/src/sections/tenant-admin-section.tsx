@@ -1,7 +1,7 @@
 "use client";
 
 import { Building2, ExternalLink, Globe, Layers, ShieldCheck, Sparkles } from "lucide-react";
-import { Badge, Button } from "@athyper/ui/primitives";
+import { Badge, Button } from "@athyper/platform-ui/primitives";
 import type { AdminTenant } from "@athyper/api-contracts/me";
 import {
   InfoRow, SectionCard, Banner, DataTable, SkeletonCard,

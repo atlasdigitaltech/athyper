@@ -17,12 +17,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@athyper/auth-bff": "workspace:*",
-    "@athyper/brand": "workspace:*",
-    "@athyper/identity-gate": "workspace:*",
-    "@athyper/session-plane": "workspace:*",
-    "@athyper/surface-kit": "workspace:*",
-    "@athyper/ui": "workspace:*"
+    "@athyper/platform-iam-auth-bff": "workspace:*",
+    "@athyper/platform-brand": "workspace:*",
+    "@athyper/platform-iam-identity-gate": "workspace:*",
+    "@athyper/platform-iam-session-plane": "workspace:*",
+    "@athyper/platform-surface-kit": "workspace:*",
+    "@athyper/platform-ui": "workspace:*"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",

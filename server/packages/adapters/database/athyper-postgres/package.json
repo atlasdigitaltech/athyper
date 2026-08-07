@@ -1,0 +1,32 @@
+{
+  "name": "@athyper/adapter-db-athyper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsup src/index.ts --format esm --dts --outDir dist --external kysely --external pg",
+    "dev": "tsup src/index.ts --format esm --dts --outDir dist --watch --external kysely --external pg",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@athyper/adapter-db-core": "workspace:*",
+    "kysely": "^0.28.16",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@athyper/tsconfig": "workspace:*",
+    "@types/pg": "^8.11.10",
+    "@types/node": "^25.6.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.0",
+    "typescript": "^6.0.3"
+  }
+}

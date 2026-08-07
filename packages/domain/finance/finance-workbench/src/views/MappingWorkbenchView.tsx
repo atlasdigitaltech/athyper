@@ -5,8 +5,8 @@ import { AlertTriangle, ArrowRight, Plus } from "lucide-react";
 import {
   Badge, Button,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+} from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { CHARTS, MAPPINGS } from "../data/demo-data";
 import type { ChartOfAccount } from "../data/types";
 

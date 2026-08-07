@@ -1,5 +1,5 @@
-import { getPlaneConfig, type PlaneKey } from "@athyper/session-plane";
-import { StatePanel, ToolbarButton } from "@athyper/surface-kit";
+import { getPlaneConfig, type PlaneKey } from "@athyper/platform-iam-session-plane";
+import { StatePanel, ToolbarButton } from "@athyper/platform-surface-kit";
 
 export function PlaneNotFound({ plane }: { plane: PlaneKey }) {
   const config = getPlaneConfig(plane);

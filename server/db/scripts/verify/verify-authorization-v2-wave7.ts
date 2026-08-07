@@ -14,23 +14,23 @@ const paths = {
     "server/packages/services/iam/authorization-rollout/authorization-shadow-comparison.ts",
   gates:
     "server/packages/services/iam/authorization-rollout/authorization-cutover-gates.ts",
-  neonState: "server/db/ddl/control/01zzy_authorization_v7_shadow_cutover.sql",
-  neonEvidence: "server/db/ddl/event/01i_authorization_v7_shadow_cutover.sql",
+  neonState: "server/db/ddl/common/ops/03_tables.sql",
+  neonEvidence: "server/db/ddl/common/ops/03_tables.sql",
   neonConstraints:
-    "server/db/ddl/control/03_authorization_v7_shadow_cutover_constraints.sql",
-  neonView: "server/db/ddl/event/07_authorization_v7_shadow_cutover_views.sql",
+    "server/db/ddl/common/ops/05_constraints.sql",
+  neonView: "server/db/ddl/common/ops/09_views.sql",
   neonFunctions:
-    "server/db/ddl/control/05_authorization_v7_shadow_cutover_functions.sql",
+    "server/db/ddl/common/ops/07_functions.sql",
   meshState:
-    "server/db/ddl/mesh_control/01zzy_authorization_v7_shadow_cutover.sql",
+    "server/db/ddl/common/ops/03_tables.sql",
   meshEvidence:
-    "server/db/ddl/mesh_log/01zzy_authorization_v7_shadow_cutover.sql",
+    "server/db/ddl/common/ops/03_tables.sql",
   meshConstraints:
-    "server/db/ddl/mesh_control/03_authorization_v7_shadow_cutover_constraints.sql",
+    "server/db/ddl/common/ops/05_constraints.sql",
   meshView:
-    "server/db/ddl/mesh_log/07_authorization_v7_shadow_cutover_views.sql",
+    "server/db/ddl/common/ops/09_views.sql",
   meshFunctions:
-    "server/db/ddl/mesh_control/05_authorization_v7_shadow_cutover_functions.sql",
+    "server/db/ddl/common/ops/07_functions.sql",
   meshProvision: "server/db/scripts/provision-mesh.ts",
 } as const;
 
@@ -142,13 +142,13 @@ for (const [name, source] of Object.entries({
   ]);
 }
 requireTokens("Mesh provision", sources.meshProvision, [
-  "ddl/mesh_control/01zzy_authorization_v7_shadow_cutover.sql",
-  "ddl/mesh_log/01zzy_authorization_v7_shadow_cutover.sql",
-  "ddl/mesh_control/03_authorization_v7_shadow_cutover_constraints.sql",
-  "ddl/mesh_control/05_authorization_v7_shadow_cutover_functions.sql",
-  "ddl/mesh_control/06_authorization_v7_shadow_cutover_triggers.sql",
-  "ddl/mesh_log/07_authorization_v7_shadow_cutover_views.sql",
-  "ddl/mesh_control/08_authorization_v7_shadow_cutover_rls.sql",
+  "ddl/common/ops/03_tables.sql",
+  "ddl/common/ops/03_tables.sql",
+  "ddl/common/ops/05_constraints.sql",
+  "ddl/common/ops/07_functions.sql",
+  "ddl/common/ops/08_triggers.sql",
+  "ddl/common/ops/09_views.sql",
+  "ddl/common/ops/10_rls.sql",
 ]);
 const meshCombined = [
   sources.meshState,

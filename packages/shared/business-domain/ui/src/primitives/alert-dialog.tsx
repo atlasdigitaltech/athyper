@@ -1,6 +1,6 @@
 import { forwardRef, type ComponentPropsWithoutRef, type HTMLAttributes } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { overlayScrimVariants } from "./overlay";
 
 // AlertDialog is semantically a confirmation dialog — no close (X) button.

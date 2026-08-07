@@ -6,11 +6,11 @@ import {
   adminAtlasProfile,
   PlaneShell,
 } from "@athyper/app-admin-shell";
-import { createAtlasSessionScope } from "@athyper/atlas-agent-runtime";
+import { createAtlasSessionScope } from "@athyper/platform-ai-agent-runtime";
 import {
   AtlasHeaderTrigger,
   AtlasShellWrapper,
-} from "@athyper/atlas-agent-ui";
+} from "@athyper/platform-ai-agent-ui";
 import { bffFetch, csrfFetch } from "@/lib/bff-fetch";
 import {
   usePlaneInboxCount,
@@ -23,7 +23,7 @@ import {
 import {
   NotificationStreamProvider,
   useNotificationStream,
-} from "@athyper/notifications-client";
+} from "@athyper/platform-communications-notifications-client";
 import { createNotificationsConfig } from "@/lib/notifications-config";
 
 const ADMIN_INBOX_ADAPTER: InboxCountAdapter = {

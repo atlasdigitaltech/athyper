@@ -131,3 +131,13 @@ COMMENT ON DOMAIN shared.idp_sync_status_d IS
   'Protocol-defined enum — not extensible by tenants. '
   'Used by master.principal_identity_binding (all 5 values) and '
   'control.mfa_config (base 4 values; disabled not applicable to MFA credentials).';
+
+-- Cross-plane application coordinate shared by publication, projection, and
+-- onboarding contracts. It describes an application plane, not a database
+-- connection name and not an authorization grant.
+
+CREATE DOMAIN shared.application_plane_d AS text
+    CHECK (VALUE IN ('athyper', 'neon', 'mesh'));
+
+COMMENT ON DOMAIN shared.application_plane_d IS
+  'Closed application-plane coordinate used in signed cross-plane contracts.';

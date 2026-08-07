@@ -27,8 +27,8 @@ import {
   Sigma,
   Trash2,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { SearchInput } from "@athyper/ui/composites";
+import { cn } from "@athyper/platform-theme/utils";
+import { SearchInput } from "@athyper/platform-ui/composites";
 import { CurrencyTriad } from "../money/currency-triad";
 import { PricingComponentOriginBadge as OriginBadge } from "./pricing-component-waterfall";
 import type {

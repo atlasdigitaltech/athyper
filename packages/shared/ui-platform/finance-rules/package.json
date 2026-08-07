@@ -13,7 +13,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@athyper/temporal": "workspace:*"
+    "@athyper/platform-temporal": "workspace:*"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",

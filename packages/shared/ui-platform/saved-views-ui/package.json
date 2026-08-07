@@ -17,12 +17,12 @@
     "lucide-react": "^1.8.0"
   },
   "peerDependencies": {
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "react": "^19.2.5"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "@types/react": "^19.2.14",
     "react": "^19.2.5",
     "typescript": "^6.0.3"

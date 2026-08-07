@@ -44,7 +44,6 @@
     "db:export-meta": "tsx src/scripts/export-meta-tables.ts"
   },
   "dependencies": {
-    "@athyper/core": "workspace:*",
     "exceljs": "^4.4.0",
     "kysely": "^0.28.16",
     "pg": "^8.13.0"

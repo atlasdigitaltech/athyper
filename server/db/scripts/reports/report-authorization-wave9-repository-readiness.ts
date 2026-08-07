@@ -145,9 +145,7 @@ function isApplicationRuntimeInput(path: string): boolean {
 function isNeonRuntimeOrProvisionInput(path: string): boolean {
   const value = normalized(relative(repositoryRoot, path));
   if (
-    value.startsWith("server/db/ddl/mesh/")
-    || value.startsWith("server/db/ddl/mesh_control/")
-    || value.startsWith("server/db/ddl/mesh_log/")
+    value.startsWith("server/db/ddl/planes/mesh/")
     || value.startsWith("server/db/seed/tenants/mesh/")
     || value.includes("provision-mesh")
   ) return false;

@@ -29,8 +29,8 @@ import {
 } from "react";
 import { ArrowUpRight, Download, Search, X } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { DrawerPeekShell } from "@athyper/ui/surfaces/shells";
-import { cn } from "@athyper/theme/utils";
+import { DrawerPeekShell } from "@athyper/platform-ui/surfaces/shells";
+import { cn } from "@athyper/platform-theme/utils";
 import { CurrencyTriad } from "../money/currency-triad";
 
 /**

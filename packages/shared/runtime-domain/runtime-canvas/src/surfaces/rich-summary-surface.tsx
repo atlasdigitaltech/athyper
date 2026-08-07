@@ -1,6 +1,6 @@
 "use client";
 
-import { WorkPanel } from "@athyper/surface-kit";
+import { WorkPanel } from "@athyper/platform-surface-kit";
 import type { RuntimeSurfaceRendererProps } from "./types";
 
 const RICH_SUMMARY_KINDS = new Set([

@@ -40,7 +40,8 @@ import {
   RuntimeBootstrapProvider,
 } from "@athyper/svc-metadata";
 import { registerMetaEntityAuthoringRoutes } from "@athyper/svc-meta-entity-authoring";
-import { PostgresNumberingPolicyTester } from "../../packages/services/numbering-runtime/index.js";
+import { registerOnboardingRoutes } from "@athyper/svc-onboarding";
+import { NumberingPolicyTester } from "../../packages/services/numbering-runtime/index.js";
 import {
   EntityQueryService,
   KyselyEntityQueryExecutor,
@@ -65,6 +66,7 @@ import {
 } from "@athyper/svc-platform";
 import { registerJobsRoutes } from "@athyper/svc-jobs";
 import { mapPostgresBusinessError } from "@athyper/svc-shared";
+import { createErrorHandler } from "./error-handler.js";
 import { registerJobsAdminRoutes } from "../../packages/services/jobs/routes/jobs.admin.route.js";
 import { registerJobsBoardRoutes } from "../../packages/services/jobs/routes/jobs.board.route.js";
 
@@ -78,8 +80,8 @@ import { registerAuditRoutes } from "@athyper/svc-audit";
 import { ClamavScanner, registerContentRoutes } from "@athyper/svc-content";
 import { registerIntegrationRoutes } from "@athyper/svc-integration";
 import { registerDocServicesRoutes } from "@athyper/svc-doc-services";
-import { createGotenbergClient } from "@athyper/server-foundation/render/gotenberg-client";
-import { createOpenApiRouter } from "@athyper/server-foundation/openapi/openapi-generator";
+import { createGotenbergClient } from "@athyper/adapter-rendering-gotenberg";
+import { createOpenApiRouter } from "@athyper/runtime-http";
 import {
   createAiServiceBundle,
   registerAiAgentRoutes,
@@ -140,7 +142,7 @@ import { parseTokenClaims } from "@athyper/runtime-contracts";
 import {
   resolveRequiredActionsEnforcement,
   resolveTokenSchemaMode,
-} from "@athyper/auth-common";
+} from "@athyper/platform-iam-auth-common";
 import type { ServerDeps } from "../kernel/bootstrap.js";
 import { livenessHandler } from "./liveness.js";
 
@@ -629,6 +631,13 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     const requestId =
       (req.headers["x-request-id"] as string) ?? randomUUID();
     req.headers["x-request-id"] = requestId;
+
+    // correlationId: prefer inbound X-Correlation-ID (set by upstream gateways
+    // or BFF relays), fall back to requestId. OTel traceId is stamped later by
+    // the Sentry scope middleware once a span is active.
+    const correlationId =
+      (req.headers["x-correlation-id"] as string | undefined) ?? requestId;
+
     const planeKey = normalizePlaneKey(
       req.headers["x-plane-key"] ?? req.headers["x-plane"] ?? req.query.plane,
     );
@@ -641,6 +650,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
       (req.headers["x-tenant-code"] as string | undefined);
     runWithContext({
       requestId,
+      correlationId,
       ...(planeKey ? { planeKey } : {}),
       ...(realmKey ? { realmKey, realm: realmKey } : {}),
       ...parseOrgHeader(xOrg),
@@ -967,6 +977,31 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     next();
   });
 
+  // ── Sentry scope stamp ────────────────────────────────────────────────────
+  // Runs after tenant-stamp so tenantId is resolved. Attaches per-request
+  // tenant/realm/correlation tags onto the Sentry scope so every exception
+  // captured downstream is filterable by tenant in GlitchTip.
+  apiRouter.use((_req: Request, _res: Response, next: NextFunction) => {
+    const ctx = tryGetContext();
+    if (ctx) {
+      const scope = Sentry.getCurrentScope();
+      if (ctx.tenantId)    scope.setTag("tenantId",      ctx.tenantId);
+      if (ctx.realmKey)    scope.setTag("realmKey",       ctx.realmKey);
+      if (ctx.planeKey)    scope.setTag("plane",          ctx.planeKey);
+      // Prefer OTel traceId when a sampled span is active — ties Sentry events
+      // to the corresponding Tempo trace without extra configuration.
+      const activeSpan = trace.getActiveSpan();
+      const otelTraceId = activeSpan?.spanContext().traceId;
+      const correlationId = otelTraceId ?? ctx.correlationId ?? ctx.requestId;
+      if (correlationId) {
+        scope.setTag("correlationId", correlationId);
+        // Update ALS with the resolved OTel traceId if one was found.
+        if (otelTraceId && !ctx.correlationId) ctx.correlationId = otelTraceId;
+      }
+    }
+    next();
+  });
+
   // ── Unified platform-context gate (Phase 1 proper + Phase 7) ──────────────
   // Off by default; flip to "on" once the shadow-mode metrics from
   // AUTH_CLAIM_FIRST_CONTEXT have been clean for one rollout window. The gate:
@@ -1282,14 +1317,20 @@ export async function startApi(deps: ServerDeps): Promise<void> {
   });
 
   if (platformDb) {
+    registerOnboardingRoutes(apiRouter, {
+      db: platformDb.kysely,
+      auth: routeAuth,
+      logger,
+    });
+
     registerMetaEntityAuthoringRoutes(apiRouter, {
       db: platformDb.kysely,
       auth: routeAuth,
       cache: iamCache,
       logger,
       numberingPolicyTesters: {
-        neon: new PostgresNumberingPolicyTester(db.kysely as never, "neon"),
-        mesh: new PostgresNumberingPolicyTester(meshDb.kysely as never, "mesh"),
+        neon: new NumberingPolicyTester(db.kysely as never, "neon"),
+        mesh: new NumberingPolicyTester(meshDb.kysely as never, "mesh"),
       },
     });
   } else {
@@ -1832,38 +1873,10 @@ export async function startApi(deps: ServerDeps): Promise<void> {
     res.status(404).json({ error: "NOT_FOUND", message: "Route not found" });
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    const businessError = mapPostgresBusinessError(err);
-    if (businessError) {
-      logger.warn("handled_business_error", {
-        err: businessError.code,
-        message: businessError.message,
-        details: businessError.details,
-      });
-      res.status(businessError.status).json({
-        error: businessError.code,
-        message: businessError.message,
-        field: businessError.field,
-        details: businessError.details,
-        errors: [{
-          code: businessError.code,
-          message: businessError.message,
-          field: businessError.field,
-          details: businessError.details,
-        }],
-      });
-      return;
-    }
-
-    logger.error("unhandled_error", { err: err.message, stack: err.stack });
-    res.status(500).json({
-      error: "INTERNAL_ERROR",
-      message:
-        config.env !== "production" ? err.message : "Internal server error",
-      ...(config.env !== "production" && { stack: err.stack }),
-    });
-  });
+  app.use(createErrorHandler({
+    isProduction: config.env === "production",
+    logger,
+  }));
 
   // ─── Startup ──────────────────────────────────────────────────────────────
 

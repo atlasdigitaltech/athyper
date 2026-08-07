@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, Building2, CheckCircle2, TrendingUp } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface RollupAggregateStripProps {
   completeCompanies: number;

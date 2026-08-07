@@ -30,7 +30,7 @@ import {
   Target,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   EntityPicker,
   SupplierPicker,
@@ -48,8 +48,8 @@ import {
   type WorkbenchMatrixAxisItem,
   type WorkbenchMatrixCellItem,
   type WorkbenchMatrixLegendItem,
-} from "@athyper/ui/composites";
-import { Badge, Button } from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/composites";
+import { Badge, Button } from "@athyper/platform-ui/primitives";
 import { ReportMetricCard, ReportMetricGrid } from "../components/ReportScaffold";
 import { StampToggle } from "../components/StampToggle";
 import { TaxonomyWorkbenchHeader } from "../components/TaxonomyWorkbenchHeader";

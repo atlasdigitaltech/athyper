@@ -4,7 +4,7 @@ import { useState } from "react";
 import {
   Button, Dialog, DialogContent, DialogDescription,
   DialogFooter, DialogHeader, DialogTitle,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import { bffFetch, BffError } from "@athyper/runtime-shared/client";
 import type { MfaActionClass, MfaElevateResponse } from "@athyper/api-contracts/iam";
 

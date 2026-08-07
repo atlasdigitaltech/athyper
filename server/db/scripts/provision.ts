@@ -34,7 +34,7 @@
 //                                             # Guarded local athyper_neon shorthand
 //   tsx db/seed/migrate.ts --drop-only       # Drop all schemas only (no re-seed)
 //   tsx db/seed/migrate.ts --keep-shared      # Use with --reset/--drop-only to keep `shared`
-//   tsx db/seed/migrate.ts --skip-shared      # Skip reseeding shared DDL (`ddl/shared/*`) during seed runs
+//   tsx db/seed/migrate.ts --skip-shared      # Skip reseeding shared DDL (`ddl/common/shared/03_tables.sql`) during seed runs
 //   tsx db/seed/migrate.ts --status          # Show status of all SQL files
 //   tsx db/seed/migrate.ts --force           # Re-run even if checksum unchanged
 //   tsx db/seed/migrate.ts --rebuild-entity-metadata
@@ -62,7 +62,7 @@
 //                         Must NOT be PgBouncer. DDL requires a direct connection.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { basename, dirname, join, relative } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import pg from "pg";
@@ -91,6 +91,7 @@ const SEED_DIR    = join(__dirname, "../seed");
 const TENANTS_DIR = join(__dirname, "../seed/tenants/neon");
 const MESH_DIR    = join(__dirname, "../seed/tenants/mesh");
 const REPO_ROOT   = join(__dirname, "../../..");
+const NEON_MANIFEST = join(DDL_DIR, "planes", "neon", "_manifest.txt");
 
 // ---------------------------------------------------------------------------
 // Types
@@ -268,6 +269,50 @@ function collectSqlFiles(dir: string): string[] {
   return results;
 }
 
+function collectManifestSqlFiles(manifestPath: string): string[] {
+  const ddlRoot = resolve(DDL_DIR);
+  if (!existsSync(manifestPath)) throw new Error(`DDL manifest not found: ${manifestPath}`);
+
+  return readFileSync(manifestPath, "utf8")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"))
+    .map((manifestEntry) => {
+      if (!manifestEntry.endsWith(".sql")) {
+        throw new Error(`DDL manifest entry must be SQL: ${manifestEntry}`);
+      }
+      const absPath = resolve(DDL_DIR, manifestEntry);
+      if (relative(ddlRoot, absPath).startsWith("..") || !existsSync(absPath)) {
+        throw new Error(`Invalid or missing DDL manifest entry: ${manifestEntry}`);
+      }
+      return absPath;
+    });
+}
+
+function readExpandedSql(absPath: string, includeStack = new Set<string>()): string {
+  const resolvedPath = resolve(absPath);
+  if (includeStack.has(resolvedPath)) throw new Error(`Recursive SQL include: ${resolvedPath}`);
+  includeStack.add(resolvedPath);
+  try {
+    return readFileSync(resolvedPath, "utf8")
+      .split(/\r?\n/)
+      .map((line) => {
+        const match = line.match(/^\s*\\ir\s+(.+?)\s*$/);
+        if (!match?.[1]) return line;
+        const includeValue = match[1].trim().replace(/^['"]|['"]$/g, "");
+        return readExpandedSql(resolve(dirname(resolvedPath), includeValue), includeStack);
+      })
+      .join("\n");
+  } finally {
+    includeStack.delete(resolvedPath);
+  }
+}
+
+function readProvisionSql(file: SqlFile): string {
+  return (file.phase === 1 ? readExpandedSql(file.absPath) : readFileSync(file.absPath, "utf8"))
+    .replace(/^\uFEFF/, "");
+}
+
 /**
  * Extract the leading numeric layer number from a filename.
  *   "00_bootstrap.sql"      → 0
@@ -387,14 +432,9 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
 
   // ── Phase 1: DDL ─────────────────────────────────────────────────────────
   if (existsSync(DDL_DIR)) {
-    for (const absPath of collectSqlFiles(DDL_DIR)) {
+    for (const absPath of collectManifestSqlFiles(NEON_MANIFEST)) {
       const relPath = `ddl/${relative(DDL_DIR, absPath).replace(/\\/g, "/")}`;
-      if (opts.skipShared && relPath.startsWith("ddl/shared/")) continue;
-      if (
-        relPath.startsWith("ddl/mesh/")
-        || relPath.startsWith("ddl/mesh_log/")
-        || relPath.startsWith("ddl/mesh_control/")
-      ) continue;
+      if (opts.skipShared && relPath.startsWith("ddl/common/shared/")) continue;
       ddlFiles.push({
         relPath,
         key: relPath.replace(/\.sql$/, ""),
@@ -507,11 +547,11 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
 
   // ── Sort DDL files by execution order (mirrors runner.sh) ─────────────────
   //
-  // Phase  0  — ddl/000_bootstrap/*
-  // Phase 10  — ddl/public/* (all layers, isolated)
+  // Phase  0  — ddl/common/shared/02_domains.sql
+  // Phase 10  — ddl/common/shared/03_tables.sql (all layers, isolated)
   // Phase 20  — ddl/*/00_bootstrap (all schemas — BEFORE tables)
-  // Phase 30  — ddl/shared/01* (shared tables before shared functions)
-  // Phase 35  — ddl/shared/02_pre_constraint, ddl/shared/05_functions
+  // Phase 30  — ddl/common/shared/03_tables.sql (shared tables before shared functions)
+  // Phase 35  — ddl/common/shared/03_tables.sql, ddl/common/shared/07_functions.sql
   //             (must run after shared/01_tables but before other schemas' 01_tables)
   // Phase 40  — ddl/*/01* (all remaining schemas)
   // Phase 50  — ddl/*/02_pre_constraint
@@ -521,53 +561,9 @@ export function discoverSqlFiles(opts: DiscoveryOptions = {}): SqlFile[] {
   // Phase 90  — ddl/*/06_triggers
   // Phase 100 — ddl/*/07_views
   // Phase 110 — ddl/*/08_rls
-  // Phase 120 — ddl/security/*
+  // Phase 120 — ddl/common/shared/09_function_search_path_hardening.sql
 
-  const SCHEMAS: string[] = [
-    "shared", "master", "mesh", "mesh_log", "mesh_control", "control", "document",
-    "ledger", "log", "event", "governance", "snapshot", "aggregate",
-  ];
-
-  function schemaIndex(relPath: string): number {
-    const schema = relPath.replace(/^ddl\//, "").split("/")[0] ?? "";
-    const idx = SCHEMAS.indexOf(schema);
-    return idx === -1 ? SCHEMAS.length : idx;
-  }
-
-  function filePhase(relPath: string, fileName: string): number {
-    if (relPath.startsWith("ddl/000_bootstrap/"))               return 0;
-    if (relPath.startsWith("ddl/public/"))                      return 10;
-    if (fileName.startsWith("00_"))                             return 20;
-    if (relPath.startsWith("ddl/shared/") && fileName.startsWith("01")) return 30;
-    if (relPath === "ddl/shared/02_pre_constraint.sql")         return 35;
-    if (relPath === "ddl/shared/05_functions.sql")              return 35;
-    if (fileName.startsWith("01"))                              return 40;
-    if (fileName.startsWith("02_"))                             return 50;
-    if (fileName.startsWith("03_"))                             return 60;
-    if (fileName.startsWith("04_"))                             return 70;
-    if (fileName.startsWith("05_"))                             return 80;
-    if (fileName.startsWith("06_"))                             return 90;
-    if (fileName.startsWith("07_"))                             return 100;
-    if (fileName.startsWith("08_"))                             return 110;
-    if (relPath.startsWith("ddl/security/"))                    return 120;
-    return 999;
-  }
-
-  ddlFiles.sort((a, b) => {
-    const phaseA = filePhase(a.relPath, basename(a.absPath));
-    const phaseB = filePhase(b.relPath, basename(b.absPath));
-    if (phaseA !== phaseB) return phaseA - phaseB;
-    // Within 000_bootstrap, preserve internal numeric order (000 < 001 < 002 < 003)
-    if (a.relPath.startsWith("ddl/000_bootstrap/")) {
-      const nA = extractLayerNumber(basename(a.absPath));
-      const nB = extractLayerNumber(basename(b.absPath));
-      if (nA !== nB) return nA - nB;
-    }
-    const schemaA = schemaIndex(a.relPath);
-    const schemaB = schemaIndex(b.relPath);
-    if (schemaA !== schemaB) return schemaA - schemaB;
-    return a.relPath.localeCompare(b.relPath);
-  });
+  // DDL files intentionally retain the explicit Neon manifest order.
 
   // Seed and tenant files sort alphabetically by relPath. The numeric prefixes
   // in each subfolder name provide the correct execution order.
@@ -1155,7 +1151,7 @@ async function runPhases(
         `);
       }
 
-      const sql = readFileSync(file.absPath, "utf-8").replace(/^\uFEFF/, "");
+      const sql = readProvisionSql(file);
       const hash = checksum(sql);
       const fileKey = scopedTrackingKey(file, opts.tenantId);
       const prev = executed.get(fileKey);
@@ -1515,7 +1511,7 @@ async function runStatus(
 
     let lastPhase = 0;
     for (const file of allFiles) {
-      const sql = readFileSync(file.absPath, "utf-8").replace(/^\uFEFF/, "");
+      const sql = readProvisionSql(file);
       const hash = checksum(sql);
       const fileKey = scopedTrackingKey(file, tenantId);
       const prev = executed.get(fileKey);

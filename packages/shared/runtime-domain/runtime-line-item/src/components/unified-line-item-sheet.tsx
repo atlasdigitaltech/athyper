@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { Button, DrawerShell } from "@athyper/ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
+import { Button, DrawerShell } from "@athyper/platform-ui/primitives";
 import { relayMutate } from "@athyper/runtime-shared/client";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";

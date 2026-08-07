@@ -1,0 +1,60 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "payment-holiday",
+  "version": "2.0.0",
+  "executionOrder": 30,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [
+    "tax-fx"
+  ],
+  "checksumAlgorithm": "sha256",
+  "checksum": "e59eddf9d3ee868884675d5b99ba5343595c0c46f8336fc7a114bc0081f75a6b",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/universal/030_payments/340_holiday_calendars.sql",
+      "sha256": "94c49598a3da49762871cc23849c2d7e51ef3c50c7faef2e60f99efc79f41eb3",
+      "bytes": 30014,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/universal/030_payments/341_payment_terms.sql",
+      "sha256": "3f44a6795b6b65d8b1771a401900362c3e36ea6c2cd8cc90fe778e2166f11734",
+      "bytes": 81886,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "master.holiday_calendar",
+      "master.payment_term"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed/packs/blueprints-v2/receipts/30-payment-holiday.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

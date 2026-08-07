@@ -1,11 +1,11 @@
-﻿import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getHandler: vi.fn(async () => new Response(JSON.stringify({ contexts: [] }), { status: 200 })),
   createGet: vi.fn(),
 }));
 
-vi.mock("@athyper/auth-bff", () => ({
+vi.mock("@athyper/platform-iam-auth-bff", () => ({
   createSessionContextsGetHandler: mocks.createGet.mockReturnValue(mocks.getHandler),
 }));
 vi.mock("@/lib/plane", () => ({ PLANE_KEY: "neon" }));

@@ -6,9 +6,9 @@ import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import type { EntityListSortEntry } from "@athyper/api-contracts/entity-list";
 import type { MetaEntityCollectionConfig } from "@athyper/runtime-contracts";
 import { resolveListConfig } from "@athyper/metadata-client/compiled-reader";
-import { SearchInput } from "@athyper/ui/composites";
-import type { ColumnDef, RowSelectionState } from "@athyper/ui/data";
-import { cn } from "@athyper/theme/utils";
+import { SearchInput } from "@athyper/platform-ui/composites";
+import type { ColumnDef, RowSelectionState } from "@athyper/platform-ui/data";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   EmbeddedEntityList,
   type EmbeddedEntityListScope,

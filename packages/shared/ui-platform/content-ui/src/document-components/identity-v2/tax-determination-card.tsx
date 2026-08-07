@@ -11,7 +11,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { csrfFetch } from "@athyper/runtime-shared/client";
 import { JurisdictionChip } from "./jurisdiction-chip";
 

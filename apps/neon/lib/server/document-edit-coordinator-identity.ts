@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import type { V4Session } from "@athyper/auth-bff";
+import type { V4Session } from "@athyper/platform-iam-auth-bff";
 import type { DocumentEditCoordinatorIdentity } from "@athyper/runtime-canvas";
 import { PLANE_KEY } from "@/lib/plane";
 import { getNeonServerSession } from "@/lib/server/session";

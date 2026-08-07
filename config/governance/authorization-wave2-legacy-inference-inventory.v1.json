@@ -22,7 +22,7 @@
     "packages/shared/runtime-domain/runtime-canvas/src/index.tsx"
   ],
   "canonicalPaths": [
-    "server/db/catalog",
+    "server/db/seed/contracts/authorization/catalog",
     "server/db/scripts/catalog",
     "server/packages/services/iam/permission-context/v2"
   ]

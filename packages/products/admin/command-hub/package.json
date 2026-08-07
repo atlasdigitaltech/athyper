@@ -13,8 +13,8 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@athyper/session-plane": "workspace:*",
-    "@athyper/surface-kit": "workspace:*"
+    "@athyper/platform-iam-session-plane": "workspace:*",
+    "@athyper/platform-surface-kit": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

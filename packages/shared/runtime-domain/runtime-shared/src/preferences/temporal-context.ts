@@ -14,8 +14,8 @@
  * after the relevant queries resolve.
  */
 
-import { firstDayOfWeekFor } from "@athyper/temporal";
-import type { WeekStart } from "@athyper/temporal";
+import { firstDayOfWeekFor } from "@athyper/platform-temporal";
+import type { WeekStart } from "@athyper/platform-temporal";
 
 export interface UserTemporalProfile {
   locale: string | null;

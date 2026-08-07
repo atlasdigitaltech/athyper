@@ -29,7 +29,7 @@
 
 import React, { useState, type ReactNode } from "react";
 import { type LucideIcon, X, Search } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { NavBadge } from "./nav-badge";
 
 // ── Types ─────────────────────────────────────────────────────────────────────

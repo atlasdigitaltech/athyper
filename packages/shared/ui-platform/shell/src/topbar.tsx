@@ -20,7 +20,7 @@
 
 import { type ReactNode } from "react";
 import { Bell, Menu, Search } from "lucide-react";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import { NavBadge } from "./nav-badge";
 
 // ── Props ─────────────────────────────────────────────────────────────────────

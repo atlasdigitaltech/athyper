@@ -25,13 +25,13 @@ const { btree_gist: btreeGist } = await import(btreeGistUrl);
 const db = new PGlite({ extensions: { pgcrypto, btree_gist: btreeGist } });
 
 const ddlFiles = [
-  "server/db/ddl/mesh/01zz_authorization_v2_authority.sql",
-  "server/db/ddl/mesh/03_authorization_v2_authority_constraints.sql",
-  "server/db/ddl/mesh/04_authorization_v2_authority_indexes.sql",
-  "server/db/ddl/mesh/05_authorization_v2_authority_functions.sql",
-  "server/db/ddl/mesh/06_authorization_v2_authority_triggers.sql",
-  "server/db/ddl/mesh/07_authorization_v2_authority_views.sql",
-  "server/db/ddl/mesh/08_authorization_v2_authority_rls.sql",
+  "server/db/ddl/planes/mesh/authz/03_tables.sql",
+  "server/db/ddl/planes/mesh/authz/05_constraints.sql",
+  "server/db/ddl/planes/mesh/authz/06_indexes.sql",
+  "server/db/ddl/planes/mesh/authz/07_functions.sql",
+  "server/db/ddl/planes/mesh/authz/08_triggers.sql",
+  "server/db/ddl/planes/mesh/authz/09_views.sql",
+  "server/db/ddl/planes/mesh/authz/10_rls.sql",
 ];
 
 const ids = {
@@ -518,7 +518,7 @@ await exec(`
 const invalidationDdl = await readFile(
   join(
     repoRoot,
-    "server/db/ddl/mesh_log/06_authorization_v2_runtime_triggers.sql",
+    "server/db/ddl/common/event/08_triggers.sql",
   ),
   "utf8",
 );

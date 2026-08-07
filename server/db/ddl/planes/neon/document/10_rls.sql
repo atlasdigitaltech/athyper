@@ -267,3 +267,329 @@ BEGIN
     END IF;
 END;
 $$;
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'workflow_request','workflow_stage',
+        'commitment','commitment_line','commitment_release_allocation',
+        'purchase_invoice','purchase_invoice_line','invoice_match_case',
+        'accounting_distribution','payment_term_application',
+        'payment_entry','payment_entry_allocation',
+        'journal_entry','journal_line','journal_line_reference'
+    ] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I FOR ALL '
+            'USING (tenant_id = shared.current_tenant_id_soft()) '
+            'WITH CHECK (tenant_id = shared.current_tenant_id())',
+            v_table
+        );
+        EXECUTE format(
+            'CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)',
+            v_table
+        );
+    END LOOP;
+END $$;
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'purchase_requisition','purchase_requisition_line',
+        'purchase_order_confirmation','purchase_order_confirmation_line',
+        'delivery_note','delivery_note_line',
+        'receipt','receipt_line','service_sheet','service_sheet_line'
+    ] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I FOR ALL USING (tenant_id = shared.current_tenant_id_soft()) WITH CHECK (tenant_id = shared.current_tenant_id())',
+            v_table
+        );
+        EXECUTE format('CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)', v_table);
+    END LOOP;
+END $$;
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY['pricing_component','schedule_line'] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I FOR ALL '
+            'USING (tenant_id = shared.current_tenant_id_soft()) '
+            'WITH CHECK (tenant_id = shared.current_tenant_id())', v_table
+        );
+        EXECUTE format(
+            'CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)',
+            v_table
+        );
+    END LOOP;
+END $$;
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'catalog_import', 'catalog_import_line',
+        'punchout_cart', 'punchout_cart_line',
+        'production_order', 'production_order_component',
+        'sales_order', 'sales_order_line'
+    ]
+    LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I FOR ALL '
+            'USING (tenant_id = shared.current_tenant_id_soft()) '
+            'WITH CHECK (tenant_id = shared.current_tenant_id())',
+            v_table
+        );
+        EXECUTE format(
+            'CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER '
+            'USING (true) WITH CHECK (true)',
+            v_table
+        );
+    END LOOP;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        FOREACH v_table IN ARRAY ARRAY[
+            'catalog_import', 'catalog_import_line',
+            'punchout_cart', 'punchout_cart_line',
+            'production_order', 'production_order_component',
+            'sales_order', 'sales_order_line'
+        ]
+        LOOP
+            EXECUTE format(
+                'CREATE POLICY admin_access ON document.%I FOR ALL TO athyperadmin '
+                'USING (true) WITH CHECK (true)',
+                v_table
+            );
+        END LOOP;
+    END IF;
+END;
+$$;
+
+DO $$
+DECLARE v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'stocktake', 'stocktake_line',
+        'sales_opportunity', 'sales_opportunity_company',
+        'sales_quotation', 'sales_quotation_company',
+        'sales_quotation_allocation', 'sales_order_intercompany_fulfillment'
+    ] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I FOR ALL '
+            'USING (tenant_id = shared.current_tenant_id_soft()) '
+            'WITH CHECK (tenant_id = shared.current_tenant_id())', v_table
+        );
+        EXECUTE format(
+            'CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER '
+            'USING (true) WITH CHECK (true)', v_table
+        );
+    END LOOP;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        FOREACH v_table IN ARRAY ARRAY[
+            'stocktake', 'stocktake_line',
+            'sales_opportunity', 'sales_opportunity_company',
+            'sales_quotation', 'sales_quotation_company',
+            'sales_quotation_allocation', 'sales_order_intercompany_fulfillment'
+        ] LOOP
+            EXECUTE format(
+                'CREATE POLICY admin_access ON document.%I FOR ALL TO athyperadmin '
+                'USING (true) WITH CHECK (true)', v_table
+            );
+        END LOOP;
+    END IF;
+END;
+$$;
+
+DO $$
+DECLARE v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'bank_statement','bank_statement_line','bank_recon_case','bank_recon_case_line',
+        'depreciation_run','depreciation_run_line','depreciation_schedule'
+    ] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY',v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY',v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I FOR ALL '
+            'USING (tenant_id=shared.current_tenant_id_soft()) '
+            'WITH CHECK (tenant_id=shared.current_tenant_id())',v_table
+        );
+        EXECUTE format(
+            'CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)',v_table
+        );
+    END LOOP;
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+        FOREACH v_table IN ARRAY ARRAY[
+            'bank_statement','bank_statement_line','bank_recon_case','bank_recon_case_line',
+            'depreciation_run','depreciation_run_line','depreciation_schedule'
+        ] LOOP
+            EXECUTE format('CREATE POLICY admin_access ON document.%I FOR ALL TO athyperadmin USING (true) WITH CHECK (true)',v_table);
+        END LOOP;
+    END IF;
+END;
+$$;
+
+DO $$
+DECLARE v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'sourcing_event','sourcing_event_company','sourcing_event_demand',
+        'sourcing_event_award','sourcing_event_award_allocation',
+        'sourcing_event_intercompany_allocation'
+    ] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY',v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY',v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I FOR ALL '
+            'USING (tenant_id=shared.current_tenant_id_soft()) '
+            'WITH CHECK (tenant_id=shared.current_tenant_id())',v_table
+        );
+        EXECUTE format(
+            'CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)',v_table
+        );
+    END LOOP;
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+        FOREACH v_table IN ARRAY ARRAY[
+            'sourcing_event','sourcing_event_company','sourcing_event_demand',
+            'sourcing_event_award','sourcing_event_award_allocation',
+            'sourcing_event_intercompany_allocation'
+        ] LOOP
+            EXECUTE format('CREATE POLICY admin_access ON document.%I FOR ALL TO athyperadmin USING (true) WITH CHECK (true)',v_table);
+        END LOOP;
+    END IF;
+END;
+$$;
+
+DO $$
+DECLARE v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'shift_assignment','time_punch','attendance_day','attendance_adjustment_request','compensation_change',
+        'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request',
+        'hr_case','onboarding_case','offboarding_case','payroll_period','payroll_run','payroll_run_employee',
+        'payroll_result','payroll_result_line'
+    ] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY',v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY',v_table);
+        EXECUTE format('CREATE POLICY tenant_access ON document.%I FOR ALL USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id())',v_table);
+        EXECUTE format('CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true)',v_table);
+    END LOOP;
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+        FOREACH v_table IN ARRAY ARRAY[
+            'shift_assignment','time_punch','attendance_day','attendance_adjustment_request','compensation_change',
+            'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request',
+            'hr_case','onboarding_case','offboarding_case','payroll_period','payroll_run','payroll_run_employee',
+            'payroll_result','payroll_result_line'
+        ] LOOP EXECUTE format('CREATE POLICY admin_access ON document.%I FOR ALL TO athyperadmin USING(true) WITH CHECK(true)',v_table); END LOOP;
+    END IF;
+END;
+$$;
+
+ALTER TABLE document.policy_acknowledgment ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.policy_acknowledgment FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_read ON document.policy_acknowledgment FOR SELECT
+    USING(tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY principal_insert ON document.policy_acknowledgment FOR INSERT
+    WITH CHECK(
+        tenant_id=shared.current_tenant_id()
+        AND acknowledged_by=master.current_principal_id_soft()
+        AND created_by=master.current_principal_id_soft()
+    );
+CREATE POLICY seed_write ON document.policy_acknowledgment FOR ALL TO CURRENT_USER
+    USING(true) WITH CHECK(true);
+
+DO $$
+BEGIN
+    IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+        EXECUTE 'CREATE POLICY admin_access ON document.policy_acknowledgment FOR ALL TO athyperadmin USING(true) WITH CHECK(true)';
+    END IF;
+END;
+$$;
+
+DO $$
+DECLARE v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'project_task', 'project_task_requirement', 'budget_profile', 'budget_allocation'
+    ]
+    LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I FOR ALL '
+            'USING (tenant_id = shared.current_tenant_id_soft()) '
+            'WITH CHECK (tenant_id = shared.current_tenant_id())', v_table);
+        EXECUTE format(
+            'CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER '
+            'USING (true) WITH CHECK (true)', v_table);
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+            EXECUTE format(
+                'CREATE POLICY admin_access ON document.%I FOR ALL TO athyperadmin '
+                'USING (true) WITH CHECK (true)', v_table);
+        END IF;
+    END LOOP;
+END;
+$$;
+
+ALTER TABLE document.planning_scenario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.planning_scenario FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.planning_scenario_line ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.planning_scenario_line FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY planning_scenario_tenant_access
+    ON document.planning_scenario FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY planning_scenario_seed_write
+    ON document.planning_scenario FOR ALL TO CURRENT_USER
+    USING (true) WITH CHECK (true);
+
+CREATE POLICY planning_scenario_line_tenant_access
+    ON document.planning_scenario_line FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY planning_scenario_line_seed_write
+    ON document.planning_scenario_line FOR ALL TO CURRENT_USER
+    USING (true) WITH CHECK (true);
+
+DO $$
+DECLARE v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'asset_transaction','fx_revaluation_run','ic_elimination','match_exception',
+        'netting_batch','obligation_horizon','payment_remittance_output',
+        'payment_term_discount_result','wht_certificate','import_request',
+        'import_request_chunk','intercompany_agreement','intercompany_transaction','render_output',
+        'user_profile_update_request'
+    ] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY',v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY',v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id())',
+            v_table
+        );
+        EXECUTE format(
+            'CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)',
+            v_table
+        );
+    END LOOP;
+END $$;

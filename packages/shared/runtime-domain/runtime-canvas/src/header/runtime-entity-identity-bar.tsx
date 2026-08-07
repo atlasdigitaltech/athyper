@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { ArrowLeft, Check, Pencil } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import type { HeaderIdentity, HeaderStatusDimension } from "./types";
 import {
   headerIdentityPaddingClass,

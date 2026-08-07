@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Skeleton } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Button, Skeleton } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import type { FinanceScope } from "../lib/scope";
 import type { AccountClass } from "../data/types";
 import { useTrialBalance } from "../hooks/useTrialBalance";

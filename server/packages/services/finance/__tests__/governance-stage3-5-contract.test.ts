@@ -15,7 +15,7 @@ describe("finance governance Stage 3-5 contracts", () => {
   });
 
   it("keeps production posting enforcement release gated and tenant aware", () => {
-    const functions = read("server/db/ddl/document/05_functions.sql")+read("server/db/ddl/document/07z_finance_certification_rollout.sql");
+    const functions = read("server/db/ddl/planes/neon/document/07_functions.sql")+read("server/db/ddl/planes/neon/document/09_views.sql");
     const flags = read("server/db/seed/platform/003_control/054_control_feature_flag_contract.sql");
     expect(functions).toContain("trg_je_finance_readiness_gate_fn");
     expect(functions).toContain("FINANCE_POSTING_READY");

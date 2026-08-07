@@ -8,11 +8,11 @@ import {
   type MeUISessionView,
 } from "@athyper/me-ui";
 import type { SettingsScopeRef } from "@athyper/api-contracts/me";
-import { getPlaneConfig } from "@athyper/session-plane";
-import { PageFrame } from "@athyper/surface-kit";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
+import { PageFrame } from "@athyper/platform-surface-kit";
 import { bffFetch } from "@/lib/bff-fetch";
 import { PLANE_KEY } from "@/lib/plane";
-import { NotificationsSettingsSection } from "@athyper/notifications-client";
+import { NotificationsSettingsSection } from "@athyper/platform-communications-notifications-client";
 
 interface SessionPayload {
   authenticated: true;

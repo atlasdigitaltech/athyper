@@ -1,0 +1,141 @@
+{
+  "contractVersion": "athyper.blueprint-pack-ledger.v1",
+  "generatedAt": "deterministic-from-repository-content",
+  "packs": [
+    {
+      "packCode": "spend-taxonomy-business-intents",
+      "executionOrder": 10,
+      "dependencies": [],
+      "checksum": "80fddfc8b5446f1e7ad957ac87895375f24a2f8ea4f76d906675ba21f72b7b72",
+      "payloadCount": 10,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "tax-fx",
+      "executionOrder": 20,
+      "dependencies": [
+        "spend-taxonomy-business-intents"
+      ],
+      "checksum": "36c2df3207a7e3145694540ab9cdd19d7fdea65efe27fca79b8486d629b50bd2",
+      "payloadCount": 6,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "payment-holiday",
+      "executionOrder": 30,
+      "dependencies": [
+        "tax-fx"
+      ],
+      "checksum": "e59eddf9d3ee868884675d5b99ba5343595c0c46f8336fc7a114bc0081f75a6b",
+      "payloadCount": 2,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "asset-policies",
+      "executionOrder": 40,
+      "dependencies": [
+        "tax-fx"
+      ],
+      "checksum": "522222d925ae195c86ab71a35573ea5cf9e326fad25c0d6642f3e96141b4653b",
+      "payloadCount": 2,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "bank-formats",
+      "executionOrder": 50,
+      "dependencies": [],
+      "checksum": "3215bdeefd42f3ceedf2acbf6ec30f6f4e00998b720f090c67eeda23330607f9",
+      "payloadCount": 1,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "coa-frameworks",
+      "executionOrder": 60,
+      "dependencies": [
+        "spend-taxonomy-business-intents",
+        "tax-fx"
+      ],
+      "checksum": "cdc0644dc48ce8e7d69e5a1e267721d27d4430af475aa43c02ae7b573f68983f",
+      "payloadCount": 5,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "organization-templates",
+      "executionOrder": 70,
+      "dependencies": [
+        "coa-frameworks",
+        "tax-fx"
+      ],
+      "checksum": "d4dce59beb878e9b927e4907a17aa25854368e05e2265d77adb7ec3b5c908fc1",
+      "payloadCount": 5,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "people-payroll",
+      "executionOrder": 80,
+      "dependencies": [
+        "organization-templates",
+        "payment-holiday",
+        "coa-frameworks"
+      ],
+      "checksum": "b2325e4c100632593461d4fd79ce0344056d0edf94d5ea732c46c6240f79fdf8",
+      "payloadCount": 4,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "party-risk-defaults",
+      "executionOrder": 90,
+      "dependencies": [],
+      "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "payloadCount": 0,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "industry-packs",
+      "executionOrder": 100,
+      "dependencies": [
+        "organization-templates",
+        "people-payroll",
+        "coa-frameworks"
+      ],
+      "checksum": "3dafbb6b04ab673b8ecb807c0162155ebffdbfc3e7462b81997779f9ae6c26c6",
+      "payloadCount": 16,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "governance",
+      "executionOrder": 110,
+      "dependencies": [
+        "organization-templates",
+        "coa-frameworks"
+      ],
+      "checksum": "34115e9cf7f9357ad8808e67ec5bb3e6a4c2cf43cda63ce1fc512aa497999d72",
+      "payloadCount": 2,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "ap-non-po",
+      "executionOrder": 120,
+      "dependencies": [
+        "spend-taxonomy-business-intents",
+        "tax-fx",
+        "payment-holiday",
+        "coa-frameworks",
+        "governance"
+      ],
+      "checksum": "5e944c6432230fd0067a11368b6e1b8b803a3de587bd3b9532a460761e647aee",
+      "payloadCount": 2,
+      "status": "pending-validation"
+    },
+    {
+      "packCode": "final-validation",
+      "executionOrder": 130,
+      "dependencies": [
+        "ap-non-po"
+      ],
+      "checksum": "1430a830d1281ab32a7f4e4401029ddc7a37b2853ea8530c810c11fac2a2f5b3",
+      "payloadCount": 2,
+      "status": "pending-validation"
+    }
+  ]
+}

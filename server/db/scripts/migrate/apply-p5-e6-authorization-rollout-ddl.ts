@@ -5,12 +5,12 @@ import pg from "pg";
 
 const databaseRoot = resolve(import.meta.dirname, "../..");
 const files = [
-  "ddl/common/ops/03_authorization_operation_rollout_tables.sql",
-  "ddl/common/ops/06_authorization_operation_rollout_indexes.sql",
-  "ddl/common/ops/07_authorization_operation_rollout_functions.sql",
-  "ddl/common/ops/08_authorization_operation_rollout_triggers.sql",
-  "ddl/common/ops/10_authorization_operation_rollout_rls.sql",
-  "ddl/common/ops/11_authorization_operation_rollout_grants.sql",
+  "ddl/common/ops/03_tables.sql",
+  "ddl/common/ops/06_indexes.sql",
+  "ddl/common/ops/07_functions.sql",
+  "ddl/common/ops/08_triggers.sql",
+  "ddl/common/ops/10_rls.sql",
+  "ddl/common/ops/11_grants.sql",
 ] as const;
 
 function argument(name: string): string | undefined {

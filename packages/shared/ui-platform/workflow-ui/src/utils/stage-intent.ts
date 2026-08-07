@@ -1,4 +1,4 @@
-import { type SemanticIntent } from "@athyper/theme/semantic-colors";
+import { type SemanticIntent } from "@athyper/platform-theme/semantic-colors";
 
 const STATUS_INTENT_MAP: Record<string, SemanticIntent> = {
   completed: "success",

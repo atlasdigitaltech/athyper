@@ -16,8 +16,8 @@
 
 import { useCallback, useState, type ReactNode } from "react";
 import { ArrowUpRight, ChevronRight, ShieldCheck, History, CornerDownRight, Plus } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors } from "@athyper/theme/semantic-colors";
+import { cn } from "@athyper/platform-theme/utils";
+import { resolveSemanticColors } from "@athyper/platform-theme/semantic-colors";
 import { CurrencyTriad } from "../money/currency-triad";
 import { MatchBadge } from "../match/match-badge";
 import { PricingComponentWaterfall } from "../pricing-components/pricing-component-waterfall";

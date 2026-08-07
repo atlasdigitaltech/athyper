@@ -21,7 +21,7 @@ import {
   AlertTriangle, CheckCircle2, XCircle, Zap,
   ChevronRight, RefreshCw, Pencil, Info,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { relayMutate } from "@athyper/runtime-shared/client";
 
 // ── Inlined from classificationPresentation.ts ────────────────────────────────

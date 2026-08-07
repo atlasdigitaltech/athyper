@@ -15,7 +15,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@athyper/session-plane": "workspace:*"
+    "@athyper/platform-iam-session-plane": "workspace:*"
   },
   "peerDependencies": {
     "lucide-react": "^1.8.0",

@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   Button,
-} from "@athyper/ui";
+} from "@athyper/platform-ui";
 import type {
   ResolvedColumn,
   RuntimeField,

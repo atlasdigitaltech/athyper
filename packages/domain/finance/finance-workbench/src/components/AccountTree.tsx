@@ -2,12 +2,12 @@
 
 import { useCallback, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import type { GlAccountNode } from "../data/types";
 import { sumTree } from "../data/demo-data";
 import { AccountClassBadge, AccountClassDot } from "./ChartBadge";
 import { fmtCompact } from "./format";
-import { Badge } from "@athyper/ui/primitives";
+import { Badge } from "@athyper/platform-ui/primitives";
 
 /* -- Single tree row ------------------------------------------------------ */
 

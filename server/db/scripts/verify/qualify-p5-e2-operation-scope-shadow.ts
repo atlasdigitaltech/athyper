@@ -198,7 +198,7 @@ const meshUrl = argument("--mesh-url") ?? process.env["MESH_DATABASE_URL"];
 const neonDatabase = argument("--neon-database");
 const meshDatabase = argument("--mesh-database");
 if (!neonUrl || !meshUrl || !neonDatabase || !meshDatabase) throw new Error("Explicit Neon and Mesh URLs/database guards are required.");
-const corpus = JSON.parse(await readFile(resolve(import.meta.dirname, "../../config/qualification/p5-e2-operation-scope-golden-corpus.v1.json"), "utf8")) as Corpus;
+const corpus = JSON.parse(await readFile(resolve(import.meta.dirname, "config/p5-e2-operation-scope-golden-corpus.v1.json"), "utf8")) as Corpus;
 const runId = randomUUID();
 const neon = await qualify({ plane: "neon", url: neonUrl, database: neonDatabase, corpus, runId });
 const mesh = await qualify({ plane: "mesh", url: meshUrl, database: meshDatabase, corpus, runId });

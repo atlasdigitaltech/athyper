@@ -18,8 +18,8 @@ import {
   type ShellExperienceDefinition,
 } from "@athyper/shell";
 import { NEON_NAV_ITEMS, type NavItem } from "@athyper/app-neon-route-manifest";
-import { getPlaneConfig } from "@athyper/session-plane";
-import { getPublicBrandAssets } from "@athyper/brand";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
+import { getPublicBrandAssets } from "@athyper/platform-brand";
 import type { FavoritesPanelSlotProps } from "@athyper/shell-runtime";
 
 export type { FavoritesPanelTab, FavoritesPanelSlotProps } from "@athyper/shell-runtime";
@@ -58,7 +58,7 @@ export function PlaneShell({
   navigate?: (href: string) => void;
 }) {
   const brand = getPublicBrandAssets(PLANE);
-  const experience = createNeonShellExperience(brand.wordmarkBlack);
+  const experience = createNeonShellExperience({ light: brand.wordmarkBlack, dark: brand.wordmarkWhite });
 
   return (
     <CanonicalShell
@@ -77,12 +77,12 @@ export function PlaneShell({
   );
 }
 
-export function createNeonShellExperience(brandWordmarkSrc: string): ShellExperienceDefinition {
+export function createNeonShellExperience(brandWordmark: { light: string; dark: string }): ShellExperienceDefinition {
   return {
     plane: PLANE,
     productName: "Neon",
     brandAlt: "Neon",
-    brandWordmarkSrc,
+    brandWordmark,
     defaultPath: planeConfig.defaultPath,
     logoutPath: planeConfig.logoutPath,
     navigation: NEON_NAV_ITEMS.map((item) => ({

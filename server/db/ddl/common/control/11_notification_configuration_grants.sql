@@ -1,2 +1,0 @@
-REVOKE ALL ON control.notification_provider, control.notification_template, control.notification_routing_rule FROM PUBLIC;
-DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT, INSERT, UPDATE ON control.notification_provider, control.notification_template, control.notification_routing_rule TO athyperapp; END IF; IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON control.notification_provider, control.notification_template, control.notification_routing_rule TO athyperadmin; END IF; END $$;

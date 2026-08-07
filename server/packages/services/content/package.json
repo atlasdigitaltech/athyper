@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@athyper/adapter-object-storage": "workspace:*",
+    "@athyper/adapter-rendering-legacy": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/svc-documents": "workspace:*",
     "@athyper/svc-shared": "workspace:*"

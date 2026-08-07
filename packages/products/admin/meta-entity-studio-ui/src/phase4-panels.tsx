@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Play, Plus, Trash2 } from "lucide-react";
-import { Badge, Button } from "@athyper/ui";
+import { Badge, Button } from "@athyper/platform-ui";
 import type {
   MetaEntityContractTestCaseDraft,
   MetaEntityContractTestResult,

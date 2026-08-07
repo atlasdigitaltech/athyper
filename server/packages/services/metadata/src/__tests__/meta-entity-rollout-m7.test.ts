@@ -16,7 +16,7 @@ describe("Meta Entity Contract M7 rollout wiring", () => {
   });
 
   it("provides a unified drift, exposure and security audit view", () => {
-    const ddl = source("server/db/ddl/control/07zz_meta_entity_contract_m7_audit.sql");
+    const ddl = source("server/db/ddl/planes/athyper/metadata/09_views.sql");
     expect(ddl).toContain("control.v_meta_entity_contract_audit");
     expect(ddl).toContain("published_version_id");
     expect(ddl).toContain("current_draft_version_id");

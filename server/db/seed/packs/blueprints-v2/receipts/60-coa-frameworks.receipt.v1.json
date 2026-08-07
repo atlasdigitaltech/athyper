@@ -1,0 +1,16 @@
+{
+    "contractVersion":  "athyper.blueprint-application-receipt.v1",
+    "packCode":  "coa-frameworks",
+    "packVersion":  "2.0.0",
+    "packChecksum":  "cdc0644dc48ce8e7d69e5a1e267721d27d4430af475aa43c02ae7b573f68983f",
+    "plane":  "neon",
+    "tenantId":  "f5000000-0000-0000-0000-000000000001",
+    "status":  "pending-validation",
+    "appliedAt":  null,
+    "payloadResults":  [
+
+                       ],
+    "assertionResults":  [
+
+                         ]
+}

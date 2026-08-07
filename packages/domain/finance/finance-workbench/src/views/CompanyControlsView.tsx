@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import {
   Badge,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import { useCompanyList } from "../hooks/useCharts";
 import { useCompanyControls } from "../hooks/useCompanyControls";
 import type { AccountClass, OwnerType } from "../data/types";

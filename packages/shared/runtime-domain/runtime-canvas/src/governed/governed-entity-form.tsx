@@ -5,7 +5,7 @@ import { ArrowLeft, LockKeyhole, Save } from "lucide-react";
 import type { MetaEntityField, MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import type { RuntimeRecordRow } from "@athyper/runtime-shared/core";
 import { readRecordValue } from "@athyper/runtime-shared/meta-entity";
-import { Button } from "@athyper/ui/primitives";
+import { Button } from "@athyper/platform-ui/primitives";
 import { FieldRow } from "@athyper/content-ui";
 import {
   defaultFormValue,

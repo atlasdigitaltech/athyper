@@ -33,7 +33,7 @@ function amountConfigResolverFor(
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
-import { DrawerShell } from "@athyper/ui/primitives";
+import { DrawerShell } from "@athyper/platform-ui/primitives";
 import type { DocumentLine } from "@athyper/api-contracts/documents";
 import { relayMutate } from "@athyper/runtime-shared/client";
 import {

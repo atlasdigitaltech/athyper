@@ -35,13 +35,16 @@
   },
   "dependencies": {
     "@athyper/adapter-object-storage": "workspace:*",
-    "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.73.0",
-    "@opentelemetry/exporter-trace-otlp-grpc": "^0.215.0",
-    "@opentelemetry/resources": "^2.7.0",
-    "@opentelemetry/sdk-node": "^0.215.0",
-    "@opentelemetry/semantic-conventions": "^1.29.0",
-    "@sentry/node": "^10.49.0"
+    "@athyper/adapter-rendering-gotenberg": "workspace:*",
+    "@athyper/adapter-rendering-legacy": "workspace:*",
+    "@athyper/adapter-telemetry": "workspace:*",
+    "@athyper/foundation-crypto": "workspace:*",
+    "@athyper/foundation-kernel": "workspace:*",
+    "@athyper/foundation-observability": "workspace:*",
+    "@athyper/plane-neon-document-rendering": "workspace:*",
+    "@athyper/platform-rendering": "workspace:*",
+    "@athyper/runtime-http": "workspace:*",
+    "@opentelemetry/api": "^1.9.0"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",
@@ -54,4 +57,3 @@
     "typescript": "^6.0.3"
   }
 }
-

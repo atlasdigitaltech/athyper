@@ -14,14 +14,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import type {
   ActiveOrg,
   ActiveSessionStatus,
   ActiveUser,
   OrgOption,
 } from "@athyper/shell-runtime";
-import type { PlaneKey } from "@athyper/session-plane";
+import type { PlaneKey } from "@athyper/platform-iam-session-plane";
 
 interface AccountContext {
   eyebrow: string;

@@ -23,7 +23,7 @@ import {
   Settings2,
   ShieldCheck,
 } from "lucide-react";
-import { Badge, Button, Input } from "@athyper/ui";
+import { Badge, Button, Input } from "@athyper/platform-ui";
 import type {
   MetaEntityDiagnostic,
   MetaEntityCreateCommand,

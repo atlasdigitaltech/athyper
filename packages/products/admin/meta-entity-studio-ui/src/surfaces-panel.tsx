@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Badge, Button } from "@athyper/ui";
+import { Badge, Button } from "@athyper/platform-ui";
 import type { MetaEntityFieldDraft, MetaEntitySurfaceDraft } from "@athyper/meta-entity-authoring-contracts";
 import {
   EditorCheckbox,

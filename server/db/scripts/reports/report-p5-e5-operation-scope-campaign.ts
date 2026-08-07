@@ -104,7 +104,7 @@ const neonDatabase = argument("--neon-database");
 const meshDatabase = argument("--mesh-database");
 if (!neonUrl || !meshUrl || !neonDatabase || !meshDatabase) throw new Error("Explicit plane URLs and database guards are required");
 const campaign = JSON.parse(await readFile(resolve(import.meta.dirname,
-  "../../config/qualification/p5-e5-operation-scope-campaign.v1.json"), "utf8")) as Campaign;
+  "../verify/config/p5-e5-operation-scope-campaign.v1.json"), "utf8")) as Campaign;
 const [neon, mesh] = await Promise.all([
   inspect("neon", neonUrl, neonDatabase, campaign), inspect("mesh", meshUrl, meshDatabase, campaign),
 ]);

@@ -2844,7 +2844,7 @@ Capture DDLs:
 | `denied` | test | packages/shared/runtime-line-item/src/adapters/__tests__/open-service-sheet-line.integration.test.tsx | 183 |
 | `denied` | test | packages/shared/ui-platform/atlas-agent-ui/src/shell/atlas-shell-wrapper.test.tsx | 120 |
 | `denied` | ui | packages/shared/ui-platform/dashboard-ui/src/dashboard.tsx | 122 |
-| `denied` | runtime | packages/shared/ui-platform/notifications-client/src/hooks/use-push-subscription.ts | 52, 73 |
+| `denied` | runtime | packages/platform/communications/notifications-client/src/hooks/use-push-subscription.ts | 52, 73 |
 | `denied` | tool | scripts/policy/authorization-inventory.ts | 731 |
 | `denied` | ddl | server/db/ddl/control/01r_tables_document_runtime_action_rules.sql | 57, 92, 97 |
 | `denied` | ddl | server/db/ddl/event/01f_tables_ai_tool_invocation.sql | 129 |
@@ -3108,9 +3108,9 @@ Capture DDLs:
 | `permissions` | ui | packages/shared/ui-platform/me-ui/src/settings-workspace.tsx | 36, 57, 65, 68, 76, 77, 92, 137, 142, 249, 251 |
 | `permissions` | ui | packages/shared/ui-platform/setup-ui/src/setup-directory.tsx | 96 |
 | `permissions` | tool | scripts/policy/authorization-inventory.ts | 733, 894, 913, 914, 953, 957 |
-| `permissions` | runtime | server/db/authority/mesh/authority.v1.json | 22 |
-| `permissions` | runtime | server/db/catalog/mesh/compiled/verification-report.v1.json | 11 |
-| `permissions` | runtime | server/db/catalog/neon-admin/compiled/verification-report.v1.json | 11 |
+| `permissions` | runtime | server/db/seed/contracts/authorization/authority/mesh/authority.v1.json | 22 |
+| `permissions` | runtime | server/db/seed/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json | 11 |
+| `permissions` | runtime | server/db/seed/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json | 11 |
 | `permissions` | ddl | server/db/ddl/control/01zzo_authorization_migration_controls.sql | 372 |
 | `permissions` | ddl | server/db/ddl/control/01zzp_authorization_v2_catalog.sql | 236 |
 | `permissions` | ddl | server/db/ddl/control/05_authorization_v7_shadow_cutover_functions.sql | 39 |
@@ -3214,11 +3214,11 @@ Capture DDLs:
 | `persona` | contract | packages/shared/platform-auth/session-plane/src/index.ts | 185 |
 | `persona` | contract | packages/shared/runtime-domain/session-plane/src/index.ts | 167 |
 | `persona` | tool | scripts/policy/authorization-inventory.ts | 555, 734, 739 |
-| `persona` | runtime | server/db/authority/authorization-authority-semantic-contract.v1.json | 13 |
-| `persona` | runtime | server/db/authority/neon-admin/authority.v1.json | 14, 46, 47, 48, 74 |
-| `persona` | runtime | server/db/authority/neon-admin/compiled/compiled-authority.v1.json | 13, 93, 97, 180, 184, 552, 556, 1078, 1082, 1642, 1646, 2246, 2250, 2850, 2922, 3009, 3099, 3474, 4003, 4570, 5177, 5861, 5871, 5881, 5891, 5901, 5911, 5921, 25498 |
-| `persona` | runtime | server/db/authority/neon-admin/compiled/existing-user-group-manifest.v1.json | 12 |
-| `persona` | runtime | server/db/catalog/neon-admin/catalog.v1.json | 32 |
+| `persona` | runtime | server/db/seed/contracts/authorization/authority/authorization-authority-semantic-contract.v1.json | 13 |
+| `persona` | runtime | server/db/seed/contracts/authorization/authority/neon-admin/authority.v1.json | 14, 46, 47, 48, 74 |
+| `persona` | runtime | server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json | 13, 93, 97, 180, 184, 552, 556, 1078, 1082, 1642, 1646, 2246, 2250, 2850, 2922, 3009, 3099, 3474, 4003, 4570, 5177, 5861, 5871, 5881, 5891, 5901, 5911, 5921, 25498 |
+| `persona` | runtime | server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json | 12 |
+| `persona` | runtime | server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json | 32 |
 | `persona` | ddl | server/db/ddl/control/01zzo_authorization_migration_controls.sql | 316 |
 | `persona` | ddl | server/db/ddl/master/01_tables_identity.sql | 1484 |
 | `persona` | ddl | server/db/ddl/master/01q_tables_plane_access.sql | 44 |
@@ -3227,8 +3227,8 @@ Capture DDLs:
 | `persona` | ddl | server/db/ddl/mesh/_shared/03_constraints.sql | 57, 71 |
 | `persona` | ddl | server/db/ddl/shared/01_tables.sql | 837 |
 | `persona` | ddl | server/db/ddl/shared/03_constraints.sql | 81, 107 |
-| `persona` | runtime | server/db/evaluator/mesh/repository-contract.v1.json | 25 |
-| `persona` | runtime | server/db/evaluator/neon-admin/repository-contract.v1.json | 24 |
+| `persona` | runtime | server/db/seed/contracts/authorization/evaluator/mesh/repository-contract.v1.json | 25 |
+| `persona` | runtime | server/db/seed/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json | 24 |
 | `persona` | runtime | server/db/migrations/contraction/mesh/001_authorization_v2_wave9_tombstone.sql | 67, 109 |
 | `persona` | runtime | server/db/migrations/contraction/neon/001_authorization_v2_wave9_tombstone.sql | 71, 132 |
 | `persona` | tool | server/db/scripts/authority/compile-authorization-authority.ts | 136, 137, 151, 152, 154, 173, 174 |
@@ -3417,8 +3417,8 @@ Capture DDLs:
 | `required_permission` | runtime | packages/shared/runtime-domain/runtime-canvas/src/document-runtime/use-document-affordance.ts | 135, 144, 147, 150 |
 | `required_permission` | runtime | packages/shared/runtime-domain/runtime-canvas/src/document-runtime/use-document-rules.ts | 30 |
 | `required_permission` | tool | scripts/policy/authorization-inventory.ts | 894, 912 |
-| `required_permission` | runtime | server/db/catalog/neon-admin/catalog.v1.json | 59 |
-| `required_permission` | runtime | server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json | 45 |
+| `required_permission` | runtime | server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json | 59 |
+| `required_permission` | runtime | server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json | 45 |
 | `required_permission` | ddl | server/db/ddl/control/01r_tables_document_runtime_action_rules.sql | 39, 62, 64, 93 |
 | `required_permission` | ddl | server/db/ddl/control/03zz_meta_entity_contract_m1.sql | 146 |
 | `required_permission` | ddl | server/db/ddl/control/06zz_meta_entity_contract_m1.sql | 71 |
@@ -3442,8 +3442,8 @@ Capture DDLs:
 | `required_permissions` | ui | apps/admin/app/(shell)/setup/metadata/[entityId]/_components/StructuredContractEditor.tsx | 29, 50, 99, 104, 110 |
 | `required_permissions` | contract | packages/shared/data-integration/api-contracts/src/schemas/meta-entity-contract-v21-upgrade.ts | 226 |
 | `required_permissions` | contract | packages/shared/data-integration/api-contracts/src/schemas/meta-entity-contract-v21.ts | 125, 320, 334, 652, 698, 701 |
-| `required_permissions` | runtime | server/db/catalog/neon-admin/catalog.v1.json | 49 |
-| `required_permissions` | runtime | server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json | 31 |
+| `required_permissions` | runtime | server/db/seed/contracts/authorization/catalog/neon-admin/catalog.v1.json | 49 |
+| `required_permissions` | runtime | server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json | 31 |
 | `required_permissions` | ddl | server/db/ddl/control/01_tables.sql | 2623, 2711 |
 | `required_permissions` | ddl | server/db/ddl/control/01zz_setup_workspace_registry.sql | 54, 80 |
 | `required_permissions` | ddl | server/db/ddl/control/07z_v_entity_surface_contract_audit.sql | 48 |
@@ -3494,8 +3494,8 @@ Capture DDLs:
 | `requiredPermissions` | test | server/packages/services/finance/__tests__/finance-settings-slice7-rollout.contract.test.ts | 85 |
 | `requiredPermissions` | route | server/packages/services/platform/routes/platform.route.ts | 1472, 1474, 1494, 1518, 1564, 1584 |
 | `roleIds` | tool | scripts/policy/authorization-inventory.ts | 735, 752 |
-| `roleIds` | runtime | server/db/authority/mesh/compiled/compiled-authority.v1.json | 282, 292, 302, 312, 322 |
-| `roleIds` | runtime | server/db/authority/neon-admin/compiled/compiled-authority.v1.json | 5863, 5873, 5883, 5893, 5903, 5913, 5923, 5933, 5941 |
+| `roleIds` | runtime | server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json | 282, 292, 302, 312, 322 |
+| `roleIds` | runtime | server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json | 5863, 5873, 5883, 5893, 5903, 5913, 5923, 5933, 5941 |
 | `roleIds` | tool | server/db/scripts/authority/compile-authorization-authority.ts | 92, 181, 187, 195, 199, 221, 229, 231, 264, 294, 307 |
 | `roleIds` | tool | server/db/scripts/verify/verify-authorization-v2-wave3.ts | 39, 157, 158, 161, 204, 240 |
 | `roleIds` | test | server/packages/services/iam/__tests__/permission-context-base.test.ts | 21, 26, 33, 34, 39, 40, 45, 46, 47 |
@@ -3617,23 +3617,23 @@ Capture DDLs:
 
 | Artifact | Generator | Owner | Present | Generator present |
 |---|---|---|---:|---:|
-| server/db/authority/mesh/compiled/compiled-authority.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | yes | yes |
-| server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | yes | yes |
-| server/db/authority/mesh/compiled/reconciliation-report.md | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | yes | yes |
-| server/db/authority/mesh/compiled/reconciliation-report.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | yes | yes |
-| server/db/authority/neon-admin/compiled/compiled-authority.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | yes | yes |
-| server/db/authority/neon-admin/compiled/existing-user-group-manifest.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | yes | yes |
-| server/db/authority/neon-admin/compiled/reconciliation-report.md | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | yes | yes |
-| server/db/authority/neon-admin/compiled/reconciliation-report.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | yes | yes |
-| server/db/catalog/mesh/compiled/catalog-preflight.sql | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | yes | yes |
-| server/db/catalog/mesh/compiled/compiled-catalog.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | yes | yes |
-| server/db/catalog/mesh/compiled/contextual-aliases.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | yes | yes |
-| server/db/catalog/mesh/compiled/verification-report.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | yes | yes |
-| server/db/catalog/neon-admin/compiled/catalog-preflight.sql | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | yes | yes |
-| server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | yes | yes |
-| server/db/catalog/neon-admin/compiled/contextual-aliases.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | yes | yes |
-| server/db/catalog/neon-admin/compiled/verification-report.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | yes | yes |
-| server/db/seed/_generated/resolver-contracts.json | server/scripts/export-resolver-contracts.ts | metadata-platform | yes | yes |
+| server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | yes | yes |
+| server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | yes | yes |
+| server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.md | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | yes | yes |
+| server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | yes | yes |
+| server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | yes | yes |
+| server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | yes | yes |
+| server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.md | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | yes | yes |
+| server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | yes | yes |
+| server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | yes | yes |
+| server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | yes | yes |
+| server/db/seed/contracts/authorization/catalog/mesh/compiled/contextual-aliases.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | yes | yes |
+| server/db/seed/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | yes | yes |
+| server/db/seed/contracts/authorization/catalog/neon-admin/compiled/catalog-preflight.sql | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | yes | yes |
+| server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | yes | yes |
+| server/db/seed/contracts/authorization/catalog/neon-admin/compiled/contextual-aliases.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | yes | yes |
+| server/db/seed/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | yes | yes |
+| server/db/seed/contracts/generated/resolver-contracts.json | server/scripts/export-resolver-contracts.ts | metadata-platform | yes | yes |
 | server/packages/adapters/db/src/prisma/schema.mesh.prisma | server/packages/adapters/db/scripts/prisma-generate.mjs --schema server/packages/adapters/db/src/prisma/schema.mesh.prisma | database-platform | yes | yes |
 | server/packages/adapters/db/src/prisma/schema.prisma | server/packages/adapters/db/scripts/prisma-generate.mjs | database-platform | yes | yes |
 | stack/config/iam/realm-athyper-demosetup.json | tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |

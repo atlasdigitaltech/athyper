@@ -1,4 +1,4 @@
-import { type SemanticIntent } from "@athyper/theme/semantic-colors";
+import { type SemanticIntent } from "@athyper/platform-theme/semantic-colors";
 
 // Mirrors the variant union from @athyper/ui Badge without importing the component type
 type BadgeVariant = "default" | "secondary" | "outline" | "success" | "warning" | "destructive" | "info" | "muted";

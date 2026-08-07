@@ -5,7 +5,7 @@
  * mapping so adding a new status (e.g. "partially_paid") only needs one edit.
  *
  * For full SemanticIntent badge rendering (bg + border) use
- * `resolveSemanticColors` from @athyper/theme/semantic-colors.
+ * `resolveSemanticColors` from @athyper/platform-theme/semantic-colors.
  */
 
 const STATUS_CLASS_MAP: Record<string, string> = {

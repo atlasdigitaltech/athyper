@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { PageFrame, StatePanel } from "@athyper/surface-kit";
-import { DataTable, Badge, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@athyper/ui";
-import type { ColumnDef } from "@athyper/ui";
+import { PageFrame, StatePanel } from "@athyper/platform-surface-kit";
+import { DataTable, Badge, Button, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@athyper/platform-ui";
+import type { ColumnDef } from "@athyper/platform-ui";
 import type { EntityOperation } from "../[entityId]/_components/types";
 
 interface EntityCatalogueItem {

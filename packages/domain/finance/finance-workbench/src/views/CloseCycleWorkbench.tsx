@@ -20,9 +20,9 @@ import {
   AlertTriangle, CheckCircle2, ChevronRight, Clock,
   Loader2, Play, RotateCcw, Shield, XCircle,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { Button, Badge, Skeleton, Textarea } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
+import { cn } from "@athyper/platform-theme/utils";
+import { Button, Badge, Skeleton, Textarea } from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
 import {
   usePeriodCloseRuns,
   usePeriodCloseTasks,

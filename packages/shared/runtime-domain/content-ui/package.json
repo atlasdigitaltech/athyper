@@ -25,16 +25,16 @@
     "@tanstack/react-virtual": "^3.13.0"
   },
   "peerDependencies": {
-    "@athyper/theme": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "@athyper/theme": "workspace:*",
-    "@athyper/ui": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",

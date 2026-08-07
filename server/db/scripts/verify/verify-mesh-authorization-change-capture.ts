@@ -291,16 +291,16 @@ expect(
 );
 
 const orderedCapturePaths = [
-  "ddl/mesh_control/01z_authorization_migration_controls.sql",
-  "ddl/mesh_log/01z_authorization_change_capture.sql",
-  "ddl/mesh_log/03z_authorization_change_capture_constraints.sql",
-  "ddl/mesh_control/04z_authorization_migration_controls_indexes.sql",
-  "ddl/mesh_log/04z_authorization_change_capture_indexes.sql",
-  "ddl/mesh_log/05z_authorization_change_capture_functions.sql",
-  "ddl/mesh_log/06z_authorization_change_capture_triggers.sql",
-  "ddl/mesh_log/07z_authorization_change_capture_views.sql",
-  "ddl/mesh_control/08z_authorization_migration_controls_rls.sql",
-  "ddl/mesh_log/08z_authorization_change_capture_rls.sql",
+  "ddl/planes/mesh/authz/03_tables.sql",
+  "ddl/common/event/03_tables.sql",
+  "ddl/common/event/05_constraints.sql",
+  "ddl/planes/mesh/authz/06_indexes.sql",
+  "ddl/common/event/06_indexes.sql",
+  "ddl/common/event/07_functions.sql",
+  "ddl/common/event/08_triggers.sql",
+  "ddl/common/event/09_views.sql",
+  "ddl/planes/mesh/authz/10_rls.sql",
+  "ddl/common/event/10_rls.sql",
 ];
 let lastProvisionIndex = -1;
 let provisionOrderValid = true;

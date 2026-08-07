@@ -102,9 +102,9 @@ await exec(`
 `);
 
 for (const relPath of [
-  "server/db/ddl/master/01zzc_authorization_v2_expand.sql",
-  "server/db/ddl/master/05_authorization_v2_functions.sql",
-  "server/db/ddl/master/06_authorization_v2_integrity_triggers.sql",
+  "server/db/ddl/planes/neon/authz/03_tables.sql",
+  "server/db/ddl/planes/neon/authz/07_functions.sql",
+  "server/db/ddl/planes/neon/authz/08_triggers.sql",
 ]) {
   try {
     await exec(await readFile(join(repoRoot, relPath), "utf8"));
@@ -346,7 +346,7 @@ await exec(`
 const invalidationDdl = await readFile(
   join(
     repoRoot,
-    "server/db/ddl/event/06_authorization_v2_runtime_triggers.sql",
+    "server/db/ddl/common/event/08_triggers.sql",
   ),
   "utf8",
 );

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env tsx
+#!/usr/bin/env tsx
 /**
  * Reference-Relation Coverage Verification
  *
@@ -175,7 +175,7 @@ async function main(): Promise<void> {
           if (v.payload) console.log(`    ${JSON.stringify(v.payload)}`);
         }
         console.log();
-        console.log("FAIL â€” add the missing belongs_to/fk rows to server/db/seed/platform/003_control/043_control_entity_relation_contract.sql");
+        console.log("FAIL â€” add the missing belongs_to/fk rows to the canonical server/db/seed/meta-entity pack");
         console.log("       (or align the descriptor reference_config.target_entity with the existing relation).");
       } else {
         console.log("OK â€” every reference_config field has a matching belongs_to/fk relation.");

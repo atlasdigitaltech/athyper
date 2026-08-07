@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
-import { Badge, Input, Skeleton } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Input, Skeleton } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { useExploreGlAccounts, type ExploreGlAccount } from "../../hooks/useFinanceExplore";
 
 export interface GlAccountsListPanelProps {

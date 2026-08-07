@@ -1,7 +1,7 @@
 "use client";
 
 import { RotateCcw, Settings2, ShieldCheck } from "lucide-react";
-import { Badge, Button } from "@athyper/ui";
+import { Badge, Button } from "@athyper/platform-ui";
 import type {
   MetaEntityClassProfile,
   MetaEntityFieldDraft,

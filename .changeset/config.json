@@ -5,10 +5,13 @@
   "fixed": [],
   "linked": [
     [
-      "@athyper/core",
+      "@athyper/platform-core",
       "@athyper/runtime",
       "@athyper/adapter-auth",
-      "@athyper/adapter-db",
+      "@athyper/adapter-db-core",
+      "@athyper/adapter-db-neon",
+      "@athyper/adapter-db-athyper",
+      "@athyper/adapter-db-mesh",
       "@athyper/adapter-memorycache",
       "@athyper/adapter-objectstorage",
       "@athyper/adapter-telemetry"

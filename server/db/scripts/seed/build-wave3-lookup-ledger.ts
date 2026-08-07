@@ -22,8 +22,8 @@ const root = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const db = resolve(root, "server/db");
 const lookupRoot = resolve(db, "seed/platform/000_lookups/LookupDomain");
 const ddlRoot = resolve(db, "ddl");
-const output = resolve(db, "seed-migration/wave3-lookup-ledger.v1.json");
-const reviewPath = resolve(db, "seed-migration/wave3-lookup-review.v1.json");
+const output = resolve(db, "seed/migration/wave3-lookup-ledger.v1.json");
+const reviewPath = resolve(db, "seed/migration/wave3-lookup-review.v1.json");
 const check = process.argv.includes("--check");
 
 const hash = (value: string) => createHash("sha256").update(value.replace(/\r\n?/g, "\n")).digest("hex");

@@ -1,5 +1,5 @@
 import { type ReactNode, type HTMLAttributes } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 export interface ToolbarProps extends HTMLAttributes<HTMLDivElement> {
   left?: ReactNode;

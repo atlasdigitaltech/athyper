@@ -155,7 +155,7 @@ describe("Finance Settings Slice 7 testing and rollout", () => {
   it("keeps Review opt-in and backend-driven", () => {
     const directory = read("packages/domain/finance/finance-workbench/src/views/company-hub/CompanyHubView.tsx");
     const review = read("packages/domain/finance/finance-workbench/src/views/FinanceReadinessWorkbench.tsx");
-    const gate = read("server/db/ddl/document/07z_finance_certification_rollout.sql");
+    const gate = read("server/db/ddl/planes/neon/document/09_views.sql");
     expect(directory).toContain(">Review configuration</Link>");
     expect(review).toContain("useCompanyHub");
     expect(review).toContain("useFinanceSetupConflicts");

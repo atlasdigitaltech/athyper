@@ -2,7 +2,7 @@
  * Organize-palette style constants for @athyper/runtime-list.
  *
  * This file is a re-export shim. The canonical source of truth is
- * `@athyper/ui/organize` — import from there in any new Neon, Mesh, or Admin
+ * `@athyper/platform-ui/organize` — import from there in any new Neon, Mesh, or Admin
  * code that needs these constants outside of runtime-list.
  *
  * Existing consumers inside this package (ColumnControl, SortControl,
@@ -27,4 +27,4 @@ export {
   organizeSegmentClass,
   organizeChipClass,
   filterValuePillClass,
-} from "@athyper/ui/organize";
+} from "@athyper/platform-ui/organize";

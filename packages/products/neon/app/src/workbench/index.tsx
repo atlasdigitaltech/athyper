@@ -1,6 +1,6 @@
-import type { PlaneKey } from "@athyper/session-plane";
-import { getPlaneConfig } from "@athyper/session-plane";
-import { PageFrame, StatePanel } from "@athyper/surface-kit";
+import type { PlaneKey } from "@athyper/platform-iam-session-plane";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
+import { PageFrame, StatePanel } from "@athyper/platform-surface-kit";
 
 export function ContentPage({ plane }: { plane: PlaneKey }) {
   const config = getPlaneConfig(plane);

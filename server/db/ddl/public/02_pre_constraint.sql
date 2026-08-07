@@ -1,6 +1,0 @@
--- ============================================================================
--- public/02_pre_constraint.sql
--- Concept: Public Pre-Constraints — no functions required
--- Depends on: 01_schemas/001_schemas.sql
--- Note: No pre-constraint functions required for the public schema.
--- ============================================================================

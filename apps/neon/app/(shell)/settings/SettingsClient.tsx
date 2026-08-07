@@ -8,8 +8,8 @@ import {
   DiagnosticsSection, MeUIProvider, SettingsWorkspace, deriveSettingsAccess,
   type MeUISessionView,
 } from "@athyper/me-ui";
-import { NotificationsSettingsSection } from "@athyper/notifications-client";
-import { PageFrame } from "@athyper/surface-kit";
+import { NotificationsSettingsSection } from "@athyper/platform-communications-notifications-client";
+import { PageFrame } from "@athyper/platform-surface-kit";
 import { bffFetch } from "@/lib/bff-fetch";
 import { applyThemePreferences } from "@/lib/preferences/theme-dom";
 

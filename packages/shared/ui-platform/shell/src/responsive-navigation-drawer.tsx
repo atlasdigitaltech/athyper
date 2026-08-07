@@ -7,8 +7,8 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+} from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { NavBadge } from "./nav-badge";
 
 export type NavigationCategory = "global" | "workspace" | "setup" | "utility";

@@ -1,6 +1,6 @@
-import type { PlaneKey } from "@athyper/session-plane";
-import { getPlaneConfig } from "@athyper/session-plane";
-import { PageFrame, PanelGrid, StatePanel, WorkPanel } from "@athyper/surface-kit";
+import type { PlaneKey } from "@athyper/platform-iam-session-plane";
+import { getPlaneConfig } from "@athyper/platform-iam-session-plane";
+import { PageFrame, PanelGrid, StatePanel, WorkPanel } from "@athyper/platform-surface-kit";
 
 export interface PlanePageProps {
   plane: PlaneKey;

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { History, RefreshCw } from "lucide-react";
-import { Button, Skeleton } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
+import { Button, Skeleton } from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
 import { useTenantCurrencyFxSummary } from "../../hooks/useCurrencyFxSetup";
 import { FxRateSettingsSection } from "./FxRateSettingsSection";
 import { TenantFxPolicyEditor } from "./TenantFxPolicyEditor";

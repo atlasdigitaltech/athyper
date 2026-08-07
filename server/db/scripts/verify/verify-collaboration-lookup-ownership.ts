@@ -33,7 +33,7 @@ async function main(): Promise<void> {
       "utf8",
     );
     assert(
-      manifest.includes("common/control/03_lookup_catalog.sql")
+      manifest.includes("common/control/03_tables.sql")
         && manifest.includes("common/control/12_collaboration_lookup_seed.sql"),
       `${plane} installs the common lookup catalog and collaboration seed`,
     );

@@ -3,7 +3,7 @@
  * Resolver Contracts Export
  *
  * Dumps the registered resolver contracts to
- * `server/db/seed/_generated/resolver-contracts.json` so the cascade-rule
+ * `server/db/seed/contracts/generated/resolver-contracts.json` so the cascade-rule
  * verifier can validate `on_source_change[].resolver` references without
  * booting the full server.
  *

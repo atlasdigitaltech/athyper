@@ -39,11 +39,11 @@ import {
   type ColumnDef,
   type RowSelectionState,
   type SortingState,
-} from "@athyper/ui/data";
+} from "@athyper/platform-ui/data";
 import type { CompiledEntity } from "@athyper/api-contracts/metadata";
 import type { EntityListSortEntry } from "@athyper/api-contracts/entity-list";
 import { resolveListConfig } from "@athyper/metadata-client/compiled-reader";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { buildEmbeddedColumns } from "./columns";
 
 // Client-side comparator used when `dataOverride` is in play (no server

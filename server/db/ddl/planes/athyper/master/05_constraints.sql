@@ -1,4 +1,25 @@
 ALTER TABLE master.tenant
+  ADD CONSTRAINT tenant_canonical_party_fk FOREIGN KEY(canonical_party_id) REFERENCES master.canonical_party(id) ON DELETE RESTRICT;
+ALTER TABLE master.canonical_party
+  ADD CONSTRAINT canonical_party_authority_tenant_fk FOREIGN KEY(authority_tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT canonical_party_merged_into_fk FOREIGN KEY(authority_tenant_id,merged_into_party_id) REFERENCES master.canonical_party(authority_tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT canonical_party_created_by_fk FOREIGN KEY(created_by) REFERENCES master.principal(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT canonical_party_updated_by_fk FOREIGN KEY(updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT canonical_party_status_by_fk FOREIGN KEY(status_changed_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+ALTER TABLE master.canonical_party_identifier
+  ADD CONSTRAINT canonical_party_identifier_party_fk FOREIGN KEY(authority_tenant_id,party_id) REFERENCES master.canonical_party(authority_tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT canonical_party_identifier_created_by_fk FOREIGN KEY(created_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+ALTER TABLE master.canonical_party_relationship
+  ADD CONSTRAINT canonical_party_relationship_from_fk FOREIGN KEY(authority_tenant_id,from_party_id) REFERENCES master.canonical_party(authority_tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT canonical_party_relationship_to_fk FOREIGN KEY(authority_tenant_id,to_party_id) REFERENCES master.canonical_party(authority_tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT canonical_party_relationship_created_by_fk FOREIGN KEY(created_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+ALTER TABLE master.canonical_party_merge
+  ADD CONSTRAINT canonical_party_merge_loser_fk FOREIGN KEY(authority_tenant_id,losing_party_id) REFERENCES master.canonical_party(authority_tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT canonical_party_merge_survivor_fk FOREIGN KEY(authority_tenant_id,surviving_party_id) REFERENCES master.canonical_party(authority_tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT canonical_party_merge_approved_by_fk FOREIGN KEY(approved_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+
+ALTER TABLE master.tenant
+    ADD CONSTRAINT tenant_canonical_party_uq UNIQUE (canonical_party_id),
     ADD CONSTRAINT tenant_subscription_plan_fk
     FOREIGN KEY (subscription_plan_id)
     REFERENCES control.subscription_plan (id)

@@ -28,9 +28,9 @@
 
 import { useMemo, useState } from "react";
 import { Minus, Plus, ArrowRight } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { resolveSemanticColors, type SemanticIntent } from "@athyper/theme/semantic-colors";
-import { DrawerPeekShell } from "@athyper/ui/surfaces/shells";
+import { cn } from "@athyper/platform-theme/utils";
+import { resolveSemanticColors, type SemanticIntent } from "@athyper/platform-theme/semantic-colors";
+import { DrawerPeekShell } from "@athyper/platform-ui/surfaces/shells";
 import type { MetaEntityField, MetaEntityRuntimeDescriptor } from "@athyper/runtime-contracts";
 import type {
   FieldDelta,

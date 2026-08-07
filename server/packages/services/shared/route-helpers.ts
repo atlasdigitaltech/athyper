@@ -15,22 +15,44 @@ export interface AuthDeps {
   verifyToken(token: string): Promise<Record<string, unknown>>;
 }
 
+// Discriminated union result — lets the route handler own the response.
+// Use this for new routes; it is testable without mocking Express Response.
+export type BearerResult =
+  | { ok: true;  claims: Record<string, unknown> }
+  | { ok: false; code: 'MISSING_TOKEN' | 'INVALID_TOKEN'; status: 401; message: string };
+
+export async function verifyBearerToken(
+  authHeader: string,
+  auth: AuthDeps,
+): Promise<BearerResult> {
+  const match = /^Bearer\s+(.+)$/i.exec(authHeader);
+  if (!match) {
+    return { ok: false, code: 'MISSING_TOKEN', status: 401, message: 'Authorization: Bearer <token> required' };
+  }
+  try {
+    const claims = await auth.verifyToken(match[1]!);
+    return { ok: true, claims };
+  } catch {
+    return { ok: false, code: 'INVALID_TOKEN', status: 401, message: 'Token verification failed' };
+  }
+}
+
+/**
+ * @deprecated Use verifyBearerToken() — returns a discriminated union so the
+ * route handler owns the response and the function is testable without mocking
+ * Express Response. This wrapper is kept for existing call sites.
+ */
 export async function verifyBearer(
   authHeader: string,
   auth: AuthDeps,
   res: Parameters<RequestHandler>[1],
 ): Promise<Record<string, unknown> | null> {
-  const match = /^Bearer\s+(.+)$/i.exec(authHeader);
-  if (!match) {
-    res.status(401).json({ error: "MISSING_TOKEN", message: "Authorization: Bearer <token> required" });
+  const result = await verifyBearerToken(authHeader, auth);
+  if (!result.ok) {
+    res.status(result.status).json({ error: result.code, message: result.message });
     return null;
   }
-  try {
-    return await auth.verifyToken(match[1]!);
-  } catch {
-    res.status(401).json({ error: "INVALID_TOKEN", message: "Token verification failed" });
-    return null;
-  }
+  return result.claims;
 }
 
 // ── UUID ──────────────────────────────────────────────────────────────────────

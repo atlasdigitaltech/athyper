@@ -4,11 +4,11 @@ import Link from "next/link";
 import {
   ArrowUpRight, Building2, CircleAlert, Coins, RefreshCw,
 } from "lucide-react";
-import { Button, Skeleton } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
-import { SurfaceHeader } from "@athyper/surface-kit";
-import { BODY_SM, LABEL_SM } from "@athyper/ui/typography";
-import { cn } from "@athyper/theme/utils";
+import { Button, Skeleton } from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
+import { SurfaceHeader } from "@athyper/platform-surface-kit";
+import { BODY_SM, LABEL_SM } from "@athyper/platform-ui/typography";
+import { cn } from "@athyper/platform-theme/utils";
 import { setupDomainPath, setupScopePath } from "@athyper/runtime-contracts";
 import { useCompanyFoundation } from "../../hooks/useCompanyFoundation";
 import { useScopeOptions } from "../../hooks/useScopeOptions";

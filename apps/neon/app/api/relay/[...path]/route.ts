@@ -7,7 +7,7 @@ import "server-only";
 import {
   buildRelayHandler,
   isNotificationEventStreamRequest,
-} from "@athyper/bff-relay";
+} from "@athyper/platform-bff-relay";
 import { getNeonServerSession } from "@/lib/server/session";
 import {
   buildSessionConfigurationIdentity,

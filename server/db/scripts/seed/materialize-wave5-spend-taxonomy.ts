@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const db = resolve(root, "server/db");
-const archive = resolve(db, "seed-migration/archive/wave5/spend-taxonomy");
+const archive = resolve(db, "../../docs/archive/database/seed-migration/wave5/spend-taxonomy");
 const target = resolve(db, "seed/blueprints/universal/010_spend_taxonomy");
 const q = (value: string) => `'${value.replace(/'/g, "''")}'`;
 

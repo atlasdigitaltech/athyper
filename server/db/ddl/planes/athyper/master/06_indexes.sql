@@ -1,3 +1,9 @@
+CREATE UNIQUE INDEX canonical_party_identifier_live_claim_uq ON master.canonical_party_identifier(authority_tenant_id,scheme,COALESCE(issuer_country_code,'--'),COALESCE(issuer_authority,''),value_hash) WHERE claim_status IN ('claimed','verified') AND effective_until IS NULL;
+CREATE INDEX canonical_party_name_idx ON master.canonical_party(authority_tenant_id,lower(display_name));
+CREATE INDEX canonical_party_relationship_from_idx ON master.canonical_party_relationship(authority_tenant_id,from_party_id,relationship_kind,status);
+CREATE INDEX canonical_party_relationship_to_idx ON master.canonical_party_relationship(authority_tenant_id,to_party_id,relationship_kind,status);
+ALTER TABLE master.canonical_party_relationship ADD CONSTRAINT canonical_party_relationship_no_overlap EXCLUDE USING gist (authority_tenant_id WITH =,from_party_id WITH =,to_party_id WITH =,relationship_kind WITH =,tstzrange(effective_from,effective_until,'[)') WITH &&) WHERE (status IN ('pending','active'));
+
 CREATE INDEX tenant_active_lookup_idx
     ON master.tenant (realm_key, code)
     WHERE status = 'active';

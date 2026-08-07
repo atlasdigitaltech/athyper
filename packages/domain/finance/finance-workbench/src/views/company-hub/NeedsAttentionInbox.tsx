@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, Info, type LucideIcon } from "lucide-react";
-import { Badge, Button } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Button } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import type { ConflictSeverity, FinanceSetupConflict } from "../../lib/finance-setup.types";
 
 const SEVERITY_ICON: Record<ConflictSeverity, LucideIcon> = {

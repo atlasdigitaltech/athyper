@@ -29,7 +29,7 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@athyper/core": "workspace:*",
+    "@athyper/platform-core": "workspace:*",
     "@opentelemetry/api": "^1.9.0"
   },
   "devDependencies": {

@@ -10,7 +10,7 @@
  * PeriodGateDecision instead of folding it into the forward-posting boolean.
  */
 
-import { parseBusinessDate } from "@athyper/temporal";
+import { parseBusinessDate } from "@athyper/platform-temporal";
 
 export type FiscalPeriodStatus = "open" | "soft_close" | "hard_close" | "future";
 

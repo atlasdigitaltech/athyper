@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import type { PlaneConfig } from "@athyper/session-plane";
+import type { PlaneConfig } from "@athyper/platform-iam-session-plane";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PlaneProxyHandler } from "./proxy";

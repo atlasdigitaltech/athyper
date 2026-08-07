@@ -13,8 +13,8 @@ describe("Contract M3 atomic publication wiring", () => {
   const publishedRuntime = source("../published-runtime-descriptor.ts");
   const route = source("../../routes/studio-contract-v21.route.ts");
   const legacyRoute = source("../../routes/studio-version.route.ts");
-  const tableDdl = source("../../../../../db/ddl/control/01zzn_meta_entity_contract_m3.sql");
-  const constraintDdl = source("../../../../../db/ddl/control/03zzn_meta_entity_contract_m3.sql");
+  const tableDdl = source("../../../../../db/ddl/planes/athyper/metadata/03_tables.sql");
+  const constraintDdl = source("../../../../../db/ddl/planes/athyper/metadata/05_constraints.sql");
 
   it("locks publication authority and persists all evidence before EFFECTIVE", () => {
     expect(repository).toContain("FOR UPDATE OF ev, state");

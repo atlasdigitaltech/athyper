@@ -29,6 +29,8 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@athyper/foundation-kernel": "workspace:*",
+    "@athyper/platform-core": "workspace:*",
     "ioredis": "^5.9.2"
   },
   "devDependencies": {

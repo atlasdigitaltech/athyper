@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
-import { Badge, Button } from "@athyper/ui/primitives";
-import { cn } from "@athyper/theme/utils";
+import { Badge, Button } from "@athyper/platform-ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
 import { useCompanyHub } from "../../hooks/useCompanyHub";
 import { PostabilityChip } from "../company-hub/PostabilityChip";
 

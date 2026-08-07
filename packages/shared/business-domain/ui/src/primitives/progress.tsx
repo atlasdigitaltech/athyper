@@ -1,5 +1,5 @@
 import { type HTMLAttributes } from "react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 
 interface ProgressProps extends HTMLAttributes<HTMLDivElement> {
   value?: number;

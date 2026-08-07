@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Button, Tabs, TabsList, TabsTrigger, TabsContent } from "@athyper/ui/primitives";
-import { PageFrame } from "@athyper/ui/layout";
+import { Button, Tabs, TabsList, TabsTrigger, TabsContent } from "@athyper/platform-ui/primitives";
+import { PageFrame } from "@athyper/platform-ui/layout";
 import { WorkspaceHeader } from "../workspace/WorkspaceHeader";
 import { GlControlsGrid } from "./GlControlsGrid";
 import { ChartAssignmentPanel, BookAssignmentPanel } from "./ChartAndBookAssignmentPanels";

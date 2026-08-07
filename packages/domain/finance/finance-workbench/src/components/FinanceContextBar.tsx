@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Check, ChevronDown, Columns3 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   Switch,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import { useScopeOptions } from "../hooks/useScopeOptions";
 import { useFiscalPeriods } from "../hooks/useFiscalPeriods";
 import { parseFinanceScope, scopeToParams, type FinanceScope } from "../lib/scope";

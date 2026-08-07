@@ -30,7 +30,7 @@ describe("Phase 0 tenant and work-context contracts", () => {
 
   it("fails closed for domain mismatch and stale context versions", () => {
     const bff = read("packages/shared/platform-auth/auth-bff/src/index.ts");
-    const relay = read("packages/shared/data-integration/bff-relay/src/index.ts");
+    const relay = read("packages/platform/foundation/bff-relay/src/index.ts");
 
     expect(bff).toContain("runtimeHeadersMatchSession");
     expect(bff).toContain("activeWorkContext");
@@ -53,7 +53,7 @@ describe("Phase 0 tenant and work-context contracts", () => {
 
   it("keeps activeOrg compatibility while carrying the legacy tenant route contract", () => {
     const bff = read("packages/shared/platform-auth/auth-bff/src/index.ts");
-    const relay = read("packages/shared/data-integration/bff-relay/src/index.ts");
+    const relay = read("packages/platform/foundation/bff-relay/src/index.ts");
 
     expect(bff).toContain("activeOrg");
     expect(bff).toContain("activeWorkContext");

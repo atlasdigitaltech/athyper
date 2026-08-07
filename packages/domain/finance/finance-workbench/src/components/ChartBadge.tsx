@@ -1,7 +1,7 @@
 "use client";
 
-import { Badge } from "@athyper/ui/primitives";
-import { cn, resolveSemanticColors, accountClassIntent, chartTierIntent, consolMethodIntent, ownerTypeIntent, reconTypeIntent } from "@athyper/theme";
+import { Badge } from "@athyper/platform-ui/primitives";
+import { cn, resolveSemanticColors, accountClassIntent, chartTierIntent, consolMethodIntent, ownerTypeIntent, reconTypeIntent } from "@athyper/platform-theme";
 import type { AccountClass, ChartTier, ConsolidationMethod, OwnerType } from "../data/types";
 
 /* -- Account class -------------------------------------------------------- */

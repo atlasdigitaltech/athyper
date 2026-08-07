@@ -10,7 +10,7 @@
  *     Ã¢â‚¬Â¢ @tanstack/react-query        (queries/mutations live in runtime-canvas)
  *
  *   content-ui MAY import @athyper/api-contracts (types) and the usual peers
- *   (@athyper/theme, @athyper/ui, lucide-react, react).
+ *   (@athyper/platform-theme, @athyper/ui, lucide-react, react).
  *
  * Two checks:
  *   1. package.json Ã¢â‚¬â€ content-ui's dependencies/peerDependencies/devDependencies

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const invalidationDdl = readFileSync(
-  new URL("../../../../db/ddl/governance/09_finance_setup_certification_invalidation.sql", import.meta.url),
+  new URL("../../../../db/ddl/common/governance/07_functions.sql", import.meta.url),
   "utf8",
 );
 

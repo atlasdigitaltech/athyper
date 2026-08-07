@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
 const db = resolve(root, "server/db");
-const source = resolve(db, "seed-migration/archive/wave5/asset-policies/341_asset_class_book_policy_templates.legacy.sql");
+const source = resolve(db, "../../docs/archive/database/seed-migration/wave5/asset-policies/341_asset_class_book_policy_templates.legacy.sql");
 const target = resolve(db, "seed/blueprints/universal/040_assets/341_asset_class_book_policy_templates.sql");
 
 async function main() {

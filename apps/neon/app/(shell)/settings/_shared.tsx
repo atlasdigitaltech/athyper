@@ -5,11 +5,11 @@ import {
   Check, Copy, Info, AlertTriangle, CheckCircle2, XCircle,
   Lock, Database, Server, User, Building2, Briefcase, HelpCircle,
 } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import {
   Badge, Button, Skeleton,
   overlayScrimVariants,
-} from "@athyper/ui/primitives";
+} from "@athyper/platform-ui/primitives";
 import { bffFetch } from "@/lib/bff-fetch";
 
 // ─── Utilities ────────────────────────────────────────────────────────────────

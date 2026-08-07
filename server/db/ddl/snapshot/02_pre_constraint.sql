@@ -1,5 +1,0 @@
--- ============================================================================
--- snapshot/02_pre_constraint.sql
--- No pre-constraint routines are required by the live schema.
--- Generated from the live Neon database snapshot schema. Do not hand-edit.
--- ============================================================================

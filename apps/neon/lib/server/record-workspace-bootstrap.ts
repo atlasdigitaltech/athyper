@@ -5,7 +5,7 @@ import {
   dehydrate,
   type DehydratedState,
 } from "@tanstack/react-query";
-import type { V4Session } from "@athyper/auth-bff";
+import type { V4Session } from "@athyper/platform-iam-auth-bff";
 import { queryKeys, type RecordWorkspaceKeyInput } from "@athyper/api-contracts/query-keys";
 import type { DocumentEditCoordinatorIdentity } from "@athyper/runtime-canvas";
 import type {

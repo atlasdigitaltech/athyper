@@ -1,7 +1,7 @@
 import { forwardRef, type ComponentPropsWithoutRef, type HTMLAttributes } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
+import { cn } from "@athyper/platform-theme/utils";
 import { overlayScrimVariants } from "./overlay";
 
 const Dialog = DialogPrimitive.Root;

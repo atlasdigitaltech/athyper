@@ -7,7 +7,7 @@
  * on row N matches the id of the row at `chain_seq = N-1` for that entity.
  *
  * Delegates to `snapshot.fn_verify_chain` (defined in
- * server/db/ddl/snapshot/05_functions.sql) and aggregates broken rows.
+ * server/db/ddl/common/snapshot/07_functions.sql) and aggregates broken rows.
  *
  * Usage:
  *   DATABASE_URL=postgres://athyperadmin:athyperadmin@127.0.0.1:5432/athyper \

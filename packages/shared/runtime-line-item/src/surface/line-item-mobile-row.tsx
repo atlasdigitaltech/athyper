@@ -6,8 +6,8 @@
 
 import type { ReactNode } from "react";
 import { ChevronRight, ClipboardList, FileText, Package, ShoppingCart, Tags, Wrench, type LucideIcon } from "lucide-react";
-import { cn } from "@athyper/theme/utils";
-import { Checkbox } from "@athyper/ui/primitives";
+import { cn } from "@athyper/platform-theme/utils";
+import { Checkbox } from "@athyper/platform-ui/primitives";
 import type { CompiledEntity, EntityField } from "@athyper/api-contracts/metadata";
 import { formatFieldValue } from "../meta";
 import { QuantityUomValue } from "../components/quantity-uom-value";

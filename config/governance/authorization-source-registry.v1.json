@@ -2690,7 +2690,7 @@
       "owner": "database-platform"
     },
     {
-      "path": "server/db/seed/_generated/resolver-contracts.json",
+      "path": "server/db/seed/contracts/generated/resolver-contracts.json",
       "generator": "server/scripts/export-resolver-contracts.ts",
       "owner": "metadata-platform"
     },
@@ -2715,82 +2715,82 @@
       "owner": "platform-iam"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
       "owner": "platform-iam"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/contextual-aliases.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/contextual-aliases.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
       "owner": "platform-iam"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/verification-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
       "owner": "platform-iam"
     },
     {
-      "path": "server/db/catalog/neon-admin/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/catalog-preflight.sql",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
       "owner": "platform-iam"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/compiled-catalog.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
       "owner": "mesh-platform"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/contextual-aliases.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/contextual-aliases.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
       "owner": "mesh-platform"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/verification-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
       "owner": "mesh-platform"
     },
     {
-      "path": "server/db/catalog/mesh/compiled/catalog-preflight.sql",
+      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql",
       "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
       "owner": "mesh-platform"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
       "owner": "platform-iam"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
       "owner": "platform-iam"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/reconciliation-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
       "owner": "platform-iam"
     },
     {
-      "path": "server/db/authority/neon-admin/compiled/reconciliation-report.md",
+      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.md",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
       "owner": "platform-iam"
     },
     {
-      "path": "server/db/authority/mesh/compiled/compiled-authority.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
       "owner": "mesh-platform"
     },
     {
-      "path": "server/db/authority/mesh/compiled/existing-user-group-manifest.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
       "owner": "mesh-platform"
     },
     {
-      "path": "server/db/authority/mesh/compiled/reconciliation-report.v1.json",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.v1.json",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
       "owner": "mesh-platform"
     },
     {
-      "path": "server/db/authority/mesh/compiled/reconciliation-report.md",
+      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.md",
       "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
       "owner": "mesh-platform"
     }
