@@ -32,7 +32,7 @@ import {
   meshAuthorizationV2RuntimeTables,
   meshAuthorizationV2Sentinels,
   meshAuthorizationV2Wave0Sources,
-} from "../contracts/mesh-authorization-v2-wave1.js";
+} from "../contracts/mesh-authorization-v2-expand.js";
 
 const exactConfirmation =
   "PRE_BACKFILL_MESH_AUTHORIZATION_V2_EXPAND_ROLLBACK";

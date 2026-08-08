@@ -1,3 +1,6 @@
+// DEPRECATED — writeRouteAudit/writeRequiredRouteAudit write to log.audit_log
+// (legacy). New code should use appendAuditEvent/appendRequiredAuditEvent from
+// @athyper/svc-audit instead (writes to audit.audit_log via contract system).
 import type { Kysely } from "kysely";
 
 export interface RouteAuditEntry {

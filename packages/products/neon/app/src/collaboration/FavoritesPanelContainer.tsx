@@ -10,7 +10,6 @@ import {
 import {
   useBookmarksList,
   useRecentItems,
-  type BookmarkRequest,
 } from "@athyper/query";
 
 type ShellProps = Pick<
@@ -19,10 +18,9 @@ type ShellProps = Pick<
 >;
 
 export function FavoritesPanelContainer({
-  request,
   ...props
-}: ShellProps & { request: BookmarkRequest }) {
-  const { groups, isLoading, error, removeBookmark, isRemoving } = useBookmarksList({ request });
+}: ShellProps) {
+  const { groups, isLoading, error, removeBookmark, isRemoving } = useBookmarksList();
   const { items, dismiss } = useRecentItems();
   const handleRemoveBookmark = useCallback((item: FavoriteBookmarkItem) => {
     removeBookmark({ entityCode: item.entityCode, recordId: item.recordId });

@@ -2,7 +2,7 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  relayHandler: vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 })),
+  relayHandler: vi.fn(async (_request: Request) => new Response(JSON.stringify({ ok: true }), { status: 200 })),
   relationHandler: vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 })),
   fieldOptionsHandler: vi.fn(async () => new Response(JSON.stringify({ options: [] }), { status: 200 })),
   draftInitiateHandler: vi.fn(async () => new Response(JSON.stringify({ record: { id: "draft-1" } }), { status: 201 })),
@@ -456,6 +456,5 @@ describe("/api/runtime/v1/[...path] relay", () => {
     });
   });
 });
-
 
 

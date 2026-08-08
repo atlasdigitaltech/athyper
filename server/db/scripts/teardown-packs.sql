@@ -52,7 +52,7 @@ RAISE NOTICE '§1  AP Non-PO Demo Documents (athyper / AUIC)';
 RAISE NOTICE '════════════════════════════════════════════════════════════════';
 
 -- Activity log entries for demo invoices
-DELETE FROM log.activity_log
+DELETE FROM audit.audit_log
 WHERE entity_type = 'purchase_invoice'
   AND entity_id IN (
       '00000001-0000-0000-0001-000000000001'::uuid,
@@ -60,9 +60,10 @@ WHERE entity_type = 'purchase_invoice'
       '00000001-0000-0000-0001-000000000004'::uuid,
       '00000001-0000-0000-0001-000000000007'::uuid,
       '00000001-0000-0000-0001-000000000008'::uuid
-  );
+  )
+  AND context->>'domain' IS NOT NULL;
 GET DIAGNOSTICS v_n = ROW_COUNT;
-RAISE NOTICE '  activity_log                    : % rows', v_n;
+RAISE NOTICE '  audit_log (activity)            : % rows', v_n;
 
 -- Invoice lines first (ON DELETE RESTRICT on purchase_invoice)
 DELETE FROM document.purchase_invoice_line

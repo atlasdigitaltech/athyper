@@ -12,6 +12,8 @@ export interface RealmPolicy {
   role: RealmRole;
   mandatoryMfa: boolean;
   hardwareKeyPreferred: boolean;
+  /** Minimum normalized assurance accepted by this realm/plane boundary. */
+  requiredAssuranceLevel: "aal1" | "aal2" | "aal3";
 }
 
 export interface PlaneConfig {
@@ -71,6 +73,22 @@ export function cookieNamesWithHostPrefix(baseCookieName: string): string[] {
   return [hostPrefixed, baseCookieName];
 }
 
+/**
+ * Reads a cookie using the hardened production name first and the local/legacy
+ * base name second. Keeping the precedence here prevents each consumer from
+ * implementing a subtly different migration fallback.
+ */
+export function readCookieWithHostPrefix<T>(
+  baseCookieName: string,
+  readCandidate: (cookieName: string) => T | null | undefined,
+): T | undefined {
+  for (const cookieName of cookieNamesWithHostPrefix(baseCookieName)) {
+    const value = readCandidate(cookieName);
+    if (value !== null && value !== undefined) return value;
+  }
+  return undefined;
+}
+
 // Policy values that govern every session across all planes. Shared here so that
 // auth-bff and any future server-side validators use the same constants without
 // importing from each other.
@@ -113,6 +131,10 @@ export function userSessionsKey(namespace: string, userId: string): string {
   return `user_sessions:${namespace}:${userId}`;
 }
 
+export function realmSubjectSessionsKey(realmKey: string, userId: string): string {
+  return `realm_subject_sessions:${realmKey}:${userId}`;
+}
+
 export function refreshLockKey(namespace: string, sid: string): string {
   return `refresh_lock:${namespace}:${sid}`;
 }
@@ -126,6 +148,10 @@ export function sidRotationKey(namespace: string, sid: string): string {
 // wipe on KC back-channel logout.
 export function kcSessionReverseKey(kcSessionId: string): string {
   return `kc_session:${kcSessionId}`;
+}
+
+export function realmKcSessionReverseKey(realmKey: string, kcSessionId: string): string {
+  return `realm_kc_session:${realmKey}:${kcSessionId}`;
 }
 
 export type RuntimeWorkbench = "user" | "partner" | "admin";
@@ -216,6 +242,7 @@ const SUPPORT_REALM_POLICY: RealmPolicy = {
   role: "support",
   mandatoryMfa: true,
   hardwareKeyPreferred: true,
+  requiredAssuranceLevel: "aal2",
 };
 
 export const PLANE_CONFIGS = {
@@ -248,6 +275,7 @@ export const PLANE_CONFIGS = {
         role: "native",
         mandatoryMfa: false,
         hardwareKeyPreferred: false,
+        requiredAssuranceLevel: "aal1",
       },
       SUPPORT_REALM_POLICY,
     ],
@@ -284,6 +312,7 @@ export const PLANE_CONFIGS = {
         role: "native",
         mandatoryMfa: false,
         hardwareKeyPreferred: false,
+        requiredAssuranceLevel: "aal1",
       },
       SUPPORT_REALM_POLICY,
     ],
@@ -320,6 +349,7 @@ export const PLANE_CONFIGS = {
         role: "native",
         mandatoryMfa: true,
         hardwareKeyPreferred: true,
+        requiredAssuranceLevel: "aal2",
       },
       SUPPORT_REALM_POLICY,
     ],

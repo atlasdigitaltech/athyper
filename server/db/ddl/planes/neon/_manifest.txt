@@ -31,7 +31,6 @@ common/document/02_domains.sql
 common/audit/02_domains.sql
 common/snapshot/02_domains.sql
 planes/neon/master/02_domains.sql
-planes/neon/authz/02_domains.sql
 common/authz/02_domains.sql
 common/runtime_meta/02_domains.sql
 planes/neon/control/02_domains.sql
@@ -50,7 +49,6 @@ common/runtime_meta/03_tables.sql
 common/ops/03_tables.sql
 common/master/03_tables.sql
 planes/neon/ledger/03_tables.sql
-planes/neon/authz/03_tables.sql
 common/authz/03_tables.sql
 common/event/03_tables.sql
 common/governance/03_tables.sql
@@ -67,7 +65,6 @@ common/master/05_constraints.sql
 common/snapshot/05_constraints.sql
 common/audit/05_constraints.sql
 common/log/05_constraints.sql
-planes/neon/authz/05_constraints.sql
 common/authz/05_constraints.sql
 planes/neon/snapshot/05_constraints.sql
 planes/neon/document/05_constraints.sql
@@ -86,7 +83,6 @@ common/log/06_indexes.sql
 common/control/06_indexes.sql
 common/ops/06_indexes.sql
 common/runtime_meta/06_indexes.sql
-planes/neon/authz/06_indexes.sql
 common/authz/06_indexes.sql
 planes/neon/snapshot/06_indexes.sql
 planes/neon/document/06_indexes.sql
@@ -104,7 +100,6 @@ common/master/07_functions.sql
 common/snapshot/07_functions.sql
 common/audit/07_functions.sql
 common/log/07_functions.sql
-planes/neon/authz/07_functions.sql
 common/authz/07_functions.sql
 common/ops/07_functions.sql
 planes/neon/snapshot/07_functions.sql
@@ -124,7 +119,6 @@ planes/neon/control/08_triggers.sql
 common/control/08_triggers.sql
 common/ops/08_triggers.sql
 common/runtime_meta/08_triggers.sql
-planes/neon/authz/08_triggers.sql
 common/authz/08_triggers.sql
 planes/neon/snapshot/08_triggers.sql
 planes/neon/document/08_triggers.sql
@@ -143,7 +137,6 @@ common/snapshot/09_views.sql
 common/audit/09_views.sql
 planes/neon/master/09_views.sql
 planes/neon/control/09_views.sql
-planes/neon/authz/09_views.sql
 planes/neon/document/09_views.sql
 planes/neon/ledger/09_views.sql
 common/shared/10_rls.sql
@@ -156,7 +149,6 @@ planes/neon/control/10_rls.sql
 common/control/10_rls.sql
 common/ops/10_rls.sql
 common/runtime_meta/10_rls.sql
-planes/neon/authz/10_rls.sql
 common/authz/10_rls.sql
 planes/neon/snapshot/10_rls.sql
 planes/neon/document/10_rls.sql
@@ -176,7 +168,6 @@ planes/neon/control/11_grants.sql
 common/control/11_grants.sql
 common/ops/11_grants.sql
 common/runtime_meta/11_grants.sql
-planes/neon/authz/11_grants.sql
 common/authz/11_grants.sql
 planes/neon/snapshot/11_grants.sql
 planes/neon/document/11_grants.sql

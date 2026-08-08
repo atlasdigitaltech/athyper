@@ -31,7 +31,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@athyper/foundation-crypto": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
     "@athyper/platform-ai-agent-runtime": "workspace:*",
     "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-shared": "workspace:*",

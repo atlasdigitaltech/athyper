@@ -1,5 +1,6 @@
 import { sql, type Kysely } from "kysely";
 import type { RequestHandler, Router } from "express";
+import { appendAuditEvent } from "@athyper/svc-audit";
 
 import {
   extractOrgHeaders,
@@ -289,37 +290,30 @@ async function writeParameterChangeLog(
     requestId: string | null;
   },
 ): Promise<void> {
-  const oldValueJson = input.before ? JSON.stringify(input.before.value) : null;
-  const newValueJson = input.overrideEnabled ? JSON.stringify(input.value) : null;
+  const auditOp =
+    input.operation === "disable_override" ? "delete" :
+    input.operation === "enable_override"  ? "create" :
+    input.operation as "create" | "update";
 
-  await sql`
-    INSERT INTO log.parameter_change_log (
-      tenant_id,
-      parameter_code,
-      actor_principal_id,
-      operation,
-      old_override_enabled,
-      new_override_enabled,
-      old_value,
-      new_value,
-      reason,
-      request_id,
-      created_by
-    )
-    VALUES (
-      ${input.tenantId}::uuid,
-      ${input.parameter.code},
-      ${input.principalId}::uuid,
-      ${input.operation},
-      ${input.before?.override_enabled ?? null},
-      ${input.overrideEnabled},
-      ${oldValueJson}::jsonb,
-      ${newValueJson}::jsonb,
-      ${input.reason},
-      ${input.requestId},
-      ${input.principalId}::uuid
-    )
-  `.execute(db);
+  await appendAuditEvent(db, {
+    event_code:     "config.parameter_changed",
+    operation:      auditOp,
+    entity_type:    "control.parameter",
+    reason_comment: input.reason,
+    old_values:     input.before ? {
+      override_enabled: input.before.override_enabled,
+      value:            input.before.value,
+    } : null,
+    new_values: {
+      override_enabled: input.overrideEnabled,
+      value:            input.overrideEnabled ? input.value : null,
+    },
+    context: {
+      parameter_code: input.parameter.code,
+      operation:      input.operation,
+    },
+    correlation_id: input.requestId,
+  });
 }
 
 function classifyOperation(

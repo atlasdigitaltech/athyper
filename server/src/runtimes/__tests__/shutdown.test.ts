@@ -15,8 +15,8 @@
 // cut off the drain; with the new design the drain always completes.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { ServerDeps } from "../../kernel/bootstrap.js";
-import { Lifecycle } from "../../lifecycle.js";
+import type { ServerDeps } from "../../composition/bootstrap.js";
+import { Lifecycle } from "@athyper/server-foundation/kernel";
 
 // ─── Stubs ────────────────────────────────────────────────────────────────────
 

@@ -33,7 +33,7 @@ describe("Phase 8 typed tenant/work-context cutover", () => {
   });
 
   it("preserves operating-organization metadata when contexts are materialized", () => {
-    const resolver = read("server/packages/services/iam/context/context-resolver.service.ts");
+    const resolver = read("server/packages/platform/iam/context/context-resolver.service.ts");
     expect(resolver).toContain("...(input.workContextDomain ? { workContextDomain: input.workContextDomain } : {})");
     expect(resolver).toContain("...(input.scopeVersion !== undefined ? { scopeVersion: input.scopeVersion } : {})");
   });

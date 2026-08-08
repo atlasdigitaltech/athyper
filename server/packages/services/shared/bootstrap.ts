@@ -2,7 +2,7 @@
 //
 // Phase D — Bootstrap-only entry for @athyper/svc-shared.
 //
-// Imported exclusively by server/src/kernel/bootstrap.ts:
+// Imported exclusively by server/src/composition/bootstrap.ts:
 //
 //   import { setDefaultRealmKey } from "@athyper/svc-shared/bootstrap";
 //

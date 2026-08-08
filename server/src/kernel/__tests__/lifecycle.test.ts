@@ -10,7 +10,7 @@
 //   ✓ async handlers are awaited in order
 
 import { describe, it, expect, vi } from "vitest";
-import { Lifecycle } from "../../lifecycle.js";
+import { Lifecycle } from "@athyper/server-foundation/kernel";
 
 describe("Lifecycle", () => {
   it("runs shutdown handlers in LIFO order", async () => {

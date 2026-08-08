@@ -16,7 +16,7 @@
  */
 
 import { resolveDateRangePreset, type DateRangePresetKey } from "@athyper/finance-rules";
-import { todayInZone } from "@athyper/temporal";
+import { todayInZone } from "@athyper/platform-temporal";
 
 // Legacy token → new preset-key mapping. Empty today because the finance-rules
 // preset keys mirror the legacy sigils 1:1. Any future rename lives here so

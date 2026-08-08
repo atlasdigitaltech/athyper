@@ -866,7 +866,7 @@ CREATE TABLE metadata.entity_operation (
     label                      text                           NOT NULL,
     description                text,
     handler_key                text,
-    permission_code            text                           NOT NULL,
+    permission_code            text,
     execution_mode             metadata.entity_operation_execution_d NOT NULL DEFAULT 'synchronous',
     idempotency_mode           metadata.entity_operation_idempotency_d NOT NULL DEFAULT 'none',
     input_surface_key          text,
@@ -889,7 +889,10 @@ CREATE TABLE metadata.entity_operation (
     CONSTRAINT entity_operation_label_chk CHECK (btrim(label) <> '' AND length(label) <= 256),
     CONSTRAINT entity_operation_description_chk CHECK (description IS NULL OR length(description) <= 4000),
     CONSTRAINT entity_operation_handler_chk CHECK (handler_key IS NULL OR handler_key ~ '^[a-z][a-z0-9_.:-]{1,126}$'),
-    CONSTRAINT entity_operation_permission_chk CHECK (permission_code ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,7}$'),
+    CONSTRAINT entity_operation_permission_chk CHECK (
+        permission_code IS NULL
+        OR permission_code ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,7}$'
+    ),
     CONSTRAINT entity_operation_surface_key_chk CHECK (
         (input_surface_key IS NULL OR input_surface_key ~ '^[a-z][a-z0-9_.-]{1,126}$')
         AND (confirmation_surface_key IS NULL OR confirmation_surface_key ~ '^[a-z][a-z0-9_.-]{1,126}$')
@@ -910,6 +913,38 @@ COMMENT ON TABLE metadata.entity_surface IS 'Change-set-owned named presentation
 COMMENT ON TABLE metadata.entity_surface_section IS 'Ordered and nestable layout region inside one Entity surface.';
 COMMENT ON TABLE metadata.entity_surface_field_binding IS 'Presentation-only field binding; it cannot redefine type, validation, storage, default, computation, key, search, or relation semantics.';
 COMMENT ON TABLE metadata.entity_operation IS 'Canonical operation identity and execution references. Permissions, handlers, lifecycle, audit contracts, and surfaces are referenced rather than embedded.';
+COMMENT ON COLUMN metadata.entity_operation.permission_code IS
+  'Compatibility projection only. New authoring uses metadata.entity_operation_permission so one operation can resolve independently per target plane.';
+
+CREATE TABLE metadata.entity_operation_permission (
+    id                   uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id            uuid,
+    entity_id            uuid        NOT NULL,
+    change_set_id        uuid        NOT NULL,
+    entity_operation_id  uuid        NOT NULL,
+    target_plane         text        NOT NULL,
+    permission_code      text        NOT NULL,
+    permission_kind      text        NOT NULL,
+    status               metadata.entity_member_status_d NOT NULL DEFAULT 'active',
+    created_at           timestamptz NOT NULL DEFAULT now(),
+    created_by           uuid        NOT NULL,
+    updated_at           timestamptz,
+    updated_by           uuid,
+    CONSTRAINT entity_operation_permission_pkey PRIMARY KEY (id),
+    CONSTRAINT entity_operation_permission_tenant_id_uq UNIQUE NULLS NOT DISTINCT (tenant_id, id),
+    CONSTRAINT entity_operation_permission_plane_uq
+        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_operation_id, target_plane),
+    CONSTRAINT entity_operation_permission_plane_chk CHECK (target_plane IN ('neon', 'mesh')),
+    CONSTRAINT entity_operation_permission_code_chk
+        CHECK (permission_code ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,7}$'),
+    CONSTRAINT entity_operation_permission_kind_chk
+        CHECK (permission_kind IN ('entity_operation', 'capability')),
+    CONSTRAINT entity_operation_permission_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE metadata.entity_operation_permission IS
+  'Plane-aware authorization binding for an Entity operation. It is independent of metadata.entity_surface_operation, so headless, scheduled, API, and UI-wired operations share the same authorization contract.';
 
 -- Phase 4 composition graph. Flows reuse surfaces, policy bindings reference
 -- canonical control policies, and test rows contain expectations but no results.
@@ -935,6 +970,9 @@ CREATE TABLE metadata.entity_surface_operation (
     CONSTRAINT entity_surface_operation_selection_chk CHECK (interaction_target = 'selection' OR selection_mode = 'none'),
     CONSTRAINT entity_surface_operation_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
+
+COMMENT ON TABLE metadata.entity_surface_operation IS
+  'Optional presentation binding from a surface to an operation. Absence of a row means the operation is headless, not undefined or unauthorized.';
 
 CREATE TABLE metadata.entity_operation_rule (
     id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid, entity_id uuid NOT NULL,

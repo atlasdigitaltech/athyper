@@ -23,15 +23,15 @@
 //   cleanly before process.exit(0) is called. See Phase 5 exit criterion test.
 
 import { createIamOutboxWorker } from "@athyper/svc-iam";
-import { makeAuditEvent } from "../audit.js";
+import { makeAuditEvent } from "@athyper/svc-audit";
 import { startProbeServer } from "./probe.js";
-import { createDescriptorCacheListener } from "../services/cache-invalidation/index.js";
-import type { ServerDeps } from "../kernel/bootstrap.js";
+import { createDescriptorCacheListener } from "@athyper/svc-metadata";
+import type { ServerDeps } from "../composition/bootstrap.js";
 
 /**
  * Phase 8 — Prometheus text-format renderer for the cache-invalidation
  * listener's internal counters. Counter names follow the existing
- * athyper_* convention from server/src/metrics.ts. The `instance` label
+ * athyper_* convention from server/src/runtimes/metrics.ts. The `instance` label
  * carries host:pid:uuid so multiple worker replicas don't collide in the
  * Prometheus storage.
  */

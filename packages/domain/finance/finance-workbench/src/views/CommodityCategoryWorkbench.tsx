@@ -2628,7 +2628,7 @@ function CommodityCategorySimulator({
               <MoneyInput
                 value={inputs.amount}
                 onChange={(value) => updateInput("amount", value)}
-                scale={4}
+                displayScale={4}
                 placeholder="0.0000"
                 className="-ml-px min-w-0 [&_input]:rounded-l-none"
               />

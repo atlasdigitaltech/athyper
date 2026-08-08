@@ -1,5 +1,5 @@
 import { sql, type Kysely } from "kysely";
-import type { CredentialEncryptionService } from "@athyper/foundation-crypto";
+import type { CredentialEncryptionService } from "@athyper/server-foundation/crypto";
 import type { TenantProviderSecretStore } from "./tenant-provider-credential-resolver.js";
 
 type AnyDb = Record<string, unknown>;

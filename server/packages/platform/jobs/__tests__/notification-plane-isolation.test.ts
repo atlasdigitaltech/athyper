@@ -9,9 +9,10 @@ function source(relative: string): string {
 describe("notification plane isolation guards", () => {
   it("passes the typed message plane into the push subscription lookup", () => {
     const worker = source("../workers/notification.worker.ts");
-    const push = source("../adapters/push.adapter.ts");
+    const contract = source("../../notifications/src/channel-handler.ts");
+    const push = source("../../../adapters/communications/src/push.adapter.ts");
 
-    expect(worker).toContain('planeKey:      "neon" | "mesh" | "admin"');
+    expect(contract).toContain('planeKey: "neon" | "mesh" | "admin"');
     expect(worker).toContain("planeKey:      msg.plane_key");
     expect(push).toContain("AND  plane_key    = ${planeKey}");
   });
@@ -22,9 +23,9 @@ describe("notification plane isolation guards", () => {
       "../handlers/p2p-notification-outbox.handler.ts",
       "../workers/lifecycle-timer.worker.ts",
       "../workers/notification.worker.ts",
-      "../../platform/notification-orchestrator.ts",
-      "../../platform/routes/notification.route.ts",
-      "../../business/lifecycle/notification-dispatch.service.ts",
+      "../../notifications/src/notification-orchestrator.ts",
+      "../../../services/platform/routes/notification.route.ts",
+      "../../../services/business/lifecycle/notification-dispatch.service.ts",
     ];
 
     for (const writer of writers) {
@@ -42,7 +43,7 @@ describe("notification plane isolation guards", () => {
       "../handlers/wf-outbox.handler.ts",
       "../handlers/p2p-notification-outbox.handler.ts",
       "../workers/lifecycle-timer.worker.ts",
-      "../../business/lifecycle/notification-dispatch.service.ts",
+      "../../../services/business/lifecycle/notification-dispatch.service.ts",
     ];
 
     for (const writer of writers) {

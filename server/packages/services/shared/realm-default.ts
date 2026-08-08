@@ -16,7 +16,7 @@
 //      anything except the runtime bootstrap.
 //
 // The setter is re-exported only via the `@athyper/svc-shared/bootstrap`
-// subpath, which `server/src/kernel/bootstrap.ts` imports. Route packages
+// subpath, which `server/src/composition/bootstrap.ts` imports. Route packages
 // resolve `@athyper/svc-shared` (the main barrel) and never see it.
 
 const FALLBACK_REALM_KEY = "athyper";
@@ -44,7 +44,7 @@ export class RealmDefaultKeyConflictError extends Error {
  *   - Empty / non-string arguments: silently ignored to match the prior
  *     forgiving behaviour during early bootstrap when env hasn't loaded.
  *
- * Intended caller: server/src/kernel/bootstrap.ts (once, per process).
+ * Intended caller: server/src/composition/bootstrap.ts (once, per process).
  */
 export function setDefaultRealmKey(key: string): void {
   if (typeof key !== "string" || key.length === 0) return;

@@ -31,6 +31,7 @@
     "./tailwind-preset": "./src/tailwind-preset.ts",
     "./typography": "./src/typography.ts",
     "./semantic-colors": "./src/semantic-colors.ts",
+    "./domain-intents": "./src/domain-intents.ts",
     "./utils": "./src/utils.ts",
     "./contracts": "./src/theme-contract.ts",
     "./validator": "./src/preset-validator.ts",

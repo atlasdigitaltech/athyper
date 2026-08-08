@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import type pg from "pg";
 import { describe, expect, it, vi } from "vitest";
 
-import { createDescriptorCacheListener } from "../listener.js";
+import { createDescriptorCacheListener } from "@athyper/svc-metadata";
 
 class FakePgClient extends EventEmitter {
   readonly query = vi.fn(async () => ({ rows: [] }));

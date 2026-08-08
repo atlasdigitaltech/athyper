@@ -40,8 +40,8 @@ import {
   RuntimeBootstrapProvider,
 } from "@athyper/svc-metadata";
 import { registerMetaEntityAuthoringRoutes } from "@athyper/svc-meta-entity-authoring";
-import { registerOnboardingRoutes } from "@athyper/svc-onboarding";
-import { NumberingPolicyTester } from "../../packages/services/numbering-runtime/index.js";
+import { registerOnboardingRoutes } from "@athyper/plane-athyper-onboarding";
+import { NumberingPolicyTester } from "@athyper/svc-numbering-runtime";
 import {
   EntityQueryService,
   KyselyEntityQueryExecutor,
@@ -52,8 +52,7 @@ import {
 import { createResolverRoute, registerAllResolvers, resolvePrincipalIdOrNull } from "@athyper/svc-shared";
 import { registerSearchRoutes } from "@athyper/svc-search";
 import { registerDocumentsRoutes } from "@athyper/svc-documents";
-import { registerCollabRoutes } from "@athyper/svc-collab";
-import { registerCollabAttachmentRoutes } from "../../packages/services/collab/routes/collab-attachments.route.js";
+import { registerCollabRoutes, registerCollabAttachmentRoutes } from "@athyper/svc-collab";
 import { registerMasterContactsRoutes, registerMasterAddressRoutes, registerMasterOwnerAddressContactRoutes } from "@athyper/svc-master";
 import { registerFinanceRoutes } from "@athyper/svc-finance";
 import {
@@ -64,11 +63,13 @@ import {
   registerCommerceRoutes,
   registerNotificationRoutes,
 } from "@athyper/svc-platform";
-import { registerJobsRoutes } from "@athyper/svc-jobs";
+import {
+  registerJobsRoutes,
+  registerJobsAdminRoutes,
+  registerJobsBoardRoutes,
+} from "@athyper/svc-jobs";
 import { mapPostgresBusinessError } from "@athyper/svc-shared";
 import { createErrorHandler } from "./error-handler.js";
-import { registerJobsAdminRoutes } from "../../packages/services/jobs/routes/jobs.admin.route.js";
-import { registerJobsBoardRoutes } from "../../packages/services/jobs/routes/jobs.board.route.js";
 
 import {
   registerWorkflowRoutes,
@@ -81,6 +82,7 @@ import { ClamavScanner, registerContentRoutes } from "@athyper/svc-content";
 import { registerIntegrationRoutes } from "@athyper/svc-integration";
 import { registerDocServicesRoutes } from "@athyper/svc-doc-services";
 import { createGotenbergClient } from "@athyper/adapter-rendering-gotenberg";
+import { Sentry } from "@athyper/adapter-telemetry/sentry";
 import { createOpenApiRouter } from "@athyper/runtime-http";
 import {
   createAiServiceBundle,
@@ -101,14 +103,14 @@ import {
   recordAuthTermination,
   registerJobQueues,
   registerMetricCollectors,
-} from "../metrics.js";
+} from "./metrics.js";
 import {
   collectFrameworkPerformanceMetrics,
   createFrameworkPerformanceMiddleware,
   startFrameworkPhase,
-} from "../framework-performance.js";
-import { resolveEntityQueryRuntimeConfig } from "../entity-query-runtime-config.js";
-import { createAtlasCompanyCodeDataGateway } from "../atlas-record-data-gateway.js";
+} from "@athyper/runtime-http";
+import { resolveEntityQueryRuntimeConfig } from "@athyper/svc-records";
+import { createAtlasCompanyCodeDataGateway } from "../composition/atlas-record-data-gateway.js";
 
 /**
  * HTTP-date string for the `Sunset` response header on @deprecated routes.
@@ -117,10 +119,8 @@ import { createAtlasCompanyCodeDataGateway } from "../atlas-record-data-gateway.
  * that surface deprecation warnings to operators.
  */
 const DEPRECATED_ROUTE_SUNSET_HTTP_DATE = "Sat, 12 Sep 2026 00:00:00 GMT";
-import { makeAuditEvent } from "../audit.js";
-import { runComplianceSuiteIfDev } from "../../packages/services/metadata/src/entity-compliance.js";
-import { createEntityCompilerService } from "../../packages/services/metadata/src/entity-compiler.service.js";
-import { createCatalogCompiler } from "../../packages/services/metadata/src/catalog-compiler.js";
+import { makeAuditEvent } from "@athyper/svc-audit";
+import { runComplianceSuiteIfDev, createEntityCompilerService, createCatalogCompiler } from "@athyper/svc-metadata";
 import { createPlatformMetricCollector } from "@athyper/server-foundation/monitoring/platform-metrics";
 import {
   bindVerifiedRequestContext,
@@ -128,7 +128,7 @@ import {
   parseOrgHeader,
   runWithContext,
   tryGetContext,
-} from "../kernel/request-context.js";
+} from "@athyper/server-foundation/context";
 import { createRequirePlatformContext } from "./require-platform-context.js";
 import {
   crossCheckClaimsAgainstContext,
@@ -136,14 +136,14 @@ import {
   loadRequiredActionMatrix,
   type AuthPipelineMode,
   type CrossCheckReporter,
-} from "../auth/auth-pipeline.js";
-import { LogSampler } from "../auth/log-sampler.js";
+} from "@athyper/svc-iam";
+import { LogSampler } from "@athyper/svc-iam";
 import { parseTokenClaims } from "@athyper/runtime-contracts";
 import {
   resolveRequiredActionsEnforcement,
   resolveTokenSchemaMode,
 } from "@athyper/platform-iam-auth-common";
-import type { ServerDeps } from "../kernel/bootstrap.js";
+import type { ServerDeps } from "../composition/bootstrap.js";
 import { livenessHandler } from "./liveness.js";
 
 // ─── Health types ─────────────────────────────────────────────────────────────
@@ -280,7 +280,7 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   // ─── Claim-first context guard mode ───────────────────────────────────────
   // Phase B (refactor): the claim-vs-context cross-checks now live in
-  // server/src/auth/auth-pipeline.ts → crossCheckClaimsAgainstContext so the
+  // @athyper/svc-iam auth pipeline → crossCheckClaimsAgainstContext so the
   // same algorithm is exercised by verifyTokenForCurrentContext, the
   // requirePlatformContext middleware, /api/auth/verify, and the auth-bff
   // session pipeline. This wrapper only resolves the mode, builds the
@@ -1494,6 +1494,8 @@ export async function startApi(deps: ServerDeps): Promise<void> {
 
   registerPlatformRoutes(apiRouter, {
     db: db.kysely,
+    platformDb: platformDb.kysely as unknown as import("kysely").Kysely<Record<string, any>>,
+    meshDb: meshDb.kysely as unknown as import("kysely").Kysely<Record<string, any>>,
     auth: routeAuth,
     cache: iamCache,
     featureFlags,

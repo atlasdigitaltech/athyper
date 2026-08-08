@@ -33,6 +33,7 @@ import {
   resolvePrincipalIdWithJit,
 } from "@athyper/svc-shared";
 import type { RedisClient } from "@athyper/adapter-memory-cache";
+import { appendAuditEvent } from "@athyper/svc-audit";
 
 // Local duck-type for MentionService (avoids cross-package rootDir import)
 interface MentionObject { userId: string; displayName: string }
@@ -238,28 +239,22 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
     });
   };
 
-  /** Insert a row into log.activity_log. Best-effort — non-fatal. */
-  const logActivity = async (
-    tenantId: string, entityType: string, entityId: string,
-    activityType: string, actorId: string, detail: Record<string, unknown>,
-  ): Promise<void> => {
-    try {
-      await db
-        .insertInto("log.activity_log" as never)
-        .values({
-          tenant_id:     tenantId,
-          log_type:      "business",
-          domain:        "user",
-          activity_type: activityType,
-          entity_type:   entityType,
-          entity_id:     entityId,
-          actor_id:      actorId,
-          actor_type:    "principal",
-          detail:        JSON.stringify(detail),
-          created_by:    actorId,
-        } as never)
-        .execute();
-    } catch { /* best-effort — main operation already succeeded */ }
+  /** Emit a user activity event to audit.audit_log. Best-effort — non-fatal. */
+  const logActivity = (
+    _tenantId: string, entityType: string, entityId: string,
+    activityType: string, _actorId: string, detail: Record<string, unknown>,
+  ): void => {
+    void appendAuditEvent(db, {
+      event_code:  `record.${activityType.replace(/^user\./, "")}`,
+      operation:   "execute",
+      entity_type: entityType,
+      entity_id:   entityId,
+      context: {
+        domain:        "user",
+        activity_type: activityType,
+        ...detail,
+      },
+    });
   };
 
   // ── GET /api/collab/comments ──────────────────────────────────────────────
@@ -1997,7 +1992,7 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
   //
   // Reconnection gap-fill (44-07):
   //   Send Last-Event-ID: <ISO timestamp> to replay missed events from
-  //   log.activity_log before the live subscription resumes.
+  //   audit.audit_log before the live subscription resumes.
   // ══════════════════════════════════════════════════════════════════════════
 
   router.get("/collab/activity/stream", async (req, res) => {
@@ -2093,29 +2088,28 @@ export function createCollabRoute(router: Router, deps: CollabRouteDeps): Router
     sendEvent("activity:count", { count: await getCount() });
 
     // ── Gap-fill burst (44-07) ────────────────────────────────────────────────
-    // Query log.activity_log for events missed since the last-seen timestamp.
-    // The detail column stores the original SSE event payload verbatim.
+    // Query audit.audit_log for events missed since the last-seen timestamp.
+    // The context column stores the original SSE event payload verbatim.
     if (lastEventTs) {
       try {
-        const missed = await db
-          .selectFrom("log.activity_log as al" as never)
-          .select([
-            "al.activity_type" as never,
-            "al.detail"        as never,
-            "al.created_at"    as never,
-          ])
-          .where("al.tenant_id"   as never, "=",        tenantId   as never)
-          .where("al.entity_type" as never, "=",        entityType as never)
-          .where("al.entity_id"   as never, "=",        entityId   as never)
-          .where("al.domain"      as never, "=",        "user"     as never)
-          .where("al.created_at"  as never, ">" as never, lastEventTs as never)
-          .orderBy("al.created_at" as never, "asc")
-          .limit(100)
-          .execute() as Array<{
-            activity_type: string;
-            detail: Record<string, unknown> | null;
-            created_at: Date | string;
-          }>;
+        const gapResult = await sql<{
+          activity_type: string;
+          detail: Record<string, unknown> | null;
+          created_at: Date | string;
+        }>`
+          SELECT al.context->>'activity_type' AS activity_type,
+                 al.context                   AS detail,
+                 al.occurred_at               AS created_at
+          FROM audit.audit_log al
+          WHERE al.tenant_id          = ${tenantId}::uuid
+            AND al.entity_type        = ${entityType}
+            AND al.entity_id          = ${entityId}::uuid
+            AND al.context->>'domain' = 'user'
+            AND al.occurred_at        > ${lastEventTs}::timestamptz
+          ORDER BY al.occurred_at ASC
+          LIMIT 100
+        `.execute(db);
+        const missed = gapResult.rows;
 
         for (const row of missed) {
           const at = row.created_at instanceof Date

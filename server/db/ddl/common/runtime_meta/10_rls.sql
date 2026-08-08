@@ -41,3 +41,24 @@ DO $$ BEGIN
     EXECUTE 'CREATE POLICY release_activation_event_applier ON runtime_meta.release_activation_event FOR ALL TO athyper_projection_applier USING(true) WITH CHECK(true)';
   END IF;
 END $$;
+
+ALTER TABLE runtime_meta.entity_contract ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runtime_meta.entity_contract FORCE ROW LEVEL SECURITY;
+ALTER TABLE runtime_meta.entity_descriptor ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runtime_meta.entity_descriptor FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY runtime_entity_contract_read ON runtime_meta.entity_contract FOR SELECT
+  USING (tenant_id IS NULL OR tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY runtime_entity_descriptor_read ON runtime_meta.entity_descriptor FOR SELECT
+  USING (tenant_id IS NULL OR tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY runtime_entity_contract_seed_owner ON runtime_meta.entity_contract
+  FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+CREATE POLICY runtime_entity_descriptor_seed_owner ON runtime_meta.entity_descriptor
+  FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+
+DO $$ BEGIN
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_projection_applier') THEN
+    EXECUTE 'CREATE POLICY runtime_entity_contract_applier ON runtime_meta.entity_contract FOR ALL TO athyper_projection_applier USING(true) WITH CHECK(true)';
+    EXECUTE 'CREATE POLICY runtime_entity_descriptor_applier ON runtime_meta.entity_descriptor FOR ALL TO athyper_projection_applier USING(true) WITH CHECK(true)';
+  END IF;
+END $$;

@@ -1,5 +1,5 @@
 import { sql, type Kysely } from "kysely";
-import type { CredentialEncryptionService, TenantKeyProvider } from "@athyper/foundation-crypto";
+import type { CredentialEncryptionService, TenantKeyProvider } from "@athyper/server-foundation/crypto";
 
 type AnyDb = Record<string, unknown>;
 

@@ -1,93 +1,275 @@
 INSERT INTO master.audit_event_contract (
-    code,event_code_pattern,priority,allowed_operations,default_severity,
-    allowed_actor_types,allowed_scope,reason_required,capture_mode,
-    max_payload_bytes,schema_version,metadata,status
+    code, event_code_pattern, priority, allowed_operations, default_severity,
+    allowed_actor_types, allowed_scope, reason_required, capture_mode,
+    max_payload_bytes, schema_version, metadata, status
 )
 VALUES
+    -- ─── PCI / PII (1–3) ──────────────────────────────────────────────────────
     (
-        'document_row_change',
-        '^document\.[a-z][a-z0-9_]*\.row_(created|updated|deleted)$',
-        10,ARRAY['create','update','delete']::audit.operation_d[],'info',
-        ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
-        'tenant',false,'changed_fields',16384,1,
-        '{"owner":"database","purpose":"baseline_row_evidence"}'::jsonb,'active'
+        'pci_event',
+        '^pci\.[a-z][a-z0-9_]*$',
+        1,
+        ARRAY['create','update','delete','execute','import','export']::audit.operation_d[],
+        'critical',
+        ARRAY['user','service_account','integration','system']::audit.actor_type_d[],
+        'tenant', true, 'metadata', 16384, 1,
+        '{"event_category":"pci","owner":"compliance","purpose":"pci_dss_evidence","sensitive":true}'::jsonb,
+        'active'
     ),
     (
-        'document_business_event',
-        '^document\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$',
-        20,ARRAY['create','update','delete','restore','execute','approve','reject','import','export']::audit.operation_d[],'info',
-        ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
-        'tenant',false,'safe_values',65536,1,
-        '{"owner":"application","purpose":"semantic_business_evidence"}'::jsonb,'active'
-    ),
-    (
-        'attachment_access_event',
-        '^document\.attachment\.(accessed|previewed|downloaded)$',
-        15,ARRAY['execute','export']::audit.operation_d[],'info',
-        ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
-        'tenant',false,'metadata',16384,1,
-        '{"owner":"application","purpose":"attachment_access_evidence","sensitive":true}'::jsonb,'active'
-    ),
-    (
-        'workflow_business_event',
-        '^workflow\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$',
-        25,ARRAY['create','update','execute','approve','reject']::audit.operation_d[],'info',
-        ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
-        'tenant',false,'safe_values',65536,1,
-        '{"owner":"workflow","purpose":"workflow_transition_evidence"}'::jsonb,'active'
-    ),
-    (
-        'accounting_business_event',
-        '^accounting\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$',
-        27,ARRAY['create','update','execute','approve','reject','import','export']::audit.operation_d[],'warning',
-        ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
-        'tenant',false,'safe_values',65536,1,
-        '{"owner":"finance","purpose":"accounting_business_evidence"}'::jsonb,'active'
-    ),
-    (
-        'ai_byok_event',
-        '^ai\.byok\.[a-z][a-z0-9_]*$',
-        30,ARRAY['create','update','delete','execute']::audit.operation_d[],'warning',
+        'pii_access_event',
+        '^pii\.(accessed|bulk_accessed)$',
+        2,
+        ARRAY['execute','export']::audit.operation_d[],
+        'warning',
         ARRAY['user','service_account','support','system']::audit.actor_type_d[],
-        'tenant',false,'metadata',16384,1,
-        '{"sensitive":true}'::jsonb,'active'
+        'tenant', true, 'metadata', 16384, 1,
+        '{"event_category":"pii","owner":"compliance","purpose":"pii_access_evidence","sensitive":true}'::jsonb,
+        'active'
     ),
     (
-        'metadata_entity_authoring_event',
-        '^metadata\.entity(\.[a-z][a-z0-9_]*){1,3}$',
-        35,ARRAY['create','update','execute','approve','reject']::audit.operation_d[],'info',
-        ARRAY['user','service_account','bot','support','system']::audit.actor_type_d[],
-        'either',false,'safe_values',65536,1,
-        '{"owner":"meta-entity-authoring","purpose":"entity_contract_authoring_evidence"}'::jsonb,'active'
+        'pii_modification_event',
+        '^pii\.modified$',
+        3,
+        ARRAY['create','update','delete']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'tenant', true, 'changed_fields', 32768, 1,
+        '{"event_category":"pii","owner":"compliance","purpose":"pii_modification_evidence","sensitive":true}'::jsonb,
+        'active'
     ),
+    -- ─── Audit self-integrity (4) ──────────────────────────────────────────────
+    (
+        'audit_system_event',
+        '^audit\.[a-z][a-z0-9_]*$',
+        4,
+        ARRAY['create','update','delete','execute','export']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'either', true, 'metadata', 16384, 1,
+        '{"event_category":"security","owner":"audit","purpose":"audit_integrity_evidence","sensitive":true}'::jsonb,
+        'active'
+    ),
+    -- ─── IAM — specific before catch-all (5–9) ────────────────────────────────
+    (
+        'iam_authentication_event',
+        '^iam\.(login|logout|mfa)[_a-z0-9]*$',
+        5,
+        ARRAY['login','logout','execute']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'either', false, 'metadata', 16384, 1,
+        '{"event_category":"security","owner":"iam","purpose":"authentication_evidence"}'::jsonb,
+        'active'
+    ),
+    (
+        'iam_session_event',
+        '^iam\.session[_a-z0-9]*$',
+        6,
+        ARRAY['execute','delete']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'either', true, 'metadata', 16384, 1,
+        '{"event_category":"security","owner":"iam","purpose":"session_lifecycle_evidence"}'::jsonb,
+        'active'
+    ),
+    (
+        'iam_authorization_event',
+        '^iam\.(role|permission|delegation)[_a-z0-9]*$',
+        7,
+        ARRAY['create','update','delete','grant','revoke']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'either', true, 'safe_values', 65536, 1,
+        '{"event_category":"security","owner":"iam","purpose":"authorization_change_evidence"}'::jsonb,
+        'active'
+    ),
+    (
+        'iam_general_event',
+        '^iam\.[a-z][a-z0-9_]*$',
+        9,
+        ARRAY['create','update','delete','execute','grant','revoke']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'either', false, 'metadata', 16384, 1,
+        '{"event_category":"security","owner":"iam","purpose":"iam_general_evidence"}'::jsonb,
+        'active'
+    ),
+    -- ─── Entity / record events — specific before catch-all (10–25) ───────────
+    (
+        'entity_row_change_event',
+        '^record\.row_(created|updated|deleted)$',
+        10,
+        ARRAY['create','update','delete']::audit.operation_d[],
+        'info',
+        ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
+        'tenant', false, 'changed_fields', 16384, 1,
+        '{"event_category":"data_modification","owner":"database","purpose":"baseline_row_evidence"}'::jsonb,
+        'active'
+    ),
+    (
+        'entity_access_event',
+        '^record\.(viewed|downloaded|accessed|previewed)$',
+        15,
+        ARRAY['execute','export']::audit.operation_d[],
+        'info',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'tenant', false, 'metadata', 16384, 1,
+        '{"event_category":"data_access","owner":"application","purpose":"access_evidence"}'::jsonb,
+        'active'
+    ),
+    (
+        'finance_period_event',
+        '^period\.[a-z][a-z0-9_]*$',
+        22,
+        ARRAY['create','update','execute','approve','reject']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'tenant', true, 'safe_values', 65536, 1,
+        '{"event_category":"business_critical","owner":"finance","purpose":"period_control_evidence"}'::jsonb,
+        'active'
+    ),
+    (
+        'entity_business_event',
+        '^record\.[a-z][a-z0-9_]*$',
+        25,
+        ARRAY['create','update','delete','restore','execute','approve','reject','import','export']::audit.operation_d[],
+        'info',
+        ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
+        'tenant', false, 'safe_values', 65536, 1,
+        '{"event_category":"generic_action","owner":"application","purpose":"entity_business_evidence"}'::jsonb,
+        'active'
+    ),
+    -- ─── Workflow inbox (26) ───────────────────────────────────────────────────
+    (
+        'inbox_routing_event',
+        '^inbox\.[a-z][a-z0-9_]*$',
+        26,
+        ARRAY['create','update','execute','approve','reject']::audit.operation_d[],
+        'info',
+        ARRAY['user','service_account','bot','system']::audit.actor_type_d[],
+        'tenant', false, 'safe_values', 65536, 1,
+        '{"event_category":"generic_action","owner":"workflow","purpose":"inbox_routing_evidence"}'::jsonb,
+        'active'
+    ),
+    -- ─── Integration + import pipeline (28–29) ────────────────────────────────
+    (
+        'integration_event',
+        '^integration\.[a-z][a-z0-9_]*$',
+        28,
+        ARRAY['create','update','delete','execute','import','export']::audit.operation_d[],
+        'info',
+        ARRAY['service_account','bot','integration','system']::audit.actor_type_d[],
+        'tenant', false, 'metadata', 32768, 1,
+        '{"event_category":"integration","owner":"integration","purpose":"integration_activity_evidence"}'::jsonb,
+        'active'
+    ),
+    (
+        'data_import_event',
+        '^import\.[a-z][a-z0-9_]*$',
+        29,
+        ARRAY['create','execute','import','reject']::audit.operation_d[],
+        'info',
+        ARRAY['user','service_account','bot','system']::audit.actor_type_d[],
+        'tenant', false, 'metadata', 32768, 1,
+        '{"event_category":"integration","owner":"jobs","purpose":"import_pipeline_evidence"}'::jsonb,
+        'active'
+    ),
+    -- ─── AI events — support-specific before general catch-all (30–31) ─────────
     (
         'ai_support_event',
-        '^ai\.support\.[a-z][a-z0-9_]*$',
-        40,ARRAY['execute','export']::audit.operation_d[],'warning',
+        '^ai\.support[_a-z0-9]*$',
+        30,
+        ARRAY['execute','export']::audit.operation_d[],
+        'warning',
         ARRAY['support']::audit.actor_type_d[],
-        'tenant',true,'metadata',16384,1,
-        '{"sensitive":true}'::jsonb,'active'
+        'tenant', true, 'metadata', 16384, 1,
+        '{"event_category":"security","owner":"ai","purpose":"support_ai_access_evidence","sensitive":true}'::jsonb,
+        'active'
     ),
+    (
+        'ai_event',
+        '^ai\.[a-z][a-z0-9_]*$',
+        31,
+        ARRAY['create','update','delete','execute']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','system']::audit.actor_type_d[],
+        'tenant', false, 'metadata', 16384, 1,
+        '{"event_category":"generic_action","owner":"ai","sensitive":true}'::jsonb,
+        'active'
+    ),
+    -- ─── Schema authoring (35) ────────────────────────────────────────────────
+    (
+        'schema_authoring_event',
+        '^schema\.[a-z][a-z0-9_]*$',
+        35,
+        ARRAY['create','update','delete','execute','approve','reject']::audit.operation_d[],
+        'info',
+        ARRAY['user','service_account','bot','support','system']::audit.actor_type_d[],
+        'either', false, 'safe_values', 65536, 1,
+        '{"event_category":"configuration","owner":"meta-entity-authoring","purpose":"schema_change_evidence"}'::jsonb,
+        'active'
+    ),
+    -- ─── Notification dispatch (38) ───────────────────────────────────────────
+    (
+        'notification_event',
+        '^notification\.[a-z][a-z0-9_]*$',
+        38,
+        ARRAY['execute']::audit.operation_d[],
+        'info',
+        ARRAY['service_account','bot','system']::audit.actor_type_d[],
+        'tenant', false, 'metadata', 16384, 1,
+        '{"event_category":"generic_action","owner":"notifications","purpose":"notification_dispatch_evidence"}'::jsonb,
+        'active'
+    ),
+    -- ─── Configuration changes (48) ───────────────────────────────────────────
+    (
+        'config_change_event',
+        '^config\.[a-z][a-z0-9_]*$',
+        48,
+        ARRAY['create','update','delete']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'either', true, 'safe_values', 65536, 1,
+        '{"event_category":"configuration","owner":"platform","purpose":"configuration_change_evidence"}'::jsonb,
+        'active'
+    ),
+    -- ─── Platform / system infra (50) ─────────────────────────────────────────
     (
         'platform_system_event',
         '^(system|platform)\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$',
-        50,ARRAY['create','update','delete','restore','execute','import','export']::audit.operation_d[],'info',
+        50,
+        ARRAY['create','update','delete','restore','execute','import','export']::audit.operation_d[],
+        'info',
         ARRAY['service_account','bot','system']::audit.actor_type_d[],
-        'either',false,'metadata',32768,1,
-        '{"owner":"platform"}'::jsonb,'active'
+        'either', false, 'metadata', 32768, 1,
+        '{"event_category":"generic_action","owner":"platform"}'::jsonb,
+        'active'
+    ),
+    -- ─── Generic action catch-all (55) ────────────────────────────────────────
+    (
+        'generic_action_event',
+        '^action\.[a-z][a-z0-9_]*$',
+        55,
+        ARRAY['execute','import','export']::audit.operation_d[],
+        'info',
+        ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
+        'tenant', false, 'metadata', 16384, 1,
+        '{"event_category":"generic_action","owner":"application","purpose":"generic_action_evidence"}'::jsonb,
+        'active'
     )
 ON CONFLICT(code) DO UPDATE SET
-    event_code_pattern=EXCLUDED.event_code_pattern,
-    priority=EXCLUDED.priority,
-    allowed_operations=EXCLUDED.allowed_operations,
-    default_severity=EXCLUDED.default_severity,
-    allowed_actor_types=EXCLUDED.allowed_actor_types,
-    allowed_scope=EXCLUDED.allowed_scope,
-    reason_required=EXCLUDED.reason_required,
-    capture_mode=EXCLUDED.capture_mode,
-    max_payload_bytes=EXCLUDED.max_payload_bytes,
-    schema_version=EXCLUDED.schema_version,
-    metadata=EXCLUDED.metadata,
-    status=EXCLUDED.status;
+    event_code_pattern  = EXCLUDED.event_code_pattern,
+    priority            = EXCLUDED.priority,
+    allowed_operations  = EXCLUDED.allowed_operations,
+    default_severity    = EXCLUDED.default_severity,
+    allowed_actor_types = EXCLUDED.allowed_actor_types,
+    allowed_scope       = EXCLUDED.allowed_scope,
+    reason_required     = EXCLUDED.reason_required,
+    capture_mode        = EXCLUDED.capture_mode,
+    max_payload_bytes   = EXCLUDED.max_payload_bytes,
+    schema_version      = EXCLUDED.schema_version,
+    metadata            = EXCLUDED.metadata,
+    status              = EXCLUDED.status;
 
 SELECT audit.ensure_monthly_partitions(date_trunc('month',CURRENT_DATE)::date,4);

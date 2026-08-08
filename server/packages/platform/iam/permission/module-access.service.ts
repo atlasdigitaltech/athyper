@@ -90,7 +90,13 @@ export async function getEffectiveModuleAccess(
       workspace_id: string | null;
       from_role_binding: boolean;
     }>`
-    WITH group_role_modules AS (
+    WITH plan_modules AS (
+      SELECT module_id
+      FROM control.subscription_plan_module
+      WHERE subscription_plan_id = ${planVersionId}::uuid
+        AND status = 'active'
+    ),
+    group_role_modules AS (
       SELECT DISTINCT permission.module_id, workspace_module.workspace_id
       FROM authz.current_group_member gm
       JOIN authz.current_group_role gr
@@ -101,6 +107,7 @@ export async function getEffectiveModuleAccess(
        AND role_permission.role_id = gr.role_id
       JOIN authz.permission permission
         ON permission.id = role_permission.permission_id
+      JOIN plan_modules pm ON pm.module_id = permission.module_id
       JOIN control.module module
         ON module.id = permission.module_id
       JOIN control.workspace_module workspace_module

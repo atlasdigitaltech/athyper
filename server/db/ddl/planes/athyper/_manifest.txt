@@ -34,7 +34,6 @@ common/document/02_domains.sql
 common/audit/02_domains.sql
 common/snapshot/02_domains.sql
 planes/athyper/master/02_domains.sql
-planes/athyper/authz/02_domains.sql
 common/authz/02_domains.sql
 planes/athyper/document/02_domains.sql
 planes/athyper/metadata/02_domains.sql
@@ -56,7 +55,6 @@ common/control/03_tables.sql
 common/runtime_meta/03_tables.sql
 common/ops/03_tables.sql
 planes/athyper/runtime_meta/03_tables.sql
-planes/athyper/authz/03_tables.sql
 common/authz/03_tables.sql
 planes/athyper/trustiam/03_tables.sql
 planes/athyper/publication/03_tables.sql
@@ -77,7 +75,6 @@ planes/athyper/master/05_constraints.sql
 common/snapshot/05_constraints.sql
 common/audit/05_constraints.sql
 common/log/05_constraints.sql
-planes/athyper/authz/05_constraints.sql
 common/authz/05_constraints.sql
 planes/athyper/trustiam/05_constraints.sql
 planes/athyper/snapshot/05_constraints.sql
@@ -100,7 +97,6 @@ common/control/06_indexes.sql
 common/ops/06_indexes.sql
 planes/athyper/runtime_meta/06_indexes.sql
 common/runtime_meta/06_indexes.sql
-planes/athyper/authz/06_indexes.sql
 common/authz/06_indexes.sql
 planes/athyper/trustiam/06_indexes.sql
 planes/athyper/snapshot/06_indexes.sql
@@ -123,7 +119,6 @@ common/runtime_meta/07_functions.sql
 common/snapshot/07_functions.sql
 common/audit/07_functions.sql
 common/log/07_functions.sql
-planes/athyper/authz/07_functions.sql
 common/authz/07_functions.sql
 planes/athyper/snapshot/07_functions.sql
 planes/athyper/document/07_functions.sql
@@ -144,7 +139,6 @@ common/control/08_triggers.sql
 common/ops/08_triggers.sql
 planes/athyper/runtime_meta/08_triggers.sql
 common/runtime_meta/08_triggers.sql
-planes/athyper/authz/08_triggers.sql
 common/authz/08_triggers.sql
 planes/athyper/trustiam/08_triggers.sql
 planes/athyper/snapshot/08_triggers.sql
@@ -165,7 +159,6 @@ common/snapshot/09_views.sql
 common/audit/09_views.sql
 common/ops/09_views.sql
 planes/athyper/master/09_views.sql
-planes/athyper/authz/09_views.sql
 planes/athyper/metadata/09_views.sql
 planes/athyper/document/09_views.sql
 common/shared/10_rls.sql
@@ -178,7 +171,6 @@ common/control/10_rls.sql
 common/ops/10_rls.sql
 planes/athyper/runtime_meta/10_rls.sql
 common/runtime_meta/10_rls.sql
-planes/athyper/authz/10_rls.sql
 common/authz/10_rls.sql
 planes/athyper/trustiam/10_rls.sql
 planes/athyper/snapshot/10_rls.sql
@@ -201,7 +193,6 @@ common/control/11_grants.sql
 common/ops/11_grants.sql
 planes/athyper/runtime_meta/11_grants.sql
 common/runtime_meta/11_grants.sql
-planes/athyper/authz/11_grants.sql
 common/authz/11_grants.sql
 planes/athyper/snapshot/11_grants.sql
 planes/athyper/metadata/11_grants.sql

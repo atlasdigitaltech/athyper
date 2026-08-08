@@ -31,10 +31,8 @@ common/document/02_domains.sql
 common/audit/02_domains.sql
 common/snapshot/02_domains.sql
 planes/mesh/master/02_domains.sql
-planes/mesh/authz/02_domains.sql
 common/authz/02_domains.sql
 common/runtime_meta/02_domains.sql
-planes/mesh/runtime_meta/02_domains.sql
 planes/mesh/control/02_domains.sql
 planes/mesh/mesh/02_domains.sql
 planes/mesh/document/02_domains.sql
@@ -48,10 +46,8 @@ planes/mesh/snapshot/03_tables.sql
 planes/mesh/control/03_tables.sql
 common/control/03_tables.sql
 common/runtime_meta/03_tables.sql
-planes/mesh/runtime_meta/03_tables.sql
 common/ops/03_tables.sql
 common/master/03_tables.sql
-planes/mesh/authz/03_tables.sql
 common/authz/03_tables.sql
 common/event/03_tables.sql
 common/governance/03_tables.sql
@@ -70,7 +66,6 @@ common/master/05_constraints.sql
 common/snapshot/05_constraints.sql
 common/audit/05_constraints.sql
 common/log/05_constraints.sql
-planes/mesh/authz/05_constraints.sql
 common/authz/05_constraints.sql
 planes/mesh/mesh/05_constraints.sql
 planes/mesh/ops/05_constraints.sql
@@ -90,8 +85,6 @@ planes/mesh/control/06_indexes.sql
 common/control/06_indexes.sql
 common/ops/06_indexes.sql
 common/runtime_meta/06_indexes.sql
-planes/mesh/runtime_meta/06_indexes.sql
-planes/mesh/authz/06_indexes.sql
 common/authz/06_indexes.sql
 planes/mesh/mesh/06_indexes.sql
 planes/mesh/ops/06_indexes.sql
@@ -102,7 +95,6 @@ common/governance/06_indexes.sql
 common/document/06_indexes.sql
 common/ai/06_indexes.sql
 common/shared/07_functions.sql
-planes/mesh/runtime_meta/07_functions.sql
 planes/mesh/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
@@ -111,7 +103,6 @@ common/master/07_functions.sql
 common/snapshot/07_functions.sql
 common/audit/07_functions.sql
 common/log/07_functions.sql
-planes/mesh/authz/07_functions.sql
 common/authz/07_functions.sql
 common/ops/07_functions.sql
 planes/mesh/mesh/07_functions.sql
@@ -122,7 +113,6 @@ common/governance/07_functions.sql
 common/document/07_functions.sql
 common/ai/07_functions.sql
 common/shared/08_triggers.sql
-planes/mesh/runtime_meta/08_triggers.sql
 planes/mesh/master/08_triggers.sql
 common/master/08_triggers.sql
 common/snapshot/08_triggers.sql
@@ -132,7 +122,6 @@ planes/mesh/control/08_triggers.sql
 common/control/08_triggers.sql
 common/ops/08_triggers.sql
 common/runtime_meta/08_triggers.sql
-planes/mesh/authz/08_triggers.sql
 common/authz/08_triggers.sql
 planes/mesh/mesh/08_triggers.sql
 planes/mesh/ops/08_triggers.sql
@@ -151,7 +140,6 @@ common/event/09_views.sql
 common/snapshot/09_views.sql
 common/audit/09_views.sql
 planes/mesh/master/09_views.sql
-planes/mesh/authz/09_views.sql
 planes/mesh/mesh/09_views.sql
 planes/mesh/document/09_views.sql
 common/shared/10_rls.sql
@@ -164,8 +152,6 @@ planes/mesh/control/10_rls.sql
 common/control/10_rls.sql
 common/ops/10_rls.sql
 common/runtime_meta/10_rls.sql
-planes/mesh/runtime_meta/10_rls.sql
-planes/mesh/authz/10_rls.sql
 common/authz/10_rls.sql
 planes/mesh/mesh/10_rls.sql
 planes/mesh/ops/10_rls.sql
@@ -186,8 +172,6 @@ planes/mesh/control/11_grants.sql
 common/control/11_grants.sql
 common/ops/11_grants.sql
 common/runtime_meta/11_grants.sql
-planes/mesh/runtime_meta/11_grants.sql
-planes/mesh/authz/11_grants.sql
 common/authz/11_grants.sql
 planes/mesh/mesh/11_grants.sql
 planes/mesh/ops/11_grants.sql

@@ -24,6 +24,7 @@ import { Worker, Queue } from "bullmq";
 import type { Job, ConnectionOptions } from "bullmq";
 import { sql } from "kysely";
 import type { Kysely } from "kysely";
+import type { NotificationChannelHandler } from "@athyper/platform-notifications";
 import { randomUUID, createHash } from "node:crypto";
 import {
   QUEUE_NAME,
@@ -43,38 +44,6 @@ type DB = Kysely<Record<string, any>>;
 type AnyDb = Kysely<Record<string, any>>;
 
 // ─── Channel handler interface ────────────────────────────────────────────────
-
-export interface NotificationChannelHandler {
-  /**
-   * Dispatch a single notification delivery attempt.
-   * Should throw on failure (worker will retry the "send" job).
-   *
-   * tenantId and recipientId are provided so channel-specific adapters
-   * (e.g. push) can perform per-tenant DB lookups (device registries, etc.)
-   * without embedding tenantId in recipientAddr.
-   */
-  send(opts: {
-    channel:       string;
-    recipientAddr: string;
-    templateKey:   string;
-    subject:       string | null;
-    payload:       Record<string, unknown>;
-    /** Tenant UUID — required by push adapter for subscription lookup */
-    tenantId?:     string;
-    /** Principal UUID — preferred over recipientAddr for push lookup */
-    recipientId?:  string;
-    planeKey:      "neon" | "mesh" | "admin";
-    /** Override the sender FROM address (e.g. per-plane email routing). */
-    fromOverride?: string;
-  }): Promise<{ externalId?: string }>;
-
-  /**
-   * Optional health check for this channel adapter.
-   * Receives the provider row so adapters can use provider-specific config.
-   * Returns "healthy", "degraded", or "down". Defaults to "healthy" if absent.
-   */
-  healthCheck?(provider?: Record<string, unknown>): Promise<"healthy" | "degraded" | "down">;
-}
 
 interface PendingMessage {
   id:               string;

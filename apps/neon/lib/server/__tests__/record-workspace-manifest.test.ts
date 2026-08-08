@@ -142,5 +142,5 @@ function session(
     },
     planeKey: "neon",
     realmKey: "tenant-control",
-  } as V4Session;
+  } as unknown as V4Session;
 }

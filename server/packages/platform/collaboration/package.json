@@ -25,6 +25,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@athyper/svc-audit": "workspace:*",
     "@athyper/svc-shared": "workspace:*",
     "busboy": "^1.6.0"
   },

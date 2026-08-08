@@ -23,7 +23,7 @@ import {
 import type { RequestLogContext } from "@athyper/platform-core/context";
 import { WorkflowRuntimeError } from "@athyper/svc-workflow";
 import { mapPostgresBusinessError } from "@athyper/svc-shared";
-import { tryGetContext } from "../kernel/request-context.js";
+import { tryGetContext } from "@athyper/server-foundation/context";
 import { Sentry } from "@athyper/adapter-telemetry/sentry";
 
 export interface ErrorHandlerOptions {
@@ -46,7 +46,7 @@ function buildRequestLogContext(): RequestLogContext | undefined {
 }
 
 function sanitize(
-  report: PlatformErrorReport,
+  report: PlatformErrorReport<string>,
   isProduction: boolean,
 ): PlatformErrorResponse {
   return {
@@ -69,7 +69,7 @@ export function createErrorHandler(opts: ErrorHandlerOptions) {
     _next: NextFunction,
   ): void {
     const context = buildRequestLogContext();
-    let platformError: PlatformError;
+    let platformError: PlatformError<string>;
     let isKnown = true;
 
     if (err instanceof PlatformException) {
@@ -103,7 +103,7 @@ export function createErrorHandler(opts: ErrorHandlerOptions) {
       }
     }
 
-    const report: PlatformErrorReport = {
+    const report: PlatformErrorReport<string> = {
       error:     platformError,
       context,
       ts:        Date.now(),

@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@athyper/finance-rules": "workspace:*",
+    "@athyper/svc-audit": "workspace:*",
     "@athyper/svc-business": "workspace:*",
     "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-policy": "workspace:*",

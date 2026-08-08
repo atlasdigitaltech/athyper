@@ -24,9 +24,9 @@
 //   Same as worker.ts — no Promise.race against a software timeout.
 //   Docker's stop_grace_period is the hard kill.
 
-import { makeAuditEvent } from "../audit.js";
+import { makeAuditEvent } from "@athyper/svc-audit";
 import { startProbeServer } from "./probe.js";
-import type { ServerDeps } from "../kernel/bootstrap.js";
+import type { ServerDeps } from "../composition/bootstrap.js";
 
 async function checkBullmqQueue(queues: unknown): Promise<void> {
   const queue = (queues as { lifecycleTimers?: { getJobCounts?: (...states: string[]) => Promise<unknown> } })

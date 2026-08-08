@@ -24,7 +24,7 @@
 
 import type { Request } from "express";
 import { sql, type Kysely } from "kysely";
-import { todayInZone } from "@athyper/temporal";
+import { todayInZone } from "@athyper/platform-temporal";
 
 // ─── Public contract ────────────────────────────────────────────────────────
 

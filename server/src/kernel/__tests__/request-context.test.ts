@@ -20,7 +20,7 @@ import {
   tryGetContext,
   runWithContext,
   runWithJobContext,
-} from "../request-context.js";
+} from "@athyper/server-foundation/context";
 import type { VerifiedRequestContext } from "@athyper/svc-iam";
 
 // ─── getContext() ─────────────────────────────────────────────────────────────

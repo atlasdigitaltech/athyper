@@ -24,6 +24,10 @@ export interface ExternalSessionIdentity {
   readonly tenantId: string;
   readonly tenantOrAccountId: string;
   readonly plane: CanonicalPlane;
+  readonly organizationId?: string;
+  readonly projectionId?: string;
+  readonly projectionVersion?: number;
+  readonly projectionHash?: string;
 }
 
 export interface ResolvedSessionIdentity {
@@ -74,6 +78,10 @@ export interface AuthorizationSessionV2 {
   readonly tenantOrAccountId: string;
   readonly principalId: string;
   readonly identityBindingId: string;
+  readonly organizationId?: string;
+  readonly projectionId?: string;
+  readonly projectionVersion?: number;
+  readonly projectionHash?: string;
   readonly catalogVersion: string;
   readonly policyVersions: readonly string[];
   readonly authorizationFingerprint: string;
@@ -209,6 +217,10 @@ export class ProductionAuthorizationSessionV2Service {
         plane: input.plane,
         tenantOrAccountId: input.tenantOrAccountId,
         principalId: identity.principalId,
+        organizationId: input.organizationId,
+        projectionId: input.projectionId,
+        projectionVersion: input.projectionVersion,
+        projectionHash: input.projectionHash,
         catalogVersion: catalog.catalogVersion,
         policyVersions,
         decisions: entries
@@ -229,6 +241,12 @@ export class ProductionAuthorizationSessionV2Service {
       tenantOrAccountId: input.tenantOrAccountId,
       principalId: identity.principalId,
       identityBindingId: identity.identityBindingId,
+      ...(input.organizationId ? { organizationId: input.organizationId } : {}),
+      ...(input.projectionId ? { projectionId: input.projectionId } : {}),
+      ...(input.projectionVersion !== undefined
+        ? { projectionVersion: input.projectionVersion }
+        : {}),
+      ...(input.projectionHash ? { projectionHash: input.projectionHash } : {}),
       catalogVersion: catalog.catalogVersion,
       policyVersions,
       authorizationFingerprint,

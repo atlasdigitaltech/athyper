@@ -23,6 +23,8 @@ import {
   parsePagination,
 } from "@athyper/svc-shared";
 import { withDomainSpan } from "@athyper/svc-shared";
+import { appendAuditEvent } from "../append-event.js";
+import { Audit } from "../event-codes.js";
 
 // ── Deps ──────────────────────────────────────────────────────────────────────
 
@@ -206,6 +208,13 @@ export function createLegalHoldRoutes(router: Router, deps: LegalHoldRouteDeps):
         return created;
       });
 
+      void appendAuditEvent(db, {
+        event_code:  Audit.HOLD_APPLIED,
+        operation:   "create",
+        entity_type: "governance.legal_hold",
+        entity_id:   String(hold["id"] ?? ""),
+        context:     { holdCode, holdName: holdName.trim(), scopeEntityType: scopeEntityType ?? null },
+      });
       res.status(201).json({ ok: true, data: toHold(hold) });
     } catch (err) {
       logger?.error("legal_hold_create_error", { err: String(err) });
@@ -329,6 +338,13 @@ export function createLegalHoldRoutes(router: Router, deps: LegalHoldRouteDeps):
         .where("is_released" as never, "=", false as never)
         .execute();
 
+      void appendAuditEvent(db, {
+        event_code:  Audit.HOLD_RELEASED,
+        operation:   "execute",
+        entity_type: "governance.legal_hold",
+        entity_id:   id,
+        context:     { releaseReason: releaseReason.trim() },
+      });
       res.json({ ok: true, data: toHold(updated) });
     } catch (err) {
       logger?.error("legal_hold_release_error", { err: String(err) });

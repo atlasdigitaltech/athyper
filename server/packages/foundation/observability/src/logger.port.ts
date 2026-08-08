@@ -1,10 +1,16 @@
-// Logger vocabulary lives in @athyper/platform-core (browser-neutral shared contracts).
-// Re-exported here so server packages declare the Logger interface without
-// depending on platform-core directly — foundation/observability is the
-// single cross-cutting import for server-side observability ports.
-export type {
-  InfraLogger as Logger,
-  ChildLogger,
-  LogLevel,
-  LogFields,
-} from "@athyper/platform-core/logger";
+export type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";
+
+export type LogFields = Record<string, unknown>;
+
+/** Capability-neutral structured logger port. */
+export interface Logger {
+  debug(event: string, fields?: LogFields): void;
+  info(event: string, fields?: LogFields): void;
+  warn(event: string, fields?: LogFields): void;
+  error(event: string, fields?: LogFields): void;
+  fatal(event: string, fields?: LogFields): void;
+}
+
+export interface ChildLogger extends Logger {
+  child(bindings: LogFields): ChildLogger;
+}

@@ -12,7 +12,7 @@ import {
   validateAuthFlagPosture,
   type AuthFlagPosture,
   type ServerEnv,
-} from "../auth-flag-validator.js";
+} from "@athyper/svc-iam";
 import type { ResolvedKernelConfig } from "../../kernel-config.js";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────

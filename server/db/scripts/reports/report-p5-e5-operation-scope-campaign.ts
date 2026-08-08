@@ -46,11 +46,12 @@ async function inspect(plane: Plane, url: string, expectedDatabase: string, camp
       SELECT b.entity_code,b.operation_key,b.decision_mode::text,
              b.source_entity_operation_id::text,b.source_release_hash,b.source_compiled_hash,
              p.requires_mfa,p.requires_sod,p.is_shareable,p.is_delegable,p.is_overridable,
-             array_agg(DISTINCT b.scope_kind::text ORDER BY b.scope_kind::text) scopes,
+             array_agg(DISTINCT scope.scope_kind::text ORDER BY scope.scope_kind::text) scopes,
              bool_or(b.tenant_id IS NOT NULL) tenant_specific_binding,
              q.sample_count::text,q.mismatch_count::text,q.candidate_error_count::text,
              q.observed_from::text,q.observed_through::text,q.qualifies_default
-        FROM authz.entity_operation_scope_binding b
+        FROM authz.entity_operation_binding b
+        JOIN authz.entity_operation_scope_binding scope ON scope.entity_operation_binding_id=b.id
         JOIN authz.permission p ON p.id=b.permission_id
         LEFT JOIN ops.authorization_shadow_qualification_v q
           ON q.plane_code=b.plane_code AND q.entity_code=b.entity_code

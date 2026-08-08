@@ -98,6 +98,29 @@ vi.mock("@athyper/adapter-object-storage", () => ({
     validateBucketAccess: vi.fn(() => Promise.resolve()),
   })),
 }));
+vi.mock("@athyper/adapter-crypto-local", () => ({
+  createCredentialEncryptionService: vi.fn(() => ({})),
+}));
+vi.mock("@athyper/adapter-rendering-legacy", () => ({ createPdfRendererClient: vi.fn() }));
+vi.mock("@athyper/adapter-rendering-gotenberg", () => ({ createGotenbergClient: vi.fn() }));
+vi.mock("@athyper/plane-neon-document-rendering", () => ({
+  RenderDocumentService: class {},
+}));
+vi.mock("@athyper/server-foundation/observability", () => ({
+  createLogger: vi.fn(() => ({
+    debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn(), fatal: vi.fn(),
+  })),
+  ServiceRegistry: class {
+    constructor(private readonly checks: Map<string, unknown>) {}
+    registerHealthCheck(name: string, check: unknown) {
+      this.checks.set(name, check);
+    }
+  },
+}));
+vi.mock("@athyper/svc-iam", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@athyper/svc-iam")>()),
+  applyAuthFlagPostureValidation: vi.fn(),
+}));
 
 vi.mock("@athyper/svc-jobs", () => ({
   createJobsService: vi.fn(() => ({
@@ -110,39 +133,86 @@ vi.mock("@athyper/svc-jobs", () => ({
   })),
   createWfOutboxHandler: vi.fn(() => ({ handle: vi.fn() })),
   createP2pNotificationOutboxHandler: vi.fn(() => ({ handle: vi.fn() })),
+  createWebhookDeliveryWorker: vi.fn(() => ({
+    worker: { close: vi.fn(() => Promise.resolve()) },
+    queue:  { close: vi.fn(() => Promise.resolve()) },
+  })),
   SYSTEM_ACTOR_ID: "00000000-0000-0000-0000-000000000000",
+}));
+
+vi.mock("@athyper/adapter-communications", () => ({
+  createWebhookAdapter: vi.fn(() => ({
+    send: vi.fn(),
+    healthCheck: vi.fn(() => Promise.resolve("healthy")),
+  })),
+  createEmailAdapter: vi.fn(() => ({
+    send: vi.fn(),
+    healthCheck: vi.fn(() => Promise.resolve("healthy")),
+  })),
+  createSmsAdapter: vi.fn(() => ({
+    send: vi.fn(),
+    healthCheck: vi.fn(() => Promise.resolve("healthy")),
+  })),
+  createPushAdapter: vi.fn(() => ({
+    send: vi.fn(),
+    healthCheck: vi.fn(() => Promise.resolve("healthy")),
+  })),
+}));
+
+vi.mock("@athyper/svc-ai", () => ({
+  AtlasThreadService: class { purgeEligible = vi.fn(); },
+  SqlAtlasRetentionPolicyResolver: class {},
+  SqlAtlasThreadMaintenanceAuthority: class {},
+  SqlAtlasThreadRepository: class {},
+  SqlAtlasToolInvocationMaintenanceAuthority: class {},
+  SqlAtlasToolInvocationRecoveryAdminService: class { recoverEligible = vi.fn(); },
+  createPrincipalPrivateAtlasThreadAuthorizers: vi.fn(() => ({})),
+}));
+
+vi.mock("@athyper/svc-finance", () => ({
+  createFinanceOutboxHandler: vi.fn(() => ({ handle: vi.fn() })),
+}));
+vi.mock("@athyper/svc-records", () => ({
+  getRecordsCapabilityHandlerManifest: vi.fn(() => []),
+  createEntityMutationOutboxHandler: vi.fn(() => ({ handle: vi.fn() })),
+}));
+vi.mock("@athyper/svc-workflow", () => ({
+  WorkflowEngine: vi.fn(),
+  ApproverResolverService: vi.fn(),
+}));
+vi.mock("@athyper/svc-search", () => ({
+  createMeilisearchClient: vi.fn(),
+  createSearchService: vi.fn(),
+  createSearchOutboxHandler: vi.fn(),
+  invoiceOverride: {},
+  journalEntryOverride: {},
+  INVOICE_ENTITY_TYPE: "finance.invoice",
+  JOURNAL_ENTRY_ENTITY_TYPE: "finance.journal_entry",
+}));
+vi.mock("@athyper/svc-integration", () => ({
+  createHttpConnectorClient: vi.fn(),
+  createOAuth2TokenCache: vi.fn(),
+}));
+vi.mock("@athyper/svc-collab", () => ({ createMentionService: vi.fn() }));
+
+vi.mock("@athyper/svc-platform", () => ({
+  createFeatureFlagService: vi.fn(() => ({})),
+  createNotificationOrchestrator: vi.fn(),
+}));
+vi.mock("@athyper/svc-metadata", () => ({
+  createMetadataApprovalBridge: vi.fn(),
+  createEntityCompilerService: vi.fn(() => ({})),
+  invalidateDescriptorCache: vi.fn(),
 }));
 
 // Stub relative framework adapters loaded by bootstrap.
 // Paths are resolved relative to this test file:
 //   __tests__/ → kernel/ → src/ → server/ → framework/
-vi.mock("../../../packages/services/jobs/adapters/webhook.adapter.js", () => ({
-  createWebhookAdapter: vi.fn(() => ({
-    send: vi.fn(),
-    healthCheck: vi.fn(() => Promise.resolve("healthy")),
-  })),
-}));
-
-vi.mock("../../../packages/services/jobs/adapters/email.adapter.js", () => ({
-  createEmailAdapter: vi.fn(() => ({
-    send: vi.fn(),
-    healthCheck: vi.fn(() => Promise.resolve("healthy")),
-  })),
-}));
-
-vi.mock("../../../packages/services/jobs/workers/webhook-delivery.worker.js", () => ({
-  createWebhookDeliveryWorker: vi.fn(() => ({
-    worker: { close: vi.fn(() => Promise.resolve()) },
-    queue:  { close: vi.fn(() => Promise.resolve()) },
-  })),
-}));
-
 // ─── Import under test (after all vi.mock declarations) ───────────────────────
 
-import { bootstrap } from "../bootstrap.js";
+import { bootstrap } from "../../composition/bootstrap.js";
 import type { ServerConfig } from "../../config.js";
-import { createJobsService } from "@athyper/svc-jobs";
-import { createWebhookDeliveryWorker } from "../../../packages/services/jobs/workers/webhook-delivery.worker.js";
+import { createJobsService, createWebhookDeliveryWorker } from "@athyper/svc-jobs";
 
 // ─── Minimal valid config (no email, no object storage) ───────────────────────
 

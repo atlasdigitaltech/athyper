@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { DOCUMENT_OPEN_CI_GATE_DEFINITIONS } from "../document-open-rollout-ci-definitions";
-import { DOCUMENT_OPEN_PROGRESS_METRIC_NAMES, DOCUMENT_OPEN_ROLLOUT_GATE_TARGETS } from "../document-open-rollout-gates";
+import {
+  DOCUMENT_OPEN_PROGRESS_METRIC_NAMES,
+  DOCUMENT_OPEN_ROLLOUT_GATE_TARGETS,
+  type DocumentOpenRolloutGateTargetName,
+} from "../document-open-rollout-gates";
 
 describe("document-open CI gate definitions", () => {
   it("contains every explicit progress metric used by rollout acceptance gates", () => {
     const definitionMetrics = new Set(DOCUMENT_OPEN_CI_GATE_DEFINITIONS.map((entry) => entry.metricName));
 
-    for (const targetName of Object.keys(DOCUMENT_OPEN_ROLLOUT_GATE_TARGETS)) {
-      const metricName = (DOCUMENT_OPEN_PROGRESS_METRIC_NAMES as Record<string, string>)[targetName];
-      if (metricName) {
-        expect(definitionMetrics.has(metricName)).toBe(true);
-      }
+    for (const targetName of Object.keys(DOCUMENT_OPEN_ROLLOUT_GATE_TARGETS) as DocumentOpenRolloutGateTargetName[]) {
+      const metricName = DOCUMENT_OPEN_PROGRESS_METRIC_NAMES[targetName];
+      expect(definitionMetrics.has(metricName)).toBe(true);
     }
   });
 
@@ -25,4 +27,3 @@ describe("document-open CI gate definitions", () => {
       .toBe(DOCUMENT_OPEN_CI_GATE_DEFINITIONS.length);
   });
 });
-

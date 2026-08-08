@@ -9,7 +9,6 @@
 import { Queue, Worker, type Job } from "bullmq";
 import type { ConnectionOptions } from "bullmq";
 import { sql, type Kysely } from "kysely";
-import type { DB } from "@athyper/adapter-db-neon";
 import { buildWebhookHeaders } from "@athyper/svc-integration";
 import {
   JOB_NAME,
@@ -29,6 +28,10 @@ const DELIVERY_LOCK_BUFFER_MS = 15_000;
 const TRANSIENT_BACKOFF_BASE_MS = 2_000;
 const TRANSIENT_BACKOFF_MAX_MS = 15 * 60_000;
 const RATE_LIMIT_BACKOFF_MS = 60 * 60_000;
+
+// The runtime supplies the concrete database adapter. This worker only needs
+// Kysely's query contract, so the platform package must not depend on Neon.
+type WebhookDatabase = Record<string, Record<string, unknown>>;
 
 export type WebhookDeliveryTerminalStatus = "delivered" | "cancelled" | "bounced";
 export type WebhookDeliveryStatus = "pending" | "queued" | "failed" | WebhookDeliveryTerminalStatus;
@@ -167,7 +170,7 @@ function parseRetryAfterMs(value: string | null): number | null {
   return null;
 }
 
-async function claimOutboxEvents(db: Kysely<DB>, tenantId: string): Promise<ClaimedEvent[]> {
+async function claimOutboxEvents(db: Kysely<WebhookDatabase>, tenantId: string): Promise<ClaimedEvent[]> {
   const lockedUntil = new Date(Date.now() + OUTBOX_LOCK_DURATION_MS).toISOString();
   const { rows } = await sql<ClaimedEvent>`
     UPDATE event.outbox
@@ -199,7 +202,7 @@ async function claimOutboxEvents(db: Kysely<DB>, tenantId: string): Promise<Clai
 }
 
 async function listMatchingSubscriptions(
-  db: Kysely<DB>,
+  db: Kysely<WebhookDatabase>,
   tenantId: string,
   topic: string,
 ): Promise<WebhookSubscription[]> {
@@ -217,7 +220,7 @@ async function listMatchingSubscriptions(
 }
 
 async function ensureWebhookDeliveryRow(
-  db: Kysely<DB>,
+  db: Kysely<WebhookDatabase>,
   event: ClaimedEvent,
   sub: WebhookSubscription,
 ): Promise<WebhookDeliveryRow> {
@@ -291,7 +294,7 @@ async function enqueueDelivery(queue: Queue<DeliverWebhookJobData | SweepJobData
   );
 }
 
-async function markOutboxCompletedWithoutSubscriptions(db: Kysely<DB>, eventId: string): Promise<void> {
+async function markOutboxCompletedWithoutSubscriptions(db: Kysely<WebhookDatabase>, eventId: string): Promise<void> {
   await sql`
     UPDATE event.outbox
     SET    status       = 'completed',
@@ -305,7 +308,7 @@ async function markOutboxCompletedWithoutSubscriptions(db: Kysely<DB>, eventId: 
 }
 
 async function sweepWebhooks(
-  db: Kysely<DB>,
+  db: Kysely<WebhookDatabase>,
   queue: Queue<DeliverWebhookJobData | SweepJobData>,
   tenantId: string,
   logger: JobLogger,
@@ -336,7 +339,7 @@ async function sweepWebhooks(
 }
 
 async function loadWebhookContext(
-  db: Kysely<DB>,
+  db: Kysely<WebhookDatabase>,
   data: DeliverWebhookJobData,
 ): Promise<WebhookDeliveryContext | null> {
   const result = await sql<WebhookDeliveryContext>`
@@ -370,7 +373,7 @@ async function loadWebhookContext(
   return result.rows[0] ?? null;
 }
 
-async function markDeliveryQueued(db: Kysely<DB>, ctx: WebhookDeliveryContext): Promise<boolean> {
+async function markDeliveryQueued(db: Kysely<WebhookDatabase>, ctx: WebhookDeliveryContext): Promise<boolean> {
   const lockedUntil = new Date(Date.now() + ctx.timeoutMs + DELIVERY_LOCK_BUFFER_MS).toISOString();
   const result = await sql<{ id: string }>`
     UPDATE event.notification_delivery
@@ -445,7 +448,7 @@ async function attemptHttpDelivery(ctx: WebhookDeliveryContext): Promise<Webhook
 }
 
 async function writeWebhookAttempt(
-  tx: Kysely<DB>,
+  tx: Kysely<WebhookDatabase>,
   ctx: WebhookDeliveryContext,
   attempt: WebhookAttemptResult,
   isSuccess: boolean,
@@ -474,7 +477,7 @@ async function writeWebhookAttempt(
 }
 
 async function updateDeliveryOutcome(
-  tx: Kysely<DB>,
+  tx: Kysely<WebhookDatabase>,
   ctx: WebhookDeliveryContext,
   attempt: WebhookAttemptResult,
   classification: WebhookClassification,
@@ -515,7 +518,7 @@ async function updateDeliveryOutcome(
 }
 
 async function updateSubscriptionStats(
-  tx: Kysely<DB>,
+  tx: Kysely<WebhookDatabase>,
   ctx: WebhookDeliveryContext,
   status: WebhookDeliveryStatus,
 ): Promise<void> {
@@ -547,7 +550,7 @@ async function updateSubscriptionStats(
   }
 }
 
-async function cancelInactiveSubscriptionDelivery(db: Kysely<DB>, ctx: WebhookDeliveryContext): Promise<void> {
+async function cancelInactiveSubscriptionDelivery(db: Kysely<WebhookDatabase>, ctx: WebhookDeliveryContext): Promise<void> {
   const attempt: WebhookAttemptResult = {
     httpStatus: null,
     errorMessage: "Webhook subscription inactive or missing",
@@ -566,7 +569,7 @@ async function cancelInactiveSubscriptionDelivery(db: Kysely<DB>, ctx: WebhookDe
 }
 
 async function deliverWebhook(
-  db: Kysely<DB>,
+  db: Kysely<WebhookDatabase>,
   data: DeliverWebhookJobData,
   logger: JobLogger,
 ): Promise<void> {
@@ -622,7 +625,7 @@ async function deliverWebhook(
   });
 }
 
-export async function reconcileWebhookOutbox(db: Kysely<DB>, outboxEventId: string): Promise<void> {
+export async function reconcileWebhookOutbox(db: Kysely<WebhookDatabase>, outboxEventId: string): Promise<void> {
   const result = await sql<ReconcileCounts>`
     SELECT
       COUNT(*)::text AS total,
@@ -694,7 +697,7 @@ export interface WebhookDeliveryWorkerResult {
 }
 
 export function createWebhookDeliveryWorker(
-  db: Kysely<DB>,
+  db: Kysely<WebhookDatabase>,
   redis: ConnectionOptions,
   logger: JobLogger,
   runWithJobContext?: <T>(context: { tenantId?: string }, fn: () => T | Promise<T>) => Promise<T>,

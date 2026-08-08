@@ -3,7 +3,7 @@
  *
  *   GET /api/activity/:entity/:id
  *
- * Returns activity log entries for a specific entity record from log.activity_log.
+ * Returns activity log entries for a specific entity record from audit.audit_log.
  * Maps DB rows to the ActivityEntry contract expected by ActivityTimeline.
  *
  * Query params:
@@ -18,7 +18,7 @@
  * ActivityEntry shape (from @athyper/api-contracts/workflow):
  *   { id, domain, activity_type, description, actor_name, from_state, to_state, detail, created_at }
  *
- * Falls back gracefully to empty array if log.activity_log partition doesn't exist yet
+ * Falls back gracefully to empty array if audit.audit_log partition doesn't exist yet
  * (Postgres error 42P01 — relation not found).
  */
 
@@ -32,6 +32,7 @@ import {
   extractOrgHeaders,
   resolvePrincipalIdOrNull,
 } from "@athyper/svc-shared";
+import { appendAuditEvent } from "@athyper/svc-audit";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;
@@ -386,17 +387,22 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
       let rows: RecentRow[] = [];
 
       try {
-        rows = await db
-          .selectFrom("log.activity_log as al")
-          .select([
-            "al.id", "al.domain", "al.activity_type",
-            "al.detail", "al.actor_id", "al.created_at",
-            "al.entity_type", "al.entity_id",
-          ] as never[])
-          .where("al.tenant_id" as never, "=", tenantId as never)
-          .orderBy("al.created_at" as never, "desc")
-          .limit(limit)
-          .execute() as RecentRow[];
+        const recentResult = await sql<RecentRow>`
+          SELECT al.id,
+                 al.context->>'domain'        AS domain,
+                 al.context->>'activity_type' AS activity_type,
+                 al.context                   AS detail,
+                 al.actor_principal_id        AS actor_id,
+                 al.occurred_at               AS created_at,
+                 al.entity_type,
+                 al.entity_id::text
+          FROM audit.audit_log al
+          WHERE al.tenant_id = ${tenantId}::uuid
+            AND al.context->>'domain' IS NOT NULL
+          ORDER BY al.occurred_at DESC
+          LIMIT ${limit}
+        `.execute(db);
+        rows = recentResult.rows;
       } catch (err) {
         const code = (err as { code?: string }).code;
         if (code === "42P01") { rows = []; }
@@ -468,19 +474,19 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
       try {
         const result = await sql<RecentPickerRow>`
           WITH latest AS (
-            SELECT DISTINCT ON (COALESCE(al.entity_id::text, al.detail #>> '{option,value}'))
-                   al.detail,
-                   al.created_at,
-                   COALESCE(al.entity_id::text, al.detail #>> '{option,value}') AS record_key
-            FROM log.activity_log al
-            WHERE al.tenant_id = ${tenantId}::uuid
-              AND al.actor_id = ${principalId}::uuid
-              AND al.domain = 'user'
-              AND al.activity_type IN ('user.record_selected', 'user.record_view')
-              AND al.entity_type = ${entityCode}
-              AND al.detail ->> 'source' = 'entity_picker'
-              AND COALESCE(al.entity_id::text, al.detail #>> '{option,value}') IS NOT NULL
-            ORDER BY COALESCE(al.entity_id::text, al.detail #>> '{option,value}'), al.created_at DESC
+            SELECT DISTINCT ON (COALESCE(al.entity_id::text, al.context #>> '{option,value}'))
+                   al.context                                                    AS detail,
+                   al.occurred_at                                               AS created_at,
+                   COALESCE(al.entity_id::text, al.context #>> '{option,value}') AS record_key
+            FROM audit.audit_log al
+            WHERE al.tenant_id            = ${tenantId}::uuid
+              AND al.actor_principal_id   = ${principalId}::uuid
+              AND al.context->>'domain'   = 'user'
+              AND al.context->>'activity_type' IN ('user.record_selected', 'user.record_view')
+              AND al.entity_type          = ${entityCode}
+              AND al.context->>'source'   = 'entity_picker'
+              AND COALESCE(al.entity_id::text, al.context #>> '{option,value}') IS NOT NULL
+            ORDER BY COALESCE(al.entity_id::text, al.context #>> '{option,value}'), al.occurred_at DESC
           )
           SELECT detail, created_at
           FROM latest
@@ -531,31 +537,20 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
       }
 
       const recordId = option.recordId ?? option.value;
-      const insertActivity = (activityType: "user.record_selected" | "user.record_view") => db
-        .insertInto("log.activity_log" as never)
-        .values({
-          tenant_id:     tenantId,
-          log_type:      "business",
-          domain:        "user",
-          activity_type: activityType,
-          entity_type:   entityCode,
-          entity_id:     isUuid(recordId) ? recordId : null,
-          actor_id:      principalId,
-          actor_type:    "principal",
-          detail:        JSON.stringify({
-            source:  "entity_picker",
-            message: `Selected ${option.label}`,
-            option,
-          }),
-          created_by:    principalId,
-        } as never)
-        .execute();
 
-      try {
-        await insertActivity("user.record_selected");
-      } catch {
-        await insertActivity("user.record_view");
-      }
+      void appendAuditEvent(db, {
+        event_code:  "record.viewed",
+        operation:   "execute",
+        entity_type: entityCode,
+        entity_id:   isUuid(recordId) ? recordId : null,
+        context: {
+          domain:        "user",
+          activity_type: "user.record_selected",
+          source:        "entity_picker",
+          message:       `Selected ${option.label}`,
+          option,
+        },
+      });
 
       res.status(204).send();
     } catch (err) {
@@ -592,7 +587,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
       const limit    = Math.min(500, Math.max(1, parseInt(String(q["limit"]  ?? "100"), 10)));
       const offset   = Math.max(0,              parseInt(String(q["offset"] ?? "0"),   10));
 
-      // ── Query log.activity_log ────────────────────────────────────────────────
+      // ── Query audit.audit_log ─────────────────────────────────────────────────
       const sourceLimit = limit + offset;
       let rows: ActivityRow[] = [];
       let lifecycleRows: LifecycleRow[] = [];
@@ -601,26 +596,23 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
       let journalEntryRow: JournalEntryRow | null = null;
 
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let q_: any = db
-          .selectFrom("log.activity_log as al")
-          .select([
-            "al.id", "al.domain", "al.activity_type",
-            "al.detail", "al.actor_id", "al.created_at",
-          ] as never[])
-          .where("al.tenant_id"   as never, "=",   tenantId   as never)
-          .where("al.entity_type" as never, "=",   entityCode as never)
-          .where("al.entity_id"   as never, "=",   recordId   as never)
-          .orderBy("al.created_at" as never, "desc")
-          .limit(sourceLimit);
-
-        if (domain && domain !== "all") {
-          q_ = q_.where("al.domain" as never, "=", domain as never);
-        }
-
-        rows = await q_.execute() as ActivityRow[];
+        const actResult = await sql<ActivityRow>`
+          SELECT al.id,
+                 al.context->>'domain'        AS domain,
+                 al.context->>'activity_type' AS activity_type,
+                 al.context                   AS detail,
+                 al.actor_principal_id        AS actor_id,
+                 al.occurred_at               AS created_at
+          FROM audit.audit_log al
+          WHERE al.tenant_id   = ${tenantId}::uuid
+            AND al.entity_type = ${entityCode}
+            AND al.entity_id   = ${recordId}::uuid
+            AND (${domain ?? null}::text IS NULL OR al.context->>'domain' = ${domain ?? null})
+          ORDER BY al.occurred_at DESC
+          LIMIT ${sourceLimit}
+        `.execute(db);
+        rows = actResult.rows;
       } catch (err) {
-        // Graceful degradation: if activity_log partition doesn't exist yet
         const code = (err as { code?: string }).code;
         if (code === "42P01") {
           logger?.warn("activity_route_table_missing", { entityCode, recordId });
@@ -660,25 +652,26 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
 
       try {
         const result = await sql<WorkflowLogRow>`
-          SELECT wel.id,
-                 wel.event_type,
-                 wel.from_status,
-                 wel.to_status,
-                 wel.action,
-                 wel.actor_id,
-                 wel.comment,
-                 wel.detail,
-                 wel.instance_id,
-                 wr.id AS workflow_request_id,
-                 wel.created_at
-            FROM log.workflow_event_log wel
+          SELECT al.id,
+                 al.context->>'workflow_event_type' AS event_type,
+                 al.old_values->>'status'           AS from_status,
+                 al.new_values->>'status'           AS to_status,
+                 al.context->>'action'              AS action,
+                 al.actor_principal_id              AS actor_id,
+                 al.context->>'comment'             AS comment,
+                 al.context->'detail'               AS detail,
+                 al.context->>'instance_id'         AS instance_id,
+                 al.context->>'instance_id'         AS workflow_request_id,
+                 al.occurred_at                     AS created_at
+            FROM audit.audit_log al
             JOIN document.workflow_request wr
-              ON wr.id::text = wel.instance_id
-           WHERE wel.tenant_id = ${tenantId}::uuid
-             AND wr.tenant_id = ${tenantId}::uuid
-             AND wr.entity_type = ${entityCode}
-             AND wr.entity_id = ${recordId}
-           ORDER BY wel.created_at DESC
+              ON wr.id::text = al.context->>'instance_id'
+           WHERE al.tenant_id             = ${tenantId}::uuid
+             AND al.event_contract_code   = 'inbox_routing_event'
+             AND wr.tenant_id             = ${tenantId}::uuid
+             AND wr.entity_type           = ${entityCode}
+             AND wr.entity_id             = ${recordId}
+           ORDER BY al.occurred_at DESC
            LIMIT ${sourceLimit}
         `.execute(db);
         workflowRows = result.rows;
@@ -829,7 +822,7 @@ export function createActivityRoute(router: Router, deps: ActivityRouteDeps): Ro
           to_state:      row.to_status,
           detail:        {
             ...detail,
-            source_log:          "log.workflow_event_log",
+            source_log:          "audit.audit_log",
             event_type:          row.event_type,
             action:              row.action,
             comment:             row.comment,

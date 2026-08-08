@@ -1,5 +1,5 @@
 /**
- * @athyper/platform-theme — Utilities
+ * @athyper/theme — Utilities
  *
  * SCOPE: This file contains ONLY the cn() class merging utility.
  * Do not add general-purpose helpers here. Theme package scope is:

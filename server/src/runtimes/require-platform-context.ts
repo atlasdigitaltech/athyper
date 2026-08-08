@@ -19,12 +19,12 @@
 import type { Request, Response, NextFunction } from "express";
 import type { Kysely } from "kysely";
 
-import { tryGetContext } from "../kernel/request-context.js";
+import { tryGetContext } from "@athyper/server-foundation/context";
 import {
   enforceAuthPipeline,
   loadRequiredActionMatrix,
   type CrossCheckReporter,
-} from "../auth/auth-pipeline.js";
+} from "@athyper/svc-iam";
 import {
   evaluateFederatedMfaPolicy,
   normalizeFederatedAssurance,

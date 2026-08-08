@@ -4,6 +4,7 @@ import { Kysely } from "kysely";
 import { createPostgresDialect } from "@athyper/adapter-db-core";
 import { closePool, createPool, healthCheck, type PoolConfig } from "@athyper/adapter-db-core";
 import type { DbPoolStats } from "@athyper/adapter-db-core";
+import { PerformanceDialect, type DatabasePerformanceObserver } from "@athyper/adapter-db-core";
 
 import type { DB as MeshDB } from "./generated/kysely-mesh/types.js";
 import type pg from "pg";
@@ -22,6 +23,9 @@ export type MeshDbClientConfig = {
    * @default 10
    */
   poolMax?: number;
+
+  /** Optional logical-query, pool-wait, and transaction observer. */
+  performanceObserver?: DatabasePerformanceObserver;
 };
 
 /**
@@ -53,9 +57,11 @@ export class MeshDbClient {
     };
 
     this.pool = createPool(poolConfig);
-    this.kysely = new Kysely<MeshDB>({
-      dialect: createPostgresDialect(this.pool),
-    });
+    const baseDialect = createPostgresDialect(this.pool);
+    const dialect = config.performanceObserver
+      ? new PerformanceDialect(baseDialect, config.performanceObserver)
+      : baseDialect;
+    this.kysely = new Kysely<MeshDB>({ dialect });
   }
 
   async close(): Promise<void> {

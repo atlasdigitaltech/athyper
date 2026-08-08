@@ -14,7 +14,7 @@
  *
  * Usage:
  *   // In a module's initialization
- *   import { cronRegistry } from "server/packages/services/jobs/cron-registry.js";
+ *   import { cronRegistry } from "server/packages/platform/jobs/cron-registry.js";
  *   cronRegistry.register({
  *     queue:    "jobs-domain-outbox",
  *     name:     "audit-archive",

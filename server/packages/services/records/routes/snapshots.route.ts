@@ -31,11 +31,11 @@ import {
   resolvePrincipalIdWithJit,
 } from "@athyper/svc-shared";
 import { checkPermission, requireAllow } from "@athyper/svc-iam";
-import { computeSnapshotDiff } from "../../business/lifecycle/snapshot-diff.service.js";
+import { computeSnapshotDiff } from "@athyper/svc-business";
 import {
   restoreFromSnapshot,
   RestoreError,
-} from "../../business/p2p/snapshot-restore.service.js";
+} from "@athyper/svc-business";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;

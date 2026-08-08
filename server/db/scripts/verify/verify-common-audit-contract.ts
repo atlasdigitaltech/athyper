@@ -197,7 +197,7 @@ for (const plane of ["athyper", "neon", "mesh"]) {
   );
   expect(
     `${plane} document layer installs canonical row audit capture`,
-    planeTriggers.includes("audit.install_document_row_audit_triggers()"),
+    planeTriggers.includes("audit.install_schema_row_triggers('document')"),
   );
 }
 

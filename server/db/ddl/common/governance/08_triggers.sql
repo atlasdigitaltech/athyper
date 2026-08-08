@@ -38,3 +38,5 @@ $$;
 CREATE TRIGGER channel_consent_projection_guard
 BEFORE UPDATE ON governance.channel_consent
 FOR EACH ROW EXECUTE FUNCTION governance.trg_guard_channel_consent_projection();
+
+SELECT audit.install_schema_row_triggers('governance');

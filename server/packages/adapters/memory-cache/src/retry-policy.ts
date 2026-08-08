@@ -1,5 +1,5 @@
-import { isTransientError } from "@athyper/foundation-kernel/resilience";
-import type { RetryPolicy } from "@athyper/foundation-kernel/resilience";
+import { isTransientError } from "@athyper/server-foundation/kernel/resilience";
+import type { RetryPolicy } from "@athyper/server-foundation/kernel/resilience";
 
 export const REDIS_RETRY_POLICY: Partial<RetryPolicy> = {
   maxAttempts:    3,

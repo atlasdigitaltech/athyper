@@ -66,7 +66,6 @@ export class SqlNormalizedEntitlementResolver implements NormalizedEntitlementRe
 interface BindingRow {
   permission_id: string;
   canonical_code: string;
-  resource_code: string;
   module_id: string;
   entity_id: string;
   entity_operation_id: string;
@@ -161,7 +160,7 @@ export class NormalizedOperationScopeAuthorizationRepository
       }),
       this.loadGroupAllows(request, permission, requiredScopes),
       this.loadDenies(request, permission),
-      this.loadAclAllows(request, permission, first.resource_code),
+      this.loadAclAllows(request, permission, permission.canonicalCode.split(".").slice(0, -1).join(".")),
       this.loadOverrides(request, permission),
     ]);
     const delegations = await this.loadDelegations(request, permission, requiredScopes);
@@ -208,32 +207,34 @@ export class NormalizedOperationScopeAuthorizationRepository
 
   private loadBindings(request: Exclude<CanonicalDecisionRequest, { mode: "registered_capability" }>): Promise<BindingRow[]> {
     return this.query<BindingRow>(`
-      SELECT b.permission_id::text,p.canonical_code,p.resource_code,p.module_id::text,
-             b.source_entity_id::text AS entity_id,b.source_entity_operation_id::text AS entity_operation_id,
-             b.source_release_hash,b.source_compiled_hash,p.is_shareable,p.is_delegable,
-             p.requires_mfa,p.requires_sod,b.scope_kind::text
-        FROM authz.entity_operation_scope_binding b
-        JOIN authz.permission p ON p.id=b.permission_id
-        JOIN authz.permission_scope_policy policy
-          ON policy.permission_id=p.id AND policy.scope_kind=b.scope_kind
-       WHERE (b.tenant_id IS NULL OR b.tenant_id=$1::uuid)
-         AND NOT (b.tenant_id IS NULL AND EXISTS (
-           SELECT 1 FROM authz.entity_operation_scope_binding tenant_binding
+      SELECT operation.permission_id::text,p.canonical_code,p.module_id::text,
+             operation.source_entity_id::text AS entity_id,operation.source_entity_operation_id::text AS entity_operation_id,
+             operation.source_release_hash,operation.source_compiled_hash,p.is_shareable,p.is_delegable,
+             p.requires_mfa,p.requires_sod,scope.scope_kind::text
+        FROM authz.entity_operation_binding operation
+        JOIN authz.entity_operation_scope_binding scope
+          ON scope.entity_operation_binding_id=operation.id
+        JOIN authz.permission p ON p.id=operation.permission_id
+       WHERE (operation.tenant_id IS NULL OR operation.tenant_id=$1::uuid)
+         AND NOT (operation.tenant_id IS NULL AND EXISTS (
+           SELECT 1 FROM authz.entity_operation_binding tenant_binding
+            JOIN authz.entity_operation_scope_binding tenant_scope
+              ON tenant_scope.entity_operation_binding_id=tenant_binding.id
             WHERE tenant_binding.tenant_id=$1::uuid
-              AND tenant_binding.plane_code=b.plane_code
-              AND tenant_binding.source_entity_operation_id=b.source_entity_operation_id
-              AND tenant_binding.scope_kind=b.scope_kind
-              AND tenant_binding.decision_mode=b.decision_mode
+              AND tenant_binding.plane_code=operation.plane_code
+              AND tenant_binding.source_entity_operation_id=operation.source_entity_operation_id
+              AND tenant_scope.scope_kind=scope.scope_kind
+              AND tenant_binding.decision_mode=operation.decision_mode
               AND tenant_binding.status='published'
               AND tenant_binding.effective_from <= $5::timestamptz
               AND (tenant_binding.effective_until IS NULL OR tenant_binding.effective_until > $5::timestamptz)
          ))
-         AND b.plane_code=$2 AND b.source_entity_operation_id=$3::uuid
-         AND b.decision_mode=$4 AND b.status='published'
-         AND b.effective_from <= $5::timestamptz
-         AND (b.effective_until IS NULL OR b.effective_until > $5::timestamptz)
+         AND operation.plane_code=$2 AND operation.source_entity_operation_id=$3::uuid
+         AND operation.decision_mode=$4 AND operation.status='published'
+         AND operation.effective_from <= $5::timestamptz
+         AND (operation.effective_until IS NULL OR operation.effective_until > $5::timestamptz)
          AND p.permission_kind='entity_operation' AND p.status='published'
-       ORDER BY b.scope_kind
+       ORDER BY scope.scope_kind
     `, [request.subject.tenantOrAccountId, this.config.plane, request.entityOperationId, request.mode, request.evaluatedAt]);
   }
 

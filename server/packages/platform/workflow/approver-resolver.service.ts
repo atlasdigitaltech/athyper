@@ -82,7 +82,7 @@ export class ApproverResolverService {
     rules: Array<{ priority?: number; conditions?: unknown; assign_to: AssignToSpec }>,
     context: ResolveContext & { payload: Record<string, unknown> },
   ): Promise<ResolvedAssignee[]> {
-    const { evaluateJsonLogic } = await import("./jsonlogic.js");
+    const { evaluateJsonLogic } = await import("@athyper/platform-rules");
 
     const sorted = [...rules].sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100));
 

@@ -14,7 +14,7 @@
  *   control.lifecycle_transition_execution (claim/markCompleted).
  *
  * Handled actions:
- *   activity_log.write           — INSERT into log.activity_log; returns the
+ *   activity_log.write           — INSERT into audit.audit_log; returns the
  *                                  new row id so subsequent handlers can link
  *                                  back to it (notably snapshot.capture)
  *   snapshot.capture             — call captureDocumentSnapshot with the
@@ -59,6 +59,7 @@ export interface RunLifecycleHooksCtx {
   sourceDocType:      string;
   sourceDocId:        string;
   principalId:        string;
+  correlationId?:     string;
   /** 'before' fires before the state mutation. 'after' fires after the row
    *  update but before the orchestrator commits. Required hooks at either
    *  timing veto the transaction by throwing. */
@@ -468,28 +469,31 @@ async function invokeActivityLogWrite(
     profile_version: ctx.sourceDocType === "purchase_order" || ctx.sourceDocType === "commitment" ? 1 : null,
   };
 
-  const result = await sql<{ id: string }>`
-    INSERT INTO log.activity_log (
-      tenant_id, log_type, domain, activity_type,
-      entity_type, entity_id,
-      actor_id, actor_type,
-      detail,
-      created_by
-    ) VALUES (
-      ${ctx.tenantId}::uuid,
-      'business'::shared.log_type_d,
-      ${domain}::text,
-      ${activityType}::text,
-      ${ctx.sourceDocType}::text,
-      ${ctx.sourceDocId}::uuid,
-      ${ctx.principalId}::uuid,
-      'principal'::text,
-      ${JSON.stringify(detail)}::jsonb,
-      ${ctx.principalId}::uuid
-    )
-    RETURNING id
-  `.execute(db);
-  return result.rows[0]?.id ?? null;
+  try {
+    const result = await sql<{ id: string }>`
+      SELECT audit.append_event(
+        ${`record.${ctx.operationCode ?? "transition"}`},
+        'execute'::audit.operation_d,
+        ${ctx.sourceDocType},
+        ${ctx.sourceDocId}::uuid,
+        'success'::audit.outcome_d,
+        NULL::audit.event_severity_d,
+        'tenant',
+        NULL::uuid,
+        NULL::uuid,
+        NULL,
+        NULL::jsonb,
+        NULL::jsonb,
+        NULL::text[],
+        ${JSON.stringify({ domain, activity_type: activityType, ...detail })}::jsonb,
+        ${ctx.correlationId ?? null}::uuid,
+        NULL
+      ) AS id
+    `.execute(db);
+    return result.rows[0]?.id ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

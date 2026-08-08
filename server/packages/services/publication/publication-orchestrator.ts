@@ -1,5 +1,6 @@
 import type {
   ActiveRelease,
+  ActiveEntityProjection,
   DeploymentBundle,
   DeploymentStatus,
   LocalPublicationRepository,
@@ -29,6 +30,21 @@ export class PublicationOrchestrator {
     return this.local.active(publicationKey);
   }
 
+  activeEntity(
+    publicationKey: string,
+    descriptorKind = "entity_runtime",
+  ): Promise<ActiveEntityProjection | null> {
+    return this.local.activeEntity(publicationKey, descriptorKind);
+  }
+
+  rollback(
+    publicationKey: string,
+    targetAppliedReleaseId: string,
+    evidence: Record<string, unknown> = {},
+  ): Promise<ActiveRelease> {
+    return this.local.rollback(publicationKey, targetAppliedReleaseId, evidence);
+  }
+
   async deploy(deploymentId: string): Promise<ActiveRelease> {
     const bundle = await this.authority.getDeployment(deploymentId);
     if (!bundle) throw new PublicationOrchestrationError("DEPLOYMENT_NOT_AVAILABLE", deploymentId);
@@ -36,7 +52,7 @@ export class PublicationOrchestrator {
       throw new PublicationOrchestrationError("DEPLOYMENT_TERMINAL", bundle.deploymentStatus);
     }
 
-    let status = bundle.deploymentStatus;
+    let status = bundle.deploymentStatus as DeploymentStatus;
     const advance = async (next: DeploymentStatus, evidence: Record<string, unknown> = {}) => {
       if (PROGRESS.indexOf(status) >= PROGRESS.indexOf(next)) return;
       await this.authority.transition(deploymentId, next, evidence);

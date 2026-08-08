@@ -134,7 +134,7 @@ beforeEach(() => {
     openDescriptorCacheV2: false,
     guard: { disabled: false, reason: null, disabledUntil: 0 },
   });
-  vi.mocked(buildDocumentEditCorePayload as never).mockResolvedValue({
+  vi.mocked(buildDocumentEditCorePayload).mockResolvedValue({
     ok: true,
     entityCode: "purchase_order",
     recordId: "REC-1",
@@ -146,16 +146,16 @@ beforeEach(() => {
     selectedOptionLabels: {},
     sectionManifest: [],
   } as never);
-  vi.mocked(buildDocumentEditSectionBatch as never).mockResolvedValue(sectionBatchResponse as never);
+  vi.mocked(buildDocumentEditSectionBatch).mockResolvedValue(sectionBatchResponse as never);
   vi.mocked(loadDocumentEditRuntimeRouteContext).mockResolvedValue(baseContext() as never);
-  vi.mocked(buildDocumentEditCoordinatorIdentity as never).mockReturnValue({ tenantId: "tenant-1", effectivePrincipal: "principal-1", permissionStamp: "stamp-1" } as never);
-  vi.mocked(resolveDocumentEditWorkspaceProfile as never).mockReturnValue("edit");
-  vi.mocked(resolveDocumentEditPlanHash as never).mockReturnValue("purchase-order-plan-v1");
+  vi.mocked(buildDocumentEditCoordinatorIdentity).mockReturnValue({ tenantId: "tenant-1", effectivePrincipal: "principal-1", permissionStamp: "stamp-1" } as never);
+  vi.mocked(resolveDocumentEditWorkspaceProfile).mockReturnValue("edit");
+  vi.mocked(resolveDocumentEditPlanHash).mockReturnValue("purchase-order-plan-v1");
   vi.mocked(mintDocumentEditWorkspaceToken).mockReturnValue("token-1");
-  vi.mocked(getMetaEntityProcessRuntimeState as never).mockResolvedValue(null as never);
-  vi.mocked(getMetaEntityRuntimeDescriptorCacheState as never).mockReturnValue("cold");
-  vi.mocked(loadDocumentRuleProjection as never).mockResolvedValue({ entity: "purchase_order", field_rules: {}, action_rules: {}, version: "v1" } as never);
-  vi.mocked(loadDocumentChildCompiledProjections as never).mockResolvedValue({ commitment_line: { fields: [] } } as never);
+  vi.mocked(getMetaEntityProcessRuntimeState).mockResolvedValue(null as never);
+  vi.mocked(getMetaEntityRuntimeDescriptorCacheState).mockReturnValue("cold");
+  vi.mocked(loadDocumentRuleProjection).mockResolvedValue({ entity: "purchase_order", field_rules: {}, action_rules: {}, version: "v1" } as never);
+  vi.mocked(loadDocumentChildCompiledProjections).mockResolvedValue({ commitment_line: { fields: [] } } as never);
 });
 
 describe("POST /api/runtime/v1/entities/[entity]/[id]/edit/open", () => {
@@ -203,8 +203,8 @@ describe("POST /api/runtime/v1/entities/[entity]/[id]/edit/open", () => {
       openDescriptorCacheV2: true,
       guard: { disabled: false, reason: null, disabledUntil: 0 },
     });
-    vi.mocked(loadDocumentRuleProjection as never).mockRejectedValueOnce(new Error("rules-down"));
-    vi.mocked(loadDocumentChildCompiledProjections as never).mockRejectedValueOnce(new Error("child-down"));
+    vi.mocked(loadDocumentRuleProjection).mockRejectedValueOnce(new Error("rules-down"));
+    vi.mocked(loadDocumentChildCompiledProjections).mockRejectedValueOnce(new Error("child-down"));
 
     const response = await POST(request(), { params: Promise.resolve({ entity: "purchase_order", id: "PO-1" }) });
 
@@ -242,7 +242,7 @@ describe("POST /api/runtime/v1/entities/[entity]/[id]/edit/open", () => {
       openDescriptorCacheV2: true,
       guard: { disabled: false, reason: null, disabledUntil: 0 },
     });
-    vi.mocked(buildDocumentEditSectionBatch as never).mockImplementation(async (input: { requestedKeys: string[] }) => {
+    vi.mocked(buildDocumentEditSectionBatch).mockImplementation(async (input: { requestedKeys: string[] }) => {
       expect(input.requestedKeys).toContain("lines");
       return sectionBatchResponse as never;
     });

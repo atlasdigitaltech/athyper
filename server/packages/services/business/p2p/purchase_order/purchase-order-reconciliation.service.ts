@@ -68,14 +68,24 @@ export async function reconcilePurchaseOrderFulfillment(
       fulfilled_amount: Number(row.fulfilled_amount),
     };
     const activity = await sql<{ id: string }>`
-      INSERT INTO log.activity_log (
-        tenant_id, log_type, domain, activity_type, entity_type, entity_id,
-        actor_id, actor_type, detail, created_by
-      ) VALUES (
-        ${tenantId}::uuid, 'business'::shared.log_type_d, 'procurement',
-        ${`purchase_order.${operation}`}, 'purchase_order', ${commitmentId}::uuid,
-        ${principalId}::uuid, 'principal', ${JSON.stringify(detail)}::jsonb, ${principalId}::uuid
-      ) RETURNING id
+      SELECT audit.append_event(
+        ${`record.${operation}`},
+        'execute'::audit.operation_d,
+        'purchase_order',
+        ${commitmentId}::uuid,
+        'success'::audit.outcome_d,
+        NULL::audit.event_severity_d,
+        'tenant',
+        NULL::uuid,
+        NULL::uuid,
+        NULL,
+        NULL::jsonb,
+        NULL::jsonb,
+        NULL::text[],
+        ${JSON.stringify({ domain: "procurement", activity_type: `purchase_order.${operation}`, ...detail })}::jsonb,
+        NULL::uuid,
+        NULL
+      ) AS id
     `.execute(db);
     const snapshot = await captureDocumentSnapshot(db, {
       tenantId,

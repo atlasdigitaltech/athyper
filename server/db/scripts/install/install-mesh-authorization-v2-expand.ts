@@ -26,7 +26,7 @@ import {
   meshAuthorizationV2RequiredSchemas,
   meshAuthorizationV2Sentinels,
   meshAuthorizationV2Wave0Sources,
-} from "../contracts/mesh-authorization-v2-wave1.js";
+} from "../contracts/mesh-authorization-v2-expand.js";
 
 interface Options {
   apply: boolean;

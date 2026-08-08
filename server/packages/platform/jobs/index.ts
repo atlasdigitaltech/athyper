@@ -26,14 +26,22 @@ export type {
   JobsQueues,
 } from "./jobs.service.js";
 
-export { registerJobsRoutes, registerJobsAdminRoutes } from "./routes/index.js";
+export {
+  registerJobsRoutes,
+  registerJobsAdminRoutes,
+  registerJobsBoardRoutes,
+} from "./routes/index.js";
 export type { JobsAdminRouteDeps } from "./routes/index.js";
 
-export type { NotificationChannelHandler } from "./workers/notification.worker.js";
+export type { NotificationChannelHandler } from "@athyper/platform-notifications";
 export type { OutboxTopicHandler, OutboxEvent } from "./workers/domain-outbox.worker.js";
 
 export { createWfOutboxHandler } from "./handlers/wf-outbox.handler.js";
 export { createP2pNotificationOutboxHandler } from "./handlers/p2p-notification-outbox.handler.js";
+export {
+  createWebhookDeliveryWorker,
+  type WebhookDeliveryWorkerResult,
+} from "./workers/webhook-delivery.worker.js";
 
 export {
   QUEUE_NAME,

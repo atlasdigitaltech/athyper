@@ -38,6 +38,25 @@ interface Logger {
   warn(event: string, fields?: Record<string, unknown>): void;
 }
 
+/** Thrown when hasModuleAccess is called without a resolver wired — always a bug in middleware setup. */
+export class ModuleAccessMisconfiguredError extends Error {
+  constructor() {
+    super("ModuleAccessResolver not provided — middleware mounted without a resolver");
+    this.name = "ModuleAccessMisconfiguredError";
+  }
+}
+
+/** Thrown when the resolver call fails due to a transient infrastructure error. Callers should return 503. */
+export class ModuleAccessDegradedError extends Error {
+  readonly retryAfterSeconds: number;
+  constructor(cause: unknown, retryAfterSeconds = 5) {
+    super("Module access service temporarily unavailable");
+    this.name = "ModuleAccessDegradedError";
+    this.retryAfterSeconds = retryAfterSeconds;
+    if (cause instanceof Error) this.cause = cause;
+  }
+}
+
 export async function hasModuleAccess(
   db: AnyDb,
   tenantId: string | null,
@@ -47,7 +66,10 @@ export async function hasModuleAccess(
   logger: Logger | undefined,
   options?: ModuleAccessResolverOptions,
 ): Promise<boolean> {
-  if (!tenantId || !principalId || !moduleId || !resolver) return true;
+  if (resolver === undefined) {
+    throw new ModuleAccessMisconfiguredError();
+  }
+  if (!tenantId || !principalId || !moduleId) return false;
 
   // Shared-infrastructure bypass — workspaces flagged with
   // `is_shared_infrastructure=true` (e.g. CORE), or individual modules whose
@@ -64,8 +86,12 @@ export async function hasModuleAccess(
           w.is_shared_infrastructure
           OR coalesce((m.config->>'is_shared_infrastructure')::boolean, false)
         ) AS is_shared_infrastructure
-        FROM shared.module m
-        JOIN shared.workspace w ON w.id = m.workspace_id
+        FROM control.module m
+        JOIN control.workspace_module wm
+          ON wm.module_id = m.id
+         AND wm.is_primary
+         AND wm.status = 'active'
+        JOIN control.workspace w ON w.id = wm.workspace_id
         WHERE m.id::text = ${moduleId}
            OR lower(m.code) = lower(${moduleId})
         LIMIT 1
@@ -99,8 +125,6 @@ export async function hasModuleAccess(
       moduleId,
       err: String(err),
     });
-    // Fail-open: preserve request availability if module checks are temporarily
-    // degraded. Route-level 404 fallback stays reserved for hard negatives.
-    return true;
+    throw new ModuleAccessDegradedError(err);
   }
 }

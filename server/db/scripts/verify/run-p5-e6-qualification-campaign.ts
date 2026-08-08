@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+﻿#!/usr/bin/env tsx
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
@@ -30,7 +30,7 @@ async function status(target:typeof targets[number]){
  const client=new pg.Client({connectionString:target.url});await client.connect();
  try{
   const identity=await client.query<{database_name:string}>("select current_database() database_name");if(identity.rows[0]?.database_name!==target.database)throw new Error(`campaign database guard rejected ${target.plane}`);
-  const rows=await client.query<{operation_key:string;sample_count:string;mismatch_count:string;candidate_error_count:string;observed_from:Date;observed_through:Date;qualifies_default:boolean}>(`select b.operation_key,q.sample_count::text,q.mismatch_count::text,q.candidate_error_count::text,q.observed_from,q.observed_through,q.qualifies_default from authz.entity_operation_scope_binding b join ops.authorization_shadow_qualification_v q on q.plane_code=b.plane_code and q.entity_code=b.entity_code and q.source_entity_operation_id=b.source_entity_operation_id and q.source_release_hash=b.source_release_hash and q.source_artifact_hash=b.source_compiled_hash where b.plane_code=$1 and b.status='published' and b.tenant_id is null order by b.operation_key`,[target.plane]);
+  const rows=await client.query<{operation_key:string;sample_count:string;mismatch_count:string;candidate_error_count:string;observed_from:Date;observed_through:Date;qualifies_default:boolean}>(`select b.operation_key,q.sample_count::text,q.mismatch_count::text,q.candidate_error_count::text,q.observed_from,q.observed_through,q.qualifies_default from authz.entity_operation_binding b join ops.authorization_shadow_qualification_v q on q.plane_code=b.plane_code and q.entity_code=b.entity_code and q.source_entity_operation_id=b.source_entity_operation_id and q.source_release_hash=b.source_release_hash and q.source_artifact_hash=b.source_compiled_hash where b.plane_code=$1 and b.status='published' and b.tenant_id is null order by b.operation_key`,[target.plane]);
   return {plane:target.plane,operations:rows.rows.map(row=>({...row,sample_count:Number(row.sample_count),mismatch_count:Number(row.mismatch_count),candidate_error_count:Number(row.candidate_error_count)}))};
  }finally{await client.end()}
 }

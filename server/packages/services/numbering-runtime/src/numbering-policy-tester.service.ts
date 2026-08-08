@@ -115,23 +115,7 @@ export class NumberingPolicyTester {
           }
         : undefined;
 
-      const firstStep    = sequence[0];
-      const legacyPreview = firstStep
-        ? {
-            formattedNumber:    firstStep.formattedNumber,
-            sequenceText:       firstStep.sequenceText,
-            nextValue:          firstStep.allocatedValue,
-            followingValue:     firstStep.followingValue,
-            resetBucket:        firstStep.resetBucket,
-            displayResetBucket: firstStep.resetBucket,
-          }
-        : (() => {
-            // Fallback preview if simulate failed
-            try {
-              const { previewNumberingPolicy } = await import("@athyper/numbering-contracts");
-              return previewNumberingPolicy(policy, effectiveCtx);
-            } catch { return undefined; }
-          })();
+      const firstStep = sequence[0];
 
       // Sync fallback — compute inline if no sequence
       let safeLegacyPreview;

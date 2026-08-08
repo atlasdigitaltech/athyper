@@ -20,9 +20,9 @@
  *   hmac_sha256              → X-Signature: sha256=HMAC(body, secret)
  */
 
-import type { CredentialEncryptionService } from "@athyper/foundation-crypto";
-import type { CircuitBreaker } from "@athyper/foundation-kernel/resilience";
-import { withRetry } from "@athyper/foundation-kernel/resilience";
+import type { CredentialEncryptionService } from "@athyper/server-foundation/crypto";
+import type { CircuitBreaker } from "@athyper/server-foundation/kernel/resilience";
+import { withRetry } from "@athyper/server-foundation/kernel/resilience";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

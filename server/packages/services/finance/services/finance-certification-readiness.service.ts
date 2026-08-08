@@ -123,10 +123,10 @@ export async function loadCompanyCertificationReadiness(
           AND (policy.company_code_id IS NULL OR policy.company_code_id=${company.id}::uuid)
         ORDER BY (policy.company_code_id IS NOT NULL) DESC,policy.effective_from DESC LIMIT 1
       ), material AS (
-        SELECT max(activity.created_at) AS changed_at FROM log.activity_log activity
-        WHERE activity.tenant_id=${tenantId}::uuid AND activity.domain='finance_setup'
-          AND (activity.company_code_id IS NULL OR activity.company_code_id=${company.id}::uuid)
-          AND activity.activity_type NOT IN (
+        SELECT max(activity.occurred_at) AS changed_at FROM audit.audit_log activity
+        WHERE activity.tenant_id=${tenantId}::uuid AND activity.context->>'domain'='finance_setup'
+          AND (activity.context->>'company_code_id' IS NULL OR activity.context->>'company_code_id'=${company.id}::text)
+          AND activity.context->>'activity_type' NOT IN (
             'finance_setup.fx_rate_created',
             'finance_setup.fx_rate_replaced',
             'finance_setup.fx_rates_imported'

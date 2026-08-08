@@ -88,10 +88,9 @@ SELECT
     occurred_at AS created_at
 FROM audit.audit_log
 WHERE event_contract_code IN (
-    'document_business_event',
-    'attachment_access_event',
-    'workflow_business_event',
-    'accounting_business_event'
+    'entity_business_event',
+    'entity_access_event',
+    'inbox_routing_event'
 );
 
 CREATE VIEW audit.entity_lifecycle_timeline
@@ -118,7 +117,7 @@ SELECT
     correlation_id,
     occurred_at AS created_at
 FROM audit.audit_log
-WHERE event_contract_code = 'document_business_event'
+WHERE event_contract_code = 'entity_business_event'
   AND (
       context ? 'lifecycle_id'
       OR (old_values ? 'status' AND new_values ? 'status')
@@ -149,7 +148,7 @@ SELECT
     trace_id,
     occurred_at AS created_at
 FROM audit.audit_log
-WHERE event_contract_code = 'workflow_business_event';
+WHERE event_contract_code = 'inbox_routing_event';
 
 COMMENT ON VIEW audit.resolution_pipeline IS
   'Canonical resolution evidence projection replacing log.v_resolution_pipeline.';

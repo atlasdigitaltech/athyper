@@ -3,7 +3,7 @@ export {
   BADGE_KIND_VARIANT,
   BADGE_KIND_LABEL,
   type BadgeKind,
-  type BadgeVariant,
+  type RecordBadgeVariant,
 } from "./record-badge";
 export {
   DataTable,

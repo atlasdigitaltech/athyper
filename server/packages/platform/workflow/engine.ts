@@ -8,13 +8,14 @@
  *   - evaluateQuorum: advance or close stages after each action
  *   - getInbox / getInboxCount: actor's pending work_items
  *   - getRequestDetail: full approval context for a request
- *   - getActivity: workflow_event_log for a request
+ *   - getActivity: audit.audit_log (inbox_routing_event) for a request
  *
  * DB constraint relied upon:
  *   wreq_one_pending_per_entity_uix  — one pending workflow_request per entity.
  *   The engine checks for an existing pending request before inserting (idempotent).
  */
 
+import { appendAuditEvent, Inbox } from "@athyper/svc-audit";
 import { emitOutboxEvent } from "@athyper/svc-shared";
 import { sql, type Kysely, type Transaction } from "kysely";
 import { evaluateRuntimeCondition } from "./gate-evaluator.js";
@@ -1431,26 +1432,38 @@ export class WorkflowEngine {
     limit?: number;
   }): Promise<unknown[]> {
     const { requestId, tenantId, limit = 100 } = params;
-    return this.db
-      .selectFrom("log.workflow_event_log as wel")
-      .select([
-        "wel.id",
-        "wel.event_type as eventType",
-        "wel.from_status as fromStatus",
-        "wel.to_status as toStatus",
-        "wel.action",
-        "wel.actor_id as actorId",
-        "wel.comment",
-        "wel.severity",
-        "wel.detail",
-        "wel.transition_name as transitionName",
-        "wel.created_at as createdAt",
-      ])
-      .where("wel.tenant_id", "=", tenantId)
-      .where("wel.instance_id", "=", requestId)
-      .orderBy("wel.created_at", "asc")
-      .limit(limit)
-      .execute();
+    const result = await sql<{
+      id:                 string;
+      eventType:          string | null;
+      fromStatus:         string | null;
+      toStatus:           string | null;
+      action:             string | null;
+      actorId:            string | null;
+      comment:            string | null;
+      severity:           string | null;
+      detail:             unknown;
+      transitionName:     string | null;
+      createdAt:          string | Date;
+    }>`
+      SELECT id,
+             context->>'workflow_event_type'  AS "eventType",
+             old_values->>'status'            AS "fromStatus",
+             new_values->>'status'            AS "toStatus",
+             context->>'action'               AS "action",
+             actor_principal_id               AS "actorId",
+             context->>'comment'              AS "comment",
+             context->>'severity'             AS "severity",
+             context->'detail'                AS "detail",
+             context->>'transition_name'      AS "transitionName",
+             occurred_at                      AS "createdAt"
+      FROM   audit.audit_log
+      WHERE  tenant_id             = ${tenantId}::uuid
+        AND  event_contract_code   = 'inbox_routing_event'
+        AND  context->>'instance_id' = ${requestId}
+      ORDER  BY occurred_at ASC
+      LIMIT  ${limit}
+    `.execute(this.db);
+    return result.rows;
   }
 
   // ── logEvent ───────────────────────────────────────────────────────────────
@@ -1474,35 +1487,24 @@ export class WorkflowEngine {
       detail?: Record<string, unknown>;
     },
   ): Promise<void> {
-    try {
-      await trx
-        .insertInto("log.workflow_event_log" as never)
-        .values({
-          tenant_id: params.tenantId,
-          event_type: params.eventType,
-          severity: "info",
-          instance_id: params.instanceId,
-          step_instance_id: params.stepInstanceId ?? null,
-          entity_type: params.entityType,
-          entity_id: params.entityId,
-          actor_id: params.actorId ?? null,
-          from_status: params.fromStatus ?? null,
-          to_status: params.toStatus ?? null,
-          action: params.action ?? null,
-          comment: params.comment ?? null,
-          detail: params.detail ? JSON.stringify(params.detail) : null,
-          correlation_id: params.correlationId ?? null,
-          created_at: new Date(),
-          created_by: params.actorId ?? SYSTEM_ACTOR,
-        } as never)
-        .execute();
-    } catch (err) {
-      // Log errors must not fail the main transaction
-      this.deps.logger?.error("workflow_log_event_failed", {
-        eventType: params.eventType,
-        err: String(err),
-      });
-    }
+    void appendAuditEvent(trx, {
+      event_code:     eventTypeToInboxCode(params.eventType),
+      operation:      "execute",
+      entity_type:    params.entityType,
+      entity_id:      params.entityId,
+      old_values:     params.fromStatus ? { status: params.fromStatus } : null,
+      new_values:     params.toStatus   ? { status: params.toStatus }   : null,
+      correlation_id: params.correlationId ?? null,
+      context: {
+        workflow_event_type: params.eventType,
+        instance_id:         params.instanceId,
+        step_instance_id:    params.stepInstanceId ?? null,
+        action:              params.action ?? null,
+        comment:             params.comment ?? null,
+        severity:            "info",
+        detail:              params.detail ?? null,
+      },
+    });
   }
 }
 
@@ -1537,6 +1539,17 @@ function isKyselyTransaction(db: unknown): boolean {
 function parseJsonValue(value: unknown): unknown {
   if (typeof value !== "string") return value;
   try { return JSON.parse(value); } catch { return value; }
+}
+
+function eventTypeToInboxCode(eventType: string): string {
+  if (
+    eventType === "request_created" ||
+    eventType === "stage_activated"  ||
+    eventType === "item_reassigned"
+  ) return Inbox.ASSIGNED;
+  if (eventType === "request_completed" || eventType === "stage_completed") return Inbox.ACTION_TAKEN;
+  if (eventType.startsWith("item_")) return Inbox.ACTION_TAKEN;
+  return Inbox.ACTION_TAKEN;
 }
 
 async function setTransactionPrincipal(

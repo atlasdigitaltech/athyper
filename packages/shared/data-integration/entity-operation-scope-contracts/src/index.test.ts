@@ -13,9 +13,7 @@ const base: EntityOperationScopeBindingContract = {
   tenantId: null,
   sourceEntityId: "019fc300-0000-7000-8000-000000000002",
   sourceEntityOperationId: "019fc300-0000-7000-8000-000000000003",
-  sourceReleaseId: "019fc300-0000-7000-8000-000000000004",
   sourceReleaseHash: "a".repeat(64),
-  sourceCompiledArtifactId: "019fc300-0000-7000-8000-000000000005",
   sourceCompiledHash: "b".repeat(64),
   entityCode: "purchase_invoice",
   operationKey: "create",
@@ -25,7 +23,6 @@ const base: EntityOperationScopeBindingContract = {
   coordinateSource: "request_field",
   coordinateKey: "company_code_id",
   resolverKey: null,
-  missingValueBehavior: "deny",
   status: "published",
 };
 
@@ -39,9 +36,7 @@ describe("Entity operation scope binding contract", () => {
       ...base,
       decisionMode: "collection",
       coordinateSource: "record_field",
-      missingValueBehavior: "allow" as "deny",
     })).toEqual(expect.arrayContaining([
-      "missing_value_behavior.must_deny",
       "collection.coordinate_source_invalid",
     ]));
   });
@@ -63,7 +58,6 @@ describe("Entity operation scope binding contract", () => {
           plane_filter: ["neon"],
           authorization: {
             decision_mode: "entity_resource",
-            missing_value_behavior: "deny",
             bindings: [{
               scope_kind: "tenant",
               coordinate_source: "tenant_context",
@@ -85,7 +79,6 @@ describe("Entity operation scope binding contract", () => {
       targetPlane: "neon",
       operationKey: "update",
       permissionCode: "neon.business_partner.update",
-      missingValueBehavior: "deny",
     })]);
   });
 
@@ -93,7 +86,7 @@ describe("Entity operation scope binding contract", () => {
     for(const plane of ["neon","mesh"] as const){
       expect(validateCrossPlaneEntityArtifact({artifact_schema_code:"athyper.meta-entity-plane-artifact",
         artifact_schema_version:"1.1",plane,source:{entity_id:base.sourceEntityId,entity_code:"business_partner",
-          release_id:base.sourceReleaseId,release_hash:base.sourceReleaseHash,revision_id:base.bindingId,
+          release_id:"019fc300-0000-7000-8000-000000000004",release_hash:base.sourceReleaseHash,revision_id:base.bindingId,
           revision_hash:"c".repeat(64),contract_hash:"d".repeat(64)},activation_contract:operationScopeActivationContract(plane),
         contract:{operations:[],operation_scope_bindings:[]},operation_scope_bindings:[]})).toEqual([]);
     }

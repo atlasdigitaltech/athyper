@@ -78,8 +78,9 @@ BEGIN
       v_parallel_approver_1_id, v_parallel_approver_2_id, v_serial_approver_id;
   END IF;
 
-  PERFORM set_config('app.current_tenant_id', v_tenant_id::text, true);
+  PERFORM set_config('app.current_tenant_id',   v_tenant_id::text, true);
   PERFORM set_config('app.current_principal_id', v_admin_id::text, true);
+  PERFORM set_config('app.database_plane',       'neon',            true);
 
   SELECT cc.id
     INTO v_company_code_id
@@ -1349,62 +1350,50 @@ BEGIN
           updated_at = v_anchor + interval '5 hours'
       WHERE id = v_invoice_id;
 
-      INSERT INTO log.workflow_event_log (
-        tenant_id,
-        event_type,
-        severity,
-        instance_id,
-        step_instance_id,
-        workflow_template_code,
-        entity_type,
-        entity_id,
-        actor_id,
-        from_status,
-        to_status,
-        transition_name,
-        action,
-        previous_state,
-        new_state,
-        comment,
-        detail,
-        created_by,
-        created_at
-      )
-      VALUES (
-        v_tenant_id,
-        'workflow.transition',
-        'info',
-        v_workflow_request_id::text,
-        v_workflow_stage_id::text,
-        'TEST_INVOICE_APPROVAL',
+      PERFORM set_config('app.current_tenant_id',    v_tenant_id::text, true);
+      PERFORM set_config('app.current_principal_id', v_admin_id::text,  true);
+      PERFORM audit.append_event(
+        'inbox.action_taken',
+        'execute'::audit.operation_d,
         'purchase_invoice',
         v_invoice_id,
-        v_admin_id,
-        'draft',
-        r.workflow_status,
-        CASE WHEN r.idx = 2 THEN 'Level 1 Parallel Approval' ELSE 'Invoice Approval' END,
-        COALESCE(r.workflow_decision, 'submit'),
+        'success'::audit.outcome_d,
+        'info'::audit.event_severity_d,
+        'tenant',
+        NULL::uuid,
+        NULL::uuid,
+        NULL,
         jsonb_build_object('status', 'draft'),
         jsonb_build_object(
           'status', r.workflow_status,
-          'stage', r.stage_status,
+          'stage',  r.stage_status,
           'currentStage', CASE WHEN r.idx = 2 THEN 'Level 1 Parallel Approval' ELSE 'Invoice Approval' END
         ),
-        CASE WHEN r.idx = 2 THEN 'Waiting for level 1 parallel approvals - due tomorrow' ELSE 'Test invoice workflow state seeded.' END,
+        NULL::text[],
         jsonb_build_object(
-          'seed', 'TestInvoice.sql',
-          'invoiceNumber', r.code,
-          'approvalTopology', CASE
-            WHEN r.idx = 2 THEN jsonb_build_object(
-              'mode', 'parallel_then_serial',
-              'activeStage', 'Level 1 Parallel Approval',
-              'pendingParallelApprovers', jsonb_build_array('athq.admin', 'athq.manager'),
-              'nextSerialApprover', 'athq.owner'
-            )
-            ELSE jsonb_build_object('mode', 'single_stage')
-          END
+          'workflow_event_type', 'workflow.transition',
+          'instance_id',         v_workflow_request_id::text,
+          'step_instance_id',    v_workflow_stage_id::text,
+          'action',              COALESCE(r.workflow_decision, 'submit'),
+          'comment',             CASE WHEN r.idx = 2 THEN 'Waiting for level 1 parallel approvals - due tomorrow' ELSE 'Test invoice workflow state seeded.' END,
+          'severity',            'info',
+          'transition_name',     CASE WHEN r.idx = 2 THEN 'Level 1 Parallel Approval' ELSE 'Invoice Approval' END,
+          'detail',              jsonb_build_object(
+            'seed',              'TestInvoice.sql',
+            'invoiceNumber',     r.code,
+            'approvalTopology',  CASE
+              WHEN r.idx = 2 THEN jsonb_build_object(
+                'mode',                     'parallel_then_serial',
+                'activeStage',              'Level 1 Parallel Approval',
+                'pendingParallelApprovers', jsonb_build_array('athq.admin', 'athq.manager'),
+                'nextSerialApprover',       'athq.owner'
+              )
+              ELSE jsonb_build_object('mode', 'single_stage')
+            END
+          )
         ),
-        v_admin_id,
+        NULL::uuid,
+        NULL,
         v_anchor + interval '5 hours'
       );
     END IF;
@@ -1828,46 +1817,29 @@ BEGIN
       v_anchor + interval '10 hours'
     );
 
-    INSERT INTO log.activity_log (
-      tenant_id,
-      domain,
-      activity_type,
-      entity_type,
-      entity_id,
-      actor_id,
-      company_code_id,
-      detail,
-      correlation_id,
-      created_by,
-      created_at
-    )
-    VALUES
-      (
-        v_tenant_id,
-        'document',
-        'document.created',
-        'purchase_invoice',
-        v_invoice_id,
-        v_admin_id,
-        v_company_code_id,
-        jsonb_build_object('seed', 'TestInvoice.sql', 'invoiceNumber', r.code, 'version', 1),
-        v_invoice_id,
-        v_admin_id,
-        v_anchor
+    PERFORM audit.append_event(
+      'record.created', 'create'::audit.operation_d, 'purchase_invoice', v_invoice_id,
+      DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT,
+      NULL, NULL, NULL,
+      jsonb_build_object(
+        'domain', 'document', 'activity_type', 'document.created',
+        'company_code_id', v_company_code_id::text,
+        'seed', 'TestInvoice.sql', 'invoiceNumber', r.code, 'version', 1
       ),
-      (
-        v_tenant_id,
-        'document',
-        'document.updated',
-        'purchase_invoice',
-        v_invoice_id,
-        v_admin_id,
-        v_company_code_id,
-        jsonb_build_object('seed', 'TestInvoice.sql', 'invoiceNumber', r.code, 'fromStatus', 'draft', 'toStatus', r.status, 'version', 2),
-        v_invoice_id,
-        v_admin_id,
-        v_anchor + interval '10 hours'
-      );
+      v_invoice_id, NULL, v_anchor
+    );
+    PERFORM audit.append_event(
+      'record.updated', 'update'::audit.operation_d, 'purchase_invoice', v_invoice_id,
+      DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT,
+      NULL, NULL, NULL,
+      jsonb_build_object(
+        'domain', 'document', 'activity_type', 'document.updated',
+        'company_code_id', v_company_code_id::text,
+        'seed', 'TestInvoice.sql', 'invoiceNumber', r.code,
+        'fromStatus', 'draft', 'toStatus', r.status, 'version', 2
+      ),
+      v_invoice_id, NULL, v_anchor + interval '10 hours'
+    );
 
     RAISE NOTICE 'Created invoice % in status %.', r.code, r.status;
   END LOOP;

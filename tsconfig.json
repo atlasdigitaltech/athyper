@@ -1,8 +1,5 @@
 {
-  "extends": "./packages/shared/data-integration/config/tsconfig.base.json",
-  "compilerOptions": {
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0"
-  },
+  "extends": "./packages/tooling/config/tsconfig-base.json",
+  "files": [],
   "exclude": ["node_modules", "dist", ".next", "coverage", "server"]
 }

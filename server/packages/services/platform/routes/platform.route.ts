@@ -39,6 +39,12 @@ import type { RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import {
+  createAdminDashboardProvider,
+  createNeonDashboardProvider,
+  createMeshDashboardProvider,
+  type DashboardQueryProvider,
+} from "./dashboard-providers.js";
+import {
   verifyBearer,
   resolveTenantId,
   isUuid,
@@ -52,6 +58,12 @@ import { addFxRate, FinanceFxError, replaceFxRate } from "@athyper/svc-finance";
 export interface PlatformRoutesDeps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   db: Kysely<any>;
+  /** Admin (athyper_platform) database — used exclusively by the admin dashboard provider. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  platformDb?: Kysely<any>;
+  /** Mesh database — used exclusively by the mesh dashboard provider. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  meshDb?: Kysely<any>;
   auth: {
     verifyToken(token: string): Promise<Record<string, unknown>>;
   };
@@ -608,6 +620,12 @@ function toEntity(row: Record<string, any>) {
 
 export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps): Router {
   const { db, auth, logger, cache, deprecation, featureFlags } = deps;
+
+  const dashboardProviders: Record<string, DashboardQueryProvider> = {
+    admin: createAdminDashboardProvider(deps.platformDb ?? db),
+    neon: createNeonDashboardProvider(db),
+    mesh: createMeshDashboardProvider(deps.meshDb ?? db),
+  };
 
   // Wraps a canonical handler so every hit on a deprecated alias surface (a) is
   // counted in telemetry and (b) responds with RFC 8594 deprecation headers
@@ -1282,124 +1300,18 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const generatedAt = new Date();
       const staleAt = new Date(generatedAt.getTime() + 60_000);
 
-      type WidgetData = { value: number | string; detail?: string; href?: string } | {
-        items: Array<{ id: string; title: string; detail?: string; status?: string; href?: string; occurredAt?: string }>;
-        total?: number;
-        href?: string;
-      };
-      const tasks: Record<string, () => Promise<WidgetData>> = {};
-      const count = async (query: ReturnType<typeof sql<{ value: string }>>, detail: string, href?: string): Promise<WidgetData> => {
-        const result = await query.execute(db);
-        return { value: Number(result.rows[0]?.value ?? 0), detail, ...(href ? { href } : {}) };
-      };
-
-      if (plane === "admin") {
-        tasks["tenant-health"] = () => count(
-          sql<{ value: string }>`select count(*)::text as value from master.tenant_module_subscription where tenant_id = ${tenantId} and status in ('active','trial')`,
-          "Active and trial module subscriptions",
-          "/setup",
-        );
-        tasks["security-actions"] = () => count(
-          sql<{ value: string }>`select count(*)::text as value from master.principal_identity_binding where tenant_id = ${tenantId} and (cardinality(required_actions) > 0 or sync_status in ('drift','error','disabled') or not idp_enabled)`,
-          "Identity bindings requiring review",
-          "/inbox?view=security",
-        );
-        tasks["failed-jobs"] = () => count(
-          sql<{ value: string }>`select count(*)::text as value from log.job_log where tenant_id = ${tenantId} and status in ('failed','timeout') and created_at >= now() - interval '24 hours'`,
-          "Failed or timed-out jobs in the last 24 hours",
-          "/jobs",
-        );
-        tasks["notification-health"] = () => count(
-          sql<{ value: string }>`select count(*)::text as value from event.notification_delivery where tenant_id = ${tenantId} and status in ('failed','bounced') and created_at >= now() - interval '24 hours'`,
-          "Failed or bounced deliveries in the last 24 hours",
-          "/notifications",
-        );
-        tasks["support-grants"] = () => count(
-          sql<{ value: string }>`select count(*)::text as value from master.tenant_relationship where to_tenant_id = ${tenantId} and status = 'active' and relationship_type in ('platform_support','implementation') and (effective_until is null or effective_until > now())`,
-          "Active support and implementation relationships",
-          "/setup/access",
-        );
-        tasks["privileged-activity"] = async () => {
-          const result = await sql<{ id: string; operation: string; created_at: Date; entity_type: string }>`
-            select id::text, operation, created_at, entity_type from log.audit_log
-            where tenant_id = ${tenantId} order by created_at desc limit 6
-          `.execute(db);
-          return { items: result.rows.map((row) => ({ id: row.id, title: row.operation, detail: row.entity_type, occurredAt: row.created_at.toISOString(), href: "/audit" })) };
-        };
-        tasks["metadata-drift"] = () => count(
-          sql<{ value: string }>`select count(*)::text as value from control.entity_version where tenant_id = ${tenantId} and status in ('DRAFT','IN_REVIEW')`,
-          "Metadata definitions not yet published",
-          "/setup/metadata",
-        );
-      } else if (plane === "neon") {
-        tasks["assigned-work"] = () => principalId
-          ? count(sql<{ value: string }>`select count(*)::text as value from event.work_item where tenant_id = ${tenantId} and assignee_id = ${principalId} and status in ('assigned','in_progress','escalated')`, "Assigned work requiring attention", "/inbox")
-          : Promise.resolve({ items: [] });
-        tasks["pending-approvals"] = () => principalId
-          ? count(sql<{ value: string }>`select count(*)::text as value from event.work_item where tenant_id = ${tenantId} and assignee_id = ${principalId} and task_type = 'approval' and status in ('assigned','in_progress')`, "Approval decisions pending", "/inbox?view=assigned")
-          : Promise.resolve({ items: [] });
-        tasks["finance-exceptions"] = () => count(
-          sql<{ value: string }>`select count(*)::text as value from event.work_item where tenant_id = ${tenantId} and status = 'escalated' and metadata->>'workspace' = 'finance'`,
-          "Escalated finance and close items",
-          "/workbench/finance/readiness",
-        );
-        tasks["invoice-exceptions"] = () => count(
-          sql<{ value: string }>`select count(*)::text as value from document.workflow_request where tenant_id = ${tenantId} and status in ('rejected','escalated') and entity_type in ('purchase_invoice','purchase_order')`,
-          "Invoice and purchasing workflow exceptions",
-          "/app/purchase_invoice",
-        );
-        tasks["recent-documents"] = async () => {
-          const result = await sql<{ id: string; entity_type: string; entity_id: string; status: string; created_at: Date }>`
-            select id::text, entity_type, entity_id, status, created_at from document.workflow_request
-            where tenant_id = ${tenantId} order by created_at desc limit 6
-          `.execute(db);
-          return { items: result.rows.map((row) => ({ id: row.id, title: `${row.entity_type} ${row.entity_id}`, status: row.status, occurredAt: row.created_at.toISOString(), href: `/inbox/${row.id}` })) };
-        };
-        tasks["frequent-saved-views"] = async () => {
-          const result = await sql<{ id: string; name: string; entity_code: string }>`
-            select id::text, name, entity_code from master.saved_view
-            where tenant_id = ${tenantId} and status = 'active'
-              and (scope in ('shared','system') or owner_principal_id = ${principalId})
-            order by updated_at desc nulls last, created_at desc limit 6
-          `.execute(db);
-          return { items: result.rows.map((row) => ({ id: row.id, title: row.name, detail: row.entity_code, href: "/saved-views" })) };
-        };
-        tasks["setup-readiness"] = () => count(
-          sql<{ value: string }>`select count(*)::text as value from master.tenant_module_subscription where tenant_id = ${tenantId} and status = 'active'`,
-          "Enabled modules contributing to tenant readiness",
-          "/finance/setup",
-        );
-      } else {
-        const account = xOrg;
-        const related = sql`(buyer_account_code = ${account} or supplier_account_code = ${account})`;
-        tasks["active-connections"] = () => count(sql<{ value: string }>`select count(*)::text as value from mesh.network_relationship where ${related} and status = 'active'`, "Active buyer-supplier relationships", "/connections");
-        tasks["inbound-envelopes"] = () => count(sql<{ value: string }>`select count(*)::text as value from mesh.document_envelope where receiver_account_code = ${account} and received_at >= now() - interval '24 hours'`, "Inbound envelopes in the last 24 hours", "/app/document_envelope");
-        tasks["outbound-envelopes"] = () => count(sql<{ value: string }>`select count(*)::text as value from mesh.document_envelope where sender_account_code = ${account} and received_at >= now() - interval '24 hours'`, "Outbound envelopes in the last 24 hours", "/app/document_envelope");
-        tasks["awaiting-ack"] = () => count(sql<{ value: string }>`select count(*)::text as value from mesh.document_envelope where sender_account_code = ${account} and status in ('received','validated','routed')`, "Envelopes awaiting acknowledgement", "/inbox");
-        tasks["failed-exchanges"] = () => count(sql<{ value: string }>`select count(*)::text as value from mesh.document_envelope where (sender_account_code = ${account} or receiver_account_code = ${account}) and status in ('failed','rejected')`, "Failed or rejected exchanges", "/inbox?view=escalated");
-        tasks["delivery-sla"] = () => count(sql<{ value: string }>`select count(*)::text as value from mesh.outbox_event where account_code = ${account} and status in ('pending','failed') and available_at < now() - interval '15 minutes'`, "Deliveries outside the 15-minute processing target", "/workbench");
-        tasks["onboarding-status"] = () => count(sql<{ value: string }>`select count(*)::text as value from mesh.connection_request where (buyer_account_code = ${account} or supplier_account_code = ${account}) and status = 'requested'`, "Connection requests awaiting onboarding action", "/connections");
-        tasks["recent-exchange-documents"] = async () => {
-          const result = await sql<{ id: string; envelope_code: string; document_type: string; status: string; received_at: Date }>`
-            select id::text, envelope_code, document_type, status, received_at from mesh.document_envelope
-            where sender_account_code = ${account} or receiver_account_code = ${account}
-            order by received_at desc limit 6
-          `.execute(db);
-          return { items: result.rows.map((row) => ({ id: row.id, title: row.envelope_code, detail: row.document_type, status: row.status, occurredAt: row.received_at.toISOString(), href: `/app/document_envelope/${row.id}` })) };
-        };
-      }
-
+      const provider = dashboardProviders[plane] ?? dashboardProviders["neon"]!;
+      const kpiData = await provider.getKpiData(tenantId, { principalId, accountCode: xOrg });
       const widgets: Record<string, unknown> = {};
-      await Promise.all(Object.entries(tasks).map(async ([id, task]) => {
-        try {
-          const data = await task();
+      for (const [id, data] of Object.entries(kpiData)) {
+        if (data === null) {
+          logger?.error("dashboard_widget_error", { plane, widget: id, err: "SOURCE_UNAVAILABLE" });
+          widgets[id] = { id, state: "failed", generatedAt: generatedAt.toISOString(), staleAt: staleAt.toISOString(), error: "SOURCE_UNAVAILABLE" };
+        } else {
           const empty = "items" in data && data.items.length === 0;
           widgets[id] = { id, state: empty ? "empty" : "ready", data, generatedAt: generatedAt.toISOString(), staleAt: staleAt.toISOString() };
-        } catch (error) {
-          logger?.error("dashboard_widget_error", { plane, widget: id, err: String(error) });
-          widgets[id] = { id, state: "failed", generatedAt: generatedAt.toISOString(), staleAt: staleAt.toISOString(), error: "SOURCE_UNAVAILABLE" };
         }
-      }));
+      }
       const payload = {
         plane,
         scopeKey: `${tenantId}:${xOrg}`,
@@ -1439,7 +1351,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const unrestricted = roles.includes("platform-admin") || roles.includes("tenant-admin");
       const moduleRows = await sql<{ code: string }>`
         select m.code from master.tenant_module_subscription tms
-        join shared.module m on m.id = tms.module_id
+        join control.module m on m.id = tms.module_id
         where tms.tenant_id = ${tenantId} and tms.status in ('active','trial')
       `.execute(db);
       const modules = new Set(moduleRows.rows.map((row) => row.code));
@@ -1570,7 +1482,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       const unrestricted = roles.includes("platform-admin") || roles.includes("tenant-admin");
       const moduleRows = await sql<{ code: string }>`
         select m.code from master.tenant_module_subscription tms
-        join shared.module m on m.id = tms.module_id
+        join control.module m on m.id = tms.module_id
         where tms.tenant_id = ${tenantId} and tms.status in ('active','trial')
       `.execute(db);
       const modules = new Set(moduleRows.rows.map((row) => row.code));
@@ -2605,19 +2517,19 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
 
       const [homeWorkspace, homeModule] = await Promise.all([
         homeWorkspaceCode
-          ? db.selectFrom("shared.workspace as w").select("w.code").where("w.code", "=", homeWorkspaceCode).executeTakeFirst()
+          ? db.selectFrom("control.workspace as w").select("w.code").where("w.code", "=", homeWorkspaceCode).executeTakeFirst()
           : Promise.resolve(null),
         homeModuleCode
-          ? db.selectFrom("shared.module as m").select("m.code").where("m.code", "=", homeModuleCode).executeTakeFirst()
+          ? db.selectFrom("control.module as m").select("m.code").where("m.code", "=", homeModuleCode).executeTakeFirst()
           : Promise.resolve(null),
       ]);
 
       if (homeWorkspaceCode && !homeWorkspace) {
-        res.status(400).json({ error: "VALIDATION_ERROR", message: "home_workspace_code must match shared.workspace.code", field: "home_workspace_code", value: homeWorkspaceCode });
+        res.status(400).json({ error: "VALIDATION_ERROR", message: "home_workspace_code must match control.workspace.code", field: "home_workspace_code", value: homeWorkspaceCode });
         return;
       }
       if (homeModuleCode && !homeModule) {
-        res.status(400).json({ error: "VALIDATION_ERROR", message: "home_module_code must match shared.module.code", field: "home_module_code", value: homeModuleCode });
+        res.status(400).json({ error: "VALIDATION_ERROR", message: "home_module_code must match control.module.code", field: "home_module_code", value: homeModuleCode });
         return;
       }
 
@@ -2950,7 +2862,7 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
           .where("tp.tenant_id", "=", tenantId)
           .executeTakeFirst(),
         db.selectFrom("master.tenant_module_subscription as ms")
-          .innerJoin("shared.module as m", "m.id", "ms.module_id")
+          .innerJoin("control.module as m", "m.id", "ms.module_id")
           .select(["m.code as module_code", "m.name as module_name", "ms.status", "ms.subscribed_at"])
           .where("ms.tenant_id", "=", tenantId)
           .execute(),
@@ -3307,8 +3219,8 @@ export function registerPlatformRoutes(router: Router, deps: PlatformRoutesDeps)
       }
 
       const [modules, permissions, features] = await Promise.all([
-        db.selectFrom("shared.plan_module_access as pma")
-          .innerJoin("shared.module as m", "m.id" as never, "pma.module_id" as never)
+        db.selectFrom("control.subscription_plan_module as pma")
+          .innerJoin("control.module as m", "m.id" as never, "pma.module_id" as never)
           .where("pma.plan_id" as never, "=", planId as never)
           .select(["m.id", "m.code", "m.name", "pma.access_level"] as never[])
           .orderBy("m.code" as never, "asc")

@@ -1,5 +1,5 @@
 import { Redis, type Redis as RedisType, type RedisOptions } from "ioredis";
-import type { InfraLogger } from "@athyper/platform-core/logger";
+import type { Logger as InfraLogger } from "@athyper/server-foundation/observability";
 
 // ─── Per-event throttle ───────────────────────────────────────────────────────
 //

@@ -1,4 +1,4 @@
-#!/usr/bin/env tsx
+﻿#!/usr/bin/env tsx
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -38,7 +38,7 @@ for(const target of urls){
  try{
   const identity=await client.query<{database_name:string}>("select current_database() database_name");if(identity.rows[0]?.database_name!==target.database)throw new Error(`P5-E7 database guard rejected ${target.plane}`);
   const expected=activation.operations.filter(item=>item.plane===target.plane);
-  const published=await client.query<{operation_key:string;source_entity_operation_id:string;source_release_hash:string;source_artifact_hash:string}>(`select distinct b.operation_key,b.source_entity_operation_id::text,b.source_release_hash,b.source_compiled_hash source_artifact_hash from authz.entity_operation_scope_binding b where b.plane_code=$1 and b.status='published' and b.tenant_id is null`,[target.plane]);
+  const published=await client.query<{operation_key:string;source_entity_operation_id:string;source_release_hash:string;source_artifact_hash:string}>(`select distinct b.operation_key,b.source_entity_operation_id::text,b.source_release_hash,b.source_compiled_hash source_artifact_hash from authz.entity_operation_binding b where b.plane_code=$1 and b.status='published' and b.tenant_id is null`,[target.plane]);
   const rollout=await client.query<{source_entity_operation_id:string;source_release_hash:string;source_artifact_hash:string;mode:string;certification_status:string|null;activated_at:Date|null}>(`select r.source_entity_operation_id::text,r.source_release_hash,r.source_artifact_hash,r.mode,c.status certification_status,r.activated_at from ops.authorization_operation_rollout r left join ops.authorization_parity_certification c on c.id=r.certification_id where r.plane_code=$1`,[target.plane]);
   const drills=await client.query<{source_entity_operation_id:string;source_release_hash:string;source_artifact_hash:string}>(`select source_entity_operation_id::text,source_release_hash,source_artifact_hash from ops.authorization_operation_cutover_drill where plane_code=$1 and outcome='passed' and legacy_fallback_count=0`,[target.plane]);
   const approval=await client.query<{approval_action:string;activation_manifest_sha256:string;covered_operation_count:number}>(`select approval_action,activation_manifest_sha256,covered_operation_count from ops.authorization_legacy_retirement_approval where plane_code=$1 order by decided_at desc,id desc limit 1`,[target.plane]);

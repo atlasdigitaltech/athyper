@@ -82,7 +82,7 @@ export function OperationsPanel({ operations, surfaces, editable, onChange }: {
             <EditorSelect label="Kind" value={selected.operationKind} options={["create", "read", "update", "delete", "execute", "transition", "import", "export"]} disabled={!editable} onChange={(operationKind) => replace({ ...selected, operationKind })} />
             <EditorSelect label="Execution" value={selected.executionMode} options={["synchronous", "asynchronous"]} disabled={!editable} onChange={(executionMode) => replace({ ...selected, executionMode })} />
             <EditorInput label="Handler key" value={selected.handlerKey ?? ""} disabled={!editable} onChange={(handlerKey) => replace({ ...selected, handlerKey: handlerKey || null })} />
-            <EditorInput label="Permission code" value={selected.permissionCode} disabled={!editable} onChange={(permissionCode) => replace({ ...selected, permissionCode })} />
+            <EditorInput label="Permission code" value={selected.permissionCode ?? ""} disabled={!editable} onChange={(permissionCode) => replace({ ...selected, permissionCode })} />
             <EditorNullableSelect label="Input surface" value={selected.inputSurfaceKey} options={surfaceKeys} disabled={!editable} onChange={(inputSurfaceKey) => replace({ ...selected, inputSurfaceKey })} />
             <EditorNullableSelect label="Result surface" value={selected.resultSurfaceKey} options={surfaceKeys} disabled={!editable} onChange={(resultSurfaceKey) => replace({ ...selected, resultSurfaceKey })} />
             <EditorInput label="Audit event code" value={selected.auditEventCode} disabled={!editable} onChange={(auditEventCode) => replace({ ...selected, auditEventCode })} />

@@ -11,16 +11,15 @@ BEGIN
     END IF;
 
     INSERT INTO authz.permission (
-        id, canonical_code, permission_kind, resource_code, operation_code,
+        id, canonical_code, permission_kind,
         module_id, risk_tier, requires_mfa, requires_sod, is_shareable,
-        is_delegable, is_overridable, provenance_ref, metadata, status, created_by
+        is_delegable, is_overridable, metadata, status, created_by
     )
     SELECT md5('athyper:p5-e2:mesh:' || seed.operation_code)::uuid,
            'mesh.document_envelope.' || seed.operation_code,
-           'entity_operation', 'mesh.document_envelope', seed.operation_code,
+           'entity_operation',
            v_module_id, seed.risk_tier::authz.risk_tier_d,
            seed.requires_mfa, seed.requires_sod, false, seed.is_delegable, false,
-           'athyper.operation-scope@p5-e2-v1',
            jsonb_build_object('seed_owner','athyper.operation-scope','phase','P5-E2','plane','mesh'),
            'draft', v_actor
       FROM (VALUES
@@ -31,15 +30,6 @@ BEGIN
       ) AS seed(operation_code,risk_tier,requires_mfa,requires_sod,is_delegable)
     ON CONFLICT (canonical_code) DO NOTHING;
 
-    INSERT INTO authz.permission_scope_policy (permission_id,scope_kind,propagation_mode,created_by)
-    SELECT permission.id,'network_account','exact',v_actor
-      FROM authz.permission permission
-     WHERE permission.canonical_code IN (
-        'mesh.document_envelope.read','mesh.document_envelope.publish',
-        'mesh.document_envelope.acknowledge','mesh.document_envelope.replay'
-     ) AND permission.status IN ('draft','suspended')
-    ON CONFLICT (permission_id,scope_kind) DO NOTHING;
-
     UPDATE authz.permission
        SET status='published',status_changed_at=now(),status_changed_by=v_actor,updated_by=v_actor
      WHERE canonical_code IN (
@@ -47,11 +37,10 @@ BEGIN
         'mesh.document_envelope.acknowledge','mesh.document_envelope.replay'
      ) AND status IN ('draft','suspended');
 
-    IF (SELECT count(*) FROM authz.permission permission
-         JOIN authz.permission_scope_policy policy ON policy.permission_id=permission.id
-        WHERE permission.canonical_code LIKE 'mesh.document_envelope.%'
-          AND permission.permission_kind='entity_operation'
-          AND permission.status='published' AND policy.scope_kind='network_account') <> 4 THEN
+    IF (SELECT count(*) FROM authz.permission
+        WHERE canonical_code LIKE 'mesh.document_envelope.%'
+          AND permission_kind='entity_operation'
+          AND status='published') <> 4 THEN
         RAISE EXCEPTION '[P5-E2 Mesh] Document Envelope canonical permission catalog is incomplete or drifted';
     END IF;
 END

@@ -1,5 +1,5 @@
 /**
- * @athyper/platform-theme — Semantic Color Resolver
+ * @athyper/theme — Semantic Color Resolver
  *
  * Maps generic semantic intents to CSS-variable-backed Tailwind classes.
  * All colors resolve through CSS custom properties from the active preset.

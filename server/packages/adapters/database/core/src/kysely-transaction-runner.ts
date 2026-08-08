@@ -9,7 +9,7 @@
 //   await runner.run(async (trx) => { ... }, { tenantId, principalId });
 
 import { sql, type Kysely, type Transaction } from "kysely";
-import type { TransactionRunner, TransactionActor } from "@athyper/foundation-transaction";
+import type { TransactionRunner, TransactionActor } from "@athyper/server-foundation/transaction";
 
 /**
  * Kysely/PostgreSQL implementation of TransactionRunner<Transaction<TDB>>.
@@ -19,7 +19,7 @@ import type { TransactionRunner, TransactionActor } from "@athyper/foundation-tr
  * duration of the transaction so triggers and audit functions can read them.
  *
  * The Kysely dependency keeps this class in adapters/database — the TransactionRunner
- * port itself remains in @athyper/foundation-transaction with no ORM imports.
+ * port itself remains in @athyper/server-foundation/transaction with no ORM imports.
  */
 export class KyselyTransactionRunner<TDB>
   implements TransactionRunner<Transaction<TDB>>

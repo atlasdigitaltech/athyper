@@ -15,7 +15,7 @@
  *      control.workflow_sla_policy.timers have been crossed since assigned_at,
  *      then EXECUTES the corresponding action:
  *
- *        reminder        → log workflow_event_log + publish outbox notification
+ *        reminder        → appendAuditEvent (inbox_routing_event) + publish outbox notification
  *        escalate        → reassign / notify escalation_chain targets
  *        auto_approve    → WorkflowEngine.processAction (action='approve')
  *        auto_reject     → WorkflowEngine.processAction (action='reject')
@@ -156,7 +156,7 @@ interface OverdueWorkItem {
  *
  * auto_approve / auto_reject → WorkflowEngine.processAction()
  * escalate                   → update assignee from escalation_chain + notify
- * reminder                   → workflow_event_log entry + outbox notification
+ * reminder                   → appendAuditEvent (inbox_routing_event) + outbox notification
  */
 async function executeSlaAction(
   db:               DB,
@@ -445,7 +445,7 @@ interface StuckWorkItem {
 
 async function checkStuckWorkItems(db: DB, logger?: JobLogger): Promise<void> {
   // Find work items that are in an active state, started more than N hours ago,
-  // and have had no workflow_event_log entry in the last N hours. The threshold
+  // and have not been updated in the last N hours. The threshold
   // is tenant-resolved from the parameter catalog with a product fallback.
   const stuck = await sql<StuckWorkItem>`
     WITH active_tenants AS (
@@ -503,12 +503,7 @@ async function checkStuckWorkItems(db: DB, logger?: JobLogger): Promise<void> {
     WHERE  wi.status IN ('pending', 'in_progress')
       AND  wi.started_at IS NOT NULL
       AND  wi.started_at < now() - (tt.threshold_hours * interval '1 hour')
-      AND  NOT EXISTS (
-             SELECT 1
-             FROM   log.workflow_event_log el
-             WHERE  el.work_item_id = wi.id
-               AND  el.created_at   > now() - (tt.threshold_hours * interval '1 hour')
-           )
+      AND  (wi.updated_at IS NULL OR wi.updated_at <= now() - (tt.threshold_hours * interval '1 hour'))
     ORDER  BY wi.started_at ASC
     LIMIT  ${BATCH}
   `.execute(db);

@@ -37,6 +37,7 @@ export function toDatabaseMetaEntityGraph(graph: MetaEntityPhase2Graph): JsonVal
     relations: graph.relations,
     surfaces: graph.surfaces ?? [],
     operations: graph.operations ?? [],
+    operationPermissions: graph.operationPermissions ?? [],
     surfaceOperations: graph.surfaceOperations ?? [],
     operationRules: graph.operationRules ?? [],
     operationScopeBindings: graph.operationScopeBindings ?? [],
@@ -59,7 +60,7 @@ export function canonicalizeMetaEntityGraph(graph: MetaEntityPhase2Graph): JsonV
   const flowKeyById = new Map((graph.flows ?? []).map((flow) => [flow.id, flow.flowKey] as const));
   delete (runtimeProfile as Partial<typeof runtimeProfile>).id;
   return canonical({
-    schemaVersion: "5.2",
+    schemaVersion: "5.3",
     runtimeProfile,
     fields: byKey(graph.fields, (field) => field.fieldKey).map((field) => {
       const { id: _id, keyUsageCount: _keyUsageCount, searchUsageCount: _searchUsageCount,
@@ -133,6 +134,13 @@ export function canonicalizeMetaEntityGraph(graph: MetaEntityPhase2Graph): JsonV
       };
     }),
     operations: byKey(graph.operations ?? [], (operation) => operation.operationKey).map(({ id: _id, ...operation }) => operation),
+    operationPermissions: byKey(
+      graph.operationPermissions ?? [],
+      (binding) => `${operationKeyById.get(binding.operationId) ?? binding.operationId}:${binding.targetPlane}`,
+    ).map(({ id: _id, operationId, ...binding }) => ({
+      ...binding,
+      operationKey: operationKeyById.get(operationId) ?? `missing:${operationId}`,
+    })),
     surfaceOperations: byKey(graph.surfaceOperations ?? [], (binding) => binding.placementKey).map(({ id: _id, surfaceId, operationId, sectionId, confirmationSurfaceId, ...binding }) => ({
       ...binding,
       surfaceKey: surfaceKeyById.get(surfaceId) ?? `missing:${surfaceId}`,
@@ -258,6 +266,27 @@ export function validateMetaEntityGraph(graph: MetaEntityPhase2Graph): MetaEntit
       if (surfaceKey && !surfaceKeys.has(surfaceKey)) add("operation.surface.missing", `Operation ${operation.operationKey} references unknown surface ${surfaceKey}.`, "operations", operation.id);
     }
     if (operation.operationKind !== "read" && !operation.handlerKey) add("operation.handler.required", `Operation ${operation.operationKey} requires a handler.`, "operations", operation.id);
+  }
+  const permissionCoordinates = new Set<string>();
+  for (const binding of graph.operationPermissions ?? []) {
+    if (!operationIds.has(binding.operationId)) {
+      add("operation.permission.operation.missing", "Operation permission references an unknown operation.", "operations", binding.id);
+    }
+    const coordinate = `${binding.operationId}:${binding.targetPlane}`;
+    if (permissionCoordinates.has(coordinate)) {
+      add("operation.permission.plane.duplicate", "An operation can have only one permission per target plane.", "operations", binding.id);
+    }
+    permissionCoordinates.add(coordinate);
+    if (!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){2,7}$/.test(binding.permissionCode)) {
+      add("operation.permission.code.invalid", "Operation permission must be a canonical three-part code.", "operations", binding.id);
+    }
+  }
+  if (graph.operationPermissions !== undefined) {
+    for (const operation of operations.filter((item) => item.status === "active")) {
+      if (!(graph.operationPermissions ?? []).some((binding) => binding.operationId === operation.id && binding.status === "active")) {
+        add("operation.permission.required", `Operation ${operation.operationKey} requires an active permission binding.`, "operations", operation.id);
+      }
+    }
   }
   for (const binding of graph.surfaceOperations ?? []) {
     if (!surfaceIds.has(binding.surfaceId) || !operationIds.has(binding.operationId)) add("surface.operation.missing", `Placement ${binding.placementKey} references an unknown surface or operation.`, "operations", binding.id);

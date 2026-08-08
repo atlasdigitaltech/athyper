@@ -74,7 +74,7 @@ BEGIN
         ) TO athyperadmin;
         GRANT EXECUTE ON FUNCTION audit.verify_hash_anchor(uuid)
             TO athyperadmin;
-        GRANT EXECUTE ON FUNCTION audit.install_document_row_audit_triggers()
+        GRANT EXECUTE ON FUNCTION audit.install_schema_row_triggers(text)
             TO athyperadmin;
     END IF;
 END;

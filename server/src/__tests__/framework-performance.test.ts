@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildFrameworkServerTiming,
   classifyFrameworkRequest,
-} from "../framework-performance.js";
+} from "@athyper/runtime-http";
 
 function request(method: string, url: string, cohort?: string) {
   return {

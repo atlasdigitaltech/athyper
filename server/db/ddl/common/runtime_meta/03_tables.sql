@@ -136,3 +136,111 @@ CREATE TABLE runtime_meta.release_activation_event (
 
 COMMENT ON TABLE runtime_meta.release_activation_head IS 'Plane-local availability boundary. Runtime reads this head and continues using it when Athyper publication authority is unreachable.';
 COMMENT ON TABLE runtime_meta.applied_release IS 'Durable local stage/verify/activate state; source UUIDs are coordinates, not cross-database foreign keys.';
+
+-- Immutable, portable Entity contract received from Athyper publication.
+-- Source UUIDs are trust coordinates and deliberately have no cross-database FKs.
+CREATE TABLE runtime_meta.entity_contract (
+    id                       uuid        NOT NULL,
+    tenant_id                uuid,
+    entity_id                uuid        NOT NULL,
+    entity_code              text        NOT NULL,
+    release_id               uuid        NOT NULL,
+    revision_id              uuid        NOT NULL,
+    release_no               bigint      NOT NULL,
+    contract_schema_code     text        NOT NULL,
+    contract_schema_version  text        NOT NULL,
+    entity_contract_hash     text        NOT NULL,
+    contract_json            jsonb       NOT NULL,
+    publication_key          text        NOT NULL,
+    signature_algorithm      text        NOT NULL,
+    signing_key_id           text        NOT NULL,
+    signature                text        NOT NULL,
+    published_at             timestamptz NOT NULL,
+    received_at              timestamptz NOT NULL DEFAULT clock_timestamp(),
+    status                   runtime_meta.entity_contract_status_d NOT NULL DEFAULT 'staged',
+    status_changed_at        timestamptz,
+
+    CONSTRAINT runtime_entity_contract_pkey PRIMARY KEY (id),
+    CONSTRAINT runtime_entity_contract_tenant_id_uq
+        UNIQUE NULLS NOT DISTINCT (tenant_id, id),
+    CONSTRAINT runtime_entity_contract_release_uq
+        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, release_id),
+    CONSTRAINT runtime_entity_contract_release_no_uq
+        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, release_no),
+    -- Compatibility coordinate retained for Mesh document envelopes.
+    CONSTRAINT runtime_entity_contract_legacy_coordinate_uq
+        UNIQUE (entity_id, id, entity_contract_hash),
+    CONSTRAINT runtime_entity_contract_code_chk
+        CHECK (entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT runtime_entity_contract_release_no_chk CHECK (release_no >= 1),
+    CONSTRAINT runtime_entity_contract_schema_code_chk
+        CHECK (contract_schema_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT runtime_entity_contract_schema_version_chk
+        CHECK (contract_schema_version ~ '^[0-9]+\.[0-9]+(?:\.[0-9]+)?$'),
+    CONSTRAINT runtime_entity_contract_hash_chk
+        CHECK (entity_contract_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT runtime_entity_contract_json_chk CHECK (jsonb_typeof(contract_json) = 'object'),
+    CONSTRAINT runtime_entity_contract_publication_key_chk
+        CHECK (publication_key ~ '^[a-z][a-z0-9_.:-]{1,190}$'),
+    CONSTRAINT runtime_entity_contract_signature_chk CHECK (
+        btrim(signature_algorithm) <> '' AND btrim(signing_key_id) <> '' AND btrim(signature) <> ''
+    ),
+    CONSTRAINT runtime_entity_contract_time_chk CHECK (received_at >= published_at),
+    CONSTRAINT runtime_entity_contract_status_time_chk CHECK (
+        (status = 'staged' AND status_changed_at IS NULL)
+        OR (status <> 'staged' AND status_changed_at IS NOT NULL)
+    )
+);
+
+CREATE TABLE runtime_meta.entity_descriptor (
+    id                         uuid        NOT NULL,
+    tenant_id                  uuid,
+    entity_contract_id         uuid        NOT NULL,
+    entity_id                  uuid        NOT NULL,
+    release_id                 uuid        NOT NULL,
+    revision_id                uuid        NOT NULL,
+    plane_code                 text        NOT NULL,
+    descriptor_kind            text        NOT NULL,
+    descriptor_schema_version  text        NOT NULL,
+    source_contract_hash       text        NOT NULL,
+    compiled_hash              text        NOT NULL,
+    compiled_json              jsonb       NOT NULL,
+    compiler_version           text        NOT NULL,
+    compatibility_level        text        NOT NULL,
+    applied_release_id         uuid        NOT NULL,
+    generated_at               timestamptz NOT NULL,
+    received_at                timestamptz NOT NULL DEFAULT clock_timestamp(),
+    status                     runtime_meta.entity_descriptor_status_d NOT NULL DEFAULT 'staged',
+    activated_at               timestamptz,
+    retired_at                 timestamptz,
+
+    CONSTRAINT runtime_entity_descriptor_pkey PRIMARY KEY (id),
+    CONSTRAINT runtime_entity_descriptor_tenant_id_uq
+        UNIQUE NULLS NOT DISTINCT (tenant_id, id),
+    CONSTRAINT runtime_entity_descriptor_release_uq
+        UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, release_id, plane_code, descriptor_kind),
+    CONSTRAINT runtime_entity_descriptor_plane_chk CHECK (plane_code IN ('athyper','neon','mesh')),
+    CONSTRAINT runtime_entity_descriptor_kind_chk
+        CHECK (descriptor_kind ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT runtime_entity_descriptor_schema_version_chk
+        CHECK (descriptor_schema_version ~ '^[0-9]+\.[0-9]+(?:\.[0-9]+)?$'),
+    CONSTRAINT runtime_entity_descriptor_contract_hash_chk
+        CHECK (source_contract_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT runtime_entity_descriptor_compiled_hash_chk
+        CHECK (compiled_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT runtime_entity_descriptor_json_chk CHECK (jsonb_typeof(compiled_json) = 'object'),
+    CONSTRAINT runtime_entity_descriptor_compiler_version_chk CHECK (btrim(compiler_version) <> ''),
+    CONSTRAINT runtime_entity_descriptor_compatibility_chk
+        CHECK (compatibility_level IN ('breaking','backward_compatible','forward_compatible','fully_compatible')),
+    CONSTRAINT runtime_entity_descriptor_time_chk CHECK (received_at >= generated_at),
+    CONSTRAINT runtime_entity_descriptor_status_time_chk CHECK (
+        (status = 'staged' AND activated_at IS NULL AND retired_at IS NULL)
+        OR (status = 'active' AND activated_at IS NOT NULL AND retired_at IS NULL)
+        OR (status = 'retired' AND activated_at IS NOT NULL AND retired_at IS NOT NULL AND retired_at >= activated_at)
+    )
+);
+
+COMMENT ON TABLE runtime_meta.entity_contract IS
+  'Immutable all-plane projection of an Athyper-authored Entity release. Status is the only mutable contract state.';
+COMMENT ON TABLE runtime_meta.entity_descriptor IS
+  'Immutable plane-local compiler output. Athyper uses admin_preview descriptors; Neon and Mesh use executable descriptors.';

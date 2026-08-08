@@ -78,7 +78,7 @@ BEGIN
      WHERE tenant_id = v_tenant_id
        AND payment_number IN ('ADV-A7-0001','ADV-VA-0001');
 
-    SELECT count(*) INTO v_act_cnt FROM log.activity_log
+    SELECT count(*) INTO v_act_cnt FROM audit.audit_log
      WHERE tenant_id = v_tenant_id
        AND entity_type = 'purchase_invoice'
        AND entity_id IN (
@@ -87,7 +87,8 @@ BEGIN
            '00000001-0000-0000-0001-000000000004',
            '00000001-0000-0000-0001-000000000007',
            '00000001-0000-0000-0001-000000000008'
-       );
+       )
+       AND context->>'domain' IS NOT NULL;
 
     -- ── Print summary ───────────────────────────────────────────────────────
     RAISE NOTICE '';

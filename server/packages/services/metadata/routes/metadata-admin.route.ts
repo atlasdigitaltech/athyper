@@ -1103,10 +1103,10 @@ export function createMetadataAdminRoutes(router: Router, deps: MetadataAdminRou
       // Fields are version-bound. Join through the EFFECTIVE version to count them.
       let query = db
         .selectFrom("control.entity as e")
-        .leftJoin("shared.module as m", (join) =>
+        .leftJoin("control.module as m", (join) =>
           join.on(sql<boolean>`m.id::text = e.module_id OR m.code = e.module_id`),
         )
-        .leftJoin("shared.workspace as w", "w.id", "m.workspace_id")
+        .leftJoin("control.workspace as w", "w.id", "m.workspace_id")
         .leftJoin(
           db
             .selectFrom("control.entity_version as ev")

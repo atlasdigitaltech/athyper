@@ -1,4 +1,4 @@
-export type OperationScopePlane = "neon" | "mesh";
+export type OperationScopePlane = "athyper" | "neon" | "mesh";
 export type OperationDecisionMode = "entity_resource" | "collection";
 export type OperationScopeKind =
   | "tenant"
@@ -17,6 +17,7 @@ export type ScopeCoordinateSource =
   | "collection_field"
   | "relation_resolver";
 export type OperationScopeBindingStatus = "draft" | "published" | "retired";
+export type OperationPermissionKind = "entity_operation" | "capability";
 
 export interface EntityOperationScopeBindingContract {
   bindingId: string;
@@ -24,19 +25,17 @@ export interface EntityOperationScopeBindingContract {
   tenantId: string | null;
   sourceEntityId: string;
   sourceEntityOperationId: string;
-  sourceReleaseId: string;
   sourceReleaseHash: string;
-  sourceCompiledArtifactId: string;
   sourceCompiledHash: string;
   entityCode: string;
   operationKey: string;
   permissionCode: string;
+  permissionKind?: OperationPermissionKind;
   decisionMode: OperationDecisionMode;
   scopeKind: OperationScopeKind;
   coordinateSource: ScopeCoordinateSource;
   coordinateKey: string | null;
   resolverKey: string | null;
-  missingValueBehavior: "deny";
   status: OperationScopeBindingStatus;
 }
 
@@ -51,12 +50,12 @@ export interface CompiledOperationScopeBindingBlueprint {
   entityCode: string;
   operationKey: string;
   permissionCode: string;
+  permissionKind?: OperationPermissionKind;
   decisionMode: OperationDecisionMode;
   scopeKind: OperationScopeKind;
   coordinateSource: ScopeCoordinateSource;
   coordinateKey: string | null;
   resolverKey: string | null;
-  missingValueBehavior: "deny";
 }
 
 export interface CrossPlaneArtifactActivationContractV1 {
@@ -105,7 +104,7 @@ export function validateCrossPlaneEntityArtifact(artifact:CrossPlaneEntityArtifa
     if(binding.targetPlane!==artifact.plane)problems.push("binding.target_plane_mismatch");
     if(binding.entityCode!==artifact.source.entity_code)problems.push("binding.entity_code_mismatch");
     const coordinate=`${binding.sourceEntityOperationId}:${binding.scopeKind}`;if(coordinates.has(coordinate))problems.push("binding.coordinate_duplicate");coordinates.add(coordinate);
-    problems.push(...validateEntityOperationScopeBinding({bindingId:binding.sourceEntityOperationId,targetPlane:artifact.plane,tenantId:null,sourceEntityId:artifact.source.entity_id,sourceEntityOperationId:binding.sourceEntityOperationId,sourceReleaseId:artifact.source.release_id,sourceReleaseHash:artifact.source.release_hash,sourceCompiledArtifactId:artifact.source.release_id,sourceCompiledHash:"0".repeat(64),entityCode:binding.entityCode,operationKey:binding.operationKey,permissionCode:binding.permissionCode,decisionMode:binding.decisionMode,scopeKind:binding.scopeKind,coordinateSource:binding.coordinateSource,coordinateKey:binding.coordinateKey,resolverKey:binding.resolverKey,missingValueBehavior:binding.missingValueBehavior,status:"draft"}).map(problem=>`binding.${problem}`));
+    problems.push(...validateEntityOperationScopeBinding({bindingId:binding.sourceEntityOperationId,targetPlane:artifact.plane,tenantId:null,sourceEntityId:artifact.source.entity_id,sourceEntityOperationId:binding.sourceEntityOperationId,sourceReleaseHash:artifact.source.release_hash,sourceCompiledHash:"0".repeat(64),entityCode:binding.entityCode,operationKey:binding.operationKey,permissionCode:binding.permissionCode,decisionMode:binding.decisionMode,scopeKind:binding.scopeKind,coordinateSource:binding.coordinateSource,coordinateKey:binding.coordinateKey,resolverKey:binding.resolverKey,status:"draft"}).map(problem=>`binding.${problem}`));
   }
   return [...new Set(problems)];
 }
@@ -121,7 +120,6 @@ export interface OperationScopeCompilationInput {
     plane_filter: readonly (OperationScopePlane | "admin")[] | null;
     authorization?: {
       decision_mode: OperationDecisionMode;
-      missing_value_behavior: "deny";
       bindings: readonly {
         scope_kind: OperationScopeKind;
         coordinate_source: ScopeCoordinateSource;
@@ -144,8 +142,7 @@ export function validateEntityOperationScopeBinding(binding: EntityOperationScop
   const problems: string[] = [];
   for (const [name, value] of [
     ["binding_id", binding.bindingId], ["source_entity_id", binding.sourceEntityId],
-    ["source_entity_operation_id", binding.sourceEntityOperationId], ["source_release_id", binding.sourceReleaseId],
-    ["source_compiled_artifact_id", binding.sourceCompiledArtifactId],
+    ["source_entity_operation_id", binding.sourceEntityOperationId],
   ] as const) if (!UUID.test(value)) problems.push(`${name}.invalid`);
   if (binding.tenantId !== null && !UUID.test(binding.tenantId)) problems.push("tenant_id.invalid");
   if (!HASH.test(binding.sourceReleaseHash)) problems.push("source_release_hash.invalid");
@@ -153,7 +150,9 @@ export function validateEntityOperationScopeBinding(binding: EntityOperationScop
   if (!ENTITY_CODE.test(binding.entityCode)) problems.push("entity_code.invalid");
   if (!OPERATION_KEY.test(binding.operationKey)) problems.push("operation_key.invalid");
   if (!PERMISSION_CODE.test(binding.permissionCode)) problems.push("permission_code.invalid");
-  if (binding.missingValueBehavior !== "deny") problems.push("missing_value_behavior.must_deny");
+  if (binding.permissionKind !== undefined && !["entity_operation", "capability"].includes(binding.permissionKind)) {
+    problems.push("permission_kind.invalid");
+  }
 
   const fieldSource = ["request_field", "record_field", "collection_field"].includes(binding.coordinateSource);
   if (fieldSource !== Boolean(binding.coordinateKey)) problems.push("coordinate_key.source_mismatch");
@@ -173,7 +172,9 @@ export function compileOperationScopeBindingBlueprints(
   const blueprints: CompiledOperationScopeBindingBlueprint[] = [];
   for (const operation of input.operations) {
     if (!operation.enabled) continue;
-    if (operation.plane_filter && !operation.plane_filter.includes(input.targetPlane)) continue;
+    if (operation.plane_filter
+        && !operation.plane_filter.includes(input.targetPlane)
+        && !(input.targetPlane === "athyper" && operation.plane_filter.includes("admin"))) continue;
     if (!operation.authorization) continue;
     for (const binding of operation.authorization.bindings) {
       const blueprint: CompiledOperationScopeBindingBlueprint = {
@@ -187,7 +188,6 @@ export function compileOperationScopeBindingBlueprints(
         coordinateSource: binding.coordinate_source,
         coordinateKey: binding.coordinate_key,
         resolverKey: binding.resolver_key,
-        missingValueBehavior: operation.authorization.missing_value_behavior,
       };
       const problems = validateEntityOperationScopeBinding({
         bindingId: operation.id,
@@ -195,9 +195,7 @@ export function compileOperationScopeBindingBlueprints(
         tenantId: null,
         sourceEntityId: operation.id,
         sourceEntityOperationId: operation.id,
-        sourceReleaseId: operation.id,
         sourceReleaseHash: "0".repeat(64),
-        sourceCompiledArtifactId: operation.id,
         sourceCompiledHash: "0".repeat(64),
         entityCode: blueprint.entityCode,
         operationKey: blueprint.operationKey,
@@ -207,7 +205,6 @@ export function compileOperationScopeBindingBlueprints(
         coordinateSource: blueprint.coordinateSource,
         coordinateKey: blueprint.coordinateKey,
         resolverKey: blueprint.resolverKey,
-        missingValueBehavior: blueprint.missingValueBehavior,
         status: "draft",
       });
       if (problems.length > 0) {

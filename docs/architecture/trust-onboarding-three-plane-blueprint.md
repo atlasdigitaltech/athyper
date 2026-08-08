@@ -944,7 +944,7 @@ checked for format and lifecycle by reconciliation, not foreign keys.
 
 ### 11.1 Admin onboarding bounded context
 
-Create `server/packages/services/onboarding` with these internal ports:
+Create `server/packages/planes/athyper/onboarding` with these internal ports:
 
 - `CaseRepository` — case, target, check, and resource desired state;
 - `PartyRegistry` — exact identifier matching, claims, review, and merge;

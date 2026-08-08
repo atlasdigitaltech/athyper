@@ -14,7 +14,7 @@ import {
   type DbActiveGrant,
   type DbTenantRow,
   type KcOrgRow,
-} from "../sync-state.js";
+} from "@athyper/svc-iam";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // computeTenantSyncDelta

@@ -196,7 +196,6 @@ function ClientFavoritesPanel(props: FavoritesPanelSlotProps) {
     <FavoritesPanelContainer
       {...props}
       navigate={(href) => router.push(href)}
-      request={csrfFetch}
     />
   );
 }

@@ -374,6 +374,11 @@ DECLARE
     v_operation audit.operation_d;
     v_suffix text;
 BEGIN
+    -- Skip during DDL/seed execution where the runtime session context is absent.
+    IF nullif(current_setting('app.current_tenant_id', true), '') IS NULL THEN
+        RETURN CASE WHEN TG_OP='DELETE' THEN OLD ELSE NEW END;
+    END IF;
+
     IF TG_OP='INSERT' THEN v_operation:='create'; v_suffix:='row_created';
     ELSIF TG_OP='UPDATE' THEN v_operation:='update'; v_suffix:='row_updated';
     ELSE v_operation:='delete'; v_suffix:='row_deleted'; END IF;
@@ -391,7 +396,7 @@ BEGIN
     END IF;
 
     PERFORM audit.append_event(
-        p_event_code=>format('%s.%s.%s',TG_TABLE_SCHEMA,TG_TABLE_NAME,v_suffix),
+        p_event_code=>'record.'||v_suffix,
         p_operation=>v_operation,
         p_entity_type=>format('%s.%s',TG_TABLE_SCHEMA,TG_TABLE_NAME),
         p_entity_id=>(v_row->>'id')::uuid,
@@ -503,7 +508,72 @@ BEGIN
          'financial', 'critical', true, 150::smallint),
         ('restore_snapshot', 'Restore From Snapshot',
          'Application state was restored from a previously captured snapshot.',
-         'snapshot', 'elevated', true, 160::smallint)
+         'snapshot', 'elevated', true, 160::smallint),
+        -- PII / privacy
+        ('pii_access_authorized', 'PII Access — Authorized Purpose',
+         'Access to personal data for a documented lawful or business purpose.',
+         'security', 'elevated', true, 170::smallint),
+        ('pii_subject_request', 'PII Access — Data Subject Request',
+         'Response to a data subject right request (access, erasure, or portability).',
+         'data_correction', 'elevated', true, 180::smallint),
+        ('pii_retention_purge', 'PII Purge — Retention Policy',
+         'Personal data removed on expiry of the configured retention period.',
+         'data_correction', 'normal', false, 190::smallint),
+        -- Audit integrity
+        ('audit_integrity_check', 'Audit Integrity Verification',
+         'Routine or on-demand verification of audit chain integrity.',
+         'security', 'normal', false, 200::smallint),
+        ('audit_tamper_response', 'Audit Tamper Response',
+         'Action taken in response to detected audit log tampering.',
+         'security', 'critical', true, 210::smallint),
+        -- IAM session
+        ('session_security_lockout', 'Session — Security Lockout',
+         'Session forcibly invalidated due to a security threat or policy violation.',
+         'security', 'elevated', true, 220::smallint),
+        ('session_device_lost', 'Session — Lost or Stolen Device',
+         'Session revoked after the user reported a lost or stolen device.',
+         'security', 'elevated', true, 230::smallint),
+        -- Finance period lifecycle
+        ('period_month_end_close', 'Period Close — Month End',
+         'Routine month-end accounting period closure.',
+         'financial', 'normal', false, 240::smallint),
+        ('period_year_end_close', 'Period Close — Year End',
+         'Annual accounting period closure.',
+         'financial', 'elevated', true, 250::smallint),
+        ('period_reopen_correction', 'Period Reopen — Correction',
+         'Accounting period reopened to apply a correction or late entry.',
+         'financial', 'critical', true, 260::smallint),
+        -- Configuration changes
+        ('config_compliance_update', 'Configuration — Compliance Requirement',
+         'System configuration changed to satisfy a regulatory or compliance requirement.',
+         'configuration', 'elevated', true, 270::smallint),
+        ('config_maintenance_update', 'Configuration — Scheduled Maintenance',
+         'Routine scheduled configuration update or system maintenance.',
+         'configuration', 'normal', false, 280::smallint),
+        -- Support / break-glass
+        ('support_escalation', 'Support Escalation — Authorized Access',
+         'AI-assisted support access following formal escalation approval.',
+         'security', 'critical', true, 290::smallint),
+        ('emergency_access', 'Emergency Break-Glass Access',
+         'Break-glass access invoked for emergency system recovery.',
+         'security', 'critical', true, 300::smallint),
+        -- Workflow / finance exceptions
+        ('workflow_bypass', 'Workflow Step Bypass',
+         'An approval or workflow step was bypassed under an authorized exception.',
+         'workflow', 'critical', true, 310::smallint),
+        ('budget_variance_override', 'Budget Variance Override',
+         'Transaction approved despite exceeding the configured budget tolerance.',
+         'financial', 'critical', true, 320::smallint),
+        ('late_journal_entry', 'Late Journal Entry',
+         'A journal entry posted after the normal period deadline.',
+         'accounting', 'elevated', true, 330::smallint),
+        -- Schema / import
+        ('schema_rollback', 'Schema Rollback',
+         'An entity schema change was rolled back after validation failure.',
+         'configuration', 'elevated', true, 340::smallint),
+        ('import_reprocess', 'Import Reprocess',
+         'A failed or partial import was reprocessed after correction.',
+         'integration', 'normal', false, 350::smallint)
     ) AS v(
         code, name, description, category,
         severity, requires_comment, sort_order
@@ -737,7 +807,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION audit.install_document_row_audit_triggers()
+CREATE OR REPLACE FUNCTION audit.install_schema_row_triggers(p_schema text)
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -751,7 +821,7 @@ BEGIN
         SELECT c.oid, c.relname
           FROM pg_class AS c
           JOIN pg_namespace AS n ON n.oid = c.relnamespace
-         WHERE n.nspname = 'document'
+         WHERE n.nspname = p_schema
            AND c.relkind = 'r'
            AND EXISTS (
                SELECT 1 FROM pg_attribute AS a
@@ -775,9 +845,9 @@ BEGIN
     LOOP
         EXECUTE format(
             'CREATE TRIGGER trg_zz_audit_row_change '
-            'AFTER INSERT OR UPDATE OR DELETE ON document.%I '
+            'AFTER INSERT OR UPDATE OR DELETE ON %I.%I '
             'FOR EACH ROW EXECUTE FUNCTION audit.trg_capture_row_change()',
-            v_table.relname
+            p_schema, v_table.relname
         );
         v_installed := v_installed + 1;
     END LOOP;

@@ -48,7 +48,8 @@ import {
   type JobHeartbeatHooks,
 } from "./jobs.types.js";
 import { createLifecycleTimerWorker } from "./workers/lifecycle-timer.worker.js";
-import { createNotificationWorker, type NotificationChannelHandler } from "./workers/notification.worker.js";
+import { createNotificationWorker } from "./workers/notification.worker.js";
+import type { NotificationChannelHandler } from "@athyper/platform-notifications";
 import { createDomainOutboxWorker, type OutboxTopicHandler } from "./workers/domain-outbox.worker.js";
 import { createSlaCheckWorker } from "./workers/sla-check.worker.js";
 import { createImportWorker, type ImportObjectStorage } from "./workers/import.worker.js";

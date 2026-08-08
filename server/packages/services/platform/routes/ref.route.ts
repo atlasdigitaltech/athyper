@@ -43,6 +43,7 @@ import type { Request, RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import busboy from "busboy";
+import { appendPlatformAuditEvent } from "@athyper/svc-audit";
 import {
   verifyBearer,
   extractOrgHeaders,
@@ -449,7 +450,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
   // ═══════════════════════════════════════════════════════════════════════════
 
   // ── GET /platform/ref/workspaces ─────────────────────────────────────────────
-  // shared.workspace; no search (small, stable set)
+  // control.workspace; no search (small, stable set)
 
   const listWorkspacesHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -464,7 +465,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
       const { page, limit, offset } = parsePagination(q);
       const sf = resolveStatusFilter(q);
 
-      let base = db.selectFrom("shared.workspace as w");
+      let base = db.selectFrom("control.workspace as w");
       base = applyStatus(base, sf, "w.status");
 
       const [countRow, rows] = await Promise.all([
@@ -487,7 +488,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
   router.get("/platform/ref/workspaces", listWorkspacesHandler);
 
   // ── GET /platform/ref/modules ────────────────────────────────────────────────
-  // shared.module; ?workspace_id= (UUID filter)
+  // control.module; ?workspace_id= (UUID filter)
 
   const listModulesHandler: RequestHandler = async (req, res, next) => {
     try {
@@ -503,7 +504,7 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
       const sf = resolveStatusFilter(q);
       const workspaceId = typeof q["workspace_id"] === "string" ? q["workspace_id"].trim() : "";
 
-      let base = db.selectFrom("shared.module as m");
+      let base = db.selectFrom("control.module as m");
       if (workspaceId) {
         base = base.where("m.workspace_id" as never, "=", workspaceId as never) as typeof base;
       }
@@ -1381,20 +1382,6 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
         return;
       }
 
-      // Idempotency check: same checksum already imported?
-      const existing = await (db as Kysely<any>)
-        .selectFrom("log.platform_audit_log as pal")
-        .select(["pal.id", "pal.created_at"])
-        .where("pal.entity_type" as never, "=", `shared.${family}` as never)
-        .where("pal.operation"   as never, "=", "bulk_import" as never)
-        .where("pal.checksum"    as never, "=", checksum as never)
-        .executeTakeFirst();
-
-      if (existing) {
-        res.json({ replayed: true, checksum, logged_at: existing.created_at });
-        return;
-      }
-
       // Upsert via COPY-safe pattern: batch INSERT … ON CONFLICT DO UPDATE
       const table = `shared.${family}`;
       const now   = new Date().toISOString();
@@ -1426,18 +1413,13 @@ export function registerRefRoutes(router: Router, deps: RefRoutesDeps): Router {
         }
       });
 
-      // Audit
-      await (db as Kysely<any>)
-        .insertInto("log.platform_audit_log")
-        .values({
-          entity_type: `shared.${family}`,
-          operation:   "bulk_import",
-          actor_id:    g.principalId,
-          payload:     JSON.stringify({ inserted, updated }),
-          checksum,
-          row_count:   inserted + updated,
-        } as never)
-        .execute();
+      void appendPlatformAuditEvent(db, {
+        event_code:  "platform.ref.import",
+        operation:   "import",
+        entity_type: `shared.${family}`,
+        scope_id:    g.principalId,
+        context:     { checksum, inserted, updated, row_count: inserted + updated },
+      });
 
       // Cache invalidation happens in the caller (BFF relay layer) via ref-cache.ts
       // after this route responds. The versioned key pattern ensures stale reads

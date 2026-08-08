@@ -26,7 +26,6 @@
   },
   "dependencies": {
     "@athyper/adapter-object-storage": "workspace:*",
-    "@athyper/foundation-crypto": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-shared": "workspace:*"
@@ -43,4 +42,3 @@
     "vitest": "^4.1.4"
   }
 }
-

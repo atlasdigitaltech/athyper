@@ -3,7 +3,7 @@
  *
  * Loads config, runs bootstrap (adapters + lifecycle), then dispatches to
  * the selected runtime. This file must not grow: all substance lives in
- * kernel/bootstrap.ts and runtimes/*.ts.
+ * composition/bootstrap.ts and runtimes/*.ts.
  *
  * Runtime selection via MODE env var (default: "api"):
  *
@@ -40,7 +40,7 @@ initSentry({ mode: process.env.MODE ?? "api" });
 
 import { loadConfig } from "./config.js";
 import { loadKernelConfig } from "./kernel-config.js";
-import { bootstrap } from "./kernel/bootstrap.js";
+import { bootstrap } from "./composition/bootstrap.js";
 import { startApi } from "./runtimes/api.js";
 import { startWorker } from "./runtimes/worker.js";
 import { startScheduler } from "./runtimes/scheduler.js";

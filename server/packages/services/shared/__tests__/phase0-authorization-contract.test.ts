@@ -7,7 +7,7 @@ const read = (relativePath: string) => readFileSync(resolve(repoRoot, relativePa
 
 describe("Phase 0 tenant and work-context contracts", () => {
   it("keeps tenant identity binding and context ownership tenant-safe", () => {
-    const resolver = read("server/packages/services/iam/context/context-resolver.service.ts");
+    const resolver = read("server/packages/platform/iam/context/context-resolver.service.ts");
     const identity = read("server/packages/services/shared/route-helpers.ts");
 
     expect(identity).toContain('"pab.tenant_id"');
@@ -17,7 +17,7 @@ describe("Phase 0 tenant and work-context contracts", () => {
   });
 
   it("discovers legal entity and typed procurement/sales contexts", () => {
-    const resolver = read("server/packages/services/iam/context/context-resolver.service.ts");
+    const resolver = read("server/packages/platform/iam/context/context-resolver.service.ts");
     const bff = read("packages/shared/platform-auth/auth-bff/src/index.ts");
 
     expect(resolver).toContain('contextType: "legal_entity"');
@@ -40,7 +40,7 @@ describe("Phase 0 tenant and work-context contracts", () => {
   });
 
   it("implements scoped deny subtraction and member-company propagation", () => {
-    const permission = read("server/packages/services/iam/permission/permission.service.ts");
+    const permission = read("server/packages/platform/iam/permission/permission.service.ts");
     const authorizationScope = read("server/db/ddl/planes/neon/authz/07_functions.sql");
     const policy = read("server/db/ddl/planes/neon/authz/12_compiled_permission_reference_seed.sql");
 

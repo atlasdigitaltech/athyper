@@ -7,12 +7,12 @@
  *   - listDefinitions / getDefinition: admin reads
  *   - createDefinition / updateDefinition: admin writes
  *   - listRules / createRule / updateRule / deleteRule: per-policy rule management
- *   - queryLog: read log.policy_evaluation_log for a tenant
+ *   - queryLog: read audit.audit_log (event_code='policy.evaluated') for a tenant
  *
  * DB tables used:
  *   control.policy_definition  — policy containers
  *   control.policy_rule        — individual JSONLogic rules
- *   log.policy_evaluation_log  — append-only evaluation audit
+ *   audit.audit_log            — evaluation events (via audit.append_event)
  *
  * Evaluation algorithm:
  *   1. Load all is_active policy_definitions for (tenant_id, entity_type) effective today,
@@ -27,11 +27,12 @@
  *      If none deny and any requires_workflow, result is require_workflow.
  *      If none of the above, and any warns, result is warn.
  *      Otherwise result is allow (or null if no rule matched).
- *   6. Log to log.policy_evaluation_log.
+ *   6. Emit to audit.audit_log via appendAuditEvent (generic_action_event contract).
  */
 
 import { sql, type Kysely } from "kysely";
 import { evaluateJsonLogic } from "@athyper/platform-rules";
+import { appendAuditEvent } from "@athyper/svc-audit";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -55,9 +56,9 @@ export interface EvaluateParams {
   /** Optional org-context injected into payload for JSONLogic */
   companyCodeId?: string;
   legalEntityId?: string;
-  /** Identifies the calling pipeline for log.policy_evaluation_log.pipeline_id */
+  /** Identifies the calling pipeline — stored in audit context.pipeline_id */
   pipelineId?: string;
-  /** Correlation txn for log.policy_evaluation_log.txn_id */
+  /** Correlation txn — stored as audit correlation_id */
   txnId?: string;
   /** The principal making the request (for the log created_by) */
   requestedBy: string;
@@ -286,38 +287,27 @@ export class PolicyEngine {
     const permitted = action !== "deny";
     const evaluationMs = Date.now() - start;
 
-    // Log to policy_evaluation_log (best-effort, non-fatal)
-    try {
-      await this.db
-        .insertInto("log.policy_evaluation_log" as never)
-        .values({
-          tenant_id:      tenantId,
-          txn_id:         txnId         ?? null,
-          pipeline_id:    pipelineId    ?? null,
-          module_id:      null,           // resolved at route level if needed
-          action:         action === "none" ? null : action,
-          score:          winning?.score        ?? null,
-          confidence:     winning?.confidence   ?? null,
-          explanation:    winning?.explanation  ?? null,
-          approvers:      winning?.approvers
-            ? JSON.stringify(winning.approvers)
-            : null,
-          sla_hours:      winning?.slaHours ?? null,
-          conditions:     allOutcomes.length > 0
-            ? JSON.stringify(allOutcomes.map((o) => ({ ruleId: o.ruleId, action: o.action })))
-            : null,
-          evaluation_ms:  evaluationMs,
-          evaluated_at:   new Date().toISOString(),
-          created_by:     requestedBy,
-        } as never)
-        .execute();
-    } catch (err) {
-      this.logger?.error("policy_log_failed", {
-        err: err instanceof Error ? err.message : String(err),
-        tenantId,
-        entityType,
-      });
-    }
+    // Emit evaluation event (best-effort, non-fatal — appendAuditEvent swallows errors)
+    void appendAuditEvent(this.db, {
+      event_code:     "policy.evaluated",
+      operation:      "execute",
+      entity_type:    entityType,
+      entity_id:      params.entityId ?? null,
+      outcome:        action === "deny" ? "failure"
+                      : action === "none" || action === "allow" ? "success"
+                      : "partial",
+      correlation_id: txnId ?? null,
+      context: {
+        policy_action:   action,
+        pipeline_id:     pipelineId    ?? null,
+        evaluation_ms:   evaluationMs,
+        outcomes_count:  allOutcomes.length,
+        winning_rule_id: winning?.ruleId       ?? null,
+        score:           winning?.score        ?? null,
+        confidence:      winning?.confidence   ?? null,
+        explanation:     winning?.explanation  ?? null,
+      },
+    });
 
     return { action, permitted, outcomes: allOutcomes, winning, evaluationMs };
   }
@@ -545,14 +535,15 @@ export class PolicyEngine {
   }): Promise<unknown[]> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q: any = this.db
-      .selectFrom("log.policy_evaluation_log as pel" as never)
-      .selectAll("pel" as never)
-      .where("pel.tenant_id" as never, "=", opts.tenantId as never)
-      .orderBy("pel.evaluated_at" as never, "desc");
+      .selectFrom("audit.audit_log as al" as never)
+      .selectAll("al" as never)
+      .where("al.tenant_id" as never, "=", opts.tenantId as never)
+      .where("al.event_code" as never, "=", "policy.evaluated" as never)
+      .orderBy("al.occurred_at" as never, "desc");
 
-    if (opts.txnId)      q = q.where("pel.txn_id",     "=", opts.txnId);
-    if (opts.pipelineId) q = q.where("pel.pipeline_id", "=", opts.pipelineId);
-    if (opts.action)     q = q.where("pel.action",     "=", opts.action);
+    if (opts.txnId)      q = q.where("al.correlation_id" as never, "=", opts.txnId as never);
+    if (opts.pipelineId) q = q.where(sql`al.context->>'pipeline_id'` as never, "=" as never, opts.pipelineId as never);
+    if (opts.action)     q = q.where(sql`al.context->>'policy_action'` as never, "=" as never, opts.action as never);
 
     q = q.limit(opts.limit ?? 50).offset(opts.offset ?? 0);
 

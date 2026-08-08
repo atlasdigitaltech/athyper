@@ -209,7 +209,7 @@ export class PostgresContractApplicationTransaction implements ContractApplicati
       SELECT e.id::text AS entity_id, m.id::text AS module_id
         FROM control.entity_version ev
         JOIN control.entity e ON e.id = ev.entity_id
-        JOIN shared.module m ON lower(m.code) = lower(${contract.catalog.module_code})
+        JOIN control.module m ON lower(m.code) = lower(${contract.catalog.module_code})
        WHERE ev.id = ${version.versionId}::uuid
          AND e.entity_code = ${contract.catalog.entity_code}
        LIMIT 1
@@ -1346,7 +1346,7 @@ export class PostgresContractApplicationTransaction implements ContractApplicati
     await sql`
       UPDATE control.entity
          SET module_id=COALESCE(
-               (SELECT id FROM shared.module WHERE lower(code)=lower(${publishedContract.catalog.module_code}) LIMIT 1),
+               (SELECT id FROM control.module WHERE lower(code)=lower(${publishedContract.catalog.module_code}) LIMIT 1),
                module_id
              ),
              entity_code=${publishedContract.catalog.entity_code},

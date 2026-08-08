@@ -8,9 +8,16 @@ import type {
 import type { PlaneDatabaseRegistry } from "../runtime/plane-database-registry.js";
 import type { BootstrapQuery } from "../session/session.types.js";
 import type { CacheClient } from "../session/session.service.js";
+import type {
+  ActiveOrganizationProjection,
+  OrganizationProjectionRepository,
+} from "../organization-projection/organization-projection.repository.js";
 
 const TENANT_ID = "11111111-1111-4111-8111-111111111111";
 const SUBJECT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const EXTERNAL_ORGANIZATION_ID = "kc-org-athyper";
+const PROJECTION_ID = "99999999-9999-4999-8999-999999999999";
+const SCOPE_TARGET_ID = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 
 function query(overrides: Partial<BootstrapQuery> = {}): BootstrapQuery {
   return {
@@ -19,7 +26,7 @@ function query(overrides: Partial<BootstrapQuery> = {}): BootstrapQuery {
     planeKey: "neon",
     name: "Demo User",
     email: "demo@example.test",
-    orgAliases: [TENANT_ID],
+    externalOrganizationIds: [EXTERNAL_ORGANIZATION_ID],
     workbenches: ["user"],
     ...overrides,
   };
@@ -56,6 +63,30 @@ function identities(rows: AdmittedIdentity[]): IdentityAdmissionRepository {
   };
 }
 
+function projection(): ActiveOrganizationProjection {
+  return {
+    projectionId: PROJECTION_ID,
+    tenantId: TENANT_ID,
+    realmKey: "athyper",
+    externalOrganizationId: EXTERNAL_ORGANIZATION_ID,
+    organizationAlias: "athyper",
+    organizationName: "Athyper",
+    sourceVersion: 1,
+    sourceHash: "a".repeat(64),
+    effectiveFrom: "2026-01-01T00:00:00.000Z",
+    effectiveUntil: null,
+    ceilings: [{
+      scopeTargetId: SCOPE_TARGET_ID,
+      ceilingMode: "exact",
+      networkRoleCeiling: null,
+    }],
+  };
+}
+
+function projections(rows: ActiveOrganizationProjection[] = [projection()]): OrganizationProjectionRepository {
+  return { resolveActive: vi.fn().mockResolvedValue(rows) };
+}
+
 function registry(): PlaneDatabaseRegistry {
   return {
     forPlane: vi.fn().mockReturnValue({ db: {}, databasePlane: "neon" }),
@@ -69,6 +100,7 @@ describe("BootstrapService.resolve", () => {
     const service = createBootstrapService({
       planeDatabases: registry(),
       identities: identityRepo,
+      projections: projections(),
       cache: cache(JSON.stringify(expected)),
     });
 
@@ -80,7 +112,8 @@ describe("BootstrapService.resolve", () => {
     const cacheClient = cache();
     const identityRepo = identities([admission()]);
     const loadScopes = vi.fn().mockResolvedValue([{
-      target_id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      scope_target_id: SCOPE_TARGET_ID,
+      target_id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
       scope_kind: "legal_entity",
       scope_key: "LE-ATHQ",
       display_name: "Athyper Holdings",
@@ -88,6 +121,7 @@ describe("BootstrapService.resolve", () => {
     const service = createBootstrapService({
       planeDatabases: registry(),
       identities: identityRepo,
+      projections: projections(),
       cache: cacheClient,
       loadScopes,
     });
@@ -117,11 +151,14 @@ describe("BootstrapService.resolve", () => {
     const service = createBootstrapService({
       planeDatabases: registry(),
       identities: identities([]),
+      projections: projections(),
       cache: cache(),
       loadScopes: vi.fn(),
     });
 
-    await expect(service.resolve(query({ orgAliases: [TENANT_ID, "ORG-LEGACY"] })))
+    await expect(service.resolve(query({
+      externalOrganizationIds: [EXTERNAL_ORGANIZATION_ID, "kc-org-missing"],
+    })))
       .resolves.toEqual({
         principal: { id: SUBJECT_ID, name: "Demo User", email: "demo@example.test" },
         tenants: [],

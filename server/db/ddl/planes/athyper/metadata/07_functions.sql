@@ -841,6 +841,7 @@ BEGIN
         + (SELECT count(*) FROM metadata.entity_relation WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_surface WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_operation WHERE change_set_id = p_change_set_id)
+        + (SELECT count(*) FROM metadata.entity_operation_permission WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_surface_operation WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_operation_rule WHERE change_set_id = p_change_set_id)
         + (SELECT count(*) FROM metadata.entity_flow WHERE change_set_id = p_change_set_id)
@@ -1089,6 +1090,23 @@ BEGIN
             USING ERRCODE = 'check_violation', DETAIL = 'operations.' || v_problem_path;
     END IF;
 
+    SELECT operation_row.operation_key INTO v_problem_path
+      FROM metadata.entity_operation AS operation_row
+     WHERE operation_row.change_set_id = p_change_set_id
+       AND operation_row.status = 'active'
+       AND operation_row.permission_code IS NULL
+       AND NOT EXISTS (
+            SELECT 1
+              FROM metadata.entity_operation_permission AS permission_binding
+             WHERE permission_binding.entity_operation_id = operation_row.id
+               AND permission_binding.status = 'active'
+       )
+     LIMIT 1;
+    IF FOUND THEN
+        RAISE EXCEPTION 'ENTITY_OPERATION_PERMISSION_REQUIRED'
+            USING ERRCODE = 'check_violation', DETAIL = 'operations.' || v_problem_path;
+    END IF;
+
     SELECT flow_row.flow_key INTO v_problem_path
       FROM metadata.entity_flow AS flow_row
      WHERE flow_row.change_set_id = p_change_set_id
@@ -1243,7 +1261,18 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, metadata, control
 AS $$
 BEGIN
-    IF TG_TABLE_NAME = 'entity_surface_operation' THEN
+    IF TG_TABLE_NAME = 'entity_operation_permission' THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM metadata.entity_operation operation_row
+             WHERE operation_row.id = NEW.entity_operation_id
+               AND operation_row.tenant_id IS NOT DISTINCT FROM NEW.tenant_id
+               AND operation_row.entity_id = NEW.entity_id
+               AND operation_row.change_set_id = NEW.change_set_id
+        ) THEN
+            RAISE EXCEPTION 'Operation permission must belong to the same Entity graph'
+                USING ERRCODE = 'foreign_key_violation';
+        END IF;
+    ELSIF TG_TABLE_NAME = 'entity_surface_operation' THEN
         IF NOT EXISTS (SELECT 1 FROM metadata.entity_surface s JOIN metadata.entity_operation o ON o.id = NEW.entity_operation_id WHERE s.id = NEW.entity_surface_id AND s.tenant_id IS NOT DISTINCT FROM NEW.tenant_id AND o.tenant_id IS NOT DISTINCT FROM NEW.tenant_id AND s.entity_id = NEW.entity_id AND o.entity_id = NEW.entity_id AND s.change_set_id = NEW.change_set_id AND o.change_set_id = NEW.change_set_id) THEN
             RAISE EXCEPTION 'Surface operation members must belong to the same Entity graph' USING ERRCODE = 'foreign_key_violation';
         END IF;

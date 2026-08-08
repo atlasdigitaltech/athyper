@@ -62,6 +62,18 @@ function descriptor() {
       ownershipModel: "tenant",
     },
     policy: { hasFieldSecurity: false }, lifecycleStateMasks: [],
+    cachePolicy: {
+      mode: "stale_while_revalidate" as const,
+      freshForSeconds: 20,
+      retainForSeconds: 300,
+      prefetch: "intent" as const,
+      restoreScroll: true,
+      invalidateOnMutation: true,
+      maxQueriesPerEntity: 5,
+      maxRowsPerQuery: 200,
+      storage: "memory" as const,
+      source: "platform" as const,
+    },
     audit: { compiledAt: "2026-01-01T00:00:00.000Z", descriptorHash: "old-hash" },
   };
 }

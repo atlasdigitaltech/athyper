@@ -15,7 +15,7 @@ export interface DurableMutationActor {
  * duration of the transaction so triggers can read them.
  *
  * Concrete implementation of the TransactionRunner port defined in
- * @athyper/foundation-transaction. The Kysely dependency keeps this in
+ * @athyper/server-foundation/transaction. The Kysely dependency keeps this in
  * adapters/database, not in foundation.
  */
 export async function executeDurableMutationTransaction<DB, Result>(

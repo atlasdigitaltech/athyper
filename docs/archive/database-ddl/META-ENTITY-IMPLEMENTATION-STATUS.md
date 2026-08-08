@@ -1,6 +1,15 @@
 # Meta Entity implementation status
 
-Status date: **2026-08-02**
+Status date: **2026-08-08**
+
+> Runtime cutover update: the normalized authoring graph remains Athyper-only.
+> All three planes now install the same immutable `runtime_meta.entity_contract`
+> and plane-local `runtime_meta.entity_descriptor` projection contract. Entity
+> releases are staged with their projection, verified, and atomically activated
+> with the local release head. Rollback and offline reads use that same local
+> activation boundary. The same transaction now stages and activates the
+> normalized `authz.entity_operation_binding` plus child scope coordinates.
+> Mesh's earlier private projection DDL has been retired.
 
 This report distinguishes repository implementation from design intent. A table
 listed in a plan is not considered complete unless its target DDL exists in the
@@ -26,9 +35,10 @@ canonical service and persists the normalized model.
 | Phase 1 authoring foundation | Complete DDL | Stable Entity identity, change sets, immutable revisions, releases, and publication head exist |
 | Entity audit integration | Complete for authoring | Dedicated sealed event contract plus same-transaction checkpoint/workflow/release writers are implemented |
 | Phase 2 normalized graph | Complete DDL + seed | All ten approved tables and protections exist; seven published examples plus one editable draft exercise the model |
-| Phase 3 surfaces/operations | Not started | No new target tables or editors |
-| Phase 4 flow/policy/tests | Not started | No new target tables, service, compiler, or test runner |
-| Runtime projections | Partial | A Mesh-only earlier `entity_contract` exists; the agreed all-plane contract/descriptor model does not |
+| Phase 3 surfaces/operations | Complete DDL + service + seed | Normalized surfaces, sections, field bindings, operations, plane permissions, and presentation bindings are authoritative in Athyper |
+| Phase 4 flow/policy/tests | Complete DDL + service + seed | Flows, policy bindings, operation scope, lifecycle/numbering composition, contract fixtures, and immutable test evidence are implemented |
+| Runtime projections | Complete DDL + consumer | Common contract/descriptor DDL is installed by every plane; activation, rollback, offline serving, and immutable guards share one local boundary |
+| Plane-local authorization authority | Complete common DDL | Athyper, Neon, and Mesh install one common table/protection stack; authority rows remain local and are never bidirectionally replicated |
 | Clean authoring contracts | Complete for Phase 2 DDL | DTOs align with runtime profiles, fields, keys, search, and normalized relation targets/mappings |
 | Clean server service/API | Complete for Phase 2 | Isolated catalog/change-set/graph/checkpoint/diff/workflow API is registered; no legacy metadata imports |
 | Independent seeds | P2.7 complete | Ten-file guarded pack has class profiles, exact permissions, seven releases, one draft, assertions, and immutable receipts |
@@ -44,8 +54,10 @@ canonical service and persists the normalized model.
 | `metadata.entity_release` | **Complete DDL** | Connected to clean API | Publish, contract-verified rollback, and contract-preserving retirement are implemented |
 | `metadata.entity_publication_status` | **Complete view** | Not connected | Correctly derives latest publication head; compilation and delivery state are intentionally absent |
 | `snapshot.compiled_artifact` | **Partial relative to Entity plan** | Not connected | Existing Athyper artifact table references tenant-only `snapshot.entity_snapshot_identity`, not nullable-tenant `snapshot.entity_contract_revision`; global Entity compilation is therefore not yet represented by this table |
-| `runtime_meta.entity_contract` | **Partial** | Legacy/isolated | Exists only under Mesh and has an earlier shape; missing the agreed all-plane nullable tenancy, release/revision coordinates, signature/projection coordinates, and Athyper/Neon installations |
-| `runtime_meta.entity_descriptor` | **Not started** | Not started | No target table in Athyper, Neon, or Mesh |
+| `runtime_meta.entity_contract` | **Complete common DDL** | Connected to publication consumer | Portable nullable-tenant contract, release/revision and signature coordinates, immutable content, and activation status are installed in Athyper, Neon, and Mesh |
+| `runtime_meta.entity_descriptor` | **Complete common DDL** | Connected to publication consumer | Athyper activates `admin_preview`; Neon and Mesh activate `entity_runtime`; only one descriptor head is active per Entity/plane/kind |
+| `authz.entity_operation_binding` | **Complete common DDL** | Connected to publication consumer | One operation/permission row per applied release; staged, verified, activated, retired, and restored atomically with its descriptor |
+| `authz.entity_operation_scope_binding` | **Complete common DDL** | Connected to normalized evaluator | Child-only typed scope coordinates; operation identity, permission, release, plane, and lifecycle are not duplicated |
 
 ## Athyper authoring inventory: table-by-table
 
@@ -92,37 +104,66 @@ unfinished.
 
 | Object | Status | Target responsibility |
 |---|---|---|
-| `metadata.entity_surface` | **Not started** | Surface identity, mode, kind, placement |
-| `metadata.entity_surface_section` | **Not started** | Section hierarchy/layout |
-| `metadata.entity_surface_field` | **Not started** | Sole field presentation/interaction owner |
-| `metadata.entity_operation` | **Not started** | Permission and server execution contract |
-| `metadata.entity_surface_operation` | **Not started** | Operation placement and UI interaction |
-| `metadata.entity_operation_rule` | **Not started** | Lifecycle/plane capability restrictions |
+| `metadata.entity_surface` | **Complete DDL + service + seed** | Surface identity, mode, kind, placement |
+| `metadata.entity_surface_section` | **Complete DDL + service + seed** | Section hierarchy/layout |
+| `metadata.entity_surface_field_binding` | **Complete DDL + service + seed** | Sole field presentation/interaction owner |
+| `metadata.entity_operation` | **Complete DDL + service + seed** | Stable operation and server execution contract |
+| `metadata.entity_operation_permission` | **Complete DDL + service + seed** | Plane-aware permission binding independent of UI placement |
+| `metadata.entity_surface_operation` | **Complete DDL + service + seed** | Optional operation placement and UI interaction |
+| `metadata.entity_operation_rule` | **Complete DDL + service + seed** | Lifecycle/plane capability restrictions |
 
 ### Phase 4 - flow, lifecycle, numbering, policy, authz, and verification
 
 | Object | Status | Target responsibility |
 |---|---|---|
-| `metadata.entity_flow` | **Not started** | Flow identity and trigger context |
-| `metadata.entity_flow_step` | **Not started** | Ordered steps referencing surfaces |
-| `metadata.entity_lifecycle_binding` | **Not started** | Immutable lifecycle revision binding |
-| `metadata.entity_numbering_policy` | **Not started** | Authored numbering policy |
-| `metadata.entity_policy_binding` | **Not started** | Entity-to-canonical-policy binding |
-| `metadata.entity_field_policy_binding` | **Not started** | Field-to-canonical-policy binding |
-| `authz.entity_operation_scope_binding` | **Not started** | Typed operation scope extraction |
-| `metadata.entity_contract_test_case` | **Not started** | Version-aware validation/compiler fixture |
+| `metadata.entity_flow` | **Complete DDL + service + seed** | Flow identity and trigger context |
+| `metadata.entity_flow_step` | **Complete DDL + service + seed** | Ordered steps referencing surfaces |
+| `metadata.entity_lifecycle_binding` | **Complete DDL + service + seed** | Immutable lifecycle revision binding |
+| `metadata.entity_lifecycle_operation_binding` | **Complete DDL + service + seed** | Operation-to-transition mapping |
+| `metadata.entity_numbering_binding` | **Complete DDL + service + seed** | Entity field/operation binding to canonical numbering policy coordinates |
+| `metadata.entity_policy_binding` | **Complete DDL + service + seed** | Entity-to-canonical-policy binding |
+| `metadata.entity_field_policy_binding` | **Complete DDL + service + seed** | Field-to-canonical-policy binding |
+| `metadata.entity_operation_scope_binding` | **Complete DDL + compiler** | Authored typed extraction compiled into plane-local `authz` projection rows |
+| `metadata.entity_contract_test_case` | **Complete DDL + runner** | Version-aware validation/compiler fixture with immutable snapshot results |
 
 ### Runtime projections
 
 | Plane/object | Status | Gap |
 |---|---|---|
-| Athyper `runtime_meta.entity_contract` | **Not started** | No local preview/runtime contract projection |
-| Neon `runtime_meta.entity_contract` | **Not started** | No target release projection |
-| Mesh `runtime_meta.entity_contract` | **Partial** | Earlier Mesh-only schema must be aligned with the final common contract |
-| Athyper `runtime_meta.entity_descriptor` | **Not started** | No Admin preview descriptor |
-| Neon `runtime_meta.entity_descriptor` | **Not started** | No compiled Neon descriptor |
-| Mesh `runtime_meta.entity_descriptor` | **Not started** | No compiled Mesh descriptor |
-| `runtime_meta.entity_number_counter` | **Not started** | Add only to an approved numbering execution plane, initially Neon |
+| Athyper `runtime_meta.entity_contract` | **Complete DDL + consumer** | Local signed release contract used by the Admin preview head |
+| Neon `runtime_meta.entity_contract` | **Complete DDL + consumer** | Local signed release contract used by the Neon runtime head |
+| Mesh `runtime_meta.entity_contract` | **Complete DDL + migrated consumer** | Common shape replaces the private Mesh table while preserving the document-envelope trust coordinate |
+| Athyper `runtime_meta.entity_descriptor` | **Complete DDL + consumer** | `admin_preview` compilation semantics; verification is signature-gated and authorization bindings are not emitted |
+| Neon `runtime_meta.entity_descriptor` | **Complete DDL + consumer** | `entity_runtime` descriptor plus normalized authorization artifact |
+| Mesh `runtime_meta.entity_descriptor` | **Complete DDL + consumer** | `entity_runtime` descriptor plus normalized authorization artifact |
+| `runtime_meta.entity_number_counter` | **Complete common DDL** | Plane-local mutable numbering state; use remains restricted to approved allocation services |
+
+### Authorization distribution boundary
+
+All planes install the same common DDL for `permission`, `plane_membership`,
+`scope_target`, `role`, `role_permission`, `principal_group`, `group_member`,
+`group_role`, `deny_rule`, `delegation`, `delegation_grant`, `override`,
+`record_acl`, and `trusted_device`. This is schema convergence, not shared row
+ownership. Tenant membership, assignments, exceptions, ACLs, delegations, and
+device trust remain authoritative in the plane that enforces them.
+
+Athyper publication distributes only immutable compiler output: the Entity
+contract/descriptor and its operation-to-permission/scope projection. The
+consumer resolves canonical permission codes against its local published
+permission catalog and rejects the entire stage when a permission is missing
+or has the wrong kind. Athyper retains explicit non-executable `admin_preview`
+semantics, so it installs the common tables and lifecycle consumer but does not
+emit executable operation-scope rows for Admin previews.
+
+No runtime authorization decision performs a cross-database join. Each plane
+serves from its last active local release head when Athyper is offline. Local
+role/grant changes remain independent of metadata release activation.
+
+Projection lifecycle certification covers clean manifest installation, shape,
+immutability, atomic activation, successor replacement, rollback, offline local
+reads, forced RLS, grants, and the Mesh document-envelope FK. Publication retry
+after local activation is idempotent so a failed Athyper acknowledgement does
+not restage or mutate runtime content.
 
 ## Studio implementation status
 

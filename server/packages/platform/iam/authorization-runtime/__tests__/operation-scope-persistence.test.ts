@@ -24,7 +24,6 @@ const blueprint: CompiledOperationScopeBindingBlueprint = {
   coordinateSource: "tenant_context",
   coordinateKey: null,
   resolverKey: null,
-  missingValueBehavior: "deny",
 };
 
 describe("P5-E2 persistence boundaries", () => {
@@ -33,10 +32,10 @@ describe("P5-E2 persistence boundaries", () => {
       targetPlane: "neon",
       expectedDatabaseName: "athyper_neon",
       tenantId: null,
+      appliedReleaseId: TENANT,
       sourceEntityId: UUID,
-      sourceReleaseId: UUID,
+      sourceReleaseId: PRINCIPAL,
       sourceReleaseHash: "a".repeat(64),
-      sourceCompiledArtifactId: UUID,
       sourceCompiledHash: "b".repeat(64),
       actorId: PRINCIPAL,
       effectiveFrom: new Date(),
@@ -50,22 +49,22 @@ describe("P5-E2 persistence boundaries", () => {
     const artifact:CrossPlaneEntityArtifactV1={artifact_schema_code:"athyper.meta-entity-plane-artifact",artifact_schema_version:"1.1",plane:"neon",
       source:{entity_id:TENANT,entity_code:"business_partner",release_id:UUID,release_hash:"a".repeat(64),revision_id:PRINCIPAL,revision_hash:"b".repeat(64),contract_hash:"c".repeat(64)},
       activation_contract:{...operationScopeActivationContract("neon"),targetPlane:"mesh"},contract:{},operation_scope_bindings:[]};
-    await expect(new SqlOperationScopeArtifactImporter(db).importArtifact({artifact,expectedDatabaseName:"athyper_neon",tenantId:null,
-      sourceCompiledArtifactId:UUID,sourceCompiledHash:"d".repeat(64),actorId:PRINCIPAL,effectiveFrom:new Date()})).rejects.toThrow("envelope_invalid");
+    await expect(new SqlOperationScopeArtifactImporter(db).importArtifact({artifact,expectedDatabaseName:"athyper_neon",tenantId:null,appliedReleaseId:TENANT,
+      sourceCompiledHash:"d".repeat(64),actorId:PRINCIPAL,effectiveFrom:new Date()})).rejects.toThrow("envelope_invalid");
     expect(opened).toBe(false);
   });
 
   it("imports one exact artifact transactionally after resolving the local permission", async () => {
     const statements: string[] = [];
+    let projectionReads = 0;
     const executor = {
       executeQuery: async (query: { sql: string }) => {
         statements.push(query.sql);
         if (query.sql.includes("current_database")) return { rows: [{ database_name: "athyper_neon" }] };
-        if (query.sql.includes("FROM authz.permission")) return { rows: [{ id: UUID, canonical_code: blueprint.permissionCode }] };
-        if (query.sql.includes("FROM authz.entity_operation_scope_binding binding")) return { rows: [] };
-        if (query.sql.includes("statement_timestamp")) return { rows: [{ applied_at: new Date("2026-08-03T00:00:00Z") }] };
-        if (query.sql.includes("UPDATE authz.entity_operation_scope_binding")) return { rows: [] };
-        if (query.sql.includes("INSERT INTO authz.entity_operation_scope_binding")) return { rows: [{ id: TENANT }] };
+        if (query.sql.includes("FROM authz.entity_operation_binding operation")) {
+          projectionReads += 1;
+          return { rows: projectionReads === 1 ? [] : [{ id: TENANT }] };
+        }
         return { rows: [] };
       },
     };
@@ -74,21 +73,22 @@ describe("P5-E2 persistence boundaries", () => {
     } as unknown as Kysely<Record<string, never>>;
     const result = await new SqlOperationScopeArtifactImporter(db).import({
       targetPlane: "neon", expectedDatabaseName: "athyper_neon", tenantId: null,
-      sourceEntityId: UUID, sourceReleaseId: UUID, sourceReleaseHash: "a".repeat(64),
-      sourceCompiledArtifactId: UUID, sourceCompiledHash: "b".repeat(64), actorId: PRINCIPAL,
+      appliedReleaseId: TENANT, sourceEntityId: UUID, sourceReleaseId: PRINCIPAL,
+      sourceReleaseHash: "a".repeat(64),
+      sourceCompiledHash: "b".repeat(64), actorId: PRINCIPAL,
       effectiveFrom: new Date("2026-08-02T00:00:00Z"), bindings: [blueprint],
     });
     expect(result).toEqual(expect.objectContaining({ noOp: false, insertedBindingIds: [TENANT] }));
     expect(statements.some((sql) => sql.includes("set_config('app.database_plane'"))).toBe(true);
-    expect(statements.some((sql) => sql.includes("updated_by=$5::uuid"))).toBe(true);
+    expect(statements.some((sql) => sql.includes("fn_stage_entity_operation_projection"))).toBe(true);
   });
 
   it("resolves candidate facts exclusively from normalized binding and authz rows", async () => {
     const db = fakeDb((sql) => {
       if (sql.includes("current_database")) return [{ database_name: "athyper_neon" }];
-      if (sql.includes("FROM authz.entity_operation_scope_binding")) return [{
+      if (sql.includes("FROM authz.entity_operation_binding")) return [{
         permission_id: UUID, canonical_code: "neon.business_partner.read",
-        resource_code: "neon.business_partner", module_id: TENANT,
+        module_id: TENANT,
         entity_id: TENANT, entity_operation_id: UUID,
         source_release_hash: "a".repeat(64), source_compiled_hash: "b".repeat(64),
         is_shareable: false, is_delegable: false, requires_mfa: false, requires_sod: false,

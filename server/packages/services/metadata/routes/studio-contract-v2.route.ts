@@ -197,7 +197,7 @@ export async function publishStagedContractV2(
   await sql`
     UPDATE control.entity
        SET module_id = COALESCE(
-             (SELECT m.id::text FROM shared.module m WHERE lower(m.code) = lower(${catalog.module_id}) LIMIT 1),
+             (SELECT m.id::text FROM control.module m WHERE lower(m.code) = lower(${catalog.module_id}) LIMIT 1),
              module_id
            ),
            entity_code = ${catalog.entity_code},
@@ -569,7 +569,7 @@ export function createStudioContractV2Routes(router: Router, deps: StudioContrac
                e.id::text AS catalog_id, e.tenant_id::text AS catalog_tenant_id,
                COALESCE(
                  (SELECT m.code
-                    FROM shared.module m
+                    FROM control.module m
                    WHERE m.id::text = e.module_id OR lower(m.code) = lower(e.module_id)
                    ORDER BY CASE WHEN m.id::text = e.module_id THEN 0 ELSE 1 END
                    LIMIT 1),
@@ -1021,7 +1021,7 @@ export function createStudioContractV2Routes(router: Router, deps: StudioContrac
       }
       const moduleExists = await sql<{ exists: boolean }>`
         SELECT EXISTS (
-          SELECT 1 FROM shared.module
+          SELECT 1 FROM control.module
            WHERE lower(code) = lower(${parsed.data.catalog.module_id})
         ) AS exists
       `.execute(deps.db);

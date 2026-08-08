@@ -409,7 +409,8 @@ export interface MetaEntityOperationDraft {
   label: string;
   description: string | null;
   handlerKey: string | null;
-  permissionCode: string;
+  /** @deprecated Use operationPermissions for plane-aware authorization. */
+  permissionCode?: string;
   executionMode: "synchronous" | "asynchronous";
   idempotencyMode: "none" | "optional" | "required";
   inputSurfaceKey: string | null;
@@ -437,6 +438,16 @@ export interface MetaEntitySurfaceOperationDraft {
   presentationVariant: string | null;
   confirmationSurfaceId: string | null;
   visibilityRule: Readonly<Record<string, unknown>> | null;
+  status: MetaEntityMemberStatus;
+}
+
+/** Authorization is attached to the operation, not to its optional UI placement. */
+export interface MetaEntityOperationPermissionDraft {
+  id: string;
+  operationId: string;
+  targetPlane: "neon" | "mesh";
+  permissionCode: string;
+  permissionKind: "entity_operation" | "capability";
   status: MetaEntityMemberStatus;
 }
 
@@ -572,6 +583,7 @@ export interface MetaEntityPhase2Graph {
   relations: readonly MetaEntityRelationDraft[];
   surfaces: readonly MetaEntitySurfaceDraft[];
   operations: readonly MetaEntityOperationDraft[];
+  operationPermissions?: readonly MetaEntityOperationPermissionDraft[];
   surfaceOperations: readonly MetaEntitySurfaceOperationDraft[];
   operationRules: readonly MetaEntityOperationRuleDraft[];
   operationScopeBindings?: readonly MetaEntityOperationScopeBindingDraft[];
@@ -780,6 +792,7 @@ export interface MetaEntityStudioSnapshot {
   relations: readonly MetaEntityRelationDraft[];
   surfaces: readonly MetaEntitySurfaceDraft[];
   operations: readonly MetaEntityOperationDraft[];
+  operationPermissions?: readonly MetaEntityOperationPermissionDraft[];
   surfaceOperations: readonly MetaEntitySurfaceOperationDraft[];
   operationRules: readonly MetaEntityOperationRuleDraft[];
   operationScopeBindings?: readonly MetaEntityOperationScopeBindingDraft[];
@@ -815,6 +828,7 @@ export const EMPTY_META_ENTITY_STUDIO_SNAPSHOT: MetaEntityStudioSnapshot = {
   relations: [],
   surfaces: [],
   operations: [],
+  operationPermissions: [],
   surfaceOperations: [],
   operationRules: [],
   flows: [],

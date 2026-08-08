@@ -7,7 +7,7 @@ const attachmentRoutes = readFileSync(
   "utf8",
 );
 const tikaWorker = readFileSync(
-  resolve(process.cwd(), "packages/services/jobs/workers/tika-extract.worker.ts"),
+  resolve(process.cwd(), "packages/platform/jobs/workers/tika-extract.worker.ts"),
   "utf8",
 );
 

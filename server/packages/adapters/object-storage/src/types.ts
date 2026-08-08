@@ -1,6 +1,6 @@
-import type { InfraLogger } from "@athyper/platform-core/logger";
-import type { BlobStore, StorageHealth, StorageProvisioner } from "@athyper/foundation-storage";
-export type { InfraLogger as AdapterLogger };
+import type { Logger as AdapterLogger } from "@athyper/server-foundation/observability";
+import type { BlobStore, StorageHealth, StorageProvisioner } from "@athyper/server-foundation/storage";
+export type { AdapterLogger };
 
 export type ObjectStorageConfig = {
   endpoint: string;

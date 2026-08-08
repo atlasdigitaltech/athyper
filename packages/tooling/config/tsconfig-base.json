@@ -8,6 +8,7 @@
     "verbatimModuleSyntax": true,
     "strict": true,
     "declaration": true,
+    "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "lib": ["ES2022"]
   }

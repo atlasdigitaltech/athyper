@@ -21,7 +21,7 @@ import {
   resolveTenantId,
   resolvePrincipalIdWithJit,
 } from "@athyper/svc-shared";
-import { hasModuleAccess, type ModuleAccessResolverOptions } from "./module-visibility.guard.js";
+import { hasModuleAccess, ModuleAccessDegradedError, ModuleAccessMisconfiguredError, type ModuleAccessResolverOptions } from "./module-visibility.guard.js";
 import { getEffectiveModuleAccess } from "@athyper/svc-iam";
 import {
   readCompiledEntityContract,
@@ -403,8 +403,15 @@ export function createEntityFlowRoute(router: Router, deps: EntityFlowRoutesDeps
             return;
           }
         } catch (modErr) {
+          if (modErr instanceof ModuleAccessMisconfiguredError) throw modErr;
+          if (modErr instanceof ModuleAccessDegradedError) {
+            res.status(503).set("Retry-After", String(modErr.retryAfterSeconds)).json({
+              error: "MODULE_ACCESS_UNAVAILABLE",
+              message: "Service temporarily unavailable. Please retry.",
+            });
+            return;
+          }
           logger?.warn("entity_flow_module_access_failed", { entityCode, tenantId, err: String(modErr) });
-          // Fail-open: render flow even if module access lookup is unavailable.
         }
       }
 

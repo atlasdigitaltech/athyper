@@ -101,6 +101,8 @@ export interface PermissionContext {
   request_id?: string;
   /** Correlation UUID linking to event.outbox if applicable. */
   correlation_id?: string;
+  /** DB plane — when set, explicit-deny decisions are emitted to audit.security_event. */
+  plane?: "neon" | "mesh" | "athyper";
 }
 
 // ─── Result ───────────────────────────────────────────────────────────────────

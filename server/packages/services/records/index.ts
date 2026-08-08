@@ -24,6 +24,7 @@ export { encodeKeysetCursor, decodeKeysetCursor, InvalidKeysetCursorError } from
 export { hydrateEntityReferences, type ReferenceLabelResolver, type ReferenceLabelBatch } from "./query/reference-hydrator.js";
 export type * from "./query/entity-query.types.js";
 export { entityListVersionKey } from "./cache/list-cache.js";
+export * from "./query/entity-query-runtime-config.js";
 export {
   createEntityMutationService,
   DefaultEntityMutationService,
@@ -103,3 +104,5 @@ export function getRecordsCapabilityHandlerManifest(): {
 export function getRecordsHandlerRegistryHealth() {
   return handlerRegistryFamily.health();
 }
+export * from "./lifecycle/execute-lifecycle-transition.js";
+export * from "./mutation/entity-mutation-outbox.handler.js";

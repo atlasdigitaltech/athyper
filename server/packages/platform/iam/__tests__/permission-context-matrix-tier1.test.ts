@@ -23,7 +23,7 @@ import { describe, expect, it } from "vitest";
 import {
   composeGrantRevokePattern,
   composeDescInvalidatePattern,
-} from "../../../../src/services/cache-invalidation/listener.js";
+} from "../cache-invalidation-patterns.js";
 import {
   computeProfileHash,
 } from "../permission-context/resolvers/base.js";

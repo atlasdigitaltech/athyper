@@ -32,3 +32,5 @@ FOR EACH ROW EXECUTE FUNCTION master.trg_guard_contact_person_role();
 CREATE TRIGGER trg_contact_person_role_30_updated
 BEFORE UPDATE ON master.contact_person_role
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+SELECT audit.install_schema_row_triggers('master');

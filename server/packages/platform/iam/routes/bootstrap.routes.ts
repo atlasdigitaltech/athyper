@@ -52,24 +52,13 @@ export interface BootstrapRoutesDeps {
 
 // ─── KC claim helpers ─────────────────────────────────────────────────────────
 
-function extractOrgAliases(orgClaim: unknown): string[] {
+function extractExternalOrganizationIds(orgClaim: unknown): string[] {
   if (!orgClaim) return [];
   if (Array.isArray(orgClaim)) {
     return orgClaim.filter((v): v is string => typeof v === "string" && v.length > 0);
   }
   if (typeof orgClaim === "object") {
-    const aliases: string[] = [];
-    for (const [key, entry] of Object.entries(orgClaim as Record<string, unknown>)) {
-      if (entry && typeof entry === "object" && !Array.isArray(entry)) {
-        const e = entry as Record<string, unknown>;
-        if (typeof e.alias === "string" && e.alias) {
-          aliases.push(e.alias);
-          continue;
-        }
-      }
-      aliases.push(key);
-    }
-    return aliases;
+    return Object.keys(orgClaim as Record<string, unknown>).filter(Boolean);
   }
   return [];
 }
@@ -169,10 +158,13 @@ export function createBootstrapRoutes(router: Router, deps: BootstrapRoutesDeps)
         return;
       }
 
-      const orgAliases = extractOrgAliases(claims.organization);
+      const organizationIdHeader = req.header("x-organization-ids");
+      const externalOrganizationIds = organizationIdHeader
+        ? organizationIdHeader.split(",").map((value) => value.trim()).filter(Boolean)
+        : extractExternalOrganizationIds(claims.organization);
       const workbenches = extractWorkbenches(claims.realm_access, planeKey);
 
-      if (orgAliases.length === 0) {
+      if (externalOrganizationIds.length === 0) {
         // No org claim in JWT (KC omits it for users with many orgs).
         // The BFF callback should have enriched sessions via the admin API;
         // this path means the caller skipped the callback flow.
@@ -184,7 +176,7 @@ export function createBootstrapRoutes(router: Router, deps: BootstrapRoutesDeps)
       }
 
       const bootstrapQuery: BootstrapQuery = {
-        sub, realmKey, planeKey, name, email, orgAliases, workbenches,
+        sub, realmKey, planeKey, name, email, externalOrganizationIds, workbenches,
       };
 
       const result = await bootstrapService.resolve(bootstrapQuery);

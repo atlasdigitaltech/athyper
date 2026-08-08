@@ -170,7 +170,8 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'entity_surface', 'entity_surface_section', 'entity_surface_field_binding', 'entity_operation'
+        'entity_surface', 'entity_surface_section', 'entity_surface_field_binding', 'entity_operation',
+        'entity_operation_permission'
     ] LOOP
         EXECUTE format('ALTER TABLE metadata.%I ENABLE ROW LEVEL SECURITY', v_table);
         EXECUTE format('ALTER TABLE metadata.%I FORCE ROW LEVEL SECURITY', v_table);

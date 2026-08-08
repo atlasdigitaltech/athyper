@@ -4,7 +4,7 @@ import type {
   EffectivePermissionContext,
   VerifiedRequestContext,
 } from "@athyper/svc-iam";
-import { createAtlasCompanyCodeDataGateway } from "../atlas-record-data-gateway.js";
+import { createAtlasCompanyCodeDataGateway } from "../composition/atlas-record-data-gateway.js";
 
 const TENANT_ID = "10000000-0000-4000-8000-000000000001";
 const PRINCIPAL_ID = "20000000-0000-4000-8000-000000000001";

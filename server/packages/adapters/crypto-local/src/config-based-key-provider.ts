@@ -10,8 +10,8 @@
  */
 
 import { pbkdf2Sync } from "crypto";
-import type { TenantKeyProvider } from "@athyper/foundation-crypto";
-import { CredentialEncryptionService } from "@athyper/foundation-crypto";
+import type { TenantKeyProvider } from "@athyper/server-foundation/crypto";
+import { CredentialEncryptionService } from "@athyper/server-foundation/crypto";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

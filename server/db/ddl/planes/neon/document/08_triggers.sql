@@ -128,7 +128,7 @@ CREATE TRIGGER comment_feed_cursor_90_updated
 BEFORE UPDATE ON document.comment_feed_cursor
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-SELECT audit.install_document_row_audit_triggers();
+SELECT audit.install_schema_row_triggers('document');
 
 CREATE TRIGGER workflow_request_identity_guard BEFORE UPDATE ON document.workflow_request
 FOR EACH ROW EXECUTE FUNCTION document.trg_guard_creation_evidence();

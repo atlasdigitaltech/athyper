@@ -21,6 +21,7 @@ import type {
   PermissionDecisionResult,
   ResolvedScope,
 } from "./permission.types.js";
+import { appendSecurityEvent } from "@athyper/svc-audit";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = any;
@@ -113,7 +114,7 @@ export async function checkPermission(
     }
 
     const envelope = await runtimeFor(db).decisions.decide(request);
-    return {
+    const result: PermissionDecisionResult = {
       decision: envelope.result.decision,
       reason: legacyReason(envelope.result.reason),
       scope: scopeFromDecision(envelope.result.mode === "collection"
@@ -121,6 +122,25 @@ export async function checkPermission(
         : undefined),
       evaluation_ms: performance.now() - startedAt,
     };
+
+    if (envelope.result.reason === "explicit_deny" && context?.plane) {
+      void appendSecurityEvent(db, {
+        plane: context.plane,
+        tenant_id: tenantId,
+        principal_id: principalId,
+        event_code: "authz.permission_denied",
+        category: "authorization",
+        severity: "warning",
+        outcome: "denied",
+        context: {
+          permission_code: permissionCode,
+          entity_type: context.entity_type ?? null,
+          entity_id: context.entity_id ?? null,
+        },
+      });
+    }
+
+    return result;
   } catch (error) {
     logger?.error("canonical_permission_evaluation_failed", {
       permissionCode,

@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@athyper/platform-rules": "workspace:*",
+    "@athyper/svc-audit": "workspace:*",
     "@athyper/svc-shared": "workspace:*"
   },
   "devDependencies": {

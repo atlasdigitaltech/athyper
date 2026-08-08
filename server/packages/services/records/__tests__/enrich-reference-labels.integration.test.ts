@@ -28,7 +28,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import {
   seedBudgetScenario, cleanupBudgetScenario,
   type BudgetScenario,
-} from "../../business/__tests__/_fixtures/budget-fixture.js";
+} from "@athyper/svc-business/test-fixtures/budget";
 import { enrichWithReferenceLabels } from "../enrich-reference-labels.js";
 
 const LIVE_DATABASE_URL =

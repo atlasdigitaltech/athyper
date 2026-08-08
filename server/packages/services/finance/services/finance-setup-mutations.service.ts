@@ -6,7 +6,7 @@
  *     UUID is internal only).
  *   • Return typed errors (MissingTenantError / NotFoundError / etc.) with
  *     .status for HTTP mapping in the route layer.
- *   • Emit a log.activity_log row via writeFinanceSetupAudit.
+ *   • Emit an audit.audit_log row via writeFinanceSetupAudit.
  *   • Refresh master.mv_company_postable_account after operations that shift
  *     control coverage — required so the readiness engine sees fresh coverage.
  *

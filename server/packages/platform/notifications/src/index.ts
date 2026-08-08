@@ -4,6 +4,7 @@ export {
   RecipientResolver,
   createNotificationOrchestrator,
 } from "./notification-orchestrator.js";
+export type { NotificationChannelHandler } from "./channel-handler.js";
 export type {
   DeliveryQueue,
   DispatchNotificationInput,

@@ -21,7 +21,7 @@ import {
   resolveCanonicalTenant,
   type AuthPipelineMode,
   type CrossCheckReporter,
-} from "../auth-pipeline.js";
+} from "@athyper/svc-iam";
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 

@@ -67,6 +67,8 @@
     "policy:server-docker-workspaces": "node scripts/policy/verify-server-docker-workspaces.mjs",
     "policy:docker-toolchain": "node scripts/policy/verify-docker-toolchain.mjs",
     "policy:canonical-packages": "node scripts/policy/verify-canonical-package-rules.mjs",
+    "policy:workspace-resolution": "node scripts/policy/verify-workspace-resolution.mjs",
+    "policy:no-legacy-schema-refs": "node scripts/policy/verify-no-legacy-schema-refs.mjs",
     "policy:shared-purity": "node scripts/policy/verify-shared-package-purity.mjs",
     "policy:no-source-junctions": "node scripts/policy/verify-no-source-junctions.mjs",
     "policy:deployment-profiles": "node scripts/policy/verify-deployment-profiles.mjs",

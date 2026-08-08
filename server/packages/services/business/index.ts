@@ -74,6 +74,7 @@ export * from "./p2p/transition-profile.js";
 export * from "./p2p/child-lifecycle-policy.js";
 export * from "./p2p/schedule-line.service.js";
 export * from "./p2p/snapshot-restore.service.js";
+export * from "./lifecycle/snapshot-diff.service.js";
 
 // ── Procurement intake ───────────────────────────────────────────────────────
 export * from "./procurement-intake/ClassificationDecision.zod.js";
@@ -93,3 +94,4 @@ export * from "./procurement/sourcing/sourcing-authorization.service.js";
 export * from "./procurement/sourcing/sourcing-document.service.js";
 export * from "./sales/sales-authorization.service.js";
 export * from "./sales/sales-document.service.js";
+export * from "./p2p/runtime-handler-manifest.js";

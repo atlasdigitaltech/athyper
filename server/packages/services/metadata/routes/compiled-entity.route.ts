@@ -20,7 +20,7 @@ import {
   resolvePrincipalIdWithJit,
   verifyBearer,
 } from "@athyper/svc-shared";
-import { hasModuleAccess, type ModuleAccessResolverOptions } from "./module-visibility.guard.js";
+import { hasModuleAccess, ModuleAccessDegradedError, ModuleAccessMisconfiguredError, type ModuleAccessResolverOptions } from "./module-visibility.guard.js";
 import { getEffectiveModuleAccess } from "@athyper/svc-iam";
 import {
   compileDocumentRuntimePlan,
@@ -671,9 +671,15 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
               return;
             }
           } catch (err) {
+            if (err instanceof ModuleAccessMisconfiguredError) throw err;
+            if (err instanceof ModuleAccessDegradedError) {
+              res.status(503).set("Retry-After", String(err.retryAfterSeconds)).json({
+                error: "MODULE_ACCESS_UNAVAILABLE",
+                message: "Service temporarily unavailable. Please retry.",
+              });
+              return;
+            }
             logger?.warn("compiled_entity_projection_module_access_failed", { entityCode, tenantId, err: String(err) });
-            // Preserve the existing fail-open behavior when the optional
-            // module-access service is unavailable.
           }
         }
 
@@ -837,8 +843,15 @@ export function createCompiledEntityRoute(router: Router, deps: CompiledEntityRo
             return;
           }
         } catch (err) {
+          if (err instanceof ModuleAccessMisconfiguredError) throw err;
+          if (err instanceof ModuleAccessDegradedError) {
+            res.status(503).set("Retry-After", String(err.retryAfterSeconds)).json({
+              error: "MODULE_ACCESS_UNAVAILABLE",
+              message: "Service temporarily unavailable. Please retry.",
+            });
+            return;
+          }
           logger?.warn("compiled_entity_module_access_failed", { entityCode, tenantId, err: String(err) });
-          // Fail-open: keep existing descriptor behavior if module checks are unavailable.
         }
       }
 

@@ -25,6 +25,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@athyper/platform-notifications": "workspace:*",
     "@athyper/svc-integration": "workspace:*",
     "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-shared": "workspace:*",

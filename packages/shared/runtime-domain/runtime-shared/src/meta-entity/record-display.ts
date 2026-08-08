@@ -1,5 +1,5 @@
 import type { MetaEntityField } from "@athyper/runtime-contracts";
-import { formatZonedDateTime, resolveTemporalKind } from "@athyper/platform-temporal";
+import { formatZonedDateTime, resolveTemporalKind } from "@athyper/temporal";
 import {
   readRuntimeRecordField,
   runtimeRecordData,

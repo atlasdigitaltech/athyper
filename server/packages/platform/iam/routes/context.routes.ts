@@ -4,7 +4,6 @@ import {
   createPlaneContextResolver,
   type PlaneKey,
 } from "../context/context-resolver.service.js";
-import { tenantIdsFromOrganizationAliases } from "../identity/identity-admission.repository.js";
 import type { PlaneDatabaseRegistry } from "../runtime/plane-database-registry.js";
 
 export interface ContextRoutesDeps {
@@ -77,23 +76,12 @@ function realmRoles(realmAccess: unknown): string[] {
   return Array.isArray(roles) ? roles.filter((role): role is string => typeof role === "string") : [];
 }
 
-function organizationAliases(value: unknown): string[] {
+function extractExternalOrgIds(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.filter((entry): entry is string => typeof entry === "string");
+    return value.filter((entry): entry is string => typeof entry === "string" && entry.trim() !== "");
   }
   if (!value || typeof value !== "object") return [];
-  const aliases: string[] = [];
-  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-      const alias = (raw as Record<string, unknown>).alias;
-      if (typeof alias === "string") {
-        aliases.push(alias);
-        continue;
-      }
-    }
-    aliases.push(key);
-  }
-  return aliases;
+  return Object.keys(value as Record<string, unknown>).filter((k) => k.trim() !== "");
 }
 
 export function createContextRoutes(router: Router, deps: ContextRoutesDeps): Router {
@@ -142,11 +130,15 @@ export function createContextRoutes(router: Router, deps: ContextRoutesDeps): Ro
         : workbenchesFromClaims(claims, planeKey);
 
       const realmKey = req.header("x-realm-key") ?? issuerRealmKey(claims);
+      const organizationIdHeader = req.header("x-organization-ids");
+      const externalOrganizationIds = organizationIdHeader
+        ? csvHeader(organizationIdHeader)
+        : extractExternalOrgIds(claims.organization);
       const result = await resolver.resolve({
         planeKey,
         realmKey,
         sub,
-        tenantIds: tenantIdsFromOrganizationAliases(organizationAliases(claims.organization)),
+        externalOrganizationIds,
         workbenches,
         username: claimString(claims.preferred_username),
         displayName: claimString(claims.name) ?? claimString(claims.preferred_username),

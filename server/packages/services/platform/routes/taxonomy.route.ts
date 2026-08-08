@@ -40,6 +40,7 @@ import type { Request, RequestHandler, Router } from "express";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import busboy from "busboy";
+import { appendPlatformAuditEvent } from "@athyper/svc-audit";
 import {
   verifyBearer,
   parsePagination,
@@ -760,16 +761,7 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
         return;
       }
 
-      // Idempotency check
       const cwTable = fam === "commodity" ? "shared.commodity_crosswalk" : "shared.industry_crosswalk";
-      const existing = await (db as Kysely<any>)
-        .selectFrom("log.platform_audit_log as pal")
-        .select(["pal.id", "pal.created_at"])
-        .where("pal.entity_type" as never, "=", cwTable as never)
-        .where("pal.operation"   as never, "=", "bulk_import" as never)
-        .where("pal.checksum"    as never, "=", checksum as never)
-        .executeTakeFirst();
-      if (existing) { res.json({ replayed: true, checksum, logged_at: existing.created_at }); return; }
 
       let inserted = 0; let updated = 0;
       await (db as Kysely<any>).transaction().execute(async (trx) => {
@@ -808,17 +800,13 @@ export function registerTaxonomyRoutes(router: Router, deps: TaxonomyRoutesDeps)
         }
       });
 
-      await (db as Kysely<any>)
-        .insertInto("log.platform_audit_log")
-        .values({
-          entity_type: cwTable,
-          operation:   "bulk_import",
-          actor_id:    g.principalId,
-          payload:     JSON.stringify({ inserted, updated }),
-          checksum,
-          row_count:   inserted + updated,
-        } as never)
-        .execute();
+      void appendPlatformAuditEvent(db, {
+        event_code:  "platform.taxonomy.import",
+        operation:   "import",
+        entity_type: cwTable,
+        scope_id:    g.principalId,
+        context:     { checksum, inserted, updated, row_count: inserted + updated },
+      });
 
       res.json({ checksum, inserted, updated, row_count: inserted + updated });
     } catch (err) {

@@ -5,7 +5,7 @@
  *   Returns the interleaved activity log + snapshot rows for a single P2P
  *   record from snapshot.v_p2p_audit_timeline.
  *
- * Tenant isolation: RLS on log.activity_log + snapshot.document_snapshot;
+ * Tenant isolation: RLS on audit.audit_log + snapshot.document_snapshot;
  * tenant resolved from bearer token (no manual WHERE).
  *
  * Pagination: keyset on activity_at DESC (most recent first).

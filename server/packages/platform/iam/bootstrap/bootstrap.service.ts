@@ -10,12 +10,18 @@ import type {
   BootstrapTenant,
 } from "../session/session.types.js";
 import type { CacheClient, CacheMetrics } from "../session/session.service.js";
+import {
+  projectionAllowsExactScope,
+  SqlOrganizationProjectionRepository,
+  type OrganizationProjectionRepository,
+} from "../organization-projection/organization-projection.repository.js";
 
 export interface BootstrapServiceDeps {
   readonly planeDatabases: PlaneDatabaseRegistry;
   readonly cache: CacheClient;
   readonly metrics?: CacheMetrics;
   readonly identities?: IdentityAdmissionRepository;
+  readonly projections?: OrganizationProjectionRepository;
   readonly loadScopes?: (
     admission: AdmittedIdentity,
     planeKey: BootstrapQuery["planeKey"],
@@ -23,6 +29,7 @@ export interface BootstrapServiceDeps {
 }
 
 interface BootstrapScopeRow {
+  readonly scope_target_id: string;
   readonly target_id: string;
   readonly scope_kind: string;
   readonly scope_key: string;
@@ -39,6 +46,7 @@ export function createBootstrapService(deps: BootstrapServiceDeps): BootstrapSer
     workflow: "session",
     sink: new SqlIdentityShadowSink(deps.planeDatabases),
   });
+  const projections = deps.projections ?? new SqlOrganizationProjectionRepository(deps.planeDatabases);
   return {
     async resolve(query): Promise<BootstrapResponse> {
       const cacheKey = bootstrapCacheKey(query);
@@ -49,9 +57,14 @@ export function createBootstrapService(deps: BootstrapServiceDeps): BootstrapSer
       }
       deps.metrics?.miss(query.planeKey);
 
+      const activeProjections = await projections.resolveActive({
+        planeKey: query.planeKey,
+        realmKey: query.realmKey,
+        externalOrganizationIds: query.externalOrganizationIds,
+      });
       const admissions = await identities.resolveCandidates({
         planeKey: query.planeKey,
-        tenantIds: query.orgAliases,
+        tenantIds: activeProjections.map((projection) => projection.tenantId),
         providerCode: "keycloak",
         realmKey: query.realmKey,
         subjectId: query.sub,
@@ -67,12 +80,14 @@ export function createBootstrapService(deps: BootstrapServiceDeps): BootstrapSer
               set_config('app.current_principal_id', ${admission.principalId}, true)
           `.execute(trx);
           const scopes = await sql<{
+            scope_target_id: string;
             target_id: string;
             scope_kind: string;
             scope_key: string;
             display_name: string;
           }>`
             SELECT DISTINCT
+              scope.id::text AS scope_target_id,
               scope.target_id::text,
               scope.scope_kind::text,
               scope.scope_key,
@@ -100,7 +115,14 @@ export function createBootstrapService(deps: BootstrapServiceDeps): BootstrapSer
           `.execute(trx);
           return scopes.rows;
         });
-        const entities = scopeRows.map((scope) => ({
+        const tenantProjections = activeProjections.filter((projection) =>
+          projection.tenantId === admission.tenantId
+        );
+        const entities = scopeRows
+          .filter((scope) => tenantProjections.some((projection) =>
+            projectionAllowsExactScope(projection, scope.scope_target_id)
+          ))
+          .map((scope) => ({
             code: scope.scope_key,
             name: scope.display_name,
             type: scope.scope_kind,
@@ -138,8 +160,10 @@ export function createBootstrapService(deps: BootstrapServiceDeps): BootstrapSer
 }
 
 function bootstrapCacheKey(query: BootstrapQuery): string {
-  const aliases = [...new Set(query.orgAliases.map((value) => value.trim().toLowerCase()))].sort();
-  return `bootstrap:${query.sub}:${query.planeKey}:${query.realmKey.toLowerCase()}:${Buffer.from(JSON.stringify(aliases)).toString("base64url") || "empty"}`;
+  const organizationIds = [...new Set(
+    query.externalOrganizationIds.map((value) => value.trim()),
+  )].sort();
+  return `bootstrap:${query.sub}:${query.planeKey}:${query.realmKey.toLowerCase()}:${Buffer.from(JSON.stringify(organizationIds)).toString("base64url") || "empty"}`;
 }
 
 function normalizeWorkbenches(values: readonly string[]): Array<"user" | "partner" | "admin"> {

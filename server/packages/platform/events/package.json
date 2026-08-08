@@ -25,7 +25,6 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@athyper/foundation-kernel": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/svc-iam": "workspace:*",
     "@athyper/svc-shared": "workspace:*"

@@ -21,7 +21,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@athyper/foundation-crypto": "workspace:*"
+    "@athyper/server-foundation": "workspace:*"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",

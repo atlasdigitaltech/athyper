@@ -2021,7 +2021,7 @@
           "config": {
             "id.token.claim": "true",
             "introspection.token.claim": "false",
-            "access.token.claim": "false",
+            "access.token.claim": "true",
             "claim.name": "organization",
             "jsonType.label": "String",
             "multivalued": "true",

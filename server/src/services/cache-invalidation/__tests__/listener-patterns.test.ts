@@ -15,7 +15,7 @@ import {
   composeExecutionDescriptorGenerationKey,
   composeExecutionDescriptorGenerationKeys,
   composeGrantRevokePattern,
-} from "../listener.js";
+} from "@athyper/svc-metadata";
 
 describe("execution descriptor generation keys", () => {
   it("addresses an exact plane, tenant, and entity without a scan pattern", () => {

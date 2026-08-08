@@ -1,6 +1,6 @@
-import type { BadgeVariant } from "@athyper/platform-theme/record-badge";
+import type { BadgeVariant as RecordBadgeVariant } from "@athyper/platform-theme/record-badge";
 
-export type { BadgeVariant };
+export type { RecordBadgeVariant };
 
 export type BadgeKind =
   // lifecycle
@@ -14,7 +14,7 @@ export type BadgeKind =
   // domain-specific
   | "blocked" | "on_hold" | "sanctioned";
 
-export const BADGE_KIND_VARIANT: Record<BadgeKind, BadgeVariant> = {
+export const BADGE_KIND_VARIANT: Record<BadgeKind, RecordBadgeVariant> = {
   active:        "success",
   inactive:      "muted",
   archived:      "muted",

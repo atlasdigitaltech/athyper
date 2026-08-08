@@ -17,8 +17,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@athyper/foundation-kernel": "workspace:*",
-    "@athyper/foundation-transaction": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
     "kysely": "^0.28.16",
     "pg": "^8.13.0"
   },

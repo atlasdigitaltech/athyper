@@ -11,7 +11,7 @@
  * Job detail:
  *   GET    /api/jobs/admin/queues/:queue/jobs/:jobId      — BullMQ job detail
  * History:
- *   GET    /api/jobs/admin/history                        — job run history (log.job_log)
+ *   GET    /api/jobs/admin/history                        — job run history (ops.job_execution)
  * Outbox:
  *   GET    /api/jobs/admin/outbox/dead                    — outbox dead_letter entries
  *   POST   /api/jobs/admin/outbox/:id/replay              — replay dead_letter outbox event
@@ -304,7 +304,7 @@ export function registerJobsAdminRoutes(router: Router, deps: JobsAdminRouteDeps
   }) as RequestHandler);
 
   // ══════════════════════════════════════════════════════════════════════════
-  // Run history — log.job_log
+  // Run history — ops.job_execution
   // ══════════════════════════════════════════════════════════════════════════
 
   // ── GET /api/jobs/admin/history ───────────────────────────────────────────
@@ -328,13 +328,12 @@ export function registerJobsAdminRoutes(router: Router, deps: JobsAdminRouteDeps
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q: any = db
-        .selectFrom("log.job_log as jl")
+        .selectFrom("ops.job_execution as jl")
         .select([
-          "jl.id", "jl.job_type", "jl.flow_id", "jl.run_id",
-          "jl.step_index", "jl.step_type", "jl.status",
-          "jl.duration_ms", "jl.attempt_no",
+          "jl.id", "jl.job_code", "jl.job_type", "jl.run_id",
+          "jl.status", "jl.duration_ms", "jl.attempt_no",
           "jl.started_at", "jl.completed_at",
-          "jl.error", "jl.purge_after",
+          "jl.error_code", "jl.error_message", "jl.purge_after",
         ])
         .where("jl.tenant_id", "=", tenantId);
 
@@ -345,7 +344,7 @@ export function registerJobsAdminRoutes(router: Router, deps: JobsAdminRouteDeps
       const [items, countRow] = await Promise.all([
         q.orderBy("jl.started_at", "desc").limit(limit).offset(offset).execute(),
         db
-          .selectFrom("log.job_log as jl")
+          .selectFrom("ops.job_execution as jl")
           .select(sql<string>`COUNT(*)`.as("cnt"))
           .where("jl.tenant_id", "=", tenantId)
           .$if(!!jobType, (qb) => qb.where("jl.job_type", "=", jobType!))

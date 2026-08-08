@@ -22,6 +22,10 @@ WORKDIR /app
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY tooling/tsconfig/ ./tooling/tsconfig/
 COPY server/package.json ./server/
+# Development builds favor a correct workspace graph over manifest-only layer
+# caching. The active package topology is still being migrated, so copying the
+# canonical tree prevents stale handwritten paths from breaking pnpm install.
+COPY packages/ ./packages/
 
 # Copy current workspace package manifests for filtered install graph resolution.
 COPY apps/admin/package.json ./apps/admin/
@@ -52,20 +56,9 @@ COPY packages/products/neon/runtime/package.json ./packages/products/neon/runtim
 COPY packages/products/admin/runtime/package.json ./packages/products/admin/runtime/
 COPY packages/products/mesh/runtime/package.json ./packages/products/mesh/runtime/
 COPY packages/shared/data-integration/api-client/package.json ./packages/shared/data-integration/api-client/
-COPY packages/shared/data-integration/api-contracts/package.json ./packages/shared/data-integration/api-contracts/
-COPY packages/shared/platform-auth/auth-bff/package.json ./packages/shared/platform-auth/auth-bff/
-COPY packages/shared/ui-platform/brand/package.json ./packages/shared/ui-platform/brand/
-COPY packages/shared/ui-platform/collaboration-ui/package.json ./packages/shared/ui-platform/collaboration-ui/
-COPY packages/shared/data-integration/config/package.json ./packages/shared/data-integration/config/
-COPY packages/shared/ui-platform/content-ui/package.json ./packages/shared/ui-platform/content-ui/
-COPY packages/shared/data-integration/core/package.json ./packages/shared/data-integration/core/
-COPY packages/shared/business-domain/cascade/package.json ./packages/shared/business-domain/cascade/
 COPY packages/shared/business-domain/domain-widgets/package.json ./packages/shared/business-domain/domain-widgets/
 COPY packages/shared/business-domain/entity-print/package.json ./packages/shared/business-domain/entity-print/
 COPY packages/shared/business-domain/finance-rules/package.json ./packages/shared/business-domain/finance-rules/
-COPY packages/shared/shared-infrastructure/i18n/package.json ./packages/shared/shared-infrastructure/i18n/
-COPY packages/shared/ui-platform/icons/package.json ./packages/shared/ui-platform/icons/
-COPY packages/shared/platform-auth/identity-gate/package.json ./packages/shared/platform-auth/identity-gate/
 COPY packages/shared/data-integration/mesh-exchange-contracts/package.json ./packages/shared/data-integration/mesh-exchange-contracts/
 COPY packages/shared/data-integration/metadata-client/package.json ./packages/shared/data-integration/metadata-client/
 COPY packages/shared/data-integration/navigation-core/package.json ./packages/shared/data-integration/navigation-core/
@@ -77,41 +70,67 @@ COPY packages/shared/runtime-domain/runtime-contracts/package.json ./packages/sh
 COPY packages/shared/runtime-domain/runtime-list/package.json ./packages/shared/runtime-domain/runtime-list/
 COPY packages/shared/runtime-domain/runtime-shared/package.json ./packages/shared/runtime-domain/runtime-shared/
 COPY packages/shared/platform-auth/session-plane/package.json ./packages/shared/platform-auth/session-plane/
-COPY packages/shared/platform-auth/session-store/package.json ./packages/shared/platform-auth/session-store/
 COPY packages/shared/ui-platform/shell/package.json ./packages/shared/ui-platform/shell/
 COPY packages/shared/runtime-domain/shell-runtime/package.json ./packages/shared/runtime-domain/shell-runtime/
-COPY packages/shared/ui-platform/surface-kit/package.json ./packages/shared/ui-platform/surface-kit/
-COPY packages/shared/ui-platform/theme/package.json ./packages/shared/ui-platform/theme/
 COPY packages/shared/business-domain/temporal/package.json ./packages/shared/business-domain/temporal/
-COPY packages/shared/ui-platform/ui/package.json ./packages/shared/ui-platform/ui/
 COPY packages/shared/ui-platform/workflow-ui/package.json ./packages/shared/ui-platform/workflow-ui/
 COPY server/db/package.json ./server/db/
+# adapters
 COPY server/packages/adapters/auth/package.json ./server/packages/adapters/auth/
-COPY server/packages/adapters/db/package.json ./server/packages/adapters/db/
+COPY server/packages/adapters/crypto-local/package.json ./server/packages/adapters/crypto-local/
+COPY server/packages/adapters/database/core/package.json ./server/packages/adapters/database/core/
+COPY server/packages/adapters/database/neon-postgres/package.json ./server/packages/adapters/database/neon-postgres/
+COPY server/packages/adapters/database/athyper-postgres/package.json ./server/packages/adapters/database/athyper-postgres/
+COPY server/packages/adapters/database/mesh-postgres/package.json ./server/packages/adapters/database/mesh-postgres/
 COPY server/packages/adapters/memory-cache/package.json ./server/packages/adapters/memory-cache/
 COPY server/packages/adapters/object-storage/package.json ./server/packages/adapters/object-storage/
+COPY server/packages/adapters/rendering/gotenberg/package.json ./server/packages/adapters/rendering/gotenberg/
+COPY server/packages/adapters/rendering/legacy-pdf-renderer/package.json ./server/packages/adapters/rendering/legacy-pdf-renderer/
 COPY server/packages/adapters/telemetry/package.json ./server/packages/adapters/telemetry/
+# foundation (root + named subpath packages)
 COPY server/packages/foundation/package.json ./server/packages/foundation/
+COPY server/packages/foundation/cache/package.json ./server/packages/foundation/cache/
+COPY server/packages/foundation/context/package.json ./server/packages/foundation/context/
+COPY server/packages/foundation/crypto/package.json ./server/packages/foundation/crypto/
+COPY server/packages/foundation/kernel/package.json ./server/packages/foundation/kernel/
+COPY server/packages/foundation/observability/package.json ./server/packages/foundation/observability/
+COPY server/packages/foundation/storage/package.json ./server/packages/foundation/storage/
+COPY server/packages/foundation/tenancy/package.json ./server/packages/foundation/tenancy/
+COPY server/packages/foundation/transaction/package.json ./server/packages/foundation/transaction/
+# runtime (root + subpath packages)
 COPY server/packages/runtime/package.json ./server/packages/runtime/
-COPY server/packages/services/ai/package.json ./server/packages/services/ai/
-COPY server/packages/services/audit/package.json ./server/packages/services/audit/
+COPY server/packages/runtime/health/package.json ./server/packages/runtime/health/
+COPY server/packages/runtime/http/package.json ./server/packages/runtime/http/
+COPY server/packages/runtime/scheduler/package.json ./server/packages/runtime/scheduler/
+COPY server/packages/runtime/workers/package.json ./server/packages/runtime/workers/
+# platform services (migrated from services/*)
+COPY server/packages/platform/ai/package.json ./server/packages/platform/ai/
+COPY server/packages/platform/audit/package.json ./server/packages/platform/audit/
+COPY server/packages/platform/collaboration/package.json ./server/packages/platform/collaboration/
+COPY server/packages/platform/documents/package.json ./server/packages/platform/documents/
+COPY server/packages/platform/events/package.json ./server/packages/platform/events/
+COPY server/packages/platform/iam/package.json ./server/packages/platform/iam/
+COPY server/packages/platform/jobs/package.json ./server/packages/platform/jobs/
+COPY server/packages/platform/notifications/package.json ./server/packages/platform/notifications/
+COPY server/packages/platform/policy/package.json ./server/packages/platform/policy/
+COPY server/packages/platform/rendering/package.json ./server/packages/platform/rendering/
+COPY server/packages/platform/rules/package.json ./server/packages/platform/rules/
+COPY server/packages/platform/search/package.json ./server/packages/platform/search/
+COPY server/packages/platform/workflow/package.json ./server/packages/platform/workflow/
+# remaining services at original location
 COPY server/packages/services/business/package.json ./server/packages/services/business/
-COPY server/packages/services/collab/package.json ./server/packages/services/collab/
 COPY server/packages/services/content/package.json ./server/packages/services/content/
 COPY server/packages/services/doc-services/package.json ./server/packages/services/doc-services/
-COPY server/packages/services/documents/package.json ./server/packages/services/documents/
 COPY server/packages/services/finance/package.json ./server/packages/services/finance/
-COPY server/packages/services/iam/package.json ./server/packages/services/iam/
-COPY server/packages/services/integration/package.json ./server/packages/services/integration/
-COPY server/packages/services/jobs/package.json ./server/packages/services/jobs/
 COPY server/packages/services/master/package.json ./server/packages/services/master/
+COPY server/packages/services/meta-entity-authoring/package.json ./server/packages/services/meta-entity-authoring/
 COPY server/packages/services/metadata/package.json ./server/packages/services/metadata/
+COPY server/packages/services/numbering-runtime/package.json ./server/packages/services/numbering-runtime/
+COPY server/packages/planes/athyper/onboarding/package.json ./server/packages/planes/athyper/onboarding/
 COPY server/packages/services/platform/package.json ./server/packages/services/platform/
-COPY server/packages/services/policy/package.json ./server/packages/services/policy/
+COPY server/packages/services/publication/package.json ./server/packages/services/publication/
 COPY server/packages/services/records/package.json ./server/packages/services/records/
-COPY server/packages/services/search/package.json ./server/packages/services/search/
 COPY server/packages/services/shared/package.json ./server/packages/services/shared/
-COPY server/packages/services/workflow/package.json ./server/packages/services/workflow/
 COPY server/packages/test-utils/package.json ./server/packages/test-utils/
 
 RUN pnpm install --frozen-lockfile \
@@ -120,14 +139,13 @@ RUN pnpm install --frozen-lockfile \
 
 # â”€â”€â”€ Source â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 COPY server/ ./server/
-COPY packages/shared/ ./packages/shared/
+COPY packages/ ./packages/
 
 # â”€â”€â”€ Build workspace library packages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-RUN pnpm --filter "@athyper/core" run build
-
-# Adapters and services export from dist/index.js â€” must be compiled before the
-# server starts. Builds in dependency order (pnpm respects workspace graph).
-RUN pnpm --filter "@athyper/server-foundation" --filter "@athyper/adapter-*" --filter "@athyper/svc-*" run build
+# Workspace packages export dist/index.js in containers. Build every transitive
+# dependency of the runtime server in dependency order, regardless of which
+# package hierarchy currently owns it.
+RUN pnpm --filter "@athyper/runtime-server^..." --if-present run build
 
 # â”€â”€â”€ Runtime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 WORKDIR /app/server

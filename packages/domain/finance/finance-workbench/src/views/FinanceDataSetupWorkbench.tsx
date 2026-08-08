@@ -2104,7 +2104,6 @@ export function FinanceDataSetupWorkbench() {
 
   return (
     <PageFrame
-      width="full"
       className="min-h-0 p-0"
       title="Finance Settings"
       description="Master, control, and governance workbench with company-scope aware setup"

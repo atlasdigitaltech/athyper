@@ -32,8 +32,7 @@ import { Kysely, sql } from "kysely";
 import pg from "pg";
 
 import { createPostgresDialect } from "../packages/adapters/db/src/kysely/dialect.js";
-import { createP2pNotificationOutboxHandler } from "../packages/services/jobs/handlers/p2p-notification-outbox.handler.js";
-import type { OutboxEvent } from "../packages/services/jobs/workers/domain-outbox.worker.js";
+import { createP2pNotificationOutboxHandler, type OutboxEvent } from "@athyper/svc-jobs";
 
 const { Pool } = pg;
 

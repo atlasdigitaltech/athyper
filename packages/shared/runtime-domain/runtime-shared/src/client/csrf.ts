@@ -16,7 +16,7 @@ import {
   getPlaneConfig,
   type PlaneKey,
   cookieNamesWithHostPrefix,
-} from "@athyper/platform-iam-session-plane";
+} from "@athyper/session-plane";
 
 // ─── Plane registration ──────────────────────────────────────────────────────
 

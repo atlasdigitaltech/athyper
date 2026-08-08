@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { cn } from "@athyper/platform-theme/utils";
+import { cn } from "@athyper/theme/utils";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-} from "@athyper/platform-ui/primitives";
+} from "@athyper/ui/primitives";
 import type { EntityEditState } from "./types";
 
 export interface EditGuardModalProps {

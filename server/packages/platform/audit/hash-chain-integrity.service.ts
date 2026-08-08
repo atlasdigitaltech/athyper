@@ -1,15 +1,15 @@
 /**
  * HashChainIntegrityService — Phase 4.1
  *
- * Computes and verifies tamper-evident hash chains over log.audit_log.
+ * Computes and verifies tamper-evident hash chains over audit.audit_log.
  * Uses SHA-256 to chain daily audit batches:
  *
  *   anchor(day N) = SHA-256(anchor(day N-1).last_hash || events(day N))
  *
- * where events(day N) = SHA-256 of each audit_log.id sorted by created_at,
+ * where events(day N) = SHA-256 of each audit_log.id sorted by occurred_at,
  * concatenated in order.
  *
- * The chain is stored in log.hash_anchor (one row per tenant per day).
+ * The chain is stored in audit.hash_anchor (one row per tenant per day).
  * Verification re-derives the hash from raw audit rows and compares to
  * the stored anchor — any modification to historical rows breaks the chain.
  *
@@ -84,7 +84,7 @@ export class HashChainIntegrityService {
 
     // Upsert anchor
     const existing = await this.db
-      .selectFrom("log.hash_anchor as ha" as never)
+      .selectFrom("audit.hash_anchor as ha" as never)
       .select("ha.id" as never)
       .where("ha.tenant_id" as never, "=", tenantId as never)
       .where("ha.anchor_date" as never, "=", date as never)
@@ -92,7 +92,7 @@ export class HashChainIntegrityService {
 
     if (existing) {
       await this.db
-        .updateTable("log.hash_anchor" as never)
+        .updateTable("audit.hash_anchor" as never)
         .set({
           last_hash:   hash as never,
           event_count: count as never,
@@ -104,7 +104,7 @@ export class HashChainIntegrityService {
     }
 
     await this.db
-      .insertInto("log.hash_anchor" as never)
+      .insertInto("audit.hash_anchor" as never)
       .values({
         tenant_id:   tenantId,
         anchor_date: date,
@@ -127,7 +127,7 @@ export class HashChainIntegrityService {
     toDate:   string,
   ): Promise<VerifyResult> {
     const anchors = await this.db
-      .selectFrom("log.hash_anchor as ha" as never)
+      .selectFrom("audit.hash_anchor as ha" as never)
       .select(["ha.anchor_date", "ha.last_hash", "ha.event_count"] as never[])
       .where("ha.tenant_id" as never, "=", tenantId as never)
       .where("ha.anchor_date" as never, ">=", fromDate as never)
@@ -197,7 +197,7 @@ export class HashChainIntegrityService {
    */
   async getLatestAnchor(tenantId: string): Promise<HashAnchor | null> {
     const row = await this.db
-      .selectFrom("log.hash_anchor as ha" as never)
+      .selectFrom("audit.hash_anchor as ha" as never)
       .selectAll("ha" as never)
       .where("ha.tenant_id" as never, "=", tenantId as never)
       .orderBy("ha.anchor_date" as never, "desc")
@@ -217,7 +217,7 @@ export class HashChainIntegrityService {
     toDate:   string,
   ): Promise<HashAnchor[]> {
     const rows = await this.db
-      .selectFrom("log.hash_anchor as ha" as never)
+      .selectFrom("audit.hash_anchor as ha" as never)
       .selectAll("ha" as never)
       .where("ha.tenant_id" as never, "=", tenantId as never)
       .where("ha.anchor_date" as never, ">=", fromDate as never)
@@ -235,20 +235,20 @@ export class HashChainIntegrityService {
     date: string,
     prevHash: string,
   ): Promise<{ hash: string; count: number }> {
-    // Fetch all audit_log rows for this tenant on this date, sorted by created_at
+    // Fetch all audit_log rows for this tenant on this date, sorted by occurred_at
     const rows = await this.db
-      .selectFrom("log.audit_log as al" as never)
-      .select(["al.id", "al.operation", "al.entity_type", "al.entity_id", "al.created_at"] as never[])
+      .selectFrom("audit.audit_log as al" as never)
+      .select(["al.id", "al.operation", "al.entity_type", "al.entity_id", "al.occurred_at"] as never[])
       .where("al.tenant_id" as never, "=", tenantId as never)
-      .where(sql`DATE(al.created_at)` as never, "=" as never, date as never)
-      .orderBy("al.created_at" as never, "asc")
+      .where(sql`DATE(al.occurred_at)` as never, "=" as never, date as never)
+      .orderBy("al.occurred_at" as never, "asc")
       .orderBy("al.id" as never, "asc")
       .execute() as Array<{
         id: string;
         operation: string;
         entity_type: string;
         entity_id: string;
-        created_at: string;
+        occurred_at: string;
       }>;
 
     // Chain: SHA-256(prevHash || event1_id || event2_id || ...)
@@ -257,7 +257,7 @@ export class HashChainIntegrityService {
 
     for (const row of rows) {
       // Include id + operation + entity identifiers for tamper detection
-      hasher.update(`${row.id}:${row.operation}:${row.entity_type}:${row.entity_id}:${row.created_at}`);
+      hasher.update(`${row.id}:${row.operation}:${row.entity_type}:${row.entity_id}:${row.occurred_at}`);
     }
 
     return { hash: hasher.digest("hex"), count: rows.length };
@@ -268,7 +268,7 @@ export class HashChainIntegrityService {
     date: string,
   ): Promise<{ lastHash: string; anchorDate: string } | null> {
     const row = await this.db
-      .selectFrom("log.hash_anchor as ha" as never)
+      .selectFrom("audit.hash_anchor as ha" as never)
       .select(["ha.last_hash", "ha.anchor_date"] as never[])
       .where("ha.tenant_id" as never, "=", tenantId as never)
       .where("ha.anchor_date" as never, "<", date as never)

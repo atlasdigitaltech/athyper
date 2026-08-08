@@ -89,17 +89,17 @@ beforeEach(() => {
     openDescriptorCacheV2: false,
     guard: { disabled: false, reason: null, disabledUntil: 0 },
   });
-  vi.mocked(loadDocumentEditRuntimeRouteContext as never).mockResolvedValue(buildContext() as never);
-  vi.mocked(loadDocumentRuleProjection as never).mockResolvedValue({ entity: "purchase_order", field_rules: {}, action_rules: {} } as never);
-  vi.mocked(loadDocumentChildCompiledProjections as never).mockResolvedValue({ commitment_line: { compiledHash: "x" } } as never);
-  vi.mocked(buildDocumentEditSectionBatch as never).mockResolvedValue(sectionBatchResponse as never);
-  vi.mocked(buildDocumentEditCorePayload as never).mockResolvedValue({ entityCode: "purchase_order", recordId: "REC-1" } as never);
-  vi.mocked(resolveDocumentEditPlanHash as never).mockReturnValue("plan-v1");
-  vi.mocked(resolveDocumentEditWorkspaceProfile as never).mockReturnValue("edit");
-  vi.mocked(buildDocumentEditCoordinatorIdentity as never).mockReturnValue({ tenantId: "tenant-1", effectivePrincipal: "principal-1", permissionStamp: "stamp-1" } as never);
-  vi.mocked(mintDocumentEditWorkspaceToken as never).mockReturnValue("workspace-token" as never);
-  vi.mocked(getMetaEntityProcessRuntimeState as never).mockResolvedValue(null as never);
-  vi.mocked(getMetaEntityRuntimeDescriptorCacheState as never).mockReturnValue("hot");
+  vi.mocked(loadDocumentEditRuntimeRouteContext).mockResolvedValue(buildContext() as never);
+  vi.mocked(loadDocumentRuleProjection).mockResolvedValue({ entity: "purchase_order", field_rules: {}, action_rules: {} } as never);
+  vi.mocked(loadDocumentChildCompiledProjections).mockResolvedValue({ commitment_line: { compiledHash: "x" } } as never);
+  vi.mocked(buildDocumentEditSectionBatch).mockResolvedValue(sectionBatchResponse as never);
+  vi.mocked(buildDocumentEditCorePayload).mockResolvedValue({ entityCode: "purchase_order", recordId: "REC-1" } as never);
+  vi.mocked(resolveDocumentEditPlanHash).mockReturnValue("plan-v1");
+  vi.mocked(resolveDocumentEditWorkspaceProfile).mockReturnValue("edit");
+  vi.mocked(buildDocumentEditCoordinatorIdentity).mockReturnValue({ tenantId: "tenant-1", effectivePrincipal: "principal-1", permissionStamp: "stamp-1" } as never);
+  vi.mocked(mintDocumentEditWorkspaceToken).mockReturnValue("workspace-token" as never);
+  vi.mocked(getMetaEntityProcessRuntimeState).mockResolvedValue(null as never);
+  vi.mocked(getMetaEntityRuntimeDescriptorCacheState).mockReturnValue("warm");
 });
 
 describe("document-open suites (load/concurrency/browser/invalidation)", () => {
@@ -133,14 +133,14 @@ describe("document-open suites (load/concurrency/browser/invalidation)", () => {
     const response = await POST(buildRequest(), { params: Promise.resolve({ entity: "purchase_order", id: "PO-1" }) });
 
     expect(response.headers.get("X-Document-Edit-Lifecycle")).toBe("open");
-    expect(response.headers.get("X-Document-Edit-Cache-State")).toBe("hot");
+    expect(response.headers.get("X-Document-Edit-Cache-State")).toBe("warm");
     expect(response.headers.get("X-Document-Open-Rollout-Stage")).toBe("full");
     expect(response.headers.get("Cache-Control")).toContain("no-store");
   });
 
   it("captures projection validation telemetry for invalid child capability payloads", async () => {
-    vi.mocked(loadDocumentChildCompiledProjections as never).mockResolvedValue({} as never);
-    vi.mocked(buildDocumentEditCorePayload as never).mockResolvedValue({
+    vi.mocked(loadDocumentChildCompiledProjections).mockResolvedValue({} as never);
+    vi.mocked(buildDocumentEditCorePayload).mockResolvedValue({
       entityCode: "purchase_order",
       recordId: "REC-1",
       processState: undefined,

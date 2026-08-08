@@ -1437,7 +1437,7 @@ export class EntityCompilerService {
         "e.module_id",
         sql<string | null>`(
           SELECT m.code
-            FROM shared.module AS m
+            FROM control.module AS m
            WHERE m.id::text = e.module_id
               OR lower(m.code) = lower(e.module_id)
            ORDER BY CASE WHEN m.id::text = e.module_id THEN 0 ELSE 1 END

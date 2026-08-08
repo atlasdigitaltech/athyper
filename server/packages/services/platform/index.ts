@@ -15,3 +15,4 @@ export {
   type DispatchNotificationInput,
   type DispatchResult,
 } from "./notification-orchestrator.js";
+export * from "./notification-orchestrator.js";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveEntityQueryRuntimeConfig } from "../entity-query-runtime-config.js";
+import { resolveEntityQueryRuntimeConfig } from "@athyper/svc-records";
 
 const DEDICATED_SECRET = "d".repeat(48);
 const LEGACY_SECRET = "l".repeat(48);

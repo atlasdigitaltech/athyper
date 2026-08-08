@@ -1,0 +1,36 @@
+{
+  "name": "@athyper/adapter-communications",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "tsup src/index.ts --format esm --dts --outDir dist --external kysely --external nodemailer",
+    "dev": "tsup src/index.ts --format esm --dts --outDir dist --external kysely --external nodemailer --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@athyper/platform-notifications": "workspace:*",
+    "kysely": "^0.28.16",
+    "nodemailer": "^8.0.5"
+  },
+  "devDependencies": {
+    "@athyper/tsconfig": "workspace:*",
+    "@types/node": "^25.6.0",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

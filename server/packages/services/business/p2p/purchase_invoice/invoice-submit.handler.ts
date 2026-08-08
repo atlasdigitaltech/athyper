@@ -30,7 +30,7 @@ import { sql } from "kysely";
 import { matchInvoice } from "./invoice-match.service.js";
 import { validatePurchaseInvoiceInvariants } from "./invoice-invariants.service.js";
 import { seedRetentionFromPricingComponents } from "../../ap/purchase_invoice/retention-advance-seeder.service.js";
-import { dispatchFlowFieldBindings } from "../../../workflow/flow-field-dispatcher.js";
+import { dispatchFlowFieldBindings } from "@athyper/svc-workflow";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<Record<string, any>>;

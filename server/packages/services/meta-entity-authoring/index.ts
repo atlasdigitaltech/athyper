@@ -13,6 +13,7 @@ export {
   toDatabaseMetaEntityGraph,
   validateMetaEntityGraph,
 } from "./src/meta-entity-graph.js";
+export { compileEntityPlaneArtifact } from "./src/entity-plane-artifact-compiler.js";
 export {
   registerMetaEntityAuthoringRoutes,
   type MetaEntityAuthoringRoutesDeps,

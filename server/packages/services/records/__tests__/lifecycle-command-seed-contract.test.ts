@@ -197,7 +197,7 @@ describe("active lifecycle operation seed contract", () => {
     ), "utf8");
     const verifier = readFileSync(resolve(
       process.cwd(),
-      "db/scripts/verify/verify-seed-contracts.ts",
+      "scripts/db/verify/verify-seed-contracts.ts",
     ), "utf8");
 
     expect(ddl).toContain("control.resolve_effective_lifecycle_hooks");

@@ -1,5 +1,5 @@
 // Barrel — three-plane permission stack (Phase 2).
-// Mounted from server/packages/services/iam/index.ts.
+// Mounted from server/packages/platform/iam/index.ts.
 
 export type { PlaneKey } from "./plane-key.js";
 export { isPlaneKey, PLANE_KEYS } from "./plane-key.js";

@@ -16,7 +16,7 @@
  *   JOB_NAME.ARCHIVE_PARTITION — archives one partition:
  *       1. Re-checks legal hold (safety net for holds created between sweep and execution).
  *       2. Calls DETACH PARTITION CONCURRENTLY (PostgreSQL 14+).
- *       3. Writes an entry to log.job_log (job_type='partition_archive').
+ *       3. Writes an entry to ops.job_execution (job_code='partition_archive').
  *       4. Drops the detached partition (cold archive via pg_dump is a separate pipeline).
  *
  * Concurrency: SWEEP = 1 (singleton), ARCHIVE_PARTITION = 2.
@@ -163,7 +163,7 @@ async function recordBlockedPartition(
   }
 }
 
-/** Write a job_log entry for the archive operation */
+/** Write an ops.job_execution entry for the archive operation */
 async function writeJobLog(
   db: DB,
   partitionTable: string,
@@ -171,16 +171,20 @@ async function writeJobLog(
   detail: string,
 ): Promise<void> {
   await db
-    .insertInto("log.job_log" as never)
+    .insertInto("ops.job_execution" as never)
     .values({
-      job_type:    "partition_archive",
-      queue:       QUEUE_NAME.PARTITION_ARCHIVE,
+      execution_key: `partition_archive:${partitionTable}`,
+      job_code:      "partition_archive",
+      job_type:      "partition_archive",
       status,
-      started_at:  new Date(),
-      completed_at: new Date(),
-      error_detail: status === "failed" ? detail : null,
-      metadata:    { partition_table: partitionTable, detail },
-      created_by:  SYSTEM_ACTOR_ID,
+      attempt_no:    1,
+      max_attempts:  1,
+      input_payload: { partition_table: partitionTable },
+      started_at:    new Date(),
+      completed_at:  new Date(),
+      error_detail:  status === "failed" ? { message: detail } : null,
+      metadata:      { partition_table: partitionTable, detail },
+      created_by:    SYSTEM_ACTOR_ID,
     } as never)
     .execute();
 }

@@ -13,19 +13,11 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-// Load @mrleebo/prisma-ast from the pnpm store (not in workspace deps).
-// 6 levels up from scripts/ reaches the monorepo root (athyper/).
-const PRISMA_AST_PATH = resolve(
-  __dirname,
-  "../../../../../../node_modules/.pnpm/@mrleebo+prisma-ast@0.13.1/node_modules/@mrleebo/prisma-ast/dist/index.js"
-);
-const { getSchema } = require(PRISMA_AST_PATH);
+const { getSchema } = require("@mrleebo/prisma-ast");
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 const args = process.argv.slice(2);

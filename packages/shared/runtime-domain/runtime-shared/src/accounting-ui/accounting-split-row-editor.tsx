@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { cn } from "@athyper/platform-theme/utils";
-import { LABEL_SM } from "@athyper/platform-ui/typography";
+import { cn } from "@athyper/theme/utils";
+import { LABEL_SM } from "@athyper/ui/typography";
 
 export interface AccountingSplitRowEditorProps {
   title: ReactNode;

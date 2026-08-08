@@ -619,6 +619,12 @@ export class PostgresMetaEntityAuthoringRepository implements MetaEntityAuthorin
           'replacementOperationKey', op.replacement_operation_key,
           'deprecatedSinceReleaseNo', op.deprecated_since_release_no, 'plannedRemovalReleaseNo', op.planned_removal_release_no
         ) ORDER BY op.operation_key), '[]'::jsonb) FROM metadata.entity_operation op WHERE op.change_set_id=rp.change_set_id),
+        'operationPermissions', (SELECT coalesce(jsonb_agg(jsonb_build_object(
+          'id', binding.id, 'operationId', binding.entity_operation_id,
+          'targetPlane', binding.target_plane, 'permissionCode', binding.permission_code,
+          'permissionKind', binding.permission_kind, 'status', binding.status
+        ) ORDER BY binding.entity_operation_id, binding.target_plane), '[]'::jsonb)
+          FROM metadata.entity_operation_permission binding WHERE binding.change_set_id=rp.change_set_id),
         'surfaceOperations', (SELECT coalesce(jsonb_agg(jsonb_build_object(
           'id', x.id, 'surfaceId', x.entity_surface_id, 'operationId', x.entity_operation_id,
           'sectionId', x.entity_surface_section_id, 'placementKey', x.placement_key,
@@ -734,6 +740,8 @@ export class PostgresMetaEntityAuthoringRepository implements MetaEntityAuthorin
       SELECT 1 FROM jsonb_array_elements(${document}::jsonb->'flows') item WHERE item->>'id'=x.id::text)`.execute(tx);
     await sql`DELETE FROM metadata.entity_operation_rule x WHERE x.change_set_id=${changeSetId}::uuid AND NOT EXISTS (
       SELECT 1 FROM jsonb_array_elements(${document}::jsonb->'operation_rules') item WHERE item->>'id'=x.id::text)`.execute(tx);
+    await sql`DELETE FROM metadata.entity_operation_permission x WHERE x.change_set_id=${changeSetId}::uuid AND NOT EXISTS (
+      SELECT 1 FROM jsonb_array_elements(${document}::jsonb->'operation_permissions') item WHERE item->>'id'=x.id::text)`.execute(tx);
     await sql`DELETE FROM metadata.entity_surface_operation x WHERE x.change_set_id=${changeSetId}::uuid AND NOT EXISTS (
       SELECT 1 FROM jsonb_array_elements(${document}::jsonb->'surface_operations') item WHERE item->>'id'=x.id::text)`.execute(tx);
     await sql`DELETE FROM metadata.entity_surface_field_binding x WHERE x.change_set_id=${changeSetId}::uuid AND NOT EXISTS (
@@ -996,6 +1004,18 @@ export class PostgresMetaEntityAuthoringRepository implements MetaEntityAuthorin
         status=EXCLUDED.status,updated_by=${actorId}::uuid
     `.execute(tx);
     await sql`
+      INSERT INTO metadata.entity_operation_permission (
+        id,tenant_id,entity_id,change_set_id,entity_operation_id,target_plane,
+        permission_code,permission_kind,status,created_by
+      ) SELECT (x->>'id')::uuid,${tenantId}::uuid,${entityId}::uuid,${changeSetId}::uuid,
+        (x->>'operation_id')::uuid,x->>'target_plane',x->>'permission_code',x->>'permission_kind',
+        (x->>'status')::metadata.entity_member_status_d,${actorId}::uuid
+      FROM jsonb_array_elements(${document}::jsonb->'operation_permissions') x
+      ON CONFLICT (id) DO UPDATE SET entity_operation_id=EXCLUDED.entity_operation_id,
+        target_plane=EXCLUDED.target_plane,permission_code=EXCLUDED.permission_code,
+        permission_kind=EXCLUDED.permission_kind,status=EXCLUDED.status,updated_by=${actorId}::uuid
+    `.execute(tx);
+    await sql`
       INSERT INTO metadata.entity_operation_rule (
         id,tenant_id,entity_id,change_set_id,entity_operation_id,rule_key,priority,decision,plane_code,
         lifecycle_state_code,lifecycle_transition_code,required_capability_code,reason_code,status,created_by
@@ -1175,7 +1195,7 @@ export class PostgresMetaEntityAuthoringRepository implements MetaEntityAuthorin
           changed_paths,compatibility_level,validation_status,validation_diagnostics,audit_event_id,correlation_id,captured_by
         ) VALUES (
           ${context.tenantId}::uuid,${scope.entity_id}::uuid,${command.changeSetId}::uuid,${(previous?.revision_no ?? 0) + 1},
-          ${previous?.id ?? null}::uuid,${scope.base_release_id}::uuid,'athyper.meta_entity','5.2',${JSON.stringify(canonicalContract)}::jsonb,
+          ${previous?.id ?? null}::uuid,${scope.base_release_id}::uuid,'athyper.meta_entity','5.3',${JSON.stringify(canonicalContract)}::jsonb,
           repeat('0',64),repeat('0',64),1,ARRAY[${sql.join(changedPaths)}]::text[],
           ${command.compatibilityLevel}::metadata.compatibility_level_d,'valid',${JSON.stringify(diagnostics)}::jsonb,
           ${audit.rows[0]!.id}::uuid,${command.correlationId ?? context.correlationId ?? null}::uuid,${context.principalId}::uuid
@@ -1403,7 +1423,7 @@ export class PostgresMetaEntityAuthoringRepository implements MetaEntityAuthorin
           run_hash,audit_event_id,correlation_id,executed_by
         ) VALUES (
           ${context.tenantId}::uuid,${scope.tenant_id}::uuid,${scope.entity_id}::uuid,${command.changeSetId}::uuid,
-          ${revision.rows[0]?.id ?? null}::uuid,${command.expectedLockVersion},'athyper.meta_entity','5.2',
+          ${revision.rows[0]?.id ?? null}::uuid,${command.expectedLockVersion},'athyper.meta_entity','5.3',
           ${JSON.stringify(execution.canonicalContract)}::jsonb,${execution.sourceContractHash},
           ${META_ENTITY_CONTRACT_RUNNER_CODE},${META_ENTITY_CONTRACT_RUNNER_VERSION},
           ${execution.status}::snapshot.entity_contract_test_run_status_d,${execution.results.length},${passedCount},

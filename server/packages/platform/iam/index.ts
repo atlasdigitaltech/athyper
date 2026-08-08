@@ -151,6 +151,7 @@ export {
 } from "./permission-context/index.js";
 export * from "./authorization-evaluator/index.js";
 export * from "./authorization-runtime/index.js";
+export * from "./organization-projection/index.js";
 export {
   PlaneDatabaseRegistry,
   createPlaneDatabaseRegistry,
@@ -180,3 +181,8 @@ export { CutoverReconciliationService, type PlaneCutoverEvidence } from "./ident
 export * from "./session/session-cutover.js";
 export { SqlSessionShadowSink } from "./session/sql-session-shadow-sink.js";
 export { PlaneIdentityProvisioningRepository, type IdentityProvisioningRepository } from "./jit/identity-provisioning.repository.js";
+export * from "./cache-invalidation-patterns.js";
+export * from "./runtime/auth-pipeline.js";
+export * from "./runtime/log-sampler.js";
+export * from "./runtime/auth-flag-validator.js";
+export * from "./runtime/three-plane-sync.js";

@@ -1,4 +1,4 @@
-import type { SemanticIntent } from "@athyper/platform-theme/semantic-colors";
+import type { SemanticIntent } from "@athyper/theme/semantic-colors";
 
 export const POSITIVE = new Set([
   "approved", "posted", "paid", "fully_paid", "completed", "cleared",

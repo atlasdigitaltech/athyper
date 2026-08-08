@@ -97,7 +97,12 @@ CREATE INDEX ix_entity_surface_replacement ON metadata.entity_surface (tenant_id
 CREATE INDEX ix_entity_surface_section_tree ON metadata.entity_surface_section (tenant_id, entity_surface_id, parent_section_id, position);
 CREATE INDEX ix_entity_surface_field_binding_field ON metadata.entity_surface_field_binding (tenant_id, entity_field_id, entity_surface_id);
 CREATE INDEX ix_entity_operation_change_set ON metadata.entity_operation (tenant_id, change_set_id, status, operation_kind, operation_key);
-CREATE INDEX ix_entity_operation_permission ON metadata.entity_operation (tenant_id, permission_code, status);
+CREATE INDEX ix_entity_operation_legacy_permission_code ON metadata.entity_operation (tenant_id, permission_code, status)
+    WHERE permission_code IS NOT NULL;
+CREATE INDEX ix_entity_operation_permission_binding_code
+    ON metadata.entity_operation_permission (target_plane, permission_code, permission_kind, status);
+CREATE INDEX ix_entity_operation_permission_binding_change_set
+    ON metadata.entity_operation_permission (tenant_id, change_set_id, entity_operation_id, status);
 CREATE INDEX ix_entity_operation_surfaces ON metadata.entity_operation (tenant_id, change_set_id, input_surface_key, result_surface_key);
 
 CREATE INDEX entity_surface_operation_change_set_ix ON metadata.entity_surface_operation (change_set_id, entity_surface_id, interaction_target, position);

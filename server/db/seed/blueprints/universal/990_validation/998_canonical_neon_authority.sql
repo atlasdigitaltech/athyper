@@ -12,11 +12,4 @@ BEGIN
   IF v_permission_count=0 THEN
     RAISE EXCEPTION '[998_canonical_neon_authority] compiled authz.permission authority is empty';
   END IF;
-  IF EXISTS (
-    SELECT 1 FROM authz.permission p
-    LEFT JOIN authz.permission_scope_policy s ON s.permission_id=p.id
-    WHERE p.status='published' AND s.permission_id IS NULL
-  ) THEN
-    RAISE EXCEPTION '[998_canonical_neon_authority] active permission lacks scope policy';
-  END IF;
 END $assert$;

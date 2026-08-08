@@ -34,6 +34,8 @@ import {
   extractOrgHeaders,
 } from "@athyper/svc-shared";
 import { createHashChainIntegrityService } from "../hash-chain-integrity.service.js";
+import { appendAuditEvent } from "../append-event.js";
+import { Audit } from "../event-codes.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<any>;
@@ -102,6 +104,14 @@ export function createIntegrityCheckRoute(router: Router, deps: IntegrityCheckRo
       logger?.warn("audit_integrity_check_started", { tenantId, fromDate, toDate });
 
       const result = await hashChain.verify(tenantId, fromDate, toDate);
+
+      void appendAuditEvent(db, {
+        event_code:  Audit.INTEGRITY_CHECKED,
+        operation:   "execute",
+        entity_type: "audit.audit_log",
+        outcome:     result.intact ? "success" : "failure",
+        context:     { fromDate, toDate, intact: result.intact, brokenAt: result.brokenAt ?? null },
+      });
 
       if (!result.intact) {
         logger?.warn("audit_integrity_chain_broken", {

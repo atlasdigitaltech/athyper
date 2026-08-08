@@ -120,7 +120,7 @@ async function extractInvoiceDraftInner(
   // POST /api/ai/actions/run with action_code=extract_document; this service
   // consumes the persisted output from the inference log.
   const inferenceRow = await db
-    .selectFrom("log.ai_inference_log as il")
+    .selectFrom("ai.ai_inference_log as il")
     .select([
       "il.output as output_payload",
       "il.confidence as confidence_score",

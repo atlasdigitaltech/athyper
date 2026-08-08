@@ -125,7 +125,7 @@ async function resolveActivePlanVersionId(db: Kysely<any>, planCode: string): Pr
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function resolveModuleId(db: Kysely<any>, moduleCode: string): Promise<string | null> {
   const row = await db
-    .selectFrom("shared.module as m")
+    .selectFrom("control.module as m")
     .select("m.id" as never)
     .where("m.code" as never, "=", moduleCode as never)
     .executeTakeFirst() as { id: string } | undefined;
@@ -533,8 +533,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       const { planCode } = req.params as Record<string, string>;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rows = await (db.selectFrom("shared.plan_module_access as pma") as any)
-        .innerJoin("shared.module as m",                        "m.id",   "pma.module_id")
+      const rows = await (db.selectFrom("control.subscription_plan_module as pma") as any)
+        .innerJoin("control.module as m",                        "m.id",   "pma.module_id")
         .innerJoin("shared.subscription_plan_version as spv",  "spv.id", "pma.plan_version_id")
         .innerJoin("shared.subscription_plan as sp",           "sp.id",  "spv.plan_id")
         .select([
@@ -586,7 +586,7 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       const userLimit  = typeof body["user_limit"]  === "number" ? body["user_limit"]  : null;
 
       const row = await db
-        .insertInto("shared.plan_module_access" as never)
+        .insertInto("control.subscription_plan_module" as never)
         .values({
           plan_version_id:     planVersionId as never,
           module_id:           moduleId      as never,
@@ -633,7 +633,7 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
       }
 
       const result = await db
-        .deleteFrom("shared.plan_module_access" as never)
+        .deleteFrom("control.subscription_plan_module" as never)
         .where("plan_version_id" as never, "=", planVersionId as never)
         .where("module_id"       as never, "=", moduleId      as never)
         .returning("id" as never)
@@ -1257,8 +1257,8 @@ export function registerCommerceRoutes(router: Router, deps: CommerceRoutesDeps)
     const [modules, features, permissions] = await Promise.all([
       // Modules: all modules with LEFT JOIN to plan access and tenant subscription
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (db.selectFrom("shared.module as m") as any)
-        .leftJoin("shared.plan_module_access as pma", (join: any) =>
+      (db.selectFrom("control.module as m") as any)
+        .leftJoin("control.subscription_plan_module as pma", (join: any) =>
           join
             .onRef("pma.module_id", "=", "m.id")
             .on("pma.plan_id", "=", planId),

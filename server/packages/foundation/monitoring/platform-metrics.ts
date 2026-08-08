@@ -380,9 +380,9 @@ async function collectArchiveJobMetrics(db: DB, samples: MetricSample[]): Promis
       jl.tenant_id::text AS tenant_id,
       count(*) FILTER (WHERE jl.status = 'success')::text AS completed,
       count(*) FILTER (WHERE jl.status = 'failed')::text AS failed
-    FROM log.job_log jl
+    FROM ops.job_execution jl
     JOIN master.tenant t ON t.id = jl.tenant_id
-    WHERE jl.job_type = 'partition_archive'
+    WHERE jl.job_code = 'partition_archive'
       AND jl.created_at >= now() - interval '24 hours'
     GROUP BY t.code, jl.tenant_id
   `);

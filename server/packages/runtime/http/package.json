@@ -16,9 +16,12 @@
   "files": ["dist"],
   "scripts": {
     "clean": "rimraf dist",
-    "build": "tsup src/index.ts --format esm --dts --outDir dist --external express",
-    "dev": "tsup src/index.ts --format esm --dts --outDir dist --external express --watch",
+    "build": "tsup src/index.ts --format esm --dts --outDir dist --external express --external @athyper/adapter-telemetry",
+    "dev": "tsup src/index.ts --format esm --dts --outDir dist --external express --external @athyper/adapter-telemetry --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@athyper/adapter-telemetry": "workspace:*"
   },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",

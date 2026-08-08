@@ -33,3 +33,15 @@ ALTER TABLE runtime_meta.entity_number_counter
 ALTER TABLE runtime_meta.release_activation_head ADD CONSTRAINT runtime_release_head_applied_fk FOREIGN KEY(applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT;
 ALTER TABLE runtime_meta.release_activation_event ADD CONSTRAINT runtime_release_event_previous_fk FOREIGN KEY(previous_applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT;
 ALTER TABLE runtime_meta.release_activation_event ADD CONSTRAINT runtime_release_event_applied_fk FOREIGN KEY(applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT;
+
+ALTER TABLE runtime_meta.entity_contract
+    ADD CONSTRAINT runtime_entity_contract_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+
+ALTER TABLE runtime_meta.entity_descriptor
+    ADD CONSTRAINT runtime_entity_descriptor_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT runtime_entity_descriptor_contract_fk
+        FOREIGN KEY (entity_contract_id) REFERENCES runtime_meta.entity_contract (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT runtime_entity_descriptor_applied_release_fk
+        FOREIGN KEY (applied_release_id) REFERENCES runtime_meta.applied_release (id) ON DELETE RESTRICT;

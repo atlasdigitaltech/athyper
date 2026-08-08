@@ -13,6 +13,7 @@ import type { RequestHandler, Router } from "express";
 import { sql } from "kysely";
 import { type FinanceRouteDeps, parseScopeParams, resolveCompanyIds } from "./finance.route.js";
 import { verifyBearer, resolveTenantId, resolvePrincipalIdOrNull } from "@athyper/svc-shared";
+import { appendAuditEvent, Period, Record as AuditRecord } from "@athyper/svc-audit";
 import {
   evaluateFinanceGovernanceTask,
   hashCertificationSnapshot,
@@ -470,6 +471,13 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           .execute();
       }
 
+      void appendAuditEvent(db as never, {
+        event_code:  Period.OPENED,
+        operation:   "create",
+        entity_type: "governance.cycle_run",
+        entity_id:   String(newRun.id ?? ""),
+        context:     { companyCode, fiscalYear, periodNumber, cycleTypeCode, runNumber },
+      });
       res.status(201).json({ id: newRun.id, runNumber, taskCount: templates.length });
     } catch (err) { logger?.error("period_close_start_run_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
@@ -622,6 +630,13 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           .execute();
       }
 
+      void appendAuditEvent(db as never, {
+        event_code:  action === "reopen" ? AuditRecord.REOPENED : AuditRecord.SUBMITTED,
+        operation:   action === "reopen" ? "update" : "execute",
+        entity_type: "governance.cycle_task",
+        entity_id:   taskId,
+        context:     { runId, action },
+      });
       res.json({ taskId, action, status: action === "complete" ? "COMPLETED" : "PENDING" });
     } catch (err) { logger?.error("period_close_task_action_error", { err: String(err) }); next(err); }
   }) as RequestHandler);
@@ -747,6 +762,13 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           .where("tenant_id", "=", tenantId)
           .execute();
 
+        void appendAuditEvent(db as never, {
+          event_code:  Period.SIGN_OFF,
+          operation:   "execute",
+          entity_type: "governance.cycle_run",
+          entity_id:   runId,
+          context:     { phaseCode, nextPhaseCode: nextPhase.phase_code },
+        });
         res.json({
           runId,
           runStatus:     "IN_PROGRESS",
@@ -768,6 +790,13 @@ export function createPeriodCloseRoutes(router: Router, deps: FinanceRouteDeps):
           .where("tenant_id", "=", tenantId)
           .execute();
 
+        void appendAuditEvent(db as never, {
+          event_code:  Period.CLOSED,
+          operation:   "execute",
+          entity_type: "governance.cycle_run",
+          entity_id:   runId,
+          context:     { phaseCode },
+        });
         res.json({
           runId,
           runStatus: "COMPLETED",

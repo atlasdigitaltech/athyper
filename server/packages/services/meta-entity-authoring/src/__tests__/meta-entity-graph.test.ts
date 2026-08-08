@@ -41,7 +41,7 @@ describe("canonical Entity graph", () => {
     const second = canonicalizeMetaEntityGraph({ ...graph(), fields: [...graph().fields].reverse() });
     expect(first).toEqual(second);
     expect(first).toMatchObject({
-      schema_version: "5.2",
+      schema_version: "5.3",
       runtime_profile: { storage_plane: "neon", tenant_field_key: "tenant_id" },
       fields: [{ field_key: "id", type_config: { kind: "uuid" } }],
     });
@@ -100,7 +100,7 @@ describe("canonical Entity graph", () => {
       operationId: "018f0000-0000-7000-8000-000000000099", mappingKey: "submit",
       transitionCode: "draft_to_submitted", status: "active" }];
     expect(canonicalizeMetaEntityGraph(candidate)).toMatchObject({
-      schema_version: "5.2",
+      schema_version: "5.3",
       lifecycle_bindings: [{ binding_key: "primary", state_field_key: "id", target_plane: "neon" }],
     });
     expect(validateMetaEntityGraph(candidate)).toContainEqual(
@@ -134,7 +134,7 @@ describe("canonical Entity graph", () => {
       status: "active",
     }];
     expect(canonicalizeMetaEntityGraph(candidate)).toMatchObject({
-      schema_version: "5.2",
+      schema_version: "5.3",
       numbering_bindings: [{ binding_key: "primary_number", field_key: "id", target_plane: "neon" }],
     });
     expect(validateMetaEntityGraph(candidate)).toContainEqual(

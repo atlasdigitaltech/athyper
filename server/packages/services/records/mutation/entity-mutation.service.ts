@@ -13,7 +13,6 @@ import {
   serializeJsonFields,
   verifyLock,
   buildDurableMutationEventKey,
-  writeRequiredRouteAudit,
   executeDurableMutationTransaction,
 } from "@athyper/svc-shared";
 
@@ -1138,7 +1137,7 @@ async function writeDurableSideEffects(
   const primaryKey = target.descriptor.storage.primaryKey;
   const versionColumn = target.descriptor.storage.rowVersionColumn ?? "row_version";
   const recordId = String(row[primaryKey] ?? command.recordId ?? "");
-  await writeRequiredRouteAudit(trx, auditEntry(command, action, row, oldRow, target));
+  // Row-level audit captured by trg_capture_row_change (entity_row_change_event)
   const eventType = `${command.entityCode}.${action === "create" ? "created" : action === "delete" ? "deleted" : action === "transition" ? "transitioned" : action === "aggregate" ? "aggregate_updated" : "updated"}`;
   const version = row[versionColumn] ?? oldRow?.[versionColumn] ?? command.expectedVersion ?? 0;
   await emitOutboxEvent(trx, {
@@ -1207,31 +1206,6 @@ async function writeRegisteredOutboxEvents(
       },
     });
   }
-}
-
-function auditEntry(
-  command: CreateEntityCommand | PatchEntityCommand | DeleteEntityCommand | TransitionEntityCommand | AggregateMutationCommand,
-  action: Action,
-  row: Record<string, unknown>,
-  oldRow: Record<string, unknown> | null,
-  target?: CompiledMutationTarget,
-) {
-  const primaryKey = target?.descriptor.storage.primaryKey ?? "id";
-  return {
-    tenantId: command.context.tenantId,
-    entityType: command.entityCode,
-    entityId: String(row[primaryKey] ?? command.recordId ?? ""),
-    operation: action === "create" ? "insert" as const
-      : action === "delete" ? "delete" as const
-      : action === "transition" ? "status_change" as const
-      : "update" as const,
-    actorId: command.context.principalId,
-    companyCodeId: command.context.companyCodeId ?? null,
-    oldValues: oldRow,
-    newValues: action === "delete" ? null : row,
-    correlationId: command.context.correlationId ?? null,
-    requestId: command.context.requestId,
-  };
 }
 
 function committed(

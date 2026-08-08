@@ -4,7 +4,7 @@
  * Read-only admin endpoints for auditing and observability.
  *
  * GET /api/iam/admin/permission-log
- *   Paginated read over log.permission_decision_log.
+ *   Paginated read over audit.authorization_decision_evidence.
  *   Query params:
  *     principal_id    — filter by principal UUID
  *     permission_code — filter by permission code (partial match)
@@ -105,12 +105,12 @@ export function createIamAdminRoutes(router: Router, deps: IamAdminRoutesDeps): 
       const tid = a.tenantId;
 
       // Dynamic filter fragments
-      const pidFilter   = principalId    ? sql`AND pdl.principal_id    = ${principalId}::uuid`       : sql``;
+      const pidFilter   = principalId    ? sql`AND pdl.subject_principal_id = ${principalId}::uuid`       : sql``;
       const pcodeFilter = permissionCode ? sql`AND pdl.permission_code ILIKE ${"%" + permissionCode + "%"}` : sql``;
-      const etFilter    = entityType     ? sql`AND pdl.entity_type     = ${entityType}`              : sql``;
-      const decFilter   = decision       ? sql`AND pdl.decision        = ${decision}`                : sql``;
-      const fromFilter  = dateFrom       ? sql`AND pdl.created_at     >= ${dateFrom}::timestamptz`   : sql``;
-      const toFilter    = dateTo         ? sql`AND pdl.created_at      < (${dateTo}::date + INTERVAL '1 day')` : sql``;
+      const etFilter    = entityType     ? sql`AND pdl.resource_type        = ${entityType}`              : sql``;
+      const decFilter   = decision       ? sql`AND pdl.decision             = ${decision}`                : sql``;
+      const fromFilter  = dateFrom       ? sql`AND pdl.occurred_at         >= ${dateFrom}::timestamptz`   : sql``;
+      const toFilter    = dateTo         ? sql`AND pdl.occurred_at          < (${dateTo}::date + INTERVAL '1 day')` : sql``;
 
       interface PdlRow {
         id: string;
@@ -120,36 +120,30 @@ export function createIamAdminRoutes(router: Router, deps: IamAdminRoutesDeps): 
         permission_code: string | null;
         entity_type: string | null;
         entity_id: string | null;
-        module_code: string | null;
         decision: string;
-        decision_reason: string;
-        scope_applied: string | null;
-        evaluation_ms: number | null;
-        ip_address: string | null;
+        reason_codes: string[] | null;
+        evaluation_duration_ms: number | null;
         request_id: string | null;
-        created_at: string;
+        occurred_at: string;
       }
 
       const result = await sql<PdlRow>`
         SELECT
           pdl.id,
-          pdl.principal_id,
+          pdl.subject_principal_id AS principal_id,
           pr.code    AS principal_code,
           COALESCE(pp.display_name, pr.name, pr.code) AS principal_display_name,
           pdl.permission_code,
-          pdl.entity_type,
-          pdl.entity_id,
-          pdl.module_code,
+          pdl.resource_type  AS entity_type,
+          pdl.resource_id    AS entity_id,
           pdl.decision,
-          pdl.decision_reason,
-          pdl.scope_applied,
-          pdl.evaluation_ms,
-          pdl.ip_address::text,
+          pdl.reason_codes,
+          pdl.evaluation_duration_ms,
           pdl.request_id,
-          pdl.created_at
-        FROM log.permission_decision_log pdl
-        LEFT JOIN master.principal       pr  ON pr.id  = pdl.principal_id
-        LEFT JOIN master.principal_profile pp ON pp.principal_id = pdl.principal_id
+          pdl.occurred_at
+        FROM audit.authorization_decision_evidence pdl
+        LEFT JOIN master.principal       pr  ON pr.id  = pdl.subject_principal_id
+        LEFT JOIN master.principal_profile pp ON pp.principal_id = pdl.subject_principal_id
         WHERE pdl.tenant_id = ${tid}::uuid
         ${pidFilter}
         ${pcodeFilter}
@@ -157,13 +151,13 @@ export function createIamAdminRoutes(router: Router, deps: IamAdminRoutesDeps): 
         ${decFilter}
         ${fromFilter}
         ${toFilter}
-        ORDER BY pdl.created_at DESC
+        ORDER BY pdl.occurred_at DESC
         LIMIT ${limit} OFFSET ${offset}
       `.execute(db);
 
       const countResult = await sql<{ total: string }>`
         SELECT COUNT(*)::text AS total
-        FROM log.permission_decision_log pdl
+        FROM audit.authorization_decision_evidence pdl
         WHERE pdl.tenant_id = ${tid}::uuid
         ${pidFilter}
         ${pcodeFilter}

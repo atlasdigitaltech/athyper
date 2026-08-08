@@ -1,16 +1,16 @@
 /**
  * Finance Setup — audit log helper.
  *
- * Writes canonical entries to log.activity_log for every mutation performed
- * through the Finance Setup Workbench. domain='finance_setup'; activity_type
- * is one of the finance_setup.* codes seeded in
- * server/db/seed/platform/000_lookups/LookupDomain/log/finance_setup_activity.sql.
+ * Writes canonical entries to audit.audit_log for every mutation performed
+ * through the Finance Setup Workbench. context.domain='finance_setup';
+ * context.activity_type is one of the finance_setup.* activity codes.
  *
  * The default helper never throws. Governed commands that require the audit
  * record to commit atomically use writeRequiredFinanceSetupAudit instead.
  */
 
-import { sql, type Kysely } from "kysely";
+import type { Kysely } from "kysely";
+import { appendAuditEvent, appendRequiredAuditEvent } from "@athyper/svc-audit";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyDb = Kysely<any>;
@@ -86,33 +86,17 @@ export async function writeRequiredFinanceSetupAudit(
   db: AnyDb,
   entry: FinanceSetupAuditEntry,
 ): Promise<void> {
-  await sql`
-    INSERT INTO log.activity_log (
-      tenant_id,
-      log_type,
-      domain,
-      activity_type,
-      entity_type,
-      entity_id,
-      actor_id,
-      actor_type,
-      company_code_id,
-      detail,
-      correlation_id,
-      created_by
-    ) VALUES (
-      ${entry.tenantId}::uuid,
-      'business',
-      'finance_setup',
-      ${entry.activityType},
-      ${entry.entityType},
-      ${entry.entityId}::uuid,
-      ${entry.actorId}::uuid,
-      'user',
-      ${entry.companyCodeId ?? null}::uuid,
-      ${JSON.stringify(entry.detail)}::jsonb,
-      ${entry.correlationId ?? null}::uuid,
-      ${entry.actorId}::uuid
-    )
-  `.execute(db);
+  await appendRequiredAuditEvent(db, {
+    event_code:  "record.finance_setup_action",
+    operation:   "update",
+    entity_type: entry.entityType,
+    entity_id:   entry.entityId ?? null,
+    context: {
+      domain:          "finance_setup",
+      activity_type:   entry.activityType,
+      company_code_id: entry.companyCodeId ?? null,
+      ...entry.detail,
+    },
+    correlation_id: entry.correlationId ?? null,
+  });
 }

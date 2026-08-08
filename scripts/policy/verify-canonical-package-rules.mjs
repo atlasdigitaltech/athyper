@@ -168,7 +168,7 @@ function* walkDirectories(directory) {
 
 if (violations.length > 0) {
   console.error(["Canonical package rule violations:", ...[...new Set(violations)].map((item) => `- ${item}`)].join("\n"));
-  process.exitCode = 1;
+  process.exit(1);
 } else {
   console.log(`Canonical package rules verified (${packages.length} package manifests).`);
 }

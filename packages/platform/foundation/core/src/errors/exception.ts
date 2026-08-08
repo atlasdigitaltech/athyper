@@ -10,7 +10,10 @@ export class PlatformException<C extends string = PlatformErrorCode> extends Err
     this.name = 'PlatformException';
     this.code = error.code;
     this.details = error.details;
-    if (Error.captureStackTrace) Error.captureStackTrace(this, PlatformException);
+    const captureStackTrace = (Error as ErrorConstructor & {
+      captureStackTrace?: (target: object, constructor?: Function) => void;
+    }).captureStackTrace;
+    captureStackTrace?.(this, PlatformException);
   }
 
   toPlatformError(): PlatformError<C> {

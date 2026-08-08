@@ -41,7 +41,7 @@ interface MentionNotificationDispatcher {
     channels?: string[];
     dedupKey?: string;
     dedupWindowMs?: number;
-    sourcePlane?: "neon" | "mesh" | "admin";
+    sourcePlane?: "neon" | "mesh" | "athyper";
   }): Promise<unknown>;
 }
 

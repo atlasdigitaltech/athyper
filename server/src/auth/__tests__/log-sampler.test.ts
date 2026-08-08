@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { LogSampler } from "../log-sampler.js";
+import { LogSampler } from "@athyper/svc-iam";
 
 class FakeClock {
   t = 0;

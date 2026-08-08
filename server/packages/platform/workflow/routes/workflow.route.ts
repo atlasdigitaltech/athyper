@@ -7,7 +7,7 @@
  * GET  /workflow/requests/:id/context     — alias for /:id (used by WorkflowClient.getApprovalContext)
  * POST /workflow/requests/:id/action      — approve / reject / delegate / escalate (requestId in path)
  * POST /workflow/items/:id/action         — approve / reject / delegate / escalate (workItemId in path)
- * GET  /workflow/requests/:id/activity    — workflow_event_log for a request
+ * GET  /workflow/requests/:id/activity    — audit.audit_log (inbox_routing_event) for a request
  * GET  /workflow/reports/compliance       — compliance KPIs: avg approval time, SLA breach rate, rejection rate
  */
 
@@ -378,11 +378,7 @@ export function createWorkflowRoutes(router: Router, deps: WorkflowRouteDeps): v
               AND  wi2.status      IN ('pending', 'in_progress')
               AND  wi2.started_at  IS NOT NULL
               AND  wi2.started_at  < now() - interval '24 hours'
-              AND  NOT EXISTS (
-                     SELECT 1 FROM log.workflow_event_log el
-                     WHERE  el.work_item_id = wi2.id
-                       AND  el.created_at   > now() - interval '24 hours'
-                   )
+              AND  (wi2.updated_at IS NULL OR wi2.updated_at <= now() - interval '24 hours')
           )                                                                 AS stuck_count
         FROM   document.workflow_request wr
         WHERE  wr.tenant_id  = ${tenantId}::uuid

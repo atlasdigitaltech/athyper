@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createEntityMutationOutboxHandler } from "../entity-mutation-outbox.handler.js";
+import { createEntityMutationOutboxHandler } from "@athyper/svc-records";
 
 describe("entity mutation durable fan-out", () => {
   it("invalidates list generations, publishes realtime, and delegates search", async () => {

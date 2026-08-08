@@ -25,7 +25,10 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@athyper/platform-iam-auth-common": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
     "@athyper/entity-operation-scope-contracts": "workspace:*",
+    "@athyper/svc-audit": "workspace:*",
     "@athyper/svc-shared": "workspace:*",
     "qrcode": "^1.5.4"
   },

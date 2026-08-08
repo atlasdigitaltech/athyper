@@ -23,6 +23,7 @@ import {
   type CacheClient,
   type CacheMetrics,
 } from "../session/session.service.js";
+import { appendSecurityEvent } from "@athyper/svc-audit";
 import type { SessionRouteQuery } from "../session/session.types.js";
 import type { PlaneDatabaseRegistry } from "../runtime/plane-database-registry.js";
 
@@ -56,24 +57,13 @@ export interface SessionRoutesDeps {
 
 // ─── KC claim helpers ─────────────────────────────────────────────────────────
 
-function extractOrgAliases(orgClaim: unknown): string[] {
+function extractExternalOrganizationIds(orgClaim: unknown): string[] {
   if (!orgClaim) return [];
   if (Array.isArray(orgClaim)) {
     return orgClaim.filter((v): v is string => typeof v === "string" && v.length > 0);
   }
   if (typeof orgClaim === "object") {
-    const aliases: string[] = [];
-    for (const [key, entry] of Object.entries(orgClaim as Record<string, unknown>)) {
-      if (entry && typeof entry === "object" && !Array.isArray(entry)) {
-        const e = entry as Record<string, unknown>;
-        if (typeof e.alias === "string" && e.alias) {
-          aliases.push(e.alias);
-          continue;
-        }
-      }
-      aliases.push(key);
-    }
-    return aliases;
+    return Object.keys(orgClaim as Record<string, unknown>).filter(Boolean);
   }
   return [];
 }
@@ -152,13 +142,12 @@ export function createSessionRoutes(router: Router, deps: SessionRoutesDeps): Ro
       const jwtName = typeof claims.name === "string" ? claims.name : jwtUsername;
       const jwtEmail = typeof claims.email === "string" ? claims.email : undefined;
 
-      // Prefer the BFF-supplied org alias list (X-Org-Aliases header) over the
-      // JWT organization claim. KC truncates the claim for users in many orgs;
-      // the BFF already enriches the full list via the KC admin API at login time.
-      const bffAliasHeader = req.headers["x-org-aliases"];
-      const orgAliases = bffAliasHeader && typeof bffAliasHeader === "string" && bffAliasHeader
-        ? bffAliasHeader.split(",").map((s) => s.trim()).filter(Boolean)
-        : extractOrgAliases(claims.organization);
+      const organizationIdHeader = req.headers["x-organization-ids"];
+      const externalOrganizationIds = organizationIdHeader
+        && typeof organizationIdHeader === "string"
+        && organizationIdHeader
+        ? organizationIdHeader.split(",").map((value) => value.trim()).filter(Boolean)
+        : extractExternalOrganizationIds(claims.organization);
 
       // Authorization gate: every request must carry AUTHORIZED on the plane client.
       if (!hasAccess(claims.resource_access, planeKey)) {
@@ -203,7 +192,7 @@ export function createSessionRoutes(router: Router, deps: SessionRoutesDeps): Ro
         tenant,
         entity,
         workbench,
-        orgAliases,
+        externalOrganizationIds,
         workbenches,
         // JIT provisioning identity — used only when principal_identity_binding is absent.
         username: jwtUsername,
@@ -214,6 +203,20 @@ export function createSessionRoutes(router: Router, deps: SessionRoutesDeps): Ro
       });
 
       res.json(session);
+
+      const securityPlane: "neon" | "mesh" | "athyper" = planeKey === "admin" ? "athyper" : planeKey;
+      void appendSecurityEvent(deps.planeDatabases.forPlane(planeKey).db, {
+        plane: securityPlane,
+        tenant_id: session.tenantOrAccountId,
+        principal_id: session.principalId,
+        event_code: "auth.login_success",
+        category: "authentication",
+        severity: "info",
+        outcome: "success",
+        session_id: typeof claims.session_state === "string" ? claims.session_state : null,
+        user_agent: typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : null,
+        context: { plane: planeKey, workbench },
+      });
     } catch (err) {
       if (err instanceof SessionError) {
         res.status(err.httpStatus).json({ error: err.code, message: err.message });

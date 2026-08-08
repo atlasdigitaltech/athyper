@@ -1,5 +1,5 @@
 /**
- * @athyper/platform-theme — Preset Registry
+ * @athyper/theme — Preset Registry
  *
  * Metadata for all shipped theme presets.
  * CSS files live alongside this file in presets/*.css.

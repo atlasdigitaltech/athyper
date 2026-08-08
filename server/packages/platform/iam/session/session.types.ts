@@ -34,11 +34,8 @@ export interface SessionQuery {
   entity: string;
   /** "user" | "partner" | "admin" */
   workbench: string;
-  /**
-   * All KC org aliases the user belongs to, extracted from the JWT
-   * `organization` claim. Membership gate: `${tenant}--${entity}` must be present.
-   */
-  orgAliases: string[];
+  /** Immutable Keycloak organization IDs extracted from the verified token. */
+  externalOrganizationIds: string[];
   /**
    * Workbench roles derived from realm_access.roles and the active plane:
    *   NEON_USER         -> "user" on Neon
@@ -176,6 +173,6 @@ export interface BootstrapQuery {
   planeKey: "neon" | "mesh" | "admin";
   name: string;          // from JWT name / preferred_username
   email: string;         // from JWT email claim
-  orgAliases: string[];  // ["athyper--le-athq", "pepsi--le-pepsi"]
+  externalOrganizationIds: string[];
   workbenches: string[]; // ["user", "partner"]
 }

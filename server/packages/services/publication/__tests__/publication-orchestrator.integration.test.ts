@@ -66,6 +66,8 @@ function fixtures() {
     }),
     findByDeployment: vi.fn(async () => release(localStatus)),
     active: vi.fn(async () => active),
+    activeEntity: vi.fn(async () => null),
+    rollback: vi.fn(async () => ({ ...release("active"), activatedAt: "2026-01-01T00:00:00.000Z" })),
   };
   return { authority, local, status: () => centralStatus, active: () => active };
 }
@@ -111,5 +113,16 @@ describe("publication runtime orchestration", () => {
     await expect(orchestrator.deploy(bundle.deploymentId)).rejects.toMatchObject({ code: "LOCAL_VERIFICATION_REJECTED" });
     expect(f.local.activate).not.toHaveBeenCalled();
     expect(f.status()).toBe("failed");
+  });
+
+  it("delegates rollback to the local atomic projection boundary", async () => {
+    const f = fixtures();
+    const orchestrator = new PublicationOrchestrator(f.authority, f.local, { load: vi.fn(async () => artifact) });
+    await orchestrator.rollback(bundle.publicationKey, "33333333-3333-4333-8333-333333333333", { reason: "runtime_regression" });
+    expect(f.local.rollback).toHaveBeenCalledWith(
+      bundle.publicationKey,
+      "33333333-3333-4333-8333-333333333333",
+      { reason: "runtime_regression" },
+    );
   });
 });

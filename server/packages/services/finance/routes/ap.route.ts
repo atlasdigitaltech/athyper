@@ -75,6 +75,7 @@ import {
 } from "@athyper/svc-business";
 import { suggestSpendCategories } from "@athyper/svc-business";
 import { extractInvoiceDraft } from "@athyper/svc-business";
+import { appendAuditEvent } from "@athyper/svc-audit";
 
 // ── Payment status resolution ─────────────────────────────────────────────────
 // Recomputes paid_amount and status from posted non-voided allocations only.
@@ -3095,24 +3096,21 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       if (mode === "save" && decision?.status) {
         const d = decision as Record<string, unknown>;
         const resolved = d["resolved"] as Record<string, unknown> | undefined;
-        sql`
-          INSERT INTO log.activity_log
-            (tenant_id, domain, activity_type, entity_type, entity_id, actor_id, detail, created_by)
-          VALUES (
-            ${tenantId}::uuid, 'procurement', 'line_classified',
-            'purchase_invoice_line', ${lineId}::uuid, ${principalId}::uuid,
-            ${JSON.stringify({
-              invoice_id:     invoiceId,
-              status:         d["status"],
-              intent_code:    (d["selected"] as Record<string, unknown> | undefined)?.["business_intent_id"] ?? null,
-              profile_id:     (d["selected"] as Record<string, unknown> | undefined)?.["profile_config_id"] ?? null,
-              confidence:     resolved?.["confidence"] ?? null,
-              pipeline_id:    d["pipeline_id"] ?? null,
-            })}::jsonb,
-            ${principalId}::uuid
-          )
-        `.execute(db).catch((e: unknown) => {
-          logger?.error("classify_activity_log_write_failed", { err: String(e), lineId });
+        void appendAuditEvent(db, {
+          event_code:  "record.line_classified",
+          operation:   "execute",
+          entity_type: "purchase_invoice_line",
+          entity_id:   lineId,
+          context: {
+            domain:        "procurement",
+            activity_type: "line_classified",
+            invoice_id:    invoiceId,
+            status:        d["status"],
+            intent_code:   (d["selected"] as Record<string, unknown> | undefined)?.["business_intent_id"] ?? null,
+            profile_id:    (d["selected"] as Record<string, unknown> | undefined)?.["profile_config_id"] ?? null,
+            confidence:    resolved?.["confidence"] ?? null,
+            pipeline_id:   d["pipeline_id"] ?? null,
+          },
         });
       }
 
@@ -3508,7 +3506,7 @@ export function createApRoutes(router: Router, deps: FinanceRouteDeps): Router {
       };
 
       const { resolveTaxGroup, explainTaxGroupResolution } = await import(
-        "../../business/ap/purchase_invoice/tax-calculation.service"
+        "@athyper/svc-business"
       );
       const ctx = {
         tenantId,

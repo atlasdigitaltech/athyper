@@ -1,5 +1,5 @@
-import { isTransientDbError } from "@athyper/foundation-kernel/resilience";
-import type { RetryPolicy } from "@athyper/foundation-kernel/resilience";
+import { isTransientDbError } from "@athyper/server-foundation/kernel/resilience";
+import type { RetryPolicy } from "@athyper/server-foundation/kernel/resilience";
 
 export const DB_RETRY_POLICY: Partial<RetryPolicy> = {
   maxAttempts:    3,

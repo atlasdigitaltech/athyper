@@ -1,13 +1,13 @@
 /**
  * Audit Query Routes
  *
- * GET /audit/events                   — paginated entity mutation trail (log.audit_log)
+ * GET /audit/events                   — paginated entity mutation trail (audit.audit_log)
  * GET /audit/events/:id               — single audit event
  * GET /audit/events/export            — download CSV or JSON compliance package
- * GET /audit/permission-decisions     — paginated auth-engine decisions (log.permission_decision_log)
+ * GET /audit/permission-decisions     — paginated auth-engine decisions (audit.authorization_decision_evidence)
  * GET /audit/permission-decisions/:id — single permission decision
  *
- * Both tables are partitioned by created_at. All queries require a date range
+ * Both tables are partitioned by occurred_at. All queries require a date range
  * bound to avoid full-table scans. Tenant isolation via RLS — tenant resolved
  * from bearer token, not a manual WHERE filter.
  *
@@ -34,6 +34,8 @@ import {
   resolveParameterSnapshot,
   getIntParam,
 } from "@athyper/svc-iam";
+import { appendAuditEvent } from "../append-event.js";
+import { Audit } from "../event-codes.js";
 
 // ── Deps ──────────────────────────────────────────────────────────────────────
 
@@ -77,51 +79,81 @@ function parseDateBounds(
 
 function toAuditEvent(row: Record<string, unknown>) {
   return {
+    id:                      row["id"],
+    tenantId:                row["tenant_id"] ?? null,
+    planeCode:               row["plane_code"],
+    eventCode:               row["event_code"],
+    eventContractCode:       row["event_contract_code"],
+    operation:               row["operation"],
+    outcome:                 row["outcome"],
+    severity:                row["severity"],
+    entityType:              row["entity_type"],
+    entityId:                row["entity_id"] ?? null,
+    scopeType:               row["scope_type"] ?? null,
+    scopeId:                 row["scope_id"] ?? null,
+    actorPrincipalId:        row["actor_principal_id"] ?? null,
+    actorType:               row["actor_type"],
+    auditReasonCodeSnapshot: row["audit_reason_code_snapshot"] ?? null,
+    reasonComment:           row["reason_comment"] ?? null,
+    oldValues:               row["old_values"] ?? null,
+    newValues:               row["new_values"] ?? null,
+    changedFields:           row["changed_fields"] ?? null,
+    context:                 row["context"] ?? {},
+    correlationId:           row["correlation_id"] ?? null,
+    requestId:               row["request_id"] ?? null,
+    ipAddress:               row["ip_address"] ?? null,
+    userAgent:               row["user_agent"] ?? null,
+    occurredAt:              row["occurred_at"],
+    recordedAt:              row["recorded_at"],
+  };
+}
+
+function toSecurityEvent(row: Record<string, unknown>) {
+  return {
     id:            row["id"],
-    tenantId:      row["tenant_id"],
-    logType:       row["log_type"],
-    entityType:    row["entity_type"],
-    entityId:      row["entity_id"],
-    operation:     row["operation"],
-    actorId:       row["actor_id"] ?? null,
-    actorType:     row["actor_type"] ?? null,
-    companyCodeId: row["company_code_id"] ?? null,
-    oldValues:     row["old_values"] ?? null,
-    newValues:     row["new_values"] ?? null,
-    changedFields: row["changed_fields"] ?? null,
+    tenantId:      row["tenant_id"] ?? null,
+    planeCode:     row["plane_code"],
+    eventCode:     row["event_code"],
+    category:      row["category"],
+    severity:      row["severity"],
+    outcome:       row["outcome"],
+    principalId:   row["principal_id"] ?? null,
+    sessionId:     row["session_id"] ?? null,
+    sourceIp:      row["source_ip"] ?? null,
+    userAgent:     row["user_agent"] ?? null,
+    detectionRule: row["detection_rule"] ?? null,
+    riskScore:     row["risk_score"] ?? null,
+    sourceService: row["source_service"],
+    traceId:       row["trace_id"] ?? null,
     correlationId: row["correlation_id"] ?? null,
     requestId:     row["request_id"] ?? null,
-    ipAddress:     row["ip_address"] ?? null,
-    userAgent:     row["user_agent"] ?? null,
-    createdAt:     row["created_at"],
-    createdBy:     row["created_by"],
+    context:       row["context"] ?? {},
+    occurredAt:    row["occurred_at"],
+    recordedAt:    row["recorded_at"],
   };
 }
 
 function toPermissionDecision(row: Record<string, unknown>) {
+  const ctx = (row["context"] as Record<string, unknown>) ?? {};
   return {
     id:                row["id"],
     tenantId:          row["tenant_id"],
-    principalId:       row["principal_id"],
-    permissionId:      row["permission_id"] ?? null,
+    principalId:       row["subject_principal_id"] ?? null,
     permissionCode:    row["permission_code"] ?? null,
-    featureId:         row["feature_id"] ?? null,
-    featureCode:       row["feature_code"] ?? null,
-    entityType:        row["entity_type"] ?? null,
-    entityId:          row["entity_id"] ?? null,
-    moduleCode:        row["module_code"] ?? null,
+    action:            row["action"] ?? null,
+    resourceType:      row["resource_type"] ?? null,
+    resourceId:        row["resource_id"] ?? null,
+    policyCode:        row["policy_code"] ?? null,
+    policyVersion:     row["policy_version"] ?? null,
+    reasonCodes:       row["reason_codes"] ?? [],
     decision:          row["decision"],
-    decisionReason:    row["decision_reason"],
-    scopeApplied:      row["scope_applied"] ?? null,
-    companyCodeId:     row["company_code_id"] ?? null,
-    matchedGrantId:    row["matched_grant_id"] ?? null,
-    matchedRoleId:     row["matched_role_id"] ?? null,
-    matchedGroupId:    row["matched_group_id"] ?? null,
-    planGateResult:    row["plan_gate_result"] ?? null,
-    evaluationMs:      row["evaluation_ms"] ?? null,
+    evaluationMs:      row["evaluation_duration_ms"] ?? null,
+    cacheHit:          row["cache_hit"] ?? false,
     requestId:         row["request_id"] ?? null,
     correlationId:     row["correlation_id"] ?? null,
-    createdAt:         row["created_at"],
+    context:           ctx,
+    occurredAt:        row["occurred_at"],
+    recordedAt:        row["recorded_at"],
   };
 }
 
@@ -139,21 +171,24 @@ function csvField(v: unknown): string {
 }
 
 const CSV_HEADERS = [
-  "id", "created_at", "entity_type", "entity_id", "operation",
-  "actor_id", "actor_type", "changed_fields", "correlation_id",
-  "request_id", "ip_address", "log_type",
+  "id", "occurred_at", "event_code", "event_contract_code",
+  "entity_type", "entity_id", "operation", "outcome",
+  "actor_principal_id", "actor_type", "audit_reason_code_snapshot",
+  "changed_fields", "correlation_id", "request_id", "ip_address",
 ];
 
 /** Build the stable string used as input to the integrity hash for one row. */
 function hashInput(row: Record<string, unknown>): string {
   return JSON.stringify({
-    id:          row["id"],
-    tenant_id:   row["tenant_id"],
-    entity_type: row["entity_type"],
-    entity_id:   row["entity_id"],
-    operation:   row["operation"],
-    created_at:  row["created_at"],
-    actor_id:    row["actor_id"] ?? null,
+    id:              row["id"],
+    tenant_id:       row["tenant_id"],
+    event_code:      row["event_code"],
+    entity_type:     row["entity_type"],
+    entity_id:       row["entity_id"],
+    operation:       row["operation"],
+    outcome:         row["outcome"],
+    occurred_at:     row["occurred_at"],
+    actor_principal_id: row["actor_principal_id"] ?? null,
   });
 }
 
@@ -202,6 +237,13 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.setHeader("Content-Type", format === "json" ? "application/x-ndjson" : "text/csv");
 
+      void appendAuditEvent(db, {
+        event_code:  Audit.EXPORT_REQUESTED,
+        operation:   "export",
+        entity_type: "audit.audit_log",
+        context:     { format, from: from.toISOString(), to: to.toISOString(), entityType: entityType ?? null },
+      });
+
       if (format === "csv") {
         // ── CSV streaming ───────────────────────────────────────────────────
         res.write(CSV_HEADERS.join(",") + "\n");
@@ -211,17 +253,17 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
 
         while (exported < exportMaxRows) {
           let q = db
-            .selectFrom("log.audit_log as al" as never)
+            .selectFrom("audit.audit_log as al" as never)
             .selectAll("al" as never)
-            .where("al.tenant_id"  as never, "=", tenantId as never)
-            .where("al.created_at" as never, ">=", batchFrom as never)
-            .where("al.created_at" as never, "<",  to as never)
-            .orderBy("al.created_at" as never, "asc")
-            .orderBy("al.id"         as never, "asc")
+            .where("al.tenant_id"   as never, "=", tenantId as never)
+            .where("al.occurred_at" as never, ">=", batchFrom as never)
+            .where("al.occurred_at" as never, "<",  to as never)
+            .orderBy("al.occurred_at" as never, "asc")
+            .orderBy("al.id"          as never, "asc")
             .limit(EXPORT_BATCH);
 
           if (entityType) q = q.where("al.entity_type" as never, "=", entityType as never);
-          if (actorId)    q = q.where("al.actor_id"    as never, "=", actorId    as never);
+          if (actorId)    q = q.where("al.actor_principal_id" as never, "=", actorId as never);
           if (operation)  q = q.where("al.operation"   as never, "=", operation  as never);
 
           const rows = await q.execute() as Record<string, unknown>[];
@@ -230,23 +272,26 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
           for (const row of rows) {
             const csvRow = [
               csvField(row["id"]),
-              csvField(row["created_at"]),
+              csvField(row["occurred_at"]),
+              csvField(row["event_code"]),
+              csvField(row["event_contract_code"]),
               csvField(row["entity_type"]),
               csvField(row["entity_id"]),
               csvField(row["operation"]),
-              csvField(row["actor_id"]),
+              csvField(row["outcome"]),
+              csvField(row["actor_principal_id"]),
               csvField(row["actor_type"]),
+              csvField(row["audit_reason_code_snapshot"]),
               csvField(Array.isArray(row["changed_fields"]) ? (row["changed_fields"] as string[]).join(";") : row["changed_fields"]),
               csvField(row["correlation_id"]),
               csvField(row["request_id"]),
               csvField(row["ip_address"]),
-              csvField(row["log_type"]),
             ];
             res.write(csvRow.join(",") + "\n");
           }
 
           exported  += rows.length;
-          batchFrom  = rows[rows.length - 1]!["created_at"] as Date;
+          batchFrom  = rows[rows.length - 1]!["occurred_at"] as Date;
           if (rows.length < EXPORT_BATCH) break;
         }
 
@@ -269,17 +314,17 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
 
         while (exported < exportMaxRows) {
           let q = db
-            .selectFrom("log.audit_log as al" as never)
+            .selectFrom("audit.audit_log as al" as never)
             .selectAll("al" as never)
-            .where("al.tenant_id"  as never, "=", tenantId as never)
-            .where("al.created_at" as never, ">=", batchFrom as never)
-            .where("al.created_at" as never, "<",  to as never)
-            .orderBy("al.created_at" as never, "asc")
-            .orderBy("al.id"         as never, "asc")
+            .where("al.tenant_id"   as never, "=", tenantId as never)
+            .where("al.occurred_at" as never, ">=", batchFrom as never)
+            .where("al.occurred_at" as never, "<",  to as never)
+            .orderBy("al.occurred_at" as never, "asc")
+            .orderBy("al.id"          as never, "asc")
             .limit(EXPORT_BATCH);
 
           if (entityType) q = q.where("al.entity_type" as never, "=", entityType as never);
-          if (actorId)    q = q.where("al.actor_id"    as never, "=", actorId    as never);
+          if (actorId)    q = q.where("al.actor_principal_id" as never, "=", actorId as never);
           if (operation)  q = q.where("al.operation"   as never, "=", operation  as never);
 
           const rows = await q.execute() as Record<string, unknown>[];
@@ -291,26 +336,29 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
             prevHash       = thisHash;
 
             res.write(JSON.stringify({
-              id:            row["id"],
-              created_at:    row["created_at"],
-              log_type:      row["log_type"],
-              entity_type:   row["entity_type"],
-              entity_id:     row["entity_id"],
-              operation:     row["operation"],
-              actor_id:      row["actor_id"] ?? null,
-              actor_type:    row["actor_type"] ?? null,
-              changed_fields: row["changed_fields"] ?? null,
-              old_values:    row["old_values"] ?? null,
-              new_values:    row["new_values"] ?? null,
-              correlation_id: row["correlation_id"] ?? null,
-              request_id:    row["request_id"] ?? null,
-              ip_address:    row["ip_address"] ?? null,
-              _hash:         thisHash,
+              id:                      row["id"],
+              occurred_at:             row["occurred_at"],
+              event_code:              row["event_code"],
+              event_contract_code:     row["event_contract_code"],
+              entity_type:             row["entity_type"],
+              entity_id:               row["entity_id"] ?? null,
+              operation:               row["operation"],
+              outcome:                 row["outcome"],
+              actor_principal_id:      row["actor_principal_id"] ?? null,
+              actor_type:              row["actor_type"],
+              audit_reason_code_snapshot: row["audit_reason_code_snapshot"] ?? null,
+              changed_fields:          row["changed_fields"] ?? null,
+              old_values:              row["old_values"] ?? null,
+              new_values:              row["new_values"] ?? null,
+              correlation_id:          row["correlation_id"] ?? null,
+              request_id:              row["request_id"] ?? null,
+              ip_address:              row["ip_address"] ?? null,
+              _hash:                   thisHash,
             }) + "\n");
           }
 
           exported  += rows.length;
-          batchFrom  = rows[rows.length - 1]!["created_at"] as Date;
+          batchFrom  = rows[rows.length - 1]!["occurred_at"] as Date;
           if (rows.length < EXPORT_BATCH) break;
         }
 
@@ -365,18 +413,18 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       }
 
       let q = db
-        .selectFrom("log.audit_log as al" as never)
+        .selectFrom("audit.audit_log as al" as never)
         .selectAll("al" as never)
         .where("al.tenant_id" as never, "=", tenantId as never)
-        .where("al.created_at" as never, ">=", from as never)
-        .where("al.created_at" as never, "<", to as never)
-        .orderBy("al.created_at" as never, "desc")
+        .where("al.occurred_at" as never, ">=", from as never)
+        .where("al.occurred_at" as never, "<", to as never)
+        .orderBy("al.occurred_at" as never, "desc")
         .limit(limit + 1)
         .offset(offset);
 
       if (entityType) q = q.where("al.entity_type" as never, "=", entityType as never);
       if (entityId)   q = q.where("al.entity_id" as never,   "=", entityId as never);
-      if (actorId)    q = q.where("al.actor_id" as never,    "=", actorId as never);
+      if (actorId)    q = q.where("al.actor_principal_id" as never, "=", actorId as never);
       if (operation)  q = q.where("al.operation" as never,   "=", operation as never);
 
       const rows = await q.execute() as Record<string, unknown>[];
@@ -404,7 +452,7 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const row = await db
-        .selectFrom("log.audit_log as al" as never)
+        .selectFrom("audit.audit_log as al" as never)
         .selectAll("al" as never)
         .where("al.id" as never, "=", id as never)
         .where("al.tenant_id" as never, "=", tenantId as never)
@@ -414,6 +462,66 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       res.json({ ok: true, data: toAuditEvent(row) });
     } catch (err) {
       logger?.error("audit_get_event_error", { err: String(err) });
+      next(err);
+    }
+  };
+
+  // ── GET /audit/security-events ───────────────────────────────────────────
+
+  const listSecurityEventsHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const { limit, offset } = parsePagination(req.query as Record<string, unknown>);
+      const auditSnap = cache
+        ? await resolveParameterSnapshot(db, cache, tenantId, "api.audit").catch(() => null)
+        : null;
+      const { from, to } = parseDateBounds(
+        req.query as Record<string, unknown>,
+        getIntParam(auditSnap, "api.audit.default_window_days", DEFAULT_WINDOW_DAYS),
+        getIntParam(auditSnap, "api.audit.max_window_days",     MAX_WINDOW_DAYS),
+      );
+
+      const principalId  = req.query["principalId"]  as string | undefined;
+      const category     = req.query["category"]     as string | undefined;
+      const eventCode    = req.query["eventCode"]    as string | undefined;
+      const outcome      = req.query["outcome"]      as string | undefined;
+      const minRiskScore = req.query["minRiskScore"] as string | undefined;
+
+      if (principalId && !isUuid(principalId)) {
+        res.status(400).json({ error: "INVALID_PARAM", message: "principalId must be a UUID" }); return;
+      }
+
+      let q = db
+        .selectFrom("audit.security_event as se" as never)
+        .selectAll("se" as never)
+        .where("se.tenant_id" as never, "=", tenantId as never)
+        .where("se.occurred_at" as never, ">=", from as never)
+        .where("se.occurred_at" as never, "<",  to as never)
+        .orderBy("se.occurred_at" as never, "desc")
+        .limit(limit + 1)
+        .offset(offset);
+
+      if (principalId)  q = q.where("se.principal_id" as never, "=", principalId as never);
+      if (category)     q = q.where("se.category" as never,     "=", category as never);
+      if (eventCode)    q = q.where("se.event_code" as never,   "=", eventCode as never);
+      if (outcome)      q = q.where("se.outcome" as never,      "=", outcome as never);
+      if (minRiskScore) {
+        const score = Number(minRiskScore);
+        if (Number.isFinite(score)) q = q.where("se.risk_score" as never, ">=" as never, score as never);
+      }
+
+      const rows = await q.execute() as Record<string, unknown>[];
+      const hasMore = rows.length > limit;
+      const data = rows.slice(0, limit).map(toSecurityEvent);
+
+      res.json({ ok: true, data, hasMore });
+    } catch (err) {
+      logger?.error("audit_list_security_events_error", { err: String(err) });
       next(err);
     }
   };
@@ -440,29 +548,25 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
 
       const principalId    = req.query["principalId"]    as string | undefined;
       const permissionCode = req.query["permissionCode"] as string | undefined;
-      const featureCode    = req.query["featureCode"]    as string | undefined;
       const decision       = req.query["decision"]       as string | undefined;
-      const moduleCode     = req.query["moduleCode"]     as string | undefined;
 
       if (principalId && !isUuid(principalId)) {
         res.status(400).json({ error: "INVALID_PARAM", message: "principalId must be a UUID" }); return;
       }
 
       let q = db
-        .selectFrom("log.permission_decision_log as pdl" as never)
+        .selectFrom("audit.authorization_decision_evidence as pdl" as never)
         .selectAll("pdl" as never)
         .where("pdl.tenant_id" as never, "=", tenantId as never)
-        .where("pdl.created_at" as never, ">=", from as never)
-        .where("pdl.created_at" as never, "<", to as never)
-        .orderBy("pdl.created_at" as never, "desc")
+        .where("pdl.occurred_at" as never, ">=", from as never)
+        .where("pdl.occurred_at" as never, "<", to as never)
+        .orderBy("pdl.occurred_at" as never, "desc")
         .limit(limit + 1)
         .offset(offset);
 
-      if (principalId)    q = q.where("pdl.principal_id" as never,    "=", principalId as never);
-      if (permissionCode) q = q.where("pdl.permission_code" as never, "=", permissionCode as never);
-      if (featureCode)    q = q.where("pdl.feature_code" as never,    "=", featureCode as never);
-      if (decision)       q = q.where("pdl.decision" as never,        "=", decision as never);
-      if (moduleCode)     q = q.where("pdl.module_code" as never,     "=", moduleCode as never);
+      if (principalId)    q = q.where("pdl.subject_principal_id" as never, "=", principalId as never);
+      if (permissionCode) q = q.where("pdl.permission_code" as never,       "=", permissionCode as never);
+      if (decision)       q = q.where("pdl.decision" as never,              "=", decision as never);
 
       const rows = await q.execute() as Record<string, unknown>[];
       const hasMore = rows.length > limit;
@@ -489,7 +593,7 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
       if (!isUuid(id)) { res.status(400).json({ error: "INVALID_ID" }); return; }
 
       const row = await db
-        .selectFrom("log.permission_decision_log as pdl" as never)
+        .selectFrom("audit.authorization_decision_evidence as pdl" as never)
         .selectAll("pdl" as never)
         .where("pdl.id" as never, "=", id as never)
         .where("pdl.tenant_id" as never, "=", tenantId as never)
@@ -503,13 +607,69 @@ export function createAuditRoutes(router: Router, deps: AuditRouteDeps): void {
     }
   };
 
+  // ── GET /audit/reason-codes ───────────────────────────────────────────────
+  // Returns the tenant's active reason codes, optionally filtered by category.
+  // Used by the reason picker dialog on reason_required=true actions.
+
+  const listReasonCodesHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const claims = await verifyBearer(req.headers.authorization ?? "", auth, res);
+      if (!claims) return;
+      const { xOrg, xRealm } = extractOrgHeaders(req);
+      const tenantId = await resolveTenantId(db, xOrg, xRealm);
+      if (!tenantId) { res.status(400).json({ error: "MISSING_TENANT" }); return; }
+
+      const categoryFilter = req.query["category"] as string | undefined;
+
+      let q = db
+        .selectFrom("master.audit_reason_code as rc" as never)
+        .select([
+          "rc.id" as never,
+          "rc.code" as never,
+          "rc.name" as never,
+          "rc.description" as never,
+          "rc.category" as never,
+          "rc.severity" as never,
+          "rc.requires_comment" as never,
+          "rc.sort_order" as never,
+        ] as never)
+        .where("rc.tenant_id" as never, "=", tenantId as never)
+        .where("rc.status" as never, "=", "active" as never)
+        .orderBy("rc.sort_order" as never, "asc");
+
+      if (categoryFilter) {
+        q = q.where("rc.category" as never, "=", categoryFilter as never);
+      }
+
+      const rows = await q.execute() as Record<string, unknown>[];
+      res.json({
+        ok: true,
+        data: rows.map((r) => ({
+          id:              r["id"],
+          code:            r["code"],
+          name:            r["name"],
+          description:     r["description"] ?? null,
+          category:        r["category"],
+          severity:        r["severity"],
+          requiresComment: r["requires_comment"],
+          sortOrder:       r["sort_order"],
+        })),
+      });
+    } catch (err) {
+      logger?.error("audit_reason_codes_error", { err: String(err) });
+      next(err);
+    }
+  };
+
   // ── Register ──────────────────────────────────────────────────────────────
   // NOTE: /export must be registered before /:id — Express matches in order,
   // and "export" would otherwise be interpreted as a UUID by the /:id route.
 
+  router.get("/audit/reason-codes",                 listReasonCodesHandler);
   router.get("/audit/events/export",                exportEventsHandler);
   router.get("/audit/events",                       listEventsHandler);
   router.get("/audit/events/:id",                   getEventHandler);
+  router.get("/audit/security-events",              listSecurityEventsHandler);
   router.get("/audit/permission-decisions",         listPermissionDecisionsHandler);
   router.get("/audit/permission-decisions/:id",     getPermissionDecisionHandler);
 }

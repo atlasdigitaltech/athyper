@@ -6,7 +6,7 @@ import {
   metricsHandler,
   recordAtlasConversationPurge,
   recordAtlasToolInvocationRecovery,
-} from "../metrics.js";
+} from "../runtimes/metrics.js";
 
 function scrapeMetrics(): Promise<string> {
   return new Promise((resolve) => {

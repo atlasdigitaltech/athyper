@@ -7,7 +7,7 @@ BEGIN
   END IF;
   SELECT plane_code,entity_code,source_entity_operation_id,source_release_hash,
          source_compiled_hash AS source_artifact_hash INTO b
-    FROM authz.entity_operation_scope_binding WHERE status='published' LIMIT 1;
+    FROM authz.entity_operation_binding WHERE status='published' LIMIT 1;
   IF NOT FOUND THEN RAISE EXCEPTION 'P5-E6 pilot binding is missing'; END IF;
   SELECT ops.certify_authorization_operation_parity(b.plane_code,b.entity_code,
     b.source_entity_operation_id,b.source_release_hash,b.source_artifact_hash,

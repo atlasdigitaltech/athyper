@@ -27,6 +27,7 @@ import { randomBytes } from "crypto";
 import { sql } from "kysely";
 import { Router, type RequestHandler } from "express";
 import type { Kysely } from "kysely";
+import { appendSecurityEvent } from "@athyper/svc-audit";
 import {
   verifyBearer,
   extractOrgHeaders,
@@ -370,7 +371,20 @@ function createMfaRoutesForDatabase(
         res.status(400).json({ error: "MISSING_FIELD", message: "'action_class' is required" });
         return;
       }
-      if (!await enforceRateLimit(cache, res, `ratelimit:mfa:elevate:${tenantId}:${sub}`, 5, 300)) return;
+      const rateLimitOk = await enforceRateLimit(cache, res, `ratelimit:mfa:elevate:${tenantId}:${sub}`, 5, 300);
+      if (!rateLimitOk) {
+        void appendSecurityEvent(db, {
+          plane: deps.plane === "admin" ? "athyper" : deps.plane,
+          tenant_id: tenantId,
+          principal_id: caller.principalId,
+          event_code: "auth.mfa_rate_limited",
+          category: "authentication",
+          severity: "warning",
+          outcome: "denied",
+          context: { action_class: body.action_class },
+        });
+        return;
+      }
 
       const validActionClasses: ActionClass[] = [
         "iam_admin", "tenant_settings", "delegation_accept", "atlas_support", "metadata_release",
@@ -385,6 +399,20 @@ function createMfaRoutesForDatabase(
       const hasFreshKeycloakAssurance = hasFreshKeycloakStepUpAssurance(claims);
       const binding = createStepUpBinding(claims, sub, tenantId, actionClass);
       if (!hasFreshKeycloakAssurance || !binding) {
+        void appendSecurityEvent(db, {
+          plane: deps.plane === "admin" ? "athyper" : deps.plane,
+          tenant_id: tenantId,
+          principal_id: caller.principalId,
+          event_code: "auth.mfa_step_up_denied",
+          category: "authentication",
+          severity: "warning",
+          outcome: "denied",
+          context: {
+            action_class: actionClass,
+            has_fresh_assurance: hasFreshKeycloakAssurance,
+            has_binding: !!binding,
+          },
+        });
         res.status(403).json({
           error: "KEYCLOAK_STEP_UP_REQUIRED",
           action_class: actionClass,
@@ -406,6 +434,17 @@ function createMfaRoutesForDatabase(
         ? Math.min(configuredTtlSec, 300)
         : configuredTtlSec;
       await stepUp.grantElevation(binding, ttlSec);
+
+      void appendSecurityEvent(db, {
+        plane: deps.plane === "admin" ? "athyper" : deps.plane,
+        tenant_id: tenantId,
+        principal_id: caller.principalId,
+        event_code: "auth.mfa_step_up_granted",
+        category: "authentication",
+        severity: "info",
+        outcome: "success",
+        context: { action_class: actionClass, ttl_sec: ttlSec },
+      });
 
       setCachePrivate(res, 0);
       res.json({ ok: true, elevated: true, action_class: actionClass, ttl_sec: ttlSec });

@@ -1,6 +1,7 @@
 import { sql, type Kysely } from "kysely";
 import type {
   ActiveRelease,
+  ActiveEntityProjection,
   AppliedRelease,
   DeploymentBundle,
   DeploymentStatus,
@@ -86,9 +87,31 @@ export class PostgresLocalPublicationRepository implements LocalPublicationRepos
   constructor(private readonly db: Kysely<any>) {}
 
   async stage(bundle: DeploymentBundle, artifact: LoadedPublicationArtifact): Promise<AppliedRelease> {
-    const result = await sql<any>`SELECT * FROM runtime_meta.fn_stage_release(
+    if (bundle.publicationKey.startsWith("metadata.entity.") && !artifact.entityProjection) {
+      throw new Error("ENTITY_RUNTIME_PROJECTION_REQUIRED");
+    }
+    const entityProjection = artifact.entityProjection
+      ? {
+          contract: {
+            ...artifact.entityProjection.contract,
+            release_id: bundle.sourceReleaseId,
+            release_no: bundle.sourceReleaseNo,
+            publication_key: bundle.publicationKey,
+            signature_algorithm: bundle.signatureAlgorithm,
+            signing_key_id: bundle.signingKeyId,
+            signature: bundle.signature,
+          },
+          descriptor: {
+            ...artifact.entityProjection.descriptor,
+            plane_code: bundle.targetPlane,
+            descriptor_kind: bundle.targetPlane === "athyper" ? "admin_preview" : "entity_runtime",
+          },
+        }
+      : null;
+    const result = await sql<any>`SELECT * FROM runtime_meta.fn_stage_release_projection(
       ${bundle.publicationKey}, ${bundle.sourceReleaseId}::uuid, ${bundle.sourceReleaseNo},
-      ${bundle.deploymentId}::uuid, ${bundle.artifactHash}, ${JSON.stringify(artifact.manifest)}::jsonb
+      ${bundle.deploymentId}::uuid, ${bundle.artifactHash}, ${JSON.stringify(artifact.manifest)}::jsonb,
+      ${entityProjection ? JSON.stringify(entityProjection) : null}::jsonb
     )`.execute(this.db);
     return applied(result.rows[0]);
   }
@@ -136,5 +159,47 @@ export class PostgresLocalPublicationRepository implements LocalPublicationRepos
     `.execute(this.db);
     if (!result.rows[0]) return null;
     return { ...applied(result.rows[0]), activatedAt: new Date(result.rows[0].activated_at).toISOString() };
+  }
+
+  async activeEntity(
+    publicationKey: string,
+    descriptorKind = "entity_runtime",
+  ): Promise<ActiveEntityProjection | null> {
+    const result = await sql<any>`SELECT * FROM runtime_meta.fn_active_entity_descriptor(
+      ${publicationKey}, ${descriptorKind}
+    )`.execute(this.db);
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+      entityContractId: row.entity_contract_id,
+      entityDescriptorId: row.entity_descriptor_id,
+      tenantId: row.tenant_id,
+      entityId: row.entity_id,
+      entityCode: row.entity_code,
+      releaseId: row.release_id,
+      releaseNo: Number(row.release_no),
+      contractHash: row.contract_hash,
+      contract: row.contract_json,
+      plane: row.plane_code,
+      descriptorKind: row.descriptor_kind,
+      compiledHash: row.compiled_hash,
+      descriptor: row.compiled_json,
+      activatedAt: new Date(row.activated_at).toISOString(),
+    };
+  }
+
+  async rollback(
+    publicationKey: string,
+    targetAppliedReleaseId: string,
+    evidence: Record<string, unknown> = {},
+  ): Promise<ActiveRelease> {
+    await sql`SELECT runtime_meta.fn_rollback_release(
+      ${publicationKey},${targetAppliedReleaseId}::uuid,${JSON.stringify(evidence)}::jsonb
+    )`.execute(this.db);
+    const active = await this.active(publicationKey);
+    if (!active || active.id !== targetAppliedReleaseId) {
+      throw new Error("LOCAL_ROLLBACK_HEAD_MISMATCH");
+    }
+    return active;
   }
 }

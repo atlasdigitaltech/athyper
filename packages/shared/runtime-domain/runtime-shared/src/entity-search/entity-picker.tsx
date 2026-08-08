@@ -8,7 +8,7 @@
  *               Uses GET runtimePath.list(entityCode) + query string.
  *   Custom    — pass `search` callback. Caller owns fetch/debounce logic.
  *
- * Renders AsyncCombobox from @athyper/platform-ui/composites.
+ * Renders AsyncCombobox from @athyper/ui/composites.
  * Layer boundary: this is runtime-shared. Do NOT import from app/domain
  * runtime packages.
  */
@@ -30,7 +30,7 @@ import {
   type AdvancedEntityChooserMetaConfig,
   type AdvancedEntityChooserOption,
   type AdvancedEntityChooserSection,
-} from "@athyper/platform-ui/composites";
+} from "@athyper/ui/composites";
 import { getCsrfToken } from "../client/csrf";
 import { appEntityDetailHref } from "../core/entity-route";
 import { entityRowToPickerOption, useEntitySearch } from "./use-entity-search";

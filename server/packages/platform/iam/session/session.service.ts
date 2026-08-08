@@ -16,6 +16,11 @@ import {
   type CanonicalSessionResolver,
 } from "./session-cutover.js";
 import { SqlSessionShadowSink } from "./sql-session-shadow-sink.js";
+import {
+  projectionAllowsExactScope,
+  SqlOrganizationProjectionRepository,
+  type OrganizationProjectionRepository,
+} from "../organization-projection/organization-projection.repository.js";
 
 export interface CacheMetrics {
   hit(tenant: string): void;
@@ -61,6 +66,7 @@ export interface SessionServiceDeps {
   readonly planeDatabases: PlaneDatabaseRegistry;
   readonly cache: CacheClient;
   readonly metrics?: CacheMetrics;
+  readonly projections?: OrganizationProjectionRepository;
   readonly legacySessions?: Partial<Record<SessionQuery["planeKey"], CanonicalSessionResolver<any>>>;
 }
 
@@ -85,6 +91,7 @@ export function createSessionService(
     workflow: "session",
     sink: new SqlIdentityShadowSink(deps.planeDatabases),
   });
+  const projections = deps.projections ?? new SqlOrganizationProjectionRepository(deps.planeDatabases);
   const evaluatorRevision =
     process.env["AUTHORIZATION_EVALUATOR_REVISION"] ?? "unpublished";
   const runtimes: Record<SessionQuery["planeKey"], CanonicalAuthorizationRuntime> = {
@@ -118,7 +125,7 @@ export function createSessionService(
         sessionSink,
       ),
     ]),
-  ) as Record<SessionQuery["planeKey"], CanonicalSessionResolver<any>>;
+  ) as unknown as Record<SessionQuery["planeKey"], CanonicalSessionResolver<any>>;
 
   return {
     async resolve(query): Promise<AuthorizationSessionV2> {
@@ -129,9 +136,21 @@ export function createSessionService(
           403,
         );
       }
+      const activeProjections = await projections.resolveActive({
+        planeKey: query.planeKey,
+        realmKey: query.realmKey,
+        externalOrganizationIds: query.externalOrganizationIds,
+      });
+      if (activeProjections.length === 0) {
+        throw new SessionError(
+          "IAM_PROJECTION_MISSING",
+          "No active organization projection exists for this plane and realm.",
+          403,
+        );
+      }
       const admissions = await identities.resolveCandidates({
         planeKey: query.planeKey,
-        tenantIds: query.orgAliases,
+        tenantIds: activeProjections.map((projection) => projection.tenantId),
         providerCode: "keycloak",
         realmKey: query.realmKey,
         subjectId: query.sub,
@@ -147,31 +166,55 @@ export function createSessionService(
           403,
         );
       }
-      const tenantOrAccountId = query.planeKey === "mesh"
-        ? await resolveMeshAccountId(meshDb, admission.tenantId, admission.principalId, query.entity)
-        : admission.tenantId;
-      if (!tenantOrAccountId) {
+      const selectedScope = query.planeKey === "mesh"
+        ? await resolveMeshAccount(meshDb, admission.tenantId, admission.principalId, query.entity)
+        : await resolveGrantedScope(
+            deps.planeDatabases.forPlane(query.planeKey).db,
+            admission.tenantId,
+            admission.principalId,
+            query.entity,
+          );
+      if (!selectedScope) {
         throw new SessionError(
           "ACCOUNT_DENIED",
-          "The selected network account is not an authorized scope for this identity.",
+          "The selected application scope is not an active grant for this identity.",
           403,
         );
       }
-      if (query.planeKey !== "mesh" && query.orgAliases.length > 0) {
-        if (!query.orgAliases.some((alias) => alias.toLowerCase() === admission.tenantId.toLowerCase())) {
-          throw new SessionError(
-            "ORGANIZATION_DENIED",
-            "The selected organization is not present in the verified identity.",
-            403,
-          );
-        }
+      const matchingProjections = activeProjections.filter((projection) =>
+        projection.tenantId === admission.tenantId
+        && projectionAllowsExactScope(
+          projection,
+          selectedScope.scopeTargetId,
+          selectedScope.networkRole,
+        )
+      );
+      if (matchingProjections.length === 0) {
+        throw new SessionError(
+          "IAM_SCOPE_OUTSIDE_CEILING",
+          "The selected application scope is outside the organization projection ceiling.",
+          403,
+        );
       }
+      if (matchingProjections.length > 1) {
+        throw new SessionError(
+          "IAM_PROJECTION_AMBIGUOUS",
+          "More than one organization projection can activate the selected scope.",
+          403,
+        );
+      }
+      const projection = matchingProjections[0]!;
+      const tenantOrAccountId = selectedScope.tenantOrAccountId;
       return sessions[query.planeKey].resolve({
         externalSubjectId: query.sub,
         realmKey: query.realmKey,
         tenantId: admission.tenantId,
         tenantOrAccountId,
         plane: query.planeKey,
+        organizationId: projection.externalOrganizationId,
+        projectionId: projection.projectionId,
+        projectionVersion: projection.sourceVersion,
+        projectionHash: projection.sourceHash,
         mfaSatisfied: query.mfaSatisfied,
         sodSatisfied: query.sodSatisfied,
       });
@@ -206,20 +249,26 @@ export function createSessionService(
   };
 }
 
-async function resolveMeshAccountId(
+interface SelectedApplicationScope {
+  readonly tenantOrAccountId: string;
+  readonly scopeTargetId: string;
+  readonly networkRole?: string;
+}
+
+async function resolveMeshAccount(
   db: AnyDb,
   tenantId: string,
   principalId: string,
   accountCodeOrId: string,
-): Promise<string | null> {
+): Promise<SelectedApplicationScope | null> {
   return db.transaction().execute(async (trx) => {
     await sql`
       SELECT
         set_config('app.current_tenant_id', ${tenantId}, true),
         set_config('app.current_principal_id', ${principalId}, true)
     `.execute(trx);
-    const result = await sql<{ id: string }>`
-      SELECT account.id::text
+    const result = await sql<{ id: string; scope_target_id: string; network_role: string }>`
+      SELECT account.id::text, scope.id::text AS scope_target_id, account.network_role::text
       FROM mesh.network_account AS account
       JOIN authz.scope_target AS scope
         ON scope.tenant_id = account.tenant_id
@@ -244,6 +293,52 @@ async function resolveMeshAccountId(
         AND account.status = 'active'
       LIMIT 1
     `.execute(trx);
-    return result.rows[0]?.id ?? null;
+    const row = result.rows[0];
+    return row ? {
+      tenantOrAccountId: row.id,
+      scopeTargetId: row.scope_target_id,
+      networkRole: row.network_role.toLowerCase(),
+    } : null;
+  });
+}
+
+async function resolveGrantedScope(
+  db: AnyDb,
+  tenantId: string,
+  principalId: string,
+  scopeKeyOrId: string,
+): Promise<SelectedApplicationScope | null> {
+  return db.transaction().execute(async (trx) => {
+    await sql`
+      SELECT
+        set_config('app.current_tenant_id', ${tenantId}, true),
+        set_config('app.current_principal_id', ${principalId}, true)
+    `.execute(trx);
+    const result = await sql<{ scope_target_id: string }>`
+      SELECT DISTINCT scope.id::text AS scope_target_id
+      FROM authz.scope_target AS scope
+      JOIN authz.group_role AS group_role
+        ON group_role.tenant_id = scope.tenant_id
+       AND group_role.scope_target_id = scope.id
+       AND group_role.status = 'active'
+       AND group_role.effective_from <= statement_timestamp()
+       AND (group_role.effective_until IS NULL OR group_role.effective_until > statement_timestamp())
+      JOIN authz.group_member AS member
+        ON member.tenant_id = group_role.tenant_id
+       AND member.group_id = group_role.group_id
+       AND member.principal_id = ${principalId}::uuid
+       AND member.status = 'active'
+       AND member.effective_from <= statement_timestamp()
+       AND (member.effective_until IS NULL OR member.effective_until > statement_timestamp())
+      WHERE scope.tenant_id = ${tenantId}::uuid
+        AND (scope.id::text = ${scopeKeyOrId} OR scope.scope_key = ${scopeKeyOrId})
+        AND scope.status = 'active'
+      LIMIT 1
+    `.execute(trx);
+    const row = result.rows[0];
+    return row ? {
+      tenantOrAccountId: tenantId,
+      scopeTargetId: row.scope_target_id,
+    } : null;
   });
 }

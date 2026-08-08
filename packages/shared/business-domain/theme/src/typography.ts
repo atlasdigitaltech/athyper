@@ -1,5 +1,5 @@
 /**
- * @athyper/platform-theme typography contract.
+ * @athyper/theme typography contract.
  *
  * Keep typography close to shadcn/Tailwind defaults. The theme owns the font
  * family and standard Tailwind font-size scale only; components should use

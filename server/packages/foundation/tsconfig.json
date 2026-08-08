@@ -2,22 +2,9 @@
   "extends": "../../../tooling/tsconfig/base.json",
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["node"]
   },
   "include": ["./**/*.ts"],
-  "exclude": [
-    "dist",
-    "node_modules",
-    ".turbo",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "cache/src",
-    "context/src",
-    "crypto/src",
-    "kernel/src",
-    "observability/src",
-    "storage/src",
-    "tenancy/src",
-    "transaction/src"
-  ]
+  "exclude": ["dist", "node_modules", ".turbo", "**/*.test.ts", "**/*.spec.ts"]
 }

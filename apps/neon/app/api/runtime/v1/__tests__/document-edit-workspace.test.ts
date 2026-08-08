@@ -481,7 +481,7 @@ describe("workspace lifecycle route guard wiring", () => {
     );
 
     expect(formSource).toContain('from "@athyper/runtime-shared/client"');
-    expect(formSource).toMatch(/import\s*\{[^}]*csrfFetch[^}]*\}\s*from "@athyper\/runtime-shared\/client"/s);
+    expect(formSource).toMatch(/import\s*\{[\s\S]*?csrfFetch[\s\S]*?\}\s*from "@athyper\/runtime-shared\/client"/);
     expect(formSource).toContain("csrfFetch(batchContext.endpoint");
     expect(batchRoute).toContain("resolveRuntimeFieldOptions");
     expect(batchRoute).toContain("MAX_BATCH_CONCURRENCY = 8");

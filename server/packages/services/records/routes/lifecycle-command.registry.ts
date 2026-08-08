@@ -10,7 +10,7 @@ import type { Kysely } from "kysely";
 import {
   preparePurchaseInvoiceSubmit as preparePurchaseInvoiceSubmitBusiness,
   PurchaseInvoiceSubmitPreparationError,
-} from "../../business/p2p/purchase_invoice/invoice-submit.handler.js";
+} from "@athyper/svc-business";
 import { entityHandlerRegistryFamily } from "../mutation/handler-registry-family.js";
 
 export type LifecycleCommandKey = `${string}::${string}`;

@@ -2,7 +2,7 @@
  * AuditFieldEncryptionService — Phase 4.1
  *
  * Wraps Phase 1.7 CredentialEncryptionService for audit-specific encryption
- * of sensitive fields in log.audit_log.
+ * of sensitive fields in audit.audit_log.
  *
  * Per PLATFORM_MIGRATION.md Phase 4.1:
  *   - Uses CredentialEncryptionService (Phase 1.7) — do NOT reimplement encryption
@@ -20,7 +20,7 @@
  *   Default: ['master.principal', 'master.identity_document', 'log.security_event_log'].
  */
 
-import type { CredentialEncryptionService } from "@athyper/foundation-crypto";
+import type { CredentialEncryptionService } from "@athyper/server-foundation/crypto";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -67,7 +67,7 @@ export class AuditFieldEncryptionService {
         "master.principal",
         "master.identity_document",
         "master.user_profile",
-        "log.security_event_log",
+        "audit.security_event",
         "master.bank_account",
       ]),
     };
@@ -196,10 +196,10 @@ export async function reEncryptHotPartition(
 
   while (true) {
     const rows = await db
-      .selectFrom("log.audit_log as al" as never)
+      .selectFrom("audit.audit_log as al" as never)
       .select(["al.id", "al.entity_type", "al.old_values", "al.new_values"] as never[])
       .where("al.tenant_id" as never, "=", tenantId as never)
-      .where("al.created_at" as never, ">=", startOfMonth.toISOString() as never)
+      .where("al.occurred_at" as never, ">=", startOfMonth.toISOString() as never)
       .orderBy("al.id" as never, "asc" as never)
       .limit(batchSize)
       .offset(offset)
@@ -224,7 +224,7 @@ export async function reEncryptHotPartition(
 
         if (reEncOld !== null || reEncNew !== null) {
           await db
-            .updateTable("log.audit_log" as never)
+            .updateTable("audit.audit_log" as never)
             .set({
               ...(reEncOld !== null ? { old_values: reEncOld as never } : {}),
               ...(reEncNew !== null ? { new_values: reEncNew as never } : {}),

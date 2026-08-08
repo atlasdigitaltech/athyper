@@ -85,7 +85,7 @@ describe("meta-entity record display hydration", () => {
   });
 
   it("hydrates only fields in the active visible-column projection", async () => {
-    const fetchMock = vi.fn(async () => jsonResponse({
+    const fetchMock = vi.fn(async (_input?: string | URL | Request) => jsonResponse({
       values: [{ code: "posted", name: "Posted" }],
     }));
     vi.stubGlobal("fetch", fetchMock);

@@ -62,8 +62,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Gate 2 — Workspace dependency resolution.
+      # Every workspace:* dep must resolve to an active workspace member.
+      # Catches packages deleted from pnpm-workspace.yaml while still
+      # referenced by consumers (the P0-B failure class).
+      - name: Verify workspace:* dependency resolution
+        run: pnpm policy:workspace-resolution
+
       - name: Verify deployment profiles and package boundaries
         run: pnpm policy:release-boundaries
+
+      # Gate 1 — Duplicate package names (explicit blocking step).
+      # policy:release-boundaries already runs this via &&, but process.exit(1)
+      # in a pnpm subprocess is sometimes swallowed by older pnpm behavior.
+      # This dedicated step makes the duplicate gate unambiguous in CI logs.
+      - name: Verify no duplicate active package names
+        run: pnpm policy:canonical-packages
 
       - name: Verify server Docker workspace manifests
         run: pnpm policy:server-docker-workspaces
@@ -219,6 +233,18 @@ jobs:
 
       - name: Verify meta-entity retirement evidence boundary
         run: pnpm test:meta-entity-retirement
+
+      # Gate 3 — Legacy DDL schema reference check (advisory → blocking at Phase 3).
+      # Fails if server/packages/**/*.ts or server/src/**/*.ts contains any of the
+      # old-DDL relation names: shared.module, shared.workspace,
+      # shared.plan_module_access, master.tenant_module_subscription,
+      # control.entity_version, control.entity_operation.
+      # Advisory while runtime code is being migrated off the old relations.
+      # Promote to blocking (remove continue-on-error) once Phase 3 migration
+      # confirms zero references remain.
+      - name: Verify no legacy DDL schema references (Gate 3 — advisory)
+        continue-on-error: true
+        run: pnpm policy:no-legacy-schema-refs
 
   # P0 performance baseline. Advisory until two stable captured runs have
   # been reviewed. Enable by setting the PERF_BASE_URL repository variable.

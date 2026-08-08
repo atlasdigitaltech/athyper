@@ -269,6 +269,13 @@ ALTER TABLE metadata.entity_operation
     ADD CONSTRAINT entity_operation_created_by_fk FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT,
     ADD CONSTRAINT entity_operation_updated_by_fk FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
 
+ALTER TABLE metadata.entity_operation_permission
+    ADD CONSTRAINT entity_operation_permission_entity_fk FOREIGN KEY (entity_id) REFERENCES metadata.entity (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_operation_permission_change_set_fk FOREIGN KEY (change_set_id) REFERENCES metadata.entity_change_set (id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_operation_permission_operation_fk FOREIGN KEY (entity_operation_id) REFERENCES metadata.entity_operation (id) ON DELETE CASCADE,
+    ADD CONSTRAINT entity_operation_permission_created_by_fk FOREIGN KEY (created_by) REFERENCES master.principal (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_operation_permission_updated_by_fk FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+
 ALTER TABLE metadata.entity_surface_operation
     ADD CONSTRAINT entity_surface_operation_entity_fk FOREIGN KEY (entity_id) REFERENCES metadata.entity (id) ON DELETE RESTRICT,
     ADD CONSTRAINT entity_surface_operation_change_set_fk FOREIGN KEY (change_set_id) REFERENCES metadata.entity_change_set (id) ON DELETE CASCADE,
