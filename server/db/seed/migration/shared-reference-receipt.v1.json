@@ -8,9 +8,21 @@
   "payloadContentPreserved": true,
   "validationFunction": "shared.validate_reference_seed()",
   "planes": {
-    "athyper": { "database": "athyper_platform", "freshBuild": "passed", "validation": "passed" },
-    "neon": { "database": "athyper_neon", "freshBuild": "passed", "validation": "passed" },
-    "mesh": { "database": "athyper_mesh", "freshBuild": "passed", "validation": "passed" }
+    "athyper": {
+      "database": "athyper_studio",
+      "freshBuild": "passed",
+      "validation": "passed"
+    },
+    "neon": {
+      "database": "athyper_neon",
+      "freshBuild": "passed",
+      "validation": "passed"
+    },
+    "mesh": {
+      "database": "athyper_mesh",
+      "freshBuild": "passed",
+      "validation": "passed"
+    }
   },
   "counts": {
     "country": 247,

@@ -85,6 +85,17 @@ VALUES
         'active'
     ),
     (
+        'iam_provisioning_event',
+        '^iam\.provisioning\.(requested|started|invited|activated|suspended|failed|deprovisioning|deprovisioned)$',
+        8,
+        ARRAY['create','update','execute']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','support','system']::audit.actor_type_d[],
+        'tenant', false, 'metadata', 16384, 1,
+        '{"event_category":"security","owner":"iam","purpose":"identity_provisioning_evidence"}'::jsonb,
+        'active'
+    ),
+    (
         'iam_general_event',
         '^iam\.[a-z][a-z0-9_]*$',
         9,

@@ -23,6 +23,15 @@ CREATE POLICY entity_number_counter_tenant_access ON runtime_meta.entity_number_
 CREATE POLICY entity_number_counter_seed_write ON runtime_meta.entity_number_counter
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
+ALTER TABLE runtime_meta.entity_number_allocation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runtime_meta.entity_number_allocation FORCE ROW LEVEL SECURITY;
+CREATE POLICY entity_number_allocation_tenant_read ON runtime_meta.entity_number_allocation
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY entity_number_allocation_tenant_insert ON runtime_meta.entity_number_allocation
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY entity_number_allocation_seed_write ON runtime_meta.entity_number_allocation
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
 ALTER TABLE runtime_meta.applied_release ENABLE ROW LEVEL SECURITY;
 ALTER TABLE runtime_meta.applied_release FORCE ROW LEVEL SECURITY;
 ALTER TABLE runtime_meta.release_activation_head ENABLE ROW LEVEL SECURITY;

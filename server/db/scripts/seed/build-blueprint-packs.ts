@@ -11,13 +11,13 @@ const check = process.argv.includes("--check");
 const sha = (value: string) => createHash("sha256").update(value.replace(/\r\n?/g, "\n")).digest("hex");
 const repoPath = (path: string) => relative(root, path).replace(/\\/g, "/");
 
-type Domain = { order: number; code: string; roots: string[]; dependencies: string[]; preconditions: string[]; plane?: "athyper" | "neon"; tenantScope?: "global" | "tenant" | "none"; requiredSetting?: string };
+type Domain = { order: number; code: string; roots: string[]; dependencies: string[]; preconditions: string[]; plane?: "studio" | "neon"; tenantScope?: "global" | "tenant" | "none"; requiredSetting?: string };
 const domains: Domain[] = [
   { order: 10, code: "spend-taxonomy-business-intents", roots: ["universal/010_spend_taxonomy"], dependencies: [], preconditions: ["master.tenant", "shared.commodity_code", "master.business_intent", "control.commodity_code_classification_policy"] },
   { order: 20, code: "tax-fx", roots: ["universal/020_tax"], dependencies: ["spend-taxonomy-business-intents"], preconditions: ["master.tax_jurisdiction", "master.tax_type", "control.tax_group", "master.fx_rate"] },
   { order: 30, code: "payment-holiday", roots: ["universal/030_payments"], dependencies: ["tax-fx"], preconditions: ["master.holiday_calendar", "master.payment_term"] },
   { order: 40, code: "asset-policies", roots: ["universal/040_assets"], dependencies: ["tax-fx"], preconditions: ["master.asset_class", "control.asset_book_policy"] },
-  { order: 50, code: "bank-formats", roots: [], dependencies: [], preconditions: ["control.bank_format_rule", "shared.country", "master.principal"], plane: "athyper", tenantScope: "global", requiredSetting: "app.current_principal_id" },
+  { order: 50, code: "bank-formats", roots: [], dependencies: [], preconditions: ["control.bank_format_rule", "shared.country", "master.principal"], plane: "studio", tenantScope: "global", requiredSetting: "app.current_principal_id" },
   { order: 60, code: "coa-frameworks", roots: ["universal/200_coa_frameworks"], dependencies: ["spend-taxonomy-business-intents", "tax-fx"], preconditions: ["master.chart_of_account", "master.gl_account"] },
   { order: 70, code: "organization-templates", roots: ["universal/060_org_structure", "200_industry_org_structure"], dependencies: ["coa-frameworks", "tax-fx"], preconditions: ["master.legal_entity", "master.company_code", "master.org_unit"] },
   { order: 80, code: "people-payroll", roots: ["universal/070_people"], dependencies: ["organization-templates", "payment-holiday", "coa-frameworks"], preconditions: ["master.employee", "master.pay_group"] },
@@ -50,7 +50,7 @@ async function filesUnder(path: string): Promise<string[]> {
 
 async function renderDomain(domain: Domain) {
   let paths = domain.code === "bank-formats"
-    ? [resolve(db, "ddl/planes/athyper/control/12_bank_format_rule_reference_seed.sql")]
+    ? [resolve(db, "ddl/planes/studio/control/12_bank_format_rule_reference_seed.sql")]
     : (await Promise.all(domain.roots.map(async (part) => (await filesUnder(resolve(blueprintRoot, part))).sort()))).flat();
   if (domain.code === "organization-templates") {
     const organizationOrder = ["/300_org_units.sql", "/301_cost_centers.sql", "/302_profit_centers.sql", "/000_industry_org_templates.sql", "/303_company_code_tax_fx_links.sql"];

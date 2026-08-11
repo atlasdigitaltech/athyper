@@ -5,7 +5,7 @@ const root = process.cwd();
 const inventory = JSON.parse(readFileSync(
   resolve(root, "config/legacy-experience-cleanup.json"),
   "utf8",
-));
+).replace(/^\uFEFF/, ""));
 const failures = [];
 const requiredTargetCodes = new Set([
   "plane_shell_wrappers",
@@ -43,9 +43,9 @@ for (const target of inventory.targets ?? []) {
 for (const code of requiredTargetCodes) failures.push(`cleanup target is not inventoried: ${code}`);
 
 const activeEntries = [
-  "apps/admin/app/(shell)/dashboard/page.tsx",
-  "apps/admin/app/(shell)/setup/page.tsx",
-  "apps/admin/app/(shell)/content/page.tsx",
+  "apps/studio/app/(shell)/dashboard/page.tsx",
+  "apps/studio/app/(shell)/setup/page.tsx",
+  "apps/studio/app/(shell)/content/page.tsx",
   "apps/neon/app/(shell)/dashboard/page.tsx",
   "apps/neon/app/(shell)/setup/page.tsx",
   "apps/neon/app/(shell)/content/page.tsx",
@@ -60,7 +60,7 @@ for (const path of activeEntries) {
   }
 }
 
-for (const plane of ["admin", "neon", "mesh"]) {
+for (const plane of ["studio", "neon", "mesh"]) {
   const path = `apps/${plane}/app/(shell)/inbox/[...requestId]/page.tsx`;
   const source = readFileSync(resolve(root, path), "utf8");
   if (!source.includes("requestId.join")) failures.push(`${path}: catch-all path is ignored`);

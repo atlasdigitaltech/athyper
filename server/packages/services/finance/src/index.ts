@@ -1,0 +1,32 @@
+// @athyper/server-service-finance — finance and accounting business service
+export {};
+export * from "./shared/posting-context.js";
+export * from "./shared/canonical.js";
+export * from "./shared/rounding-resolver.js";
+export * from "./shared/book-period-service.js";
+export * from "./shared/posting-guard.js";
+export * from "./shared/in-memory-command-repository.js";
+export * from "./shared/kysely-finance-foundation.js";
+export * from "./shared/kysely-command-repository.js";
+export * from "./shared/evidence.js";
+export * from "./shared/permission-checker.js";
+export * from "./budget/budget-service.js";
+export * from "./budget/kysely-budget-repository.js";
+export * from "./planning/planning-service.js";
+export * from "./planning/kysely-planning-repository.js";
+export * from "./ledger/gl-posting-service.js";
+export * from "./ledger/kysely-gl-balance-repository.js";
+export * from "./ledger/cross-book-posting-service.js";
+export * from "./ledger/kysely-cross-book-repository.js";
+export * from "./ledger/commitment-service.js";
+export * from "./ledger/kysely-commitment-repository.js";
+export * from "./tax/tax-calculation-service.js";
+export * from "./tax/tax-credit-service.js";
+export * from "./tax/kysely-tax-repositories.js";
+export * from "./tax/kysely-tax-configuration.js";
+export * from "./inventory/inventory-service.js";
+export * from "./inventory/kysely-inventory-repository.js";
+export * from "./closing/closing-services.js";
+export * from "./closing/kysely-closing-repositories.js";
+/** Finance implementations execute only against the Neon business plane. */
+export const financeFoundation = { executionPlane: "neon", routesEnabledByDefault: false } as const;

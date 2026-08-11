@@ -1,1 +1,0 @@
-// @athyper/platform-notifications

@@ -1,1 +1,1 @@
-// @athyper/contracts-athyper-publication
+﻿export {};

@@ -1,4 +1,4 @@
--- seed-contract-version: 1
+﻿-- seed-contract-version: 1
 -- seed-pack: common.control.lookup.operations_activity
 -- seed-pack-version: 1.0.0
 -- seed-dataset: common.control.lookup.operations_activity
@@ -15,7 +15,7 @@
 -- source-files: server/db/seed/platform/000_lookups/LookupDomain/event/evt_event_type.sql,server/db/seed/platform/000_lookups/LookupDomain/event/task_type.sql,server/db/seed/platform/000_lookups/LookupDomain/event/workflow_type.sql,server/db/seed/platform/000_lookups/LookupDomain/log/activity_domain.sql,server/db/seed/platform/000_lookups/LookupDomain/log/activity_type.sql,server/db/seed/platform/000_lookups/LookupDomain/log/attachment_access_type.sql,server/db/seed/platform/000_lookups/LookupDomain/log/close_activity_type.sql,server/db/seed/platform/000_lookups/LookupDomain/log/export_type.sql,server/db/seed/platform/000_lookups/LookupDomain/log/finance_setup_activity.sql,server/db/seed/platform/000_lookups/LookupDomain/master/attachment_kind.sql
 
 DO $guard$ BEGIN
-  IF current_setting('app.database_plane', true) NOT IN ('athyper', 'neon', 'mesh') THEN
+  IF current_setting('app.database_plane', true) NOT IN ('studio', 'neon', 'mesh') THEN
     RAISE EXCEPTION 'common.control.lookup.operations_activity: invalid database plane';
   END IF;
 END $guard$;

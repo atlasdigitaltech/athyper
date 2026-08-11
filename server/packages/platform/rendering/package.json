@@ -1,30 +1,22 @@
 {
-  "name": "@athyper/platform-rendering",
+  "name": "@athyper/server-platform-rendering",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
-    "./package.json": "./package.json"
+    ".": "./src/index.ts"
   },
-  "files": ["dist"],
   "scripts": {
-    "clean": "rimraf dist",
-    "build": "tsup src/index.ts --format esm --dts --outDir dist",
-    "dev": "tsup src/index.ts --format esm --dts --outDir dist --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@athyper/server-contract-rendering": "workspace:*"
   },
   "devDependencies": {
-    "@athyper/tsconfig": "workspace:*",
     "@types/node": "^25.6.0",
-    "rimraf": "^6.0.1",
-    "tsup": "^8.3.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

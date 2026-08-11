@@ -174,12 +174,12 @@ call :require_var PUBLIC_WEB_URL
 call :require_var APPS_ATHYPER_WEB_HOST
 call :require_var APPS_ATHYPER_NEON_HOST
 call :require_var APPS_ATHYPER_MESH_HOST
-call :require_var APPS_ATHYPER_ADMIN_HOST
+call :require_var APPS_ATHYPER_STUDIO_HOST
 call :require_var APPS_ATHYPER_API_HOST
 call :require_var APPS_ATHYPER_WEB_UPSTREAM_URL
 call :require_var APPS_ATHYPER_NEON_UPSTREAM_URL
 call :require_var APPS_ATHYPER_MESH_UPSTREAM_URL
-call :require_var APPS_ATHYPER_ADMIN_UPSTREAM_URL
+call :require_var APPS_ATHYPER_STUDIO_UPSTREAM_URL
 call :require_var GATEWAY_HOST
 call :require_var IAM_HOST
 call :require_var ALERTMANAGER_HOST
@@ -209,7 +209,7 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
   call :require_var DBPOOL_SESSION_PASSWORD
   call :require_var IAM_ADMIN_PASSWORD
   call :require_var IAM_CLIENT_SECRET
-  call :require_var ADMIN_WEB_CLIENT_SECRET
+  call :require_var STUDIO_WEB_CLIENT_SECRET
   call :require_var ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET
   call :require_var NEON_SVC_BFF_CLIENT_SECRET
   call :require_var AUTH_DISCOVERY_SHARED_SECRET
@@ -219,6 +219,7 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
   call :require_var MEMORYCACHE_PASSWORD
   call :require_var REDIS_EXPORTER_PASSWORD
   call :require_var REDIS_GLITCHTIP_PASSWORD
+  call :require_var REDIS_BULLBOARD_PASSWORD
   call :require_var REDIS_INFISICAL_PASSWORD
   call :require_var REDIS_ADMIN_PASSWORD
   call :require_var S3_ACCESS_KEY
@@ -241,8 +242,8 @@ if /I "!ENVIRONMENT!"=="local" goto :sec3_local
   call :require_var NEON_GATEWAY_ORIGIN
   call :require_var MESH_ALLOWED_HOSTS
   call :require_var MESH_GATEWAY_ORIGIN
-  call :require_var ADMIN_ALLOWED_HOSTS
-  call :require_var ADMIN_GATEWAY_ORIGIN
+  call :require_var STUDIO_ALLOWED_HOSTS
+  call :require_var STUDIO_GATEWAY_ORIGIN
   call :require_var APP_S3_ACCESS_KEY
   call :require_var APP_S3_SECRET_KEY
   call :require_var BACKUP_S3_ACCESS_KEY
@@ -365,6 +366,11 @@ REM 5. Security checks (non-local only)
 REM ----------------------------
 echo [5/6] Security checks...
 if /I "!ENVIRONMENT!"=="local" goto :sec5_local
+echo ,!ENV_STACK_PROFILE!, | findstr /C:",admin," >nul
+if not errorlevel 1 (
+  echo   FAIL  STACK_PROFILE=!ENV_STACK_PROFILE! includes local-only dbconsole/admin
+  set /a ERRORS+=1
+)
 
   REM CREDENTIAL_MASTER_KEY: length >= 32
   set "CMK=!ENV_CREDENTIAL_MASTER_KEY!"
@@ -412,6 +418,16 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
     echo   FAIL  ALERTMANAGER_SMTP_SMARTHOST=!ENV_ALERTMANAGER_SMTP_SMARTHOST! in !ENVIRONMENT! ^(mailtrap is local-only^)
     set /a ERRORS+=1
   )
+  for %%V in (SMTP_HOST KC_SMTP_HOST) do (
+    if /I "!ENV_%%V!"=="mailtrap" (
+      echo   FAIL  %%V=mailtrap in !ENVIRONMENT! ^(local capture SMTP is forbidden^)
+      set /a ERRORS+=1
+    )
+    if /I "!ENV_%%V!"=="mailpit" (
+      echo   FAIL  %%V=mailpit in !ENVIRONMENT! ^(local capture SMTP is forbidden^)
+      set /a ERRORS+=1
+    )
+  )
   if /I not "!ENV_ALERTMANAGER_SMTP_REQUIRE_TLS!"=="true" (
     echo   FAIL  ALERTMANAGER_SMTP_REQUIRE_TLS=!ENV_ALERTMANAGER_SMTP_REQUIRE_TLS! in !ENVIRONMENT! ^(must be true outside local^)
     set /a ERRORS+=1
@@ -426,7 +442,7 @@ if /I "!ENVIRONMENT!"=="local" goto :sec5_local
   )
 
   REM P2.4 - Traefik plane upstreams must NOT use host.docker.internal outside local
-  for %%U in (APPS_ATHYPER_WEB_UPSTREAM_URL APPS_ATHYPER_NEON_UPSTREAM_URL APPS_ATHYPER_MESH_UPSTREAM_URL APPS_ATHYPER_ADMIN_UPSTREAM_URL) do (
+  for %%U in (APPS_ATHYPER_WEB_UPSTREAM_URL APPS_ATHYPER_NEON_UPSTREAM_URL APPS_ATHYPER_MESH_UPSTREAM_URL APPS_ATHYPER_STUDIO_UPSTREAM_URL) do (
     echo !ENV_%%U! | findstr /C:"host.docker.internal" >nul
     if not errorlevel 1 (
       echo   FAIL  %%U=!ENV_%%U! in !ENVIRONMENT! ^(host.docker.internal is dev-only^)

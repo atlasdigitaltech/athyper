@@ -24,7 +24,7 @@ services:
       - |
         set -eu
         : "$${MEMORYCACHE_PASSWORD:?MEMORYCACHE_PASSWORD is empty — refusing to start}"
-        if grep -qE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' /usr/local/etc/redis/redis-acl.conf; then
+        if grep -qE '__(APP|EXPORTER|GLITCHTIP|BULLBOARD|INFISICAL|ADMIN)_HASH__' /usr/local/etc/redis/redis-acl.conf; then
           echo "FATAL: redis-acl.conf still has unrendered hash markers." >&2
           echo "       Run validate-env.sh before starting the stack." >&2
           exit 1

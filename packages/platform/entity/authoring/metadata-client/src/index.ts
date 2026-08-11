@@ -1,2 +1,1 @@
-// @athyper/metadata-client — skeleton placeholder
-export {};
+﻿export {};

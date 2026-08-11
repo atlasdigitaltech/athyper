@@ -1,2 +1,1 @@
-// @athyper/content-ui — skeleton placeholder
-export {};
+﻿export {};

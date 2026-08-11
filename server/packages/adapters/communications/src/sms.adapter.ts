@@ -1,125 +1,148 @@
-/**
- * SMS Channel Adapter — Twilio
- *
- * Delivers notification messages via Twilio Messaging API.
- * Registered in bootstrap.ts under channel key "sms" when
- * config.sms is present (TWILIO_ACCOUNT_SID env var).
- *
- * Config (from kernel config.sms.*):
- *   accountSid         — Twilio Account SID (ACxxxxxxxx)
- *   authToken          — Twilio Auth Token
- *   fromNumber         — E.164 sender number (e.g. +14155550100)
- *   messagingServiceSid — Optional Messaging Service SID (MSxxxxxxxx).
- *                         When provided, used instead of fromNumber for
- *                         optimal deliverability across pools.
- *
- * Body resolution:
- *   - payload.rendered_text is used as the SMS body if present.
- *   - Falls back to payload.body (plain text field).
- *   - Subject is prepended if both are present (subject: body).
- *   - Truncated to 1600 chars (10 GSM concatenated segments).
- *
- * The adapter uses the Twilio REST API directly (no SDK dependency).
- * Health check verifies account reachability via the /Accounts/:sid endpoint.
- */
+import type {
+  NotificationChannelHandler,
+  NotificationDeliveryRequest,
+} from "@athyper/server-contract-notifications";
 
-import type { NotificationChannelHandler } from "@athyper/platform-notifications";
+import { CommunicationDeliveryError } from "./communication-delivery.error.js";
 
 export interface SmsAdapterConfig {
-  accountSid:          string;
-  authToken:           string;
-  fromNumber:          string;   // E.164 format, e.g. +14155550100
-  messagingServiceSid?: string;  // MSxxxxxxxx — optional Messaging Service
+  readonly accountSid: string;
+  readonly authToken: string;
+  readonly fromNumber?: string;
+  readonly messagingServiceSid?: string;
+  readonly requestTimeoutMs?: number;
+  readonly healthTimeoutMs?: number;
 }
 
-const TWILIO_BASE = "https://api.twilio.com/2010-04-01";
-const MAX_SMS_CHARS = 1600;
+export interface SmsAdapterDependencies {
+  readonly fetch: typeof fetch;
+}
+
+const TWILIO_BASE_URL = "https://api.twilio.com/2010-04-01";
+const MAX_SMS_CHARACTERS = 1_600;
 const TRUNCATION_SUFFIX = " [...]";
+const E164 = /^\+[1-9]\d{7,14}$/;
 
-function buildAuthHeader(accountSid: string, authToken: string): string {
-  const encoded = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
-  return `Basic ${encoded}`;
-}
-
-function buildBody(
-  subject: string | null,
-  payload: Record<string, unknown>,
-): string {
-  const text =
-    typeof payload["rendered_text"] === "string"
-      ? payload["rendered_text"]
-      : typeof payload["body"] === "string"
-        ? payload["body"]
-        : "";
-
-  const full = subject && text ? `${subject}: ${text}` : subject ?? text;
-
-  if (full.length <= MAX_SMS_CHARS) return full;
-  // Truncate and append indicator to stay within 10 concatenated GSM segments.
-  return full.slice(0, MAX_SMS_CHARS - TRUNCATION_SUFFIX.length) + TRUNCATION_SUFFIX;
-}
-
-export function createSmsAdapter(config: SmsAdapterConfig): NotificationChannelHandler {
-  const authHeader = buildAuthHeader(config.accountSid, config.authToken);
-  const messagesUrl = `${TWILIO_BASE}/Accounts/${config.accountSid}/Messages.json`;
+export function createSmsAdapter(
+  config: SmsAdapterConfig,
+  dependencies: SmsAdapterDependencies = { fetch: globalThis.fetch },
+): NotificationChannelHandler {
+  const accountSid = requireValue(config.accountSid, "Twilio account SID");
+  const authToken = requireValue(config.authToken, "Twilio auth token");
+  const fromNumber = config.fromNumber?.trim();
+  const messagingServiceSid = config.messagingServiceSid?.trim();
+  if (!fromNumber && !messagingServiceSid) {
+    throw new Error("Twilio from number or messaging service SID is required");
+  }
+  if (fromNumber && !E164.test(fromNumber)) {
+    throw new Error("Twilio from number must use E.164 format");
+  }
+  const requestTimeoutMs = positiveTimeout(config.requestTimeoutMs ?? 15_000);
+  const healthTimeoutMs = positiveTimeout(config.healthTimeoutMs ?? 5_000);
+  const authorization = `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`;
+  const accountUrl = `${TWILIO_BASE_URL}/Accounts/${encodeURIComponent(accountSid)}`;
 
   return {
-    async send(opts) {
-      const { recipientAddr, subject, payload } = opts;
-
-      if (!recipientAddr || !recipientAddr.startsWith("+")) {
-        throw new Error(`Invalid SMS recipient address: "${recipientAddr}". Must be E.164 format.`);
+    channel: "sms",
+    async send(request) {
+      assertChannel(request, "sms");
+      if (!E164.test(request.recipientAddress)) {
+        throw new Error("SMS recipient must use E.164 format");
       }
-
-      const body = buildBody(subject, payload);
+      const body = buildSmsBody(request);
       if (!body) {
-        throw new Error("SMS body is empty — template must provide rendered_text or body.");
+        throw new Error("SMS body is empty; provide renderedText or body");
       }
+      const form = new URLSearchParams({ To: request.recipientAddress, Body: body });
+      if (messagingServiceSid) form.set("MessagingServiceSid", messagingServiceSid);
+      else form.set("From", fromNumber!);
 
-      const formData = new URLSearchParams({
-        To:   recipientAddr,
-        Body: body,
-        ...(config.messagingServiceSid
-          ? { MessagingServiceSid: config.messagingServiceSid }
-          : { From: config.fromNumber }),
-      });
-
-      const response = await fetch(messagesUrl, {
-        method:  "POST",
-        headers: {
-          "Authorization": authHeader,
-          "Content-Type":  "application/x-www-form-urlencoded",
-        },
-        body:   formData.toString(),
-        signal: AbortSignal.timeout(15_000),
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => "(unreadable)");
-        throw new Error(
-          `Twilio SMS delivery failed: HTTP ${response.status} — ${errorBody.slice(0, 300)}`,
-        );
-      }
-
-      const result = (await response.json()) as { sid: string; status: string };
-      return { externalId: result.sid };
-    },
-
-    async healthCheck() {
+      let response: Response;
       try {
-        const response = await fetch(
-          `${TWILIO_BASE}/Accounts/${config.accountSid}.json`,
+        response = await dependencies.fetch(`${accountUrl}/Messages.json`, {
+          method: "POST",
+          headers: {
+            Authorization: authorization,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: form.toString(),
+          signal: AbortSignal.timeout(requestTimeoutMs),
+        });
+      } catch (error) {
+        throw new CommunicationDeliveryError("Twilio SMS request failed", {
+          channel: "sms",
+          retryable: true,
+          cause: error,
+        });
+      }
+      if (!response.ok) {
+        const detail = (await response.text().catch(() => "unreadable response")).slice(0, 300);
+        throw new CommunicationDeliveryError(
+          `Twilio SMS delivery failed with HTTP ${response.status}: ${detail}`,
           {
-            headers: { Authorization: authHeader },
-            signal:  AbortSignal.timeout(5_000),
+            channel: "sms",
+            retryable: response.status === 429 || response.status >= 500,
+            statusCode: response.status,
           },
         );
-        if (response.ok)   return "healthy";
-        if (response.status === 401 || response.status === 403) return "down";
-        return "degraded";
+      }
+      const result = (await response.json()) as { sid?: unknown };
+      return typeof result.sid === "string" ? { externalId: result.sid } : {};
+    },
+    async health() {
+      const startedAt = Date.now();
+      try {
+        const response = await dependencies.fetch(`${accountUrl}.json`, {
+          headers: { Authorization: authorization },
+          signal: AbortSignal.timeout(healthTimeoutMs),
+        });
+        const status = response.ok
+          ? "healthy"
+          : response.status === 401 || response.status === 403
+            ? "unhealthy"
+            : "degraded";
+        return { status, latencyMs: Date.now() - startedAt };
       } catch {
-        return "down";
+        return {
+          status: "unhealthy",
+          message: "Twilio health request failed",
+          latencyMs: Date.now() - startedAt,
+        };
       }
     },
   };
+}
+
+function buildSmsBody(request: NotificationDeliveryRequest): string {
+  const rendered = request.payload["renderedText"] ?? request.payload["rendered_text"];
+  const bodyValue = typeof rendered === "string" ? rendered : request.payload["body"];
+  const text = typeof bodyValue === "string" ? bodyValue : "";
+  const full = request.subject && text
+    ? `${request.subject}: ${text}`
+    : request.subject ?? text;
+  return full.length <= MAX_SMS_CHARACTERS
+    ? full
+    : `${full.slice(0, MAX_SMS_CHARACTERS - TRUNCATION_SUFFIX.length)}${TRUNCATION_SUFFIX}`;
+}
+
+function assertChannel(
+  request: NotificationDeliveryRequest,
+  expected: "email" | "sms",
+): void {
+  if (request.channel !== expected) {
+    throw new Error(`${expected} adapter cannot deliver channel ${request.channel}`);
+  }
+}
+
+function requireValue(value: string, name: string): string {
+  const normalized = value.trim();
+  if (!normalized) throw new Error(`${name} is required`);
+  return normalized;
+}
+
+function positiveTimeout(value: number): number {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error("Communication timeout must be a positive integer");
+  }
+  return value;
 }

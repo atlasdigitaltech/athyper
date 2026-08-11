@@ -1,4 +1,4 @@
-{
+﻿{
   "contractVersion": "wave5.consumer-migration.v1",
   "asOf": "2026-07-27",
   "authorityTarget": "CanonicalConsumerAuthorization",
@@ -6,7 +6,7 @@
   "consumers": [
     {
       "family": "metadata",
-      "planeApplicability": ["neon", "admin", "mesh"],
+      "planeApplicability": ["neon", "studio", "mesh"],
       "entryPoints": [
         "server/packages/services/metadata/routes/runtime-bootstrap.route.ts",
         "server/packages/services/metadata/routes/entity-operations.route.ts",
@@ -52,8 +52,8 @@
       "knownLegacyBehavior": ["permission_token_entity_action_lookup"]
     },
     {
-      "family": "admin",
-      "planeApplicability": ["admin"],
+      "family": "studio",
+      "planeApplicability": ["studio"],
       "entryPoints": [
         "server/packages/services/iam/routes/operator.routes.ts",
         "server/packages/services/iam/routes/iam-admin.routes.ts"
@@ -75,7 +75,7 @@
     },
     {
       "family": "session",
-      "planeApplicability": ["neon", "admin", "mesh"],
+      "planeApplicability": ["neon", "studio", "mesh"],
       "entryPoints": [
         "server/packages/services/iam/session/session.service.ts",
         "server/packages/services/iam/routes/session.routes.ts"
@@ -86,7 +86,7 @@
     },
     {
       "family": "ai",
-      "planeApplicability": ["neon", "admin", "mesh"],
+      "planeApplicability": ["neon", "studio", "mesh"],
       "entryPoints": [
         "server/packages/services/ai/autonomy-resolver.service.ts",
         "server/packages/services/ai/tool-policy.service.ts"

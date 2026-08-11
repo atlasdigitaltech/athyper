@@ -104,16 +104,16 @@ pnpm.cmd --dir server/db exec tsx scripts/reports/capture-authorization-golden-c
   --identity-evidence=artifacts/authorization-wave0/external-identity-evidence.json `
   --supplemental-decision-evidence=artifacts/authorization-wave0/mesh-decision-evidence.json `
   --output=artifacts/authorization-wave0/golden-decision-corpus.json --strict
-pnpm.cmd --dir server/db exec tsx scripts/reports/verify-authorization-golden-corpus.ts `
+pnpm.cmd --dir server/db exec tsx scripts/verify/verify-authorization-golden-corpus.ts `
   --corpus=artifacts/authorization-wave0/golden-decision-corpus.json --strict
 
-pnpm.cmd --dir server/db exec tsx scripts/reports/report-authorization-legacy-writes.ts `
+pnpm.cmd --dir server/db exec tsx scripts/reports/report-neon-authorization-legacy-writes.ts `
   --output=artifacts/authorization-wave0/neon-authorization-legacy-writes.json --strict
 pnpm.cmd --dir server/db exec tsx scripts/reports/report-mesh-authorization-legacy-writes.ts `
   --output=artifacts/authorization-wave0/mesh-authorization-legacy-writes.json --strict
-pnpm.cmd --dir server/db exec tsx scripts/reports/report-authorization-data-quality.ts `
+pnpm.cmd --dir server/db exec tsx scripts/reports/neon-authorization-quality.ts `
   --output=artifacts/authorization-wave0/neon-authorization-data-quality.json --strict
-pnpm.cmd --dir server/db exec tsx scripts/reports/report-mesh-authorization-data-quality.ts `
+pnpm.cmd --dir server/db exec tsx scripts/reports/mesh-authorization-quality.ts `
   --output=artifacts/authorization-wave0/mesh-authorization-data-quality.json --strict
 
 pnpm.cmd --dir server/db exec tsx scripts/reports/report-authorization-data-disposition-coverage.ts `

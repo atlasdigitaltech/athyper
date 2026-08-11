@@ -15,6 +15,24 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION log.trg_guard_integration_attempt()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'log.integration_delivery_attempt is immutable' USING ERRCODE = '55000';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION log.trg_guard_integration_dlq()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP = 'DELETE' OR OLD.replayed_at IS NOT NULL
+       OR (to_jsonb(NEW) - ARRAY['replayed_at','replayed_by']) IS DISTINCT FROM (to_jsonb(OLD) - ARRAY['replayed_at','replayed_by']) THEN
+        RAISE EXCEPTION 'integration DLQ evidence is append-mostly' USING ERRCODE = '55000';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION log.trg_guard_notification_dlq()
 RETURNS trigger
 LANGUAGE plpgsql

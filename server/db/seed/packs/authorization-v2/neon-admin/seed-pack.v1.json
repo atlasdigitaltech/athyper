@@ -1,4 +1,4 @@
-{
+﻿{
   "contractVersion": "authorization-v2.final-seed-pack.v1",
   "planePack": "neon-admin",
   "semanticPermissionContract": {
@@ -2630,7 +2630,7 @@
         "id": "bf2bc099-5bd5-5d00-8dd5-be621ef962a5",
         "code": "admin.catalog.viewer",
         "name": "Admin Catalog Viewer",
-        "plane": "admin",
+        "plane": "studio",
         "permissionSetIds": [],
         "permissionIds": [
           "0525fe2d-2837-5d09-8478-26c44268e937",
@@ -2644,7 +2644,7 @@
         "id": "47e4cf36-6cfc-576a-97c6-0e6236940af6",
         "code": "admin.catalog.operator",
         "name": "Admin Catalog Operator",
-        "plane": "admin",
+        "plane": "studio",
         "permissionSetIds": [],
         "permissionIds": [
           "0525fe2d-2837-5d09-8478-26c44268e937",
@@ -2667,7 +2667,7 @@
         "id": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "code": "admin.catalog.owner",
         "name": "Admin Catalog Owner",
-        "plane": "admin",
+        "plane": "studio",
         "permissionSetIds": [],
         "permissionIds": [
           "0525fe2d-2837-5d09-8478-26c44268e937",
@@ -2778,7 +2778,7 @@
       {
         "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
         "code": "admin.platform.owners",
-        "plane": "admin",
+        "plane": "studio",
         "roleIds": [
           "6a34a4bd-7114-5808-a6cf-261fa2ea25a4"
         ],
@@ -2788,7 +2788,7 @@
       {
         "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
         "code": "admin.platform.quarantine",
-        "plane": "admin",
+        "plane": "studio",
         "roleIds": [],
         "scopeKind": "tenant",
         "zeroGrant": true
@@ -20278,147 +20278,147 @@
         "permissionId": "0525fe2d-2837-5d09-8478-26c44268e937",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "0ddc4f75-c6ed-5abc-bbfa-df8484ed6b54",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "1394d660-f143-54c8-b722-462bacf2e904",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "1653a301-1247-5fb7-a6da-0a90598c9d2b",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "35088f5a-17d3-55d9-999e-1c3732f87bf9",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "41141163-37ce-5be5-a3bf-d4706b054e58",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "4a336e83-c04d-5576-b7d4-9beb89e8c1e7",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "4dee8253-5694-5bc0-9476-14a991829a6e",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "52490b9c-4a5a-58ca-83aa-37f7eefda41a",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "67558ce2-039f-5079-9026-8dfc4d2ef154",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "73426782-e0e0-5738-8070-4775707df802",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "750703b4-75af-5c77-b434-0421ca0ef951",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "7cd6c09c-479f-50a4-bc8f-722c6479be7e",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "7cf12424-aca1-5535-9e7f-ec963cedeb00",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "99ed995f-4f70-5308-b80c-eec1e3094f56",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "a4f874aa-df03-51d9-9224-fe0122a2ad23",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "b011ecba-8951-5f8a-9bfd-3460150cf562",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "b1aa1811-75a3-54e7-8cdb-c3fbcdeaf371",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "bf2aae7c-ec8d-5d02-b52b-c306c903bf60",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "bf5236e6-049c-5a24-85eb-b04749ae5dbd",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       },
       {
         "permissionId": "f96e6cb2-f58c-5a48-81da-9460381aaa0e",
         "roleId": "6a34a4bd-7114-5808-a6cf-261fa2ea25a4",
         "groupId": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
-        "plane": "admin",
+        "plane": "studio",
         "scopeKind": "tenant"
       }
     ]
@@ -20735,7 +20735,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -20784,7 +20784,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -20941,7 +20941,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -21070,7 +21070,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -21349,7 +21349,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -21478,7 +21478,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -21677,7 +21677,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -21726,7 +21726,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -21925,7 +21925,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -21974,7 +21974,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -22173,7 +22173,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -22222,7 +22222,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -22421,7 +22421,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -22470,7 +22470,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -22669,7 +22669,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -22718,7 +22718,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -22917,7 +22917,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -22966,7 +22966,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -23165,7 +23165,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -23214,7 +23214,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -23413,7 +23413,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -23462,7 +23462,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -23661,7 +23661,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -23710,7 +23710,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -23909,7 +23909,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -23958,7 +23958,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -24157,7 +24157,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -24206,7 +24206,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -24405,7 +24405,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -24454,7 +24454,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -24653,7 +24653,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -24702,7 +24702,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -24901,7 +24901,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -24950,7 +24950,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25149,7 +25149,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25198,7 +25198,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25397,7 +25397,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25446,7 +25446,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25510,7 +25510,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25574,7 +25574,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25623,7 +25623,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25672,7 +25672,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25721,7 +25721,7 @@
           ]
         },
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25751,7 +25751,7 @@
       "disposition": "managed_explicit_assignment",
       "planes": [
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25781,7 +25781,7 @@
       "disposition": "managed_explicit_assignment",
       "planes": [
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",
@@ -25811,7 +25811,7 @@
       "disposition": "managed_explicit_assignment",
       "planes": [
         {
-          "plane": "admin",
+          "plane": "studio",
           "membershipStatus": "active",
           "group": {
             "id": "f5bb994e-cc83-5e4d-984a-d2f1fc2f8453",

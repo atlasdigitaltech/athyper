@@ -18,6 +18,54 @@ BEGIN
 END;
 $$;
 
+ALTER TABLE audit.export_request ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit.export_request FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON audit.export_request FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+ALTER TABLE audit.export_manifest ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit.export_manifest FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read_insert ON audit.export_manifest FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+ALTER TABLE audit.integrity_check_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit.integrity_check_evidence FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read_insert ON audit.integrity_check_evidence FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+ALTER TABLE audit.legal_hold ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit.legal_hold FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON audit.legal_hold FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+ALTER TABLE audit.legal_hold_manifest ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit.legal_hold_manifest FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read_insert ON audit.legal_hold_manifest FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+ALTER TABLE audit.retention_policy ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit.retention_policy FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON audit.retention_policy FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+
+DO $$
+DECLARE v_table text;
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        FOREACH v_table IN ARRAY ARRAY['export_request','export_manifest','integrity_check_evidence','legal_hold','legal_hold_manifest','retention_policy']
+        LOOP
+            EXECUTE format('CREATE POLICY admin_access ON audit.%I FOR ALL TO athyperadmin USING (true) WITH CHECK (true)', v_table);
+        END LOOP;
+    END IF;
+END;
+$$;
+
 ALTER TABLE audit.authorization_decision_evidence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit.authorization_decision_evidence FORCE ROW LEVEL SECURITY;
 

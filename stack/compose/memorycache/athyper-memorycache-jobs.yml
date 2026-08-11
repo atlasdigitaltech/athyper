@@ -50,18 +50,21 @@ services:
         : "$${REDIS_GLITCHTIP_PASSWORD:?REDIS_GLITCHTIP_PASSWORD is empty — refusing to start}"
         : "$${REDIS_INFISICAL_PASSWORD:?REDIS_INFISICAL_PASSWORD is empty — refusing to start}"
         : "$${REDIS_ADMIN_PASSWORD:?REDIS_ADMIN_PASSWORD is empty — refusing to start}"
+        : "$${REDIS_BULLBOARD_PASSWORD:?REDIS_BULLBOARD_PASSWORD is empty}"
         APP_HASH=$$(printf '%s' "$$MEMORYCACHE_PASSWORD" | sha256sum | awk '{print $$1}')
         EXP_HASH=$$(printf '%s' "$$REDIS_EXPORTER_PASSWORD" | sha256sum | awk '{print $$1}')
         GT_HASH=$$(printf '%s' "$$REDIS_GLITCHTIP_PASSWORD" | sha256sum | awk '{print $$1}')
+        BB_HASH=$$(printf '%s' "$$REDIS_BULLBOARD_PASSWORD" | sha256sum | awk '{print $$1}')
         INF_HASH=$$(printf '%s' "$$REDIS_INFISICAL_PASSWORD" | sha256sum | awk '{print $$1}')
         ADM_HASH=$$(printf '%s' "$$REDIS_ADMIN_PASSWORD" | sha256sum | awk '{print $$1}')
         sed -e "s/__APP_HASH__/$$APP_HASH/g" \
             -e "s/__EXPORTER_HASH__/$$EXP_HASH/g" \
             -e "s/__GLITCHTIP_HASH__/$$GT_HASH/g" \
+            -e "s/__BULLBOARD_HASH__/$$BB_HASH/g" \
             -e "s/__INFISICAL_HASH__/$$INF_HASH/g" \
             -e "s/__ADMIN_HASH__/$$ADM_HASH/g" \
             /usr/local/etc/redis/redis-acl.conf > /tmp/redis-acl.conf
-        if grep -qE '__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__' /tmp/redis-acl.conf; then
+        if grep -qE '__(APP|EXPORTER|GLITCHTIP|BULLBOARD|INFISICAL|ADMIN)_HASH__' /tmp/redis-acl.conf; then
           echo "FATAL: ACL hash markers not fully substituted in /tmp/redis-acl.conf" >&2
           exit 1
         fi
@@ -72,6 +75,7 @@ services:
       MEMORYCACHE_PASSWORD: ${MEMORYCACHE_PASSWORD}
       REDIS_EXPORTER_PASSWORD: ${REDIS_EXPORTER_PASSWORD}
       REDIS_GLITCHTIP_PASSWORD: ${REDIS_GLITCHTIP_PASSWORD}
+      REDIS_BULLBOARD_PASSWORD: ${REDIS_BULLBOARD_PASSWORD}
       REDIS_INFISICAL_PASSWORD: ${REDIS_INFISICAL_PASSWORD}
       REDIS_ADMIN_PASSWORD: ${REDIS_ADMIN_PASSWORD}
     volumes:

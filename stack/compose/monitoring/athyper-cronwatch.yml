@@ -7,10 +7,10 @@
 #   completion; cronwatch alerts when the expected ping interval is
 #   missed ("job never fired" / "job didn't report success").
 #
-#   Wiring lives in createJobsService() (server/src/kernel/bootstrap.ts):
+#   Wiring lives in the host-composed Cronwatch JobExecutionLifecycle adapter:
 #   onCompleted → pingSuccess(queue, jobName); onFailed → pingFail(...).
 #   The slug is `{queue}-{jobName}` lowercased and dash-collapsed — see
-#   server/packages/foundation/monitoring/healthchecks.ts. Operators create a
+#   server/packages/adapters/telemetry-otel. Operators create a
 #   cronwatch check per slug they want to alert on; unmatched pings are
 #   dropped server-side. control.cron_schedule.code is NOT used as the
 #   slug today.
@@ -42,7 +42,7 @@ services:
       SITE_ROOT: https://${CRONWATCH_HOST}
       SITE_NAME: "Athyper Cronwatch"
       DEFAULT_FROM_EMAIL: ${KC_SMTP_FROM:-noreply@athyper.local}
-      EMAIL_HOST: ${KC_SMTP_HOST:-mailtrap}
+      EMAIL_HOST: ${KC_SMTP_HOST:-}
       EMAIL_PORT: ${KC_SMTP_PORT:-1025}
       EMAIL_USE_TLS: ${CRONWATCH_EMAIL_USE_TLS:-False}
       EMAIL_HOST_USER: ${KC_SMTP_USERNAME:-}

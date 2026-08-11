@@ -14,7 +14,7 @@ REM   api-up.bat --build scheduler  : rebuild image, then start scheduler
 REM
 REM Behaviour (auto-detected from ENVIRONMENT in stack\env\.env):
 REM   local      : load stack\env\.env, translate Docker hostnames to 127.0.0.1,
-REM                 then: pnpm --filter @athyper/runtime-server dev
+REM                 then: pnpm --filter @athyper/server-platform-host run dev:<mode>
 REM                 (--build is ignored in local mode; tsx handles incremental reloads)
 REM   staging    : optional build, then docker compose up selected api/worker/scheduler service
 REM   production : optional build, then docker compose up selected api/worker/scheduler service
@@ -85,6 +85,7 @@ shift
 goto :parse_args
 
 :after_parse_args
+set "REQUESTED_MODE=!MODE!"
 
 REM ----------------------------
 REM Read all vars from stack .env into the current environment.
@@ -106,6 +107,10 @@ if exist "%ENV_FILE%" (
   echo WARNING: .env not found: "%ENV_FILE%" -- defaulting to local mode.
 )
 
+REM The shared environment may provide MODE=api for compose.  A command-line
+REM worker or scheduler selection is authoritative for this launcher.
+set "MODE=!REQUESTED_MODE!"
+
 if "!ENVIRONMENT!"=="" set "ENVIRONMENT=local"
 
 REM ATHYPER_CONFIG_ROOT / ATHYPER_DATA_ROOT fallbacks (loaded from .env above;
@@ -123,7 +128,7 @@ set "_TMP=!ATHYPER_DATA_ROOT:\=/!"   & set "ATHYPER_DATA=!_TMP!"
 echo.
 echo ==========================
 echo ENVIRONMENT = "!ENVIRONMENT!"
-echo SERVICE     = !MODE! ^(@athyper/runtime-server^)
+echo SERVICE     = !MODE! ^(@athyper/server-platform-host^)
 echo MODE        = "!MODE!"
 echo ==========================
 echo.
@@ -132,7 +137,7 @@ REM ----------------------------
 REM Local: translate Docker hostnames → 127.0.0.1, then run pnpm dev
 REM ----------------------------
 if /I "!ENVIRONMENT!"=="local" (
-  set "PNPM_SCRIPT=dev"
+  set "PNPM_SCRIPT=dev:!MODE!"
 
   REM Shadow-detection: if the containerized counterpart is running, host edits
   REM will silently NOT take effect because the bundle inside the container is
@@ -193,10 +198,10 @@ if /I "!ENVIRONMENT!"=="local" (
   set "NODE_TLS_REJECT_UNAUTHORIZED=0"
 
   echo Local mode: starting backend server
-  echo   MODE=!MODE! pnpm --filter @athyper/runtime-server !PNPM_SCRIPT!
+  echo   MODE=!MODE! pnpm --filter @athyper/server-platform-host run !PNPM_SCRIPT!
   echo.
   pushd "%REPO_ROOT%" >nul
-  pnpm --filter @athyper/runtime-server !PNPM_SCRIPT!
+  pnpm --filter @athyper/server-platform-host run !PNPM_SCRIPT!
   popd >nul
   goto :end
 )

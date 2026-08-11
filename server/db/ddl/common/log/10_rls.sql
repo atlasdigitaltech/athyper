@@ -2,7 +2,7 @@ DO $$
 DECLARE
     v_table text;
 BEGIN
-    FOREACH v_table IN ARRAY ARRAY['notification_delivery_attempt','notification_dlq'] LOOP
+    FOREACH v_table IN ARRAY ARRAY['notification_delivery_attempt','notification_dlq','integration_delivery_attempt','integration_dlq'] LOOP
         EXECUTE format('ALTER TABLE log.%I ENABLE ROW LEVEL SECURITY', v_table);
         EXECUTE format('ALTER TABLE log.%I FORCE ROW LEVEL SECURITY', v_table);
         EXECUTE format('CREATE POLICY notification_log_tenant_access ON log.%I FOR ALL USING (tenant_id = shared.current_tenant_id_soft()) WITH CHECK (tenant_id = shared.current_tenant_id())', v_table);

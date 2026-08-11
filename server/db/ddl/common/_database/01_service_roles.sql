@@ -23,6 +23,11 @@ BEGIN
         CREATE ROLE athyper_projection_applier
             NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
     END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_jobs_service') THEN
+        CREATE ROLE athyper_jobs_service
+            NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+    END IF;
 END;
 $$;
 
@@ -34,3 +39,5 @@ COMMENT ON ROLE athyper_publication_service IS
   'NOLOGIN privilege role for compiling, signing, and dispatching approved releases.';
 COMMENT ON ROLE athyper_projection_applier IS
   'NOLOGIN privilege role for verified, idempotent plane-local projection application.';
+COMMENT ON ROLE athyper_jobs_service IS
+  'NOLOGIN least-privilege role for plane-global scheduling and durable Jobs execution evidence.';

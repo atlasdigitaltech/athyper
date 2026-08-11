@@ -1,4 +1,4 @@
-{
+﻿{
   "contractVersion": "wave3.authorization-authority.semantic.v1",
   "manifestVersion": "wave3.neon-admin.authority.v1",
   "database": "neon",
@@ -92,13 +92,13 @@
       "code": "admin.platform.owners",
       "name": "Admin Platform Owners",
       "roleCodes": ["admin.catalog.owner"],
-      "plane": "admin"
+      "plane": "studio"
     },
     {
       "code": "admin.platform.quarantine",
       "name": "Admin Platform Quarantine",
       "roleCodes": [],
-      "plane": "admin",
+      "plane": "studio",
       "status": "active",
       "purpose": "Fail-closed Admin quarantine; membership grants no permission."
     }

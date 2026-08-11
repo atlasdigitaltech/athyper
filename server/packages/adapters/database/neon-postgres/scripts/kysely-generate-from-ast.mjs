@@ -5,10 +5,12 @@
  * Generates Kysely TypeScript types from a Prisma schema file using
  * @mrleebo/prisma-ast (pure JS, no WASM). Produces the same output as
  * prisma-kysely, but bypasses the Prisma WASM schema-build binary that panics
- * on large schemas (capacity overflow with 433+ models).
+ * on large schemas (capacity overflow with 400+ models).
  *
  * Usage:
- *   node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.prisma --output src/generated/kysely
+ *   node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.neon.prisma
+ *   node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.mesh.prisma
+ *   node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.studio.prisma
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -49,14 +51,13 @@ const PRISMA_SCALAR_MAP = {
 };
 
 function mapPrismaType(typeName) {
-  return PRISMA_SCALAR_MAP[typeName] ?? null; // null = not a known scalar
+  return PRISMA_SCALAR_MAP[typeName] ?? null;
 }
 
 // ── Parse schema ──────────────────────────────────────────────────────────────
 const schemaSource = readFileSync(schemaPath, "utf-8");
 const parsed = getSchema(schemaSource);
 
-// Derive output path from schema generator block if not supplied via CLI
 function getGeneratorOutput(schema, generatorName) {
   for (const block of schema.list) {
     if (block.type === "generator" && block.name === generatorName) {
@@ -83,7 +84,6 @@ if (outputArg) {
   outputDir = resolve(dirname(schemaPath), relOut);
 }
 
-// Collect all model names so we can identify relation fields by their type
 const modelNames = new Set();
 const enumNames = new Set();
 for (const block of parsed.list) {
@@ -131,7 +131,6 @@ function getMapAttr(block) {
 
 // ── Generate output ───────────────────────────────────────────────────────────
 const DEFAULT_SCHEMA = "public";
-
 const lines = [];
 
 lines.push(`import type { ColumnType } from "kysely";`);
@@ -141,7 +140,6 @@ lines.push(`  : ColumnType<T, T | undefined, T>;`);
 lines.push(`export type Timestamp = ColumnType<Date, Date | string, Date | string>;`);
 lines.push(``);
 
-// Collect enums
 for (const block of parsed.list) {
   if (block.type !== "enum") continue;
   const values = block.enumerators
@@ -152,11 +150,10 @@ for (const block of parsed.list) {
   lines.push(``);
 }
 
-// Collect models sorted by name
 const models = parsed.list.filter((b) => b.type === "model");
 models.sort((a, b) => a.name.localeCompare(b.name));
 
-const dbEntries = []; // { key, typeName }
+const dbEntries = [];
 
 for (const model of models) {
   const modelName = model.name;
@@ -168,21 +165,17 @@ for (const model of models) {
     if (prop.type !== "field") continue;
     const field = prop;
 
-    // Skip relation fields
     if (hasRelationAttr(field)) continue;
 
-    // Determine the base field type
     let fieldTypeName;
     if (typeof field.fieldType === "string") {
       fieldTypeName = field.fieldType;
     } else if (field.fieldType?.type === "function") {
-      // e.g. Unsupported("...") -> unknown
       fieldTypeName = "Unsupported";
     } else {
       fieldTypeName = String(field.fieldType);
     }
 
-    // Check if it's a scalar type
     const tsScalar = mapPrismaType(fieldTypeName);
     let tsType;
 
@@ -191,22 +184,14 @@ for (const model of models) {
     } else if (enumNames.has(fieldTypeName)) {
       tsType = fieldTypeName;
     } else if (modelNames.has(fieldTypeName)) {
-      // Relation field without explicit @relation attr (back-ref array/optional)
-      // Skip if it's a model reference (relation back-ref)
-      if (field.array || field.optional) {
-        // Only skip if it's truly a back-ref (model type)
-        continue;
-      }
-      // Non-optional, non-array model type without @relation: unusual, skip
+      if (field.array || field.optional) continue;
       continue;
     } else if (fieldTypeName === "Unsupported") {
       tsType = "unknown";
     } else {
-      // Unknown type → unknown
       tsType = "unknown";
     }
 
-    // Handle arrays (scalar arrays like String[] are real DB columns)
     if (field.array) {
       tsType = `${tsType}[]`;
     }
@@ -235,7 +220,6 @@ for (const model of models) {
   lines.push(`};`);
   lines.push(``);
 
-  // DB map key
   const dbKey =
     pgSchema === DEFAULT_SCHEMA
       ? tableDbName
@@ -243,7 +227,6 @@ for (const model of models) {
   dbEntries.push({ key: dbKey, typeName: modelName });
 }
 
-// DB type
 lines.push(`export type DB = {`);
 for (const entry of dbEntries) {
   const needsQuotes = entry.key.includes(".");

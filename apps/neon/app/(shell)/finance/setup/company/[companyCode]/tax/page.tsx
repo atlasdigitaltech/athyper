@@ -1,2 +1,0 @@
-import { redirect } from "next/navigation";import { CompanyTaxProfileView } from "@athyper/finance-workbench";import { getNeonServerSession } from "@/lib/server/session";
-export default async function TaxPage({params}:{params:Promise<{companyCode:string}>}){const {companyCode}=await params,decoded=decodeURIComponent(companyCode);if(!await getNeonServerSession())redirect(`/login?next=${encodeURIComponent(`/finance/setup/company/${decoded}/tax`)}`);return <CompanyTaxProfileView companyCode={decoded}/>;}

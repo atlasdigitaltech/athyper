@@ -1,1 +1,1 @@
-// @athyper/contracts-mesh-network
+﻿export {};

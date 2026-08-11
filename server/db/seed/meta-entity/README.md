@@ -32,9 +32,9 @@ module. Each profile records an independently immutable version and receipt:
 ```powershell
 # Production reference data (default profile)
 pnpm.cmd --dir server/db run db:seed:meta-entity:check
-pnpm.cmd --dir server/db run db:seed:meta-entity -- --expected-database=athyper_platform
+pnpm.cmd --dir server/db run db:seed:meta-entity -- --expected-database=athyper_studio
 
 # Disposable validation corpus
 pnpm.cmd --dir server/db run db:seed:meta-entity:validation:check
-pnpm.cmd --dir server/db run db:seed:meta-entity:validation -- --expected-database=athyper_platform
+pnpm.cmd --dir server/db run db:seed:meta-entity:validation -- --expected-database=athyper_studio
 ```

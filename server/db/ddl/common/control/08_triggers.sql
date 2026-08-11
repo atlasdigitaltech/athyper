@@ -100,6 +100,10 @@ BEFORE INSERT OR UPDATE OF tenant_id, domain_code
 ON control.cycle_type
 FOR EACH ROW EXECUTE FUNCTION control.trg_validate_cycle_domain();
 
+CREATE TRIGGER cycle_template_revision_immutable
+BEFORE UPDATE OR DELETE ON control.cycle_template_revision
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_cycle_template_revision_mutation();
+
 CREATE TRIGGER bank_account_validation_rule_updated_at
 BEFORE UPDATE ON control.bank_account_validation_rule
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
@@ -232,6 +236,12 @@ CREATE TRIGGER policy_test_case_updated_at
 CREATE TRIGGER policy_test_case_status_changed
     BEFORE UPDATE OF status ON control.policy_test_case
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+CREATE TRIGGER policy_definition_published_immutable BEFORE UPDATE OR DELETE ON control.policy_definition
+    FOR EACH ROW EXECUTE FUNCTION control.trg_fn_protect_published_policy_revision();
+CREATE TRIGGER policy_rule_published_immutable BEFORE UPDATE OR DELETE ON control.policy_rule
+    FOR EACH ROW EXECUTE FUNCTION control.trg_fn_protect_published_policy_revision();
+CREATE TRIGGER policy_test_case_published_immutable BEFORE UPDATE OR DELETE ON control.policy_test_case
+    FOR EACH ROW EXECUTE FUNCTION control.trg_fn_protect_published_policy_revision();
 
 CREATE TRIGGER trg_rounding_rule_00_created_by
 BEFORE INSERT ON control.rounding_rule

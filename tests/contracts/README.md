@@ -46,9 +46,9 @@ Do not infer or add GitHub team handles from the logical-owner labels below.
 
 | Contract file | Cross-workspace boundary | Logical owner | Inventory basis |
 | --- | --- | --- | --- |
-| `list-plane-feature-rollout.test.ts` | `@athyper/runtime-list` feature resolution against the Admin, Mesh, and Neon list adapters | Runtime Domain | `@athyper/runtime-list` is owned by Runtime Domain in `docs/architecture/package-ownership-matrix.json`; the application adapters are the participating plane consumers. |
-| `shell-experience-registration.test.ts` | Canonical shell registrations supplied by the Admin, Mesh, and Neon shell packages | Admin, Mesh, and Neon (joint) | `@athyper/app-admin-shell`, `@athyper/app-mesh-shell`, and `@athyper/app-neon-shell` are respectively owned by Admin, Mesh, and Neon in the package ownership inventory. |
-| `work-inbox-adapters.test.ts` | Shared work-inbox adapters across workflow-backed Admin/Neon behavior and Mesh's read-only document behavior | UI Platform | The SUT is under `packages/shared/ui-platform/work-inbox-ui`; UI Platform owns shared UI surfaces in the ownership model. Add the package to the generated inventory when its manifest is next refreshed. |
+| `list-plane-feature-rollout.test.ts` | `@athyper/runtime-list` feature resolution against the Studio, Mesh, and Neon list adapters | Runtime Domain | `@athyper/runtime-list` is owned by Runtime Domain in `docs/architecture/package-ownership-matrix.json`; the application adapters are the participating plane consumers. |
+| `shell-experience-registration.test.ts` | Canonical shell registrations supplied by the Studio, Mesh, and Neon shell packages | Studio, Mesh, and Neon (joint) | `@athyper/app-studio-shell`, `@athyper/app-mesh-shell`, and `@athyper/app-neon-shell` are respectively owned by Studio, Mesh, and Neon in the package ownership inventory. |
+| `work-inbox-adapters.test.ts` | Shared work-inbox adapters across workflow-backed Studio/Neon behavior and Mesh's read-only document behavior | UI Platform | The SUT is under `packages/shared/ui-platform/work-inbox-ui`; UI Platform owns shared UI surfaces in the ownership model. Add the package to the generated inventory when its manifest is next refreshed. |
 
 When a contract changes, request review from its logical owner and from each
 affected application-plane owner. A root contract can have more than one

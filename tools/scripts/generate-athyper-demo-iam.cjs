@@ -54,14 +54,14 @@ function access(persona, tenantLevel = false) {
     realmRoles: [
       "default-roles-athyper",
       "NEON_USER",
-      ...(elevated ? ["MESH_BUYER_USER", "ADMIN_USER"] : []),
+      ...(elevated ? ["MESH_BUYER_USER", "STUDIO_USER"] : []),
     ],
     clientRoles: {
       "neon-web": ["AUTHORIZED"],
       ...(elevated
         ? {
             "mesh-web": ["AUTHORIZED"],
-            "admin-web": ["AUTHORIZED"],
+            "studio-web": ["AUTHORIZED"],
           }
         : {}),
     },
@@ -115,7 +115,22 @@ function isReplacedLegacyUser(username) {
   return legalEntities.some(([, code]) => personas.some(([, persona]) => username === `${code}.${persona}`));
 }
 
+function normalizeStudioAccess(value) {
+  if (Array.isArray(value)) return value.map(normalizeStudioAccess);
+  if (!value || typeof value !== "object") {
+    if (typeof value !== "string") return value;
+    if (value === "ADMIN_USER") return "STUDIO_USER";
+    if (value === "admin-web") return "studio-web";
+    return value.replaceAll("ADMIN_USER", "STUDIO_USER").replaceAll("admin-web", "studio-web");
+  }
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+    key === "admin-web" ? "studio-web" : key,
+    normalizeStudioAccess(item),
+  ]));
+}
+
 function renderFixture(input) {
+  input = normalizeStudioAccess(input);
   const generated = systematicUsers();
   const generatedByName = new Map(generated.map((entry) => [entry.username, entry]));
   const preservedUsers = (input.users || []).filter((entry) => !isReplacedLegacyUser(entry.username));

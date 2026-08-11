@@ -1,4 +1,4 @@
--- seed-contract-version: 1
+﻿-- seed-contract-version: 1
 -- seed-pack: common.control.lookup.operations_core
 -- seed-pack-version: 1.0.0
 -- seed-dataset: common.control.lookup.operations_core
@@ -15,7 +15,7 @@
 -- source-files: server/db/seed/platform/000_lookups/LookupDomain/log/actor_type.sql,server/db/seed/platform/000_lookups/LookupDomain/log/ai_feedback_type.sql,server/db/seed/platform/000_lookups/LookupDomain/log/password_change_reason.sql,server/db/seed/platform/000_lookups/LookupDomain/master/comment_intent.sql,server/db/seed/platform/000_lookups/LookupDomain/master/comment_type.sql,server/db/seed/platform/000_lookups/LookupDomain/master/contact_role.sql,server/db/seed/platform/000_lookups/LookupDomain/master/reaction_type.sql
 
 DO $guard$ BEGIN
-  IF current_setting('app.database_plane', true) NOT IN ('athyper', 'neon', 'mesh') THEN
+  IF current_setting('app.database_plane', true) NOT IN ('studio', 'neon', 'mesh') THEN
     RAISE EXCEPTION 'common.control.lookup.operations_core: invalid database plane';
   END IF;
 END $guard$;

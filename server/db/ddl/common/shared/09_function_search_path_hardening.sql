@@ -7,6 +7,8 @@ ALTER FUNCTION control.trg_guard_control_identity()
     SET search_path = pg_catalog, control, shared;
 ALTER FUNCTION control.trg_reject_cycle_dependency_cycle()
     SET search_path = pg_catalog, control, governance, shared;
+ALTER FUNCTION control.trg_reject_cycle_template_revision_mutation()
+    SET search_path = pg_catalog, control, shared;
 ALTER FUNCTION control.trg_reject_secret_shaped_json()
     SET search_path = pg_catalog, control, shared;
 ALTER FUNCTION control.trg_validate_cycle_domain()

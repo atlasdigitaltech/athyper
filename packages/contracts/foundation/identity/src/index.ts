@@ -1,1 +1,1 @@
-// @athyper/contracts-foundation-identity
+﻿export {};

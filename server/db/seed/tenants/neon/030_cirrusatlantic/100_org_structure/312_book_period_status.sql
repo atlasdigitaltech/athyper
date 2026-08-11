@@ -70,6 +70,7 @@ BEGIN
 
     UPDATE ledger.book_period_status AS gate
        SET status     = 'open'::ledger.book_period_status_d,
+           version_number = gate.version_number + 1,
            opened_at  = now(),
            opened_by  = v_actor,
            updated_at = now(),

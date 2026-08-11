@@ -1,9 +1,1 @@
-export * from "./primitives";
-export * from "./composites";
-export * from "./accounting-period";
-export * from "./layout";
-export * from "./data";
-export * from "./surfaces";
-export * from "./screens";
-export * from "./organize";
-export * from "./typography";
+﻿export {};

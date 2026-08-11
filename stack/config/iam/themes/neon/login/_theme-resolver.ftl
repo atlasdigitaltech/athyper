@@ -16,7 +16,7 @@
   var params = new URLSearchParams(window.location.search);
   var plane = params.get("athyper_plane") || params.get("plane");
   var themeApplied = false;
-  if (plane === "neon" || plane === "mesh" || plane === "admin" || plane === "platform-control") {
+  if (plane === "neon" || plane === "mesh" || plane === "studio" || plane === "platform-control") {
     themeApplied = applyTheme(fallbackTheme);
   }
 

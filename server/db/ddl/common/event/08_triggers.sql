@@ -65,6 +65,9 @@ FOR EACH ROW EXECUTE FUNCTION event.trg_authorization_invalidation_immutable();
 CREATE TRIGGER notification_delivery_claim_updated_at
 BEFORE UPDATE ON event.notification_delivery_claim
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER notification_outbox_state_updated_at
+BEFORE UPDATE ON event.notification_outbox_state
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 CREATE TRIGGER push_subscription_updated_at
 BEFORE UPDATE ON event.push_subscription
@@ -81,3 +84,7 @@ FOR EACH ROW EXECUTE FUNCTION event.trg_mirror_whatsapp_consent_event();
 CREATE TRIGGER webhook_subscription_updated_at
 BEFORE UPDATE ON event.webhook_subscription
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+DROP TRIGGER IF EXISTS trg_authorization_invalidation_notify ON event.authorization_invalidation_outbox;
+CREATE TRIGGER trg_authorization_invalidation_notify AFTER INSERT ON event.authorization_invalidation_outbox FOR EACH ROW EXECUTE FUNCTION event.notify_invalidation();
+DROP TRIGGER IF EXISTS trg_descriptor_invalidation_notify ON event.descriptor_invalidation_outbox;
+CREATE TRIGGER trg_descriptor_invalidation_notify AFTER INSERT ON event.descriptor_invalidation_outbox FOR EACH ROW EXECUTE FUNCTION event.notify_invalidation();

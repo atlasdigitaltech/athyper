@@ -1,10 +1,6 @@
-{
-  "extends": "@athyper/config/tsconfig",
-  "compilerOptions": {
-    "rootDir": "src",
-    "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
-    "types": ["node"]
-  },
-  "include": ["src"]
+﻿{
+  "extends": "@athyper/tsconfig/base.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }

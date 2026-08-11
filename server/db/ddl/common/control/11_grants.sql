@@ -53,7 +53,8 @@ REVOKE ALL ON
     control.cycle_task_template,
     control.cycle_task_dependency,
     control.cycle_cross_dependency,
-    control.cycle_carryforward_rule
+    control.cycle_carryforward_rule,
+    control.cycle_template_revision
 FROM PUBLIC;
 
 DO $$
@@ -72,6 +73,7 @@ BEGIN
             control.cycle_cross_dependency,
             control.cycle_carryforward_rule
         TO athyperapp;
+        GRANT SELECT, INSERT ON control.cycle_template_revision TO athyperapp;
     END IF;
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
@@ -86,7 +88,8 @@ BEGIN
             control.cycle_task_template,
             control.cycle_task_dependency,
             control.cycle_cross_dependency,
-            control.cycle_carryforward_rule
+            control.cycle_carryforward_rule,
+            control.cycle_template_revision
         TO athyperadmin;
     END IF;
 END;
@@ -163,16 +166,25 @@ END;
 $$;
 
 REVOKE ALL ON control.cron_schedule FROM PUBLIC;
+REVOKE ALL ON control.cron_schedule_change_log FROM PUBLIC;
 REVOKE ALL ON FUNCTION control.fn_cron_schedules_for_scheduler() FROM PUBLIC;
+REVOKE ALL ON FUNCTION control.fn_mark_cron_schedule_reconciled(uuid,timestamptz,timestamptz) FROM PUBLIC;
+GRANT USAGE ON SCHEMA control TO athyper_jobs_service;
+GRANT EXECUTE ON FUNCTION control.fn_cron_schedules_for_scheduler() TO athyper_jobs_service;
+GRANT EXECUTE ON FUNCTION control.fn_mark_cron_schedule_reconciled(uuid,timestamptz,timestamptz) TO athyper_jobs_service;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         GRANT SELECT, INSERT, UPDATE, DELETE ON control.cron_schedule TO athyperapp;
+        GRANT SELECT, INSERT ON control.cron_schedule_change_log TO athyperapp;
         GRANT EXECUTE ON FUNCTION control.fn_cron_schedules_for_scheduler() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION control.fn_mark_cron_schedule_reconciled(uuid,timestamptz,timestamptz) TO athyperapp;
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON control.cron_schedule TO athyperadmin;
+        GRANT ALL PRIVILEGES ON control.cron_schedule_change_log TO athyperadmin;
         GRANT EXECUTE ON FUNCTION control.fn_cron_schedules_for_scheduler() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION control.fn_mark_cron_schedule_reconciled(uuid,timestamptz,timestamptz) TO athyperadmin;
     END IF;
 END;
 $$;

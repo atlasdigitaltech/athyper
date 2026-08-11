@@ -35,7 +35,7 @@ services:
       GLITCHTIP_DOMAIN: https://${ERRORCOLLECT_HOST}
       DEFAULT_FROM_EMAIL: ${KC_SMTP_FROM:-noreply@athyper.local}
       EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
-      EMAIL_HOST: ${KC_SMTP_HOST:-mailtrap}
+      EMAIL_HOST: ${KC_SMTP_HOST:-}
       EMAIL_PORT: ${KC_SMTP_PORT:-1025}
       EMAIL_USE_TLS: ${KC_SMTP_STARTTLS:-False}
       EMAIL_HOST_USER: ${KC_SMTP_USERNAME:-}

@@ -20,7 +20,7 @@ REM   minio|storage  -> MinIO object store (athyper-objectstorage-1)
 REM   mail|mailtrap  -> mailtrap           (athyper-mailtrap-1)
 REM   web|frontend|neon -> Neon frontend   (%COMPOSE_PROJECT_NAME%-neon-web-1)
 REM   mesh           -> Mesh frontend       (%COMPOSE_PROJECT_NAME%-mesh-web-1)
-REM   admin          -> Admin frontend      (%COMPOSE_PROJECT_NAME%-admin-web-1)
+REM   studio         -> Studio frontend      (%COMPOSE_PROJECT_NAME%-studio-web-1)
 REM   api|backend    -> Backend API         (%COMPOSE_PROJECT_NAME%-api-1)
 REM   search|searchcore  -> searchcore      (athyper-searchcore-1)
 REM ============================================================
@@ -52,13 +52,13 @@ if not defined DOCKER_CONTAINER_MINIO         set "DOCKER_CONTAINER_MINIO=!COMPO
 if not defined DOCKER_CONTAINER_MAIL          set "DOCKER_CONTAINER_MAIL=!COMPOSE_PROJECT_NAME!-mailtrap-1"
 if not defined DOCKER_CONTAINER_WEB           set "DOCKER_CONTAINER_WEB=!COMPOSE_PROJECT_NAME!-neon-web-1"
 if not defined DOCKER_CONTAINER_MESH_WEB      set "DOCKER_CONTAINER_MESH_WEB=!COMPOSE_PROJECT_NAME!-mesh-web-1"
-if not defined DOCKER_CONTAINER_ADMIN_WEB     set "DOCKER_CONTAINER_ADMIN_WEB=!COMPOSE_PROJECT_NAME!-admin-web-1"
+if not defined DOCKER_CONTAINER_STUDIO_WEB     set "DOCKER_CONTAINER_STUDIO_WEB=!COMPOSE_PROJECT_NAME!-studio-web-1"
 if not defined DOCKER_CONTAINER_API           set "DOCKER_CONTAINER_API=!COMPOSE_PROJECT_NAME!-api-1"
 if not defined DOCKER_CONTAINER_SEARCH        set "DOCKER_CONTAINER_SEARCH=!COMPOSE_PROJECT_NAME!-searchcore-1"
 
 if "%~1"=="" (
   echo Usage: stop.bat [--time N] ^<alias^|name^> [alias^|name ...]
-  echo Aliases: iam  db  dbpool-session  dbpool-apps  gateway  redis  minio  mail  web  neon  mesh  admin  api  search
+  echo Aliases: iam  db  dbpool-session  dbpool-apps  gateway  redis  minio  mail  web  neon  mesh  studio  api  search
   pause & exit /b 1
 )
 
@@ -117,7 +117,7 @@ if /I "!A!"=="web"          set "RESULT=!DOCKER_CONTAINER_WEB!"
 if /I "!A!"=="frontend"     set "RESULT=!DOCKER_CONTAINER_WEB!"
 if /I "!A!"=="neon"         set "RESULT=!DOCKER_CONTAINER_WEB!"
 if /I "!A!"=="mesh"         set "RESULT=!DOCKER_CONTAINER_MESH_WEB!"
-if /I "!A!"=="admin"        set "RESULT=!DOCKER_CONTAINER_ADMIN_WEB!"
+if /I "!A!"=="studio"        set "RESULT=!DOCKER_CONTAINER_STUDIO_WEB!"
 if /I "!A!"=="api"          set "RESULT=!DOCKER_CONTAINER_API!"
 if /I "!A!"=="backend"      set "RESULT=!DOCKER_CONTAINER_API!"
 if /I "!A!"=="search"       set "RESULT=!DOCKER_CONTAINER_SEARCH!"

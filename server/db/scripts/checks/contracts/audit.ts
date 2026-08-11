@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
-const repoRoot = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
+const repoRoot = resolve(fileURLToPath(new URL("../../../../../", import.meta.url)));
 
 async function read(path: string): Promise<string> {
   return readFile(resolve(repoRoot, path), "utf8");
@@ -35,15 +35,26 @@ const expectedTables = [
   "authorization_decision_evidence",
   "security_event",
   "hash_anchor",
+  "export_request",
+  "export_manifest",
+  "integrity_check_evidence",
+  "legal_hold",
+  "legal_hold_manifest",
+  "retention_policy",
 ];
 
 expect(
-  "common audit has exactly the four locked physical relations",
+  "common audit has exactly the governed physical relations",
   JSON.stringify(physicalAuditTables.sort())
     === JSON.stringify(expectedTables.sort()),
 );
 
 for (const table of expectedTables) {
+  expect(`${table} has forced RLS`, rls.includes(`ALTER TABLE audit.${table} FORCE ROW LEVEL SECURITY`));
+  expect(`${table} appears in the sealed audit grants`, grants.includes(`audit.${table}`));
+}
+
+for (const table of ["audit_log","authorization_decision_evidence","security_event","hash_anchor","export_manifest","integrity_check_evidence","legal_hold_manifest"]) {
   expect(
     `${table} has an immutable evidence trigger`,
     triggers.includes(`ON audit.${table}`)
@@ -52,15 +63,10 @@ for (const table of expectedTables) {
         || triggers.includes("trg_guard_audit_log_immutable")
       ),
   );
-  expect(
-    `${table} has forced RLS`,
-    rls.includes(`ALTER TABLE audit.${table} FORCE ROW LEVEL SECURITY`),
-  );
-  expect(
-    `${table} appears in the sealed audit grants`,
-    grants.includes(`audit.${table}`),
-  );
 }
+
+expect("export request scope has a dedicated immutability guard", triggers.includes("trg_export_request_guard") && functions.includes("Audit export request scope is immutable"));
+expect("legal holds can only be explicitly released", triggers.includes("trg_legal_hold_guard") && functions.includes("Only release of an active legal hold is allowed"));
 
 expect(
   "ordinary application writes canonical audit only through append_event",
@@ -135,7 +141,7 @@ expect(
   tables.includes("CREATE TABLE master.audit_event_contract")
     && tables.includes("event_contract_code")
     && functions.includes("No active audit event contract matches")
-    && seed.includes("document_row_change"),
+    && seed.includes("entity_row_change_event"),
 );
 expect(
   "document audit capture is metadata-only for baseline row changes",
@@ -179,7 +185,7 @@ const auditPhases = [
 
 for (const manifest of [
   "server/db/ddl/common/_manifest.txt",
-  "server/db/ddl/planes/athyper/_manifest.txt",
+  "server/db/ddl/planes/studio/_manifest.txt",
   "server/db/ddl/planes/neon/_manifest.txt",
   "server/db/ddl/planes/mesh/_manifest.txt",
 ]) {
@@ -191,7 +197,7 @@ for (const manifest of [
   );
 }
 
-for (const plane of ["athyper", "neon", "mesh"]) {
+for (const plane of ["studio", "neon", "mesh"]) {
   const planeTriggers = await read(
     `server/db/ddl/planes/${plane}/document/08_triggers.sql`,
   );
@@ -201,17 +207,16 @@ for (const plane of ["athyper", "neon", "mesh"]) {
   );
 }
 
-const envelope = await read(
-  "packages/platform/foundation/core/src/telemetry/envelope.ts",
+const telemetryRecords = await read(
+  "server/packages/contracts/telemetry/src/records.ts",
 );
 const alloy = await read(
   "stack/config/telemetry/logging/alloy.alloy",
 );
 expect(
-  "shared telemetry envelope emits snake-case trace context",
-  envelope.includes("trace_id:")
-    && envelope.includes("span_id:")
-    && !envelope.includes("{ traceId:"),
+  "shared telemetry contract carries typed trace context",
+  telemetryRecords.includes("TelemetryTraceContext = SpanContext")
+    && telemetryRecords.includes("readonly trace?: TelemetryTraceContext"),
 );
 expect(
   "Alloy extracts audit reporting metadata",

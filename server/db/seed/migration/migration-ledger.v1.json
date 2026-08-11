@@ -51,12 +51,12 @@
           "targetSchema": "master",
           "targetTable": "principal",
           "planes": [
-            "athyper",
+            "studio",
             "neon",
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/master/03_tables.sql",
+            "server/db/ddl/planes/studio/master/03_tables.sql",
             "server/db/ddl/planes/mesh/master/03_tables.sql",
             "server/db/ddl/planes/neon/master/03_tables.sql"
           ],
@@ -70,12 +70,12 @@
           "targetSchema": "master",
           "targetTable": "tenant",
           "planes": [
-            "athyper",
+            "studio",
             "neon",
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/master/03_tables.sql",
+            "server/db/ddl/planes/studio/master/03_tables.sql",
             "server/db/ddl/planes/mesh/master/03_tables.sql",
             "server/db/ddl/planes/neon/master/03_tables.sql"
           ],
@@ -1838,7 +1838,7 @@
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/master/03_tables.sql",
+            "server/db/ddl/planes/studio/master/03_tables.sql",
             "server/db/ddl/planes/mesh/master/03_tables.sql",
             "server/db/ddl/planes/neon/master/03_tables.sql"
           ],
@@ -1855,7 +1855,7 @@
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/master/03_tables.sql",
+            "server/db/ddl/planes/studio/master/03_tables.sql",
             "server/db/ddl/planes/mesh/master/03_tables.sql",
             "server/db/ddl/planes/neon/master/03_tables.sql"
           ],
@@ -1964,12 +1964,12 @@
           "targetSchema": "master",
           "targetTable": "workspace",
           "planes": [
-            "athyper",
+            "studio",
             "neon",
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/master/03_tables.sql",
+            "server/db/ddl/planes/studio/master/03_tables.sql",
             "server/db/ddl/planes/mesh/master/03_tables.sql",
             "server/db/ddl/planes/neon/master/03_tables.sql"
           ],
@@ -2078,12 +2078,12 @@
           "targetSchema": "master",
           "targetTable": "module",
           "planes": [
-            "athyper",
+            "studio",
             "neon",
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/master/03_tables.sql",
+            "server/db/ddl/planes/studio/master/03_tables.sql",
             "server/db/ddl/planes/mesh/master/03_tables.sql",
             "server/db/ddl/planes/neon/master/03_tables.sql"
           ],
@@ -2097,12 +2097,12 @@
           "targetSchema": "master",
           "targetTable": "workspace",
           "planes": [
-            "athyper",
+            "studio",
             "neon",
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/master/03_tables.sql",
+            "server/db/ddl/planes/studio/master/03_tables.sql",
             "server/db/ddl/planes/mesh/master/03_tables.sql",
             "server/db/ddl/planes/neon/master/03_tables.sql"
           ],
@@ -2211,12 +2211,12 @@
           "targetSchema": "control",
           "targetTable": "subscription_plan",
           "planes": [
-            "athyper",
+            "studio",
             "neon",
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/control/03_tables.sql",
+            "server/db/ddl/planes/studio/control/03_tables.sql",
             "server/db/ddl/planes/mesh/control/03_tables.sql",
             "server/db/ddl/planes/neon/control/03_tables.sql"
           ],
@@ -2341,12 +2341,12 @@
           "targetSchema": "authz",
           "targetTable": "permission",
           "planes": [
-            "athyper",
+            "studio",
             "neon",
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/authz/03_tables.sql",
+            "server/db/ddl/planes/studio/authz/03_tables.sql",
             "server/db/ddl/planes/mesh/authz/03_tables.sql",
             "server/db/ddl/planes/neon/authz/03_tables.sql"
           ],
@@ -2468,12 +2468,12 @@
           "targetSchema": "authz",
           "targetTable": "permission",
           "planes": [
-            "athyper",
+            "studio",
             "neon",
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/authz/03_tables.sql",
+            "server/db/ddl/planes/studio/authz/03_tables.sql",
             "server/db/ddl/planes/mesh/authz/03_tables.sql",
             "server/db/ddl/planes/neon/authz/03_tables.sql"
           ],
@@ -4745,7 +4745,7 @@
             "neon"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/control/03_tables.sql"
+            "server/db/ddl/planes/studio/control/03_tables.sql"
           ],
           "mapping": "exact"
         }
@@ -6995,7 +6995,7 @@
             "neon"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/master/03_tables.sql",
+            "server/db/ddl/planes/studio/master/03_tables.sql",
             "server/db/ddl/planes/mesh/master/03_tables.sql",
             "server/db/ddl/planes/neon/master/03_tables.sql"
           ],
@@ -20836,12 +20836,12 @@
           "targetSchema": "control",
           "targetTable": "owner_type",
           "planes": [
-            "athyper",
+            "studio",
             "neon",
             "mesh"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/control/03_tables.sql",
+            "server/db/ddl/planes/studio/control/03_tables.sql",
             "server/db/ddl/planes/mesh/control/03_tables.sql",
             "server/db/ddl/planes/neon/control/03_tables.sql"
           ],
@@ -21171,10 +21171,10 @@
           "targetSchema": "master",
           "targetTable": "tenant",
           "planes": [
-            "athyper"
+            "studio"
           ],
           "ddlLocations": [
-            "server/db/ddl/planes/athyper/master/03_tables.sql",
+            "server/db/ddl/planes/studio/master/03_tables.sql",
             "server/db/ddl/planes/mesh/master/03_tables.sql",
             "server/db/ddl/planes/neon/master/03_tables.sql"
           ],

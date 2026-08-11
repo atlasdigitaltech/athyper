@@ -1,4 +1,4 @@
--- Generated from the extracted live Atlas AI contract.
+﻿-- Generated from the extracted live Atlas AI contract.
 -- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
 
 ALTER TABLE ONLY "ai"."ai_action_policy"
@@ -251,7 +251,7 @@ ALTER TABLE ONLY "ai"."ai_tool_invocation"
   ADD CONSTRAINT "ai_tool_invocation_permission_snapshot_chk" CHECK (jsonb_typeof(permission_snapshot) = 'object'::text AND permission_snapshot <> '{}'::jsonb AND octet_length(permission_snapshot::text) <= 32768);
 
 ALTER TABLE ONLY "ai"."ai_tool_invocation"
-  ADD CONSTRAINT "ai_tool_invocation_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'admin'::text]));
+  ADD CONSTRAINT "ai_tool_invocation_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'studio'::text]));
 
 ALTER TABLE ONLY "ai"."ai_tool_invocation"
   ADD CONSTRAINT "ai_tool_invocation_policy_snapshot_chk" CHECK (jsonb_typeof(policy_snapshot) = 'object'::text AND policy_snapshot <> '{}'::jsonb AND octet_length(policy_snapshot::text) <= 32768);
@@ -296,7 +296,7 @@ ALTER TABLE ONLY "ai"."atlas_run"
   ADD CONSTRAINT "atlas_run_messages_distinct_chk" CHECK (input_message_id <> output_message_id);
 
 ALTER TABLE ONLY "ai"."atlas_run"
-  ADD CONSTRAINT "atlas_run_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'admin'::text]));
+  ADD CONSTRAINT "atlas_run_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'studio'::text]));
 
 ALTER TABLE ONLY "ai"."atlas_run"
   ADD CONSTRAINT "atlas_run_status_chk" CHECK (status = ANY (ARRAY['started'::text, 'completed'::text, 'failed'::text, 'cancelled'::text]));
@@ -431,7 +431,7 @@ ALTER TABLE ONLY "ai"."ai_agent_run"
   ADD CONSTRAINT "ai_agent_run_aar_outcome_chk" CHECK (outcome = ANY (ARRAY['completed'::text, 'failed'::text, 'incomplete'::text, 'cancelled'::text, 'rejected'::text]));
 
 ALTER TABLE ONLY "ai"."ai_agent_run"
-  ADD CONSTRAINT "ai_agent_run_aar_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'admin'::text]));
+  ADD CONSTRAINT "ai_agent_run_aar_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'studio'::text]));
 
 ALTER TABLE ONLY "ai"."ai_agent_run"
   ADD CONSTRAINT "ai_agent_run_aar_provider_account_class_chk" CHECK (provider_account_class IS NULL OR (provider_account_class = ANY (ARRAY['platform_unverified'::text, 'platform_paid'::text, 'developer_free'::text, 'tenant_paid'::text, 'tenant_byok'::text, 'local'::text, 'test'::text])));
@@ -557,7 +557,7 @@ ALTER TABLE ONLY "ai"."atlas_message"
   ADD CONSTRAINT "atlas_message_parent_chk" CHECK (parent_message_id IS NULL OR parent_message_id <> id);
 
 ALTER TABLE ONLY "ai"."atlas_message"
-  ADD CONSTRAINT "atlas_message_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'admin'::text]));
+  ADD CONSTRAINT "atlas_message_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'studio'::text]));
 
 ALTER TABLE ONLY "ai"."atlas_message"
   ADD CONSTRAINT "atlas_message_result_cards_chk" CHECK (jsonb_typeof(result_cards) = 'array'::text);
@@ -584,7 +584,7 @@ ALTER TABLE ONLY "ai"."atlas_thread"
   ADD CONSTRAINT "atlas_thread_legal_hold_chk" CHECK (legal_hold = false AND legal_hold_reference IS NULL OR legal_hold = true AND legal_hold_reference IS NOT NULL AND btrim(legal_hold_reference) <> ''::text);
 
 ALTER TABLE ONLY "ai"."atlas_thread"
-  ADD CONSTRAINT "atlas_thread_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'admin'::text]));
+  ADD CONSTRAINT "atlas_thread_plane_chk" CHECK (plane = ANY (ARRAY['neon'::text, 'mesh'::text, 'studio'::text]));
 
 ALTER TABLE ONLY "ai"."atlas_thread"
   ADD CONSTRAINT "atlas_thread_purge_chk" CHECK (purge_after IS NULL OR purge_after > created_at);

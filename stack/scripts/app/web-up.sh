@@ -6,8 +6,8 @@
 # Usage:
 #   ./web-up.sh                 -> start Neon
 #   ./web-up.sh mesh            -> start Mesh
-#   ./web-up.sh admin --build   -> rebuild and start Admin
-#   ./web-up.sh all             -> start Neon, Mesh, and Admin
+#   ./web-up.sh studio --build  -> rebuild and start Studio
+#   ./web-up.sh all             -> start Neon, Mesh, and Studio
 #
 # Behaviour (auto-detected from ENVIRONMENT in stack/env/.env):
 #   local      -> load stack/env/.env, translate Docker hostnames to 127.0.0.1,
@@ -37,7 +37,7 @@ PLANE_SERVICES=()
 usage() {
   cat <<EOF
 Usage:
-  $0 [neon|mesh|admin|all] [--build]
+  $0 [neon|mesh|studio|all] [--build]
 
 Defaults to: neon
 EOF
@@ -56,7 +56,7 @@ parse_args() {
         usage
         exit 0
         ;;
-      neon|mesh|admin|all)
+      neon|mesh|studio|all)
         if [[ "$PLANE_TARGET_SEEN" == "1" ]]; then
           echo "ERROR: only one target can be supplied."
           usage
@@ -84,13 +84,13 @@ resolve_targets() {
       PLANE_NAMES=(mesh)
       PLANE_SERVICES=(mesh-web)
       ;;
-    admin)
-      PLANE_NAMES=(admin)
-      PLANE_SERVICES=(admin-web)
+    studio)
+      PLANE_NAMES=(studio)
+      PLANE_SERVICES=(studio-web)
       ;;
     all)
-      PLANE_NAMES=(neon mesh admin)
-      PLANE_SERVICES=(neon-web mesh-web admin-web)
+      PLANE_NAMES=(neon mesh studio)
+      PLANE_SERVICES=(neon-web mesh-web studio-web)
       ;;
   esac
 }
@@ -118,7 +118,7 @@ export_common_local_env() {
   export RUNTIME_API_URL="http://localhost:4000"
   export KEYCLOAK_BASE_URL="https://${IAM_HOST:-iam.athyper.local}"
   export PLATFORM_KEYCLOAK_REALM="${PLATFORM_KEYCLOAK_REALM:-platform-control}"
-  export PLATFORM_KEYCLOAK_CLIENT_ID="${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-admin}"
+  export PLATFORM_KEYCLOAK_CLIENT_ID="${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-studio}"
   export ALLOW_DIRECT_ACCESS=true
   export SENTRY_DSN="${SENTRY_DSN:-${GLITCHTIP_DSN:-}}"
   export NEXT_PUBLIC_ENVIRONMENT="${ENVIRONMENT}"
@@ -134,7 +134,7 @@ plane_label() {
   case "$1" in
     neon) echo "Neon" ;;
     mesh) echo "Mesh" ;;
-    admin) echo "Admin" ;;
+    studio) echo "Studio" ;;
   esac
 }
 
@@ -142,7 +142,7 @@ plane_port() {
   case "$1" in
     neon) echo "${NEON_DEV_PORT:-3101}" ;;
     mesh) echo "${MESH_DEV_PORT:-3102}" ;;
-    admin) echo "${ADMIN_DEV_PORT:-3103}" ;;
+    studio) echo "${STUDIO_DEV_PORT:-3103}" ;;
   esac
 }
 
@@ -150,7 +150,7 @@ plane_public_url() {
   case "$1" in
     neon) echo "${PUBLIC_NEON_URL:-https://${APPS_ATHYPER_NEON_HOST:-neon.athyper.local}}" ;;
     mesh) echo "${PUBLIC_MESH_URL:-https://${APPS_ATHYPER_MESH_HOST:-mesh.athyper.local}}" ;;
-    admin) echo "${PUBLIC_ADMIN_URL:-https://${APPS_ATHYPER_ADMIN_HOST:-admin.athyper.local}}" ;;
+    studio) echo "${PUBLIC_STUDIO_URL:-https://${APPS_ATHYPER_STUDIO_HOST:-studio.athyper.local}}" ;;
   esac
 }
 
@@ -158,7 +158,7 @@ plane_realm() {
   case "$1" in
     neon) echo "${NEON_KEYCLOAK_REALM:-${KEYCLOAK_REALM:-athyper}}" ;;
     mesh) echo "${MESH_KEYCLOAK_REALM:-${KEYCLOAK_REALM:-athyper}}" ;;
-    admin) echo "${ADMIN_KEYCLOAK_REALM:-${KEYCLOAK_REALM:-athyper}}" ;;
+    studio) echo "${STUDIO_KEYCLOAK_REALM:-${KEYCLOAK_REALM:-athyper}}" ;;
   esac
 }
 
@@ -166,7 +166,7 @@ plane_client_id() {
   case "$1" in
     neon) echo "${NEON_KEYCLOAK_CLIENT_ID:-neon-web}" ;;
     mesh) echo "${MESH_KEYCLOAK_CLIENT_ID:-mesh-web}" ;;
-    admin) echo "${ADMIN_KEYCLOAK_CLIENT_ID:-admin-web}" ;;
+    studio) echo "${STUDIO_KEYCLOAK_CLIENT_ID:-studio-web}" ;;
   esac
 }
 

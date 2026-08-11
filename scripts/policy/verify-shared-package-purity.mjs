@@ -63,7 +63,7 @@ for (const manifest of manifests) {
     const text = readFileSync(source, "utf8");
     const forbidden = text.match(/(?:from\s*["']|import\s*\(|require\s*\()["']([^"']+)["']/g) ?? [];
     for (const statement of forbidden) {
-      if (statement.includes("/apps/") || statement.includes("packages/products/") || statement.includes("server/")) {
+      if (statement.includes("/apps/") || statement.includes("packages/planes/") || statement.includes("server/")) {
         errors.push(`${relative(root, source)} imports an application/product/server implementation`);
       }
     }

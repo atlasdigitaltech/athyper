@@ -6,10 +6,10 @@ REM athyper - Plane Apps UP - Windows Batch
 REM Location: stack\scripts\app\planes-up.bat
 REM
 REM Usage:
-REM   planes-up.bat          : start Neon, Mesh, and Admin
-REM   planes-up.bat all      : start Neon, Mesh, and Admin
+REM   planes-up.bat          : start Neon, Mesh, and Studio
+REM   planes-up.bat all      : start Neon, Mesh, and Studio
 REM   planes-up.bat mesh     : start Mesh only
-REM   planes-up.bat admin    : start Admin only
+REM   planes-up.bat studio   : start Studio only
 REM
 REM Local Windows:
 REM   Starts selected app(s) on ports 3101-3103.
@@ -117,7 +117,7 @@ goto :end
 
 :usage
 echo Usage:
-echo   planes-up.bat [neon^|mesh^|admin^|all] [--build]
+echo   planes-up.bat [neon^|mesh^|studio^|all] [--build]
 echo.
 echo Defaults to: all
 exit /b 0
@@ -133,14 +133,14 @@ if /I "!PLANE_TARGET!"=="mesh" (
   set "SERVICES=mesh-web"
   exit /b 0
 )
-if /I "!PLANE_TARGET!"=="admin" (
-  set "PLANE_LIST=admin"
-  set "SERVICES=admin-web"
+if /I "!PLANE_TARGET!"=="studio" (
+  set "PLANE_LIST=studio"
+  set "SERVICES=studio-web"
   exit /b 0
 )
 if /I "!PLANE_TARGET!"=="all" (
-  set "PLANE_LIST=neon mesh admin"
-  set "SERVICES=neon-web mesh-web admin-web"
+  set "PLANE_LIST=neon mesh studio"
+  set "SERVICES=neon-web mesh-web studio-web"
   exit /b 0
 )
 echo ERROR: unsupported target "!PLANE_TARGET!".
@@ -154,7 +154,7 @@ set "REDIS_SOCKET_TIMEOUT_MS=0"
 set "RUNTIME_API_URL=http://localhost:4000"
 set "KEYCLOAK_BASE_URL=https://!IAM_HOST!"
 if "!PLATFORM_KEYCLOAK_REALM!"=="" set "PLATFORM_KEYCLOAK_REALM=platform-control"
-if "!PLATFORM_KEYCLOAK_CLIENT_ID!"=="" set "PLATFORM_KEYCLOAK_CLIENT_ID=athyper-admin"
+if "!PLATFORM_KEYCLOAK_CLIENT_ID!"=="" set "PLATFORM_KEYCLOAK_CLIENT_ID=athyper-studio"
 set "ALLOW_DIRECT_ACCESS=true"
 if "!SENTRY_DSN!"=="" set "SENTRY_DSN=!GLITCHTIP_DSN!"
 set "NEXT_PUBLIC_ENVIRONMENT=!ENVIRONMENT!"
@@ -202,18 +202,18 @@ if /I "!_PLANE!"=="mesh" (
   set "KEYCLOAK_CLIENT_ID=!MESH_KEYCLOAK_CLIENT_ID!"
   set "MESH_PUBLIC_WEB_URL=!_PLANE_URL!"
 )
-if /I "!_PLANE!"=="admin" (
-  if "!ADMIN_DEV_PORT!"=="" set "ADMIN_DEV_PORT=3103"
-  if "!APPS_ATHYPER_ADMIN_HOST!"=="" set "APPS_ATHYPER_ADMIN_HOST=admin.athyper.local"
-  set "_PLANE_PORT=!ADMIN_DEV_PORT!"
-  set "_PLANE_LABEL=Admin"
-  if not "!PUBLIC_ADMIN_URL!"=="" (set "_PLANE_URL=!PUBLIC_ADMIN_URL!") else (set "_PLANE_URL=https://!APPS_ATHYPER_ADMIN_HOST!")
-  if "!ADMIN_KEYCLOAK_REALM!"=="" if not "!KEYCLOAK_REALM!"=="" set "ADMIN_KEYCLOAK_REALM=!KEYCLOAK_REALM!"
-  if "!ADMIN_KEYCLOAK_REALM!"=="" set "ADMIN_KEYCLOAK_REALM=athyper"
-  if "!ADMIN_KEYCLOAK_CLIENT_ID!"=="" set "ADMIN_KEYCLOAK_CLIENT_ID=admin-web"
-  set "KEYCLOAK_REALM=!ADMIN_KEYCLOAK_REALM!"
-  set "KEYCLOAK_CLIENT_ID=!ADMIN_KEYCLOAK_CLIENT_ID!"
-  set "ADMIN_PUBLIC_WEB_URL=!_PLANE_URL!"
+if /I "!_PLANE!"=="studio" (
+  if "!STUDIO_DEV_PORT!"=="" set "STUDIO_DEV_PORT=3103"
+  if "!APPS_ATHYPER_STUDIO_HOST!"=="" set "APPS_ATHYPER_STUDIO_HOST=studio.athyper.local"
+  set "_PLANE_PORT=!STUDIO_DEV_PORT!"
+  set "_PLANE_LABEL=Studio"
+  if not "!PUBLIC_STUDIO_URL!"=="" (set "_PLANE_URL=!PUBLIC_STUDIO_URL!") else (set "_PLANE_URL=https://!APPS_ATHYPER_STUDIO_HOST!")
+  if "!STUDIO_KEYCLOAK_REALM!"=="" if not "!KEYCLOAK_REALM!"=="" set "STUDIO_KEYCLOAK_REALM=!KEYCLOAK_REALM!"
+  if "!STUDIO_KEYCLOAK_REALM!"=="" set "STUDIO_KEYCLOAK_REALM=athyper"
+  if "!STUDIO_KEYCLOAK_CLIENT_ID!"=="" set "STUDIO_KEYCLOAK_CLIENT_ID=studio-web"
+  set "KEYCLOAK_REALM=!STUDIO_KEYCLOAK_REALM!"
+  set "KEYCLOAK_CLIENT_ID=!STUDIO_KEYCLOAK_CLIENT_ID!"
+  set "STUDIO_PUBLIC_WEB_URL=!_PLANE_URL!"
 )
 set "PUBLIC_BASE_URL=!_PLANE_URL!"
 set "PUBLIC_WEB_URL=!_PLANE_URL!"

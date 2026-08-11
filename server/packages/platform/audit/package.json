@@ -1,43 +1,24 @@
 {
-  "name": "@athyper/svc-audit",
+  "name": "@athyper/server-platform-audit",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
-    "./package.json": "./package.json"
+    ".": "./src/index.ts"
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "clean": "rimraf dist",
-    "build": "tsup index.ts --format esm --dts --outDir dist --external express --external kysely",
-    "dev": "tsup index.ts --format esm --dts --outDir dist --external express --external kysely --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest",
-    "lint": "eslint ."
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@athyper/adapter-object-storage": "workspace:*",
-    "@athyper/server-foundation": "workspace:*",
-    "@athyper/svc-iam": "workspace:*",
-    "@athyper/svc-shared": "workspace:*"
+    "@athyper/server-contract-audit": "workspace:*",
+    "@athyper/server-contract-auth": "workspace:*",
+    "express": "^5.0.0"
   },
   "devDependencies": {
-    "@athyper/tsconfig": "workspace:*",
-    "@types/express": "^5.0.1",
     "@types/node": "^25.6.0",
-    "express": "^5.0.0",
-    "kysely": "^0.28.16",
-    "rimraf": "^6.0.1",
-    "tsup": "^8.3.0",
+    "@types/express": "^5.0.1",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

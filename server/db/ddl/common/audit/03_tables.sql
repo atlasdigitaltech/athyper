@@ -429,3 +429,135 @@ CREATE TABLE audit.hash_anchor (
 
 COMMENT ON TABLE audit.hash_anchor IS
   'Immutable tenant- or platform-scoped hash-chain anchors over a closed evidence window.';
+
+CREATE TABLE audit.export_request (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    plane_code          audit.plane_code_d NOT NULL DEFAULT current_setting('app.database_plane')::audit.plane_code_d,
+    actor_principal_id  uuid        NOT NULL,
+    exact_filter        jsonb       NOT NULL,
+    export_format       text        NOT NULL,
+    status              text        NOT NULL DEFAULT 'queued',
+    requested_at        timestamptz NOT NULL DEFAULT now(),
+    retention_until     timestamptz NOT NULL,
+    started_at          timestamptz,
+    completed_at        timestamptz,
+    failure_code        text,
+    CONSTRAINT export_request_pkey PRIMARY KEY (id),
+    CONSTRAINT export_request_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT export_request_filter_chk CHECK (jsonb_typeof(exact_filter) = 'object'),
+    CONSTRAINT export_request_format_chk CHECK (export_format IN ('csv','json','ndjson')),
+    CONSTRAINT export_request_status_chk CHECK (status IN ('queued','running','completed','failed','expired')),
+    CONSTRAINT export_request_retention_chk CHECK (retention_until > requested_at),
+    CONSTRAINT export_request_lifecycle_chk CHECK (
+        (status = 'queued' AND started_at IS NULL AND completed_at IS NULL AND failure_code IS NULL)
+        OR (status = 'running' AND started_at IS NOT NULL AND completed_at IS NULL AND failure_code IS NULL)
+        OR (status = 'completed' AND started_at IS NOT NULL AND completed_at IS NOT NULL AND failure_code IS NULL)
+        OR (status = 'failed' AND completed_at IS NOT NULL AND failure_code IS NOT NULL)
+        OR status = 'expired'
+    )
+);
+
+CREATE TABLE audit.export_manifest (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    export_request_id   uuid        NOT NULL,
+    tenant_id           uuid        NOT NULL,
+    actor_principal_id  uuid        NOT NULL,
+    exact_filter        jsonb       NOT NULL,
+    export_format       text        NOT NULL,
+    row_count           bigint      NOT NULL,
+    byte_count          bigint      NOT NULL,
+    artifact_sha256     char(64)    NOT NULL,
+    chunks              jsonb       NOT NULL,
+    object_key          text        NOT NULL,
+    retention_until     timestamptz NOT NULL,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT export_manifest_pkey PRIMARY KEY (id),
+    CONSTRAINT export_manifest_request_uq UNIQUE (export_request_id),
+    CONSTRAINT export_manifest_filter_chk CHECK (jsonb_typeof(exact_filter) = 'object'),
+    CONSTRAINT export_manifest_format_chk CHECK (export_format IN ('csv','json','ndjson')),
+    CONSTRAINT export_manifest_counts_chk CHECK (row_count >= 0 AND byte_count >= 0),
+    CONSTRAINT export_manifest_hash_chk CHECK (artifact_sha256 ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT export_manifest_chunks_chk CHECK (jsonb_typeof(chunks) = 'array'),
+    CONSTRAINT export_manifest_object_key_chk CHECK (btrim(object_key) <> ''),
+    CONSTRAINT export_manifest_retention_chk CHECK (retention_until > created_at)
+);
+
+CREATE TABLE audit.integrity_check_evidence (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    actor_principal_id  uuid        NOT NULL,
+    checked_from        timestamptz NOT NULL,
+    checked_until       timestamptz NOT NULL,
+    event_count         bigint      NOT NULL,
+    calculated_hash     char(64)    NOT NULL,
+    anchor_hash         char(64),
+    is_valid            boolean     NOT NULL,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT integrity_check_evidence_pkey PRIMARY KEY (id),
+    CONSTRAINT integrity_check_window_chk CHECK (checked_until > checked_from),
+    CONSTRAINT integrity_check_count_chk CHECK (event_count >= 0),
+    CONSTRAINT integrity_check_hash_chk CHECK (calculated_hash ~ '^[0-9a-f]{64}$' AND (anchor_hash IS NULL OR anchor_hash ~ '^[0-9a-f]{64}$')),
+    CONSTRAINT integrity_check_time_chk CHECK (created_at >= checked_until)
+);
+
+CREATE TABLE audit.legal_hold (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    matter_code         text        NOT NULL,
+    exact_filter        jsonb       NOT NULL,
+    status              text        NOT NULL DEFAULT 'active',
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    released_at         timestamptz,
+    released_by         uuid,
+    CONSTRAINT legal_hold_pkey PRIMARY KEY (id),
+    CONSTRAINT legal_hold_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT legal_hold_matter_code_chk CHECK (matter_code ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,126}$'),
+    CONSTRAINT legal_hold_filter_chk CHECK (jsonb_typeof(exact_filter) = 'object'),
+    CONSTRAINT legal_hold_status_chk CHECK (status IN ('active','released')),
+    CONSTRAINT legal_hold_release_chk CHECK ((status = 'active' AND released_at IS NULL AND released_by IS NULL) OR (status = 'released' AND released_at IS NOT NULL AND released_by IS NOT NULL))
+);
+
+CREATE TABLE audit.legal_hold_manifest (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    legal_hold_id       uuid        NOT NULL,
+    tenant_id           uuid        NOT NULL,
+    exact_filter        jsonb       NOT NULL,
+    matched_row_count   bigint      NOT NULL,
+    manifest_sha256     char(64)    NOT NULL,
+    object_key          text,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    CONSTRAINT legal_hold_manifest_pkey PRIMARY KEY (id),
+    CONSTRAINT legal_hold_manifest_filter_chk CHECK (jsonb_typeof(exact_filter) = 'object'),
+    CONSTRAINT legal_hold_manifest_count_chk CHECK (matched_row_count >= 0),
+    CONSTRAINT legal_hold_manifest_hash_chk CHECK (manifest_sha256 ~ '^[0-9a-f]{64}$')
+);
+
+CREATE TABLE audit.retention_policy (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    code                text        NOT NULL,
+    event_code_pattern  text        NOT NULL,
+    retain_days         integer     NOT NULL,
+    status              text        NOT NULL DEFAULT 'active',
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+    CONSTRAINT retention_policy_pkey PRIMARY KEY (id),
+    CONSTRAINT retention_policy_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT retention_policy_code_chk CHECK (code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
+    CONSTRAINT retention_policy_pattern_chk CHECK (btrim(event_code_pattern) <> ''),
+    CONSTRAINT retention_policy_days_chk CHECK (retain_days > 0),
+    CONSTRAINT retention_policy_status_chk CHECK (status IN ('active','inactive')),
+    CONSTRAINT retention_policy_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE audit.export_request IS 'Immutable export scope and requester coordinates with mutable governed worker status.';
+COMMENT ON TABLE audit.export_manifest IS 'Append-only export artifact evidence including exact scope, counts, chunk hashes, and artifact hash.';
+COMMENT ON TABLE audit.integrity_check_evidence IS 'Append-only read-only integrity verification evidence.';
+COMMENT ON TABLE audit.legal_hold IS 'Explicit preservation override; it does not mutate normal retention policy.';
+COMMENT ON TABLE audit.legal_hold_manifest IS 'Append-only evidence describing the rows and artifact covered by a legal hold.';
+COMMENT ON TABLE audit.retention_policy IS 'Normal event retention administration; active legal holds are evaluated separately at purge time.';

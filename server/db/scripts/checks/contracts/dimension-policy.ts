@@ -118,9 +118,9 @@ const financePhases = [
   "10_rls.sql",
   "11_grants.sql",
 ];
-const [neonManifest, athyperManifest, meshManifest] = await Promise.all([
+const [neonManifest, studioManifest, meshManifest] = await Promise.all([
   read("server/db/ddl/planes/neon/_manifest.txt"),
-  read("server/db/ddl/planes/athyper/_manifest.txt"),
+  read("server/db/ddl/planes/studio/_manifest.txt"),
   read("server/db/ddl/planes/mesh/_manifest.txt"),
 ]);
 expect(
@@ -129,8 +129,8 @@ expect(
     neonManifest.split(`planes/neon/control/${phase}`).length === 2),
 );
 expect(
-  "Athyper and Mesh do not install Neon dimension policy",
-  !/finance_policy|dimension_policy/.test(athyperManifest)
+  "Studio and Mesh do not install Neon dimension policy",
+  !/finance_policy|dimension_policy/.test(studioManifest)
     && !/finance_policy|dimension_policy/.test(meshManifest),
 );
 

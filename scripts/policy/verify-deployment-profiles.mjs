@@ -10,14 +10,14 @@ const rel = (path) => relative(root, path).replaceAll("\\", "/");
 
 function workspaceRows() {
   const output = process.platform === "win32"
-    ? execFileSync("powershell.exe", ["-NoProfile", "-Command", "pnpm list -r --depth -1 --json"], { cwd: root, encoding: "utf8" })
+    ? execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "pnpm.cmd list -r --depth -1 --json"], { cwd: root, encoding: "utf8" })
     : execFileSync("pnpm", ["list", "-r", "--depth", "-1", "--json"], { cwd: root, encoding: "utf8" });
   return JSON.parse(output);
 }
 
 function packageManifest(directory) {
   const path = join(directory, "package.json");
-  return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : null;
+  return existsSync(path) ? JSON.parse(readFileSync(path, "utf8").replace(/^\uFEFF/, "")) : null;
 }
 
 function dependencyNames(manifest) {

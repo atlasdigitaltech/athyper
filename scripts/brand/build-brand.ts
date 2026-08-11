@@ -3,9 +3,9 @@
  * Build canonical brand assets into packages/shared/ui-platform/brand/dist.
  *
  * Sources (per-product after brand split):
- *   packages/products/neon/brand/src/
- *   packages/products/mesh/brand/src/
- *   packages/products/admin/brand/src/
+ *   packages/planes/neon/brand/src/
+ *   packages/planes/mesh/brand/src/
+ *   packages/planes/studio/brand/src/
  *
  * Output:
  *   packages/shared/ui-platform/brand/dist/{product}/
@@ -22,14 +22,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 const distRoot = path.join(repoRoot, "packages/platform/foundation/brand/dist");
 
-const PRODUCTS = ["neon", "mesh", "admin"] as const;
+const PRODUCTS = ["neon", "mesh", "studio"] as const;
 
 type ProductCode = (typeof PRODUCTS)[number];
 
 const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  neon:    path.join(repoRoot, "packages/products/neon/brand/src"),
-  mesh:    path.join(repoRoot, "packages/products/mesh/brand/src"),
-  admin:   path.join(repoRoot, "packages/products/admin/brand/src"),
+  neon:   path.join(repoRoot, "packages/planes/neon/brand/src"),
+  mesh:   path.join(repoRoot, "packages/planes/mesh/brand/src"),
+  studio: path.join(repoRoot, "packages/planes/studio/brand/src"),
 };
 const REQUIRED_PUBLIC_ASSET_KEYS = [
   "wordmarkBlack",

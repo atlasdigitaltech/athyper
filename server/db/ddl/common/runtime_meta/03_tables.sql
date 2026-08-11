@@ -1,4 +1,4 @@
--- Mutable, plane-local enforcement state. It is updated only by the local
+﻿-- Mutable, plane-local enforcement state. It is updated only by the local
 -- content/attachment services; commercial limits remain in control.
 CREATE TABLE runtime_meta.tenant_usage_counter (
     tenant_id       uuid        NOT NULL,
@@ -85,6 +85,37 @@ COMMENT ON COLUMN runtime_meta.entity_number_counter.next_value IS
   'Value reserved for the next successful allocation. Preview never reads or mutates this column.';
 COMMENT ON COLUMN runtime_meta.entity_number_counter.reset_bucket IS
   'Immutable rollover partition: never, YYYY, YYYY-MM, YYYY-MM-DD, or the caller-resolved fiscal-year code.';
+
+CREATE TABLE runtime_meta.entity_number_allocation (
+    id uuid NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id uuid NOT NULL,
+    allocation_id uuid NOT NULL,
+    numbering_policy_id uuid NOT NULL,
+    counter_id uuid NOT NULL,
+    policy_code text NOT NULL,
+    policy_revision integer NOT NULL,
+    policy_source text NOT NULL,
+    scope_key text NOT NULL,
+    reset_bucket text NOT NULL,
+    allocated_value bigint NOT NULL,
+    following_value bigint NOT NULL,
+    formatted_number text NOT NULL,
+    correlation_id uuid,
+    context jsonb NOT NULL DEFAULT '{}'::jsonb,
+    allocated_at timestamptz NOT NULL,
+    allocated_by uuid NOT NULL,
+    CONSTRAINT entity_number_allocation_pkey PRIMARY KEY (id),
+    CONSTRAINT entity_number_allocation_id_uq UNIQUE (tenant_id,allocation_id),
+    CONSTRAINT entity_number_allocation_tenant_id_uq UNIQUE (tenant_id,id),
+    CONSTRAINT entity_number_allocation_policy_chk CHECK (policy_code ~ '^[a-z][a-z0-9_.-]{1,126}$' AND policy_revision > 0),
+    CONSTRAINT entity_number_allocation_source_chk CHECK (policy_source IN ('tenant','global')),
+    CONSTRAINT entity_number_allocation_scope_chk CHECK (btrim(scope_key) <> '' AND btrim(reset_bucket) <> ''),
+    CONSTRAINT entity_number_allocation_value_chk CHECK (allocated_value >= 0 AND following_value > allocated_value),
+    CONSTRAINT entity_number_allocation_number_chk CHECK (btrim(formatted_number) <> '' AND length(formatted_number) <= 512),
+    CONSTRAINT entity_number_allocation_context_chk CHECK (jsonb_typeof(context) = 'object')
+);
+COMMENT ON TABLE runtime_meta.entity_number_allocation IS
+  'ARCHETYPE=D;SCOPE=T;SUBTYPE=APPEND_ONLY. Durable idempotency and audit receipt for a committed numbering allocation.';
 
 CREATE TABLE runtime_meta.applied_release (
     id uuid NOT NULL DEFAULT shared.uuidv7(),
@@ -219,7 +250,7 @@ CREATE TABLE runtime_meta.entity_descriptor (
         UNIQUE NULLS NOT DISTINCT (tenant_id, id),
     CONSTRAINT runtime_entity_descriptor_release_uq
         UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, release_id, plane_code, descriptor_kind),
-    CONSTRAINT runtime_entity_descriptor_plane_chk CHECK (plane_code IN ('athyper','neon','mesh')),
+    CONSTRAINT runtime_entity_descriptor_plane_chk CHECK (plane_code IN ('studio','neon','mesh')),
     CONSTRAINT runtime_entity_descriptor_kind_chk
         CHECK (descriptor_kind ~ '^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT runtime_entity_descriptor_schema_version_chk

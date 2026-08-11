@@ -9,3 +9,5 @@ user glitchtip on #__GLITCHTIP_HASH__ ~* &* +@connection +ping +auth +quit +rese
 user infisical on #__INFISICAL_HASH__ ~* &* +@connection +ping +auth +quit +reset +@fast +@read +@write +@string +@hash +@list +@set +@sortedset +@keyspace +xadd +xtrim +xread +xreadgroup +xlen +xrange +xrevrange +xack +xgroup|create +xgroup|setid +xdel +object|encoding -@admin -@dangerous -@scripting -config -debug -shutdown -flushall -flushdb -cluster -wait -waitaof -sort +info +eval +evalsha +subscribe +psubscribe +unsubscribe +punsubscribe +publish +ssubscribe +sunsubscribe
 
 user admin on #__ADMIN_HASH__ ~* &* +@all
+
+user bullboard on #__BULLBOARD_HASH__ ~bull:* &* +@read +@connection +ping +auth +quit +reset +scan +keys +info +client|getname +client|setname +eval +evalsha -@write -@admin -@dangerous -publish -subscribe -psubscribe

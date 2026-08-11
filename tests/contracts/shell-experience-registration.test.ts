@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { createAdminShellExperience } from "../../packages/products/admin/shell/src/index";
-import { createNeonShellExperience } from "../../packages/products/neon/shell/src/index";
-import { createMeshShellExperience } from "../../packages/products/mesh/shell/src/index";
+import { createStudioShellExperience } from "../../packages/planes/studio/shell/src/index";
+import { createNeonShellExperience } from "../../packages/planes/neon/shell/src/index";
+import { createMeshShellExperience } from "../../packages/planes/mesh/shell/src/index";
 
 const experiences = [
-  createAdminShellExperience("/admin.svg"),
+  createStudioShellExperience("/studio.svg"),
   createNeonShellExperience("/neon.svg"),
   createMeshShellExperience("/mesh.svg"),
 ];

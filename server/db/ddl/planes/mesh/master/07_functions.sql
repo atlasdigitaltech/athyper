@@ -350,6 +350,29 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION master.trg_require_contact_verification_evidence()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND NEW.is_verified IS DISTINCT FROM OLD.is_verified THEN
+        IF NEW.verification_provider IS NULL
+           OR btrim(NEW.verification_provider) = ''
+           OR NEW.verification_signature IS NULL
+           OR btrim(NEW.verification_signature) = ''
+           OR NEW.verification_evidence = '{}'::jsonb
+           OR NEW.verification_evidence IS NOT DISTINCT FROM OLD.verification_evidence
+           OR NEW.verification_signature IS NOT DISTINCT FROM OLD.verification_signature THEN
+            RAISE EXCEPTION 'Verification changes require new signed provider evidence'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION master.trg_normalize_external_reference()
 RETURNS trigger
 LANGUAGE plpgsql

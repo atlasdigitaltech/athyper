@@ -19,6 +19,7 @@ CREATE TABLE document.work_item (
     payload jsonb NOT NULL DEFAULT '{}'::jsonb,
     outcome jsonb,
     status document.work_item_status_d NOT NULL DEFAULT 'open',
+    row_version bigint NOT NULL DEFAULT 1,
     status_changed_at timestamptz,
     status_changed_by uuid,
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -35,6 +36,7 @@ CREATE TABLE document.work_item (
         (claimant_principal_id IS NULL) = (claimed_at IS NULL)
     ),
     CONSTRAINT work_item_due_chk CHECK (due_at IS NULL OR due_at >= available_at),
+    CONSTRAINT work_item_row_version_chk CHECK (row_version >= 1),
     CONSTRAINT work_item_payload_chk CHECK (
         jsonb_typeof(payload) = 'object'
         AND (outcome IS NULL OR jsonb_typeof(outcome) = 'object')

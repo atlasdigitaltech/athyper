@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "defaults": {
+    "routes": {
+      "owner": "platform-host",
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-d---produce-the-phase-0-inventory-and-parity-matrix",
+      "risk": "A legacy HTTP behavior may be absent or have changed authorization semantics.",
+      "dueGate": "Gate F precondition"
+    },
+    "jobs": {
+      "owner": "jobs-and-capability-owners",
+      "followUp": "docs/architecture/server-phase9-jobs-recovery-status-report.md",
+      "risk": "Pending work may lack an owning handler, retry policy, or durable migration decision.",
+      "dueGate": "Gate F precondition"
+    },
+    "schedules": {
+      "owner": "jobs-and-capability-owners",
+      "followUp": "docs/architecture/server-phase9-jobs-recovery-status-report.md",
+      "risk": "A governed recurring operation may not be reconciled in the rebuilt scheduler.",
+      "dueGate": "Gate F precondition"
+    },
+    "configuration": {
+      "owner": "platform-host",
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
+      "risk": "A deployment may rely on an unmapped, renamed, or retired configuration key.",
+      "dueGate": "Gate F precondition"
+    },
+    "database-commands": {
+      "owner": "database-platform",
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
+      "risk": "An operational database workflow may lack a qualified successor.",
+      "dueGate": "Gate F precondition"
+    },
+    "operational-scripts": {
+      "owner": "platform-operations",
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
+      "risk": "An operator command may be unavailable or may target obsolete paths.",
+      "dueGate": "Gate F precondition"
+    },
+    "processes": {
+      "owner": "platform-host",
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
+      "risk": "A process entry point or lifecycle behavior may lack clean-environment qualification.",
+      "dueGate": "Gate F precondition"
+    },
+    "compose-services": {
+      "owner": "platform-operations",
+      "followUp": "docs/architecture/server-platform-host-rebuild-closure-plan.md#increment-e---qualify-a-clean-revision",
+      "risk": "A runtime service may be missing, stale, or incorrectly composed.",
+      "dueGate": "Gate F precondition"
+    }
+  },
+  "overrides": {}
+}

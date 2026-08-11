@@ -1,6 +1,0 @@
-{
-  "extends": "../../../../../tooling/tsconfig/base.json",
-  "compilerOptions": { "noEmit": true },
-  "include": ["./**/*.ts"],
-  "exclude": ["dist", "node_modules", ".turbo", "**/*.test.ts", "**/*.spec.ts"]
-}

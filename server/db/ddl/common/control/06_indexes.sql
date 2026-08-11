@@ -40,6 +40,8 @@ CREATE INDEX cycle_cross_dependency_successor_idx
        (tenant_id, successor_type_id, successor_phase_id);
 CREATE INDEX cycle_carryforward_rule_type_idx
     ON control.cycle_carryforward_rule (tenant_id, cycle_type_id);
+CREATE INDEX cycle_template_revision_latest_idx
+    ON control.cycle_template_revision (tenant_id, cycle_type_id, revision_number DESC);
 
 CREATE UNIQUE INDEX bank_account_validation_rule_applicability_uq
     ON control.bank_account_validation_rule (
@@ -93,6 +95,7 @@ CREATE INDEX tenant_parameter_value_resolve_idx
 
 CREATE INDEX cron_schedule_due_idx ON control.cron_schedule (is_enabled, effective_from, effective_until, code) WHERE is_enabled;
 CREATE INDEX cron_schedule_tenant_idx ON control.cron_schedule (tenant_id, code) WHERE tenant_id IS NOT NULL;
+CREATE INDEX cron_schedule_change_log_schedule_idx ON control.cron_schedule_change_log (tenant_id, schedule_id, changed_at DESC);
 
 CREATE INDEX notification_provider_active_idx ON control.notification_provider (channel, priority) WHERE is_enabled;
 CREATE INDEX notification_provider_health_idx ON control.notification_provider (health) WHERE health IN ('degraded','down');
@@ -138,6 +141,11 @@ CREATE INDEX policy_test_case_definition_idx
     ON control.policy_test_case (policy_definition_id, status, code);
 CREATE INDEX policy_test_case_created_by_idx
     ON control.policy_test_case (created_by);
+CREATE UNIQUE INDEX policy_definition_revision_uq
+    ON control.policy_definition (tenant_id, entity_type, name, version_no) NULLS NOT DISTINCT;
+CREATE INDEX policy_test_result_hash_idx ON control.policy_test_result (policy_definition_id, definition_hash, executed_at DESC);
+CREATE UNIQUE INDEX policy_activation_coordinate_uq ON control.policy_activation (tenant_id, entity_type, name) NULLS NOT DISTINCT;
+CREATE INDEX policy_evaluation_history_lookup_idx ON control.policy_evaluation_history (tenant_id, entity_type, evaluated_at DESC);
 CREATE UNIQUE INDEX workspace_module_one_primary_uq
     ON control.workspace_module (module_id)
     WHERE is_primary AND status = 'active';

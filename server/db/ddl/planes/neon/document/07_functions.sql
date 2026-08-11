@@ -3547,3 +3547,130 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION document.trg_legal_hold_placement_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.attachment_series_id IS DISTINCT FROM OLD.attachment_series_id
+       OR NEW.placed_at IS DISTINCT FROM OLD.placed_at
+       OR NEW.placed_by IS DISTINCT FROM OLD.placed_by
+       OR NEW.reason IS DISTINCT FROM OLD.reason
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION 'Legal hold placement evidence is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_legal_hold_release_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF OLD.released_at IS NOT NULL AND (
+        NEW.released_at IS DISTINCT FROM OLD.released_at
+        OR NEW.released_by IS DISTINCT FROM OLD.released_by
+        OR NEW.release_reason IS DISTINCT FROM OLD.release_reason
+    ) THEN
+        RAISE EXCEPTION 'Legal hold release evidence is immutable once recorded'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF (NEW.released_at IS NULL) <> (NEW.released_by IS NULL)
+       OR (NEW.released_at IS NULL) <> (NEW.release_reason IS NULL) THEN
+        RAISE EXCEPTION 'Legal hold release requires released_at, released_by, and release_reason together'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_legal_hold_no_delete()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    RAISE EXCEPTION 'Legal hold rows cannot be deleted through the application role; use the release workflow'
+        USING ERRCODE = 'insufficient_privilege';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_legal_hold_event_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    RAISE EXCEPTION 'Legal hold event rows are append-only'
+        USING ERRCODE = 'check_violation';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_multipart_upload_part_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    RAISE EXCEPTION 'Multipart upload part rows are append-only; re-upload the part if needed'
+        USING ERRCODE = 'check_violation';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_attachment_series_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND (
+        NEW.id IS DISTINCT FROM OLD.id
+        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at
+        OR NEW.created_by IS DISTINCT FROM OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'Attachment series identity and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.current_attachment_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM document.attachment
+         WHERE tenant_id = NEW.tenant_id
+           AND id = NEW.current_attachment_id
+    ) THEN
+        RAISE EXCEPTION 'current_attachment_id must reference an attachment in the same tenant'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_attachment_derivative_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.attachment_id IS DISTINCT FROM OLD.attachment_id
+       OR NEW.derivative_type IS DISTINCT FROM OLD.derivative_type
+       OR NEW.rendition_code IS DISTINCT FROM OLD.rendition_code
+       OR NEW.source_sha256 IS DISTINCT FROM OLD.source_sha256
+       OR NEW.specification_hash IS DISTINCT FROM OLD.specification_hash
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION 'Derivative identity and source evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;

@@ -35,7 +35,7 @@
   /* Plane accents */
   --athyper-color-neon: #151515;
   --athyper-color-mesh: #0e7490;
-  --athyper-color-admin: #234a84;
+  --athyper-color-studio: #234a84;
   --plane-accent: var(--athyper-color-primary);
 
   /* Typography */
@@ -74,9 +74,9 @@
   --plane-accent: var(--athyper-color-mesh);
 }
 
-:root[data-plane="admin"],
+:root[data-plane="studio"],
 :root[data-plane="platform-control"] {
-  --plane-accent: var(--athyper-color-admin);
+  --plane-accent: var(--athyper-color-studio);
 }
 
 :root[data-theme="dark"],
@@ -103,9 +103,9 @@
   --plane-accent: var(--athyper-color-mesh);
 }
 
-[data-plane="admin"],
+[data-plane="studio"],
 [data-plane="platform-control"] {
-  --plane-accent: var(--athyper-color-admin);
+  --plane-accent: var(--athyper-color-studio);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,64 +1,26 @@
-{
+﻿{
   "name": "@athyper/mesh",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "notifications:sync": "node ../../packages/platform/communications/notifications-client/service-worker/sync-sw.mjs",
-    "predev": "pnpm run notifications:sync",
-    "prebuild": "pnpm run notifications:sync",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next typegen && tsc --noEmit",
-    "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@athyper/app-foundation": "workspace:*",
-    "@athyper/platform-ai-agent-ui": "workspace:*",
-    "@athyper/mesh-runtime": "workspace:*",
-    "@athyper/adapter-db-mesh": "workspace:*",
-    "@athyper/platform-iam-auth-bff": "workspace:*",
-    "@athyper/platform-bff-relay": "workspace:*",
-    "@athyper/content-hub-ui": "workspace:*",
-    "@athyper/dashboard-ui": "workspace:*",
-    "@athyper/app-mesh": "workspace:*",
-    "@athyper/api-contracts": "workspace:*",
-    "@athyper/platform-i18n": "workspace:*",
-    "@athyper/platform-iam-identity-gate": "workspace:*",
-    "@athyper/me-ui": "workspace:*",
-    "@athyper/mesh-exchange-contracts": "workspace:*",
-    "@athyper/platform-communications-notifications-client": "workspace:*",
-    "@athyper/app-mesh-route-manifest": "workspace:*",
-    "@athyper/runtime-list": "workspace:*",
-    "@athyper/runtime-canvas": "workspace:*",
-    "@athyper/runtime-contracts": "workspace:*",
-    "@athyper/runtime-shared": "workspace:*",
-    "@athyper/saved-views-ui": "workspace:*",
-    "@athyper/platform-iam-session-plane": "workspace:*",
-    "@athyper/setup-ui": "workspace:*",
-    "@athyper/shell": "workspace:*",
-    "@athyper/app-mesh-shell": "workspace:*",
-    "@athyper/platform-surface-kit": "workspace:*",
-    "@athyper/platform-theme": "workspace:*",
-    "@athyper/platform-ui": "workspace:*",
-    "@athyper/work-inbox-ui": "workspace:*",
-    "@tanstack/react-query": "^5.99.0",
-    "geist": "^1.7.0",
-    "lucide-react": "^1.8.0",
     "next": "^16.2.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
-    "@tailwindcss/postcss": "^4.2.2",
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "tailwindcss": "^4.0.0",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "typescript": "^6.0.3"
   }
 }

@@ -28,7 +28,7 @@ let activePkgs;
 try {
   const args = ["list", "-r", "--depth", "-1", "--json"];
   const output = process.platform === "win32"
-    ? execFileSync("powershell.exe", ["-NoProfile", "-Command", `pnpm ${args.join(" ")}`], { cwd: root, encoding: "utf8" })
+    ? execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", `pnpm.cmd ${args.join(" ")}`], { cwd: root, encoding: "utf8" })
     : execFileSync("pnpm", args, { cwd: root, encoding: "utf8" });
   activePkgs = JSON.parse(output);
 } catch (err) {

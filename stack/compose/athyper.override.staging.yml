@@ -92,16 +92,16 @@ services:
       - traefik.http.services.mesh-web.loadbalancer.healthcheck.interval=15s
       - traefik.http.services.mesh-web.loadbalancer.healthcheck.timeout=5s
 
-  admin-web:
+  studio-web:
     build:
       context: ../..
     labels:
       - traefik.enable=true
       - traefik.docker.network=athyper-edge
-      - traefik.http.services.admin-web.loadbalancer.server.port=3000
-      - traefik.http.services.admin-web.loadbalancer.healthcheck.path=/livez
-      - traefik.http.services.admin-web.loadbalancer.healthcheck.interval=15s
-      - traefik.http.services.admin-web.loadbalancer.healthcheck.timeout=5s
+      - traefik.http.services.studio-web.loadbalancer.server.port=3000
+      - traefik.http.services.studio-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.studio-web.loadbalancer.healthcheck.interval=15s
+      - traefik.http.services.studio-web.loadbalancer.healthcheck.timeout=5s
 
 
   # API: 2 replicas to validate multi-instance behavior before production.

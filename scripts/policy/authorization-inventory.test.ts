@@ -236,7 +236,7 @@ test("capture-source registry and DDL must match exactly in both directions", ()
     kind: "table",
     authorityClass: "identity",
     owner: "platform-iam",
-    planes: ["admin", "neon"],
+    planes: ["studio", "neon"],
     sourceOfTruth: true,
     disposition: "keep",
   }]);

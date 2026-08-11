@@ -155,10 +155,10 @@ else
   add_key "IAM_CLIENT_SECRET" "$(openssl rand -hex 32)"
 fi
 
-if has_key "ADMIN_WEB_CLIENT_SECRET"; then
-  skip_key "ADMIN_WEB_CLIENT_SECRET"
+if has_key "STUDIO_WEB_CLIENT_SECRET"; then
+  skip_key "STUDIO_WEB_CLIENT_SECRET"
 else
-  add_key "ADMIN_WEB_CLIENT_SECRET" "$(openssl rand -hex 32)"
+  add_key "STUDIO_WEB_CLIENT_SECRET" "$(openssl rand -hex 32)"
 fi
 
 if has_key "ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET"; then
@@ -182,7 +182,7 @@ fi
 # ── Redis / MemoryCache ───────────────────────────────────────────────────────
 # hex avoids %, +, = characters that break Redis ACL config and URL embedding.
 for redis_key in MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD \
-                 REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD; do
+                 REDIS_GLITCHTIP_PASSWORD REDIS_BULLBOARD_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD BULLBOARD_UI_PASSWORD; do
   if has_key "$redis_key"; then
     skip_key "$redis_key"
   else

@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "../..");
 const targetDir = path.join(repoRoot, "stack/config/gateway/fallback/brand");
-const products = ["neon", "mesh", "admin"] as const;
+const products = ["neon", "mesh", "studio"] as const;
 
 async function main(): Promise<void> {
   await fs.mkdir(targetDir, { recursive: true });

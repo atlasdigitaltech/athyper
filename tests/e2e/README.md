@@ -2,13 +2,13 @@
 
 `tests/e2e/` contains browser-executed tests. Session and visual checks retain
 their existing projects. The production experience matrix adds desktop and
-mobile projects for Admin, Neon and Mesh:
+mobile projects for Studio, Neon and Mesh:
 
 | Project | Directory | Command | Purpose |
 | --- | --- | --- | --- |
 | `session` | `session/` | `pnpm test:e2e:session` | Authenticated session lifecycle behavior. |
 | `visual` | `visual/` | `pnpm test:visual` | PI screenshot regression only. |
-| `production-admin-desktop/mobile` | `production/` | `pnpm test:e2e:production` | Admin experience, accessibility and performance contract. |
+| `production-studio-desktop/mobile` | `production/` | `pnpm test:e2e:production` | Studio experience, accessibility and performance contract. |
 | `production-neon-desktop/mobile` | `production/` | `pnpm test:e2e:production` | Neon experience, accessibility and performance contract. |
 | `production-mesh-desktop/mobile` | `production/` | `pnpm test:e2e:production` | Mesh experience, accessibility and performance contract. |
 
@@ -18,7 +18,7 @@ CI-compatible command, but explicitly selects only the `visual` project.
 ## Shared authentication
 
 `global-setup.ts` accepts shared `PLAYWRIGHT_USER` and `PLAYWRIGHT_PASSWORD`
-credentials or plane-specific `PLAYWRIGHT_ADMIN_*`, `PLAYWRIGHT_NEON_*` and
+credentials or plane-specific `PLAYWRIGHT_STUDIO_*`, `PLAYWRIGHT_NEON_*` and
 `PLAYWRIGHT_MESH_*` values. It writes one local-only storage state per plane.
 Without credentials it writes empty states and exits without launching a
 browser, so test discovery remains deterministic.
@@ -33,7 +33,7 @@ Production execution is opt-in and fail-closed:
 
 ```powershell
 $env:PLAYWRIGHT_PRODUCTION_MATRIX = "1"
-$env:PLAYWRIGHT_ADMIN_BASE_URL = "https://admin.example.test"
+$env:PLAYWRIGHT_STUDIO_BASE_URL = "https://studio.example.test"
 $env:PLAYWRIGHT_NEON_BASE_URL = "https://neon.example.test"
 $env:PLAYWRIGHT_MESH_BASE_URL = "https://mesh.example.test"
 pnpm test:e2e:production

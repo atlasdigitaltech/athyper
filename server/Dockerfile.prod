@@ -1,80 +1,43 @@
 # syntax=docker/dockerfile:1.7
-
 # =============================================================================
-# athyper Runtime Server - Production Image
+# athyper Platform Host — Production Image
 # Build context: repository root
 # =============================================================================
 
 FROM node:24-alpine AS base
-
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /repo
 
 FROM base AS pruner
-
 COPY . .
 RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
-    pnpm dlx turbo@2.9.6 prune "@athyper/runtime-server" "@athyper/db" --docker
+    pnpm dlx turbo@2.9.6 prune "@athyper/server-platform-host" "@athyper/server-db" --docker
 
 FROM base AS installer
-
 COPY --from=pruner /repo/out/json/ ./
 COPY --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY server/tsconfig.json ./server/tsconfig.json
 RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile
 
 FROM base AS builder
-
 COPY --from=installer /repo/ ./
 COPY --from=pruner /repo/out/full/ ./
 
-RUN pnpm --filter "@athyper/core" run build
+# Build workspace dependencies first, then the host
+RUN pnpm --filter "@athyper/server-platform-host^..." --if-present run build
+RUN pnpm --filter "@athyper/server-platform-host" run build
 
-# Source-exporting workspace packages are compiled and their manifests are
-# redirected to dist only inside this build stage. Frontend development keeps
-# the repository's source exports unchanged.
-RUN node server/scripts/prepare-production-workspaces.mjs
-RUN pnpm --filter "@athyper/server-foundation" \
-         --filter "@athyper/adapter-*" \
-         --filter "@athyper/svc-*" \
-         run build
-RUN pnpm --filter "@athyper/runtime-server" run build
-
-# Deploy the production dependency graph with pnpm's ESM-safe virtual-store
-# structure. The DB workspace is deployed separately because migrations use
-# its SQL assets and TypeScript operational scripts.
+# Deploy the production dependency graph
 RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
-    pnpm --filter "@athyper/runtime-server" --prod deploy --legacy /runtime && \
-    pnpm --filter "@athyper/db" --prod deploy --legacy /db-runtime
-
-# Keep only runtime server artifacts. TypeScript under db/ is intentional:
-# migrations and verification operations execute it through the server's
-# retained production tsx dependency.
-RUN rm -rf /runtime/src \
-           /runtime/scripts \
-           /runtime/.turbo \
-           /runtime/Dockerfile.dev \
-           /runtime/Dockerfile.prod \
-           /runtime/tsconfig.json \
-           /runtime/vitest.config.ts \
-           /runtime/.env \
-           /runtime/.env.example \
-           /runtime/production.env.example \
-           /runtime/staging.env.example \
-           /runtime/renamed-packages-map.json \
-           /runtime/db && \
-    mv /db-runtime /runtime/db && \
-    find /runtime -type f ! -path "/runtime/db/*" \
-      \( -name "*.ts" -o -name "*.tsx" -o -name "*.map" \) -delete
+    pnpm --filter "@athyper/server-platform-host" --prod deploy --legacy /runtime && \
+    pnpm --filter "@athyper/server-db" --prod deploy --legacy /db-runtime
 
 FROM node:24-alpine AS runtime
 
-# pg_dump is used by the backup worker. Keeping the client in the shared image
-# avoids introducing divergent API/worker/scheduler targets before the size
-# benefit of a split has been demonstrated.
 RUN apk add --no-cache postgresql-client wget
 
 ENV NODE_ENV=production
@@ -83,9 +46,9 @@ WORKDIR /app/server
 COPY --from=builder --chown=node:node /runtime/ ./
 
 USER node
-EXPOSE 3000
+EXPOSE 4000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD wget -qO- http://localhost:3000/livez || exit 1
+  CMD wget -qO- http://localhost:4000/livez || exit 1
 
-CMD ["node", "dist/src/app.js"]
+CMD ["node", "dist/main.js"]

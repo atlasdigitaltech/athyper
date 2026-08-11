@@ -1,4 +1,4 @@
--- seed-contract-version: 1
+﻿-- seed-contract-version: 1
 -- seed-pack: common.shared.global-reference
 -- seed-pack-version: 2.0.0
 -- seed-dataset: shared.global-reference
@@ -24,8 +24,8 @@ SET app.reference_seed_mode = 'on';
 
 DO $$
 BEGIN
-    IF current_setting('app.database_plane', true) NOT IN ('athyper', 'neon', 'mesh') THEN
-        RAISE EXCEPTION 'common reference seed requires app.database_plane=athyper|neon|mesh';
+    IF current_setting('app.database_plane', true) NOT IN ('studio', 'neon', 'mesh') THEN
+        RAISE EXCEPTION 'common reference seed requires app.database_plane=studio|neon|mesh';
     END IF;
 END $$;
 

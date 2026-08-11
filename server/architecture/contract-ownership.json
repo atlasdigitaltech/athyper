@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "domains": {
+    "ai": "@athyper/server-contract-ai",
+    "attachments": "@athyper/server-contract-attachments",
+    "audit": "@athyper/server-contract-audit",
+    "auth": "@athyper/server-contract-auth",
+    "collaboration": "@athyper/server-contract-collaboration",
+    "content": "@athyper/server-contract-content",
+    "content-extraction": "@athyper/server-contract-content-extraction",
+    "derivatives": "@athyper/server-contract-derivatives",
+    "documents": "@athyper/server-contract-documents",
+    "events": "@athyper/server-contract-events",
+    "integration": "@athyper/server-contract-integration",
+    "jobs": "@athyper/server-contract-jobs",
+    "malware-scanning": "@athyper/server-contract-malware-scanning",
+    "master-data": "@athyper/server-contract-master-data",
+    "meta-entity-authoring": "@athyper/server-contract-meta-entity-authoring",
+    "metadata": "@athyper/server-contract-metadata",
+    "notifications": "@athyper/server-contract-notifications",
+    "numbering": "@athyper/server-contract-numbering",
+    "object-storage": "@athyper/server-contract-object-storage",
+    "policy": "@athyper/server-contract-policy",
+    "publication": "@athyper/server-contract-publication",
+    "records": "@athyper/server-contract-records",
+    "rendering": "@athyper/server-contract-rendering",
+    "search": "@athyper/server-contract-search",
+    "secrets": "@athyper/server-contract-secrets",
+    "telemetry": "@athyper/server-contract-telemetry",
+    "workflow": "@athyper/server-contract-workflow"
+  },
+  "duplicateSymbolAllowlist": []
+}

@@ -1,4 +1,4 @@
--- Unified audit protocol values installed independently in every plane.
+﻿-- Unified audit protocol values installed independently in every plane.
 -- Reason codes remain tenant master rows; these sealed values are interpreted
 -- directly by audit writers, reports, and policy enforcement.
 
@@ -56,7 +56,7 @@ CREATE DOMAIN audit.actor_type_d AS text
 -- deliberately small and stable so they can also be used as low-cardinality
 -- Prometheus dimensions and Grafana filters.
 CREATE DOMAIN audit.plane_code_d AS text
-    CHECK (VALUE IN ('athyper', 'neon', 'mesh'));
+    CHECK (VALUE IN ('studio', 'neon', 'mesh'));
 
 CREATE DOMAIN audit.outcome_d AS text
     CHECK (VALUE IN (

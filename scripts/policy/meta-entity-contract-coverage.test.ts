@@ -23,7 +23,7 @@ function v20Contract() {
       ownership_model: "system",
       label_singular: "Sample",
       label_plural: "Samples",
-      plane_eligibility: ["admin", "neon"],
+      plane_eligibility: ["studio", "neon"],
       status: "DRAFT",
       is_active: true,
     },

@@ -1,6 +1,0 @@
-import { describe,expect,it } from "vitest";
-import { compareAdmissions,admissionFingerprint } from "../identity-admission-comparator.js";
-import type { AdmittedIdentity } from "../identity-admission.repository.js";
-
-function admitted(overrides:Partial<AdmittedIdentity>={}):AdmittedIdentity{return {planeKey:"neon",databasePlane:"neon",tenantId:"11111111-1111-4111-8111-111111111111",tenantCode:"tenant",tenantName:"Tenant",principalId:"22222222-2222-4222-8222-222222222222",identityBindingId:"33333333-3333-4333-8333-333333333333",principalType:"user",authEpoch:1,membershipId:"44444444-4444-4444-8444-444444444444",membershipKind:"member",bindingStatus:"active",membershipStatus:"active",...overrides};}
-describe("identity admission comparator",()=>{it("compares stable security coordinates",()=>{expect(compareAdmissions(admitted(),admitted())).toEqual([]);expect(compareAdmissions(admitted(),admitted({principalId:"different"}))).toContain("principal");expect(compareAdmissions(admitted(),admitted({identityBindingId:"different"}))).toContain("binding");expect(compareAdmissions(admitted(),admitted({membershipId:"different"}))).toContain("membership");});it("treats denial symmetry as a match",()=>{expect(compareAdmissions(null,null)).toEqual([]);expect(admissionFingerprint(null)).toMatch(/^[a-f0-9]{64}$/);});});

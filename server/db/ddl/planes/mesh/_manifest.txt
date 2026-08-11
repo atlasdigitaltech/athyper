@@ -40,7 +40,6 @@ common/shared/03_tables.sql
 planes/mesh/master/03_tables.sql
 common/snapshot/03_tables.sql
 common/audit/03_tables.sql
-common/log/03_tables.sql
 planes/mesh/document/03_tables.sql
 planes/mesh/snapshot/03_tables.sql
 planes/mesh/control/03_tables.sql
@@ -50,6 +49,7 @@ common/ops/03_tables.sql
 common/master/03_tables.sql
 common/authz/03_tables.sql
 common/event/03_tables.sql
+common/log/03_tables.sql
 common/governance/03_tables.sql
 common/document/03_tables.sql
 planes/mesh/mesh/03_tables.sql

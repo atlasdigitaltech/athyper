@@ -1,5 +1,9 @@
 ALTER TABLE document.attachment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_quota_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_quota_usage FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_quota_reservation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_quota_reservation FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_link ENABLE ROW LEVEL SECURITY;
@@ -26,6 +30,12 @@ ALTER TABLE document.multipart_upload ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.multipart_upload FORCE ROW LEVEL SECURITY;
 ALTER TABLE snapshot.content_item_version ENABLE ROW LEVEL SECURITY;
 ALTER TABLE snapshot.content_item_version FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.content_item_access_grant ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.content_item_access_grant FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.content_quota_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.content_quota_usage FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.content_quota_reservation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.content_quota_reservation FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_access ON document.attachment
     FOR ALL
@@ -33,6 +43,10 @@ CREATE POLICY tenant_access ON document.attachment
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON document.attachment
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+CREATE POLICY tenant_access ON document.attachment_quota_usage FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.attachment_quota_usage FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+CREATE POLICY tenant_access ON document.attachment_quota_reservation FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.attachment_quota_reservation FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 CREATE POLICY tenant_access ON document.attachment_folder
     FOR ALL
@@ -593,3 +607,77 @@ BEGIN
         );
     END LOOP;
 END $$;
+
+ALTER TABLE document.attachment_series ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_series FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.attachment_series
+    FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.attachment_series
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+-- Legal hold: no DELETE policy for application role
+ALTER TABLE document.attachment_legal_hold ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_legal_hold FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.attachment_legal_hold
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.attachment_legal_hold
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_update ON document.attachment_legal_hold
+    FOR UPDATE
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.attachment_legal_hold
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+-- Legal hold event: append-only
+ALTER TABLE document.attachment_legal_hold_event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_legal_hold_event FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.attachment_legal_hold_event
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.attachment_legal_hold_event
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.attachment_legal_hold_event
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE document.attachment_derivative ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.attachment_derivative FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.attachment_derivative
+    FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.attachment_derivative
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+-- Multipart upload part: append-only per tenant
+ALTER TABLE document.multipart_upload_part ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.multipart_upload_part FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.multipart_upload_part
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.multipart_upload_part
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.multipart_upload_part
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        FOREACH v_table IN ARRAY ARRAY[
+            'attachment_series', 'attachment_legal_hold', 'attachment_legal_hold_event',
+            'attachment_derivative', 'multipart_upload_part'
+        ]
+        LOOP
+            EXECUTE format(
+                'CREATE POLICY admin_access ON document.%I FOR ALL TO athyperadmin USING (true) WITH CHECK (true)',
+                v_table
+            );
+        END LOOP;
+    END IF;
+END;
+$$;
+CREATE POLICY tenant_access ON document.content_item_access_grant FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY tenant_access ON document.content_quota_usage FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY tenant_access ON document.content_quota_reservation FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());

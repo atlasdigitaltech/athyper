@@ -61,3 +61,10 @@ After editing monitors via the UI:
 For first boot, open the statuswatch UI, import `statuswatch-monitors.local.json`
 through Settings → Backup / Restore, then export the live file back here whenever
 operators change the monitor set.
+
+Create two **Push** monitors named `platform worker` and `platform scheduler`.
+Copy their complete push URLs into `STATUSWATCH_WORKER_PUSH_URL` and
+`STATUSWATCH_SCHEDULER_PUSH_URL`. The corresponding processes send a fail-open
+heartbeat every 10 seconds; set each monitor's heartbeat interval to 30 seconds
+with at least two retries. Empty URLs disable this integration for local
+host-run processes.

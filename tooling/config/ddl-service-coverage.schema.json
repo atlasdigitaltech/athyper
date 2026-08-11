@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://athyper.dev/schemas/ddl-service-coverage.schema.json",
+  "title": "Athyper DDL-to-service coverage inventory",
+  "description": "One row per physical CREATE TABLE declaration discovered from the DDL manifests.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "generatedFrom", "summary", "rows"],
+  "properties": {
+    "$schema": { "const": "../../../tooling/config/ddl-service-coverage.schema.json" },
+    "schemaVersion": { "const": "1.0.0" },
+    "generatedFrom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ddlRoot", "ownership", "planeManifests"],
+      "properties": {
+        "ddlRoot": { "const": "server/db/ddl" },
+        "ownership": { "const": "tooling/config/ddl-service-ownership.yaml" },
+        "planeManifests": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 3,
+          "uniqueItems": true
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tableDeclarations", "classifiedAndOwned", "coveragePercent", "byPlane", "byAuthority", "byClassification", "byOwner", "byRolloutStatus", "reviewRequired"],
+      "properties": {
+        "tableDeclarations": { "type": "integer", "minimum": 0 },
+        "classifiedAndOwned": { "type": "integer", "minimum": 0 },
+        "coveragePercent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "byPlane": { "$ref": "#/$defs/countMap" },
+        "byAuthority": { "$ref": "#/$defs/countMap" },
+        "byClassification": { "$ref": "#/$defs/countMap" },
+        "byOwner": { "$ref": "#/$defs/countMap" },
+        "byRolloutStatus": { "$ref": "#/$defs/countMap" },
+        "reviewRequired": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/coverageRow" }
+    }
+  },
+  "$defs": {
+    "countMap": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "pathList": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "commands": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision", "codes"],
+          "properties": {
+            "decision": { "const": "supported" },
+            "codes": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["decision", "codes", "reason"],
+          "properties": {
+            "decision": { "const": "not_exposed" },
+            "codes": { "type": "array", "maxItems": 0 },
+            "reason": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "coverageRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceKey",
+        "plane",
+        "tableKey",
+        "ddlPath",
+        "installedPlanes",
+        "physicalAuthority",
+        "classification",
+        "serviceOwner",
+        "commands",
+        "repository",
+        "entryPoints",
+        "auditEvent",
+        "outboxEvent",
+        "replayEvidence",
+        "immutabilityEvidence",
+        "reversalEvidence",
+        "concurrencyEvidence",
+        "rebuildEvidence",
+        "reconciliationEvidence",
+        "mutationComposition",
+        "unitTests",
+        "postgresTests",
+        "featureGate",
+        "rolloutStatus",
+        "reviewStatus"
+      ],
+      "properties": {
+        "sourceKey": { "type": "string", "pattern": "^(studio|neon|mesh):[a-z_][a-z0-9_]*\\.[a-z_][a-z0-9_]*:" },
+        "plane": { "enum": ["studio", "neon", "mesh"] },
+        "tableKey": { "type": "string", "pattern": "^[a-z_][a-z0-9_]*\\.[a-z_][a-z0-9_]*$" },
+        "ddlPath": { "type": "string", "pattern": "^server/db/ddl/.+\\.sql$" },
+        "installedPlanes": {
+          "type": "array",
+          "items": { "enum": ["studio", "neon", "mesh"] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "physicalAuthority": { "enum": ["common_plane_local", "studio", "neon", "mesh"] },
+        "classification": { "enum": ["runtime_mutable", "append_only", "projection", "evidence", "catalog_seed_managed", "read_only"] },
+        "serviceOwner": {
+          "type": "string",
+          "pattern": "^(none|@athyper/[a-z0-9][a-z0-9-]*)$"
+        },
+        "commands": { "$ref": "#/$defs/commands" },
+        "repository": { "$ref": "#/$defs/pathList" },
+        "entryPoints": { "$ref": "#/$defs/pathList" },
+        "auditEvent": { "$ref": "#/$defs/pathList" },
+        "outboxEvent": { "$ref": "#/$defs/pathList" },
+        "replayEvidence": { "$ref": "#/$defs/pathList" },
+        "immutabilityEvidence": { "$ref": "#/$defs/pathList" },
+        "reversalEvidence": { "$ref": "#/$defs/pathList" },
+        "concurrencyEvidence": { "$ref": "#/$defs/pathList" },
+        "rebuildEvidence": { "$ref": "#/$defs/pathList" },
+        "reconciliationEvidence": { "$ref": "#/$defs/pathList" },
+        "mutationComposition": { "enum": ["not_applicable", "direct", "composed"] },
+        "unitTests": { "$ref": "#/$defs/pathList" },
+        "postgresTests": { "$ref": "#/$defs/pathList" },
+        "featureGate": { "type": ["string", "null"] },
+        "rolloutStatus": {
+          "description": "Promotion stage. A provisional row is not promotion evidence even when this lowest allowed stage is code_complete.",
+          "enum": ["code_complete", "database_qualified", "shadow", "controlled_mutation", "ga"]
+        },
+        "reviewStatus": { "enum": ["provisional", "reviewed"] },
+        "decisionNote": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

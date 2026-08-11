@@ -58,9 +58,9 @@ function requireUser(username, expectedId, elevated) {
   if (!user.clientRoles?.["neon-web"]?.includes("AUTHORIZED")) errors.push(`${username}: missing neon-web.AUTHORIZED`);
   if (elevated) {
     if (!user.realmRoles?.includes("MESH_BUYER_USER")) errors.push(`${username}: missing MESH_BUYER_USER`);
-    if (!user.realmRoles?.includes("ADMIN_USER")) errors.push(`${username}: missing ADMIN_USER`);
+    if (!user.realmRoles?.includes("STUDIO_USER")) errors.push(`${username}: missing STUDIO_USER`);
     if (!user.clientRoles?.["mesh-web"]?.includes("AUTHORIZED")) errors.push(`${username}: missing mesh-web.AUTHORIZED`);
-    if (!user.clientRoles?.["admin-web"]?.includes("AUTHORIZED")) errors.push(`${username}: missing admin-web.AUTHORIZED`);
+    if (!user.clientRoles?.["studio-web"]?.includes("AUTHORIZED")) errors.push(`${username}: missing studio-web.AUTHORIZED`);
   }
 }
 

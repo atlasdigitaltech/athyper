@@ -57,8 +57,8 @@ include:
   # without DASHBOARD_AUTH_MW; dbconsole is dev-only.
   - admin/athyper-queueconsole.yml
   - admin/athyper-dbconsole.yml
-  # Search profile (Track B2.1) — searchcore. Indexing worker and search
-  # API arrive in B2.2; compose service is inert until then.
+  # Search profile — searchcore for the governed extraction/indexing worker
+  # and authenticated document search API.
   - search/athyper-searchcore.yml
   # Analytics profile (Track B4) — analyticsboard, DEFERRED / hedge stage.
   # Profile is OFF by default and not in any preset profile set. Do NOT

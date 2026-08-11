@@ -3,7 +3,7 @@
   "packCode": "bank-formats",
   "version": "2.0.0",
   "executionOrder": 50,
-  "plane": "athyper",
+  "plane": "studio",
   "tenantScope": "global",
   "compatibleDdl": {
     "contract": "foundation-v2",
@@ -15,7 +15,7 @@
   "payloads": [
     {
       "order": 1,
-      "path": "server/db/ddl/planes/athyper/control/12_bank_format_rule_reference_seed.sql",
+      "path": "server/db/ddl/planes/studio/control/12_bank_format_rule_reference_seed.sql",
       "sha256": "0a1dcd297c39c9fd4e9e1ff0dfbca6437c7dc5924da8845b51bb73a43a0b3877",
       "bytes": 5657,
       "permanentDdl": false,

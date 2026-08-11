@@ -171,7 +171,7 @@ goto :end
 
 :usage
 echo Usage:
-echo   web-restart.bat [neon^|mesh^|admin^|all] [--build]
+echo   web-restart.bat [neon^|mesh^|studio^|all] [--build]
 echo.
 echo Defaults to: neon
 exit /b 0
@@ -185,12 +185,12 @@ if /I "!PLANE_TARGET!"=="mesh" (
   set "SERVICES=mesh-web"
   exit /b 0
 )
-if /I "!PLANE_TARGET!"=="admin" (
-  set "SERVICES=admin-web"
+if /I "!PLANE_TARGET!"=="studio" (
+  set "SERVICES=studio-web"
   exit /b 0
 )
 if /I "!PLANE_TARGET!"=="all" (
-  set "SERVICES=neon-web mesh-web admin-web"
+  set "SERVICES=neon-web mesh-web studio-web"
   exit /b 0
 )
 echo ERROR: unsupported target "!PLANE_TARGET!".

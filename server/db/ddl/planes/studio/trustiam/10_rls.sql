@@ -1,0 +1,5 @@
+DO $$ DECLARE v_table text; BEGIN FOREACH v_table IN ARRAY ARRAY['organization','organization_provider','application_projection','projection_scope','identity_provisioning_request'] LOOP EXECUTE format('ALTER TABLE trustiam.%I ENABLE ROW LEVEL SECURITY',v_table); EXECUTE format('ALTER TABLE trustiam.%I FORCE ROW LEVEL SECURITY',v_table); EXECUTE format('CREATE POLICY authority_access ON trustiam.%I FOR ALL USING (authority_tenant_id=shared.current_tenant_id_soft()) WITH CHECK (authority_tenant_id=shared.current_tenant_id())',v_table); EXECUTE format('CREATE POLICY seed_write ON trustiam.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)',v_table); END LOOP; END $$;
+ALTER TABLE trustiam.identity_provisioning_attempt ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trustiam.identity_provisioning_attempt FORCE ROW LEVEL SECURITY;
+CREATE POLICY authority_access ON trustiam.identity_provisioning_attempt FOR ALL USING(authority_tenant_id=shared.current_tenant_id_soft()) WITH CHECK(authority_tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON trustiam.identity_provisioning_attempt FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);

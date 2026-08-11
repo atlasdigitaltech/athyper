@@ -11,6 +11,8 @@ CREATE INDEX cycle_task_run_status_idx
 CREATE INDEX cycle_task_owner_idx
     ON governance.cycle_task (tenant_id, owner_principal_id, status)
     WHERE owner_principal_id IS NOT NULL;
+CREATE INDEX cycle_task_dependency_successor_idx
+    ON governance.cycle_task_dependency (tenant_id, cycle_run_id, successor_task_id);
 CREATE INDEX cycle_deviation_run_idx
     ON governance.cycle_deviation (tenant_id, cycle_run_id, cycle_task_id);
 CREATE INDEX cycle_certification_run_idx

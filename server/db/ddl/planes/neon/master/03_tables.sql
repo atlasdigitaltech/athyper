@@ -255,6 +255,7 @@ CREATE TABLE master.address (
     country_code        character(2),
     latitude            numeric(9,6),
     longitude           numeric(9,6),
+    normalized_hash     char(64)    NOT NULL,
     metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
     status              text        NOT NULL DEFAULT 'active',
     is_active           boolean     GENERATED ALWAYS AS (status = 'active') STORED,
@@ -294,6 +295,8 @@ CREATE TABLE master.address (
         CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180),
     CONSTRAINT address_coordinates_pair_chk
         CHECK ((latitude IS NULL) = (longitude IS NULL)),
+    CONSTRAINT address_normalized_hash_chk
+        CHECK (normalized_hash ~ '^[0-9a-f]{64}$'),
     CONSTRAINT address_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object'),
     CONSTRAINT address_status_chk
@@ -356,6 +359,11 @@ CREATE TABLE master.contact_link (
     is_primary          boolean     NOT NULL DEFAULT false,
     is_verified         boolean     NOT NULL DEFAULT false,
     verified_at         timestamptz,
+    verification_provider text,
+    verification_evidence jsonb     NOT NULL DEFAULT '{}'::jsonb,
+    verification_signature text,
+    effective_from      timestamptz NOT NULL DEFAULT now(),
+    effective_until     timestamptz,
     metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
     status              text        NOT NULL DEFAULT 'active',
     is_active           boolean     GENERATED ALWAYS AS (status = 'active') STORED,
@@ -379,9 +387,19 @@ CREATE TABLE master.contact_link (
         CHECK (role_qualifier IS NULL OR btrim(role_qualifier) <> ''),
     CONSTRAINT contact_link_verification_chk
         CHECK (
-            (is_verified AND verified_at IS NOT NULL)
+            (
+                is_verified
+                AND verified_at IS NOT NULL
+                AND verification_provider IS NOT NULL
+                AND verification_signature IS NOT NULL
+                AND verification_evidence <> '{}'::jsonb
+            )
             OR (NOT is_verified AND verified_at IS NULL)
         ),
+    CONSTRAINT contact_link_verification_evidence_object_chk
+        CHECK (jsonb_typeof(verification_evidence) = 'object'),
+    CONSTRAINT contact_link_effective_range_chk
+        CHECK (effective_until IS NULL OR effective_until > effective_from),
     CONSTRAINT contact_link_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object'),
     CONSTRAINT contact_link_status_chk

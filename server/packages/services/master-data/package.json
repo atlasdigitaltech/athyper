@@ -1,0 +1,27 @@
+{
+  "name": "@athyper/server-service-master-data",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@athyper/server-contract-audit": "workspace:*",
+    "@athyper/server-contract-auth": "workspace:*",
+    "@athyper/server-contract-events": "workspace:*",
+    "@athyper/server-contract-master-data": "workspace:*",
+    "@athyper/server-contract-metadata": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
+    "express": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

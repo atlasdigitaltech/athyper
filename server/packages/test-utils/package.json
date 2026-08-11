@@ -1,18 +1,21 @@
 {
-  "name": "@athyper/test-utils",
+  "name": "@athyper/server-test-utils",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:postgres": "node scripts/run-postgres-tests.mjs",
+    "test:postgres:local": "node scripts/run-postgres-tests.mjs --allow-skip"
   },
+  "dependencies": { "pg": "^8.16.3" },
   "devDependencies": {
-    "@athyper/tsconfig": "workspace:*",
     "@types/node": "^25.6.0",
+    "@types/pg": "^8.15.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

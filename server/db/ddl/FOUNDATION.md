@@ -2,7 +2,7 @@
 
 The application-plane database names are:
 
-- `athyper_platform` — Athyper control/platform plane
+- `athyper_studio` — Studio control/platform plane
 - `athyper_neon` — Neon ERP plane
 - `athyper_mesh` — Mesh network plane
 

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "capabilities": [
+    { "id": "content", "registration": "conditional", "requirements": ["metadata database"], "profiles": { "athyper-server": false } },
+    { "id": "publication", "registration": "conditional", "requirements": ["jobs runtime", "publication.apiEnabled", "signing key", "object storage"], "profiles": { "athyper-server": false } },
+    { "id": "collaboration", "registration": "conditional", "requirements": ["plane metadata database", "collaboration schema"], "profiles": { "athyper-server": false } },
+    { "id": "integration", "registration": "conditional", "requirements": ["studio database", "secret store", "jobs runtime"], "profiles": { "athyper-server": false } },
+    { "id": "atlas", "registration": "not registered", "requirements": ["durable stores", "admission policy", "provider binding", "credentials"], "profiles": { "athyper-server": false } },
+    { "id": "documents", "registration": "conditional", "requirements": ["metadata database", "renderer", "object storage", "malware scanner"], "profiles": { "athyper-server": false } },
+    { "id": "document-derivatives", "registration": "conditional", "requirements": ["jobs runtime", "object storage", "preview renderer", "metadata database"], "profiles": { "athyper-server": false } },
+    { "id": "jobs-administration", "registration": "conditional", "requirements": ["jobs runtime", "governance store"], "profiles": { "athyper-server": false } }
+  ]
+}

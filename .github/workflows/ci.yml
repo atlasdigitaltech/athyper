@@ -72,6 +72,9 @@ jobs:
       - name: Verify deployment profiles and package boundaries
         run: pnpm policy:release-boundaries
 
+      - name: Verify UTF-8 source and architecture artifacts
+        run: pnpm policy:utf8
+
       # Gate 1 — Duplicate package names (explicit blocking step).
       # policy:release-boundaries already runs this via &&, but process.exit(1)
       # in a pnpm subprocess is sometimes swallowed by older pnpm behavior.
@@ -101,6 +104,21 @@ jobs:
 
       - name: Typecheck
         run: pnpm run typecheck
+
+      - name: Verify OpenAPI route contracts and operation IDs
+        run: pnpm run openapi:check
+
+      - name: Verify DDL service coverage policy and generated artifact
+        run: pnpm run ddl:coverage:check
+
+      - name: Verify host capability composition agrees with DDL coverage
+        run: pnpm run policy:host-capability-registry
+
+      - name: Test DDL service coverage failure gates
+        run: pnpm run test:ddl-service-coverage
+
+      - name: Test host capability composition failure gates
+        run: pnpm run test:host-capability-registry
 
       - name: Check generated typography CSS
         run: pnpm --filter @athyper/platform-theme run check:typography

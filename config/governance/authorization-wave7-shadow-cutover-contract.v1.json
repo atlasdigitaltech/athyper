@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "contractId": "authorization-v2-wave7-shadow-cutover",
   "status": "implemented-operational-evidence-pending",
@@ -8,7 +8,7 @@
       "defaultResolver": "legacy",
       "defaultWriter": "legacy"
     },
-    "admin": {
+    "studio": {
       "authorityDatabase": "neon",
       "defaultResolver": "legacy",
       "defaultWriter": "legacy"
@@ -28,7 +28,7 @@
     "single",
     "batch",
     "session",
-    "admin",
+    "studio",
     "mesh",
     "workflow",
     "company_scope",

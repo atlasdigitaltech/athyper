@@ -510,7 +510,7 @@ Text extraction from uploaded documents (PDF, Word, Excel). Feeds the content se
 
 | Field | Value |
 |---|---|
-| Image | `axllent/mailpit:v1.20.4` |
+| Image | `axllent/mailpit:v1.30.6` |
 | Ports | `1025` (SMTP, internal), `8025` (Web UI, edge → `mail.athyper.local`) |
 
 Captures all outgoing SMTP in local dev. No emails leave the machine.
@@ -523,17 +523,18 @@ Captures all outgoing SMTP in local dev. No emails leave the machine.
 
 | Field | Value |
 |---|---|
-| Image | `mcinq/bull-board:5.20.5` |
-| Port | `3001` (internal) |
+| Image | `venatum/bull-board:3.3.17` |
+| Profile | `emergency` (requires `memorycache-jobs`) |
+| Port | `127.0.0.1:3001` only |
 
-BullMQ queue browser. Shows queue depths, job history, failed jobs, DLQ.
+Read-only BullMQ queue browser. Normal mutations use `/api/jobs/admin/*`; see RB-08.
 
 #### `dbconsole` — Adminer
 
 | Field | Value |
 |---|---|
-| Image | `adminer:4.8.1-standalone` |
-| Port | `8080` (internal) |
+| Image | `sosedoff/pgweb:0.16.2` |
+| Port | `8081` (Traefik, local only) |
 
 Database explorer. **Local dev only** — never enabled in staging/production.
 
@@ -563,7 +564,8 @@ Self-service analytics dashboards. Requires a read replica of `athyper_neon` to 
 | `monitoring` | + errorcollect, statuswatch, cronwatch | Error tracking + uptime |
 | `search` | + searchcore | Full-text search |
 | `render` | + docrender, docparser | Document processing |
-| `admin` | + queueconsole, dbconsole | Developer tooling |
+| `admin` | + dbconsole | Local developer database tooling |
+| `emergency` | + queueconsole | Break-glass inspection; pair with `memorycache-jobs` |
 | `analytics` | + analyticsboard | Analytics dashboards |
 | `security-infisical` | + secretstore | Production secrets management |
 | `memorycache-jobs` | + memorycache-jobs | Dedicated BullMQ Redis |

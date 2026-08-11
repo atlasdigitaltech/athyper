@@ -149,11 +149,11 @@ export function assertPlaneFileBoundary(
         || path.startsWith("seed/tenants/mesh/");
     }
     return path.startsWith("ddl/planes/neon/")
-      || path.startsWith("ddl/planes/athyper/")
+      || path.startsWith("ddl/planes/studio/")
       || path.startsWith("seed/tenants/neon/")
-      || path.startsWith("seed/tenants/admin/")
+      || path.startsWith("seed/tenants/studio/")
       || path.startsWith("neon/")
-      || path.startsWith("admin/");
+      || path.startsWith("studio/");
   });
   if (forbidden.length > 0) {
     throw new Error(

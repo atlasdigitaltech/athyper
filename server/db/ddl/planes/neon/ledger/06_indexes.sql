@@ -77,6 +77,7 @@ CREATE INDEX commitment_fulfillment_reversal_idx ON ledger.commitment_fulfillmen
 CREATE INDEX commitment_fulfillment_created_by_idx ON ledger.commitment_fulfillment (tenant_id, created_by);
 
 CREATE INDEX inventory_movement_position_idx ON ledger.inventory_movement (tenant_id, company_code_id, item_id, warehouse_id, performed_at DESC);
+CREATE INDEX inventory_movement_rebuild_idx ON ledger.inventory_movement (tenant_id, company_code_id, item_id, warehouse_id, lot_number, serial_number, movement_sequence);
 CREATE INDEX inventory_movement_warehouse_idx ON ledger.inventory_movement (tenant_id, warehouse_id);
 CREATE INDEX inventory_movement_source_warehouse_idx ON ledger.inventory_movement (tenant_id, source_warehouse_id) WHERE source_warehouse_id IS NOT NULL;
 CREATE INDEX inventory_movement_destination_warehouse_idx ON ledger.inventory_movement (tenant_id, destination_warehouse_id) WHERE destination_warehouse_id IS NOT NULL;
@@ -108,6 +109,7 @@ CREATE INDEX tax_calculation_schedule_idx ON ledger.tax_calculation (tenant_id, 
 CREATE INDEX tax_calculation_journal_idx ON ledger.tax_calculation (tenant_id, journal_entry_id) WHERE journal_entry_id IS NOT NULL;
 CREATE INDEX tax_calculation_journal_line_idx ON ledger.tax_calculation (tenant_id, journal_line_id) WHERE journal_line_id IS NOT NULL;
 CREATE INDEX tax_calculation_reversal_idx ON ledger.tax_calculation (tenant_id, reverses_calculation_id) WHERE reverses_calculation_id IS NOT NULL;
+CREATE UNIQUE INDEX tax_calculation_one_reversal_uq ON ledger.tax_calculation (tenant_id, reverses_calculation_id) WHERE reverses_calculation_id IS NOT NULL;
 CREATE INDEX tax_calculation_posted_by_idx ON ledger.tax_calculation (tenant_id, posted_by);
 CREATE INDEX tax_calculation_created_by_idx ON ledger.tax_calculation (tenant_id, created_by);
 
@@ -115,6 +117,7 @@ CREATE INDEX tax_credit_movement_period_idx ON ledger.tax_credit_movement
     (tenant_id, company_code_id, ledger_book_id, fiscal_period_id, jurisdiction_id, tax_type_id, tax_bucket);
 CREATE INDEX tax_credit_movement_source_idx ON ledger.tax_credit_movement (tenant_id, source_tax_calculation_id) WHERE source_tax_calculation_id IS NOT NULL;
 CREATE INDEX tax_credit_movement_reversal_idx ON ledger.tax_credit_movement (tenant_id, reverses_movement_id) WHERE reverses_movement_id IS NOT NULL;
+CREATE UNIQUE INDEX tax_credit_movement_one_reversal_uq ON ledger.tax_credit_movement (tenant_id, reverses_movement_id) WHERE reverses_movement_id IS NOT NULL;
 CREATE INDEX tax_credit_movement_created_by_idx ON ledger.tax_credit_movement (tenant_id, created_by);
 
 CREATE INDEX asset_revaluation_reserve_asset_idx ON ledger.asset_revaluation_reserve (tenant_id, asset_id, asset_book_id, fiscal_period_id, posted_at DESC);

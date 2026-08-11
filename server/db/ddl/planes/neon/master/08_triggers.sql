@@ -95,6 +95,11 @@ BEFORE INSERT OR UPDATE OF
 ON master.contact_link
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_owner_reference();
 
+CREATE TRIGGER trg_contact_link_30_verification_evidence
+BEFORE UPDATE OF is_verified, verification_provider, verification_evidence, verification_signature
+ON master.contact_link
+FOR EACH ROW EXECUTE FUNCTION master.trg_require_contact_verification_evidence();
+
 CREATE TRIGGER trg_contact_link_updated_at
 BEFORE UPDATE ON master.contact_link
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

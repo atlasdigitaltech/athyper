@@ -1,0 +1,4 @@
+export interface FinanceAuditInput{readonly eventCode:string;readonly action:string;readonly outcome:"success"|"failure"|"denied"|"error";readonly actor:{readonly kind:"user"|"service"|"system";readonly principalId?:string};readonly tenantId?:string;readonly entityType?:string;readonly entityId?:string;readonly requestId?:string;readonly correlationId?:string;readonly metadata?:Readonly<Record<string,unknown>>}
+export interface FinanceAuditRecorder<Transaction>{record(input:FinanceAuditInput,transaction?:Transaction):Promise<unknown>}
+export interface FinanceOutboxInput{readonly tenantId:string;readonly topic:string;readonly eventType:string;readonly eventKey?:string;readonly aggregateType?:string;readonly aggregateId?:string;readonly actorId:string;readonly correlationId?:string;readonly payload?:Readonly<Record<string,unknown>>}
+export interface FinanceOutboxWriter<Transaction>{append(input:FinanceOutboxInput,transaction?:Transaction):Promise<void>}

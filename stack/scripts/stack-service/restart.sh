@@ -19,7 +19,7 @@
 #   mail | mailtrap            -> mailtrap          (athyper-mailtrap-1)
 #   web | frontend | neon      -> Neon frontend     (${COMPOSE_PROJECT_NAME}-neon-web-1)
 #   mesh                       -> Mesh frontend     (${COMPOSE_PROJECT_NAME}-mesh-web-1)
-#   admin                      -> Admin frontend    (${COMPOSE_PROJECT_NAME}-admin-web-1)
+#   admin                      -> Studio frontend    (${COMPOSE_PROJECT_NAME}-studio-web-1)
 #   api | backend              -> Backend API       (${COMPOSE_PROJECT_NAME}-api-1)
 #   search | searchcore        -> searchcore        (athyper-searchcore-1)
 #
@@ -44,7 +44,7 @@ _resolve() {
     mail|mailtrap)           echo "${CONTAINER_MAILTRAP}" ;;
     web|frontend|neon)       echo "${CONTAINER_NEON_WEB}" ;;
     mesh)                    echo "${CONTAINER_MESH_WEB}" ;;
-    admin)                   echo "${CONTAINER_ADMIN_WEB}" ;;
+    admin)                   echo "${CONTAINER_STUDIO_WEB}" ;;
     api|backend)             echo "${CONTAINER_API}" ;;
     search|searchcore)       echo "${CONTAINER_SEARCHCORE}" ;;
     *)                       echo "$1" ;;
@@ -63,7 +63,7 @@ done
 
 if [[ ${#TARGETS[@]} -eq 0 ]]; then
   echo "Usage: $(basename "$0") [--time N] <alias|name> [alias|name ...]"
-  echo "Aliases: iam  db  dbpool-session  dbpool-apps  gateway  redis  minio  mail  web  neon  mesh  admin  api  search"
+  echo "Aliases: iam  db  dbpool-session  dbpool-apps  gateway  redis  minio  mail  web  neon  mesh  studio  api  search"
   exit 1
 fi
 

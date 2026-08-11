@@ -1,1 +1,1 @@
-// @athyper/contracts-mesh-catalog
+﻿export {};

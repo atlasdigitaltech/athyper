@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, type TestInfo } from "@playwright/test";
 
-export type Plane = "admin" | "neon" | "mesh";
+export type Plane = "studio" | "neon" | "mesh";
 export type RequiredComponentState =
   | "loading"
   | "empty"

@@ -57,3 +57,27 @@ FOR EACH ROW EXECUTE FUNCTION audit.trg_prepare_hash_anchor();
 CREATE TRIGGER trg_hash_anchor_immutable
 BEFORE UPDATE OR DELETE ON audit.hash_anchor
 FOR EACH ROW EXECUTE FUNCTION audit.trg_guard_immutable_evidence();
+
+CREATE TRIGGER trg_export_request_guard
+BEFORE UPDATE OR DELETE ON audit.export_request
+FOR EACH ROW EXECUTE FUNCTION audit.trg_guard_export_request();
+
+CREATE TRIGGER trg_export_manifest_immutable
+BEFORE UPDATE OR DELETE ON audit.export_manifest
+FOR EACH ROW EXECUTE FUNCTION audit.trg_guard_immutable_evidence();
+
+CREATE TRIGGER trg_integrity_check_evidence_immutable
+BEFORE UPDATE OR DELETE ON audit.integrity_check_evidence
+FOR EACH ROW EXECUTE FUNCTION audit.trg_guard_immutable_evidence();
+
+CREATE TRIGGER trg_legal_hold_guard
+BEFORE UPDATE OR DELETE ON audit.legal_hold
+FOR EACH ROW EXECUTE FUNCTION audit.trg_guard_legal_hold();
+
+CREATE TRIGGER trg_legal_hold_manifest_immutable
+BEFORE UPDATE OR DELETE ON audit.legal_hold_manifest
+FOR EACH ROW EXECUTE FUNCTION audit.trg_guard_immutable_evidence();
+
+CREATE TRIGGER trg_retention_policy_updated_at
+BEFORE UPDATE ON audit.retention_policy
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

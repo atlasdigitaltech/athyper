@@ -1,23 +1,13 @@
-{
+﻿{
   "name": "@athyper/platform-surface-kit",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": {
-    ".": "./src/index.ts",
-    "./package.json": "./package.json"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
-  },
-  "peerDependencies": {
-    "react": "^19.2.5"
-  },
-  "dependencies": {
-    "@athyper/platform-ui": "workspace:*"
-  },
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "peerDependencies": { "react": "^19.2.5" },
   "devDependencies": {
     "@athyper/config": "workspace:*",
     "@types/react": "^19.2.14",

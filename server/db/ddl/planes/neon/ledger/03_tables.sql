@@ -14,6 +14,7 @@ CREATE TABLE ledger.budget_transaction (
     effective_date       date                             NOT NULL,
     source_document_type text                             NOT NULL,
     source_document_id   uuid                             NOT NULL,
+    reversal_of_transaction_id uuid,
     idempotency_key      text                             NOT NULL,
     previous_state       jsonb                            NOT NULL,
     resulting_state      jsonb                            NOT NULL,
@@ -27,6 +28,13 @@ CREATE TABLE ledger.budget_transaction (
     CONSTRAINT budget_transaction_pkey PRIMARY KEY (id),
     CONSTRAINT budget_transaction_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT budget_transaction_idempotency_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT budget_transaction_reversal_uq UNIQUE (tenant_id, reversal_of_transaction_id),
+    CONSTRAINT budget_transaction_reversal_fk FOREIGN KEY (tenant_id, reversal_of_transaction_id)
+        REFERENCES ledger.budget_transaction (tenant_id, id),
+    CONSTRAINT budget_transaction_reversal_contract_chk CHECK (
+        (transaction_type = 'reverse') = (reversal_of_transaction_id IS NOT NULL)
+        AND reversal_of_transaction_id IS DISTINCT FROM id
+    ),
     CONSTRAINT budget_transaction_amount_chk CHECK (amount > 0),
     CONSTRAINT budget_transaction_fiscal_year_chk CHECK (fiscal_year BETWEEN 1900 AND 9999),
     CONSTRAINT budget_transaction_period_chk CHECK (period_number BETWEEN 1 AND 16),
@@ -71,6 +79,9 @@ CREATE TABLE ledger.budget_balance (
         AND reserved_amount >= 0
         AND consumed_amount >= 0
         AND released_amount >= 0
+        AND released_amount <= reserved_amount
+        AND opening_amount - reserved_amount - consumed_amount
+            + released_amount + adjusted_amount >= 0
     ),
     CONSTRAINT budget_balance_version_chk CHECK (version_number >= 1),
     CONSTRAINT budget_balance_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
@@ -81,6 +92,7 @@ CREATE TABLE ledger.planning_run (
     tenant_id            uuid                         NOT NULL,
     planning_model_id    uuid                         NOT NULL,
     planning_scenario_id uuid                         NOT NULL,
+    retry_of_run_id      uuid,
     company_code_id      uuid                         NOT NULL,
     ledger_book_id       uuid                         NOT NULL,
     model_version_number integer                      NOT NULL,
@@ -103,6 +115,9 @@ CREATE TABLE ledger.planning_run (
     CONSTRAINT planning_run_pkey PRIMARY KEY (id),
     CONSTRAINT planning_run_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT planning_run_model_id_uq UNIQUE (tenant_id, planning_model_id, id),
+    CONSTRAINT planning_run_retry_fk FOREIGN KEY (tenant_id, retry_of_run_id)
+        REFERENCES ledger.planning_run (tenant_id, id),
+    CONSTRAINT planning_run_retry_self_chk CHECK (retry_of_run_id IS NULL OR retry_of_run_id <> id),
     CONSTRAINT planning_run_version_chk CHECK (model_version_number >= 1),
     CONSTRAINT planning_run_hash_chk CHECK (input_hash ~ '^[a-f0-9]{64}$'),
     CONSTRAINT planning_run_range_chk CHECK (
@@ -177,12 +192,17 @@ CREATE TABLE ledger.book_period_status (
     ledger_book_id uuid NOT NULL,
     fiscal_period_id uuid NOT NULL,
     status ledger.book_period_status_d NOT NULL DEFAULT 'future',
+    version_number bigint NOT NULL DEFAULT 1,
     opened_at timestamptz,
     opened_by uuid,
     soft_closed_at timestamptz,
     soft_closed_by uuid,
     hard_closed_at timestamptz,
     hard_closed_by uuid,
+    reopened_at timestamptz,
+    reopened_by uuid,
+    reopen_reason text,
+    reopen_approval_evidence jsonb,
     status_changed_at timestamptz,
     status_changed_by uuid,
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -193,11 +213,18 @@ CREATE TABLE ledger.book_period_status (
     CONSTRAINT book_period_status_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT book_period_status_coordinate_uq
         UNIQUE (tenant_id, ledger_book_id, fiscal_period_id),
+    CONSTRAINT book_period_status_version_chk CHECK (version_number >= 1),
     CONSTRAINT book_period_status_open_pair_chk CHECK ((opened_at IS NULL) = (opened_by IS NULL)),
     CONSTRAINT book_period_status_soft_pair_chk
         CHECK ((soft_closed_at IS NULL) = (soft_closed_by IS NULL)),
     CONSTRAINT book_period_status_hard_pair_chk
         CHECK ((hard_closed_at IS NULL) = (hard_closed_by IS NULL)),
+    CONSTRAINT book_period_status_reopen_pair_chk
+        CHECK ((reopened_at IS NULL) = (reopened_by IS NULL)),
+    CONSTRAINT book_period_status_reopen_evidence_chk CHECK (
+        (reopened_at IS NULL AND reopen_reason IS NULL AND reopen_approval_evidence IS NULL)
+        OR (reopened_at IS NOT NULL AND btrim(reopen_reason) <> '' AND jsonb_typeof(reopen_approval_evidence) = 'object' AND reopen_approval_evidence <> '{}'::jsonb)
+    ),
     CONSTRAINT book_period_status_changed_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT book_period_status_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
@@ -368,6 +395,7 @@ CREATE TABLE ledger.inventory_movement (
     company_code_id          uuid          NOT NULL,
     item_id                  uuid          NOT NULL,
     warehouse_id             uuid          NOT NULL,
+    movement_sequence        bigint        NOT NULL,
     movement_type            ledger.inventory_movement_type_d NOT NULL,
     valuation_method         ledger.inventory_valuation_method_d NOT NULL,
     quantity                 numeric(20,6) NOT NULL,
@@ -393,6 +421,10 @@ CREATE TABLE ledger.inventory_movement (
     CONSTRAINT inventory_movement_pkey PRIMARY KEY (id),
     CONSTRAINT inventory_movement_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT inventory_movement_idempotency_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT inventory_movement_coordinate_sequence_uq UNIQUE NULLS NOT DISTINCT (
+        tenant_id, company_code_id, item_id, warehouse_id, lot_number, serial_number, movement_sequence
+    ),
+    CONSTRAINT inventory_movement_sequence_chk CHECK (movement_sequence >= 1),
     CONSTRAINT inventory_movement_quantity_chk CHECK (quantity <> 0),
     CONSTRAINT inventory_movement_cost_chk CHECK (unit_cost >= 0),
     CONSTRAINT inventory_movement_value_sign_chk CHECK (

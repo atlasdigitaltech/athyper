@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://athyper.local/schemas/authorization-supplemental-decision-evidence-v1.json",
   "title": "Authorization supplemental decision evidence",
@@ -82,7 +82,7 @@
     "plane": {
       "enum": [
         "neon",
-        "admin",
+        "studio",
         "mesh"
       ]
     },

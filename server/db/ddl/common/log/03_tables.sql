@@ -51,3 +51,38 @@ CREATE TABLE log.notification_dlq (
 
 COMMENT ON TABLE log.notification_delivery_attempt IS 'Append-mostly HTTP trace for notification/webhook delivery. Only redaction and purge metadata may be updated.';
 COMMENT ON TABLE log.notification_dlq IS 'Notification worker dead-letter queue. Only one retry marker update is permitted.';
+
+CREATE TABLE log.integration_delivery_attempt (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, delivery_id uuid NOT NULL,
+    attempt smallint NOT NULL, started_at timestamptz NOT NULL, completed_at timestamptz NOT NULL,
+    request_url text NOT NULL, request_method text NOT NULL, request_headers jsonb NOT NULL DEFAULT '{}'::jsonb,
+    request_body_hash char(64) NOT NULL, response_status integer, response_headers jsonb NOT NULL DEFAULT '{}'::jsonb,
+    response_body_hash char(64), response_body_preview text,
+    response_error jsonb, response_error_classification text, response_error_purge_after timestamptz,
+    duration_ms integer NOT NULL,
+    disposition text NOT NULL, error_code text, created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT integration_delivery_attempt_pkey PRIMARY KEY(id),
+    CONSTRAINT integration_delivery_attempt_coordinate_uq UNIQUE(tenant_id,delivery_id,attempt),
+    CONSTRAINT integration_delivery_attempt_delivery_fk FOREIGN KEY(tenant_id,delivery_id) REFERENCES event.integration_delivery(tenant_id,id),
+    CONSTRAINT integration_delivery_attempt_method_chk CHECK(request_method IN ('GET','POST','PUT','PATCH','DELETE')),
+    CONSTRAINT integration_delivery_attempt_status_chk CHECK(response_status IS NULL OR response_status BETWEEN 100 AND 599),
+    CONSTRAINT integration_delivery_attempt_evidence_chk CHECK(duration_ms>=0 AND completed_at>=started_at AND disposition IN ('transient','permanent')),
+    CONSTRAINT integration_delivery_attempt_error_chk CHECK(
+        (response_error IS NULL AND response_error_classification IS NULL AND response_error_purge_after IS NULL)
+        OR (jsonb_typeof(response_error)='object' AND response_error_classification IN ('provider','transport','validation','security') AND response_error_purge_after>completed_at)
+    )
+);
+
+CREATE TABLE log.integration_dlq (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, delivery_id uuid NOT NULL,
+    failure_code text NOT NULL, failure_message text NOT NULL, attempt_count smallint NOT NULL,
+    moved_at timestamptz NOT NULL DEFAULT now(), replayed_at timestamptz, replayed_by uuid,
+    CONSTRAINT integration_dlq_pkey PRIMARY KEY(id),
+    CONSTRAINT integration_dlq_delivery_uq UNIQUE(tenant_id,delivery_id),
+    CONSTRAINT integration_dlq_delivery_fk FOREIGN KEY(tenant_id,delivery_id) REFERENCES event.integration_delivery(tenant_id,id),
+    CONSTRAINT integration_dlq_attempt_chk CHECK(attempt_count>0),
+    CONSTRAINT integration_dlq_replay_pair_chk CHECK((replayed_at IS NULL)=(replayed_by IS NULL))
+);
+
+COMMENT ON TABLE log.integration_delivery_attempt IS 'Immutable redacted evidence for each general connector invocation attempt.';
+COMMENT ON TABLE log.integration_dlq IS 'Administrative dead-letter evidence for Integration; notification DLQ remains separately owned.';

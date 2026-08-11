@@ -1,4 +1,4 @@
-ALTER TABLE runtime_meta.tenant_usage_counter
+﻿ALTER TABLE runtime_meta.tenant_usage_counter
     ADD CONSTRAINT tenant_usage_counter_tenant_fk
     FOREIGN KEY (tenant_id)
     REFERENCES master.tenant (id)
@@ -12,7 +12,7 @@ ALTER TABLE runtime_meta.authorization_epoch
     ADD CONSTRAINT authorization_epoch_scope_chk CHECK (
         (scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL)
         OR (scope_kind = 'tenant' AND tenant_id IS NOT NULL AND plane_code IS NULL)
-        OR (scope_kind = 'plane' AND tenant_id IS NOT NULL AND plane_code IN ('athyper', 'neon', 'mesh'))
+        OR (scope_kind = 'plane' AND tenant_id IS NOT NULL AND plane_code IN ('studio', 'neon', 'mesh'))
     ),
     ADD CONSTRAINT authorization_epoch_value_chk CHECK (epoch >= 0),
     ADD CONSTRAINT authorization_epoch_tenant_fk
@@ -29,6 +29,12 @@ ALTER TABLE runtime_meta.entity_number_counter
         FOREIGN KEY (updated_by) REFERENCES master.principal (id) ON DELETE RESTRICT,
     ADD CONSTRAINT entity_number_counter_last_allocated_by_fk
         FOREIGN KEY (last_allocated_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
+
+ALTER TABLE runtime_meta.entity_number_allocation
+    ADD CONSTRAINT entity_number_allocation_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_number_allocation_policy_fk FOREIGN KEY (numbering_policy_id) REFERENCES control.numbering_policy (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_number_allocation_counter_fk FOREIGN KEY (tenant_id,counter_id) REFERENCES runtime_meta.entity_number_counter (tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT entity_number_allocation_actor_fk FOREIGN KEY (allocated_by) REFERENCES master.principal (id) ON DELETE RESTRICT;
 
 ALTER TABLE runtime_meta.release_activation_head ADD CONSTRAINT runtime_release_head_applied_fk FOREIGN KEY(applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT;
 ALTER TABLE runtime_meta.release_activation_event ADD CONSTRAINT runtime_release_event_previous_fk FOREIGN KEY(previous_applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT;

@@ -144,6 +144,16 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION control.trg_reject_cycle_template_revision_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'published cycle-template revisions are immutable; publish a successor revision'
+        USING ERRCODE = '55000';
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION control.trg_validate_cycle_domain()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -458,6 +468,27 @@ AS $$
     ORDER BY tenant_id NULLS FIRST, code
 $$;
 
+CREATE OR REPLACE FUNCTION control.fn_mark_cron_schedule_reconciled(
+    p_schedule_id uuid,
+    p_reconciled_at timestamptz,
+    p_next_run_at timestamptz DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = control, pg_catalog
+AS $$
+BEGIN
+    UPDATE control.cron_schedule
+       SET last_reconciled_at = p_reconciled_at,
+           next_run_at = COALESCE(p_next_run_at, next_run_at)
+     WHERE id = p_schedule_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'cron_schedule.not_found' USING ERRCODE = 'no_data_found';
+    END IF;
+END
+$$;
+
 CREATE OR REPLACE FUNCTION control.trg_validate_numbering_policy()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -578,5 +609,18 @@ BEGIN
     END IF;
 
     RETURN NEW;
+END;
+$$;
+CREATE OR REPLACE FUNCTION control.trg_fn_protect_published_policy_revision()
+RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE definition_status text;
+BEGIN
+  IF TG_TABLE_NAME = 'policy_definition' THEN definition_status := OLD.status;
+  ELSE SELECT status INTO definition_status FROM control.policy_definition WHERE id = OLD.policy_definition_id;
+  END IF;
+  IF definition_status IN ('published', 'active') THEN
+    RAISE EXCEPTION 'Published policy definition revisions and their children are immutable' USING ERRCODE = '55000';
+  END IF;
+  RETURN OLD;
 END;
 $$;

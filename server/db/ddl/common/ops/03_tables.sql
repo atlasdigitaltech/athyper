@@ -1,4 +1,4 @@
-CREATE TABLE ops.authorization_parity_certification (
+﻿CREATE TABLE ops.authorization_parity_certification (
     id                         uuid        NOT NULL DEFAULT shared.uuidv7(),
     plane_code                 text        NOT NULL,
     entity_code                text        NOT NULL,
@@ -207,7 +207,7 @@ CREATE TABLE ops.identity_admission_shadow_comparison (
     observed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
     observed_by text NOT NULL DEFAULT session_user,
     CONSTRAINT identity_admission_shadow_pkey PRIMARY KEY(id),
-    CONSTRAINT identity_admission_shadow_plane_chk CHECK(plane_code IN ('athyper','neon','mesh')),
+    CONSTRAINT identity_admission_shadow_plane_chk CHECK(plane_code IN ('studio','neon','mesh')),
     CONSTRAINT identity_admission_shadow_workflow_chk CHECK(workflow IN ('login','session','logout','provisioning')),
     CONSTRAINT identity_admission_shadow_request_chk CHECK(btrim(request_id)<>'' AND length(request_id)<=256),
     CONSTRAINT identity_admission_shadow_realm_chk CHECK(btrim(realm_key)<>'' AND length(realm_key)<=256),
@@ -242,7 +242,7 @@ CREATE TABLE ops.authorization_session_shadow_comparison (
     observed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
     observed_by text NOT NULL DEFAULT session_user,
     CONSTRAINT authorization_session_shadow_pkey PRIMARY KEY(id),
-    CONSTRAINT authorization_session_shadow_plane_chk CHECK(plane_code IN ('athyper','neon','mesh')),
+    CONSTRAINT authorization_session_shadow_plane_chk CHECK(plane_code IN ('studio','neon','mesh')),
     CONSTRAINT authorization_session_shadow_status_chk CHECK(comparison_status IN ('match','mismatch','candidate_error')),
     CONSTRAINT authorization_session_shadow_area_chk CHECK(mismatch_areas <@ ARRAY['tenant','principal','binding','catalog','scope','permission']::text[]),
     CONSTRAINT authorization_session_shadow_json_chk CHECK(jsonb_typeof(legacy_result)='object' AND (candidate_result IS NULL OR jsonb_typeof(candidate_result)='object')),
@@ -321,3 +321,88 @@ CREATE TABLE ops.job_execution (
 
 COMMENT ON TABLE ops.job_execution IS
   'Plane-local durable job execution and retry history replacing legacy log.job_log. Global executions use NULL tenant_id.';
+
+CREATE TABLE ops.job_execution_attempt (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid,
+    execution_id          uuid        NOT NULL,
+    attempt_no            smallint    NOT NULL,
+    worker_id             text,
+    status                text        NOT NULL,
+    started_at            timestamptz NOT NULL,
+    completed_at          timestamptz NOT NULL,
+    duration_ms           bigint      NOT NULL,
+    error_code            text,
+    error_message         text,
+    error_detail          jsonb,
+    trace_id              text,
+    span_id               text,
+    metadata              jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+
+    CONSTRAINT job_execution_attempt_pkey PRIMARY KEY (id),
+    CONSTRAINT job_execution_attempt_uq UNIQUE (execution_id, attempt_no),
+    CONSTRAINT job_execution_attempt_no_chk CHECK (attempt_no > 0),
+    CONSTRAINT job_execution_attempt_status_chk CHECK (
+        status IN ('succeeded','retrying','failed','cancelled','timed_out','dead_letter')
+    ),
+    CONSTRAINT job_execution_attempt_time_chk CHECK (
+        completed_at >= started_at AND duration_ms >= 0
+    ),
+    CONSTRAINT job_execution_attempt_error_chk CHECK (
+        status NOT IN ('retrying','failed','timed_out','dead_letter') OR error_code IS NOT NULL
+    ),
+    CONSTRAINT job_execution_attempt_json_chk CHECK (
+        (error_detail IS NULL OR jsonb_typeof(error_detail) = 'object')
+        AND jsonb_typeof(metadata) = 'object'
+    )
+);
+
+COMMENT ON TABLE ops.job_execution_attempt IS
+  'Append-only terminal evidence for each attempt of a logical job execution.';
+
+CREATE TABLE ops.job_execution_command (
+    id                       uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                uuid,
+    execution_id             uuid        NOT NULL,
+    command                  text        NOT NULL,
+    reason                   text        NOT NULL,
+    requested_at             timestamptz NOT NULL DEFAULT now(),
+    requested_by             uuid        NOT NULL,
+    status                   text        NOT NULL,
+    applied_at               timestamptz,
+    replacement_execution_id uuid,
+    detail                   jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    created_at               timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT job_execution_command_pkey PRIMARY KEY (id),
+    CONSTRAINT job_execution_command_type_chk CHECK (command IN ('cancel','retry','replay')),
+    CONSTRAINT job_execution_command_reason_chk CHECK (btrim(reason) <> ''),
+    CONSTRAINT job_execution_command_status_chk CHECK (status IN ('applied','rejected')),
+    CONSTRAINT job_execution_command_applied_chk CHECK (applied_at IS NOT NULL),
+    CONSTRAINT job_execution_command_replacement_chk CHECK (
+        replacement_execution_id IS NULL OR command IN ('retry','replay')
+    ),
+    CONSTRAINT job_execution_command_json_chk CHECK (jsonb_typeof(detail) = 'object')
+);
+
+COMMENT ON TABLE ops.job_execution_command IS
+  'Append-only, actor-attributed cancel/retry/replay command and outcome evidence.';
+
+CREATE TABLE ops.record_edit_lock (
+    tenant_id          uuid        NOT NULL,
+    entity_code        text        NOT NULL,
+    record_id          uuid        NOT NULL,
+    owner_principal_id uuid        NOT NULL,
+    lock_token         uuid        NOT NULL,
+    fencing_token      bigint      NOT NULL,
+    acquired_at        timestamptz NOT NULL,
+    expires_at         timestamptz NOT NULL,
+    CONSTRAINT record_edit_lock_pkey PRIMARY KEY (tenant_id, entity_code, record_id),
+    CONSTRAINT record_edit_lock_entity_chk CHECK (entity_code ~ '^[a-z][a-z0-9_.:-]{1,126}$'),
+    CONSTRAINT record_edit_lock_fencing_chk CHECK (fencing_token > 0),
+    CONSTRAINT record_edit_lock_expiry_chk CHECK (expires_at >= acquired_at)
+);
+
+COMMENT ON TABLE ops.record_edit_lock IS 'Database-time edit leases. Rows are retained so fencing tokens remain monotonic across release and reacquisition.';

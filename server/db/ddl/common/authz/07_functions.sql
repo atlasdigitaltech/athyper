@@ -1405,7 +1405,7 @@ CREATE OR REPLACE FUNCTION authz.trg_validate_entity_operation_binding()
 RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,authz AS $$
 DECLARE v_database_plane text:=current_setting('app.database_plane',true);
 BEGIN
-    IF v_database_plane IS NULL OR v_database_plane NOT IN ('athyper','neon','mesh') OR NEW.plane_code<>v_database_plane THEN
+    IF v_database_plane IS NULL OR v_database_plane NOT IN ('studio','neon','mesh') OR NEW.plane_code<>v_database_plane THEN
       RAISE EXCEPTION 'Entity-operation binding plane % does not match database plane %',NEW.plane_code,coalesce(v_database_plane,'unset') USING ERRCODE='check_violation';
     END IF;
     IF NEW.status='published' AND NOT EXISTS(

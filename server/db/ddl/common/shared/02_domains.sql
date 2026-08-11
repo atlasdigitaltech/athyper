@@ -1,4 +1,4 @@
--- ============================================================================
+﻿-- ============================================================================
 -- 00_platform/003_domains.sql
 -- Concept: Domain Types — reusable PostgreSQL CHECK domains for status and lifecycle fields
 -- Depends on: 01_schemas/001_schemas.sql
@@ -137,7 +137,7 @@ COMMENT ON DOMAIN shared.idp_sync_status_d IS
 -- connection name and not an authorization grant.
 
 CREATE DOMAIN shared.application_plane_d AS text
-    CHECK (VALUE IN ('athyper', 'neon', 'mesh'));
+    CHECK (VALUE IN ('studio', 'neon', 'mesh'));
 
 COMMENT ON DOMAIN shared.application_plane_d IS
   'Closed application-plane coordinate used in signed cross-plane contracts.';

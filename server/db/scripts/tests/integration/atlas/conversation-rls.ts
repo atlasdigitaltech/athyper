@@ -34,7 +34,7 @@ async function setScope(
   sql: Transaction,
   tenantId: string,
   principalId: string,
-  plane: "neon" | "mesh" | "admin",
+  plane: "neon" | "mesh" | "studio",
 ) {
   await sql`SELECT
     set_config('app.current_tenant_id', ${tenantId}, true),

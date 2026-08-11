@@ -21,7 +21,7 @@ if (!appRole || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(appRole)) {
 }
 
 type Transaction = postgres.TransactionSql;
-type Plane = "neon" | "mesh" | "admin";
+type Plane = "neon" | "mesh" | "studio";
 
 type RunFixture = {
   threadId: string;

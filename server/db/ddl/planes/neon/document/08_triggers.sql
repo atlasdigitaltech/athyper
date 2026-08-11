@@ -898,3 +898,43 @@ FOR EACH ROW EXECUTE FUNCTION document.trg_rollup_match_exceptions();
 CREATE TRIGGER payment_term_discount_result_10_immutable
 BEFORE UPDATE OR DELETE ON document.payment_term_discount_result
 FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
+
+-- attachment_series
+CREATE TRIGGER trg_attachment_series_10_guard
+BEFORE INSERT OR UPDATE ON document.attachment_series
+FOR EACH ROW EXECUTE FUNCTION document.trg_attachment_series_guard();
+CREATE TRIGGER trg_attachment_series_20_status
+BEFORE UPDATE OF status, status_changed_at, status_changed_by ON document.attachment_series
+FOR EACH ROW EXECUTE FUNCTION document.trg_stamp_status_evidence();
+CREATE TRIGGER trg_attachment_series_90_updated_at
+BEFORE UPDATE ON document.attachment_series
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- attachment_legal_hold
+CREATE TRIGGER trg_legal_hold_10_placement_guard
+BEFORE UPDATE ON document.attachment_legal_hold
+FOR EACH ROW EXECUTE FUNCTION document.trg_legal_hold_placement_guard();
+CREATE TRIGGER trg_legal_hold_20_release_guard
+BEFORE UPDATE OF released_at, released_by, release_reason ON document.attachment_legal_hold
+FOR EACH ROW EXECUTE FUNCTION document.trg_legal_hold_release_guard();
+CREATE TRIGGER trg_legal_hold_30_no_delete
+BEFORE DELETE ON document.attachment_legal_hold
+FOR EACH ROW EXECUTE FUNCTION document.trg_legal_hold_no_delete();
+
+-- attachment_legal_hold_event (append-only)
+CREATE TRIGGER trg_legal_hold_event_10_immutable
+BEFORE UPDATE OR DELETE ON document.attachment_legal_hold_event
+FOR EACH ROW EXECUTE FUNCTION document.trg_legal_hold_event_immutable();
+
+-- attachment_derivative
+CREATE TRIGGER trg_attachment_derivative_10_guard
+BEFORE UPDATE ON document.attachment_derivative
+FOR EACH ROW EXECUTE FUNCTION document.trg_attachment_derivative_guard();
+CREATE TRIGGER trg_attachment_derivative_90_updated_at
+BEFORE UPDATE ON document.attachment_derivative
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+-- multipart_upload_part (append-only)
+CREATE TRIGGER trg_multipart_upload_part_10_immutable
+BEFORE UPDATE OR DELETE ON document.multipart_upload_part
+FOR EACH ROW EXECUTE FUNCTION document.trg_multipart_upload_part_immutable();

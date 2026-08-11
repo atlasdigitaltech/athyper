@@ -20,5 +20,11 @@ FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_authorization_shadow_comparison();
 CREATE TRIGGER job_execution_updated_at
     BEFORE UPDATE ON ops.job_execution
     FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER job_execution_attempt_immutable
+    BEFORE UPDATE OR DELETE ON ops.job_execution_attempt
+    FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_job_execution_evidence();
+CREATE TRIGGER job_execution_command_immutable
+    BEFORE UPDATE OR DELETE ON ops.job_execution_command
+    FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_job_execution_evidence();
 CREATE TRIGGER identity_admission_shadow_immutable BEFORE UPDATE OR DELETE ON ops.identity_admission_shadow_comparison
 FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_identity_admission_shadow_comparison();

@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(scriptDir, "../..");
 
-const PLANES = ["neon", "mesh", "admin"] as const;
+const PLANES = ["neon", "mesh", "studio"] as const;
 const AUTH_METHODS = [
   "local-password",
   "totp",
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
   }
 
   const invalidProviderPlanePairs = [
-    ["linkedin", "admin"],
+    ["linkedin", "studio"],
     ["windows-integrated-authentication", "mesh"],
   ] as const;
   assert(invalidProviderPlanePairs.length === 2, "Invalid provider/plane safety cases are not declared.");

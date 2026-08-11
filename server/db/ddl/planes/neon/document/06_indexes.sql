@@ -12,6 +12,8 @@ CREATE INDEX attachment_expiry_idx
 CREATE INDEX attachment_processing_idx
     ON document.attachment (tenant_id, text_extraction_status, created_at)
     WHERE text_extraction_status IN ('pending', 'failed');
+CREATE INDEX attachment_quota_reservation_expiry_idx ON document.attachment_quota_reservation (tenant_id, expires_at) WHERE status='reserved';
+CREATE INDEX attachment_quota_reservation_resource_idx ON document.attachment_quota_reservation (tenant_id, resource_id);
 
 CREATE INDEX attachment_folder_owner_idx
     ON document.attachment_folder
@@ -55,6 +57,8 @@ CREATE INDEX content_item_link_target_idx
 CREATE INDEX content_item_version_item_idx
     ON snapshot.content_item_version
     (tenant_id, content_item_id, version DESC);
+CREATE INDEX content_item_acl_subject_idx ON document.content_item_access_grant(tenant_id,subject_type,subject_id,content_item_id);
+CREATE INDEX content_quota_reservation_expiry_idx ON document.content_quota_reservation(tenant_id,expires_at) WHERE status='reserved';
 
 CREATE INDEX conversation_owner_idx
     ON document.conversation (tenant_id, entity_type, entity_id)
@@ -762,3 +766,58 @@ CREATE UNIQUE INDEX user_profile_update_request_one_active_uq ON document.user_p
 CREATE INDEX user_profile_update_request_status_idx ON document.user_profile_update_request(tenant_id,status,created_at DESC);
 CREATE INDEX user_profile_update_request_workflow_idx ON document.user_profile_update_request(tenant_id,workflow_request_id) WHERE workflow_request_id IS NOT NULL;
 CREATE INDEX user_profile_update_request_scope_gin ON document.user_profile_update_request USING gin(request_scope);
+CREATE UNIQUE INDEX attachment_generated_idempotency_uq ON document.attachment (tenant_id, (metadata->>'idempotency_key')) WHERE kind='generated_document' AND metadata ? 'idempotency_key';
+
+-- attachment_series indexes
+CREATE INDEX attachment_series_status_idx
+    ON document.attachment_series (tenant_id, status, updated_at DESC)
+    WHERE status IN ('active', 'expired', 'purge_requested');
+CREATE INDEX attachment_series_expiry_idx
+    ON document.attachment_series (expires_at)
+    WHERE is_auto_delete_on_expiry AND status NOT IN ('purged', 'deleted');
+CREATE INDEX attachment_series_retention_idx
+    ON document.attachment_series (retention_until)
+    WHERE status IN ('expired', 'deleted', 'purge_requested') AND retention_until IS NOT NULL;
+
+-- attachment: series_id lookup
+CREATE INDEX attachment_series_id_idx
+    ON document.attachment (tenant_id, series_id)
+    WHERE series_id IS NOT NULL;
+
+-- attachment_link: series lookup
+CREATE INDEX attachment_link_series_idx
+    ON document.attachment_link (tenant_id, attachment_series_id)
+    WHERE attachment_series_id IS NOT NULL;
+
+-- attachment_legal_hold indexes
+CREATE INDEX attachment_legal_hold_series_active_idx
+    ON document.attachment_legal_hold (tenant_id, attachment_series_id)
+    WHERE released_at IS NULL;
+CREATE INDEX attachment_legal_hold_code_idx
+    ON document.attachment_legal_hold (tenant_id, hold_code)
+    WHERE hold_code IS NOT NULL AND released_at IS NULL;
+
+-- attachment_legal_hold_event indexes
+CREATE INDEX attachment_legal_hold_event_hold_idx
+    ON document.attachment_legal_hold_event (tenant_id, legal_hold_id, occurred_at DESC);
+CREATE INDEX attachment_legal_hold_event_series_idx
+    ON document.attachment_legal_hold_event (tenant_id, attachment_series_id, occurred_at DESC);
+
+-- attachment_derivative indexes
+CREATE INDEX attachment_derivative_attachment_status_idx
+    ON document.attachment_derivative (tenant_id, attachment_id, status, rendition_code);
+CREATE INDEX attachment_derivative_ready_idx
+    ON document.attachment_derivative (tenant_id, attachment_id, derivative_type, rendition_code)
+    WHERE status = 'ready';
+CREATE INDEX attachment_derivative_pending_idx
+    ON document.attachment_derivative (created_at)
+    WHERE status IN ('pending', 'failed') AND attempt_count < 5;
+
+-- multipart_upload_part indexes
+CREATE INDEX multipart_upload_part_upload_idx
+    ON document.multipart_upload_part (tenant_id, multipart_upload_id, part_number);
+
+-- multipart_upload: series lookup
+CREATE INDEX multipart_upload_series_idx
+    ON document.multipart_upload (tenant_id, attachment_series_id)
+    WHERE attachment_series_id IS NOT NULL;

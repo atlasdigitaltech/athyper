@@ -8,8 +8,8 @@ REM
 REM Usage:
 REM   web-down.bat          : stop Neon
 REM   web-down.bat mesh     : stop Mesh
-REM   web-down.bat admin    : stop Admin
-REM   web-down.bat all      : stop Neon, Mesh, and Admin
+REM   web-down.bat studio   : stop Studio
+REM   web-down.bat all      : stop Neon, Mesh, and Studio
 REM
 REM Behaviour (auto-detected from ENVIRONMENT in .env):
 REM   local      : prints target-aware guidance
@@ -118,8 +118,8 @@ echo.
 if /I "!ENVIRONMENT!"=="local" (
   echo Local mode: Next.js dev servers run in your terminal.
   if /I "!PLANE_TARGET!"=="all" (
-    echo To stop: press Ctrl+C in each Neon, Mesh, and Admin dev terminal.
-    echo If started through planes-up.bat, close the athyper-neon, athyper-mesh, and athyper-admin windows.
+    echo To stop: press Ctrl+C in each Neon, Mesh, and Studio dev terminal.
+    echo If started through planes-up.bat, close the athyper-neon, athyper-mesh, and athyper-studio windows.
   ) else (
     echo To stop: press Ctrl+C in the terminal running the !PLANE_TARGET! dev server.
     echo If started through planes-up.bat, close the athyper-!PLANE_TARGET! window.
@@ -154,7 +154,7 @@ goto :end
 
 :usage
 echo Usage:
-echo   web-down.bat [neon^|mesh^|admin^|all]
+echo   web-down.bat [neon^|mesh^|studio^|all]
 echo.
 echo Defaults to: neon
 exit /b 0
@@ -168,12 +168,12 @@ if /I "!PLANE_TARGET!"=="mesh" (
   set "SERVICES=mesh-web"
   exit /b 0
 )
-if /I "!PLANE_TARGET!"=="admin" (
-  set "SERVICES=admin-web"
+if /I "!PLANE_TARGET!"=="studio" (
+  set "SERVICES=studio-web"
   exit /b 0
 )
 if /I "!PLANE_TARGET!"=="all" (
-  set "SERVICES=neon-web mesh-web admin-web"
+  set "SERVICES=neon-web mesh-web studio-web"
   exit /b 0
 )
 echo ERROR: unsupported target "!PLANE_TARGET!".

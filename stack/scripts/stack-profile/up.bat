@@ -217,6 +217,18 @@ echo OVERRIDE           = "!OVERRIDE!"
 echo ==========================
 echo.
 
+if /I not "!ENVIRONMENT!"=="local" (
+  if "!USE_PROFILE!"=="0" (
+    echo ERROR: dbconsole/admin profile is local-only and cannot be activated in !ENVIRONMENT!.
+    exit /b 1
+  )
+  echo ,!ACTIVE_PROFILE!, | findstr /C:",admin," >nul
+  if not errorlevel 1 (
+    echo ERROR: dbconsole/admin profile is local-only and cannot be activated in !ENVIRONMENT!.
+    exit /b 1
+  )
+)
+
 REM ----------------------------
 REM Validate environment variables
 REM Call must be at top level (not inside a compound block) so that

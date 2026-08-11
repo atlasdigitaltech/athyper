@@ -3,7 +3,7 @@
  * Sync generated brand assets into each Next app's public/brand folder.
  *
  * The app folders are deployment targets only. Edit assets in:
- *   packages/products/{product}/brand/src/products/{product}/
+ *   packages/planes/{product}/brand/src/products/{product}/
  *
  * Run:
  *   pnpm brand:sync:apps
@@ -18,9 +18,9 @@ const repoRoot = path.resolve(__dirname, "../..");
 const distRoot = path.join(repoRoot, "packages/platform/foundation/brand/dist");
 
 const APP_TARGETS = {
-  neon: "apps/neon/public/brand",
-  mesh: "apps/mesh/public/brand",
-  admin: "apps/admin/public/brand",
+  neon:   "apps/neon/public/brand",
+  mesh:   "apps/mesh/public/brand",
+  studio: "apps/studio/public/brand",
 } as const;
 
 const PUBLIC_OUTPUT_FILES = {
@@ -34,18 +34,18 @@ const PUBLIC_OUTPUT_FILES = {
 } as const;
 
 const LEGACY_PUBLIC_FILES = {
-  neon: ["athyper-icon-white-on-black.jpg", "neon-black.svg", "neon-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
-  mesh: ["athyper-icon-white-on-black.jpg", "mesh-black.svg", "mesh-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
-  admin: ["athyper-icon-white-on-black.jpg", "athyper-black.svg", "athyper-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
+  neon:   ["athyper-icon-white-on-black.jpg", "neon-black.svg", "neon-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
+  mesh:   ["athyper-icon-white-on-black.jpg", "mesh-black.svg", "mesh-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
+  studio: ["athyper-icon-white-on-black.jpg", "athyper-black.svg", "athyper-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
 } as const satisfies Record<keyof typeof APP_TARGETS, readonly string[]>;
 
 type ProductCode = keyof typeof APP_TARGETS;
 type PublicAssetKey = keyof typeof PUBLIC_OUTPUT_FILES;
 
 const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  neon:  "packages/products/neon/brand/src",
-  mesh:  "packages/products/mesh/brand/src",
-  admin: "packages/products/admin/brand/src",
+  neon:   "packages/planes/neon/brand/src",
+  mesh:   "packages/planes/mesh/brand/src",
+  studio: "packages/planes/studio/brand/src",
 };
 
 interface BrandManifest {

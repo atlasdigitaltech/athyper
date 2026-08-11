@@ -22,6 +22,12 @@ ALTER TABLE document.attachment
     FOREIGN KEY (tenant_id, status_changed_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE document.attachment_quota_usage ADD CONSTRAINT attachment_quota_usage_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_quota_usage ADD CONSTRAINT attachment_quota_usage_created_by_fk FOREIGN KEY (tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_quota_reservation ADD CONSTRAINT attachment_quota_reservation_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_quota_reservation ADD CONSTRAINT attachment_quota_reservation_attachment_fk FOREIGN KEY (tenant_id,resource_id) REFERENCES document.attachment(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_quota_reservation ADD CONSTRAINT attachment_quota_reservation_created_by_fk FOREIGN KEY (tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
 ALTER TABLE document.attachment_folder
     ADD CONSTRAINT attachment_folder_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
@@ -266,3 +272,117 @@ ALTER TABLE document.content_item
     FOREIGN KEY (tenant_id, current_version_id)
     REFERENCES snapshot.content_item_version (tenant_id, id)
     DEFERRABLE INITIALLY DEFERRED;
+
+ALTER TABLE document.content_item_access_grant ADD CONSTRAINT content_item_access_grant_item_fk FOREIGN KEY(tenant_id,content_item_id) REFERENCES document.content_item(tenant_id,id) ON DELETE CASCADE;
+ALTER TABLE document.content_item_access_grant ADD CONSTRAINT content_item_access_grant_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
+ALTER TABLE document.content_item_access_grant ADD CONSTRAINT content_item_access_grant_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE document.content_quota_usage ADD CONSTRAINT content_quota_usage_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
+ALTER TABLE document.content_quota_reservation ADD CONSTRAINT content_quota_reservation_item_fk FOREIGN KEY(tenant_id,content_item_id) REFERENCES document.content_item(tenant_id,id) ON DELETE CASCADE;
+
+-- attachment_series constraints
+ALTER TABLE document.attachment_series
+    ADD CONSTRAINT attachment_series_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_series
+    ADD CONSTRAINT attachment_series_current_attachment_fk
+    FOREIGN KEY (tenant_id, current_attachment_id)
+    REFERENCES document.attachment (tenant_id, id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE document.attachment_series
+    ADD CONSTRAINT attachment_series_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_series
+    ADD CONSTRAINT attachment_series_updated_by_fk
+    FOREIGN KEY (tenant_id, updated_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_series
+    ADD CONSTRAINT attachment_series_status_changed_by_fk
+    FOREIGN KEY (tenant_id, status_changed_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
+-- attachment.series_id FK (deferrable: series and first version are co-created)
+ALTER TABLE document.attachment
+    ADD CONSTRAINT attachment_series_id_fk
+    FOREIGN KEY (tenant_id, series_id)
+    REFERENCES document.attachment_series (tenant_id, id) ON DELETE RESTRICT;
+
+-- attachment_link: series FK
+ALTER TABLE document.attachment_link
+    ADD CONSTRAINT attachment_link_attachment_series_fk
+    FOREIGN KEY (tenant_id, attachment_series_id)
+    REFERENCES document.attachment_series (tenant_id, id) ON DELETE RESTRICT;
+
+-- multipart_upload: series + parent FKs
+ALTER TABLE document.multipart_upload
+    ADD CONSTRAINT multipart_upload_attachment_series_fk
+    FOREIGN KEY (tenant_id, attachment_series_id)
+    REFERENCES document.attachment_series (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.multipart_upload
+    ADD CONSTRAINT multipart_upload_parent_attachment_fk
+    FOREIGN KEY (tenant_id, parent_attachment_id)
+    REFERENCES document.attachment (tenant_id, id) ON DELETE RESTRICT;
+
+-- attachment_legal_hold constraints
+ALTER TABLE document.attachment_legal_hold
+    ADD CONSTRAINT attachment_legal_hold_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_legal_hold
+    ADD CONSTRAINT attachment_legal_hold_series_fk
+    FOREIGN KEY (tenant_id, attachment_series_id)
+    REFERENCES document.attachment_series (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_legal_hold
+    ADD CONSTRAINT attachment_legal_hold_placed_by_fk
+    FOREIGN KEY (tenant_id, placed_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_legal_hold
+    ADD CONSTRAINT attachment_legal_hold_released_by_fk
+    FOREIGN KEY (tenant_id, released_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_legal_hold
+    ADD CONSTRAINT attachment_legal_hold_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
+-- attachment_legal_hold_event constraints
+ALTER TABLE document.attachment_legal_hold_event
+    ADD CONSTRAINT attachment_legal_hold_event_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_legal_hold_event
+    ADD CONSTRAINT attachment_legal_hold_event_hold_fk
+    FOREIGN KEY (tenant_id, legal_hold_id)
+    REFERENCES document.attachment_legal_hold (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_legal_hold_event
+    ADD CONSTRAINT attachment_legal_hold_event_series_fk
+    FOREIGN KEY (tenant_id, attachment_series_id)
+    REFERENCES document.attachment_series (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_legal_hold_event
+    ADD CONSTRAINT attachment_legal_hold_event_actor_fk
+    FOREIGN KEY (tenant_id, actor_id)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
+-- attachment_derivative constraints
+ALTER TABLE document.attachment_derivative
+    ADD CONSTRAINT attachment_derivative_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_derivative
+    ADD CONSTRAINT attachment_derivative_attachment_fk
+    FOREIGN KEY (tenant_id, attachment_id)
+    REFERENCES document.attachment (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_derivative
+    ADD CONSTRAINT attachment_derivative_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.attachment_derivative
+    ADD CONSTRAINT attachment_derivative_updated_by_fk
+    FOREIGN KEY (tenant_id, updated_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
+-- multipart_upload_part constraints
+ALTER TABLE document.multipart_upload_part
+    ADD CONSTRAINT multipart_upload_part_upload_fk
+    FOREIGN KEY (tenant_id, multipart_upload_id)
+    REFERENCES document.multipart_upload (tenant_id, id) ON DELETE CASCADE;
+ALTER TABLE document.multipart_upload_part
+    ADD CONSTRAINT multipart_upload_part_recorded_by_fk
+    FOREIGN KEY (tenant_id, recorded_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;

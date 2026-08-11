@@ -1,1 +1,0 @@
-export { FavoritesPanelContainer } from "./FavoritesPanelContainer";

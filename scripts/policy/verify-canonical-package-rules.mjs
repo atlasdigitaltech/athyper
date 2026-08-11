@@ -65,7 +65,7 @@ const manifestFiles = [...walk(root)].filter((file) => file.endsWith("package.js
 const packages = [];
 for (const manifestFile of manifestFiles) {
   const directory = dirname(manifestFile);
-  const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
+  const manifest = JSON.parse(readFileSync(manifestFile, "utf8").replace(/^\uFEFF/, ""));
   if (typeof manifest.name !== "string") continue;
   packages.push({ name: manifest.name, directory, manifest, boundary: packageBoundary(rel(directory)) });
 }
@@ -76,7 +76,7 @@ for (const item of packages) byName.set(item.name, [...(byName.get(item.name) ??
 let activeDirectories = new Set();
 try {
   const output = process.platform === "win32"
-    ? execFileSync("powershell.exe", ["-NoProfile", "-Command", "pnpm list -r --depth -1 --json"], { cwd: root, encoding: "utf8" })
+    ? execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "pnpm.cmd list -r --depth -1 --json"], { cwd: root, encoding: "utf8" })
     : execFileSync("pnpm", ["list", "-r", "--depth", "-1", "--json"], { cwd: root, encoding: "utf8" });
   activeDirectories = new Set(JSON.parse(output).map((item) => posix(relative(root, item.path))));
 } catch {

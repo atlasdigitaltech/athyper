@@ -15,7 +15,7 @@ record IamPresentationContext(
         long createdAt,
         long expiresAt) {
 
-    private static final Set<String> PLANES = Set.of("neon", "mesh", "admin");
+    private static final Set<String> PLANES = Set.of("studio", "neon", "mesh");
 
     String validatedDisplayName(
             String expectedRealm,

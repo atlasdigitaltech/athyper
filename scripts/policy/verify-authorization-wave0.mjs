@@ -227,7 +227,7 @@ const goldenArtifactCheck = golden
       process.execPath,
       [
         tsxCli,
-        "scripts/reports/verify-authorization-golden-corpus.ts",
+        "scripts/verify/verify-authorization-golden-corpus.ts",
         `--corpus=${goldenPath}`,
         "--strict",
       ],

@@ -1,4 +1,4 @@
-CREATE TABLE event.comment_flag (
+﻿CREATE TABLE event.comment_flag (
     id uuid NOT NULL DEFAULT shared.uuidv7(),
     tenant_id uuid NOT NULL,
     comment_id uuid NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE event.notification_message (
     CONSTRAINT notification_message_pkey PRIMARY KEY (id),
     CONSTRAINT notification_message_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT notification_message_event_origin_uq UNIQUE (tenant_id, plane_key, event_id),
-    CONSTRAINT notification_message_plane_chk CHECK (plane_key IN ('admin','neon','mesh')),
+    CONSTRAINT notification_message_plane_chk CHECK (plane_key IN ('studio','neon','mesh')),
     CONSTRAINT notification_message_code_chk CHECK (event_code ~ '^[a-z][a-z0-9_.:-]{1,126}$' AND template_key ~ '^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT notification_message_version_chk CHECK (template_version > 0),
     CONSTRAINT notification_message_payload_chk CHECK (jsonb_typeof(payload) = 'object' AND jsonb_typeof(metadata) = 'object'),
@@ -105,6 +105,39 @@ CREATE TABLE event.notification_delivery (
     CONSTRAINT notification_delivery_error_category_chk CHECK (error_category IS NULL OR error_category IN ('transient','permanent','rate_limit','auth')),
     CONSTRAINT notification_delivery_json_chk CHECK (jsonb_typeof(channel_detail) = 'object' AND jsonb_typeof(metadata) = 'object'),
     CONSTRAINT notification_delivery_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+-- Durable attachment intent. URLs and object-storage coordinates are resolved
+-- only by Documents immediately before a delivery attempt.
+CREATE TABLE event.notification_message_attachment (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    message_id            uuid        NOT NULL,
+    attachment_id         uuid        NOT NULL,
+    attachment_version_id uuid,
+    version_policy        text        NOT NULL,
+    requested_disposition text        NOT NULL DEFAULT 'auto',
+    is_required           boolean     NOT NULL DEFAULT true,
+    display_name          text,
+    sort_order            smallint    NOT NULL DEFAULT 0,
+    metadata              jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    created_at            timestamptz NOT NULL DEFAULT now(),
+    created_by            uuid        NOT NULL,
+    CONSTRAINT notification_message_attachment_pkey PRIMARY KEY (id),
+    CONSTRAINT notification_message_attachment_tenant_id_uq UNIQUE (tenant_id,id),
+    CONSTRAINT notification_message_attachment_coordinate_uq
+        UNIQUE (tenant_id,message_id,attachment_id,attachment_version_id),
+    CONSTRAINT notification_message_attachment_version_chk CHECK (
+        (version_policy='current' AND attachment_version_id IS NULL)
+        OR (version_policy='pinned' AND attachment_version_id IS NOT NULL)
+    ),
+    CONSTRAINT notification_message_attachment_disposition_chk
+        CHECK (requested_disposition IN ('link','embed','auto')),
+    CONSTRAINT notification_message_attachment_order_chk CHECK (sort_order>=0),
+    CONSTRAINT notification_message_attachment_name_chk
+        CHECK (display_name IS NULL OR btrim(display_name)<>''),
+    CONSTRAINT notification_message_attachment_metadata_chk
+        CHECK (jsonb_typeof(metadata)='object')
 );
 
 CREATE TABLE event.notification_inbox_state (
@@ -185,6 +218,36 @@ CREATE TABLE event.outbox (
         OR (locked_at IS NOT NULL AND locked_by IS NOT NULL AND locked_until > locked_at)
     ),
     CONSTRAINT outbox_attempt_chk CHECK (attempts >= 0 AND max_attempts > 0 AND attempts <= max_attempts)
+);
+
+-- Integration owns general connector delivery only. Notification webhook delivery
+-- and search indexing retain their existing capability-specific tables.
+CREATE TABLE event.integration_delivery (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    endpoint_id uuid NOT NULL, invocation_plan jsonb NOT NULL, payload jsonb NOT NULL,
+    payload_hash char(64) NOT NULL, idempotency_key char(64) NOT NULL,
+    status text NOT NULL DEFAULT 'pending', attempt_count smallint NOT NULL DEFAULT 0,
+    next_attempt_at timestamptz, last_error_code text, last_error_message text,
+    delivered_at timestamptz, created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT integration_delivery_pkey PRIMARY KEY(id),
+    CONSTRAINT integration_delivery_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT integration_delivery_idempotency_uq UNIQUE(tenant_id,idempotency_key),
+    CONSTRAINT integration_delivery_endpoint_fk FOREIGN KEY(tenant_id,endpoint_id) REFERENCES control.integration_endpoint(tenant_id,id),
+    CONSTRAINT integration_delivery_status_chk CHECK(status IN ('pending','processing','delivered','failed','dead_letter')),
+    CONSTRAINT integration_delivery_json_chk CHECK(jsonb_typeof(invocation_plan)='object' AND jsonb_typeof(payload)='object'),
+    CONSTRAINT integration_delivery_attempt_chk CHECK(attempt_count>=0),
+    CONSTRAINT integration_delivery_delivered_chk CHECK((status='delivered')=(delivered_at IS NOT NULL))
+);
+
+CREATE TABLE event.integration_inbound_receipt (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    subscription_id uuid NOT NULL, delivery_key text NOT NULL, timestamp_value text NOT NULL,
+    body_hash char(64) NOT NULL, payload jsonb NOT NULL, admitted_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT integration_inbound_receipt_pkey PRIMARY KEY(id),
+    CONSTRAINT integration_inbound_receipt_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT integration_inbound_receipt_dedup_uq UNIQUE(tenant_id,subscription_id,delivery_key),
+    CONSTRAINT integration_inbound_receipt_subscription_fk FOREIGN KEY(tenant_id,subscription_id) REFERENCES control.webhook_subscription(tenant_id,id),
+    CONSTRAINT integration_inbound_receipt_payload_chk CHECK(jsonb_typeof(payload) IN ('object','array'))
 );
 
 CREATE TABLE event.channel_consent_event (
@@ -361,7 +424,7 @@ CREATE TABLE event.descriptor_invalidation_outbox (
         entity_code IS NULL OR entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'
     ),
     CONSTRAINT descriptor_invalidation_outbox_plane_chk CHECK (
-        plane_key IS NULL OR plane_key IN ('athyper','neon','mesh')
+        plane_key IS NULL OR plane_key IN ('studio','neon','mesh')
     ),
     CONSTRAINT descriptor_invalidation_outbox_reason_chk CHECK (
         reason ~ '^[a-z][a-z0-9_.-]{1,126}$'
@@ -416,6 +479,34 @@ CREATE TABLE event.notification_delivery_claim (
     CONSTRAINT notification_delivery_claim_audit_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
+-- Independent notification-consumer state. The shared outbox row may have
+-- multiple consumers and therefore must never be completed by Notifications.
+CREATE TABLE event.notification_outbox_state (
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+    outbox_id       uuid        NOT NULL,
+    status          text        NOT NULL DEFAULT 'pending',
+    attempt_count   smallint    NOT NULL DEFAULT 0,
+    message_count   integer     NOT NULL DEFAULT 0,
+    locked_at       timestamptz,
+    locked_by       text,
+    locked_until    timestamptz,
+    next_retry_at   timestamptz,
+    last_error      text,
+    processed_at    timestamptz,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+    CONSTRAINT notification_outbox_state_pkey PRIMARY KEY (id),
+    CONSTRAINT notification_outbox_state_coordinate_uq UNIQUE (tenant_id,outbox_id),
+    CONSTRAINT notification_outbox_state_status_chk CHECK (status IN ('pending','processing','completed','failed','dead_letter')),
+    CONSTRAINT notification_outbox_state_attempt_chk CHECK (attempt_count>=0 AND message_count>=0),
+    CONSTRAINT notification_outbox_state_lock_chk CHECK ((locked_at IS NULL)=(locked_by IS NULL) AND (locked_by IS NULL OR locked_until IS NOT NULL)),
+    CONSTRAINT notification_outbox_state_processed_chk CHECK ((status='completed')=(processed_at IS NOT NULL)),
+    CONSTRAINT notification_outbox_state_audit_chk CHECK ((updated_at IS NULL)=(updated_by IS NULL))
+);
+
 CREATE TABLE event.digest_staging (
     id           uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id    uuid        NOT NULL,
@@ -463,7 +554,7 @@ CREATE TABLE event.push_subscription (
     updated_by   uuid,
     CONSTRAINT push_subscription_pkey PRIMARY KEY (id),
     CONSTRAINT push_subscription_coordinate_uq UNIQUE (tenant_id, principal_id, plane_key, platform, device_id),
-    CONSTRAINT push_subscription_plane_chk CHECK (plane_key IN ('admin','neon','mesh')),
+    CONSTRAINT push_subscription_plane_chk CHECK (plane_key IN ('studio','neon','mesh')),
     CONSTRAINT push_subscription_platform_chk CHECK (platform IN ('web','android','ios')),
     CONSTRAINT push_subscription_device_chk CHECK (btrim(device_id) <> '' AND btrim(endpoint) <> ''),
     CONSTRAINT push_subscription_key_chk CHECK ((platform = 'web' AND p256dh_key IS NOT NULL AND auth_key IS NOT NULL) OR (platform IN ('android','ios') AND device_token IS NOT NULL)),
@@ -529,3 +620,10 @@ CREATE TABLE event.webhook_subscription (
 COMMENT ON TABLE event.digest_staging IS 'Plane-local mutable digest work queue.';
 COMMENT ON TABLE event.push_subscription IS 'Plane-local push device subscription. plane_key is transitional while runtime routing is contracted to physical database identity.';
 COMMENT ON TABLE event.webhook_subscription IS 'Plane-local compatibility projection consumed by the webhook delivery worker; control.webhook_subscription remains the administrative model.';
+CREATE TABLE IF NOT EXISTS event.invalidation_dead_letter (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(), invalidation_id uuid NOT NULL UNIQUE,
+    kind text NOT NULL, plane_key text NOT NULL, tenant_id uuid, scope_key text NOT NULL,
+    error_code text NOT NULL, sanitized_payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+    original_created_at timestamptz NOT NULL, attempt_count integer NOT NULL,
+    dead_lettered_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);

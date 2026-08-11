@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION event.trg_guard_event_creation()
+﻿CREATE OR REPLACE FUNCTION event.trg_guard_event_creation()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
@@ -126,7 +126,7 @@ BEGIN
     IF p_scope_kind NOT IN ('global', 'tenant', 'plane') THEN
         RAISE EXCEPTION 'unsupported authorization invalidation scope %', p_scope_kind;
     END IF;
-    IF p_scope_kind = 'plane' AND (p_plane_code IS DISTINCT FROM v_local_plane OR v_local_plane NOT IN ('athyper','neon','mesh')) THEN
+    IF p_scope_kind = 'plane' AND (p_plane_code IS DISTINCT FROM v_local_plane OR v_local_plane NOT IN ('studio','neon','mesh')) THEN
         RAISE EXCEPTION 'plane epoch must use the local database plane';
     END IF;
     IF (p_scope_kind = 'global' AND (p_tenant_id IS NOT NULL OR p_plane_code IS NOT NULL))
@@ -253,12 +253,11 @@ AS $$
     SELECT CASE coalesce(
         nullif(current_setting('app.current_plane_key', true), ''),
         CASE current_database()
-            WHEN 'athyper_platform' THEN 'admin'
             WHEN 'athyper_mesh' THEN 'mesh'
             ELSE 'neon'
         END
     )
-        WHEN 'admin' THEN 'admin'
+        WHEN 'studio' THEN 'studio'
         WHEN 'mesh' THEN 'mesh'
         WHEN 'neon' THEN 'neon'
         ELSE 'neon'
@@ -282,8 +281,11 @@ BEGIN
     END IF;
 
     IF p_work_kind = 'message' THEN
-        RETURN QUERY SELECT DISTINCT m.tenant_id FROM event.notification_message m
-        WHERE m.status = 'pending' AND (m.expires_at IS NULL OR m.expires_at > clock_timestamp()) LIMIT p_limit;
+        RETURN QUERY SELECT DISTINCT work.tenant_id FROM (
+            SELECT m.tenant_id FROM event.notification_message m WHERE m.status IN ('pending','delivering') AND (m.expires_at IS NULL OR m.expires_at > clock_timestamp())
+            UNION
+            SELECT o.tenant_id FROM event.outbox o WHERE o.event_type IS NOT NULL AND EXISTS (SELECT 1 FROM control.notification_routing_rule r WHERE r.event_type=o.event_type AND r.is_enabled AND (r.tenant_id IS NULL OR r.tenant_id=o.tenant_id)) AND NOT EXISTS (SELECT 1 FROM event.notification_outbox_state s WHERE s.tenant_id=o.tenant_id AND s.outbox_id=o.id AND s.status IN ('completed','dead_letter'))
+        ) work LIMIT p_limit;
     ELSIF p_work_kind = 'digest' THEN
         RETURN QUERY SELECT DISTINCT d.tenant_id FROM event.digest_staging d
         WHERE d.delivered_at IS NULL AND d.frequency = p_frequency LIMIT p_limit;
@@ -296,17 +298,20 @@ BEGIN
             WHERE NOT s.is_active AND coalesce(s.updated_at, s.expires_at, s.created_at) < clock_timestamp() - interval '90 days'
         ) x LIMIT p_limit;
     ELSE
-        RETURN QUERY SELECT DISTINCT o.tenant_id FROM event.outbox o
-        WHERE (o.status IN ('pending','failed') AND o.available_at <= clock_timestamp())
-           OR (o.status = 'processing' AND o.locked_until < clock_timestamp())
-        LIMIT p_limit;
+        RETURN QUERY SELECT DISTINCT d.tenant_id FROM event.notification_delivery d
+        WHERE d.channel='webhook'
+          AND (d.status IN ('pending','failed') OR (d.status='sending' AND d.locked_until<=clock_timestamp()))
+          AND d.attempt_count<d.max_attempts
+          AND (d.next_retry_at IS NULL OR d.next_retry_at<=clock_timestamp()) LIMIT p_limit;
     END IF;
 END;
 $$;
 
 -- Atomic worker claim. The active service normally claims one message at a
 -- time; this function supports batch workers without weakening tenant RLS.
+DROP FUNCTION IF EXISTS event.fn_notification_claim_deliveries(text,integer,integer);
 CREATE OR REPLACE FUNCTION event.fn_notification_claim_deliveries(
+    p_tenant_id uuid,
     p_worker_id text,
     p_batch_size integer DEFAULT 100,
     p_lease_seconds integer DEFAULT 60
@@ -320,7 +325,7 @@ DECLARE
     v_now timestamptz := clock_timestamp();
     v_row event.notification_delivery%ROWTYPE;
 BEGIN
-    IF btrim(coalesce(p_worker_id, '')) = ''
+    IF p_tenant_id IS NULL OR btrim(coalesce(p_worker_id, '')) = ''
        OR p_batch_size NOT BETWEEN 1 AND 1000
        OR p_lease_seconds NOT BETWEEN 5 AND 3600 THEN
         RAISE EXCEPTION 'invalid notification delivery claim arguments';
@@ -329,7 +334,9 @@ BEGIN
     FOR v_row IN
         SELECT *
         FROM event.notification_delivery
-        WHERE status IN ('pending','failed')
+        WHERE tenant_id=p_tenant_id
+          AND (status IN ('pending','failed') OR (status='queued' AND locked_until<=v_now))
+          AND channel <> 'webhook'
           AND attempt_count < max_attempts
           AND (next_retry_at IS NULL OR next_retry_at <= v_now)
           AND (locked_until IS NULL OR locked_until <= v_now)
@@ -380,3 +387,8 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+CREATE OR REPLACE FUNCTION event.notify_invalidation() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM pg_notify('athyper_invalidation', NEW.id::text);
+  RETURN NEW;
+END $$;

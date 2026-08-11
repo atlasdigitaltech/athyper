@@ -1,1 +1,1 @@
-// @athyper/contracts-neon-inventory
+﻿export {};

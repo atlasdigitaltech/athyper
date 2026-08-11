@@ -6,7 +6,7 @@ REM athyper - Local Container Mode Bootstrap - Windows Batch
 REM Location: stack\scripts\dev-container.bat
 REM
 REM Runs the 6 app services (api, worker, scheduler, neon-web,
-REM mesh-web, admin-web) as PRODUCTION containers on the developer
+REM mesh-web, studio-web) as PRODUCTION containers on the developer
 REM machine. Used for performance testing and QA that mirrors
 REM staging behaviour without leaving Windows.
 REM
@@ -82,7 +82,7 @@ if not defined COMPOSE_PROJECT_NAME (
 )
 if not defined COMPOSE_PROJECT_NAME set "COMPOSE_PROJECT_NAME=athyper"
 
-set "APP_CONTAINERS=!COMPOSE_PROJECT_NAME!-api-1 !COMPOSE_PROJECT_NAME!-worker-1 !COMPOSE_PROJECT_NAME!-scheduler-1 !COMPOSE_PROJECT_NAME!-neon-web-1 !COMPOSE_PROJECT_NAME!-mesh-web-1 !COMPOSE_PROJECT_NAME!-admin-web-1"
+set "APP_CONTAINERS=!COMPOSE_PROJECT_NAME!-api-1 !COMPOSE_PROJECT_NAME!-worker-1 !COMPOSE_PROJECT_NAME!-scheduler-1 !COMPOSE_PROJECT_NAME!-neon-web-1 !COMPOSE_PROJECT_NAME!-mesh-web-1 !COMPOSE_PROJECT_NAME!-studio-web-1"
 
 REM Extended set stopped only when --stop-only is combined with --all (or when
 REM --stop-only alone is passed — we opportunistically stop these if present).
@@ -165,7 +165,7 @@ if "!STOP_ONLY!"=="1" (
 
 REM ----------------------------
 REM Step 2: Warn if host dev servers appear to be running
-REM (ports 4000/3101/3102/3103 = api / neon / mesh / admin dev servers)
+REM (ports 4000/3101/3102/3103 = api / neon / mesh / studio dev servers)
 REM ----------------------------
 set "HOST_PORTS_IN_USE=0"
 for %%P in (4000 3101 3102 3103) do (
@@ -177,7 +177,7 @@ for %%P in (4000 3101 3102 3103) do (
 )
 if "!HOST_PORTS_IN_USE!"=="1" (
   echo.
-  echo Ctrl+C the athyper-api / athyper-neon / athyper-mesh / athyper-admin windows,
+  echo Ctrl+C the athyper-api / athyper-neon / athyper-mesh / athyper-studio windows,
   echo then re-run this script. Container Traefik routing will fight host processes otherwise.
   echo.
   choice /M "Continue anyway"
@@ -278,8 +278,8 @@ set "COMPOSE_PROFILES=!EFFECTIVE_PROFILES!"
 
 if "!DO_BUILD!"=="1" (
   echo [3/4] Rebuilding 6 app images ^(--build^)... 5-10 minutes on first run.
-  echo Running: docker compose ... build api worker scheduler neon-web mesh-web admin-web
-  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" !COMPOSE_FILES! build api worker scheduler neon-web mesh-web admin-web
+  echo Running: docker compose ... build api worker scheduler neon-web mesh-web studio-web
+  docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" !COMPOSE_FILES! build api worker scheduler neon-web mesh-web studio-web
   if errorlevel 1 (
     echo ERROR: docker compose build failed.
     exit /b 1
@@ -291,7 +291,7 @@ if "!DO_BUILD!"=="1" (
 )
 
 echo [4/4] Starting 6 app containers ^(profile=!EFFECTIVE_PROFILES!^)...
-set "UP_SVCS=api worker scheduler neon-web mesh-web admin-web"
+set "UP_SVCS=api worker scheduler neon-web mesh-web studio-web"
 if "!WITH_SEARCH!"=="1"  set "UP_SVCS=!UP_SVCS! searchcore"
 if "!ALL_SIDECARS!"=="1" set "UP_SVCS=!UP_SVCS! docparser docrender cronwatch errorcollect statuswatch analyticsboard secretstore dbconsole queueconsole"
 docker compose --project-directory "%COMPOSE_DIR%" --env-file "%ENV_FILE%" !COMPOSE_FILES! up -d !UP_SVCS!

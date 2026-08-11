@@ -20,7 +20,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const planeBaseUrls = {
-  admin: process.env.PLAYWRIGHT_ADMIN_BASE_URL ?? "https://admin.athyper.local",
+  studio: process.env.PLAYWRIGHT_STUDIO_BASE_URL ?? "https://studio.athyper.local",
   neon: process.env.PLAYWRIGHT_NEON_BASE_URL ?? process.env.PLAYWRIGHT_BASE_URL ?? "https://neon.athyper.local",
   mesh: process.env.PLAYWRIGHT_MESH_BASE_URL ?? "https://mesh.athyper.local",
 } as const;
@@ -65,7 +65,7 @@ export default defineConfig({
       testMatch: "**/visual/**/*.spec.ts",
       use:  { browserName: "chromium" },
     },
-    ...(["admin", "neon", "mesh"] as const).flatMap((plane) => [
+    ...(["studio", "neon", "mesh"] as const).flatMap((plane) => [
       {
         name: `production-${plane}-desktop`,
         testMatch: "**/production/**/*.spec.ts",

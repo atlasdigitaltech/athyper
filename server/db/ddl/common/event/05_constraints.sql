@@ -1,4 +1,4 @@
-ALTER TABLE event.comment_flag
+﻿ALTER TABLE event.comment_flag
     ADD CONSTRAINT comment_flag_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT comment_flag_comment_fk FOREIGN KEY (tenant_id, comment_id) REFERENCES document.comment(tenant_id, id),
     ADD CONSTRAINT comment_flag_reporter_fk FOREIGN KEY (tenant_id, reporter_principal_id) REFERENCES master.principal(tenant_id, id),
@@ -16,6 +16,13 @@ ALTER TABLE event.notification_delivery
     ADD CONSTRAINT notification_delivery_provider_fk FOREIGN KEY (provider_id) REFERENCES control.notification_provider(id),
     ADD CONSTRAINT notification_delivery_outbox_fk FOREIGN KEY (tenant_id, outbox_id) REFERENCES event.outbox(tenant_id, id);
 
+ALTER TABLE event.notification_message_attachment
+    ADD CONSTRAINT notification_message_attachment_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
+    ADD CONSTRAINT notification_message_attachment_message_fk FOREIGN KEY (tenant_id,message_id) REFERENCES event.notification_message(tenant_id,id) ON DELETE CASCADE,
+    ADD CONSTRAINT notification_message_attachment_attachment_fk FOREIGN KEY (tenant_id,attachment_id) REFERENCES document.attachment(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT notification_message_attachment_version_fk FOREIGN KEY (tenant_id,attachment_version_id) REFERENCES document.attachment(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT notification_message_attachment_created_by_fk FOREIGN KEY (tenant_id,created_by) REFERENCES master.principal(tenant_id,id);
+
 ALTER TABLE event.notification_inbox_state
     ADD CONSTRAINT notification_inbox_state_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT notification_inbox_state_message_fk FOREIGN KEY (tenant_id, message_id) REFERENCES event.notification_message(tenant_id, id) ON DELETE CASCADE,
@@ -23,6 +30,12 @@ ALTER TABLE event.notification_inbox_state
     ADD CONSTRAINT notification_inbox_state_principal_fk FOREIGN KEY (tenant_id, principal_id) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT notification_inbox_state_read_by_fk FOREIGN KEY (tenant_id, read_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT notification_inbox_state_dismissed_by_fk FOREIGN KEY (tenant_id, dismissed_by) REFERENCES master.principal(tenant_id, id);
+
+ALTER TABLE event.notification_outbox_state
+    ADD CONSTRAINT notification_outbox_state_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE,
+    ADD CONSTRAINT notification_outbox_state_outbox_fk FOREIGN KEY (tenant_id,outbox_id) REFERENCES event.outbox(tenant_id,id) ON DELETE CASCADE,
+    ADD CONSTRAINT notification_outbox_state_created_by_fk FOREIGN KEY (tenant_id,created_by) REFERENCES master.principal(tenant_id,id),
+    ADD CONSTRAINT notification_outbox_state_updated_by_fk FOREIGN KEY (tenant_id,updated_by) REFERENCES master.principal(tenant_id,id);
 
 ALTER TABLE event.outbox
     ADD CONSTRAINT outbox_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id);
@@ -47,7 +60,7 @@ ALTER TABLE event.authorization_invalidation_outbox
     ADD CONSTRAINT authorization_invalidation_outbox_scope_chk CHECK (
         (scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL)
         OR (scope_kind = 'tenant' AND tenant_id IS NOT NULL AND plane_code IS NULL)
-        OR (scope_kind = 'plane' AND tenant_id IS NOT NULL AND plane_code IN ('athyper', 'neon', 'mesh'))
+        OR (scope_kind = 'plane' AND tenant_id IS NOT NULL AND plane_code IN ('studio', 'neon', 'mesh'))
     ),
     ADD CONSTRAINT authorization_invalidation_outbox_epoch_chk CHECK (
         (epoch_applied_at IS NULL AND global_epoch IS NULL AND tenant_epoch IS NULL AND plane_epoch IS NULL)
@@ -103,3 +116,10 @@ ALTER TABLE event.webhook_subscription
 
 ALTER TABLE event.notification_delivery
     ADD CONSTRAINT notification_delivery_subscription_fk FOREIGN KEY (tenant_id, subscription_id) REFERENCES event.webhook_subscription(tenant_id, id) ON DELETE SET NULL;
+ALTER TABLE event.invalidation_dead_letter
+  ADD CONSTRAINT invalidation_dead_letter_kind_chk CHECK (kind IN ('metadata','authorization')),
+  ADD CONSTRAINT invalidation_dead_letter_plane_chk CHECK (plane_key IN ('studio','neon','mesh')),
+  ADD CONSTRAINT invalidation_dead_letter_scope_chk CHECK (scope_key ~ '^[A-Za-z0-9_.:-]{1,256}$'),
+  ADD CONSTRAINT invalidation_dead_letter_attempt_chk CHECK (attempt_count > 0),
+  ADD CONSTRAINT invalidation_dead_letter_payload_object_chk CHECK (jsonb_typeof(sanitized_payload)='object'),
+  ADD CONSTRAINT invalidation_dead_letter_payload_size_chk CHECK (octet_length(sanitized_payload::text) <= 4096);

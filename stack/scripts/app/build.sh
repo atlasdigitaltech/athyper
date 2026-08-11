@@ -9,7 +9,7 @@
 #   - scheduler    (server/Dockerfile.prod in staging)
 #   - neon-web     (apps/Dockerfile, APP_NAME=neon)
 #   - mesh-web     (apps/Dockerfile, APP_NAME=mesh)
-#   - admin-web    (apps/Dockerfile, APP_NAME=admin)
+#   - studio-web   (apps/Dockerfile, APP_NAME=studio)
 #
 # This script ONLY builds images. It does not pull source, deploy
 # new containers, or prune anything. To deploy after building, use:
@@ -22,8 +22,8 @@
 #   ./build.sh --no-cache          -> rebuild from scratch (slow)
 #   ./build.sh --service=api       -> build a single service
 #   ./build.sh --service=api,neon  -> comma-separated subset
-#                                     (api | worker | scheduler | neon | mesh | admin | web | planes)
-#                                     web/planes builds neon-web, mesh-web, and admin-web
+#                                     (api | worker | scheduler | neon | mesh | studio | web | planes)
+#                                     web/planes builds neon-web, mesh-web, and studio-web
 #
 # Local mode is rejected — there is no compose build pipeline in
 # local dev (use planes-up.sh/.bat and api-up.sh).
@@ -40,7 +40,7 @@ source "${SCRIPT_DIR}/../lib/compose.sh"
 NO_CACHE=0
 SERVICE_FILTER="all"
 
-ALL_SERVICES=( api worker scheduler neon-web mesh-web admin-web )
+ALL_SERVICES=( api worker scheduler neon-web mesh-web studio-web )
 
 usage() {
   sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
@@ -80,13 +80,13 @@ else
                   add_target_service neon-web ;;
       mesh|mesh-web)
                   add_target_service mesh-web ;;
-      admin|admin-web)
-                  add_target_service admin-web ;;
+      studio|studio-web)
+                  add_target_service studio-web ;;
       web|planes|all-web)
                   add_target_service neon-web
                   add_target_service mesh-web
-                  add_target_service admin-web ;;
-      *) echo "Unknown service: $_p (expected api|worker|scheduler|neon|mesh|admin|web|planes)" >&2; exit 1 ;;
+                  add_target_service studio-web ;;
+      *) echo "Unknown service: $_p (expected api|worker|scheduler|neon|mesh|studio|web|planes)" >&2; exit 1 ;;
     esac
   done
 fi

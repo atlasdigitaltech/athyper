@@ -185,6 +185,11 @@ __pycache__/
 **/codegen/
 **/.prisma/
 
+# Versioned DDL-to-service coverage evidence is generated but reviewable.
+!docs/architecture/generated/
+docs/architecture/generated/*
+!docs/architecture/generated/ddl-service-coverage.json
+
 # =========================
 # Scratch / Prototype work
 # =========================
@@ -199,6 +204,13 @@ docs/local/
 # Local database backups and diagnostic evidence
 **/.local-backups/
 **/.local-evidence/
+
+# Server backup directory
+server-backup/
+
+# Backup directories
+apps-backup/
+packages-backup/
 
 # =========================
 # Claude Code artifacts

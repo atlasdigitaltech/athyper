@@ -85,3 +85,11 @@ CREATE INDEX hash_anchor_chain_idx
 
 CREATE INDEX hash_anchor_root_hash_idx
     ON audit.hash_anchor (root_hash);
+
+CREATE INDEX export_request_worker_idx ON audit.export_request (status, requested_at) WHERE status IN ('queued','running');
+CREATE INDEX export_request_actor_idx ON audit.export_request (tenant_id, actor_principal_id, requested_at DESC);
+CREATE INDEX export_manifest_retention_idx ON audit.export_manifest (tenant_id, retention_until);
+CREATE INDEX integrity_check_window_idx ON audit.integrity_check_evidence (tenant_id, checked_until DESC);
+CREATE INDEX legal_hold_active_idx ON audit.legal_hold (tenant_id, created_at DESC) WHERE status = 'active';
+CREATE INDEX legal_hold_manifest_hold_idx ON audit.legal_hold_manifest (tenant_id, legal_hold_id, created_at DESC);
+CREATE INDEX retention_policy_active_idx ON audit.retention_policy (tenant_id, code) WHERE status = 'active';

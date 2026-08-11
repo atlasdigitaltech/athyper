@@ -81,7 +81,7 @@ REM   Stage 3 - Blueprint  : server/db/seed/blueprints/universal/  (TIER 1 found
 REM                        : server/db/seed/blueprints/industry/   (TIER 2b industry packs)
 REM                        : server/db/seed/blueprints/modules/    (TIER 3 module packs)
 REM             Tenant     : server/db/seed/tenants/neon/{client}/
-REM           Admin Plane  : server/db/seed/tenants/admin/
+REM           Studio Plane : server/db/seed/tenants/studio/
 REM                          Per-client order: 000_tenant.sql -> 001_tenant_profile.sql ->
 REM                          100_org_structure -> 200_finance -> 300_governance ->
 REM                          800_subscriptions -> 900_principals -> 950_rbac ->

@@ -6,7 +6,7 @@
   "summary": {
     "byPlane": {
       "common": 19,
-      "athyper": 34,
+      "studio": 34,
       "neon": 212,
       "mesh": 3
     },
@@ -28,7 +28,7 @@
       "classificationBasis": "legacy cross-plane registry must be decomposed using the consumer classification ledger",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -47,11 +47,11 @@
       "sourceFile": "server/db/seed/platform/000_lookups/LookupDomain/010_ai_lookup_domains.sql",
       "sourceSha256": "40917d709f8de13e39ab6bf7aa744732b9d3b41a09b94357eb6e08a6aa8f0085",
       "domains": [],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "AI administration vocabulary is owned by the Athyper platform plane",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -76,7 +76,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -97,11 +97,11 @@
       "domains": [
         "control.ai_action_code"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -122,11 +122,11 @@
       "domains": [
         "control.ai_doc_class"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -151,7 +151,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -176,7 +176,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -201,7 +201,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -226,7 +226,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -251,7 +251,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -276,7 +276,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -301,7 +301,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -326,7 +326,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -351,7 +351,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -376,7 +376,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -401,7 +401,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -426,7 +426,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -451,7 +451,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -476,7 +476,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -501,7 +501,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -526,7 +526,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -551,7 +551,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -572,11 +572,11 @@
       "domains": [
         "entity.entity_class"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -601,7 +601,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -622,11 +622,11 @@
       "domains": [
         "entity_field.cardinality"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -647,11 +647,11 @@
       "domains": [
         "entity_field.compute_mode"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -672,11 +672,11 @@
       "domains": [
         "entity_field.data_type"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -697,11 +697,11 @@
       "domains": [
         "entity_field.origin"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -722,11 +722,11 @@
       "domains": [
         "entity_field.ui_type"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -747,11 +747,11 @@
       "domains": [
         "control.formula_expression_language"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -772,11 +772,11 @@
       "domains": [
         "control.formula_kind"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -797,11 +797,11 @@
       "domains": [
         "entity.governance_level"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -822,11 +822,11 @@
       "domains": [
         "control.mfa_method_type"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -847,11 +847,11 @@
       "domains": [
         "entity.mutability"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -876,7 +876,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -901,7 +901,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -926,7 +926,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -947,11 +947,11 @@
       "domains": [
         "overlay_change.kind"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -972,11 +972,11 @@
       "domains": [
         "entity.ownership_model"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1001,7 +1001,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1026,7 +1026,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1051,7 +1051,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1072,11 +1072,11 @@
       "domains": [
         "entity_relation.kind"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1101,7 +1101,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1126,7 +1126,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1147,11 +1147,11 @@
       "domains": [
         "entity.security_tier"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1176,7 +1176,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1201,7 +1201,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1226,7 +1226,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1253,7 +1253,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1278,7 +1278,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1303,7 +1303,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1328,7 +1328,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1353,7 +1353,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1389,7 +1389,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1419,7 +1419,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1444,7 +1444,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1469,7 +1469,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1494,7 +1494,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1519,7 +1519,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1544,7 +1544,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1569,7 +1569,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1594,7 +1594,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1619,7 +1619,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1646,7 +1646,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1671,7 +1671,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1696,7 +1696,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1723,7 +1723,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1748,7 +1748,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1773,7 +1773,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1798,7 +1798,7 @@
       "classificationBasis": "operational event/log/shared fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1823,7 +1823,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1848,7 +1848,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1873,7 +1873,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1898,7 +1898,7 @@
       "classificationBasis": "single-plane DDL consumer",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [
           "server/db/ddl/planes/neon/control/07_functions.sql",
           "server/db/ddl/planes/neon/control/12_accounting_policy_reference_seed.sql"
@@ -1928,7 +1928,7 @@
       "classificationBasis": "ERP document/finance semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1953,7 +1953,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -1978,7 +1978,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2003,7 +2003,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2030,7 +2030,7 @@
         "common": [
           "server/db/ddl/common/ai/08_triggers.sql"
         ],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2055,7 +2055,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2080,7 +2080,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2105,7 +2105,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2126,11 +2126,11 @@
       "domains": [
         "log.field_classification"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2156,7 +2156,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2181,7 +2181,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2202,11 +2202,11 @@
       "domains": [
         "log.security_event_category"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2231,7 +2231,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2256,7 +2256,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2281,7 +2281,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2306,7 +2306,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2331,7 +2331,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2356,7 +2356,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2381,7 +2381,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2408,7 +2408,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2433,7 +2433,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2458,7 +2458,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2483,7 +2483,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2510,7 +2510,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2537,7 +2537,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2562,7 +2562,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2589,7 +2589,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2614,7 +2614,7 @@
       "classificationBasis": "common operational semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2639,7 +2639,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2666,7 +2666,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2691,7 +2691,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2716,7 +2716,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2743,7 +2743,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2768,7 +2768,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2793,7 +2793,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2818,7 +2818,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2843,7 +2843,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2868,7 +2868,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2893,7 +2893,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2918,7 +2918,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2943,7 +2943,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2968,7 +2968,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -2993,7 +2993,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3018,7 +3018,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3045,7 +3045,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3070,7 +3070,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3095,7 +3095,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3122,7 +3122,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3147,7 +3147,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3172,7 +3172,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3197,7 +3197,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3222,7 +3222,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3247,7 +3247,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3272,7 +3272,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3297,7 +3297,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3322,7 +3322,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3347,7 +3347,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3372,7 +3372,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3397,7 +3397,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3424,8 +3424,8 @@
         "common": [
           "server/db/ddl/common/control/12_collaboration_lookup_seed.sql"
         ],
-        "athyper": [
-          "server/db/ddl/planes/athyper/document/07_functions.sql"
+        "studio": [
+          "server/db/ddl/planes/studio/document/07_functions.sql"
         ],
         "neon": [
           "server/db/ddl/planes/neon/document/07_functions.sql"
@@ -3457,8 +3457,8 @@
         "common": [
           "server/db/ddl/common/control/12_collaboration_lookup_seed.sql"
         ],
-        "athyper": [
-          "server/db/ddl/planes/athyper/document/07_functions.sql"
+        "studio": [
+          "server/db/ddl/planes/studio/document/07_functions.sql"
         ],
         "neon": [
           "server/db/ddl/planes/neon/document/07_functions.sql"
@@ -3488,7 +3488,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3513,7 +3513,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3538,7 +3538,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3563,7 +3563,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3588,7 +3588,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3613,7 +3613,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3638,7 +3638,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3666,7 +3666,7 @@
           "server/db/ddl/common/master/07_functions.sql",
           "server/db/ddl/common/master/12_contact_person_reference_seed.sql"
         ],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3691,7 +3691,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3716,7 +3716,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3741,7 +3741,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3766,7 +3766,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3791,7 +3791,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3816,7 +3816,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3841,7 +3841,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3866,7 +3866,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3891,7 +3891,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3916,7 +3916,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3943,7 +3943,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3968,7 +3968,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -3995,7 +3995,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4022,7 +4022,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4047,7 +4047,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4072,7 +4072,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4093,11 +4093,11 @@
       "domains": [
         "master.entity_document_link.link_kind"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4122,7 +4122,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4147,7 +4147,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4172,7 +4172,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4199,7 +4199,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4224,7 +4224,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4251,7 +4251,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4278,7 +4278,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4303,7 +4303,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4330,7 +4330,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4355,7 +4355,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4380,7 +4380,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4405,7 +4405,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4430,7 +4430,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4451,11 +4451,11 @@
       "domains": [
         "master.idp_provider_type"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4480,7 +4480,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4507,7 +4507,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4532,7 +4532,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4557,7 +4557,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4582,7 +4582,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4607,7 +4607,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4634,7 +4634,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4659,7 +4659,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4684,7 +4684,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4707,7 +4707,7 @@
       "classificationBasis": "existing tombstone removes the retired operating-unit lookup",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4732,7 +4732,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4757,7 +4757,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4788,7 +4788,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4813,7 +4813,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4838,7 +4838,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4863,7 +4863,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4888,7 +4888,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4913,7 +4913,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4938,7 +4938,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4963,7 +4963,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -4988,7 +4988,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5013,7 +5013,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5038,7 +5038,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5063,7 +5063,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5088,7 +5088,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5113,7 +5113,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5138,7 +5138,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5163,7 +5163,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5190,7 +5190,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5215,7 +5215,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5242,7 +5242,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5267,7 +5267,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5294,7 +5294,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5319,7 +5319,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5344,7 +5344,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5369,7 +5369,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5394,7 +5394,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5419,7 +5419,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5444,7 +5444,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5469,7 +5469,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5490,11 +5490,11 @@
       "domains": [
         "master.principal_identity_binding.sync_status"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5515,11 +5515,11 @@
       "domains": [
         "master.principal_profile.keycloak_sync_status"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5540,11 +5540,11 @@
       "domains": [
         "master.principal_relationship_type"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5565,11 +5565,11 @@
       "domains": [
         "master.principal_relationship_verification_status"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5590,11 +5590,11 @@
       "domains": [
         "master.principal_relationship_verified_method"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5615,11 +5615,11 @@
       "domains": [
         "master.principal_source"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5640,11 +5640,11 @@
       "domains": [
         "master.principal_type"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5671,7 +5671,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5696,7 +5696,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5721,7 +5721,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5746,7 +5746,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5771,7 +5771,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5798,7 +5798,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5823,7 +5823,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5848,7 +5848,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5875,7 +5875,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5900,7 +5900,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5929,8 +5929,8 @@
         "common": [
           "server/db/ddl/common/control/12_collaboration_lookup_seed.sql"
         ],
-        "athyper": [
-          "server/db/ddl/planes/athyper/document/07_functions.sql"
+        "studio": [
+          "server/db/ddl/planes/studio/document/07_functions.sql"
         ],
         "neon": [
           "server/db/ddl/planes/neon/document/07_functions.sql"
@@ -5960,7 +5960,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -5985,7 +5985,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6010,7 +6010,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6035,7 +6035,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6060,7 +6060,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6085,7 +6085,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6110,7 +6110,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6135,7 +6135,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6160,7 +6160,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6185,7 +6185,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6212,7 +6212,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6237,7 +6237,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6262,7 +6262,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6289,7 +6289,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6310,11 +6310,11 @@
       "domains": [
         "master.template_engine"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6337,11 +6337,11 @@
       "domains": [
         "master.template_kind"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6362,11 +6362,11 @@
       "domains": [
         "master.tenant_feature_entitlement.status"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6387,11 +6387,11 @@
       "domains": [
         "master.tenant_module_subscription.status"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6416,7 +6416,7 @@
       "classificationBasis": "partner-network semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6441,7 +6441,7 @@
       "classificationBasis": "partner-network semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6466,7 +6466,7 @@
       "classificationBasis": "partner-network semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6487,11 +6487,11 @@
       "domains": [
         "master.tenant_subscription"
       ],
-      "plane": "athyper",
+      "plane": "studio",
       "classificationBasis": "platform administration/metadata semantic fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6516,7 +6516,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6541,7 +6541,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6566,7 +6566,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6591,7 +6591,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6616,7 +6616,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6641,7 +6641,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6666,7 +6666,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6691,7 +6691,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6716,7 +6716,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6741,7 +6741,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6766,7 +6766,7 @@
       "classificationBasis": "ERP master/control fallback; review required",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },
@@ -6791,7 +6791,7 @@
       "classificationBasis": "single-plane DDL consumer",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [
           "server/db/ddl/planes/neon/control/12_reference_seed.sql",
           "server/db/ddl/planes/neon/master/07_functions.sql"
@@ -6819,7 +6819,7 @@
       "classificationBasis": "operational event/log/shared fallback",
       "consumerEvidence": {
         "common": [],
-        "athyper": [],
+        "studio": [],
         "neon": [],
         "mesh": []
       },

@@ -1,5 +1,6 @@
-{
-  "extends": "@athyper/config/tsconfig-react",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist" },
-  "include": ["src"]
+﻿{
+  "extends": "@athyper/config/tsconfig-react.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }

@@ -708,7 +708,7 @@ CREATE TABLE authz.entity_operation_binding (
     CONSTRAINT entity_operation_binding_tenant_id_uq UNIQUE NULLS NOT DISTINCT (tenant_id,id),
     CONSTRAINT entity_operation_binding_coordinate_uq UNIQUE NULLS NOT DISTINCT
         (tenant_id,applied_release_id,source_entity_operation_id),
-    CONSTRAINT entity_operation_binding_plane_chk CHECK (plane_code IN ('athyper','neon','mesh')),
+    CONSTRAINT entity_operation_binding_plane_chk CHECK (plane_code IN ('studio','neon','mesh')),
     CONSTRAINT entity_operation_binding_release_hash_chk CHECK (source_release_hash ~ '^[a-f0-9]{64}$'),
     CONSTRAINT entity_operation_binding_compiled_hash_chk CHECK (source_compiled_hash ~ '^[a-f0-9]{64}$'),
     CONSTRAINT entity_operation_binding_entity_code_chk CHECK (entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),

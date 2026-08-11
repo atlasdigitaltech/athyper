@@ -3,8 +3,8 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'comment_flag','notification_message','notification_delivery','outbox','channel_consent_event',
-        'command_execution'
+        'comment_flag','notification_message','notification_delivery','notification_message_attachment','outbox','channel_consent_event',
+        'command_execution','integration_delivery','integration_inbound_receipt'
     ]
     LOOP
         EXECUTE format('ALTER TABLE event.%I ENABLE ROW LEVEL SECURITY', v_table);
@@ -24,6 +24,11 @@ $$;
 
 ALTER TABLE event.notification_inbox_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event.notification_inbox_state FORCE ROW LEVEL SECURITY;
+ALTER TABLE event.notification_outbox_state ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event.notification_outbox_state FORCE ROW LEVEL SECURITY;
+CREATE POLICY notification_outbox_state_tenant_access ON event.notification_outbox_state FOR ALL TO athyperapp
+  USING (tenant_id=shared.current_tenant_id()) WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY notification_outbox_state_seed_write ON event.notification_outbox_state FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 CREATE POLICY notification_inbox_recipient_read
     ON event.notification_inbox_state
@@ -65,6 +70,11 @@ CREATE POLICY authorization_invalidation_seed_write ON event.authorization_inval
 
 ALTER TABLE event.descriptor_invalidation_outbox ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event.descriptor_invalidation_outbox FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE event.invalidation_dead_letter ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event.invalidation_dead_letter FORCE ROW LEVEL SECURITY;
+CREATE POLICY invalidation_dead_letter_admin_access ON event.invalidation_dead_letter
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
 CREATE POLICY descriptor_invalidation_local_access
     ON event.descriptor_invalidation_outbox

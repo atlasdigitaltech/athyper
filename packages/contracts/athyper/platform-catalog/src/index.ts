@@ -1,1 +1,1 @@
-// @athyper/contracts-athyper-platform-catalog
+﻿export {};

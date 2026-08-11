@@ -39,9 +39,9 @@ from pathlib import Path
 
 SCHEMA_DIR = Path(__file__).parent.parent / "src" / "prisma"
 SCHEMAS = [
-    SCHEMA_DIR / "schema.prisma",
+    SCHEMA_DIR / "schema.neon.prisma",
     SCHEMA_DIR / "schema.mesh.prisma",
-    SCHEMA_DIR / "schema.admin.prisma",
+    SCHEMA_DIR / "schema.studio.prisma",
 ]
 
 

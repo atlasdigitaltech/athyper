@@ -69,6 +69,8 @@ ALTER TABLE ledger.book_period_status
         FOREIGN KEY (tenant_id, soft_closed_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT book_period_status_hard_by_fk
         FOREIGN KEY (tenant_id, hard_closed_by) REFERENCES master.principal(tenant_id, id),
+    ADD CONSTRAINT book_period_status_reopened_by_fk
+        FOREIGN KEY (tenant_id, reopened_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT book_period_status_changed_by_fk
         FOREIGN KEY (tenant_id, status_changed_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT book_period_status_created_by_fk

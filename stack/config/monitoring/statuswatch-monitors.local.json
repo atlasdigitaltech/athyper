@@ -53,9 +53,9 @@
       "accepted_statuscodes": ["200-299"]
     },
     {
-      "name": "admin plane - /livez",
+      "name": "studio plane - /livez",
       "type": "http",
-      "url": "https://admin.athyper.local/livez",
+      "url": "https://studio.athyper.local/livez",
       "method": "GET",
       "interval": 120,
       "retryInterval": 60,

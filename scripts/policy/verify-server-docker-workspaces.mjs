@@ -65,10 +65,12 @@ export function analyzeServerDockerWorkspaceCopies({
   return { copySources, missing, stale };
 }
 
-function runtimeServerManifestClosure() {
+function platformHostManifestClosure() {
   const pnpmArguments = [
     "--filter",
-    "@athyper/runtime-server...",
+    "@athyper/server-platform-host...",
+    "--filter",
+    "@athyper/server-db...",
     "list",
     "--depth",
     "-1",
@@ -93,7 +95,7 @@ function runtimeServerManifestClosure() {
   if (result.status !== 0) {
     throw new Error(
       [
-        "Unable to calculate the @athyper/runtime-server workspace closure.",
+        "Unable to calculate the @athyper/server-platform-host workspace closure.",
         result.error?.message,
         result.stderr?.trim(),
       ].filter(Boolean).join("\n"),
@@ -101,6 +103,9 @@ function runtimeServerManifestClosure() {
   }
 
   const projects = JSON.parse(result.stdout);
+  if (!Array.isArray(projects) || projects.length === 0) {
+    throw new Error("The @athyper/server-platform-host workspace closure is empty.");
+  }
   return projects.map((project) => {
     const projectPath = normalizePath(relative(repositoryRoot, project.path));
     return `${projectPath}/package.json`;
@@ -108,7 +113,10 @@ function runtimeServerManifestClosure() {
 }
 
 function run() {
-  const requiredManifestPaths = runtimeServerManifestClosure();
+  const requiredManifestPaths = [
+    ...platformHostManifestClosure(),
+    "server/tsconfig.json",
+  ];
   const dockerfileText = readFileSync(dockerfilePath, "utf8");
   const analysis = analyzeServerDockerWorkspaceCopies({
     dockerfileText,

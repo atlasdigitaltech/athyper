@@ -1,2 +1,0 @@
-import { redirect } from "next/navigation";import { TaxConfigurationWorkbench } from "@athyper/finance-workbench";import { getNeonServerSession } from "@/lib/server/session";
-export default async function TaxDefinitionsPage({params}:{params:Promise<{tenantCode:string}>}){const {tenantCode}=await params,decoded=decodeURIComponent(tenantCode);if(!await getNeonServerSession())redirect(`/login?next=${encodeURIComponent(`/finance/setup/tenant/${decoded}/tax`)}`);return <TaxConfigurationWorkbench tenantCode={decoded}/>;}

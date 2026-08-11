@@ -1,0 +1,24 @@
+export type PublicationErrorCode =
+  | "ARTIFACT_INVALID"
+  | "ARTIFACT_SCHEMA_REQUIRED"
+  | "ARTIFACT_SCHEMA_UNSUPPORTED"
+  | "ARTIFACT_PAYLOAD_INVALID"
+  | "ARTIFACT_PLANE_INVALID"
+  | "ARTIFACT_COORDINATES_INVALID"
+  | "ARTIFACT_HASH_MISMATCH"
+  | "ARTIFACT_SIGNATURE_INVALID"
+  | "ARTIFACT_MANIFEST_INVALID"
+  | "TARGET_PLANE_MISMATCH"
+  | "RUNTIME_INCOMPATIBLE"
+  | "ARTIFACT_STORAGE_IMMUTABILITY_CONFLICT"
+  | "ARTIFACT_STORAGE_URI_INVALID"
+  | "ARTIFACT_STORAGE_UNAVAILABLE"
+  | "ACKNOWLEDGEMENT_CONFLICT"
+  | "ACTIVATION_REGRESSION";
+
+export class PublicationContractError extends Error {
+  constructor(readonly code: PublicationErrorCode, message: string) {
+    super(message);
+    this.name = "PublicationContractError";
+  }
+}

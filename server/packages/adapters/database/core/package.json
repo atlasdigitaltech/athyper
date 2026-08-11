@@ -1,20 +1,18 @@
 {
-  "name": "@athyper/adapter-db-core",
+  "name": "@athyper/server-adapter-db-core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" },
-    "./package.json": "./package.json"
+    ".": "./src/index.ts",
+    "./pool": "./src/pool.ts",
+    "./retry": "./src/retry.ts",
+    "./transaction": "./src/transaction.ts"
   },
-  "files": ["dist"],
   "scripts": {
-    "clean": "rimraf dist",
-    "build": "tsup src/index.ts --format esm --dts --outDir dist --external kysely --external pg",
-    "dev": "tsup src/index.ts --format esm --dts --outDir dist --watch --external kysely --external pg",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@athyper/server-foundation": "workspace:*",
@@ -22,11 +20,9 @@
     "pg": "^8.13.0"
   },
   "devDependencies": {
-    "@athyper/tsconfig": "workspace:*",
-    "@types/pg": "^8.11.10",
     "@types/node": "^25.6.0",
-    "rimraf": "^6.0.1",
-    "tsup": "^8.3.0",
-    "typescript": "^6.0.3"
+    "@types/pg": "^8.11.10",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

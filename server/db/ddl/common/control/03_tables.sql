@@ -173,6 +173,7 @@ CREATE TABLE control.connector_instance (
     environment_code     text                                NOT NULL DEFAULT 'production',
     base_url             text,
     credential_reference text,
+    credential_revision  integer                             NOT NULL DEFAULT 1,
     config               jsonb                               NOT NULL DEFAULT '{}'::jsonb,
     health_status        control.connector_health_status_d   NOT NULL DEFAULT 'unknown',
     last_health_check_at timestamptz,
@@ -198,7 +199,7 @@ CREATE TABLE control.connector_instance (
     CONSTRAINT connector_instance_url_chk
         CHECK (base_url IS NULL OR base_url ~* '^https://'),
     CONSTRAINT connector_instance_credential_chk
-        CHECK (credential_reference IS NULL OR btrim(credential_reference) <> ''),
+        CHECK ((credential_reference IS NULL OR btrim(credential_reference) <> '') AND credential_revision > 0),
     CONSTRAINT connector_instance_config_chk CHECK (jsonb_typeof(config) = 'object'),
     CONSTRAINT connector_instance_status_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
@@ -220,6 +221,9 @@ CREATE TABLE control.integration_endpoint (
     timeout_ms            integer                               NOT NULL DEFAULT 10000,
     retry_policy          jsonb                                 NOT NULL DEFAULT '{}'::jsonb,
     headers               jsonb                                 NOT NULL DEFAULT '{}'::jsonb,
+    request_schema        jsonb                                 NOT NULL DEFAULT '{}'::jsonb,
+    max_payload_bytes     integer                               NOT NULL DEFAULT 1048576,
+    definition_version    integer                               NOT NULL DEFAULT 1,
     health_check_path     text,
     health_status         control.connector_health_status_d     NOT NULL DEFAULT 'unknown',
     last_checked_at       timestamptz,
@@ -249,8 +253,9 @@ CREATE TABLE control.integration_endpoint (
         CHECK (last_response_ms IS NULL OR last_response_ms >= 0),
     CONSTRAINT integration_endpoint_json_chk CHECK (
         jsonb_typeof(retry_policy) = 'object'
-        AND jsonb_typeof(headers) = 'object'
+        AND jsonb_typeof(headers) = 'object' AND jsonb_typeof(request_schema) = 'object'
     ),
+    CONSTRAINT integration_endpoint_payload_chk CHECK (max_payload_bytes BETWEEN 1 AND 10485760 AND definition_version > 0),
     CONSTRAINT integration_endpoint_status_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT integration_endpoint_audit_pair_chk
@@ -269,6 +274,11 @@ CREATE TABLE control.webhook_subscription (
     payload_contract_version integer                             NOT NULL DEFAULT 1,
     max_retries           smallint                              NOT NULL DEFAULT 3,
     retry_policy          jsonb                                 NOT NULL DEFAULT '{}'::jsonb,
+    signing_secret_reference text,
+    signature_header      text                                  NOT NULL DEFAULT 'x-webhook-signature',
+    timestamp_header      text                                  NOT NULL DEFAULT 'x-webhook-timestamp',
+    timestamp_tolerance_seconds integer                         NOT NULL DEFAULT 300,
+    max_body_bytes        integer                               NOT NULL DEFAULT 1048576,
     last_delivery_at      timestamptz,
     last_delivery_status  text,
     failure_count         integer                               NOT NULL DEFAULT 0,
@@ -292,7 +302,8 @@ CREATE TABLE control.webhook_subscription (
     CONSTRAINT webhook_subscription_version_chk
         CHECK (payload_contract_version > 0),
     CONSTRAINT webhook_subscription_retry_chk
-        CHECK (max_retries BETWEEN 0 AND 20 AND failure_count >= 0),
+        CHECK (max_retries BETWEEN 0 AND 20 AND failure_count >= 0 AND timestamp_tolerance_seconds BETWEEN 1 AND 3600 AND max_body_bytes BETWEEN 1 AND 10485760),
+    CONSTRAINT webhook_subscription_secret_chk CHECK (signing_secret_reference IS NULL OR btrim(signing_secret_reference) <> ''),
     CONSTRAINT webhook_subscription_json_chk CHECK (
         jsonb_typeof(event_filter) = 'object'
         AND jsonb_typeof(retry_policy) = 'object'
@@ -554,6 +565,36 @@ CREATE TABLE control.cycle_carryforward_rule (
     CONSTRAINT cycle_carryforward_rule_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
+
+CREATE TABLE control.cycle_template_revision (
+    id                   uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id            uuid        NOT NULL,
+    cycle_type_id        uuid        NOT NULL,
+    revision_number      integer     NOT NULL,
+    schema_code          text        NOT NULL DEFAULT 'athyper.cycle-template/1.0',
+    template_json        jsonb       NOT NULL,
+    template_hash        char(64)    NOT NULL,
+    topological_task_ids uuid[]      NOT NULL DEFAULT '{}'::uuid[],
+    idempotency_key      text        NOT NULL,
+    published_at         timestamptz NOT NULL DEFAULT now(),
+    published_by         uuid        NOT NULL,
+    created_at           timestamptz NOT NULL DEFAULT now(),
+    created_by           uuid        NOT NULL,
+
+    CONSTRAINT cycle_template_revision_pkey PRIMARY KEY (id),
+    CONSTRAINT cycle_template_revision_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT cycle_template_revision_coordinate_uq UNIQUE (tenant_id, cycle_type_id, revision_number),
+    CONSTRAINT cycle_template_revision_pin_uq UNIQUE (tenant_id, cycle_type_id, id, revision_number, template_hash),
+    CONSTRAINT cycle_template_revision_idempotency_uq UNIQUE (tenant_id, cycle_type_id, idempotency_key),
+    CONSTRAINT cycle_template_revision_number_chk CHECK (revision_number > 0),
+    CONSTRAINT cycle_template_revision_schema_chk CHECK (schema_code = 'athyper.cycle-template/1.0'),
+    CONSTRAINT cycle_template_revision_json_chk CHECK (jsonb_typeof(template_json) = 'object'),
+    CONSTRAINT cycle_template_revision_hash_chk CHECK (template_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT cycle_template_revision_key_chk CHECK (btrim(idempotency_key) <> '')
+);
+
+COMMENT ON TABLE control.cycle_template_revision IS
+  'Immutable, complete published cycle-template aggregate. Runtime cycle runs pin its revision identity and hash.';
 
 -- Platform-owned banking identifier standards. This catalog is installed in
 -- every plane so Admin can govern the standard and Neon/Mesh can validate
@@ -960,6 +1001,7 @@ CREATE TABLE control.cron_schedule (
     lock_key          text,
     last_run_at       timestamptz,
     next_run_at       timestamptz,
+    last_reconciled_at timestamptz,
     created_at        timestamptz NOT NULL DEFAULT now(),
     created_by        uuid        NOT NULL,
     updated_at        timestamptz,
@@ -976,6 +1018,20 @@ CREATE TABLE control.cron_schedule (
 );
 
 COMMENT ON TABLE control.cron_schedule IS 'Physical-plane BullMQ schedules. tenant_id NULL rows are plane-global; code-owned registry entries win at runtime.';
+
+CREATE TABLE control.cron_schedule_change_log (
+    id          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id   uuid,
+    schedule_id uuid        NOT NULL,
+    action      text        NOT NULL CHECK (action IN ('created','updated','deactivated')),
+    reason      text        NOT NULL CHECK (btrim(reason) <> ''),
+    changed_at  timestamptz NOT NULL DEFAULT now(),
+    changed_by  uuid        NOT NULL,
+    CONSTRAINT cron_schedule_change_log_pkey PRIMARY KEY (id),
+    CONSTRAINT cron_schedule_change_log_schedule_fk FOREIGN KEY (schedule_id) REFERENCES control.cron_schedule(id) ON DELETE CASCADE,
+    CONSTRAINT cron_schedule_change_log_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE
+);
+COMMENT ON TABLE control.cron_schedule_change_log IS 'Append-only operator evidence for governed schedule mutations.';
 
 -- Canonical notification configuration shared by all three physical planes.
 -- Provider credentials remain in the external secret provider. config may only
@@ -1163,6 +1219,8 @@ CREATE TABLE control.policy_definition (
     effective_from   date        NOT NULL DEFAULT CURRENT_DATE,
     effective_until  date,
     version_no       integer     NOT NULL DEFAULT 1,
+    predecessor_id   uuid,
+    definition_hash  text,
     status           text        NOT NULL DEFAULT 'active',
     is_active        boolean     GENERATED ALWAYS AS (status = 'active') STORED,
     created_at       timestamptz NOT NULL DEFAULT now(),
@@ -1250,6 +1308,31 @@ CREATE TABLE control.policy_test_case (
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT policy_test_case_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE control.policy_test_result (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), policy_test_case_id uuid NOT NULL,
+    policy_definition_id uuid NOT NULL, definition_hash text NOT NULL, passed boolean NOT NULL,
+    actual_outcome jsonb NOT NULL, executed_at timestamptz NOT NULL DEFAULT now(), executed_by uuid NOT NULL,
+    CONSTRAINT policy_test_result_pkey PRIMARY KEY (id),
+    CONSTRAINT policy_test_result_hash_chk CHECK (definition_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT policy_test_result_json_chk CHECK (jsonb_typeof(actual_outcome) = 'object')
+);
+
+CREATE TABLE control.policy_activation (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid, entity_type text NOT NULL, name text NOT NULL, policy_definition_id uuid NOT NULL,
+    definition_hash text NOT NULL, activated_at timestamptz NOT NULL DEFAULT now(), activated_by uuid NOT NULL,
+    CONSTRAINT policy_activation_pkey PRIMARY KEY (id),
+    CONSTRAINT policy_activation_hash_chk CHECK (definition_hash ~ '^[0-9a-f]{64}$')
+);
+
+CREATE TABLE control.policy_evaluation_history (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, policy_definition_id uuid NOT NULL,
+    definition_hash text NOT NULL, entity_type text NOT NULL, entity_id text, decision jsonb NOT NULL,
+    evaluated_at timestamptz NOT NULL DEFAULT now(), evaluated_by uuid NOT NULL,
+    CONSTRAINT policy_evaluation_history_pkey PRIMARY KEY (id),
+    CONSTRAINT policy_evaluation_history_hash_chk CHECK (definition_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT policy_evaluation_history_json_chk CHECK (jsonb_typeof(decision) = 'object')
 );
 
 COMMENT ON TABLE control.policy_rule IS

@@ -1,6 +1,0 @@
-#!/usr/bin/env tsx
-import {readFile} from "node:fs/promises";import{resolve}from"node:path";import pg from"pg";
-function arg(n:string){return process.argv.find(v=>v.startsWith(`${n}=`))?.slice(n.length+1)}
-const url=arg("--database-url"),expected=arg("--expected-database"),plane=arg("--plane");if(!url||!expected||!["neon","mesh"].includes(plane??""))throw new Error("Explicit URL/database/plane required");
-const file=plane==="neon"?"seed/entity-operation-permissions/neon/020_p5_e5_business_partner_qualification_permissions.sql":"seed/entity-operation-permissions/mesh/020_p5_e5_document_envelope_qualification_permissions.sql";
-const client=new pg.Client({connectionString:url});await client.connect();try{const r=await client.query<{database_name:string}>("select current_database() database_name");if(r.rows[0]?.database_name!==expected)throw new Error("database guard");await client.query("begin");await client.query("select set_config('app.database_plane',$1,true),set_config('app.current_principal_id','00000000-0000-0000-0000-000000000000',true)",[plane]);await client.query(await readFile(resolve(import.meta.dirname,"../..",file),"utf8"));await client.query("commit");process.stdout.write(`P5_E5_PERMISSIONS_OK plane=${plane}\n`)}catch(e){await client.query("rollback").catch(()=>{});throw e}finally{await client.end()}

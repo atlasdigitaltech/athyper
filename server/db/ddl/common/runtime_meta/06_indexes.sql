@@ -13,6 +13,9 @@ CREATE INDEX entity_number_counter_policy_ix
 CREATE INDEX entity_number_counter_last_allocation_ix
     ON runtime_meta.entity_number_counter (tenant_id,last_allocation_id)
     WHERE last_allocation_id IS NOT NULL;
+CREATE INDEX entity_number_allocation_counter_ix ON runtime_meta.entity_number_allocation (tenant_id,counter_id,allocated_at DESC);
+CREATE INDEX entity_number_allocation_number_ix ON runtime_meta.entity_number_allocation (tenant_id,policy_code,formatted_number);
+CREATE INDEX entity_number_allocation_correlation_ix ON runtime_meta.entity_number_allocation (tenant_id,correlation_id) WHERE correlation_id IS NOT NULL;
 
 CREATE INDEX runtime_applied_release_status_idx ON runtime_meta.applied_release(publication_key,status,source_release_no DESC);
 CREATE INDEX runtime_release_activation_event_idx ON runtime_meta.release_activation_event(publication_key,activated_at DESC,id);

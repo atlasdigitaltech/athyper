@@ -19,8 +19,8 @@
 
 DO $guard$
 BEGIN
-  IF current_setting('app.database_plane', true) NOT IN ('athyper','neon','mesh') THEN
-    RAISE EXCEPTION 'system authority seed requires app.database_plane=athyper|neon|mesh';
+  IF current_setting('app.database_plane', true) NOT IN ('studio','neon','mesh') THEN
+    RAISE EXCEPTION 'system authority seed requires app.database_plane=studio|neon|mesh';
   END IF;
 END $guard$;
 

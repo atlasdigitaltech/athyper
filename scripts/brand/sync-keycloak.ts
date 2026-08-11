@@ -16,9 +16,9 @@ const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
 const kcImg = path.join(kcLogin, "resources/img");
 
 const brandSources = {
-  neon: path.join(repoRoot, "packages/products/neon/brand/src"),
-  mesh: path.join(repoRoot, "packages/products/mesh/brand/src"),
-  admin: path.join(repoRoot, "packages/products/admin/brand/src"),
+  neon:   path.join(repoRoot, "packages/planes/neon/brand/src"),
+  mesh:   path.join(repoRoot, "packages/planes/mesh/brand/src"),
+  studio: path.join(repoRoot, "packages/planes/studio/brand/src"),
 } as const;
 
 interface BrandManifest {
@@ -39,8 +39,8 @@ function generatedHeader(): string[] {
 function planeSelection(): string[] {
   return [
     `  <#assign iamBrandPlane = (iamPlane!"athyper")>`,
-    `  <#if iamBrandPlane != "neon" && iamBrandPlane != "mesh" && iamBrandPlane != "admin">`,
-    `    <#assign iamBrandPlane = "admin">`,
+    `  <#if iamBrandPlane != "neon" && iamBrandPlane != "mesh" && iamBrandPlane != "studio">`,
+    `    <#assign iamBrandPlane = "studio">`,
     `  </#if>`,
   ];
 }

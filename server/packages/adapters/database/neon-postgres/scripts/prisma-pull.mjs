@@ -3,9 +3,9 @@
 // and passes it directly via --url (avoids requiring a local prisma install).
 //
 // Usage (via package.json):
-//   node scripts/prisma-pull.mjs --target=neon  --schema src/prisma/schema.prisma
-//   node scripts/prisma-pull.mjs --target=mesh  --schema src/prisma/schema.mesh.prisma
-//   node scripts/prisma-pull.mjs --target=admin --schema src/prisma/schema.admin.prisma
+//   node scripts/prisma-pull.mjs --target=neon   --schema src/prisma/schema.neon.prisma --force
+//   node scripts/prisma-pull.mjs --target=mesh   --schema src/prisma/schema.mesh.prisma --force
+//   node scripts/prisma-pull.mjs --target=studio --schema src/prisma/schema.studio.prisma --force
 import { spawnSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,7 +23,7 @@ const target = targetArg ? targetArg.split("=")[1] : "neon";
 const schemaArgs = process.argv.slice(2).filter((a) => !a.startsWith("--target="));
 
 const url = (() => {
-  if (target === "admin") {
+  if (target === "studio") {
     return (
       process.env.ATHYPER_PLATFORM_DATABASE_URL ??
       process.env.DATABASE_ADMIN_URL ??
@@ -37,11 +37,11 @@ const url = (() => {
 })();
 
 if (!url) {
-  console.error(`[prisma-pull] No database URL found for target="${target}". Set DATABASE_URL / MESH_DATABASE_URL / DATABASE_ADMIN_URL.`);
+  console.error(`[prisma-pull] No database URL found for target="${target}". Set DATABASE_URL / MESH_DATABASE_URL / ATHYPER_PLATFORM_DATABASE_URL.`);
   process.exit(1);
 }
 
-// The pnpm hoisted store — contains prisma package so prisma.config.ts can resolve 'prisma/config'.
+// NODE_PATH pointing to the pnpm hoisted store so prisma.config.ts can resolve 'prisma/config' if present.
 const PNPM_HOISTED = resolve(__dirname, "../../../../../../node_modules/.pnpm/node_modules");
 const nodePath = process.env.NODE_PATH
   ? `${PNPM_HOISTED}${process.platform === "win32" ? ";" : ":"}${process.env.NODE_PATH}`

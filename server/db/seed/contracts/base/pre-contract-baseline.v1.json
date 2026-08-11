@@ -202,7 +202,7 @@
         "scope.plane-assertion"
       ]
     },
-    "server/db/ddl/planes/athyper/control/12_reference_seed.sql": {
+    "server/db/ddl/planes/studio/control/12_reference_seed.sql": {
       "sourceSha256": "21acfa77b192e6ac48e1ac40ef532c6d5fe29886f649c1888f84ba6d81758200",
       "ruleIds": [
         "assertion.failure",

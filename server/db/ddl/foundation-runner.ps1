@@ -1,7 +1,7 @@
 [CmdletBinding(DefaultParameterSetName = "Single")]
 param(
     [Parameter(Mandatory = $true, ParameterSetName = "Single")]
-    [ValidateSet("athyper", "neon", "mesh")]
+    [ValidateSet("studio", "neon", "mesh")]
     [string] $Plane,
 
     [Parameter(Mandatory = $true, ParameterSetName = "All")]
@@ -52,9 +52,9 @@ if ($DatabaseUser -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
 }
 
 $planes = @{
-    athyper = @{
-        Database = "athyper_platform"
-        Manifest = "planes/athyper/_manifest.txt"
+    studio = @{
+        Database = "athyper_studio"
+        Manifest = "planes/studio/_manifest.txt"
         Variables = @("ATHYPER_PLATFORM_DATABASE_ADMIN_URL")
     }
     neon = @{
@@ -462,7 +462,7 @@ if ($CreateDatabaseOnly) {
 }
 
 $selectedPlanes = if ($All) {
-    @("athyper", "neon", "mesh")
+    @("studio", "neon", "mesh")
 } else {
     @($Plane)
 }

@@ -212,12 +212,12 @@ require_var PUBLIC_WEB_URL
 require_var APPS_ATHYPER_WEB_HOST
 require_var APPS_ATHYPER_NEON_HOST
 require_var APPS_ATHYPER_MESH_HOST
-require_var APPS_ATHYPER_ADMIN_HOST
+require_var APPS_ATHYPER_STUDIO_HOST
 require_var APPS_ATHYPER_API_HOST
 require_var APPS_ATHYPER_WEB_UPSTREAM_URL
 require_var APPS_ATHYPER_NEON_UPSTREAM_URL
 require_var APPS_ATHYPER_MESH_UPSTREAM_URL
-require_var APPS_ATHYPER_ADMIN_UPSTREAM_URL
+require_var APPS_ATHYPER_STUDIO_UPSTREAM_URL
 require_var GATEWAY_HOST
 require_var IAM_HOST
 require_var ALERTMANAGER_HOST
@@ -239,6 +239,11 @@ require_file_path "$ATHYPER_CONFIG_VAL/${ENV_MAP[ATHYPER_KERNEL_CONFIG_PATH]:-}"
 # 3. Non-local only: secrets that MUST be injected
 # ----------------------------
 if [[ "$ENVIRONMENT" != "local" ]]; then
+  STACK_PROFILE_VALUE="${ENV_MAP[STACK_PROFILE]:-}"
+  if [[ ",$STACK_PROFILE_VALUE," == *",admin,"* ]]; then
+    echo "  FAIL  STACK_PROFILE=$STACK_PROFILE_VALUE includes local-only dbconsole/admin"
+    ERRORS=$((ERRORS + 1))
+  fi
   echo "[3/6] Non-local secrets (must not be placeholders)..."
   require_var CREDENTIAL_MASTER_KEY
   require_var DB_ADMIN_PASSWORD
@@ -250,7 +255,7 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   require_var DBPOOL_SESSION_PASSWORD
   require_var IAM_ADMIN_PASSWORD
   require_var IAM_CLIENT_SECRET
-  require_var ADMIN_WEB_CLIENT_SECRET
+  require_var STUDIO_WEB_CLIENT_SECRET
   require_var ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET
   require_var NEON_SVC_BFF_CLIENT_SECRET
   require_var AUTH_DISCOVERY_SHARED_SECRET
@@ -260,6 +265,7 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   require_var MEMORYCACHE_PASSWORD
   require_var REDIS_EXPORTER_PASSWORD
   require_var REDIS_GLITCHTIP_PASSWORD
+  require_var REDIS_BULLBOARD_PASSWORD
   require_var REDIS_INFISICAL_PASSWORD
   require_var REDIS_ADMIN_PASSWORD
   require_var S3_ACCESS_KEY
@@ -288,8 +294,8 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
   require_var NEON_GATEWAY_ORIGIN
   require_var MESH_ALLOWED_HOSTS
   require_var MESH_GATEWAY_ORIGIN
-  require_var ADMIN_ALLOWED_HOSTS
-  require_var ADMIN_GATEWAY_ORIGIN
+  require_var STUDIO_ALLOWED_HOSTS
+  require_var STUDIO_GATEWAY_ORIGIN
   fail_unexpanded_placeholders
 else
   echo "[3/6] Skipping non-local secrets check (ENVIRONMENT=local)"
@@ -300,7 +306,7 @@ fi
 # validate-env.sh stays read-only; setup-config.sh performs final rendering.
 # ----------------------------
 ACL_TPL="$STACK_DIR/config/memorycache/redis-acl.conf.tpl"
-ACL_REQUIRED_KEYS=(MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD)
+ACL_REQUIRED_KEYS=(MEMORYCACHE_PASSWORD REDIS_EXPORTER_PASSWORD REDIS_GLITCHTIP_PASSWORD REDIS_BULLBOARD_PASSWORD REDIS_INFISICAL_PASSWORD REDIS_ADMIN_PASSWORD)
 ACL_OUT="$ATHYPER_CONFIG_VAL/memorycache/redis-acl.conf"
 
 if [[ ! -f "$ACL_TPL" ]]; then
@@ -483,13 +489,20 @@ if [[ "$ENVIRONMENT" != "local" ]]; then
     echo "  FAIL  ALERTMANAGER_SMTP_SMARTHOST=$AM_SMARTHOST in $ENVIRONMENT (mailtrap is local-only)"
     ERRORS=$((ERRORS + 1))
   fi
+  for smtp_var in SMTP_HOST KC_SMTP_HOST; do
+    SMTP_VALUE="${ENV_MAP[$smtp_var]:-}"
+    if [[ "$SMTP_VALUE" == "mailtrap" || "$SMTP_VALUE" == "mailpit" ]]; then
+      echo "  FAIL  $smtp_var=$SMTP_VALUE in $ENVIRONMENT (local capture SMTP is forbidden)"
+      ERRORS=$((ERRORS + 1))
+    fi
+  done
   AM_REQUIRE_TLS="${ENV_MAP[ALERTMANAGER_SMTP_REQUIRE_TLS]:-}"
   if [[ "$AM_REQUIRE_TLS" != "true" ]]; then
     echo "  FAIL  ALERTMANAGER_SMTP_REQUIRE_TLS=$AM_REQUIRE_TLS in $ENVIRONMENT (must be true outside local)"
     ERRORS=$((ERRORS + 1))
   fi
 
-  for upstream_var in APPS_ATHYPER_WEB_UPSTREAM_URL APPS_ATHYPER_NEON_UPSTREAM_URL APPS_ATHYPER_MESH_UPSTREAM_URL APPS_ATHYPER_ADMIN_UPSTREAM_URL; do
+  for upstream_var in APPS_ATHYPER_WEB_UPSTREAM_URL APPS_ATHYPER_NEON_UPSTREAM_URL APPS_ATHYPER_MESH_UPSTREAM_URL APPS_ATHYPER_STUDIO_UPSTREAM_URL; do
     UPSTREAM="${ENV_MAP[$upstream_var]:-}"
     if [[ "$UPSTREAM" == *"host.docker.internal"* ]]; then
       echo "  FAIL  $upstream_var=$UPSTREAM in $ENVIRONMENT (host.docker.internal is dev-only)"

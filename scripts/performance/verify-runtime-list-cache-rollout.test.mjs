@@ -88,7 +88,7 @@ test("keeps dashboard and shell app links on the Next client router", () => {
     import.meta.url,
   ), "utf8");
   const favorites = readFileSync(new URL(
-    "../../packages/products/neon/app/src/collaboration/FavoritesPanelContainer.tsx",
+    "../../packages/planes/neon/app/src/collaboration/FavoritesPanelContainer.tsx",
     import.meta.url,
   ), "utf8");
 

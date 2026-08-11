@@ -35,8 +35,19 @@ CREATE INDEX job_execution_correlation_idx
     ON ops.job_execution (correlation_id) WHERE correlation_id IS NOT NULL;
 CREATE INDEX job_execution_purge_idx
     ON ops.job_execution (purge_after) WHERE purge_after IS NOT NULL;
+CREATE INDEX job_execution_attempt_tenant_idx
+    ON ops.job_execution_attempt (tenant_id, execution_id, attempt_no DESC);
+CREATE INDEX job_execution_attempt_failure_idx
+    ON ops.job_execution_attempt (status, completed_at DESC)
+    WHERE status IN ('failed','timed_out','dead_letter');
+CREATE INDEX job_execution_command_actor_idx
+    ON ops.job_execution_command (tenant_id, requested_by, requested_at DESC);
+CREATE INDEX job_execution_command_execution_idx
+    ON ops.job_execution_command (execution_id, requested_at DESC);
 CREATE INDEX identity_admission_shadow_gate_idx ON ops.identity_admission_shadow_comparison(plane_code,workflow,comparison_status,severity,observed_at DESC);
 CREATE INDEX identity_admission_shadow_tenant_idx ON ops.identity_admission_shadow_comparison(tenant_id,observed_at DESC);
 CREATE INDEX identity_admission_shadow_subject_idx ON ops.identity_admission_shadow_comparison(subject_fingerprint,observed_at DESC);
 CREATE INDEX authorization_session_shadow_gate_idx ON ops.authorization_session_shadow_comparison(plane_code,comparison_status,observed_at DESC);
 CREATE INDEX authorization_session_shadow_tenant_idx ON ops.authorization_session_shadow_comparison(tenant_id,principal_id,observed_at DESC);
+CREATE INDEX record_edit_lock_expiry_idx ON ops.record_edit_lock (tenant_id, expires_at);
+CREATE INDEX record_edit_lock_owner_idx ON ops.record_edit_lock (tenant_id, owner_principal_id, expires_at DESC);

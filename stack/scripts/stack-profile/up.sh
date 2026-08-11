@@ -126,6 +126,11 @@ echo "OVERRIDE        = $OVERRIDE"
 echo "=========================="
 echo ""
 
+if [[ "$ENVIRONMENT" != "local" ]] && { [[ "$USE_PROFILE" -ne 1 ]] || [[ ",$ACTIVE_PROFILE," == *",admin,"* ]]; }; then
+  echo "ERROR: dbconsole/admin profile is local-only and cannot be activated in $ENVIRONMENT."
+  exit 1
+fi
+
 # ----------------------------
 # Validate environment variables
 # ----------------------------

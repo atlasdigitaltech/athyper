@@ -24,6 +24,16 @@ BEGIN
             ON audit.authorization_decision_evidence,
                audit.security_event
             TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE
+            ON audit.export_request,
+               audit.legal_hold,
+               audit.retention_policy
+            TO athyperapp;
+        GRANT SELECT, INSERT
+            ON audit.export_manifest,
+               audit.integrity_check_evidence,
+               audit.legal_hold_manifest
+            TO athyperapp;
         GRANT EXECUTE ON FUNCTION audit.append_event(
             text, audit.operation_d, text, uuid, audit.outcome_d,
             audit.event_severity_d, text, uuid, uuid, text, jsonb, jsonb,
@@ -48,6 +58,16 @@ BEGIN
         GRANT SELECT, INSERT
             ON audit.authorization_decision_evidence,
                audit.security_event
+            TO athyperadmin;
+        GRANT SELECT, INSERT, UPDATE
+            ON audit.export_request,
+               audit.legal_hold,
+               audit.retention_policy
+            TO athyperadmin;
+        GRANT SELECT, INSERT
+            ON audit.export_manifest,
+               audit.integrity_check_evidence,
+               audit.legal_hold_manifest
             TO athyperadmin;
         GRANT EXECUTE ON FUNCTION audit.trg_prepare_audit_log()
             TO athyperadmin;

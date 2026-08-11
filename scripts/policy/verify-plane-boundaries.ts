@@ -84,22 +84,22 @@ const neonOnlyPackages = [
   },
 ] satisfies BannedPackage[];
 
-const adminOnlyPackages = [
+const studioOnlyPackages = [
   {
-    name: "@athyper/app-admin-command-hub",
-    reason: "Admin app-specific package",
+    name: "@athyper/app-studio-command-hub",
+    reason: "Studio app-specific package",
   },
   {
-    name: "@athyper/app-admin-shell",
-    reason: "Admin app-specific shell",
+    name: "@athyper/app-studio-shell",
+    reason: "Studio app-specific shell",
   },
   {
-    name: "@athyper/app-admin-route-manifest",
-    reason: "Admin app-specific route manifest",
+    name: "@athyper/app-studio-route-manifest",
+    reason: "Studio app-specific route manifest",
   },
   {
-    name: "@athyper/app-admin-navigation",
-    reason: "Admin app-specific navigation",
+    name: "@athyper/app-studio-navigation",
+    reason: "Studio app-specific navigation",
   },
 ] satisfies BannedPackage[];
 
@@ -108,43 +108,43 @@ const rules = [
     label: "Shared + Core product",
     roots: [
       "packages/shared",
-      "packages/products/design",
+      "packages/planes/design",
       "packages/product-deprecated/runtime-ui",
     ],
     bannedPackages: [
       ...neonOnlyPackages,
       ...meshOnlyPackages,
-      ...adminOnlyPackages,
+      ...studioOnlyPackages,
     ],
   },
   {
     label: "Mesh",
     roots: [
       "apps/mesh",
-      "packages/products/mesh",
+      "packages/planes/mesh",
     ],
     bannedPackages: [
       ...neonOnlyPackages,
-      ...adminOnlyPackages,
+      ...studioOnlyPackages,
     ],
   },
   {
     label: "Neon",
     roots: [
       "apps/neon",
-      "packages/products/neon",
+      "packages/planes/neon",
     ],
     bannedPackages: [
       ...removedNeonProductPackages,
       ...meshOnlyPackages,
-      ...adminOnlyPackages,
+      ...studioOnlyPackages,
     ],
   },
   {
-    label: "Admin",
+    label: "Studio",
     roots: [
-      "apps/admin",
-      "packages/products/admin",
+      "apps/studio",
+      "packages/planes/studio",
     ],
     bannedPackages: [
       ...meshOnlyPackages,
@@ -191,7 +191,7 @@ const legacyRuntimePackages = [
 
 const legacyRuntimeImportScanRoots = [
   "apps",
-  "packages/products",
+  "packages/planes",
   "packages/shared",
   "packages/domain",
   "server",
@@ -271,7 +271,7 @@ function isProductCoreGroup(groupName: string): groupName is ProductCoreGroup {
 }
 
 function collectProductPackagesByName(): Map<string, { groupName: string; packageJsonPath: string }> {
-  const productRoot = join(repoRoot, "packages/products");
+  const productRoot = join(repoRoot, "packages/planes");
   const packagesByName = new Map<string, { groupName: string; packageJsonPath: string }>();
   if (!existsSync(productRoot)) return packagesByName;
 
@@ -358,7 +358,7 @@ for (const [_packageName, packageInfo] of productPackagesByName) {
       if (!depInfo || allowedGroups.has(depInfo.groupName)) continue;
 
       violations.push(
-        `Product tier: ${relative(repoRoot, packageInfo.packageJsonPath)} ${section} references ${depName} from packages/products/${depInfo.groupName}; allowed groups are ${[...allowedGroups].join(", ") || "(none)"}`,
+        `Product tier: ${relative(repoRoot, packageInfo.packageJsonPath)} ${section} references ${depName} from packages/planes/${depInfo.groupName}; allowed groups are ${[...allowedGroups].join(", ") || "(none)"}`,
       );
     }
   }

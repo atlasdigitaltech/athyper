@@ -17,9 +17,9 @@
     "retired"
   ],
   "summary": {
-    "tableDeclarations": 692,
+    "tableDeclarations": 693,
     "covered": 6,
-    "missingDefinitionOfCovered": 686
+    "missingDefinitionOfCovered": 687
   },
   "rows": [
     {
@@ -31,9 +31,14 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -45,8 +50,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -133,9 +138,13 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -147,8 +156,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -231,9 +240,14 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -245,8 +259,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -265,9 +279,15 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -279,8 +299,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -299,9 +319,13 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -313,8 +337,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -333,9 +357,14 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -347,8 +376,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -367,9 +396,13 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -381,8 +414,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -475,9 +508,15 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -489,8 +528,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -509,9 +548,15 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -523,8 +568,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -543,9 +588,15 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -557,8 +608,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -645,9 +696,15 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -659,8 +716,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -679,9 +736,15 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/ai"
+      ],
       "classification": "projection",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -693,8 +756,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -748,7 +811,8 @@
         "mesh"
       ],
       "serviceOwners": [
-        "server/apps/platform-host"
+        "server/apps/platform-host",
+        "server/packages/platform/ai"
       ],
       "classification": "evidence",
       "supportedCommands": [
@@ -1863,7 +1927,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -1877,7 +1943,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -1898,6 +1964,7 @@
         "mesh"
       ],
       "serviceOwners": [
+        "server/packages/platform/control-admin",
         "server/packages/services/integration"
       ],
       "classification": "runtime_mutable",
@@ -1941,6 +2008,7 @@
         "mesh"
       ],
       "serviceOwners": [
+        "server/packages/platform/control-admin",
         "server/packages/services/integration"
       ],
       "classification": "catalog_seed_managed",
@@ -2070,7 +2138,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -2084,7 +2154,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -2104,7 +2174,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -2118,7 +2190,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -2138,7 +2210,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -2152,7 +2226,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -2172,7 +2246,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -2186,7 +2262,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -2206,7 +2282,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -2220,7 +2298,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -2240,7 +2318,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "catalog_seed_managed",
       "supportedCommands": [],
       "repositories": [],
@@ -2254,7 +2334,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": true,
@@ -2275,6 +2355,7 @@
         "mesh"
       ],
       "serviceOwners": [
+        "server/packages/platform/control-admin",
         "server/packages/platform/governance"
       ],
       "classification": "runtime_mutable",
@@ -2283,7 +2364,8 @@
         "read"
       ],
       "repositories": [
-        "server/packages/platform/governance/src/cycles/kysely-cycle-template-repository.ts"
+        "server/packages/platform/control-admin/src/cycle/kysely-cycle-template-repository.ts",
+        "server/packages/platform/governance/src/cycles/kysely-cycle-execution-repository.ts"
       ],
       "routesOrJobs": [],
       "auditEvents": [],
@@ -2312,14 +2394,14 @@
         "mesh"
       ],
       "serviceOwners": [
-        "server/packages/platform/governance"
+        "server/packages/platform/control-admin"
       ],
       "classification": "catalog_seed_managed",
       "supportedCommands": [
         "read"
       ],
       "repositories": [
-        "server/packages/platform/governance/src/cycles/kysely-cycle-template-repository.ts"
+        "server/packages/platform/control-admin/src/cycle/kysely-cycle-template-repository.ts"
       ],
       "routesOrJobs": [],
       "auditEvents": [
@@ -2351,7 +2433,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "catalog_seed_managed",
       "supportedCommands": [],
       "repositories": [],
@@ -2365,7 +2449,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": true,
@@ -2385,7 +2469,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -2399,7 +2485,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -2420,6 +2506,7 @@
         "mesh"
       ],
       "serviceOwners": [
+        "server/packages/platform/control-admin",
         "server/packages/services/integration"
       ],
       "classification": "runtime_mutable",
@@ -2462,7 +2549,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -2476,7 +2565,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -2496,7 +2585,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -2510,7 +2601,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -2530,7 +2621,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -2544,7 +2637,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -2714,7 +2807,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "catalog_seed_managed",
       "supportedCommands": [],
       "repositories": [],
@@ -2728,7 +2823,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": true,
@@ -2965,6 +3060,7 @@
         "mesh"
       ],
       "serviceOwners": [
+        "server/packages/platform/control-admin",
         "server/packages/services/finance"
       ],
       "classification": "runtime_mutable",
@@ -3003,6 +3099,8 @@
         "mesh"
       ],
       "serviceOwners": [
+        "server/apps/platform-host",
+        "server/packages/platform/control-admin",
         "server/packages/services/finance"
       ],
       "classification": "runtime_mutable",
@@ -3040,7 +3138,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -3054,7 +3154,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -3074,7 +3174,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -3088,7 +3190,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -3108,7 +3210,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -3122,7 +3226,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -3142,7 +3246,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -3156,7 +3262,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -3176,7 +3282,9 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "catalog_seed_managed",
       "supportedCommands": [],
       "repositories": [],
@@ -3190,7 +3298,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": true,
@@ -3401,15 +3509,16 @@
         "mesh"
       ],
       "serviceOwners": [
-        "server/packages/platform/governance",
-        "server/packages/platform/notifications"
+        "server/packages/platform/governance"
       ],
       "classification": "append_only",
       "supportedCommands": [
         "create",
         "read"
       ],
-      "repositories": [],
+      "repositories": [
+        "server/packages/platform/governance/src/repositories/kysely-governance-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
@@ -3425,7 +3534,7 @@
       "definitionOfCovered": {
         "hasServiceOwner": true,
         "hasSupportedCommand": true,
-        "hasRepository": false,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": true,
@@ -3452,9 +3561,11 @@
       "supportedCommands": [
         "create",
         "read",
-        "update"
+        "update",
+        "delete"
       ],
       "repositories": [
+        "server/packages/services/finance/src/shared/kysely-command-repository.postgres.test.ts",
         "server/packages/services/finance/src/shared/kysely-command-repository.ts"
       ],
       "routesOrJobs": [],
@@ -3466,8 +3577,12 @@
       "outboxEvents": [
         "server/packages/contracts/integration/src/index.ts"
       ],
-      "unitTests": [],
-      "postgresIntegrationTests": [],
+      "unitTests": [
+        "server/packages/services/finance/src/shared/kysely-command-repository.postgres.test.ts"
+      ],
+      "postgresIntegrationTests": [
+        "server/packages/services/finance/src/shared/kysely-command-repository.postgres.test.ts"
+      ],
       "definitionOfCovered": {
         "hasServiceOwner": true,
         "hasSupportedCommand": true,
@@ -3475,8 +3590,8 @@
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": true,
-        "hasUnitTest": false,
-        "hasPostgresIntegrationTest": false
+        "hasUnitTest": true,
+        "hasPostgresIntegrationTest": true
       },
       "rolloutStatus": "not_started"
     },
@@ -3490,14 +3605,18 @@
         "mesh"
       ],
       "serviceOwners": [
-        "server/packages/platform/collaboration"
+        "server/packages/platform/collaboration",
+        "server/packages/platform/governance"
       ],
       "classification": "runtime_mutable",
       "supportedCommands": [
-        "create"
+        "create",
+        "read",
+        "update"
       ],
       "repositories": [
-        "server/packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+        "server/packages/platform/collaboration/src/kysely-collaboration-repository.ts",
+        "server/packages/platform/governance/src/repositories/kysely-governance-repository.ts"
       ],
       "routesOrJobs": [],
       "auditEvents": [
@@ -4193,10 +4312,57 @@
       "classification": "runtime_mutable",
       "supportedCommands": [
         "create",
-        "read"
+        "read",
+        "update"
       ],
       "repositories": [
         "server/packages/platform/governance/src/repositories/kysely-governance-repository.ts"
+      ],
+      "routesOrJobs": [],
+      "auditEvents": [
+        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
+        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/platform/governance/src/moderation/moderation-service.ts"
+      ],
+      "outboxEvents": [
+        "server/packages/platform/governance/src/moderation/moderation-service.ts"
+      ],
+      "unitTests": [
+        "server/packages/platform/governance/src/moderation/moderation-service.test.ts"
+      ],
+      "postgresIntegrationTests": [],
+      "definitionOfCovered": {
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
+        "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
+        "hasAuditDisposition": true,
+        "hasOutboxDisposition": true,
+        "hasUnitTest": true,
+        "hasPostgresIntegrationTest": false
+      },
+      "rolloutStatus": "not_started"
+    },
+    {
+      "id": "common:governance.cycle_certification",
+      "qualifiedName": "governance.cycle_certification",
+      "ddlPath": "server/db/ddl/common/governance/03_tables.sql",
+      "physicalOwner": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "serviceOwners": [
+        "server/packages/platform/governance"
+      ],
+      "classification": "runtime_mutable",
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/platform/governance/src/cycles/kysely-cycle-execution-repository.ts"
       ],
       "routesOrJobs": [],
       "auditEvents": [
@@ -4220,40 +4386,6 @@
       "rolloutStatus": "not_started"
     },
     {
-      "id": "common:governance.cycle_certification",
-      "qualifiedName": "governance.cycle_certification",
-      "ddlPath": "server/db/ddl/common/governance/03_tables.sql",
-      "physicalOwner": [
-        "studio",
-        "neon",
-        "mesh"
-      ],
-      "serviceOwners": [],
-      "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
-      "routesOrJobs": [],
-      "auditEvents": [
-        "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
-        "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
-      ],
-      "outboxEvents": [],
-      "unitTests": [],
-      "postgresIntegrationTests": [],
-      "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
-        "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
-        "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
-        "hasUnitTest": false,
-        "hasPostgresIntegrationTest": false
-      },
-      "rolloutStatus": "not_started"
-    },
-    {
       "id": "common:governance.cycle_deviation",
       "qualifiedName": "governance.cycle_deviation",
       "ddlPath": "server/db/ddl/common/governance/03_tables.sql",
@@ -4262,10 +4394,18 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/governance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
+      "repositories": [
+        "server/packages/platform/governance/src/cycles/kysely-cycle-execution-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
@@ -4276,9 +4416,9 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -4296,10 +4436,17 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/governance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/platform/governance/src/cycles/kysely-cycle-execution-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
@@ -4310,9 +4457,9 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -4330,10 +4477,17 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/governance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/platform/governance/src/cycles/kysely-cycle-execution-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
@@ -4344,11 +4498,48 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
+        "hasOutboxDisposition": false,
+        "hasUnitTest": false,
+        "hasPostgresIntegrationTest": false
+      },
+      "rolloutStatus": "not_started"
+    },
+    {
+      "id": "common:governance.cycle_task_dependency",
+      "qualifiedName": "governance.cycle_task_dependency",
+      "ddlPath": "server/db/ddl/common/governance/03_tables.sql",
+      "physicalOwner": [
+        "studio",
+        "neon",
+        "mesh"
+      ],
+      "serviceOwners": [
+        "server/packages/platform/governance"
+      ],
+      "classification": "runtime_mutable",
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/platform/governance/src/cycles/kysely-cycle-execution-repository.ts"
+      ],
+      "routesOrJobs": [],
+      "auditEvents": [],
+      "outboxEvents": [],
+      "unitTests": [],
+      "postgresIntegrationTests": [],
+      "definitionOfCovered": {
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
+        "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
+        "hasAuditDisposition": false,
         "hasOutboxDisposition": false,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
@@ -4365,11 +4556,19 @@
         "mesh"
       ],
       "serviceOwners": [
-        "server/packages/contracts/governance"
+        "server/packages/contracts/governance",
+        "server/packages/platform/governance"
       ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update",
+        "delete"
+      ],
+      "repositories": [
+        "server/packages/platform/governance/src/compliance/kysely-compliance-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
@@ -4381,8 +4580,8 @@
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
         "hasServiceOwner": true,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -4400,10 +4599,19 @@
         "neon",
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/governance"
+      ],
       "classification": "evidence",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update",
+        "delete"
+      ],
+      "repositories": [
+        "server/packages/platform/governance/src/compliance/kysely-compliance-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
@@ -4414,9 +4622,9 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -4435,11 +4643,18 @@
         "mesh"
       ],
       "serviceOwners": [
-        "server/packages/contracts/governance"
+        "server/packages/contracts/governance",
+        "server/packages/platform/governance"
       ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
+      "repositories": [
+        "server/packages/platform/governance/src/compliance/kysely-compliance-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts",
@@ -4451,8 +4666,8 @@
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
         "hasServiceOwner": true,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -6007,6 +6222,8 @@
         "mesh"
       ],
       "serviceOwners": [
+        "server/apps/platform-host",
+        "server/packages/services/finance",
         "server/packages/services/records"
       ],
       "classification": "append_only",
@@ -6049,6 +6266,8 @@
         "mesh"
       ],
       "serviceOwners": [
+        "server/apps/platform-host",
+        "server/packages/services/finance",
         "server/packages/services/records"
       ],
       "classification": "evidence",
@@ -6308,7 +6527,9 @@
       "physicalOwner": [
         "mesh"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -6322,7 +6543,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -10071,7 +10292,9 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -10085,7 +10308,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -10103,9 +10326,13 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "read"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -10115,8 +10342,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -10133,9 +10360,13 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "read"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -10145,8 +10376,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -10163,9 +10394,13 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "read"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -10175,8 +10410,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -10193,9 +10428,13 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "read"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -10205,8 +10444,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
@@ -11175,24 +11414,29 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/ledger/commitment-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/ledger/commitment-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -11762,24 +12006,35 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/closing/kysely-closing-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/closing/closing-services.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/closing/closing-services.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -11822,24 +12077,33 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/closing/kysely-closing-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/closing/closing-services.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/closing/closing-services.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -12002,25 +12266,36 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/apps/platform-host",
+        "server/packages/contracts/finance",
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/ledger/cross-book-posting-service.ts",
+        "server/packages/services/finance/src/ledger/gl-posting-service.ts"
       ],
-      "outboxEvents": [],
-      "unitTests": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/ledger/cross-book-posting-service.ts",
+        "server/packages/services/finance/src/ledger/gl-posting-service.ts"
+      ],
+      "unitTests": [
+        "server/packages/services/finance/src/ledger/f3-acceptance.test.ts"
+      ],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
-        "hasUnitTest": false,
+        "hasOutboxDisposition": true,
+        "hasUnitTest": true,
         "hasPostgresIntegrationTest": false
       },
       "rolloutStatus": "not_started"
@@ -12996,7 +13271,9 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/apps/platform-host"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -13008,7 +13285,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -13176,7 +13453,9 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -13185,16 +13464,18 @@
         "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
       ],
       "outboxEvents": [],
-      "unitTests": [],
+      "unitTests": [
+        "server/packages/services/finance/src/inventory/f4-acceptance.test.ts"
+      ],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
-        "hasUnitTest": false,
+        "hasUnitTest": true,
         "hasPostgresIntegrationTest": false
       },
       "rolloutStatus": "not_started"
@@ -14028,24 +14309,34 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/closing/kysely-closing-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/closing/closing-services.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/closing/closing-services.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -14059,6 +14350,7 @@
         "neon"
       ],
       "serviceOwners": [
+        "server/apps/platform-host",
         "server/packages/services/finance"
       ],
       "classification": "runtime_mutable",
@@ -14069,9 +14361,12 @@
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/shared/book-period-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/shared/book-period-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
@@ -14080,7 +14375,7 @@
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -14093,24 +14388,35 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "projection",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/budget/kysely-budget-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/budget/budget-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/budget/budget-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -14123,24 +14429,34 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/budget/kysely-budget-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/budget/budget-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/budget/budget-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -14153,24 +14469,34 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/ledger/kysely-commitment-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/ledger/commitment-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/ledger/commitment-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -14183,24 +14509,35 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/ledger/kysely-cross-book-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/ledger/cross-book-posting-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/ledger/cross-book-posting-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -14213,10 +14550,17 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/closing/kysely-closing-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
@@ -14225,9 +14569,9 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -14243,10 +14587,18 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "projection",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/ledger/kysely-gl-balance-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
@@ -14255,9 +14607,9 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -14273,10 +14625,17 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/closing/kysely-closing-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
@@ -14285,9 +14644,9 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -14303,10 +14662,18 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "projection",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/inventory/kysely-inventory-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
@@ -14315,9 +14682,9 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -14333,24 +14700,34 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/inventory/kysely-inventory-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/inventory/inventory-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/inventory/inventory-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -14363,10 +14740,18 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/inventory/kysely-inventory-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
@@ -14375,9 +14760,9 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -14393,10 +14778,17 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/planning/kysely-planning-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
@@ -14405,9 +14797,9 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
         "hasOutboxDisposition": false,
@@ -14423,24 +14815,35 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/planning/kysely-planning-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/planning/planning-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/planning/planning-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -14453,24 +14856,34 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/tax/kysely-tax-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/tax/tax-calculation-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/tax/tax-calculation-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -14483,24 +14896,34 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read"
+      ],
+      "repositories": [
+        "server/packages/services/finance/src/tax/kysely-tax-repositories.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
-        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts"
+        "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+        "server/packages/services/finance/src/tax/tax-credit-service.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/services/finance/src/tax/tax-credit-service.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },
@@ -18390,9 +18813,13 @@
       "physicalOwner": [
         "neon"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/services/finance"
+      ],
       "classification": "catalog_seed_managed",
-      "supportedCommands": [],
+      "supportedCommands": [
+        "read"
+      ],
       "repositories": [],
       "routesOrJobs": [],
       "auditEvents": [
@@ -18402,8 +18829,8 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": true,
         "hasAuditDisposition": true,
@@ -19075,7 +19502,9 @@
       "physicalOwner": [
         "studio"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/platform/control-admin"
+      ],
       "classification": "runtime_mutable",
       "supportedCommands": [],
       "repositories": [],
@@ -19089,7 +19518,7 @@
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
+        "hasServiceOwner": true,
         "hasSupportedCommand": false,
         "hasRepository": false,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
@@ -22336,24 +22765,35 @@
       "physicalOwner": [
         "studio"
       ],
-      "serviceOwners": [],
+      "serviceOwners": [
+        "server/packages/planes/studio"
+      ],
       "classification": "runtime_mutable",
-      "supportedCommands": [],
-      "repositories": [],
+      "supportedCommands": [
+        "create",
+        "read",
+        "update",
+        "delete"
+      ],
+      "repositories": [
+        "server/packages/planes/studio/onboarding/src/kysely-onboarding-saga-repository.ts"
+      ],
       "routesOrJobs": [],
       "auditEvents": [
         "server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts"
       ],
-      "outboxEvents": [],
+      "outboxEvents": [
+        "server/packages/planes/studio/onboarding/src/kysely-onboarding-saga-repository.ts"
+      ],
       "unitTests": [],
       "postgresIntegrationTests": [],
       "definitionOfCovered": {
-        "hasServiceOwner": false,
-        "hasSupportedCommand": false,
-        "hasRepository": false,
+        "hasServiceOwner": true,
+        "hasSupportedCommand": true,
+        "hasRepository": true,
         "hasRuntimeEntrypointOrDeclaredNonRuntime": false,
         "hasAuditDisposition": true,
-        "hasOutboxDisposition": false,
+        "hasOutboxDisposition": true,
         "hasUnitTest": false,
         "hasPostgresIntegrationTest": false
       },

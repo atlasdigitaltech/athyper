@@ -1,0 +1,8 @@
+// Mesh is the partner-network and exchange data plane. It applies signed
+// Studio projections locally and remains authoritative for network records.
+export const meshPlaneComposition = Object.freeze({
+  planeKey: "mesh",
+  role: "network-runtime",
+  owns: ["network-accounts", "relationships", "exchange-envelopes", "plane-authorization", "plane-audit", "plane-outbox"] as const,
+  consumes: ["signed-control-projections", "idempotent-provisioning-commands"] as const,
+});

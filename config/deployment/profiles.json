@@ -1,73 +1,120 @@
 {
   "$schema": "./profiles.schema.json",
-  "version": 1,
+  "version": 2,
   "profiles": {
     "athyper-neon": {
       "entryApplication": "@athyper/neon",
-      "requiredProductPackages": ["@athyper/neon-runtime"],
-      "requiredSharedPackages": [
-        "@athyper/api-client", "@athyper/api-contracts", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-auth-common",
-        "@athyper/platform-bff-relay", "@athyper/brand", "@athyper/cascade", "@athyper/collaboration-ui",
-        "@athyper/content-ui", "@athyper/entity-print", "@athyper/finance-workbench", "@athyper/icons",
-        "@athyper/platform-iam-identity-gate", "@athyper/metadata-client", "@athyper/me-ui", "@athyper/query",
-        "@athyper/runtime-add-item", "@athyper/runtime-canvas", "@athyper/runtime-contracts",
-        "@athyper/runtime-line-item", "@athyper/runtime-list", "@athyper/runtime-shared",
-        "@athyper/platform-iam-session-plane", "@athyper/platform-iam-session-store", "@athyper/shell", "@athyper/surface-kit",
-        "@athyper/temporal", "@athyper/platform-theme", "@athyper/ui"
-      ],
-      "requiredServerServices": ["@athyper/runtime-server"],
-      "environmentVariables": ["NODE_ENV", "PORT", "DATABASE_URL", "REDIS_URL", "AUTH_ISSUER_URL", "AUTH_CLIENT_ID", "AUTH_CLIENT_SECRET"],
+      "requiredProductPackages": [],
+      "requiredSharedPackages": ["@athyper/config"],
+      "requiredServerServices": ["@athyper/server-platform-host"],
+      "environmentVariables": ["NODE_ENV", "PORT", "ATHYPER_ENV"],
       "buildCommand": "pnpm --filter @athyper/neon... build",
       "runtimeCommand": "pnpm --filter @athyper/neon start",
-      "healthChecks": [{"path": "/", "expectedStatus": 200}, {"path": "/readyz", "expectedStatus": 200, "target": "athyper-server"}]
+      "healthChecks": [
+        {"path": "/", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200, "target": "athyper-server"}
+      ]
     },
-    "athyper-admin": {
-      "entryApplication": "@athyper/admin",
-      "requiredProductPackages": ["@athyper/admin-studio"],
-      "requiredSharedPackages": [
-        "@athyper/api-contracts", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-auth-common", "@athyper/platform-bff-relay",
-        "@athyper/brand", "@athyper/cascade", "@athyper/collaboration-ui", "@athyper/finance-rules",
-        "@athyper/i18n", "@athyper/icons", "@athyper/platform-iam-identity-gate", "@athyper/me-ui", "@athyper/query",
-        "@athyper/route-manifest-core", "@athyper/runtime-contracts", "@athyper/runtime-list",
-        "@athyper/runtime-shared", "@athyper/platform-iam-session-plane", "@athyper/platform-iam-session-store", "@athyper/shell",
-        "@athyper/shell-runtime", "@athyper/surface-kit", "@athyper/temporal", "@athyper/platform-theme", "@athyper/ui"
-      ],
-      "requiredServerServices": ["@athyper/runtime-server"],
-      "environmentVariables": ["NODE_ENV", "PORT", "DATABASE_URL", "REDIS_URL", "AUTH_ISSUER_URL", "AUTH_CLIENT_ID", "AUTH_CLIENT_SECRET"],
-      "buildCommand": "pnpm --filter @athyper/admin... build",
-      "runtimeCommand": "pnpm --filter @athyper/admin start",
-      "healthChecks": [{"path": "/", "expectedStatus": 200}, {"path": "/readyz", "expectedStatus": 200, "target": "athyper-server"}]
+    "athyper-studio": {
+      "entryApplication": "@athyper/studio",
+      "requiredProductPackages": [],
+      "requiredSharedPackages": ["@athyper/config"],
+      "requiredServerServices": ["@athyper/server-platform-host"],
+      "environmentVariables": ["NODE_ENV", "PORT", "ATHYPER_ENV"],
+      "buildCommand": "pnpm --filter @athyper/studio... build",
+      "runtimeCommand": "pnpm --filter @athyper/studio start",
+      "healthChecks": [
+        {"path": "/", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200, "target": "athyper-server"}
+      ]
     },
     "athyper-mesh": {
       "entryApplication": "@athyper/mesh",
-      "requiredProductPackages": ["@athyper/mesh-runtime"],
-      "requiredSharedPackages": [
-        "@athyper/adapter-db", "@athyper/platform-iam-auth-bff", "@athyper/platform-bff-relay", "@athyper/brand", "@athyper/i18n",
-        "@athyper/platform-iam-identity-gate", "@athyper/me-ui", "@athyper/mesh-exchange-contracts", "@athyper/query",
-        "@athyper/runtime-shared", "@athyper/platform-iam-session-plane", "@athyper/shell", "@athyper/surface-kit",
-        "@athyper/platform-theme", "@athyper/ui"
-      ],
-      "requiredServerServices": ["@athyper/runtime-server"],
-      "environmentVariables": ["NODE_ENV", "PORT", "DATABASE_URL", "REDIS_URL", "AUTH_ISSUER_URL", "AUTH_CLIENT_ID", "AUTH_CLIENT_SECRET"],
+      "requiredProductPackages": [],
+      "requiredSharedPackages": ["@athyper/config"],
+      "requiredServerServices": ["@athyper/server-platform-host"],
+      "environmentVariables": ["NODE_ENV", "PORT", "ATHYPER_ENV"],
       "buildCommand": "pnpm --filter @athyper/mesh... build",
       "runtimeCommand": "pnpm --filter @athyper/mesh start",
-      "healthChecks": [{"path": "/", "expectedStatus": 200}, {"path": "/readyz", "expectedStatus": 200, "target": "athyper-server"}]
+      "healthChecks": [
+        {"path": "/", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200, "target": "athyper-server"}
+      ]
     },
     "athyper-server": {
-      "entryApplication": "@athyper/runtime-server",
+      "entryApplication": "@athyper/server-platform-host",
       "requiredProductPackages": [],
-      "requiredSharedPackages": ["@athyper/platform-iam-auth-common", "@athyper/runtime-contracts"],
-      "requiredServerServices": [
-        "@athyper/svc-ai", "@athyper/svc-audit", "@athyper/svc-business", "@athyper/svc-collab",
-        "@athyper/svc-content", "@athyper/svc-doc-services", "@athyper/svc-documents", "@athyper/svc-finance",
-        "@athyper/svc-iam", "@athyper/svc-integration", "@athyper/svc-jobs", "@athyper/svc-master",
-        "@athyper/svc-metadata", "@athyper/svc-platform", "@athyper/svc-policy", "@athyper/svc-records",
-        "@athyper/svc-search", "@athyper/svc-shared", "@athyper/svc-workflow"
+      "requiredSharedPackages": [
+        "@athyper/server-foundation",
+        "@athyper/server-contract-audit",
+        "@athyper/server-contract-auth",
+        "@athyper/server-contract-content",
+        "@athyper/server-contract-content-extraction",
+        "@athyper/server-contract-documents",
+        "@athyper/server-contract-events",
+        "@athyper/server-contract-jobs",
+        "@athyper/server-contract-malware-scanning",
+        "@athyper/server-contract-metadata",
+        "@athyper/server-contract-notifications",
+        "@athyper/server-contract-numbering",
+        "@athyper/server-contract-object-storage",
+        "@athyper/server-contract-policy",
+        "@athyper/server-contract-publication",
+        "@athyper/server-contract-records",
+        "@athyper/server-contract-rendering",
+        "@athyper/server-contract-search",
+        "@athyper/server-contract-secrets",
+        "@athyper/server-contract-workflow"
       ],
-      "environmentVariables": ["NODE_ENV", "PORT", "DATABASE_URL", "REDIS_URL", "AUTH_ISSUER_URL", "AUTH_CLIENT_ID", "AUTH_CLIENT_SECRET", "S3_ENDPOINT", "S3_BUCKET"],
-      "buildCommand": "pnpm --filter @athyper/runtime-server... build",
-      "runtimeCommand": "pnpm --filter @athyper/runtime-server start:api",
-      "healthChecks": [{"path": "/livez", "expectedStatus": 200}, {"path": "/readyz", "expectedStatus": 200}]
+      "requiredServerServices": [
+        "@athyper/server-adapter-auth-keycloak",
+        "@athyper/server-adapter-cache-redis",
+        "@athyper/server-adapter-communications",
+        "@athyper/server-adapter-db-athyper",
+        "@athyper/server-adapter-db-core",
+        "@athyper/server-adapter-db-mesh",
+        "@athyper/server-adapter-db-neon",
+        "@athyper/server-adapter-document-parser-tika",
+        "@athyper/server-adapter-malware-clamav",
+        "@athyper/server-adapter-object-storage-s3",
+        "@athyper/server-adapter-publication-signing",
+        "@athyper/server-adapter-rendering",
+        "@athyper/server-adapter-search-meilisearch",
+        "@athyper/server-adapter-secretstore-infisical",
+        "@athyper/server-adapter-telemetry-otel",
+        "@athyper/server-platform-audit",
+        "@athyper/server-platform-iam",
+        "@athyper/server-platform-jobs",
+        "@athyper/server-platform-metadata",
+        "@athyper/server-platform-notifications",
+        "@athyper/server-platform-policy",
+        "@athyper/server-platform-preferences",
+        "@athyper/server-platform-rendering",
+        "@athyper/server-platform-search",
+        "@athyper/server-platform-workflow",
+        "@athyper/server-service-attachments",
+        "@athyper/server-service-content",
+        "@athyper/server-service-document-processing",
+        "@athyper/server-service-documents",
+        "@athyper/server-service-jobs",
+        "@athyper/server-service-numbering",
+        "@athyper/server-service-publication",
+        "@athyper/server-service-records",
+        "@athyper/server-runtime-http",
+        "@athyper/server-runtime-jobs",
+        "@athyper/server-runtime-scheduling"
+      ],
+      "environmentVariables": [
+        "NODE_ENV", "ATHYPER_ENV", "MODE", "PORT", "DATABASE_URL", "MESH_DATABASE_URL",
+        "KEYCLOAK_ISSUER_URL", "KEYCLOAK_CLIENT_ID", "REDIS_URL", "REDIS_BULLMQ_URL",
+        "S3_ENDPOINT", "S3_BUCKET", "OTEL_EXPORTER_OTLP_ENDPOINT"
+      ],
+      "buildCommand": "pnpm --filter @athyper/server-platform-host... build",
+      "runtimeCommand": "pnpm --filter @athyper/server-platform-host start:api",
+      "healthChecks": [
+        {"path": "/livez", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200}
+      ]
     }
   }
 }

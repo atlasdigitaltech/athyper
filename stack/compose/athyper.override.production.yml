@@ -42,7 +42,7 @@ services:
     build:
       context: ../..
 
-  admin-web:
+  studio-web:
     build:
       context: ../..
 

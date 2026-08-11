@@ -1,1 +1,1 @@
-// @athyper/contracts-foundation-errors
+﻿export {};

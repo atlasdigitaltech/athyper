@@ -85,7 +85,8 @@ BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'connector_instance', 'integration_endpoint', 'webhook_subscription',
         'cycle_type', 'cycle_phase', 'cycle_task_category', 'cycle_task_template',
-        'cycle_task_dependency', 'cycle_cross_dependency', 'cycle_carryforward_rule'
+        'cycle_task_dependency', 'cycle_cross_dependency', 'cycle_carryforward_rule',
+        'cycle_template_revision'
     ]
     LOOP
         EXECUTE format('ALTER TABLE control.%I ENABLE ROW LEVEL SECURITY', v_table);
@@ -172,6 +173,12 @@ CREATE POLICY cron_schedule_tenant_write ON control.cron_schedule FOR ALL TO ath
     USING (tenant_id = shared.current_tenant_id_soft())
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY cron_schedule_seed_write ON control.cron_schedule FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+ALTER TABLE control.cron_schedule_change_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.cron_schedule_change_log FORCE ROW LEVEL SECURITY;
+CREATE POLICY cron_schedule_change_log_read ON control.cron_schedule_change_log FOR SELECT TO athyperapp
+  USING (tenant_id IS NOT DISTINCT FROM shared.current_tenant_id());
+CREATE POLICY cron_schedule_change_log_insert ON control.cron_schedule_change_log FOR INSERT TO athyperapp
+  WITH CHECK (tenant_id IS NOT DISTINCT FROM shared.current_tenant_id());
 
 ALTER TABLE control.notification_provider ENABLE ROW LEVEL SECURITY;
 ALTER TABLE control.notification_provider FORCE ROW LEVEL SECURITY;

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 const LEGACY_STORAGE_STATE_PATH = "./tests/e2e/.auth/storage-state.json";
-const PLANES = ["admin", "neon", "mesh"] as const;
+const PLANES = ["studio", "neon", "mesh"] as const;
 
 /**
  * Creates one authenticated storage state per plane. Credentials may be

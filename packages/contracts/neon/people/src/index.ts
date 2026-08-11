@@ -1,1 +1,1 @@
-// @athyper/contracts-neon-people
+﻿export {};

@@ -70,8 +70,8 @@ resolve_targets() {
   case "$PLANE_TARGET" in
     neon) PLANE_SERVICES=(neon-web) ;;
     mesh) PLANE_SERVICES=(mesh-web) ;;
-    admin) PLANE_SERVICES=(admin-web) ;;
-    all) PLANE_SERVICES=(neon-web mesh-web admin-web) ;;
+    studio) PLANE_SERVICES=(studio-web) ;;
+    all) PLANE_SERVICES=(neon-web mesh-web studio-web) ;;
   esac
 }
 

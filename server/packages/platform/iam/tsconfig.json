@@ -1,13 +1,10 @@
 {
-  "extends": "../../../../tooling/tsconfig/base.json",
+  "extends": "../../../tsconfig.json",
   "compilerOptions": {
-    "noEmit": true,
-    "rootDir": "../../../..",
-    "baseUrl": ".",
-    "paths": {
-      "@athyper/entity-operation-scope-contracts": ["../../../../packages/shared/data-integration/entity-operation-scope-contracts/src/index.ts"]
-    }
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"]
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["dist", "node_modules", ".turbo", "**/*.test.ts", "**/*.spec.ts"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
 }

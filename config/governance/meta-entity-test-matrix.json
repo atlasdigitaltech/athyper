@@ -1,8 +1,8 @@
-{
+﻿{
   "schemaVersion": 1,
   "required": {
     "entityScope": ["platform_entity", "tenant_overlay_entity"],
-    "planes": ["neon", "mesh", "admin"],
+    "planes": ["neon", "mesh", "studio"],
     "security": ["two_tenants_same_entity", "different_permission_profiles", "warm_auth_epoch_change", "warm_profile_hash_change"],
     "cache": ["publish_during_cold_load", "redis_unavailable", "redis_slow", "redis_reconnected", "redis_flushed"],
     "topology": ["single_replica", "multiple_replicas"],
@@ -23,7 +23,7 @@
     },
     {
       "artifact": "server/packages/services/metadata/src/execution-descriptor/__tests__/provider.test.ts",
-      "covers": ["neon", "mesh", "admin", "two_tenants_same_entity", "publish_during_cold_load", "redis_unavailable", "redis_slow", "redis_reconnected", "redis_flushed", "single_replica", "multiple_replicas", "cold", "stampede", "provider_cache_invalidation_unit"]
+      "covers": ["neon", "mesh", "studio", "two_tenants_same_entity", "publish_during_cold_load", "redis_unavailable", "redis_slow", "redis_reconnected", "redis_flushed", "single_replica", "multiple_replicas", "cold", "stampede", "provider_cache_invalidation_unit"]
     },
     {
       "artifact": "server/packages/services/records/query/__tests__/entity-query.service.test.ts",

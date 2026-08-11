@@ -4,16 +4,12 @@
 #
 # Description :
 #   searchcore backs the Sprint 41 SearchInput and future cross-entity
-#   queries. Indexing is driven by a jobs-search-index BullMQ worker
-#   that subscribes to event.outbox (Track B2.2, not yet wired).
+#   queries. Indexing is driven by the governed documents.processing
+#   BullMQ worker after content extraction is durably persisted.
 #
-#   Tenant isolation uses Meilisearch tenant tokens (JWTs) minted per
-#   request BY THE API RUNTIME (backend) from tenantContext, with an
-#   embedded `_tenant_id` filter rule. Tokens are NEVER issued
-#   client-side — doing so would require shipping the parent API key to
-#   the browser and defeat the isolation guarantee. The backend issues a
-#   scoped token per session and returns it to the frontend, which uses
-#   it to query searchcore directly.
+#   Searchcore is queried only by the authenticated API. The adapter derives
+#   mandatory plane and tenant filters from VerifiedRequestContext. Search
+#   credentials are never returned to a browser.
 #
 # Notes :
 #   - Persistent volume at $ATHYPER_DATA/searchcore (indexes + settings).
@@ -21,8 +17,7 @@
 #     (the root path returns the JSON status). Set MEILI_ENV=development
 #     to expose the UI — staging does this in the override file.
 #   - Master-key auth is enforced regardless of MEILI_ENV.
-#   - Master key is admin-only; application code uses scoped API keys or
-#     tenant tokens, never the master.
+#   - The host/worker owns the configured key; browsers never receive it.
 # =======================================================================
 
 services:

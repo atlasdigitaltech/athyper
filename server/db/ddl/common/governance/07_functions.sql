@@ -33,3 +33,26 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION governance.trg_guard_approved_certification()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF OLD.status = 'approved' THEN
+        RAISE EXCEPTION 'approved cycle certifications are immutable'
+            USING ERRCODE = '22000';
+    END IF;
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION governance.trg_reject_cycle_dependency_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'instantiated cycle task dependencies are immutable'
+        USING ERRCODE = '22000';
+END;
+$$;

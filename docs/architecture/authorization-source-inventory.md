@@ -1522,7 +1522,7 @@ Capture DDLs:
 | `master.principal` | update | ddl | server/db/ddl/master/06_triggers.sql | 2117 |
 | `master.principal` | insert | tool | server/db/scripts/migrate/migrate-preserved-identities.ts | 184 |
 | `master.principal` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave3-authority.mjs | 83 |
-| `master.principal` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 126 |
+| `master.principal` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 126 |
 | `master.principal` | insert | tool | server/db/scripts/verify/verify-authorization-v2-wave6.ts | 124 |
 | `master.principal` | insert | seed | server/db/seed/platform/000_bootstrap/000_bootstrap.sql | 32 |
 | `master.principal` | insert | seed | server/db/seed/tenants/admin/000_platform_staff.sql | 43 |
@@ -1688,7 +1688,7 @@ Capture DDLs:
 | `mesh.network_account` | update | ddl | server/db/ddl/mesh/01a_foundation_tables.sql | 254 |
 | `mesh.network_account` | update | ddl | server/db/ddl/mesh/09_streamline.sql | 121, 169 |
 | `mesh.network_account` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs | 274 |
-| `mesh.network_account` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 150 |
+| `mesh.network_account` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 150 |
 | `mesh.network_account` | insert | seed | server/db/seed/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 48 |
 | `mesh.account_grant` | insert | ddl | server/db/ddl/mesh/01a_foundation_tables.sql | 344 |
 | `mesh.account_grant` | update | ddl | server/db/ddl/mesh/01z_account_grant_fingerprint.sql | 61 |
@@ -1712,15 +1712,15 @@ Capture DDLs:
 | `mesh.principal_identity_binding` | insert | runtime | server/packages/services/iam/session/session.service.ts | 192 |
 | `mesh.principal_identity_binding` | update | runtime | server/packages/services/jobs/workers/kc-sync.worker.ts | 404, 444 |
 | `mesh.principal` | insert | tool | server/db/scripts/migrate/migrate-preserved-identities.ts | 229 |
-| `mesh.principal` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 153 |
+| `mesh.principal` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 153 |
 | `mesh.principal` | insert | tool | server/db/scripts/verify/verify-authorization-v2-wave6.ts | 125 |
 | `mesh.principal` | insert | seed | server/db/seed/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 107 |
 | `mesh.principal` | insert | runtime | server/packages/services/iam/session/session.service.ts | 181 |
 | `mesh.principal` | update | runtime | server/packages/services/jobs/workers/kc-sync.worker.ts | 423 |
-| `mesh.network_relationship` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 157 |
+| `mesh.network_relationship` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 157 |
 | `mesh.network_relationship` | insert | seed | server/db/seed/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 153 |
 | `control.entity` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 63 |
-| `control.entity` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 134 |
+| `control.entity` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 134 |
 | `control.entity` | insert | seed | server/db/seed/platform/003_control/040_control_entity_contract.sql | 518 |
 | `control.entity` | update | seed | server/db/seed/platform/003_control/040_control_entity_contract.sql | 627, 649, 660 |
 | `control.entity` | insert | seed | server/db/seed/platform/003_control/040a_control_all_schema_entity_coverage_contract.sql | 336 |
@@ -1969,15 +1969,15 @@ Capture DDLs:
 | `mesh_control.auth_catalog_owner` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 141 |
 | `mesh_control.auth_permission` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 145 |
 | `mesh_control.auth_permission` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs | 276 |
-| `mesh_control.auth_permission` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 167 |
+| `mesh_control.auth_permission` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 167 |
 | `mesh_control.auth_permission_plane` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs | 282 |
-| `mesh_control.auth_permission_plane` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 179 |
+| `mesh_control.auth_permission_plane` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 179 |
 | `mesh_control.auth_plane` | insert | ddl | server/db/ddl/mesh_control/01zz_authorization_v2_catalog.sql | 47 |
-| `mesh_control.auth_plane` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 138 |
+| `mesh_control.auth_plane` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 138 |
 | `mesh_control.authorization_v2_expand_installation` | insert | tool | server/db/scripts/install/install-mesh-authorization-v2-expand.ts | 275 |
 | `mesh_control.authorization_v2_frozen_legacy_object` | insert | ddl | server/db/ddl/mesh_control/01zzz_authorization_v2_migration_state.sql | 147 |
 | `mesh_control.entity` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 143 |
-| `mesh_control.entity` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 161 |
+| `mesh_control.entity` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 161 |
 | `mesh_control.entity_operation` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 147 |
 | `mesh_control.entity_operation_plane` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 151 |
 | `mesh_log.authorization_account_epoch_v2` | insert | ddl | server/db/ddl/mesh_log/05_authorization_v2_invalidation_functions.sql | 215, 239 |
@@ -1993,36 +1993,36 @@ Capture DDLs:
 | `mesh_log.authorization_v2_replay_transaction` | insert | ddl | server/db/ddl/mesh_log/05_authorization_v2_replay_functions.sql | 429 |
 | `mesh_log.authorization_v2_replay_transaction` | update | ddl | server/db/ddl/mesh_log/05_authorization_v2_replay_functions.sql | 684, 929 |
 | `mesh.account_entitlement_override` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs | 305 |
-| `mesh.auth_delegation` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 243 |
-| `mesh.auth_delegation_permission` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 367, 403 |
-| `mesh.auth_deny_rule` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 336 |
-| `mesh.auth_override` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 346 |
+| `mesh.auth_delegation` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 243 |
+| `mesh.auth_delegation_permission` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 367, 403 |
+| `mesh.auth_deny_rule` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 336 |
+| `mesh.auth_override` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 346 |
 | `mesh.auth_permission_set` | update | ddl | server/db/ddl/mesh/05_authorization_v2_authority_functions.sql | 414 |
-| `mesh.auth_permission_set` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 200, 304 |
-| `mesh.auth_permission_set_rule` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 203, 309 |
-| `mesh.auth_plane_membership` | delete | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 443 |
-| `mesh.auth_plane_membership` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 184 |
-| `mesh.auth_record_acl` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 234, 381 |
-| `mesh.auth_record_acl_permission` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 359, 393 |
+| `mesh.auth_permission_set` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 200, 304 |
+| `mesh.auth_permission_set_rule` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 203, 309 |
+| `mesh.auth_plane_membership` | delete | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 443 |
+| `mesh.auth_plane_membership` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 184 |
+| `mesh.auth_record_acl` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 234, 381 |
+| `mesh.auth_record_acl_permission` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 359, 393 |
 | `mesh.auth_role` | update | ddl | server/db/ddl/mesh/05_authorization_v2_authority_functions.sql | 620 |
-| `mesh.auth_role` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 210, 316, 414 |
+| `mesh.auth_role` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 210, 316, 414 |
 | `mesh.auth_role_compilation` | update | ddl | server/db/ddl/mesh/05_authorization_v2_authority_functions.sql | 614 |
-| `mesh.auth_role_compilation` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 216, 322, 420 |
-| `mesh.auth_role_compilation` | update | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 435 |
-| `mesh.auth_role_permission` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 224, 329 |
-| `mesh.auth_scope_account` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 195 |
-| `mesh.auth_scope_network_relationship` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 279 |
-| `mesh.auth_scope_resource` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 293 |
-| `mesh.auth_scope_target` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 191, 254, 262, 271, 288 |
-| `mesh.auth_scope_target` | update | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 198 |
+| `mesh.auth_role_compilation` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 216, 322, 420 |
+| `mesh.auth_role_compilation` | update | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 435 |
+| `mesh.auth_role_permission` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 224, 329 |
+| `mesh.auth_scope_account` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 195 |
+| `mesh.auth_scope_network_relationship` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 279 |
+| `mesh.auth_scope_resource` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 293 |
+| `mesh.auth_scope_target` | insert | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 191, 254, 262, 271, 288 |
+| `mesh.auth_scope_target` | update | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 198 |
 | `control.auth_catalog_owner` | insert | ddl | server/db/ddl/control/01zzp_authorization_v2_catalog.sql | 134 |
 | `control.auth_catalog_owner` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 61 |
-| `control.auth_catalog_owner` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 129 |
+| `control.auth_catalog_owner` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 129 |
 | `control.auth_permission` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 65 |
 | `control.auth_permission` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs | 145 |
-| `control.auth_permission` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 139 |
+| `control.auth_permission` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 139 |
 | `control.auth_permission_plane` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs | 149 |
-| `control.auth_permission_plane` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 150 |
+| `control.auth_permission_plane` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 150 |
 | `control.auth_plane` | insert | ddl | server/db/ddl/control/01zzp_authorization_v2_catalog.sql | 58 |
 | `control.authorization_v2_deferred_constraint_registry` | insert | tool | server/db/scripts/install/install-authorization-v2-expand.ts | 467 |
 | `control.authorization_v2_expand_installation` | insert | tool | server/db/scripts/install/install-authorization-v2-expand.ts | 591 |
@@ -2041,21 +2041,21 @@ Capture DDLs:
 | `event.authorization_v2_replay_inbox` | insert | ddl | server/db/ddl/event/05_authorization_v2_replay_functions.sql | 423 |
 | `event.authorization_v2_replay_transaction` | insert | ddl | server/db/ddl/event/05_authorization_v2_replay_functions.sql | 399 |
 | `event.authorization_v2_replay_transaction` | update | ddl | server/db/ddl/event/05_authorization_v2_replay_functions.sql | 617, 838 |
-| `master.auth_delegation` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 188 |
-| `master.auth_delegation_permission` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 209, 265 |
-| `master.auth_deny_rule` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 235 |
-| `master.auth_override` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 245 |
-| `master.auth_permission_set` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 163 |
-| `master.auth_permission_set_rule` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 196, 218 |
+| `master.auth_delegation` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 188 |
+| `master.auth_delegation_permission` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 209, 265 |
+| `master.auth_deny_rule` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 235 |
+| `master.auth_override` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 245 |
+| `master.auth_permission_set` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 163 |
+| `master.auth_permission_set_rule` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 196, 218 |
 | `master.auth_plane_membership` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave3-authority.mjs | 87 |
-| `master.auth_record_acl` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 181, 279 |
-| `master.auth_record_acl_permission` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 205, 257 |
+| `master.auth_record_acl` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 181, 279 |
+| `master.auth_record_acl_permission` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 205, 257 |
 | `master.auth_role` | update | ddl | server/db/ddl/master/05_authorization_v2_functions.sql | 877 |
-| `master.auth_role` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 168 |
+| `master.auth_role` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 168 |
 | `master.auth_role_compilation` | update | ddl | server/db/ddl/master/05_authorization_v2_functions.sql | 860, 868 |
-| `master.auth_role_compilation` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 174 |
-| `master.auth_role_permission` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 200, 226 |
-| `master.auth_scope_target` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-v2-catalog-ownership.mjs | 156 |
+| `master.auth_role_compilation` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 174 |
+| `master.auth_role_permission` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 200, 226 |
+| `master.auth_scope_target` | insert | tool | server/db/scripts/verify/smoke-neon-authorization-catalog-ownership.mjs | 156 |
 | `master.tenant_entitlement_override` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave4-entitlement.mjs | 185 |
 | `mesh_control.auth_catalog_reference_v2` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 156 |
 | `mesh_control.auth_permission_alias_v2` | insert | tool | server/db/scripts/verify/smoke-authorization-v2-wave2-catalog.mjs | 172 |
@@ -2973,8 +2973,8 @@ Capture DDLs:
 | `permissionCode` | runtime | packages/shared/runtime-line-item/src/surface/resolve-line-selection-actions.ts | 33, 66 |
 | `permissionCode` | tool | scripts/policy/authorization-inventory.ts | 894, 912 |
 | `permissionCode` | tool | server/db/scripts/reports/capture-authorization-golden-corpus.ts | 63, 75, 602, 766, 768, 1443, 1460, 1461, 1462, 1505, 1546, 1547, 1548, 1552, 1613 |
-| `permissionCode` | tool | server/db/scripts/reports/report-authorization-data-quality.ts | 624, 649 |
-| `permissionCode` | tool | server/db/scripts/reports/verify-authorization-golden-corpus.ts | 727, 768, 792, 855 |
+| `permissionCode` | tool | server/db/scripts/reports/neon-authorization-quality.ts | 624, 649 |
+| `permissionCode` | tool | server/db/scripts/verify/verify-authorization-golden-corpus.ts | 727, 768, 792, 855 |
 | `permissionCode` | test | server/packages/services/ai/__tests__/atlas-data-gateway.test.ts | 13, 27, 134, 135 |
 | `permissionCode` | runtime | server/packages/services/ai/agent/model-catalog.ts | 586, 601, 602, 603, 604 |
 | `permissionCode` | runtime | server/packages/services/ai/atlas-data-gateway.ts | 15, 110, 111, 112, 113, 118, 180 |
@@ -3131,8 +3131,8 @@ Capture DDLs:
 | `permissions` | generated | server/db/generated/authorization-catalog/neon-admin/verification-report.v1.json | 11 |
 | `permissions` | tool | server/db/scripts/authority/compile-authorization-authority.ts | 101, 104, 145, 153, 158, 169, 205, 216 |
 | `permissions` | tool | server/db/scripts/catalog/compile-authorization-catalog.ts | 507, 685 |
-| `permissions` | tool | server/db/scripts/reports/report-authorization-data-quality.ts | 652, 673, 676 |
-| `permissions` | tool | server/db/scripts/verify/smoke-mesh-authorization-v2-authority.mjs | 430 |
+| `permissions` | tool | server/db/scripts/reports/neon-authorization-quality.ts | 652, 673, 676 |
+| `permissions` | tool | server/db/scripts/verify/smoke-mesh-authorization-authority.mjs | 430 |
 | `permissions` | tool | server/db/scripts/verify/verify-atlas-tools-rls.ts | 175 |
 | `permissions` | tool | server/db/scripts/verify/verify-authorization-v2-wave2.ts | 22, 105, 137 |
 | `permissions` | seed | server/db/seed/platform/003_control/010_control_entity_class_profile_contract.sql | 28 |

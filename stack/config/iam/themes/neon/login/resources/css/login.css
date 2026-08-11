@@ -37,12 +37,12 @@ body {
  * retain their own accents after the user leaves the authentication shell. */
 :root[data-plane="neon"],
 :root[data-plane="mesh"],
-:root[data-plane="admin"],
+:root[data-plane="studio"],
 :root[data-plane="athyper"],
 :root[data-plane="platform-control"],
 .iam-shell[data-plane="neon"],
 .iam-shell[data-plane="mesh"],
-.iam-shell[data-plane="admin"],
+.iam-shell[data-plane="studio"],
 .iam-shell[data-plane="athyper"],
 .iam-shell[data-plane="platform-control"] {
   --plane-accent: var(--athyper-color-primary);

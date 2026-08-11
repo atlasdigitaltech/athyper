@@ -46,9 +46,12 @@ x-athyper-shared-env: &athyper-shared-env
   # Database
   DATABASE_URL: "${DATABASE_URL}"
   DATABASE_ADMIN_URL: "${DATABASE_ADMIN_URL}"
-  ATHYPER_PLATFORM_DATABASE_URL: "${ATHYPER_PLATFORM_DATABASE_URL:-}"
-  ATHYPER_PLATFORM_DATABASE_POOL_MAX: "${ATHYPER_PLATFORM_DATABASE_POOL_MAX:-2}"
+  NEON_WORKER_DATABASE_URL: "${NEON_WORKER_DATABASE_URL:-}"
+  STUDIO_DATABASE_URL: "${STUDIO_DATABASE_URL:-${ATHYPER_PLATFORM_DATABASE_URL:-}}"
+  STUDIO_WORKER_DATABASE_URL: "${STUDIO_WORKER_DATABASE_URL:-${ATHYPER_PLATFORM_WORKER_DATABASE_URL:-}}"
+  STUDIO_DATABASE_POOL_MAX: "${STUDIO_DATABASE_POOL_MAX:-${ATHYPER_PLATFORM_DATABASE_POOL_MAX:-2}}"
   MESH_DATABASE_URL: "${MESH_DATABASE_URL:-}"
+  MESH_WORKER_DATABASE_URL: "${MESH_WORKER_DATABASE_URL:-}"
   MESH_DATABASE_POOL_MAX: "${MESH_DATABASE_POOL_MAX:-2}"
   DB_POOL_MAX: "${DB_POOL_MAX}"
   # Cache
@@ -74,9 +77,27 @@ x-athyper-shared-env: &athyper-shared-env
   BACKUP_S3_BUCKET: "${BACKUP_S3_BUCKET:-athyper-backups}"
   BACKUP_S3_ACCESS_KEY: "${BACKUP_S3_ACCESS_KEY}"
   BACKUP_S3_SECRET_KEY: "${BACKUP_S3_SECRET_KEY}"
+  # Publication is disabled by default and enabled per process during rollout.
+  PUBLICATION_API_ENABLED: "false"
+  PUBLICATION_COMPILE_ENABLED: "false"
+  PUBLICATION_DISPATCH_ENABLED: "false"
+  PUBLICATION_APPLY_ENABLED: "false"
+  PUBLICATION_RECOVERY_ENABLED: "false"
+  PUBLICATION_TARGET_PLANES: "${PUBLICATION_TARGET_PLANES:-}"
+  PUBLICATION_REQUIRE_SIGNATURE: "${PUBLICATION_REQUIRE_SIGNATURE:-true}"
+  PUBLICATION_SIGNING_KEY_ID: "${PUBLICATION_SIGNING_KEY_ID:-}"
+  PUBLICATION_PUBLIC_KEY_REFERENCE: "${PUBLICATION_PUBLIC_KEY_REFERENCE:-}"
+  PUBLICATION_RUNTIME_VERSION: "${PUBLICATION_RUNTIME_VERSION:-1.0.0}"
+  PUBLICATION_RECOVERY_INTERVAL_MS: "${PUBLICATION_RECOVERY_INTERVAL_MS:-60000}"
+  INFISICAL_URL: "${INFISICAL_URL:-}"
+  INFISICAL_WORKSPACE_ID: "${INFISICAL_WORKSPACE_ID:-}"
+  INFISICAL_ENVIRONMENT: "${INFISICAL_ENVIRONMENT:-prod}"
+  INFISICAL_SECRET_PATH: "${INFISICAL_SECRET_PATH:-/publication}"
   # Virus scanning (virusscan)
   CLAMD_HOST: "${CLAMD_HOST:-virusscan}"
   CLAMD_PORT: "${CLAMD_PORT:-3310}"
+  CLAMD_TIMEOUT_MS: "${CLAMD_TIMEOUT_MS:-30000}"
+  CLAMD_MAX_BYTES: "${CLAMD_MAX_BYTES:-104857600}"
   CLAMD_ON_UNAVAILABLE: "${CLAMD_ON_UNAVAILABLE:-fail-closed}"
   # IAM
   IAM_ISSUER_URL: "${IAM_ISSUER_URL}"
@@ -174,17 +195,25 @@ x-athyper-shared-env: &athyper-shared-env
   # PDF rendering (docrender) + text extraction (docparser) — render profile; empty disables
   DOCRENDER_BASE_URL: "${DOCRENDER_BASE_URL:-}"
   DOCPARSER_URL: "${DOCPARSER_URL:-}"
+  DOCPARSER_TIMEOUT_MS: "${DOCPARSER_TIMEOUT_MS:-120000}"
+  DOCPARSER_MAX_INPUT_BYTES: "${DOCPARSER_MAX_INPUT_BYTES:-52428800}"
+  DOCPARSER_MAX_TEXT_CHARS: "${DOCPARSER_MAX_TEXT_CHARS:-5000000}"
   # Cron heartbeats (cronwatch — monitoring profile; empty disables)
   CRONWATCH_BASE_URL: "${CRONWATCH_BASE_URL:-}"
+  CRONWATCH_PING_KEY: "${CRONWATCH_PING_KEY:-}"
+  STATUSWATCH_WORKER_PUSH_URL: "${STATUSWATCH_WORKER_PUSH_URL:-}"
+  STATUSWATCH_SCHEDULER_PUSH_URL: "${STATUSWATCH_SCHEDULER_PUSH_URL:-}"
   # Search (searchcore — search profile; empty disables)
   SEARCHCORE_URL: "${SEARCHCORE_URL:-}"
   SEARCHCORE_MASTER_KEY: "${MEILI_MASTER_KEY:-}"
+  SEARCHCORE_DOCUMENT_INDEX: "${SEARCHCORE_DOCUMENT_INDEX:-documents}"
+  SEARCHCORE_TIMEOUT_MS: "${SEARCHCORE_TIMEOUT_MS:-10000}"
   # SMTP — app notification email channel
   # Dev default: mailtrap container (port 1025, no auth). The email channel
   # is only registered when SMTP_HOST is non-empty, so these defaults wire
   # local dev automatically without requiring .env changes.
   # Staging/production: override all vars via secrets/.env.
-  SMTP_HOST: "${SMTP_HOST:-mailtrap}"
+  SMTP_HOST: "${SMTP_HOST:-}"
   SMTP_PORT: "${SMTP_PORT:-1025}"
   SMTP_SECURE: "${SMTP_SECURE:-false}"
   SMTP_USER: "${SMTP_USER:-}"
@@ -300,7 +329,7 @@ services:
       # ── Platform control realm (optional) ──────────────────────────────
       PLATFORM_CONTROL_ENABLED:     "${PLATFORM_CONTROL_ENABLED:-false}"
       PLATFORM_KEYCLOAK_REALM:      "${PLATFORM_KEYCLOAK_REALM:-platform-control}"
-      PLATFORM_KEYCLOAK_CLIENT_ID:  "${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-admin}"
+      PLATFORM_KEYCLOAK_CLIENT_ID:  "${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-studio}"
       # ── Data-plane proxy target (internal network, no TLS) ─────────────
       RUNTIME_API_URL: "http://api:${API_PORT}"
       ATLAS_AGENT_ENABLED: "${ATLAS_AGENT_ENABLED:-false}"
@@ -409,7 +438,7 @@ services:
       KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD}"
       PLATFORM_CONTROL_ENABLED: "${PLATFORM_CONTROL_ENABLED:-false}"
       PLATFORM_KEYCLOAK_REALM: "${PLATFORM_KEYCLOAK_REALM:-platform-control}"
-      PLATFORM_KEYCLOAK_CLIENT_ID: "${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-admin}"
+      PLATFORM_KEYCLOAK_CLIENT_ID: "${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-studio}"
       RUNTIME_API_URL: "http://api:${API_PORT}"
       AUTH_CONTEXT_RESOLVER_REQUIRED: "${AUTH_CONTEXT_RESOLVER_REQUIRED:-true}"
       AUTH_DISCOVERY_SHARED_SECRET: "${AUTH_DISCOVERY_SHARED_SECRET:-}"
@@ -457,14 +486,14 @@ services:
       - traefik.http.services.mesh-web.loadbalancer.healthcheck.interval=15s
       - traefik.http.services.mesh-web.loadbalancer.healthcheck.timeout=5s
 
-  admin-web:
+  studio-web:
     build:
       context: ../..
       dockerfile: apps/Dockerfile
       args:
         <<: *next-public-build-args
-        APP_NAME: admin
-        APP_PACKAGE: "@athyper/admin"
+        APP_NAME: studio
+        APP_PACKAGE: "@athyper/studio"
     profiles: ["apps"]
     deploy:
       resources:
@@ -481,21 +510,21 @@ services:
       ENVIRONMENT: "${ENVIRONMENT}"
       NODE_ENV: "${NODE_ENV:-production}"
       PORT: "${WEB_PORT}"
-      ALLOWED_HOSTS: "${ADMIN_ALLOWED_HOSTS}"
-      GATEWAY_ORIGIN: "${ADMIN_GATEWAY_ORIGIN}"
-      PUBLIC_BASE_URL: "https://${APPS_ATHYPER_ADMIN_HOST}"
-      PUBLIC_WEB_URL: "https://${APPS_ATHYPER_ADMIN_HOST}"
-      ADMIN_PUBLIC_WEB_URL: "https://${APPS_ATHYPER_ADMIN_HOST}"
+      ALLOWED_HOSTS: "${STUDIO_ALLOWED_HOSTS}"
+      GATEWAY_ORIGIN: "${STUDIO_GATEWAY_ORIGIN}"
+      PUBLIC_BASE_URL: "https://${APPS_ATHYPER_STUDIO_HOST}"
+      PUBLIC_WEB_URL: "https://${APPS_ATHYPER_STUDIO_HOST}"
+      STUDIO_PUBLIC_WEB_URL: "https://${APPS_ATHYPER_STUDIO_HOST}"
       KEYCLOAK_BASE_URL: "https://${IAM_HOST}"
       KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
-      ADMIN_KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
-      ADMIN_KEYCLOAK_CLIENT_ID: "${ADMIN_KEYCLOAK_CLIENT_ID:-admin-web}"
-      ADMIN_KEYCLOAK_CLIENT_SECRET: "${ADMIN_WEB_CLIENT_SECRET:-}"
+      STUDIO_KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
+      STUDIO_KEYCLOAK_CLIENT_ID: "${STUDIO_KEYCLOAK_CLIENT_ID:-studio-web}"
+      STUDIO_KEYCLOAK_CLIENT_SECRET: "${STUDIO_WEB_CLIENT_SECRET:-}"
       KEYCLOAK_ADMIN_USERNAME: "${KEYCLOAK_ADMIN_USERNAME}"
       KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD}"
       PLATFORM_CONTROL_ENABLED: "${PLATFORM_CONTROL_ENABLED:-false}"
       PLATFORM_KEYCLOAK_REALM: "${PLATFORM_KEYCLOAK_REALM:-platform-control}"
-      PLATFORM_KEYCLOAK_CLIENT_ID: "${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-admin}"
+      PLATFORM_KEYCLOAK_CLIENT_ID: "${PLATFORM_KEYCLOAK_CLIENT_ID:-athyper-studio}"
       RUNTIME_API_URL: "http://api:${API_PORT}"
       AUTH_CONTEXT_RESOLVER_REQUIRED: "${AUTH_CONTEXT_RESOLVER_REQUIRED:-true}"
       AUTH_DISCOVERY_SHARED_SECRET: "${AUTH_DISCOVERY_SHARED_SECRET:-}"
@@ -538,10 +567,10 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=athyper-edge
-      - traefik.http.services.admin-web.loadbalancer.server.port=3000
-      - traefik.http.services.admin-web.loadbalancer.healthcheck.path=/livez
-      - traefik.http.services.admin-web.loadbalancer.healthcheck.interval=15s
-      - traefik.http.services.admin-web.loadbalancer.healthcheck.timeout=5s
+      - traefik.http.services.studio-web.loadbalancer.server.port=3000
+      - traefik.http.services.studio-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.studio-web.loadbalancer.healthcheck.interval=15s
+      - traefik.http.services.studio-web.loadbalancer.healthcheck.timeout=5s
 
   # -------------------------------------------------------------------------
   # Runtime API - Backend services
@@ -579,6 +608,7 @@ services:
     environment:
       <<: *athyper-shared-env
       MODE: "${MODE}"
+      PUBLICATION_API_ENABLED: "${PUBLICATION_API_ENABLED:-false}"
     extra_hosts: *athyper-hosts
     volumes: *athyper-volumes
     # F4: Use /livez (process-alive, no dep checks) to avoid restarts on transient
@@ -637,6 +667,13 @@ services:
     environment:
       <<: *athyper-shared-env
       MODE: worker
+      PUBLICATION_API_ENABLED: "false"
+      PUBLICATION_COMPILE_ENABLED: "${PUBLICATION_COMPILE_ENABLED:-false}"
+      PUBLICATION_DISPATCH_ENABLED: "${PUBLICATION_DISPATCH_ENABLED:-false}"
+      PUBLICATION_APPLY_ENABLED: "${PUBLICATION_APPLY_ENABLED:-false}"
+      PUBLICATION_RECOVERY_ENABLED: "false"
+      PUBLICATION_PRIVATE_KEY_REFERENCE: "${PUBLICATION_PRIVATE_KEY_REFERENCE:-}"
+      INFISICAL_TOKEN: "${INFISICAL_TOKEN:-}"
       # Cross-tenant retention authority is intentionally absent from API.
       ATLAS_CONVERSATION_MAINTENANCE_DATABASE_URL: "${ATLAS_CONVERSATION_MAINTENANCE_DATABASE_URL:-}"
     extra_hosts: *athyper-hosts
@@ -646,7 +683,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget --no-check-certificate -qO- http://localhost:${API_PORT:-3000}/livez || exit 1",
+          "node -e \"const fs=require('fs');const s=fs.statSync('/tmp/athyper-worker.heartbeat');if(Date.now()-s.mtimeMs>45000)process.exit(1)\"",
         ]
       interval: 30s
       timeout: 5s
@@ -687,6 +724,11 @@ services:
     environment:
       <<: *athyper-shared-env
       MODE: scheduler
+      PUBLICATION_API_ENABLED: "false"
+      PUBLICATION_COMPILE_ENABLED: "false"
+      PUBLICATION_DISPATCH_ENABLED: "false"
+      PUBLICATION_APPLY_ENABLED: "false"
+      PUBLICATION_RECOVERY_ENABLED: "${PUBLICATION_RECOVERY_ENABLED:-false}"
       # Used only to validate and schedule governed retention maintenance.
       ATLAS_CONVERSATION_MAINTENANCE_DATABASE_URL: "${ATLAS_CONVERSATION_MAINTENANCE_DATABASE_URL:-}"
     extra_hosts: *athyper-hosts
@@ -696,7 +738,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget --no-check-certificate -qO- http://localhost:${API_PORT:-3000}/livez || exit 1",
+          "node -e \"const fs=require('fs');const s=fs.statSync('/tmp/athyper-scheduler.heartbeat');if(Date.now()-s.mtimeMs>45000)process.exit(1)\"",
         ]
       interval: 30s
       timeout: 5s

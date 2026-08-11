@@ -27,7 +27,7 @@ test("login and context selection remain reachable", async ({ browser }, testInf
   await expect(page.getByLabel(/password/i)).toBeVisible();
   await expect(page.getByRole("button", { name: /sign in|log in/i })).toBeEnabled();
   await context.close();
-  expect(["admin", "neon", "mesh"]).toContain(project.plane);
+  expect(["studio", "neon", "mesh"]).toContain(project.plane);
 });
 
 for (const surface of CORE_SURFACES) {

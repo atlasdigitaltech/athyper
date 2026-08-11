@@ -45,7 +45,7 @@ describe("work Inbox plane adapters", () => {
       items: [{ id: "work-2", entityType: "purchase_order", status: "assigned" }],
       total: 1,
     } as never);
-    const result = await createWorkflowInboxAdapter("admin", fetcher).list(
+    const result = await createWorkflowInboxAdapter("studio", fetcher).list(
       { ...baseQuery, view: "delegated" },
       new AbortController().signal,
     );

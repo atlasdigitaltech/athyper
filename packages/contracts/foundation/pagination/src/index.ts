@@ -1,1 +1,1 @@
-// @athyper/contracts-foundation-pagination
+﻿export {};

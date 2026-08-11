@@ -42,9 +42,9 @@ const QUIET = process.argv.includes("--quiet");
 const SCAN_ROOTS = [
   "apps/neon",
   "apps/mesh",
-  "apps/admin",
-  "packages/products/admin",
-  "packages/products/mesh",
+  "apps/studio",
+  "packages/planes/studio",
+  "packages/planes/mesh",
   "packages/shared",
   "packages/domain/finance",
   "server/packages",

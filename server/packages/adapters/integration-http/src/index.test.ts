@@ -1,0 +1,6 @@
+import { describe,expect,it,vi } from "vitest";
+import { createIntegrationHttpTransport,validateOutboundUrl } from "./index.js";
+describe("integration HTTP boundary",()=>{
+  it("rejects resolved private addresses",async()=>{await expect(validateOutboundUrl("https://example.test/x",async()=>["10.0.0.2"])).rejects.toMatchObject({code:"INTEGRATION_PRIVATE_NETWORK_DENIED"});});
+  it("denies redirects",async()=>{const fetch=vi.fn(async()=>new Response(null,{status:302,headers:{location:"https://elsewhere.test"}}));const transport=createIntegrationHttpTransport({fetch:fetch as typeof globalThis.fetch,lookup:async()=>["8.8.8.8"]});await expect(transport.invoke({version:1,tenantId:"t",endpointId:"e",connectorInstanceId:"c",kind:"operation",url:"https://example.test/x",method:"POST",requestContentType:"application/json",timeoutMs:1000,headers:{},maxPayloadBytes:100,retryPolicy:{maxAttempts:1,initialDelayMs:1,maxDelayMs:1,multiplier:1,retryStatuses:[]},credentialRevision:1,audience:"https://example.test"},new Uint8Array(),undefined)).rejects.toMatchObject({code:"INTEGRATION_REDIRECT_DENIED"});expect(fetch).toHaveBeenCalledWith(expect.any(URL),expect.objectContaining({redirect:"manual"}));});
+});

@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://athyper.local/schemas/authorization-golden-corpus-v1.json",
   "title": "Authorization Wave 0 golden decision corpus",
@@ -220,7 +220,7 @@
             "required": [
               "single",
               "batch",
-              "admin",
+              "studio",
               "mesh"
             ],
             "properties": {
@@ -230,7 +230,7 @@
               "batch": {
                 "type": "string"
               },
-              "admin": {
+              "studio": {
                 "type": [
                   "string",
                   "null"
@@ -443,7 +443,7 @@
     "plane": {
       "enum": [
         "neon",
-        "admin",
+        "studio",
         "mesh"
       ]
     },

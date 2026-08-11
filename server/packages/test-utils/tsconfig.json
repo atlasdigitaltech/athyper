@@ -1,9 +1,9 @@
 {
-  "extends": "../../../tooling/tsconfig/base.json",
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": ".",
-    "noEmit": true
+    "outDir": "dist",
+    "rootDir": "src"
   },
-  "include": ["./**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

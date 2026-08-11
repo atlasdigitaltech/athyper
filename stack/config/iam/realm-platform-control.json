@@ -106,7 +106,7 @@
   "users": [],
   "scopeMappings": [
     {
-      "client": "athyper-admin",
+      "client": "athyper-studio",
       "roles": [
         "PRODUCT_ADMIN",
         "TENANT_MANAGER",
@@ -117,7 +117,7 @@
   ],
   "clients": [
     {
-      "clientId": "athyper-admin",
+      "clientId": "athyper-studio",
       "name": "athyper Platform Admin Console",
       "description": "Platform administration client used by product owners for controlled support access.",
       "rootUrl": "",
@@ -191,7 +191,7 @@
         "token.response.type.bearer.lower-case": "false",
         "dpop.bound.access.tokens": "false",
         "pkce.code.challenge.method": "S256",
-        "backchannel.logout.url": "${ADMIN_PUBLIC_WEB_URL}/api/auth/backchannel-logout"
+        "backchannel.logout.url": "${STUDIO_PUBLIC_WEB_URL}/api/auth/backchannel-logout"
       },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": false,

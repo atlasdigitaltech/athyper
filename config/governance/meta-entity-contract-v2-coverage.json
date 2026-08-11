@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "contract": {
     "currentSchemaVersion": "2.0",
@@ -261,7 +261,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -305,7 +305,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -349,7 +349,7 @@
       },
       "compiler": "catalog loader",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "catalog loader",
         "mesh": "catalog loader; plane admission required"
       },
@@ -393,7 +393,7 @@
       },
       "compiler": "compiler class profile",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "compiler class profile",
         "mesh": "compiler class profile; plane admission required"
       },
@@ -437,7 +437,7 @@
       },
       "compiler": "all runtime resolvers",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "all runtime resolvers",
         "mesh": "all runtime resolvers; plane admission required"
       },
@@ -481,7 +481,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -525,7 +525,7 @@
       },
       "compiler": "catalog loader",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "catalog loader",
         "mesh": "catalog loader; plane admission required"
       },
@@ -569,7 +569,7 @@
       },
       "compiler": "catalog loader",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "catalog loader",
         "mesh": "catalog loader; plane admission required"
       },
@@ -613,7 +613,7 @@
       },
       "compiler": "catalog/list",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "catalog/list",
         "mesh": "catalog/list; plane admission required"
       },
@@ -657,7 +657,7 @@
       },
       "compiler": "catalog/list/detail",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "catalog/list/detail",
         "mesh": "catalog/list/detail; plane admission required"
       },
@@ -701,7 +701,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -750,7 +750,7 @@
       },
       "compiler": "provisioner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "provisioner",
         "mesh": "provisioner; plane admission required"
       },
@@ -776,7 +776,7 @@
         "nullable": false,
         "enumValues": [
           "neon",
-          "admin",
+          "studio",
           "mesh"
         ]
       },
@@ -798,7 +798,7 @@
       },
       "compiler": "plane guard",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "plane guard",
         "mesh": "plane guard; plane admission required"
       },
@@ -842,7 +842,7 @@
       },
       "compiler": "route resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "route resolver",
         "mesh": "route resolver; plane admission required"
       },
@@ -891,7 +891,7 @@
       },
       "compiler": "publish state",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "publish state",
         "mesh": "publish state; plane admission required"
       },
@@ -935,7 +935,7 @@
       },
       "compiler": "audit reader",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "audit reader",
         "mesh": "audit reader; plane admission required"
       },
@@ -979,7 +979,7 @@
       },
       "compiler": "audit reader",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "audit reader",
         "mesh": "audit reader; plane admission required"
       },
@@ -1023,7 +1023,7 @@
       },
       "compiler": "tenant overlay resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "tenant overlay resolver",
         "mesh": "tenant overlay resolver; plane admission required"
       },
@@ -1068,7 +1068,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -1112,7 +1112,7 @@
       },
       "compiler": "compatibility projection only",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "compatibility projection only",
         "mesh": "compatibility projection only; plane admission required"
       },
@@ -1156,7 +1156,7 @@
       },
       "compiler": "compatibility projection only",
       "consumers": {
-        "admin": "not_applicable",
+        "studio": "not_applicable",
         "neon": "compatibility projection only",
         "mesh": "compatibility projection only; plane admission required"
       },
@@ -1200,7 +1200,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -1248,7 +1248,7 @@
       },
       "compiler": "collection resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "collection resolver",
         "mesh": "collection resolver; plane admission required"
       },
@@ -1292,7 +1292,7 @@
       },
       "compiler": "projection builder",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "projection builder",
         "mesh": "projection builder; plane admission required"
       },
@@ -1336,7 +1336,7 @@
       },
       "compiler": "value compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "value compiler",
         "mesh": "value compiler; plane admission required"
       },
@@ -1380,7 +1380,7 @@
       },
       "compiler": "value compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "value compiler",
         "mesh": "value compiler; plane admission required"
       },
@@ -1424,7 +1424,7 @@
       },
       "compiler": "coercion/validation",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "coercion/validation",
         "mesh": "coercion/validation; plane admission required"
       },
@@ -1468,7 +1468,7 @@
       },
       "compiler": "type_config",
       "consumers": {
-        "admin": "not_applicable",
+        "studio": "not_applicable",
         "neon": "type_config",
         "mesh": "type_config; plane admission required"
       },
@@ -1512,7 +1512,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -1556,7 +1556,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -1600,7 +1600,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -1644,7 +1644,7 @@
       },
       "compiler": "field resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "field resolver",
         "mesh": "field resolver; plane admission required"
       },
@@ -1688,7 +1688,7 @@
       },
       "compiler": "type_config",
       "consumers": {
-        "admin": "not_applicable",
+        "studio": "not_applicable",
         "neon": "type_config",
         "mesh": "type_config; plane admission required"
       },
@@ -1732,7 +1732,7 @@
       },
       "compiler": "field resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "field resolver",
         "mesh": "field resolver; plane admission required"
       },
@@ -1776,7 +1776,7 @@
       },
       "compiler": "query planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "query planner",
         "mesh": "query planner; plane admission required"
       },
@@ -1820,7 +1820,7 @@
       },
       "compiler": "value compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "value compiler",
         "mesh": "value compiler; plane admission required"
       },
@@ -1864,7 +1864,7 @@
       },
       "compiler": "field resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "field resolver",
         "mesh": "field resolver; plane admission required"
       },
@@ -1908,7 +1908,7 @@
       },
       "compiler": "query planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "query planner",
         "mesh": "query planner; plane admission required"
       },
@@ -1952,7 +1952,7 @@
       },
       "compiler": "query planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "query planner",
         "mesh": "query planner; plane admission required"
       },
@@ -1996,7 +1996,7 @@
       },
       "compiler": "data_policy.pii_fields",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "data_policy.pii_fields",
         "mesh": "data_policy.pii_fields; plane admission required"
       },
@@ -2040,7 +2040,7 @@
       },
       "compiler": "semantic_roles",
       "consumers": {
-        "admin": "not_applicable",
+        "studio": "not_applicable",
         "neon": "semantic_roles",
         "mesh": "semantic_roles; plane admission required"
       },
@@ -2084,7 +2084,7 @@
       },
       "compiler": "semantic_roles",
       "consumers": {
-        "admin": "not_applicable",
+        "studio": "not_applicable",
         "neon": "semantic_roles",
         "mesh": "semantic_roles; plane admission required"
       },
@@ -2128,7 +2128,7 @@
       },
       "compiler": "write validation",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write validation",
         "mesh": "write validation; plane admission required"
       },
@@ -2172,7 +2172,7 @@
       },
       "compiler": "write validation",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write validation",
         "mesh": "write validation; plane admission required"
       },
@@ -2216,7 +2216,7 @@
       },
       "compiler": "search_config.fields",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "search_config.fields",
         "mesh": "search_config.fields; plane admission required"
       },
@@ -2260,7 +2260,7 @@
       },
       "compiler": "query planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "query planner",
         "mesh": "query planner; plane admission required"
       },
@@ -2304,7 +2304,7 @@
       },
       "compiler": "write validation",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write validation",
         "mesh": "write validation; plane admission required"
       },
@@ -2348,7 +2348,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -2392,7 +2392,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -2436,7 +2436,7 @@
       },
       "compiler": "type_config",
       "consumers": {
-        "admin": "not_applicable",
+        "studio": "not_applicable",
         "neon": "type_config",
         "mesh": "type_config; plane admission required"
       },
@@ -2480,7 +2480,7 @@
       },
       "compiler": "field resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "field resolver",
         "mesh": "field resolver; plane admission required"
       },
@@ -2528,7 +2528,7 @@
       },
       "compiler": "provisioner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "provisioner",
         "mesh": "provisioner; plane admission required"
       },
@@ -2572,7 +2572,7 @@
       },
       "compiler": "projection builder",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "projection builder",
         "mesh": "projection builder; plane admission required"
       },
@@ -2616,7 +2616,7 @@
       },
       "compiler": "type_config + relations",
       "consumers": {
-        "admin": "not_applicable",
+        "studio": "not_applicable",
         "neon": "type_config + relations",
         "mesh": "type_config + relations; plane admission required"
       },
@@ -2660,7 +2660,7 @@
       },
       "compiler": "execution eligibility",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "execution eligibility",
         "mesh": "execution eligibility; plane admission required"
       },
@@ -2704,7 +2704,7 @@
       },
       "compiler": "amount/currency/lifecycle resolvers",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "amount/currency/lifecycle resolvers",
         "mesh": "amount/currency/lifecycle resolvers; plane admission required"
       },
@@ -2748,7 +2748,7 @@
       },
       "compiler": "tenant overlay resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "tenant overlay resolver",
         "mesh": "tenant overlay resolver; plane admission required"
       },
@@ -2792,7 +2792,7 @@
       },
       "compiler": "value coercion",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "value coercion",
         "mesh": "value coercion; plane admission required"
       },
@@ -2836,7 +2836,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -2880,7 +2880,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -2924,7 +2924,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -2968,7 +2968,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3015,7 +3015,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3059,7 +3059,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3106,7 +3106,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3150,7 +3150,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3194,7 +3194,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3243,7 +3243,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3287,7 +3287,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3331,7 +3331,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3375,7 +3375,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3419,7 +3419,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3463,7 +3463,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3507,7 +3507,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3551,7 +3551,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3599,7 +3599,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3643,7 +3643,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3691,7 +3691,7 @@
       },
       "compiler": "write validation",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write validation",
         "mesh": "write validation; plane admission required"
       },
@@ -3735,7 +3735,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3779,7 +3779,7 @@
       },
       "compiler": "flow engine",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "flow engine",
         "mesh": "flow engine; plane admission required"
       },
@@ -3823,7 +3823,7 @@
       },
       "compiler": "flow engine",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "flow engine",
         "mesh": "flow engine; plane admission required"
       },
@@ -3867,7 +3867,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3911,7 +3911,7 @@
       },
       "compiler": "flow engine",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "flow engine",
         "mesh": "flow engine; plane admission required"
       },
@@ -3955,7 +3955,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -3999,7 +3999,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -4043,7 +4043,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -4087,7 +4087,7 @@
       },
       "compiler": "lifecycle resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "lifecycle resolver",
         "mesh": "lifecycle resolver; plane admission required"
       },
@@ -4131,7 +4131,7 @@
       },
       "compiler": "lifecycle kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "lifecycle kernel",
         "mesh": "lifecycle kernel; plane admission required"
       },
@@ -4175,7 +4175,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -4219,7 +4219,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -4263,7 +4263,7 @@
       },
       "compiler": "lifecycle resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "lifecycle resolver",
         "mesh": "lifecycle resolver; plane admission required"
       },
@@ -4307,7 +4307,7 @@
       },
       "compiler": "lifecycle resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "lifecycle resolver",
         "mesh": "lifecycle resolver; plane admission required"
       },
@@ -4351,7 +4351,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -4395,7 +4395,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -4439,7 +4439,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4483,7 +4483,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4527,7 +4527,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -4571,7 +4571,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4615,7 +4615,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4659,7 +4659,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4703,7 +4703,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4747,7 +4747,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4791,7 +4791,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4835,7 +4835,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4885,7 +4885,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4929,7 +4929,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -4983,7 +4983,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -5027,7 +5027,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -5071,7 +5071,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -5115,7 +5115,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -5162,7 +5162,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -5210,7 +5210,7 @@
       },
       "compiler": "numbering service",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "numbering service",
         "mesh": "numbering service; plane admission required"
       },
@@ -5254,7 +5254,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -5298,7 +5298,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -5342,7 +5342,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -5386,7 +5386,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -5430,7 +5430,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -5474,7 +5474,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -5518,7 +5518,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -5562,7 +5562,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -5606,7 +5606,7 @@
       },
       "compiler": "operation kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation kernel",
         "mesh": "operation kernel; plane admission required"
       },
@@ -5650,7 +5650,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -5699,7 +5699,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -5743,7 +5743,7 @@
       },
       "compiler": "operation renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation renderer",
         "mesh": "operation renderer; plane admission required"
       },
@@ -5787,7 +5787,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -5836,7 +5836,7 @@
       },
       "compiler": "operation renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation renderer",
         "mesh": "operation renderer; plane admission required"
       },
@@ -5880,7 +5880,7 @@
       },
       "compiler": "operation renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation renderer",
         "mesh": "operation renderer; plane admission required"
       },
@@ -5924,7 +5924,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -5968,7 +5968,7 @@
       },
       "compiler": "authorization",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "authorization",
         "mesh": "authorization; plane admission required"
       },
@@ -6018,7 +6018,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -6062,7 +6062,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -6106,7 +6106,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -6150,7 +6150,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -6194,7 +6194,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -6238,7 +6238,7 @@
       },
       "compiler": "operation renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation renderer",
         "mesh": "operation renderer; plane admission required"
       },
@@ -6288,7 +6288,7 @@
       },
       "compiler": "operation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "operation resolver",
         "mesh": "operation resolver; plane admission required"
       },
@@ -6332,7 +6332,7 @@
       },
       "compiler": "tenant overlay resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "tenant overlay resolver",
         "mesh": "tenant overlay resolver; plane admission required"
       },
@@ -6376,7 +6376,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -6424,7 +6424,7 @@
       },
       "compiler": "policy compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "policy compiler",
         "mesh": "policy compiler; plane admission required"
       },
@@ -6472,7 +6472,7 @@
       },
       "compiler": "policy compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "policy compiler",
         "mesh": "policy compiler; plane admission required"
       },
@@ -6516,7 +6516,7 @@
       },
       "compiler": "policy compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "policy compiler",
         "mesh": "policy compiler; plane admission required"
       },
@@ -6560,7 +6560,7 @@
       },
       "compiler": "metadata compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "metadata compiler",
         "mesh": "metadata compiler; plane admission required"
       },
@@ -6609,7 +6609,7 @@
       },
       "compiler": "policy compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "policy compiler",
         "mesh": "policy compiler; plane admission required"
       },
@@ -6653,7 +6653,7 @@
       },
       "compiler": "policy compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "policy compiler",
         "mesh": "policy compiler; plane admission required"
       },
@@ -6697,7 +6697,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -6741,7 +6741,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -6785,7 +6785,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -6829,7 +6829,7 @@
       },
       "compiler": "policy compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "policy compiler",
         "mesh": "policy compiler; plane admission required"
       },
@@ -6873,7 +6873,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -6917,7 +6917,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -6961,7 +6961,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7010,7 +7010,7 @@
       },
       "compiler": "collection write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "collection write kernel",
         "mesh": "collection write kernel; plane admission required"
       },
@@ -7054,7 +7054,7 @@
       },
       "compiler": "collection write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "collection write kernel",
         "mesh": "collection write kernel; plane admission required"
       },
@@ -7104,7 +7104,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7148,7 +7148,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7192,7 +7192,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7236,7 +7236,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7280,7 +7280,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7324,7 +7324,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7372,7 +7372,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7421,7 +7421,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7465,7 +7465,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7509,7 +7509,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7553,7 +7553,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7597,7 +7597,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7641,7 +7641,7 @@
       },
       "compiler": "relation resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "relation resolver",
         "mesh": "relation resolver; plane admission required"
       },
@@ -7685,7 +7685,7 @@
       },
       "compiler": "tenant overlay resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "tenant overlay resolver",
         "mesh": "tenant overlay resolver; plane admission required"
       },
@@ -7730,7 +7730,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -7774,7 +7774,7 @@
       },
       "compiler": "field placement resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "field placement resolver",
         "mesh": "field placement resolver; plane admission required"
       },
@@ -7818,7 +7818,7 @@
       },
       "compiler": "field placement resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "field placement resolver",
         "mesh": "field placement resolver; plane admission required"
       },
@@ -7866,7 +7866,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -7910,7 +7910,7 @@
       },
       "compiler": "surface resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface resolver",
         "mesh": "surface resolver; plane admission required"
       },
@@ -7954,7 +7954,7 @@
       },
       "compiler": "surface editor",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface editor",
         "mesh": "surface editor; plane admission required"
       },
@@ -7998,7 +7998,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8042,7 +8042,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8086,7 +8086,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8130,7 +8130,7 @@
       },
       "compiler": "field placement resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "field placement resolver",
         "mesh": "field placement resolver; plane admission required"
       },
@@ -8174,7 +8174,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -8218,7 +8218,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -8262,7 +8262,7 @@
       },
       "compiler": "field placement resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "field placement resolver",
         "mesh": "field placement resolver; plane admission required"
       },
@@ -8306,7 +8306,7 @@
       },
       "compiler": "field placement resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "field placement resolver",
         "mesh": "field placement resolver; plane admission required"
       },
@@ -8350,7 +8350,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8394,7 +8394,7 @@
       },
       "compiler": "surface resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface resolver",
         "mesh": "surface resolver; plane admission required"
       },
@@ -8438,7 +8438,7 @@
       },
       "compiler": "field placement resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "field placement resolver",
         "mesh": "field placement resolver; plane admission required"
       },
@@ -8483,7 +8483,7 @@
       },
       "compiler": "surface resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface resolver",
         "mesh": "surface resolver; plane admission required"
       },
@@ -8528,7 +8528,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -8573,7 +8573,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8618,7 +8618,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8663,7 +8663,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8708,7 +8708,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8753,7 +8753,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8798,7 +8798,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8843,7 +8843,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8888,7 +8888,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8933,7 +8933,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -8978,7 +8978,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -9023,7 +9023,7 @@
       },
       "compiler": "surface resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "surface resolver",
         "mesh": "surface resolver; plane admission required"
       },
@@ -9068,7 +9068,7 @@
       },
       "compiler": "surface resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "surface resolver",
         "mesh": "surface resolver; plane admission required"
       },
@@ -9113,7 +9113,7 @@
       },
       "compiler": "surface resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface resolver",
         "mesh": "surface resolver; plane admission required"
       },
@@ -9168,7 +9168,7 @@
       },
       "compiler": "surface resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface resolver",
         "mesh": "surface resolver; plane admission required"
       },
@@ -9213,7 +9213,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -9270,7 +9270,7 @@
       },
       "compiler": "surface resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface resolver",
         "mesh": "surface resolver; plane admission required"
       },
@@ -9315,7 +9315,7 @@
       },
       "compiler": "surface renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "surface renderer",
         "mesh": "surface renderer; plane admission required"
       },
@@ -9360,7 +9360,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -9405,7 +9405,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -9449,7 +9449,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -9497,7 +9497,7 @@
       },
       "compiler": "route exposure",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "route exposure",
         "mesh": "route exposure; plane admission required"
       },
@@ -9547,7 +9547,7 @@
       },
       "compiler": "storage adapter",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "storage adapter",
         "mesh": "storage adapter; plane admission required"
       },
@@ -9591,7 +9591,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -9635,7 +9635,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -9679,7 +9679,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -9727,7 +9727,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -9771,7 +9771,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -9819,7 +9819,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -9863,7 +9863,7 @@
       },
       "compiler": "cache identity",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "cache identity",
         "mesh": "cache identity; plane admission required"
       },
@@ -9912,7 +9912,7 @@
       },
       "compiler": "create runtime",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "create runtime",
         "mesh": "create runtime; plane admission required"
       },
@@ -9956,7 +9956,7 @@
       },
       "compiler": "policy compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "policy compiler",
         "mesh": "policy compiler; plane admission required"
       },
@@ -10005,7 +10005,7 @@
       },
       "compiler": "policy compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "policy compiler",
         "mesh": "policy compiler; plane admission required"
       },
@@ -10049,7 +10049,7 @@
       },
       "compiler": "delete kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "delete kernel",
         "mesh": "delete kernel; plane admission required"
       },
@@ -10093,7 +10093,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -10137,7 +10137,7 @@
       },
       "compiler": "masking compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "masking compiler",
         "mesh": "masking compiler; plane admission required"
       },
@@ -10181,7 +10181,7 @@
       },
       "compiler": "retention worker",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "retention worker",
         "mesh": "retention worker; plane admission required"
       },
@@ -10225,7 +10225,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -10269,7 +10269,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -10313,7 +10313,7 @@
       },
       "compiler": "draft reaper",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "draft reaper",
         "mesh": "draft reaper; plane admission required"
       },
@@ -10357,7 +10357,7 @@
       },
       "compiler": "version loader",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "version loader",
         "mesh": "version loader; plane admission required"
       },
@@ -10401,7 +10401,7 @@
       },
       "compiler": "governance compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "governance compiler",
         "mesh": "governance compiler; plane admission required"
       },
@@ -10445,7 +10445,7 @@
       },
       "compiler": "version loader",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "version loader",
         "mesh": "version loader; plane admission required"
       },
@@ -10489,7 +10489,7 @@
       },
       "compiler": "identity resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "identity resolver",
         "mesh": "identity resolver; plane admission required"
       },
@@ -10533,7 +10533,7 @@
       },
       "compiler": "identity resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "identity resolver",
         "mesh": "identity resolver; plane admission required"
       },
@@ -10577,7 +10577,7 @@
       },
       "compiler": "identity renderer",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "identity renderer",
         "mesh": "identity renderer; plane admission required"
       },
@@ -10621,7 +10621,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -10665,7 +10665,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -10709,7 +10709,7 @@
       },
       "compiler": "duplicate validator",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "duplicate validator",
         "mesh": "duplicate validator; plane admission required"
       },
@@ -10753,7 +10753,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -10797,7 +10797,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -10845,7 +10845,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -10889,7 +10889,7 @@
       },
       "compiler": "identity resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "identity resolver",
         "mesh": "identity resolver; plane admission required"
       },
@@ -10933,7 +10933,7 @@
       },
       "compiler": "list resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "list resolver",
         "mesh": "list resolver; plane admission required"
       },
@@ -10977,7 +10977,7 @@
       },
       "compiler": "identity resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "identity resolver",
         "mesh": "identity resolver; plane admission required"
       },
@@ -11021,7 +11021,7 @@
       },
       "compiler": "hierarchy resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "hierarchy resolver",
         "mesh": "hierarchy resolver; plane admission required"
       },
@@ -11065,7 +11065,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -11109,7 +11109,7 @@
       },
       "compiler": "identity resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "identity resolver",
         "mesh": "identity resolver; plane admission required"
       },
@@ -11153,7 +11153,7 @@
       },
       "compiler": "replacement resolver",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "replacement resolver",
         "mesh": "replacement resolver; plane admission required"
       },
@@ -11197,7 +11197,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -11241,7 +11241,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -11285,7 +11285,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -11329,7 +11329,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -11373,7 +11373,7 @@
       },
       "compiler": "record identity",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "record identity",
         "mesh": "record identity; plane admission required"
       },
@@ -11422,7 +11422,7 @@
       },
       "compiler": "read kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "read kernel",
         "mesh": "read kernel; plane admission required"
       },
@@ -11466,7 +11466,7 @@
       },
       "compiler": "read kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "read kernel",
         "mesh": "read kernel; plane admission required"
       },
@@ -11510,7 +11510,7 @@
       },
       "compiler": "execution eligibility",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "execution eligibility",
         "mesh": "execution eligibility; plane admission required"
       },
@@ -11554,7 +11554,7 @@
       },
       "compiler": "search planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "search planner",
         "mesh": "search planner; plane admission required"
       },
@@ -11598,7 +11598,7 @@
       },
       "compiler": "search planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "search planner",
         "mesh": "search planner; plane admission required"
       },
@@ -11642,7 +11642,7 @@
       },
       "compiler": "search planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "search planner",
         "mesh": "search planner; plane admission required"
       },
@@ -11686,7 +11686,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -11730,7 +11730,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -11774,7 +11774,7 @@
       },
       "compiler": "search planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "search planner",
         "mesh": "search planner; plane admission required"
       },
@@ -11822,7 +11822,7 @@
       },
       "compiler": "search planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "search planner",
         "mesh": "search planner; plane admission required"
       },
@@ -11870,7 +11870,7 @@
       },
       "compiler": "search planner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "search planner",
         "mesh": "search planner; plane admission required"
       },
@@ -11914,7 +11914,7 @@
       },
       "compiler": "security compiler",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "security compiler",
         "mesh": "security compiler; plane admission required"
       },
@@ -11962,7 +11962,7 @@
       },
       "compiler": "compiler provenance",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "compiler provenance",
         "mesh": "compiler provenance; plane admission required"
       },
@@ -12006,7 +12006,7 @@
       },
       "compiler": "provisioner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "provisioner",
         "mesh": "provisioner; plane admission required"
       },
@@ -12050,7 +12050,7 @@
       },
       "compiler": "storage adapter",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "storage adapter",
         "mesh": "storage adapter; plane admission required"
       },
@@ -12094,7 +12094,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12138,7 +12138,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12182,7 +12182,7 @@
       },
       "compiler": "storage adapter",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "storage adapter",
         "mesh": "storage adapter; plane admission required"
       },
@@ -12226,7 +12226,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12270,7 +12270,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12314,7 +12314,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12358,7 +12358,7 @@
       },
       "compiler": "storage provisioner",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "storage provisioner",
         "mesh": "storage provisioner; plane admission required"
       },
@@ -12402,7 +12402,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12451,7 +12451,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12495,7 +12495,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12539,7 +12539,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12583,7 +12583,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12627,7 +12627,7 @@
       },
       "compiler": "storage adapter",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "storage adapter",
         "mesh": "storage adapter; plane admission required"
       },
@@ -12671,7 +12671,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12715,7 +12715,7 @@
       },
       "compiler": "mapping required before v2.1 publication",
       "consumers": {
-        "admin": "planned",
+        "studio": "planned",
         "neon": "classification required",
         "mesh": "classification required"
       },
@@ -12759,7 +12759,7 @@
       },
       "compiler": "records query",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "records query",
         "mesh": "records query; plane admission required"
       },
@@ -12803,7 +12803,7 @@
       },
       "compiler": "records query",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "records query",
         "mesh": "records query; plane admission required"
       },
@@ -12847,7 +12847,7 @@
       },
       "compiler": "tenant predicate",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "tenant predicate",
         "mesh": "tenant predicate; plane admission required"
       },
@@ -12891,7 +12891,7 @@
       },
       "compiler": "tenant overlay resolver",
       "consumers": {
-        "admin": "read_only",
+        "studio": "read_only",
         "neon": "tenant overlay resolver",
         "mesh": "tenant overlay resolver; plane admission required"
       },
@@ -12940,7 +12940,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },
@@ -12984,7 +12984,7 @@
       },
       "compiler": "write kernel",
       "consumers": {
-        "admin": "authoring",
+        "studio": "authoring",
         "neon": "write kernel",
         "mesh": "write kernel; plane admission required"
       },

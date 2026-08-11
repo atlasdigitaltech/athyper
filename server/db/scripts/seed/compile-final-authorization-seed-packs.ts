@@ -55,7 +55,7 @@ for (const target of ["neon-admin", "mesh"] as const) {
     databaseRoot,
     `seed/contracts/authorization/authority/${target}/compiled/compiled-authority.v1.json`,
   ));
-  const acceptedPlanes = target === "mesh" ? new Set(["mesh"]) : new Set(["neon", "admin"]);
+  const acceptedPlanes = target === "mesh" ? new Set(["mesh"]) : new Set(["neon", "studio"]);
   const subjectAssignments = Object.values(users.subjectMappings)
     .map((subject) => ({
       keycloakSubject: subject.keycloakSubject,

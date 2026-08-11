@@ -26,6 +26,9 @@
 # Local Codex build/prototype artifacts
 .codex-*
 
+# Preserved legacy server is behavioral reference only and must never enter images.
+server-backup
+
 # Stack ops directory — contains redis-acl.conf (SHA-256 hashes),
 # pgbouncer userlist.txt (hashed credentials), and other ops-only files.
 # None of these are needed by Next.js or the server build.

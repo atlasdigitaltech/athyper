@@ -4,11 +4,8 @@
 #
 # Status      : BREAK-GLASS FALLBACK — not part of normal operations.
 #
-# Primary path (day-to-day) :
-#   queueconsole is embedded inside the API runtime at
-#     /api/jobs/admin/board
-#   gated by RBAC permissions JOBS.BOARD.VIEW and JOBS.QUEUE.MANAGE.
-#   That is the route all operators should use during normal operations.
+# Primary path (day-to-day): the RBAC-protected JSON administration routes
+# under /api/jobs/admin. This out-of-band UI is incident-only.
 #
 # This container :
 #   Exists only so queue state can be inspected when the API runtime
@@ -37,29 +34,32 @@
 
 services:
   queueconsole:
-    image: deadly0/bull-board:3.2.6@sha256:58817a076c16055e090f095103b9f3fe3a8b8500cf75cd5abe610f409bcc8fa6
+    image: venatum/bull-board:3.3.17
     profiles: ["emergency"]
     networks: [internal]
     environment:
-      REDIS_HOST: "${BULLBOARD_REDIS_HOST:-memorycache}"
+      REDIS_HOST: "${BULLBOARD_REDIS_HOST:-memorycache-jobs}"
       REDIS_PORT: "${BULLBOARD_REDIS_PORT:-6379}"
       REDIS_DB: "${BULLBOARD_REDIS_DB:-0}"
       REDIS_USE_TLS: "${BULLBOARD_REDIS_USE_TLS:-false}"
-      REDIS_USERNAME: "${BULLBOARD_REDIS_USERNAME:-app}"
-      # The Redis `app` ACL user is provisioned from MEMORYCACHE_PASSWORD.
-      # Compose does not support nested defaults such as
-      # ${BULLBOARD_REDIS_PASSWORD:-${MEMORYCACHE_PASSWORD}}; it renders that
-      # expression incorrectly and bull-board attempts AUTH with `"=`.
-      REDIS_PASSWORD: "${MEMORYCACHE_PASSWORD}"
+      REDIS_USER: "${BULLBOARD_REDIS_USER:-bullboard}"
+      REDIS_PASSWORD: "${REDIS_BULLBOARD_PASSWORD}"
+      BULL_VERSION: BULLMQ
+      BULL_PREFIX: "${BULLMQ_PREFIX:-bull}"
+      USER_LOGIN: "${BULLBOARD_UI_USER}"
+      USER_PASSWORD: "${BULLBOARD_UI_PASSWORD}"
+      BULL_BOARD_TITLE: "Athyper BullMQ Emergency Console"
+    ports:
+      - "127.0.0.1:${QUEUECONSOLE_HOST_PORT:-3001}:3000"
     deploy:
       resources:
         limits:
           memory: "${QUEUECONSOLE_MEMORY_LIMIT:-128m}"
     depends_on:
-      memorycache:
+      memorycache-jobs:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/ || exit 1"]
+      test: ["CMD-SHELL", 'wget -q --spider --user="$$USER_LOGIN" --password="$$USER_PASSWORD" http://127.0.0.1:3000/ || exit 1']
       interval: 30s
       timeout: 5s
       retries: 3

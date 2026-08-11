@@ -1,2 +1,1 @@
-// @athyper/descriptor-client — skeleton placeholder
-export {};
+﻿export {};

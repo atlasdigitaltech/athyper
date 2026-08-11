@@ -20,12 +20,12 @@
       "NEON_USER",
       "MESH_BUYER_USER",
       "MESH_PARTNER_USER",
-      "ADMIN_USER"
+      "STUDIO_USER"
     ]
   },
   "organizationAttributePolicy": {
-    "tenant_code": "Required when NEON_USER or ADMIN_USER is granted for the organization context.",
-    "legal_entity_code": "Required when NEON_USER or ADMIN_USER is granted for the organization context.",
+    "tenant_code": "Required when NEON_USER or STUDIO_USER is granted for the organization context.",
+    "legal_entity_code": "Required when NEON_USER or STUDIO_USER is granted for the organization context.",
     "buyer_account_code": "Required when MESH_BUYER_USER is granted for the organization context.",
     "supplier_account_code": "Required when MESH_PARTNER_USER is granted for the organization context."
   },
@@ -1402,6 +1402,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010207-0000-0000-0000-000000000000"
         ],
@@ -1413,7 +1416,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -1422,7 +1425,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -1439,6 +1442,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010204-0000-0000-0000-000000000000"
@@ -1470,6 +1476,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010205-0000-0000-0000-000000000000"
         ],
@@ -1500,6 +1509,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010206-0000-0000-0000-000000000000"
         ],
@@ -1511,7 +1523,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -1520,7 +1532,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -1537,6 +1549,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010202-0000-0000-0000-000000000000"
@@ -1568,6 +1583,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010203-0000-0000-0000-000000000000"
         ],
@@ -1597,6 +1615,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010201-0000-0000-0000-000000000000"
@@ -1628,6 +1649,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010307-0000-0000-0000-000000000000"
         ],
@@ -1639,7 +1663,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -1648,7 +1672,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -1665,6 +1689,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010304-0000-0000-0000-000000000000"
@@ -1696,6 +1723,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010305-0000-0000-0000-000000000000"
         ],
@@ -1726,6 +1756,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010306-0000-0000-0000-000000000000"
         ],
@@ -1737,7 +1770,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -1746,7 +1779,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -1763,6 +1796,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010302-0000-0000-0000-000000000000"
@@ -1794,6 +1830,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010303-0000-0000-0000-000000000000"
         ],
@@ -1823,6 +1862,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010301-0000-0000-0000-000000000000"
@@ -1854,6 +1896,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010407-0000-0000-0000-000000000000"
         ],
@@ -1865,7 +1910,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -1874,7 +1919,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -1891,6 +1936,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010404-0000-0000-0000-000000000000"
@@ -1922,6 +1970,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010405-0000-0000-0000-000000000000"
         ],
@@ -1952,6 +2003,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010406-0000-0000-0000-000000000000"
         ],
@@ -1963,7 +2017,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -1972,7 +2026,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -1989,6 +2043,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010402-0000-0000-0000-000000000000"
@@ -2020,6 +2077,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010403-0000-0000-0000-000000000000"
         ],
@@ -2049,6 +2109,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010401-0000-0000-0000-000000000000"
@@ -2080,6 +2143,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010507-0000-0000-0000-000000000000"
         ],
@@ -2091,7 +2157,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -2100,7 +2166,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -2117,6 +2183,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010504-0000-0000-0000-000000000000"
@@ -2148,6 +2217,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010505-0000-0000-0000-000000000000"
         ],
@@ -2178,6 +2250,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010506-0000-0000-0000-000000000000"
         ],
@@ -2189,7 +2264,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -2198,7 +2273,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -2215,6 +2290,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010502-0000-0000-0000-000000000000"
@@ -2246,6 +2324,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010503-0000-0000-0000-000000000000"
         ],
@@ -2275,6 +2356,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010501-0000-0000-0000-000000000000"
@@ -2306,6 +2390,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010607-0000-0000-0000-000000000000"
         ],
@@ -2317,7 +2404,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -2326,7 +2413,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -2343,6 +2430,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010604-0000-0000-0000-000000000000"
@@ -2374,6 +2464,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010605-0000-0000-0000-000000000000"
         ],
@@ -2404,6 +2497,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010606-0000-0000-0000-000000000000"
         ],
@@ -2415,7 +2511,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -2424,7 +2520,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -2441,6 +2537,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010602-0000-0000-0000-000000000000"
@@ -2472,6 +2571,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010603-0000-0000-0000-000000000000"
         ],
@@ -2501,6 +2603,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010601-0000-0000-0000-000000000000"
@@ -2532,6 +2637,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010707-0000-0000-0000-000000000000"
         ],
@@ -2543,7 +2651,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -2552,7 +2660,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -2569,6 +2677,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010704-0000-0000-0000-000000000000"
@@ -2600,6 +2711,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010705-0000-0000-0000-000000000000"
         ],
@@ -2630,6 +2744,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010706-0000-0000-0000-000000000000"
         ],
@@ -2641,7 +2758,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -2650,7 +2767,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -2667,6 +2784,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010702-0000-0000-0000-000000000000"
@@ -2698,6 +2818,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010703-0000-0000-0000-000000000000"
         ],
@@ -2727,6 +2850,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010701-0000-0000-0000-000000000000"
@@ -2758,6 +2884,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010807-0000-0000-0000-000000000000"
         ],
@@ -2769,7 +2898,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -2778,7 +2907,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -2795,6 +2924,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010804-0000-0000-0000-000000000000"
@@ -2826,6 +2958,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010805-0000-0000-0000-000000000000"
         ],
@@ -2856,6 +2991,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010806-0000-0000-0000-000000000000"
         ],
@@ -2867,7 +3005,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -2876,7 +3014,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -2893,6 +3031,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010802-0000-0000-0000-000000000000"
@@ -2924,6 +3065,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010803-0000-0000-0000-000000000000"
         ],
@@ -2953,6 +3097,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010801-0000-0000-0000-000000000000"
@@ -2984,6 +3131,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010907-0000-0000-0000-000000000000"
         ],
@@ -2995,7 +3145,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -3004,7 +3154,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -3021,6 +3171,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010904-0000-0000-0000-000000000000"
@@ -3052,6 +3205,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010905-0000-0000-0000-000000000000"
         ],
@@ -3082,6 +3238,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010906-0000-0000-0000-000000000000"
         ],
@@ -3093,7 +3252,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -3102,7 +3261,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -3119,6 +3278,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010902-0000-0000-0000-000000000000"
@@ -3150,6 +3312,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010903-0000-0000-0000-000000000000"
         ],
@@ -3179,6 +3344,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010901-0000-0000-0000-000000000000"
@@ -3210,6 +3378,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010a07-0000-0000-0000-000000000000"
         ],
@@ -3221,7 +3392,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -3230,7 +3401,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -3247,6 +3418,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010a04-0000-0000-0000-000000000000"
@@ -3278,6 +3452,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010a05-0000-0000-0000-000000000000"
         ],
@@ -3308,6 +3485,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010a06-0000-0000-0000-000000000000"
         ],
@@ -3319,7 +3499,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -3328,7 +3508,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -3345,6 +3525,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010a02-0000-0000-0000-000000000000"
@@ -3376,6 +3559,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010a03-0000-0000-0000-000000000000"
         ],
@@ -3405,6 +3591,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010a01-0000-0000-0000-000000000000"
@@ -3436,6 +3625,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010b07-0000-0000-0000-000000000000"
         ],
@@ -3447,7 +3639,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -3456,7 +3648,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -3473,6 +3665,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010b04-0000-0000-0000-000000000000"
@@ -3504,6 +3699,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010b05-0000-0000-0000-000000000000"
         ],
@@ -3534,6 +3732,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010b06-0000-0000-0000-000000000000"
         ],
@@ -3545,7 +3746,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -3554,7 +3755,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -3571,6 +3772,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010b02-0000-0000-0000-000000000000"
@@ -3602,6 +3806,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010b03-0000-0000-0000-000000000000"
         ],
@@ -3631,6 +3838,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010b01-0000-0000-0000-000000000000"
@@ -3662,6 +3872,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010c07-0000-0000-0000-000000000000"
         ],
@@ -3673,7 +3886,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -3682,7 +3895,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -3699,6 +3912,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010c04-0000-0000-0000-000000000000"
@@ -3730,6 +3946,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010c05-0000-0000-0000-000000000000"
         ],
@@ -3760,6 +3979,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010c06-0000-0000-0000-000000000000"
         ],
@@ -3771,7 +3993,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -3780,7 +4002,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -3797,6 +4019,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010c02-0000-0000-0000-000000000000"
@@ -3828,6 +4053,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010c03-0000-0000-0000-000000000000"
         ],
@@ -3857,6 +4085,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010c01-0000-0000-0000-000000000000"
@@ -3888,6 +4119,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010d07-0000-0000-0000-000000000000"
         ],
@@ -3899,7 +4133,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -3908,7 +4142,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -3925,6 +4159,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010d04-0000-0000-0000-000000000000"
@@ -3956,6 +4193,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010d05-0000-0000-0000-000000000000"
         ],
@@ -3986,6 +4226,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010d06-0000-0000-0000-000000000000"
         ],
@@ -3997,7 +4240,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4006,7 +4249,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4023,6 +4266,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010d02-0000-0000-0000-000000000000"
@@ -4054,6 +4300,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010d03-0000-0000-0000-000000000000"
         ],
@@ -4083,6 +4332,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010d01-0000-0000-0000-000000000000"
@@ -4114,6 +4366,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010e07-0000-0000-0000-000000000000"
         ],
@@ -4125,7 +4380,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4134,7 +4389,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4151,6 +4406,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010e04-0000-0000-0000-000000000000"
@@ -4182,6 +4440,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010e05-0000-0000-0000-000000000000"
         ],
@@ -4212,6 +4473,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010e06-0000-0000-0000-000000000000"
         ],
@@ -4223,7 +4487,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4232,7 +4496,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4249,6 +4513,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010e02-0000-0000-0000-000000000000"
@@ -4280,6 +4547,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010e03-0000-0000-0000-000000000000"
         ],
@@ -4309,6 +4579,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010e01-0000-0000-0000-000000000000"
@@ -4340,6 +4613,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010107-0000-0000-0000-000000000000"
         ],
@@ -4351,7 +4627,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4360,7 +4636,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4377,6 +4653,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010104-0000-0000-0000-000000000000"
@@ -4408,6 +4687,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010105-0000-0000-0000-000000000000"
         ],
@@ -4438,6 +4720,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010106-0000-0000-0000-000000000000"
         ],
@@ -4449,7 +4734,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4458,7 +4743,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4475,6 +4760,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010102-0000-0000-0000-000000000000"
@@ -4506,6 +4794,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010103-0000-0000-0000-000000000000"
         ],
@@ -4535,6 +4826,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010101-0000-0000-0000-000000000000"
@@ -4566,6 +4860,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010007-0000-0000-0000-000000000000"
         ],
@@ -4577,7 +4874,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4586,7 +4883,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4604,6 +4901,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010006-0000-0000-0000-000000000000"
         ],
@@ -4615,7 +4915,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4624,7 +4924,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4642,6 +4942,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa010f07-0000-0000-0000-000000000000"
         ],
@@ -4653,7 +4956,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4662,7 +4965,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4679,6 +4982,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa010f04-0000-0000-0000-000000000000"
@@ -4710,6 +5016,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa010f05-0000-0000-0000-000000000000"
         ],
@@ -4740,6 +5049,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa010f06-0000-0000-0000-000000000000"
         ],
@@ -4751,7 +5063,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4760,7 +5072,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4777,6 +5089,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa010f02-0000-0000-0000-000000000000"
@@ -4808,6 +5123,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa010f03-0000-0000-0000-000000000000"
         ],
@@ -4837,6 +5155,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa010f01-0000-0000-0000-000000000000"
@@ -4868,6 +5189,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa011007-0000-0000-0000-000000000000"
         ],
@@ -4879,7 +5203,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4888,7 +5212,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -4905,6 +5229,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa011004-0000-0000-0000-000000000000"
@@ -4936,6 +5263,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa011005-0000-0000-0000-000000000000"
         ],
@@ -4966,6 +5296,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa011006-0000-0000-0000-000000000000"
         ],
@@ -4977,7 +5310,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -4986,7 +5319,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5003,6 +5336,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa011002-0000-0000-0000-000000000000"
@@ -5034,6 +5370,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa011003-0000-0000-0000-000000000000"
         ],
@@ -5063,6 +5402,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa011001-0000-0000-0000-000000000000"
@@ -5094,6 +5436,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "admin"
+        ],
         "principal_id": [
           "aa011107-0000-0000-0000-000000000000"
         ],
@@ -5105,7 +5450,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -5114,7 +5459,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5131,6 +5476,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "agent"
         ],
         "principal_id": [
           "aa011104-0000-0000-0000-000000000000"
@@ -5162,6 +5510,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "manager"
+        ],
         "principal_id": [
           "aa011105-0000-0000-0000-000000000000"
         ],
@@ -5192,6 +5543,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "owner"
+        ],
         "principal_id": [
           "aa011106-0000-0000-0000-000000000000"
         ],
@@ -5203,7 +5557,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -5212,7 +5566,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5229,6 +5583,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "reporter"
         ],
         "principal_id": [
           "aa011102-0000-0000-0000-000000000000"
@@ -5260,6 +5617,9 @@
         "tenant_code": [
           "athyper"
         ],
+        "persona": [
+          "requester"
+        ],
         "principal_id": [
           "aa011103-0000-0000-0000-000000000000"
         ],
@@ -5289,6 +5649,9 @@
       "attributes": {
         "tenant_code": [
           "athyper"
+        ],
+        "persona": [
+          "viewer"
         ],
         "principal_id": [
           "aa011101-0000-0000-0000-000000000000"
@@ -5320,7 +5683,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -5329,7 +5692,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5366,7 +5729,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -5375,7 +5738,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5600,10 +5963,10 @@
       "email": "platform.admin@athyper.com",
       "realmRoles": [
         "default-roles-athyper",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5619,10 +5982,10 @@
       "email": "platform.owner@athyper.com",
       "realmRoles": [
         "default-roles-athyper",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5696,13 +6059,13 @@
       "realmRoles": [
         "default-roles-athyper",
         "NEON_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5719,13 +6082,13 @@
       "realmRoles": [
         "default-roles-athyper",
         "NEON_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5798,10 +6161,10 @@
       "email": "support.agent@athyper.com",
       "realmRoles": [
         "default-roles-athyper",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5818,13 +6181,13 @@
       "realmRoles": [
         "default-roles-athyper",
         "NEON_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5842,7 +6205,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -5851,7 +6214,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },
@@ -5869,7 +6232,7 @@
         "default-roles-athyper",
         "NEON_USER",
         "MESH_BUYER_USER",
-        "ADMIN_USER"
+        "STUDIO_USER"
       ],
       "clientRoles": {
         "neon-web": [
@@ -5878,7 +6241,7 @@
         "mesh-web": [
           "AUTHORIZED"
         ],
-        "admin-web": [
+        "studio-web": [
           "AUTHORIZED"
         ]
       },

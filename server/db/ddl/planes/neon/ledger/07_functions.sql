@@ -26,6 +26,50 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION ledger.trg_guard_budget_balance_identity()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, ledger
+AS $$
+BEGIN
+    IF NEW.budget_allocation_id IS DISTINCT FROM OLD.budget_allocation_id
+       OR NEW.fiscal_year IS DISTINCT FROM OLD.fiscal_year
+       OR NEW.period_number IS DISTINCT FROM OLD.period_number THEN
+        RAISE EXCEPTION 'Budget balance coordinates are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION ledger.trg_validate_budget_reversal()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, ledger
+AS $$
+DECLARE
+    original ledger.budget_transaction%ROWTYPE;
+BEGIN
+    IF NEW.transaction_type <> 'reverse' THEN
+        RETURN NEW;
+    END IF;
+    SELECT * INTO original FROM ledger.budget_transaction
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.reversal_of_transaction_id
+     FOR KEY SHARE;
+    IF NOT FOUND OR original.transaction_type = 'reverse'
+       OR original.budget_allocation_id <> NEW.budget_allocation_id
+       OR original.fiscal_year <> NEW.fiscal_year
+       OR original.period_number <> NEW.period_number
+       OR original.amount <> NEW.amount
+       OR original.currency_code <> NEW.currency_code
+       OR original.direction = NEW.direction THEN
+        RAISE EXCEPTION 'Budget reversal must exactly oppose an eligible original transaction'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION ledger.trg_stamp_run_status()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -49,6 +93,48 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION ledger.trg_enforce_planning_run_transition()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, ledger
+AS $$
+BEGIN
+    IF NEW.status IS NOT DISTINCT FROM OLD.status THEN
+        RETURN NEW;
+    END IF;
+    IF NOT (
+        (OLD.status = 'pending' AND NEW.status IN ('running','cancelled'))
+        OR (OLD.status = 'running' AND NEW.status IN ('completed','failed','cancelled'))
+        OR (OLD.status = 'completed' AND NEW.status = 'approved')
+    ) THEN
+        RAISE EXCEPTION 'Invalid planning run transition: % -> %', OLD.status, NEW.status
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION ledger.trg_validate_planning_output_run()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, ledger
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM ledger.planning_run r
+         WHERE r.tenant_id = NEW.tenant_id
+           AND r.id = NEW.planning_run_id
+           AND r.planning_model_id = NEW.planning_model_id
+           AND r.ledger_book_id = NEW.ledger_book_id
+           AND r.status = 'running'
+    ) THEN
+        RAISE EXCEPTION 'Planning output requires a matching running planning run'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION ledger.trg_validate_planning_run()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -57,6 +143,7 @@ AS $$
 DECLARE
     v_scenario_status document.planning_scenario_status_d;
     v_expected_hash text;
+    v_retry ledger.planning_run%ROWTYPE;
 BEGIN
     SELECT status INTO v_scenario_status
       FROM document.planning_scenario
@@ -75,6 +162,18 @@ BEGIN
         RAISE EXCEPTION 'Planning run input hash does not match the approved scenario'
             USING ERRCODE = 'check_violation';
     END IF;
+    IF NEW.retry_of_run_id IS NOT NULL THEN
+        SELECT * INTO v_retry FROM ledger.planning_run
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.retry_of_run_id;
+        IF NOT FOUND OR v_retry.status NOT IN ('failed','cancelled')
+           OR v_retry.planning_model_id <> NEW.planning_model_id
+           OR v_retry.planning_scenario_id <> NEW.planning_scenario_id
+           OR v_retry.company_code_id <> NEW.company_code_id
+           OR v_retry.ledger_book_id <> NEW.ledger_book_id THEN
+            RAISE EXCEPTION 'Planning retry must reference a compatible failed or cancelled run'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
     RETURN NEW;
 END;
 $$;
@@ -87,6 +186,7 @@ AS $$
 BEGIN
     IF NEW.planning_model_id IS DISTINCT FROM OLD.planning_model_id
        OR NEW.planning_scenario_id IS DISTINCT FROM OLD.planning_scenario_id
+       OR NEW.retry_of_run_id IS DISTINCT FROM OLD.retry_of_run_id
        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
        OR NEW.ledger_book_id IS DISTINCT FROM OLD.ledger_book_id
        OR NEW.model_version_number IS DISTINCT FROM OLD.model_version_number
@@ -116,6 +216,10 @@ BEGIN
        OR NEW.created_by IS DISTINCT FROM OLD.created_by) THEN
         RAISE EXCEPTION 'book-period coordinates and creation evidence are immutable'
             USING ERRCODE = '22000';
+    END IF;
+    IF TG_OP = 'UPDATE' AND NEW.version_number <> OLD.version_number + 1 THEN
+        RAISE EXCEPTION 'book-period version must advance exactly once'
+            USING ERRCODE = '23514';
     END IF;
     SELECT company_code_id, start_date, end_date
       INTO v_company_id, v_period_start, v_period_end
@@ -156,6 +260,17 @@ BEGIN
             USING ERRCODE = '23514';
     END IF;
 
+    IF TG_OP = 'UPDATE' AND OLD.status = 'soft_close' AND NEW.status = 'open' AND (
+       NEW.reopened_at IS NULL
+       OR NEW.reopened_by IS NULL
+       OR NEW.reopen_reason IS NULL
+       OR btrim(NEW.reopen_reason) = ''
+       OR NEW.reopen_approval_evidence IS NULL
+       OR NEW.reopen_approval_evidence = '{}'::jsonb) THEN
+        RAISE EXCEPTION 'reopen reason and approval evidence are required'
+            USING ERRCODE = '23514';
+    END IF;
+
     IF NEW.status IN ('open','soft_close','hard_close') AND NEW.opened_at IS NULL THEN
         RAISE EXCEPTION 'opened evidence is required for status %', NEW.status
             USING ERRCODE = '23514';
@@ -185,6 +300,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 DECLARE
+    v_row jsonb := to_jsonb(NEW);
     v_company_id uuid;
     v_period_id uuid;
     v_book_id uuid;

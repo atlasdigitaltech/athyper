@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { resolveRuntimeListFeaturesWithDiagnostics } from "../../packages/shared/runtime-domain/runtime-list/src/adapter/index";
-import { adminAdapter } from "../../packages/products/admin/app/src/list/index";
-import { createMeshAdapter } from "../../packages/products/mesh/app/src/list/index";
-import { createNeonAdapter } from "../../packages/products/neon/app/src/list/index";
+import { studioAdapter } from "../../packages/planes/studio/app/src/list/index";
+import { createMeshAdapter } from "../../packages/planes/mesh/app/src/list/index";
+import { createNeonAdapter } from "../../packages/planes/neon/app/src/list/index";
 
 const neonAdapter = createNeonAdapter({
   fetchDescriptor: async () => null,
@@ -18,7 +18,7 @@ describe("list feature plane rollout contract", () => {
   for (const [plane, adapter, maxPageSize, searchMode] of [
     ["neon", neonAdapter, 500, "both"],
     ["mesh", meshAdapter, 200, "server"],
-    ["admin", adminAdapter, 100, "server"],
+    ["studio", studioAdapter, 100, "server"],
   ] as const) {
     it(`keeps ${plane} fallback policy plane-local`, () => {
       const result = resolveRuntimeListFeaturesWithDiagnostics({ adapterDefaults: adapter.features });

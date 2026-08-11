@@ -1,0 +1,2 @@
+export class ContentError extends Error{constructor(readonly status:number,readonly code:string,message:string,readonly details?:Readonly<Record<string,unknown>>){super(message);this.name="ContentError";}}
+export class ContentQuotaExceededError extends ContentError{constructor(readonly limitItems:number,readonly usedItems:number,readonly reservedItems:number,readonly retryAfterSeconds:number){super(429,"CONTENT_ITEM_QUOTA_EXCEEDED","The tenant content item quota has been reached",{limitItems,usedItems,reservedItems,retryAfterSeconds});}}

@@ -172,7 +172,7 @@ groups:
           description: "The platform collector has not completed successfully for more than 2 minutes."
 
       - alert: PlatformMetricSectionDown
-        expr: athyper_platform_metric_section_up == 0
+        expr: athyper_studio_metric_section_up == 0
         for: 5m
         labels:
           severity: warning

@@ -464,7 +464,7 @@ The `STACK_PROFILE` env var (also settable as a CLI arg to `stack-profile/up`) c
 
 | Profile | Services included | Typical use |
 |---------|-------------------|-------------|
-| `core` | db, dbpool-apps, dbpool-session, gateway, IAM, Redis, MinIO, mailtrap, virusscan, socket proxies | Daily dev |
+| `core` | db, dbpool-apps, dbpool-session, gateway, IAM, Redis, MinIO, virusscan, socket proxies | Base infrastructure |
 | `telemetry` | core + Grafana, Loki, Tempo, Prometheus, Alertmanager, logshipper | Observability work |
 | `search` | core + searchcore (Meilisearch) | Full-text search development |
 | `analytics` | core + analyticsboard (Metabase) | Analytics / BI (requires governance gate — see validate-env) |
@@ -479,8 +479,8 @@ The `STACK_PROFILE` env var (also settable as a CLI arg to `stack-profile/up`) c
 | `db` | standalone Postgres + PgBouncer containers | Add DB tier independently of `core` |
 | `iam` | standalone Keycloak container | Add IAM independently of `core` |
 | `gateway` | standalone Traefik container | Add ingress independently of `core` |
-| `dev` | development-specific helper services | Local developer tooling |
-| `emergency` | break-glass emergency services | Incident response (see RBAC posture) |
+| `dev` | Mailpit and development-specific helper services | Local developer tooling |
+| `emergency` | read-only queueconsole break-glass service | Incident response; pair with `memorycache-jobs` and follow RB-08 |
 | `all` | every profile above | Integration testing, CI |
 
 Set the default in `stack/env/.env`:

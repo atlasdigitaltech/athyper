@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "catalogId": "authorization-wave0-high-risk-actions",
   "selection": {
@@ -21,7 +21,7 @@
       "legacy_single",
       "legacy_batch"
     ],
-    "admin": [
+    "studio": [
       "legacy_admin"
     ],
     "mesh": [

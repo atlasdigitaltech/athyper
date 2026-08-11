@@ -76,7 +76,7 @@
 #                        : server/db/seed/blueprints/industry/   (TIER 2b industry packs)
 #                        : server/db/seed/blueprints/modules/    (TIER 3 module packs)
 #             Tenant     : server/db/seed/tenants/neon/{client}/
-#           Admin Plane  : server/db/seed/tenants/admin/
+#           Studio Plane : server/db/seed/tenants/studio/
 #
 # Requires: Node.js with tsx available (npx tsx)
 #           DATABASE_ADMIN_URL must be a DIRECT Postgres connection — not PgBouncer.

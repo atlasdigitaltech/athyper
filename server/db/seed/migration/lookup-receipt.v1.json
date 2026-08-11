@@ -6,15 +6,39 @@
   "retainedValues": 1710,
   "sealedDomainRetirements": 32,
   "generatedPacks": {
-    "common": { "files": 2, "values": 196 },
-    "athyper": { "files": 6, "values": 220 },
-    "neon": { "files": 24, "values": 1275 },
-    "mesh": { "files": 1, "values": 19 }
+    "common": {
+      "files": 2,
+      "values": 196
+    },
+    "athyper": {
+      "files": 6,
+      "values": 220
+    },
+    "neon": {
+      "files": 24,
+      "values": 1275
+    },
+    "mesh": {
+      "files": 1,
+      "values": 19
+    }
   },
   "freshBuilds": {
-    "athyper_platform": { "status": "passed", "lookupDomainsAfterAllLayer12": 48, "globalValuesAfterAllLayer12": 421 },
-    "athyper_neon": { "status": "passed", "lookupDomainsAfterAllLayer12": 223, "globalValuesAfterAllLayer12": 1511 },
-    "athyper_mesh": { "status": "passed", "lookupDomainsAfterAllLayer12": 21, "globalValuesAfterAllLayer12": 227 }
+    "athyper_studio": {
+      "status": "passed",
+      "lookupDomainsAfterAllLayer12": 48,
+      "globalValuesAfterAllLayer12": 421
+    },
+    "athyper_neon": {
+      "status": "passed",
+      "lookupDomainsAfterAllLayer12": 223,
+      "globalValuesAfterAllLayer12": 1511
+    },
+    "athyper_mesh": {
+      "status": "passed",
+      "lookupDomainsAfterAllLayer12": 21,
+      "globalValuesAfterAllLayer12": 227
+    }
   },
   "validation": {
     "consumerClassificationCoverage": "passed",

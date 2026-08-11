@@ -28,6 +28,10 @@ CREATE INDEX address_duplicate_candidate_idx
        (tenant_id, country_code, postal_code, lower(line1), lower(city))
     WHERE status = 'active' AND line1 IS NOT NULL;
 
+CREATE UNIQUE INDEX address_normalized_hash_uq
+    ON master.address (tenant_id, normalized_hash)
+    WHERE status = 'active';
+
 CREATE INDEX address_link_owner_idx
     ON master.address_link
        (tenant_id, owner_type_id, owner_id, purpose, role_qualifier);
@@ -38,21 +42,23 @@ CREATE INDEX address_link_address_idx
 CREATE INDEX address_link_owner_type_fk_idx
     ON master.address_link (owner_type_id);
 
-CREATE INDEX address_link_current_primary_idx
+CREATE UNIQUE INDEX address_link_current_primary_uq
     ON master.address_link
        (tenant_id, owner_type_id, owner_id, purpose, role_qualifier)
+    NULLS NOT DISTINCT
     WHERE is_primary AND effective_until IS NULL;
 
 CREATE UNIQUE INDEX contact_link_value_uq
     ON master.contact_link
        (tenant_id, owner_type_id, owner_id, channel_type, value, purpose, role_qualifier)
-    NULLS NOT DISTINCT;
+    NULLS NOT DISTINCT
+    WHERE status = 'active' AND effective_until IS NULL;
 
 CREATE UNIQUE INDEX contact_link_one_primary_uq
     ON master.contact_link
        (tenant_id, owner_type_id, owner_id, channel_type, purpose, role_qualifier)
     NULLS NOT DISTINCT
-    WHERE is_primary AND status = 'active';
+    WHERE is_primary AND status = 'active' AND effective_until IS NULL;
 
 CREATE INDEX contact_link_owner_idx
     ON master.contact_link

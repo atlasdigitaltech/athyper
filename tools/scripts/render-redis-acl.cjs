@@ -14,6 +14,7 @@ const REQUIRED_KEYS = [
   "MEMORYCACHE_PASSWORD",
   "REDIS_EXPORTER_PASSWORD",
   "REDIS_GLITCHTIP_PASSWORD",
+  "REDIS_BULLBOARD_PASSWORD",
   "REDIS_INFISICAL_PASSWORD",
   "REDIS_ADMIN_PASSWORD",
 ];
@@ -104,10 +105,11 @@ let rendered = fs.readFileSync(templateFile, "utf8")
   .replaceAll("__APP_HASH__", sha256(env.MEMORYCACHE_PASSWORD))
   .replaceAll("__EXPORTER_HASH__", sha256(env.REDIS_EXPORTER_PASSWORD))
   .replaceAll("__GLITCHTIP_HASH__", sha256(env.REDIS_GLITCHTIP_PASSWORD))
+  .replaceAll("__BULLBOARD_HASH__", sha256(env.REDIS_BULLBOARD_PASSWORD))
   .replaceAll("__INFISICAL_HASH__", sha256(env.REDIS_INFISICAL_PASSWORD))
   .replaceAll("__ADMIN_HASH__", sha256(env.REDIS_ADMIN_PASSWORD));
 
-const leftovers = rendered.match(/__(APP|EXPORTER|GLITCHTIP|INFISICAL|ADMIN)_HASH__/g);
+const leftovers = rendered.match(/__(APP|EXPORTER|GLITCHTIP|BULLBOARD|INFISICAL|ADMIN)_HASH__/g);
 if (leftovers) {
   console.error(`FAIL Redis ACL still contains unrendered tokens: ${[...new Set(leftovers)].join(", ")}`);
   process.exit(1);

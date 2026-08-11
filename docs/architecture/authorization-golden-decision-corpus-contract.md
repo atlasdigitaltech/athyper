@@ -16,7 +16,7 @@ provenance, and disagreement gate passes.
 The repository contracts are:
 
 - `server/db/scripts/reports/capture-authorization-golden-corpus.ts`
-- `server/db/scripts/reports/verify-authorization-golden-corpus.ts`
+- `server/db/scripts/verify/verify-authorization-golden-corpus.ts`
 - `config/governance/authorization-golden-corpus.schema.json`
 - `config/governance/authorization-external-identity-evidence.schema.json`
 - `config/governance/authorization-supplemental-decision-evidence.schema.json`
@@ -157,7 +157,7 @@ pnpm.cmd --dir server/db exec tsx scripts/reports/capture-authorization-golden-c
   --output=D:\restricted\golden-decision-corpus.json `
   --strict
 
-pnpm.cmd --dir server/db exec tsx scripts/reports/verify-authorization-golden-corpus.ts `
+pnpm.cmd --dir server/db exec tsx scripts/verify/verify-authorization-golden-corpus.ts `
   --corpus=D:\restricted\golden-decision-corpus.json `
   --strict
 ```

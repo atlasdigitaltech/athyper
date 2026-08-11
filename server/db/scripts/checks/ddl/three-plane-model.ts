@@ -3,9 +3,10 @@
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const databaseRoot = resolve(import.meta.dirname, "../..");
+// This checker lives at db/scripts/checks/ddl.  The DDL root is db, not db/scripts.
+const databaseRoot = resolve(import.meta.dirname, "../../..");
 const repositoryRoot = resolve(databaseRoot, "../..");
-const planes = ["athyper", "neon", "mesh"] as const;
+const planes = ["studio", "neon", "mesh"] as const;
 const legacyPath =
   /(?:server\/db\/|(?:\.\.\/)*db\/)?ddl\/(?:000_bootstrap|aggregate|control|document|event|governance|ledger|log|master|mesh|mesh_control|mesh_log|public|security|shared|snapshot)\//;
 
@@ -125,12 +126,12 @@ if (/capability_toggle|product_capability|subscription_plan_capability/.test(con
   pass("feature flags contain no commercial capability semantics");
 }
 
-const canonicalPartyTables = await readFile(resolve(databaseRoot, "ddl/planes/athyper/master/03_tables.sql"), "utf8");
+const canonicalPartyTables = await readFile(resolve(databaseRoot, "ddl/planes/studio/master/03_tables.sql"), "utf8");
 for (const relation of ["canonical_party", "canonical_party_identifier", "canonical_party_relationship", "canonical_party_merge"]) {
   if (!canonicalPartyTables.includes(`CREATE TABLE master.${relation}`)) fail(`master.${relation} is missing`);
   else pass(`master.${relation} is defined`);
 }
-const trustiamTables = await readFile(resolve(databaseRoot, "ddl/planes/athyper/trustiam/03_tables.sql"), "utf8");
+const trustiamTables = await readFile(resolve(databaseRoot, "ddl/planes/studio/trustiam/03_tables.sql"), "utf8");
 for (const relation of ["organization", "organization_provider", "application_projection", "projection_scope"]) {
   if (!trustiamTables.includes(`CREATE TABLE trustiam.${relation}`)) fail(`trustiam.${relation} is missing`);
   else pass(`trustiam.${relation} is defined`);

@@ -1,8 +1,6 @@
-{
-  "extends": "@athyper/config/tsconfig",
-  "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
-  },
-  "include": ["src"]
+﻿{
+  "extends": "@athyper/tsconfig/base.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }

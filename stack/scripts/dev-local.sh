@@ -68,7 +68,7 @@ APP_CONTAINERS=(
   "${COMPOSE_PROJECT_NAME}-scheduler-1"
   "${COMPOSE_PROJECT_NAME}-neon-web-1"
   "${COMPOSE_PROJECT_NAME}-mesh-web-1"
-  "${COMPOSE_PROJECT_NAME}-admin-web-1"
+  "${COMPOSE_PROJECT_NAME}-studio-web-1"
 )
 
 echo ""

@@ -1,4 +1,4 @@
-{
+﻿{
   "schemaVersion": 1,
   "contractId": "authorization-v2-rollout",
   "status": "wave0-default-legacy",
@@ -23,7 +23,7 @@
       "kind": "caller_supplied_plane_local",
       "authority": "neon"
     },
-    "admin": {
+    "studio": {
       "kind": "caller_supplied_plane_local",
       "authority": "neon"
     },
@@ -67,9 +67,9 @@
       "defaultMode": "legacy",
       "rules": []
     },
-    "admin": {
+    "studio": {
       "schemaVersion": 1,
-      "planeKey": "admin",
+      "planeKey": "studio",
       "authority": "neon",
       "revision": "wave0-default-legacy",
       "defaultMode": "legacy",

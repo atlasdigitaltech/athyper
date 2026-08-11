@@ -338,7 +338,7 @@ Consumed by Traefik router rules and upstream URL configs. All values are DNS na
 | `REDIS_ERROR_LOG_COOLDOWN_MS` | Minimum ms between repeated Redis error log entries (prevents log flooding). | `10000` | `30000` | `30000` |
 | `REDIS_BULLMQ_URL` | Optional dedicated Redis URL for BullMQ job queues. When unset, BullMQ reuses `REDIS_URL`. Set to a separate DB or instance to isolate job coordination from cache reconnect storms. ⚡ | — | `secrets/.env` (if isolated) | `secrets/.env` (if isolated) |
 | `BULLBOARD_REDIS_HOST` / `PORT` / `DB` | BullBoard sidecar Redis connection (admin profile). | `memorycache` / `6379` / `0` | same | same |
-| `BULLBOARD_REDIS_PASSWORD` | BullBoard Redis password. Leave empty to reuse `MEMORYCACHE_PASSWORD`. | `(empty)` | `(empty)` | `(empty)` |
+| `REDIS_BULLBOARD_PASSWORD` | Password for the read-only `bullboard` Redis ACL user. | local dev value | secret | secret |
 
 ---
 

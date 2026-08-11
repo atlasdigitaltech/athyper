@@ -1,0 +1,26 @@
+{
+  "name": "@athyper/server-adapter-object-storage-s3",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@athyper/server-contract-object-storage": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
+    "@aws-sdk/client-s3": "^3.1032.0",
+    "@aws-sdk/lib-storage": "^3.1032.0",
+    "@aws-sdk/s3-request-presigner": "^3.1032.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

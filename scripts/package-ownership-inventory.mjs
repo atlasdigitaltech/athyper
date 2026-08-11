@@ -26,10 +26,10 @@ function discoverPackageFiles(directory) {
 
 const packageFiles = [...new Set([
   ...tracked.filter((file) => existsSync(resolve(root, file))),
-  // Include new, not-yet-tracked workspace packages in every ownership area.
-  // Restricting discovery to packages/products made generated ownership output
-  // silently omit new shared packages until after their first commit.
-  ...discoverPackageFiles(resolve(root, "packages")),
+  // Include new, not-yet-tracked workspace packages in every active ownership
+  // area. Ownership validation must not depend on a package's first commit.
+  ...["apps", "packages", "server/apps", "server/db", "server/packages", "tooling"]
+    .flatMap((directory) => discoverPackageFiles(resolve(root, directory))),
 ])];
 const manifests = packageFiles.map((file) => {
   const path = resolve(root, file);
@@ -39,7 +39,7 @@ const manifests = packageFiles.map((file) => {
     canonicalPath,
     isSourceAlias: canonicalPath !== file,
     directory: dirname(file),
-    manifest: JSON.parse(readFileSync(path, "utf8")),
+    manifest: JSON.parse(readFileSync(path, "utf8").replace(/^\uFEFF/, "")),
   };
 });
 
@@ -71,7 +71,7 @@ for (const item of manifests) {
   byName.set(name, list);
 }
 
-const appNames = ["neon", "admin", "mesh"];
+const appNames = ["neon", "studio", "mesh"];
 const categoryValues = [
   "Shared contract",
   "Shared platform",
@@ -83,15 +83,22 @@ const categoryValues = [
 ];
 
 function appFromPath(path) {
-  const match = path.match(/^(?:apps|packages\/products)\/(neon|admin|mesh)(?:\/|$)/);
+  const match = path.match(/^(?:apps|packages\/(?:products|planes))\/(neon|studio|mesh)(?:\/|$)/);
   return match?.[1] ?? null;
 }
 
 function classify(path, manifest) {
-  if (path.startsWith("packages/product-deprecated/")) return "Deprecated";
+  if (path.startsWith("packages/product-deprecated/")
+    || path.startsWith(".codex-phase6-deploy/")
+    || path.startsWith("server-backup/")
+    || path.startsWith("apps-backup/")
+    || path.startsWith("packages-backup/")
+    || path.startsWith(".local-backups/")) return "Deprecated";
   if (path.startsWith("server/")) return "Server-only";
   if (path.startsWith("apps/")) return "Application composition";
-  if (path.startsWith("packages/products/")) return "Product-specific";
+  if (path.startsWith("packages/planes/")) return "Product-specific";
+  if (path.startsWith("packages/contracts/")) return "Shared contract";
+  if (path.startsWith("packages/platform/")) return "Shared platform";
   if (path.startsWith("packages/domain/")) return "Shared domain";
   if (path.startsWith("tooling/") || path === "package.json") return "Shared platform";
 
@@ -112,6 +119,8 @@ function owner(path, category) {
   const app = appFromPath(path);
   if (app) return app[0].toUpperCase() + app.slice(1);
   if (category === "Server-only") return "Runtime Server";
+  if (path.startsWith("packages/contracts/")) return "Contract Platform";
+  if (path.startsWith("packages/platform/")) return "Shared Platform";
   if (path.startsWith("packages/shared/data-integration/")) return "Data Integration";
   if (path.startsWith("packages/shared/platform-auth/")) return "Platform Auth";
   if (path.startsWith("packages/shared/runtime-domain/")) return "Runtime Domain";
@@ -143,7 +152,7 @@ function targets(path, category) {
   if (category === "Server-only") return "server";
   if (category === "Deprecated") return "none (retirement)";
   if (path.startsWith("tooling/") || path === "package.json") return "CI/build";
-  return "neon, admin, mesh, server as consumed";
+  return "neon, studio, mesh, server as consumed";
 }
 
 function proposedPath(item, duplicateItems) {
@@ -246,7 +255,7 @@ const markdown = [
   "## Phase 1 decision rules",
   "",
   "- `packages/shared/*` is the canonical shared source area.",
-  "- `packages/products/<app>/*` is the destination for product-specific reusable packages (`app`, `brand`, `shell`, `navigation`, `route-manifest`, `i18n`, `command-hub`, `runtime`).",
+  "- `packages/planes/<app>/*` is the destination for product-specific reusable packages (`app`, `brand`, `shell`, `navigation`, `route-manifest`, `i18n`, `command-hub`, `runtime`).",
   "- `apps/<app>` remains application composition and deployment entrypoint code.",
   "- `server/packages/*` remains server-only.",
   "- `packages/product-deprecated/*` is never a dependency authority and is scheduled for retirement.",

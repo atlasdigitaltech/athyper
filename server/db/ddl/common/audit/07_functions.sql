@@ -1074,3 +1074,47 @@ BEGIN
     RETURN v_id;
 END;
 $$;
+CREATE OR REPLACE FUNCTION audit.trg_guard_export_request()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, audit
+AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Audit export requests cannot be deleted' USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.plane_code IS DISTINCT FROM OLD.plane_code
+       OR NEW.actor_principal_id IS DISTINCT FROM OLD.actor_principal_id
+       OR NEW.exact_filter IS DISTINCT FROM OLD.exact_filter
+       OR NEW.export_format IS DISTINCT FROM OLD.export_format
+       OR NEW.requested_at IS DISTINCT FROM OLD.requested_at
+       OR NEW.retention_until IS DISTINCT FROM OLD.retention_until THEN
+        RAISE EXCEPTION 'Audit export request scope is immutable' USING ERRCODE = 'check_violation';
+    END IF;
+    IF (OLD.status, NEW.status) NOT IN (('queued','running'),('queued','failed'),('running','completed'),('running','failed'),('completed','expired'),('failed','expired')) THEN
+        RAISE EXCEPTION 'Invalid audit export status transition % -> %', OLD.status, NEW.status USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION audit.trg_guard_legal_hold()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, audit
+AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Legal holds cannot be deleted' USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.matter_code IS DISTINCT FROM OLD.matter_code OR NEW.exact_filter IS DISTINCT FROM OLD.exact_filter
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at OR NEW.created_by IS DISTINCT FROM OLD.created_by
+       OR OLD.status <> 'active' OR NEW.status <> 'released' THEN
+        RAISE EXCEPTION 'Only release of an active legal hold is allowed' USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;

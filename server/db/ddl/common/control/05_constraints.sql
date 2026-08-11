@@ -179,6 +179,16 @@ ALTER TABLE control.cycle_carryforward_rule
     ADD CONSTRAINT cycle_carryforward_rule_updated_by_fk
         FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id);
 
+ALTER TABLE control.cycle_template_revision
+    ADD CONSTRAINT cycle_template_revision_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
+    ADD CONSTRAINT cycle_template_revision_type_fk
+        FOREIGN KEY (tenant_id, cycle_type_id) REFERENCES control.cycle_type(tenant_id, id),
+    ADD CONSTRAINT cycle_template_revision_published_by_fk
+        FOREIGN KEY (tenant_id, published_by) REFERENCES master.principal(tenant_id, id),
+    ADD CONSTRAINT cycle_template_revision_created_by_fk
+        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id);
+
 ALTER TABLE control.bank_account_validation_rule
     ADD CONSTRAINT bank_account_validation_rule_country_fk
         FOREIGN KEY (country_code) REFERENCES shared.country(code),
@@ -281,7 +291,11 @@ ALTER TABLE control.policy_definition
     ADD CONSTRAINT pdef_priority_pos
         CHECK (priority > 0),
     ADD CONSTRAINT pdef_status_chk
-        CHECK (status IN ('active', 'inactive', 'deprecated')),
+        CHECK (status IN ('draft', 'pending_approval', 'published', 'active', 'retired', 'inactive', 'deprecated')),
+    ADD CONSTRAINT pdef_hash_chk
+        CHECK (definition_hash IS NULL OR definition_hash ~ '^[0-9a-f]{64}$'),
+    ADD CONSTRAINT pdef_published_hash_chk
+        CHECK (status NOT IN ('published', 'active') OR definition_hash IS NOT NULL),
     ADD CONSTRAINT pdef_version_pos
         CHECK (version_no > 0),
     ADD CONSTRAINT pdef_audit_pair_chk
@@ -291,7 +305,9 @@ ALTER TABLE control.policy_definition
     ADD CONSTRAINT pdef_module_fk
         FOREIGN KEY (module_id) REFERENCES control.module(id) ON DELETE SET NULL,
     ADD CONSTRAINT pdef_tenant_fk
-        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE,
+    ADD CONSTRAINT pdef_predecessor_fk
+        FOREIGN KEY (predecessor_id) REFERENCES control.policy_definition(id) ON DELETE RESTRICT;
 
 ALTER TABLE control.policy_rule
     ADD CONSTRAINT policy_rule_definition_fk
@@ -310,6 +326,17 @@ ALTER TABLE control.policy_test_case
         FOREIGN KEY (updated_by) REFERENCES master.principal(id) ON DELETE RESTRICT,
     ADD CONSTRAINT policy_test_case_status_changed_by_fk
         FOREIGN KEY (status_changed_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+
+ALTER TABLE control.policy_test_result
+    ADD CONSTRAINT policy_test_result_case_fk FOREIGN KEY (policy_test_case_id) REFERENCES control.policy_test_case(id) ON DELETE CASCADE,
+    ADD CONSTRAINT policy_test_result_definition_fk FOREIGN KEY (policy_definition_id) REFERENCES control.policy_definition(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT policy_test_result_executed_by_fk FOREIGN KEY (executed_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+ALTER TABLE control.policy_activation
+    ADD CONSTRAINT policy_activation_definition_fk FOREIGN KEY (policy_definition_id) REFERENCES control.policy_definition(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT policy_activation_activated_by_fk FOREIGN KEY (activated_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
+ALTER TABLE control.policy_evaluation_history
+    ADD CONSTRAINT policy_evaluation_history_definition_fk FOREIGN KEY (policy_definition_id) REFERENCES control.policy_definition(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT policy_evaluation_history_evaluated_by_fk FOREIGN KEY (evaluated_by) REFERENCES master.principal(id) ON DELETE RESTRICT;
 
 ALTER TABLE control.usage_metric_catalog
     ADD CONSTRAINT usage_metric_catalog_module_fk

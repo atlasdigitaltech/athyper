@@ -20,6 +20,9 @@ ALTER TABLE governance.cycle_run
     ADD CONSTRAINT cycle_run_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT cycle_run_type_fk
         FOREIGN KEY (tenant_id, cycle_type_id) REFERENCES control.cycle_type(tenant_id, id),
+    ADD CONSTRAINT cycle_run_template_revision_fk
+        FOREIGN KEY (tenant_id, cycle_type_id, template_revision_id, template_revision_number, template_hash)
+        REFERENCES control.cycle_template_revision(tenant_id, cycle_type_id, id, revision_number, template_hash),
     ADD CONSTRAINT cycle_run_parent_fk
         FOREIGN KEY (tenant_id, parent_cycle_run_id) REFERENCES governance.cycle_run(tenant_id, id),
     ADD CONSTRAINT cycle_run_owner_fk
@@ -53,6 +56,19 @@ ALTER TABLE governance.cycle_task
     ADD CONSTRAINT cycle_task_status_changed_by_fk
         FOREIGN KEY (tenant_id, status_changed_by) REFERENCES master.principal(tenant_id, id);
 
+ALTER TABLE governance.cycle_task_dependency
+    ADD CONSTRAINT cycle_task_dependency_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
+    ADD CONSTRAINT cycle_task_dependency_run_fk
+        FOREIGN KEY (tenant_id, cycle_run_id) REFERENCES governance.cycle_run(tenant_id, id),
+    ADD CONSTRAINT cycle_task_dependency_predecessor_fk
+        FOREIGN KEY (tenant_id, cycle_run_id, predecessor_task_id)
+        REFERENCES governance.cycle_task(tenant_id, cycle_run_id, id),
+    ADD CONSTRAINT cycle_task_dependency_successor_fk
+        FOREIGN KEY (tenant_id, cycle_run_id, successor_task_id)
+        REFERENCES governance.cycle_task(tenant_id, cycle_run_id, id),
+    ADD CONSTRAINT cycle_task_dependency_created_by_fk
+        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id);
+
 ALTER TABLE governance.cycle_deviation
     ADD CONSTRAINT cycle_deviation_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT cycle_deviation_run_fk
@@ -61,6 +77,8 @@ ALTER TABLE governance.cycle_deviation
         FOREIGN KEY (tenant_id, cycle_task_id) REFERENCES governance.cycle_task(tenant_id, id),
     ADD CONSTRAINT cycle_deviation_carry_run_fk
         FOREIGN KEY (tenant_id, carried_to_cycle_run_id) REFERENCES governance.cycle_run(tenant_id, id),
+    ADD CONSTRAINT cycle_deviation_carry_source_fk
+        FOREIGN KEY (tenant_id, carried_from_deviation_id) REFERENCES governance.cycle_deviation(tenant_id, id),
     ADD CONSTRAINT cycle_deviation_created_by_fk
         FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT cycle_deviation_resolved_by_fk
@@ -72,6 +90,10 @@ ALTER TABLE governance.cycle_certification
         FOREIGN KEY (tenant_id, cycle_run_id) REFERENCES governance.cycle_run(tenant_id, id),
     ADD CONSTRAINT cycle_certification_certified_by_fk
         FOREIGN KEY (tenant_id, certified_by) REFERENCES master.principal(tenant_id, id),
+    ADD CONSTRAINT cycle_certification_submitted_by_fk
+        FOREIGN KEY (tenant_id, submitted_by) REFERENCES master.principal(tenant_id, id),
+    ADD CONSTRAINT cycle_certification_rejected_by_fk
+        FOREIGN KEY (tenant_id, rejected_by) REFERENCES master.principal(tenant_id, id),
     ADD CONSTRAINT cycle_certification_created_by_fk
         FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id);
 

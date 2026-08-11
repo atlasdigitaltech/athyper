@@ -58,8 +58,8 @@
           "allowedAzp": [
             "athyper-api-runtime",
             "athyper-svc-runtime-worker",
-            "admin-svc-bff",
-            "admin-web",
+            "studio-svc-bff",
+            "studio-web",
             "mesh-svc-bff",
             "mesh-web",
             "neon-svc-bff",

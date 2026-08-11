@@ -3,82 +3,25 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    },
-    "./kernel": {
-      "types": "./dist/kernel/src/index.d.ts",
-      "import": "./dist/kernel/src/index.js",
-      "default": "./dist/kernel/src/index.js"
-    },
-    "./kernel/resilience": {
-      "types": "./dist/kernel/src/resilience/index.d.ts",
-      "import": "./dist/kernel/src/resilience/index.js",
-      "default": "./dist/kernel/src/resilience/index.js"
-    },
-    "./context": {
-      "types": "./dist/context/src/index.d.ts",
-      "import": "./dist/context/src/index.js",
-      "default": "./dist/context/src/index.js"
-    },
-    "./tenancy": {
-      "types": "./dist/tenancy/src/index.d.ts",
-      "import": "./dist/tenancy/src/index.js",
-      "default": "./dist/tenancy/src/index.js"
-    },
-    "./transaction": {
-      "types": "./dist/transaction/src/index.d.ts",
-      "import": "./dist/transaction/src/index.js",
-      "default": "./dist/transaction/src/index.js"
-    },
-    "./crypto": {
-      "types": "./dist/crypto/src/index.d.ts",
-      "import": "./dist/crypto/src/index.js",
-      "default": "./dist/crypto/src/index.js"
-    },
-    "./cache": {
-      "types": "./dist/cache/src/index.d.ts",
-      "import": "./dist/cache/src/index.js",
-      "default": "./dist/cache/src/index.js"
-    },
-    "./storage": {
-      "types": "./dist/storage/src/index.d.ts",
-      "import": "./dist/storage/src/index.js",
-      "default": "./dist/storage/src/index.js"
-    },
-    "./observability": {
-      "types": "./dist/observability/src/index.d.ts",
-      "import": "./dist/observability/src/index.js",
-      "default": "./dist/observability/src/index.js"
-    },
-    "./monitoring/platform-metrics": {
-      "types": "./dist/monitoring/platform-metrics.d.ts",
-      "import": "./dist/monitoring/platform-metrics.js",
-      "default": "./dist/monitoring/platform-metrics.js"
-    },
-    "./package.json": "./package.json"
+    ".": "./src/index.ts",
+    "./context": "./src/context/index.ts",
+    "./errors": "./src/errors/index.ts",
+    "./lifecycle": "./src/lifecycle/index.ts",
+    "./observability": "./src/observability/index.ts",
+    "./resilience": "./src/resilience/index.ts",
+    "./tenancy": "./src/tenancy/index.ts",
+    "./transaction": "./src/transaction/index.ts",
+    "./validation": "./src/validation/index.ts"
   },
-  "files": ["dist"],
   "scripts": {
-    "clean": "rimraf dist",
     "build": "tsc -p tsconfig.json",
-    "dev": "tsc -p tsconfig.json --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
-  "dependencies": {
-    "@opentelemetry/api": "^1.9.0",
-    "kysely": "^0.28.16",
-    "pino": "^10.3.1"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "@athyper/tsconfig": "workspace:*",
     "@types/node": "^25.6.0",
-    "rimraf": "^6.0.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
   }
 }

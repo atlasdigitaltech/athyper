@@ -55,7 +55,12 @@ CREATE INDEX descriptor_invalidation_outbox_purge_idx
     WHERE status = 'completed';
 
 CREATE INDEX notification_delivery_claim_expiry_idx ON event.notification_delivery_claim (expires_at) WHERE completed_at IS NULL;
+CREATE INDEX notification_message_attachment_delivery_idx ON event.notification_message_attachment (tenant_id,message_id,sort_order);
+CREATE INDEX notification_outbox_state_claim_idx ON event.notification_outbox_state (tenant_id,next_retry_at,created_at) WHERE status IN ('pending','failed');
+CREATE INDEX notification_outbox_state_lease_idx ON event.notification_outbox_state (locked_until) WHERE status='processing';
 CREATE INDEX digest_staging_pending_idx ON event.digest_staging (tenant_id, recipient_id, channel, frequency, staged_at) WHERE delivered_at IS NULL;
 CREATE INDEX push_subscription_active_idx ON event.push_subscription (tenant_id, principal_id, plane_key, platform) WHERE is_active;
 CREATE INDEX whatsapp_consent_current_idx ON event.whatsapp_consent (tenant_id, principal_id, consent_status);
 CREATE INDEX webhook_subscription_topic_idx ON event.webhook_subscription USING gin (topics) WHERE is_active;
+CREATE INDEX IF NOT EXISTS ix_invalidation_dead_letter_created
+  ON event.invalidation_dead_letter (dead_lettered_at DESC);

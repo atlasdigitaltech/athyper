@@ -1,21 +1,63 @@
 {
   "contractVersion": "seed-migration.wave4-platform-catalog-receipt.v1",
   "sources": {
-    "workspaceModule": ["011_workspace.sql", "012_module.sql", "_mesh/workspace_module.sql"],
-    "subscriptionPlan": ["014_subscription_plan.sql"],
-    "permissionStaging": ["017_permission.sql"],
-    "ownerTypes": ["003_master/001_owner_type.sql"],
-    "neonRegistries": ["003_master/002_party_risk_registry.sql", "003_master/003_certification_type.sql", "003_master/004_condition_type.sql"],
-    "auditReasonCodes": ["003_master/005_change_reason_code.sql"],
-    "systemAuthority": ["000_bootstrap/000_bootstrap.sql"],
-    "retiredDemoTenant": ["006_system_tenant/000_athyper_tenant.sql"]
+    "workspaceModule": [
+      "011_workspace.sql",
+      "012_module.sql",
+      "_mesh/workspace_module.sql"
+    ],
+    "subscriptionPlan": [
+      "014_subscription_plan.sql"
+    ],
+    "permissionStaging": [
+      "017_permission.sql"
+    ],
+    "ownerTypes": [
+      "003_master/001_owner_type.sql"
+    ],
+    "neonRegistries": [
+      "003_master/002_party_risk_registry.sql",
+      "003_master/003_certification_type.sql",
+      "003_master/004_condition_type.sql"
+    ],
+    "auditReasonCodes": [
+      "003_master/005_change_reason_code.sql"
+    ],
+    "systemAuthority": [
+      "000_bootstrap/000_bootstrap.sql"
+    ],
+    "retiredDemoTenant": [
+      "006_system_tenant/000_athyper_tenant.sql"
+    ]
   },
   "targets": {
-    "athyper": { "workspaces": 1, "modules": 13, "subscriptionPlans": 5, "compiledPermissions": 24 },
-    "neon": { "workspaces": 8, "modules": 39, "subscriptionPlans": 5, "compiledPermissions": 126, "certificationTypes": 17, "riskDimensions": 8, "platformConditionTypes": 20 },
-    "mesh": { "workspaces": 2, "modules": 19, "subscriptionPlans": 5, "compiledPermissions": 0 }
+    "athyper": {
+      "workspaces": 1,
+      "modules": 13,
+      "subscriptionPlans": 5,
+      "compiledPermissions": 24
+    },
+    "neon": {
+      "workspaces": 8,
+      "modules": 39,
+      "subscriptionPlans": 5,
+      "compiledPermissions": 126,
+      "certificationTypes": 17,
+      "riskDimensions": 8,
+      "platformConditionTypes": 20
+    },
+    "mesh": {
+      "workspaces": 2,
+      "modules": 19,
+      "subscriptionPlans": 5,
+      "compiledPermissions": 0
+    }
   },
-  "canonicalization": { "workspaceCodes": "lowercase", "moduleCodes": "lowercase", "dependentPermissionModuleIds": "atomic" },
+  "canonicalization": {
+    "workspaceCodes": "lowercase",
+    "moduleCodes": "lowercase",
+    "dependentPermissionModuleIds": "atomic"
+  },
   "legacyExecution": "disabled",
   "systemAuthorityMigration": {
     "source": "server/db/seed/platform/000_bootstrap/000_bootstrap.sql",
@@ -23,8 +65,14 @@
     "target": "server/db/ddl/common/master/12_system_authority_reference_seed.sql",
     "targetSha256": "3eb2a67a643a438b57c0719e3c1745c3051e49e1b5cb98f1cfa521d6c5e8baa7",
     "disposition": "merged-and-legacy-retired",
-    "expectedRowsPerPlane": { "systemTenants": 1, "systemPrincipals": 1 },
-    "naturalKeys": ["master.tenant(id)", "master.principal(id)"],
+    "expectedRowsPerPlane": {
+      "systemTenants": 1,
+      "systemPrincipals": 1
+    },
+    "naturalKeys": [
+      "master.tenant(id)",
+      "master.principal(id)"
+    ],
     "planes": {
       "athyper": "passed-twice-zero-second-pass-updates",
       "neon": "passed-twice-zero-second-pass-updates",
@@ -46,11 +94,26 @@
   },
   "masterReferenceMigration": {
     "sources": {
-      "ownerTypes": { "legacyRows": 13, "target": "plane-local control.owner_type and control.owner_type_purpose" },
-      "riskRegistries": { "legacyRows": 65, "target": "planes/neon/master/12_risk_reference_seed.sql" },
-      "certificationTypes": { "legacyRows": 17, "target": "planes/neon/master/12_certification_reference_seed.sql" },
-      "conditionTypes": { "legacyRows": 20, "target": "planes/neon/master/12_condition_reference_seed.sql" },
-      "changeReasonCodes": { "legacyRows": 6, "target": "master.seed_audit_reason_catalog in common/audit/07_functions.sql" }
+      "ownerTypes": {
+        "legacyRows": 13,
+        "target": "plane-local control.owner_type and control.owner_type_purpose"
+      },
+      "riskRegistries": {
+        "legacyRows": 65,
+        "target": "planes/neon/master/12_risk_reference_seed.sql"
+      },
+      "certificationTypes": {
+        "legacyRows": 17,
+        "target": "planes/neon/master/12_certification_reference_seed.sql"
+      },
+      "conditionTypes": {
+        "legacyRows": 20,
+        "target": "planes/neon/master/12_condition_reference_seed.sql"
+      },
+      "changeReasonCodes": {
+        "legacyRows": 6,
+        "target": "master.seed_audit_reason_catalog in common/audit/07_functions.sql"
+      }
     },
     "auditReasonTarget": {
       "target": "server/db/ddl/common/audit/07_functions.sql",
@@ -67,7 +130,7 @@
     "legacyDeletionEligible": true
   },
   "freshBuilds": {
-    "athyper_platform": "passed",
+    "athyper_studio": "passed",
     "athyper_neon": "passed",
     "athyper_mesh": "passed"
   },

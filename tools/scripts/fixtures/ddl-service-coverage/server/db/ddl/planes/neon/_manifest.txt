@@ -1,0 +1,2 @@
+common/core/03_tables.sql
+planes/neon/core/03_tables.sql

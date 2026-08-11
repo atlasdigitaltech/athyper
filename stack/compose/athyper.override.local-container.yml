@@ -48,7 +48,7 @@ services:
     environment:
       APPS_ATHYPER_NEON_UPSTREAM_URL:  "http://neon-web:3000"
       APPS_ATHYPER_MESH_UPSTREAM_URL:  "http://mesh-web:3000"
-      APPS_ATHYPER_ADMIN_UPSTREAM_URL: "http://admin-web:3000"
+      APPS_ATHYPER_STUDIO_UPSTREAM_URL: "http://studio-web:3000"
       APPS_ATHYPER_API_UPSTREAM_URL:   "http://api:3000"
 
   # ─────────────────────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ services:
     environment:
       NODE_ENV: production
 
-  admin-web:
+  studio-web:
     environment:
       NODE_ENV: production
 
