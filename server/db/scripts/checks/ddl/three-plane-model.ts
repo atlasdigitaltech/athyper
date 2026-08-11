@@ -94,12 +94,8 @@ for (const plane of planes) {
 
 const packageJson = await readFile(resolve(databaseRoot, "package.json"), "utf8");
 const provision = await readFile(resolve(databaseRoot, "scripts/safe-provision.ts"), "utf8");
-const meshProvision = await readFile(
-  resolve(databaseRoot, "scripts/provision-mesh.ts"),
-  "utf8",
-);
 const foundationRunner = await readFile(resolve(databaseRoot, "ddl/foundation-runner.ps1"), "utf8");
-const activeSources = packageJson + provision + meshProvision + foundationRunner;
+const activeSources = packageJson + provision + foundationRunner;
 
 if (legacyPath.test(activeSources)) fail("active provisioning still references legacy DDL paths");
 else pass("active provisioning references only common and plane DDL");

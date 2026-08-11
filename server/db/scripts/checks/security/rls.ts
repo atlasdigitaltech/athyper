@@ -161,6 +161,7 @@ function colorize(status: CheckResult["status"]) {
     case "SKIP":  return `\x1b[33m${status}\x1b[0m`;
     case "ERROR": return `\x1b[35m${status}\x1b[0m`;
   }
+  return status;
 }
 
 // ── Core verifier ─────────────────────────────────────────────────────────────
@@ -242,6 +243,12 @@ async function verifyTable(
       // Rollback via exception to clean up test data automatically
       throw new Error("__rollback__");
     });
+    return {
+      table,
+      status: "ERROR",
+      message: "RLS verification transaction completed without rollback",
+      durationMs: Date.now() - start,
+    };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg === "__rollback__") {
