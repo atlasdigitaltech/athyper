@@ -7,6 +7,7 @@ import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 export type TransactionActorStamper<Database> = (
   transaction: Transaction<Database>,
   actor: TransactionActor,
+  signal?: AbortSignal,
 ) => Promise<void>;
 
 /** Uses bound parameters and transaction-local PostgreSQL settings. */
@@ -22,8 +23,11 @@ export function createTransactionActorStampQuery(
 export async function stampTransactionActor<Database>(
   transaction: Transaction<Database>,
   actor: TransactionActor,
+  signal?: AbortSignal,
 ): Promise<void> {
+  signal?.throwIfAborted();
   await createTransactionActorStampQuery(actor).execute(transaction);
+  signal?.throwIfAborted();
 }
 
 /** PostgreSQL/Kysely implementation of Foundation's persistence-neutral port. */
@@ -37,12 +41,18 @@ export class KyselyTransactionRunner<Database>
   ) {}
 
   async run<Result>(
-    work: (transaction: Transaction<Database>) => Promise<Result>,
+    work: (transaction: Transaction<Database>, signal?: AbortSignal) => Promise<Result>,
     actor?: TransactionActor,
+    signal?: AbortSignal,
   ): Promise<Result> {
+    signal?.throwIfAborted();
     return this.database.transaction().execute(async (transaction) => {
-      if (actor) await this.stampActor(transaction, actor);
-      return work(transaction);
+      signal?.throwIfAborted();
+      if (actor) await this.stampActor(transaction, actor, signal);
+      signal?.throwIfAborted();
+      const result = await work(transaction, signal);
+      signal?.throwIfAborted();
+      return result;
     });
   }
 }

@@ -6,12 +6,12 @@ import express, {
   type RequestHandler,
   type Response,
 } from "express";
-import { runWithRequestContext } from "@athyper/server-foundation/context";
+import { runWithRequestContext, tryGetRequestContext } from "@athyper/server-foundation/context";
 import type { HealthContribution, HealthRegistry } from "@athyper/server-foundation/observability";
 
 import { HttpError } from "./http-error.js";
 import { sendProblem } from "./problem-details.js";
-import { createOpenApiDocument, defineRouteContract, registerContractRoute, type RouteContract } from "./route-contract.js";
+import { assertRouteContracts, configureContractRouteMiddleware, createOpenApiDocument, defineRouteContract, enforceContractResponses, registerContractRoute, type RouteContract } from "./route-contract.js";
 
 export interface HttpRuntimeOptions {
   readonly healthRegistry?: HealthRegistry;
@@ -21,6 +21,7 @@ export interface HttpRuntimeOptions {
   readonly environment?: "local" | "staging" | "production";
   readonly onUnexpectedError?: (error: unknown, request: Request) => void;
   readonly requestDeadlineMs?: number;
+  readonly drainController?: HttpDrainController;
   readonly rateLimit?: RateLimitOptions;
   readonly metrics?: {
     readonly exporter: {
@@ -38,6 +39,10 @@ export interface HttpRuntimeOptions {
     readonly docsPath?: string;
     readonly docsPermission?: string;
     readonly authorizeDocs?: RequestHandler;
+    /** Fail application construction when a configured Express route has no route contract. */
+    readonly enforceContracts?: boolean;
+    /** Validate JSON response statuses and bodies against route contracts at runtime. */
+    readonly enforceResponses?: boolean;
   };
 }
 
@@ -56,7 +61,41 @@ export interface RateLimitOptions {
   readonly exemptPaths?: readonly string[];
   readonly store?: RateLimitStore;
   readonly key?: (request: Request) => string;
+  /** Source limits run before routing; tenant-principal limits run after a contracted route authenticates. */
+  readonly scope?: "source" | "tenant-principal";
+  /** Optional source ceiling layered over tenant-principal limits, including for legacy raw routes. */
+  readonly sourceMaxRequests?: number;
+  readonly identity?: (request: Request) => { readonly tenantId: string; readonly principalId: string } | undefined;
   readonly onStoreError?: (error: unknown) => void;
+}
+
+/** Tracks in-flight HTTP work so shutdown can stop admission, drain streams, then cancel stragglers. */
+export class HttpDrainController {
+  readonly #active = new Set<AbortController>();
+  readonly #waiters = new Set<(drained: boolean) => void>();
+  #draining = false;
+
+  get isDraining(): boolean { return this.#draining; }
+  get activeRequests(): number { return this.#active.size; }
+  beginDrain(): void { this.#draining = true; this.#notifyIfDrained(); }
+  abortActive(reason: unknown = new Error("HTTP server is shutting down")): void {
+    for (const controller of this.#active) if (!controller.signal.aborted) controller.abort(reason);
+  }
+  async waitForDrain(timeoutMs: number): Promise<boolean> {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 0) throw new TypeError("HTTP drain timeout must be a non-negative integer");
+    if (this.#active.size === 0) return true;
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const finish = (drained: boolean) => { if (settled) return; settled = true; clearTimeout(timer); this.#waiters.delete(finish); resolve(drained); };
+      const timer = setTimeout(() => finish(false), timeoutMs);
+      this.#waiters.add(finish);
+    });
+  }
+  track(controller: AbortController): () => void {
+    this.#active.add(controller);
+    return () => { this.#active.delete(controller); this.#notifyIfDrained(); };
+  }
+  #notifyIfDrained(): void { if (this.#active.size === 0) for (const waiter of [...this.#waiters]) waiter(true); }
 }
 
 const requestAbortSignals = new WeakMap<Request, AbortSignal>();
@@ -64,7 +103,9 @@ export function getRequestAbortSignal(request: Request): AbortSignal { return re
 
 export function createHttpApplication(options: HttpRuntimeOptions = {}): Application {
   const app = express();
+  const openApi = options.openApi === false ? undefined : options.openApi ?? { title: "Athyper API", version: "0.1.0" };
   app.disable("x-powered-by");
+  app.use(createRequestCancellationMiddleware(options.requestDeadlineMs, options.drainController));
   app.use(express.json({limit:options.jsonLimit??"256kb",verify:(request,_response,buffer)=>{(request as Request&{rawBody?:Uint8Array}).rawBody=Uint8Array.from(buffer);}}));
   app.use((request, response, next) => {
     const requestId = headerValue(request, "x-request-id") ?? randomUUID();
@@ -75,8 +116,11 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
       next,
     );
   });
-  if (options.requestDeadlineMs !== undefined) app.use(createRequestDeadlineMiddleware(options.requestDeadlineMs));
-  if (options.rateLimit) app.use(createRateLimitMiddleware(options.rateLimit));
+  if (options.rateLimit?.scope === "tenant-principal") {
+    if (options.rateLimit.sourceMaxRequests !== undefined) app.use(createRateLimitMiddleware({ ...options.rateLimit, scope: "source", maxRequests: options.rateLimit.sourceMaxRequests }));
+    configureContractRouteMiddleware(app, { authenticated: createRateLimitMiddleware(options.rateLimit) });
+  } else if (options.rateLimit) app.use(createRateLimitMiddleware(options.rateLimit));
+  if (openApi?.enforceResponses) enforceContractResponses(app);
   if (options.metrics) {
     const duration = options.metrics.exporter.histogram("athyper_http_request_duration_seconds", "HTTP server request duration");
     const errors = options.metrics.exporter.counter("athyper_http_errors_total", "HTTP server error responses");
@@ -125,8 +169,8 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
       response.status(200).type("text/plain; version=0.0.4; charset=utf-8").send(options.metrics!.exporter.render());
     });
   }
-  if (options.openApi !== false) {
-    const openApi = options.openApi ?? { title: "Athyper API", version: "0.1.0" };
+  if (openApi?.enforceContracts) assertRouteContracts(app);
+  if (openApi) {
     const artifactPath = openApi.path ?? "/openapi.json";
     app.get(artifactPath, (_request, response) => {
       response.json(createOpenApiDocument(app, openApi));
@@ -153,14 +197,21 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
   return app;
 }
 
-function createRequestDeadlineMiddleware(timeoutMs: number): RequestHandler {
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) throw new Error("HTTP request deadline must be a positive integer");
+function createRequestCancellationMiddleware(timeoutMs: number | undefined, drain: HttpDrainController | undefined): RequestHandler {
+  if (timeoutMs !== undefined && (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1)) throw new Error("HTTP request deadline must be a positive integer");
   return (request, response, next) => {
+    if (drain?.isDraining) {
+      response.setHeader("Connection", "close");
+      sendProblem(response, request, new HttpError(503, "SERVER_DRAINING", "The server is draining and cannot accept new requests"));
+      return;
+    }
     const controller = new AbortController();
     requestAbortSignals.set(request, controller.signal);
     const abort = (reason: string) => { if (!controller.signal.aborted) controller.abort(new Error(reason)); };
-    const timer = setTimeout(() => abort("HTTP request deadline exceeded"), timeoutMs);
-    const cleanup = () => { clearTimeout(timer); request.off("aborted", onAborted); response.off("finish", cleanup); response.off("close", onClosed); };
+    const untrack = drain?.track(controller);
+    const timer = timeoutMs === undefined ? undefined : setTimeout(() => abort("HTTP request deadline exceeded"), timeoutMs);
+    let cleaned = false;
+    const cleanup = () => { if (cleaned) return; cleaned = true; if (timer) clearTimeout(timer); untrack?.(); request.off("aborted", onAborted); response.off("finish", cleanup); response.off("close", onClosed); };
     const onAborted = () => abort("HTTP client disconnected");
     const onClosed = () => { if (!response.writableEnded) abort("HTTP response closed"); cleanup(); };
     request.once("aborted", onAborted); response.once("finish", cleanup); response.once("close", onClosed);
@@ -175,7 +226,7 @@ function createRateLimitMiddleware(options: RateLimitOptions): RequestHandler {
   return async (request, response, next) => {
     if (exempt.has(request.path)) { next(); return; }
     const now = Date.now();
-    const key = options.key?.(request) ?? (request.ip || request.socket.remoteAddress || "unknown");
+    const key = options.key?.(request) ?? rateLimitKey(request, options);
     let active: { count: number; resetAt: number };
     try {
       active = options.store
@@ -190,6 +241,13 @@ function createRateLimitMiddleware(options: RateLimitOptions): RequestHandler {
     if (active.count > options.maxRequests) { response.setHeader("Retry-After", String(Math.max(1, Math.ceil((active.resetAt - now) / 1_000)))); sendProblem(response, request, new HttpError(429, "RATE_LIMITED", "Too many requests")); return; }
     next();
   };
+}
+
+function rateLimitKey(request: Request, options: RateLimitOptions): string {
+  if (options.scope !== "tenant-principal") return `source:${request.ip || request.socket.remoteAddress || "unknown"}`;
+  const context = options.identity?.(request) ?? tryGetRequestContext();
+  if (!context?.tenantId || !context.principalId) throw new HttpError(500, "RATE_LIMIT_IDENTITY_MISSING", "Authenticated rate limiting requires tenant and principal context");
+  return `tenant:${context.tenantId}:principal:${context.principalId}`;
 }
 
 function consumeLocal(entries: Map<string, { startedAt: number; count: number }>, key: string, now: number, windowMs: number): RateLimitDecision {

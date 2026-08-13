@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "state": "authenticated",
+  "plane": "neon",
+  "realmKey": "athyper",
+  "expiresAt": "2026-08-12T12:00:00.000Z",
+  "idleExpiresAt": "2026-08-12T12:00:00.000Z",
+  "absoluteExpiresAt": "2026-08-12T18:00:00.000Z",
+  "accessExpiresAt": "2026-08-12T11:00:00.000Z",
+  "tenantId": "00000000-0000-4000-8000-000000000001",
+  "principalId": "00000000-0000-4000-8000-000000000002",
+  "authEpoch": 3,
+  "sessionVersion": 1,
+  "configurationRevision": "phase3",
+  "assurance": "baseline",
+  "requiredActions": [],
+  "allowedNextActions": ["continue", "refresh", "logout"]
+}

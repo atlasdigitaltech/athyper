@@ -20,6 +20,8 @@ import {
 const sdkMocks = vi.hoisted(() => ({
   signedUrl: vi.fn(),
   uploadDone: vi.fn(),
+  uploadAbort: vi.fn(),
+  uploadOptions: undefined as { params: { Body: Readable } } | undefined,
 }));
 
 vi.mock("@aws-sdk/s3-request-presigner", () => ({
@@ -28,7 +30,9 @@ vi.mock("@aws-sdk/s3-request-presigner", () => ({
 
 vi.mock("@aws-sdk/lib-storage", () => ({
   Upload: class MockUpload {
+    constructor(options: { params: { Body: Readable } }) { sdkMocks.uploadOptions = options; }
     done = sdkMocks.uploadDone;
+    abort = sdkMocks.uploadAbort;
   },
 }));
 
@@ -116,6 +120,18 @@ describe("S3 object-storage adapter", () => {
     await expect(
       adapter.putStream("large.bin", Readable.from([]), { partSizeBytes: 1 }),
     ).rejects.toThrow("at least 5 MiB");
+  });
+
+  it("aborts a multipart upload when an undeclared stream exceeds the maximum", async () => {
+    const { adapter } = runtime({ maxUploadBytes: 4 });
+    sdkMocks.uploadDone.mockImplementationOnce(async () => {
+      for await (const _chunk of sdkMocks.uploadOptions!.params.Body) { /* consume upload */ }
+      return {};
+    });
+    await expect(adapter.putStream("large.bin", Readable.from([Buffer.from("123"), Buffer.from("45")]))).rejects.toMatchObject({
+      code: "S3_UPLOAD_TOO_LARGE",
+    });
+    expect(sdkMocks.uploadAbort).toHaveBeenCalledOnce();
   });
 
   it("buffers downloads and exposes Node streams explicitly", async () => {

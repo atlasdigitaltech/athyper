@@ -1,3 +1,5 @@
+import { systemClock, type Clock, type RuntimeDependencies } from "../dependencies/index.js";
+
 export type CircuitState = "CLOSED" | "OPEN" | "HALF_OPEN";
 
 export interface CircuitBreakerConfig {
@@ -37,6 +39,7 @@ const DEFAULT_CONFIG: CircuitBreakerConfig = {
 
 export class CircuitBreaker {
   private readonly config: CircuitBreakerConfig;
+  private readonly clock: Clock;
   private state: CircuitState = "CLOSED";
   private failures: number[] = [];
   private halfOpenSuccesses = 0;
@@ -46,15 +49,24 @@ export class CircuitBreaker {
   private lastFailureAt?: number;
   private lastSuccessAt?: number;
 
-  constructor(readonly name: string, config: Partial<CircuitBreakerConfig> = {}) {
+  constructor(
+    readonly name: string,
+    config: Partial<CircuitBreakerConfig> = {},
+    dependencies: Pick<RuntimeDependencies, "clock"> = {},
+  ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+    this.clock = dependencies.clock ?? systemClock;
   }
 
-  async execute<T>(work: () => Promise<T>): Promise<T> {
+  async execute<T>(
+    work: (signal?: AbortSignal) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    signal?.throwIfAborted();
     this.totalCalls += 1;
     if (this.state === "OPEN") {
       const nextAttemptAt = (this.openedAt ?? 0) + this.config.resetTimeoutMs;
-      if (Date.now() < nextAttemptAt) {
+      if (this.clock.now() < nextAttemptAt) {
         throw new CircuitBreakerOpenError(this.name, nextAttemptAt);
       }
       this.state = "HALF_OPEN";
@@ -62,10 +74,12 @@ export class CircuitBreaker {
     }
 
     try {
-      const value = await work();
+      const value = await work(signal);
+      signal?.throwIfAborted();
       this.recordSuccess();
       return value;
     } catch (error) {
+      signal?.throwIfAborted();
       this.recordFailure(error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
@@ -76,7 +90,7 @@ export class CircuitBreaker {
   }
 
   getMetrics(): CircuitBreakerMetrics {
-    this.pruneFailureWindow(Date.now());
+    this.pruneFailureWindow(this.clock.now());
     return {
       state: this.state,
       failures: this.failures.length,
@@ -99,12 +113,12 @@ export class CircuitBreaker {
 
   forceOpen(): void {
     this.state = "OPEN";
-    this.openedAt = Date.now();
+    this.openedAt = this.clock.now();
   }
 
   private recordSuccess(): void {
     this.totalSuccesses += 1;
-    this.lastSuccessAt = Date.now();
+    this.lastSuccessAt = this.clock.now();
     if (this.state === "HALF_OPEN") {
       this.halfOpenSuccesses += 1;
       if (this.halfOpenSuccesses >= this.config.successThreshold) this.reset();
@@ -113,7 +127,7 @@ export class CircuitBreaker {
 
   private recordFailure(error: Error): void {
     if (this.config.shouldTrigger && !this.config.shouldTrigger(error)) return;
-    const now = Date.now();
+    const now = this.clock.now();
     this.lastFailureAt = now;
     if (this.state === "HALF_OPEN") {
       this.state = "OPEN";

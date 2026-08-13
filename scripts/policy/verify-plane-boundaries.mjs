@@ -290,7 +290,7 @@ function collectProductPackagesByName() {
       const packageJsonPath = join(packageRoot, "package.json");
       if (!existsSync(packageJsonPath)) continue;
 
-      const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8"));
+      const manifest = JSON.parse(readFileSync(packageJsonPath, "utf8").replace(/^\uFEFF/, ""));
       if (typeof manifest.name !== "string") continue;
 
       packagesByName.set(manifest.name, {
@@ -444,7 +444,7 @@ for (const [packageName, packageInfo] of productPackagesByName) {
   }
 
   const allowedGroups = new Set(productTierDependencyPolicy[packageInfo.groupName]);
-  const manifest = JSON.parse(readFileSync(packageInfo.packageJsonPath, "utf8"));
+  const manifest = JSON.parse(readFileSync(packageInfo.packageJsonPath, "utf8").replace(/^\uFEFF/, ""));
 
   for (const section of dependencySections) {
     const deps = manifest[section];

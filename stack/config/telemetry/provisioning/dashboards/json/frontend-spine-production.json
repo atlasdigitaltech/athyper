@@ -1,0 +1,48 @@
+{
+  "uid": "athyper-frontend-spine",
+  "title": "Athyper Frontend Spine — Production",
+  "description": "Neon, Mesh, and Studio availability, BFF/auth/bootstrap failures, server latency, and browser/request boundary errors. No tenant or principal labels are displayed.",
+  "tags": ["athyper", "frontend-spine", "production", "bff"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [{ "name": "plane", "label": "Plane", "type": "custom", "query": "neon,mesh,studio", "current": { "text": "neon", "value": "neon" } }] },
+  "panels": [
+    {
+      "id": 1, "title": "Frontend liveness", "type": "stat", "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "max(probe_success{service=~\"athyper-(neon|mesh|studio)\",path=\"/livez\"}) by (service)", "legendFormat": "{{service}}" }],
+      "fieldConfig": { "defaults": { "min": 0, "max": 1, "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } }
+    },
+    {
+      "id": 2, "title": "Frontend readiness", "type": "stat", "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "max(probe_success{service=~\"athyper-(neon|mesh|studio)\",path=\"/readyz\"}) by (service)", "legendFormat": "{{service}}" }],
+      "fieldConfig": { "defaults": { "min": 0, "max": 1, "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } }
+    },
+    {
+      "id": 3, "title": "Platform-host p95 latency", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(athyper_http_request_duration_seconds_bucket[5m])) by (le,route))", "legendFormat": "{{route}}" }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 4, "title": "Platform-host HTTP errors", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [{ "expr": "sum(rate(athyper_http_errors_total[5m])) by (route,status)", "legendFormat": "{{status}} {{route}}" }]
+    },
+    {
+      "id": 5, "title": "Auth, relay, and bootstrap failures", "type": "timeseries", "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "sum by (plane) (count_over_time({service=~\"athyper-(neon|mesh|studio)\"} |~ \"AUTH_|RELAY_|bootstrap failed\" [5m]))", "legendFormat": "{{plane}}" }]
+    },
+    {
+      "id": 6, "title": "Redacted frontend boundary/request errors", "type": "logs", "gridPos": { "h": 9, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [{ "expr": "{service=~\"athyper-(neon|mesh|studio)\"} |~ \"app_boundary_error|frontend-request-error\"", "legendFormat": "frontend" }],
+      "options": { "showTime": true, "showLabels": false, "wrapLogMessage": true, "enableLogDetails": true }
+    }
+  ]
+}

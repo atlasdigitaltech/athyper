@@ -10,8 +10,33 @@
   "sourceRealmFile": "realm-athyper.json",
   "importableByKeycloak": false,
   "description": "Generated unified athyper demo IAM setup. Systematic fixture IDs identify master.principal records; Keycloak assigns the runtime JWT subject and the application reconciles it by username.",
+  "tenantOrganizationPolicy": {
+    "authority": "server/db/seed/manifests/three-plane-demo.v1.json",
+    "alias": "Exact immutable master.tenant UUID shared by Studio, Neon, and Mesh fixtures",
+    "businessScopes": "Legal entities and network accounts remain plane-local authorization scopes"
+  },
+  "tenantOrganizations": [
+    {
+      "alias": "11111111-1111-4111-8111-111111111111",
+      "name": "Athyper Group Holdings",
+      "enabled": true,
+      "attributes": { "tenant_code": ["athyper"], "context_kind": ["tenant"] }
+    },
+    {
+      "alias": "22222222-2222-4222-8222-222222222222",
+      "name": "Technostat Group Holdings",
+      "enabled": true,
+      "attributes": { "tenant_code": ["technostat"], "context_kind": ["tenant"] }
+    },
+    {
+      "alias": "44444444-4444-4444-8444-444444444444",
+      "name": "CirrusAtlantic",
+      "enabled": true,
+      "attributes": { "tenant_code": ["cirrusatlantic"], "context_kind": ["tenant"] }
+    }
+  ],
   "namingPolicy": {
-    "organizationAlias": "ORG-{10-digit-zero-padded}",
+    "organizationAlias": "Tenant context organizations use tenant UUIDs; legacy legal-entity fixtures retain ORG-{10-digit-zero-padded}",
     "tenantLegalEntityBlock": "ORG-1000000001..ORG-1999999999",
     "partnerSupplierBlock": "ORG-3000000001..ORG-3999999999",
     "networkAccountCode": "BNA-{10-digit-zero-padded}",

@@ -27,4 +27,5 @@ describe("Atlas HTTP streaming", () => {
     expect(write).toHaveBeenCalledWith(expect.stringContaining('"protocol":"atlas.sse/1"'));
     expect(end).toHaveBeenCalledOnce();
   });
+  it("stops writing and does not end a socket already closed by the client",async()=>{const controller=new AbortController();const write=vi.fn(()=>{controller.abort();return true;});const end=vi.fn();async function* events(){yield{protocol:"atlas.sse/1",sequence:1,runId:"r",threadId:"t",emittedAt:"2026-08-12T00:00:00Z",event:{type:"run.cancelled"}} as AtlasSseEnvelope;yield{protocol:"atlas.sse/1",sequence:2,runId:"r",threadId:"t",emittedAt:"2026-08-12T00:00:00Z",event:{type:"run.cancelled"}} as AtlasSseEnvelope;}await writeAtlasSse({status:vi.fn().mockReturnThis(),setHeader:vi.fn(),write,end} as never,events(),controller.signal);expect(write).toHaveBeenCalledOnce();expect(end).not.toHaveBeenCalled();});
 });

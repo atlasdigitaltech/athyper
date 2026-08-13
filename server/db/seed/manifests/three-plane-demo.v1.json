@@ -1,0 +1,52 @@
+{
+  "contractVersion": "athyper.three-plane-provision.v1",
+  "manifestVersion": "1.0.0",
+  "realmKey": "athyper",
+  "systemPrincipalId": "00000000-0000-0000-0000-000000000000",
+  "identitySource": "../../../../stack/config/iam/realm-athyper-demosetup.json",
+  "planes": {
+    "studio": {
+      "databaseName": "athyper_studio",
+      "databaseUrlEnvironment": "ATHYPER_PLATFORM_DATABASE_ADMIN_URL",
+      "authorizationPack": "../packs/authorization-v2/neon-admin/seed-pack.v1.json"
+    },
+    "neon": {
+      "databaseName": "athyper_neon",
+      "databaseUrlEnvironment": "ATHYPER_NEON_DATABASE_ADMIN_URL",
+      "authorizationPack": "../packs/authorization-v2/neon-admin/seed-pack.v1.json"
+    },
+    "mesh": {
+      "databaseName": "athyper_mesh",
+      "databaseUrlEnvironment": "ATHYPER_MESH_DATABASE_ADMIN_URL",
+      "authorizationPack": "../packs/authorization-v2/mesh/seed-pack.v1.json"
+    }
+  },
+  "tenants": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "code": "athyper",
+      "name": "Athyper Group",
+      "displayName": "Athyper Group Holdings",
+      "keycloakOrganizationAlias": "11111111-1111-4111-8111-111111111111"
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "code": "technostat",
+      "name": "Technostat Group",
+      "displayName": "Technostat Group Holdings",
+      "keycloakOrganizationAlias": "22222222-2222-4222-8222-222222222222"
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444444",
+      "code": "cirrusatlantic",
+      "name": "CirrusAtlantic Limited",
+      "displayName": "CirrusAtlantic",
+      "keycloakOrganizationAlias": "44444444-4444-4444-8444-444444444444"
+    }
+  ],
+  "keycloak": {
+    "organizationModel": "tenant",
+    "businessScopesRemainPlaneLocal": true,
+    "reconcileCommand": "pnpm iam:reconcile:authorization-v2"
+  }
+}

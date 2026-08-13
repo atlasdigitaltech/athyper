@@ -11,6 +11,23 @@ import { createNotificationRecipientResolver } from "../recipient-resolver.js";
 import { createNotificationDispatchHandler,createNotificationDispatchScheduler,DISPATCH_NOTIFICATION_JOB,NOTIFICATION_QUEUE } from "../notification-jobs.js";
 
 describe("notification platform", () => {
+  it("continues delivery when a listener throws synchronously", async () => {
+    const bus = createNotificationEventBus();
+    const delivered = vi.fn();
+    bus.subscribe({ tenantId: "tenant-1", principalId: "person-1" }, () => { throw new Error("broken listener"); });
+    bus.subscribe({ tenantId: "tenant-1", principalId: "person-1" }, delivered);
+    await expect(bus.publish({ type: "notification.read", tenantId: "tenant-1", principalId: "person-1", notificationId: "notice-1", occurredAt: "2026-08-09T00:00:00.000Z" })).resolves.toBeUndefined();
+    expect(delivered).toHaveBeenCalledOnce();
+  });
+
+  it("closes an SSE subscription when a heartbeat write fails", () => {
+    vi.useFakeTimers();
+    const subscribe = vi.fn((_scope, _listener) => vi.fn());
+    let writes = 0;
+    openNotificationSseStream({ subscriber: { subscribe }, tenantId: "tenant-1", principalId: "person-1", write: () => { if (++writes > 1) throw new Error("closed writer"); }, signal: new AbortController().signal, heartbeatMs: 100 });
+    expect(() => vi.advanceTimersByTime(100)).not.toThrow();
+    vi.useRealTimers();
+  });
   it("persists in-app delivery before publishing its scoped event", async () => {
     const bus = createNotificationEventBus();
     const listener = vi.fn();

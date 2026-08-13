@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@athyper/server-foundation": "workspace:*",
+    "ajv": "^8.20.0",
     "express": "^5.0.0"
   },
   "devDependencies": {

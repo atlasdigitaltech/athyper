@@ -668,6 +668,83 @@ model atlas_tenant_provider_credential_epoch {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model atlas_tenant_quota_policy {
+  tenant_id                                                           String     @id @db.Uuid
+  max_requests                                                        BigInt
+  max_input_tokens                                                    BigInt
+  max_output_tokens                                                   BigInt
+  window_seconds                                                      Int
+  revision                                                            Int        @default(1)
+  created_at                                                          DateTime   @default(now()) @db.Timestamptz(6)
+  created_by                                                          String     @db.Uuid
+  updated_at                                                          DateTime?  @db.Timestamptz(6)
+  updated_by                                                          String?    @db.Uuid
+  principal_atlas_tenant_quota_policy_tenant_id_created_byToprincipal principal  @relation("atlas_tenant_quota_policy_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_policy_created_by_fk")
+  tenant                                                              tenant     @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "atlas_tenant_quota_policy_tenant_fk")
+  principal_atlas_tenant_quota_policy_tenant_id_updated_byToprincipal principal? @relation("atlas_tenant_quota_policy_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_policy_updated_by_fk")
+
+  @@schema("ai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model atlas_tenant_quota_reservation {
+  id                                                                         String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                  String                    @db.Uuid
+  window_started_at                                                          DateTime                  @db.Timestamptz(6)
+  plane_key                                                                  String
+  principal_id                                                               String                    @db.Uuid
+  reserved_input_tokens                                                      BigInt
+  reserved_output_tokens                                                     BigInt
+  actual_input_tokens                                                        BigInt?
+  actual_output_tokens                                                       BigInt?
+  status                                                                     String                    @default("reserved")
+  expires_at                                                                 DateTime                  @db.Timestamptz(6)
+  settled_at                                                                 DateTime?                 @db.Timestamptz(6)
+  released_at                                                                DateTime?                 @db.Timestamptz(6)
+  created_at                                                                 DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by                                                                 String                    @db.Uuid
+  updated_at                                                                 DateTime?                 @db.Timestamptz(6)
+  updated_by                                                                 String?                   @db.Uuid
+  principal_atlas_tenant_quota_reservation_tenant_id_created_byToprincipal   principal                 @relation("atlas_tenant_quota_reservation_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_reservation_created_by_fk")
+  principal_atlas_tenant_quota_reservation_tenant_id_principal_idToprincipal principal                 @relation("atlas_tenant_quota_reservation_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_reservation_principal_fk")
+  principal_atlas_tenant_quota_reservation_tenant_id_updated_byToprincipal   principal?                @relation("atlas_tenant_quota_reservation_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_reservation_updated_by_fk")
+  atlas_tenant_quota_window                                                  atlas_tenant_quota_window @relation(fields: [tenant_id, window_started_at], references: [tenant_id, window_started_at], onDelete: Cascade, onUpdate: NoAction, map: "atlas_tenant_quota_reservation_window_fk")
+
+  @@index([tenant_id, window_started_at, expires_at], map: "atlas_tenant_quota_reservation_expiry_idx", where: raw("(status = 'reserved'::text)"))
+  @@schema("ai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model atlas_tenant_quota_window {
+  tenant_id                                                           String                           @db.Uuid
+  window_started_at                                                   DateTime                         @db.Timestamptz(6)
+  window_ends_at                                                      DateTime                         @db.Timestamptz(6)
+  used_requests                                                       BigInt                           @default(0)
+  used_input_tokens                                                   BigInt                           @default(0)
+  used_output_tokens                                                  BigInt                           @default(0)
+  reserved_input_tokens                                               BigInt                           @default(0)
+  reserved_output_tokens                                              BigInt                           @default(0)
+  created_at                                                          DateTime                         @default(now()) @db.Timestamptz(6)
+  created_by                                                          String                           @db.Uuid
+  updated_at                                                          DateTime?                        @db.Timestamptz(6)
+  updated_by                                                          String?                          @db.Uuid
+  atlas_tenant_quota_reservation                                      atlas_tenant_quota_reservation[]
+  principal_atlas_tenant_quota_window_tenant_id_created_byToprincipal principal                        @relation("atlas_tenant_quota_window_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_window_created_by_fk")
+  tenant                                                              tenant                           @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "atlas_tenant_quota_window_tenant_fk")
+  principal_atlas_tenant_quota_window_tenant_id_updated_byToprincipal principal?                       @relation("atlas_tenant_quota_window_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_window_updated_by_fk")
+
+  @@id([tenant_id, window_started_at])
+  @@index([tenant_id, window_ends_at(sort: Desc)], map: "atlas_tenant_quota_window_active_idx")
+  @@schema("ai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an index with non-default null sort order and requires additional setup for migrations. Visit https://pris.ly/d/default-index-null-ordering for more info.
 model atlas_thread {
   conversation_id                                                String               @id @db.Uuid
@@ -1904,7 +1981,7 @@ model cycle_task_category {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model cycle_task_dependency {
+model control_cycle_task_dependency {
   id                                                                                                             String              @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                                                                      String              @db.Uuid
   cycle_type_id                                                                                                  String              @db.Uuid
@@ -1927,53 +2004,54 @@ model cycle_task_dependency {
   @@unique([tenant_id, cycle_type_id, predecessor_template_id, successor_template_id], map: "cycle_task_dependency_edge_uq")
   @@unique([tenant_id, id], map: "cycle_task_dependency_tenant_id_uq")
   @@index([tenant_id, cycle_type_id, successor_template_id], map: "cycle_task_dependency_successor_idx")
+  @@map("cycle_task_dependency")
   @@schema("control")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model cycle_task_template {
-  id                                                                                                               String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                                                        String                  @db.Uuid
-  cycle_type_id                                                                                                    String                  @db.Uuid
-  phase_id                                                                                                         String                  @db.Uuid
-  category_id                                                                                                      String                  @db.Uuid
+  id                                                                                                               String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                                        String                          @db.Uuid
+  cycle_type_id                                                                                                    String                          @db.Uuid
+  phase_id                                                                                                         String                          @db.Uuid
+  category_id                                                                                                      String                          @db.Uuid
   entity_code                                                                                                      String
   code                                                                                                             String
   name                                                                                                             String
   description                                                                                                      String?
-  completion_mode                                                                                                  String                  @default("manual")
+  completion_mode                                                                                                  String                          @default("manual")
   system_check_handler                                                                                             String?
-  is_mandatory                                                                                                     Boolean                 @default(true)
-  is_waivable                                                                                                      Boolean                 @default(false)
+  is_mandatory                                                                                                     Boolean                         @default(true)
+  is_waivable                                                                                                      Boolean                         @default(false)
   severity_code                                                                                                    String?
-  sort_order                                                                                                       Int                     @default(10) @db.SmallInt
+  sort_order                                                                                                       Int                             @default(10) @db.SmallInt
   sla_hours                                                                                                        Int?
   estimated_duration_min                                                                                           Int?
   reminder_lead_hours                                                                                              Int?
   default_owner_role_code                                                                                          String?
-  default_owner_principal_id                                                                                       String?                 @db.Uuid
-  auto_start_when_ready                                                                                            Boolean                 @default(false)
+  default_owner_principal_id                                                                                       String?                         @db.Uuid
+  auto_start_when_ready                                                                                            Boolean                         @default(false)
   orchestration_group                                                                                              String?
-  applicability                                                                                                    Json                    @default("{}")
-  status                                                                                                           String                  @default("draft")
-  is_active                                                                                                        Boolean?                @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                                                                                DateTime?               @db.Timestamptz(6)
-  status_changed_by                                                                                                String?                 @db.Uuid
-  created_at                                                                                                       DateTime                @default(now()) @db.Timestamptz(6)
-  created_by                                                                                                       String                  @db.Uuid
-  updated_at                                                                                                       DateTime?               @db.Timestamptz(6)
-  updated_by                                                                                                       String?                 @db.Uuid
-  cycle_task_dependency_cycle_task_dependency_tenant_id_cycle_type_id_predecessor_template_idTocycle_task_template cycle_task_dependency[] @relation("cycle_task_dependency_tenant_id_cycle_type_id_predecessor_template_idTocycle_task_template")
-  cycle_task_dependency_cycle_task_dependency_tenant_id_cycle_type_id_successor_template_idTocycle_task_template   cycle_task_dependency[] @relation("cycle_task_dependency_tenant_id_cycle_type_id_successor_template_idTocycle_task_template")
-  cycle_task_category                                                                                              cycle_task_category     @relation(fields: [tenant_id, cycle_type_id, category_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_category_fk")
-  principal_cycle_task_template_tenant_id_created_byToprincipal                                                    principal               @relation("cycle_task_template_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_created_by_fk")
-  principal_cycle_task_template_tenant_id_default_owner_principal_idToprincipal                                    principal?              @relation("cycle_task_template_tenant_id_default_owner_principal_idToprincipal", fields: [tenant_id, default_owner_principal_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_default_owner_fk")
-  cycle_phase                                                                                                      cycle_phase             @relation(fields: [tenant_id, cycle_type_id, phase_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_phase_fk")
-  principal_cycle_task_template_tenant_id_status_changed_byToprincipal                                             principal?              @relation("cycle_task_template_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_status_changed_by_fk")
-  tenant                                                                                                           tenant                  @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_tenant_fk")
-  cycle_type                                                                                                       cycle_type              @relation(fields: [tenant_id, cycle_type_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_type_fk")
-  principal_cycle_task_template_tenant_id_updated_byToprincipal                                                    principal?              @relation("cycle_task_template_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_updated_by_fk")
+  applicability                                                                                                    Json                            @default("{}")
+  status                                                                                                           String                          @default("draft")
+  is_active                                                                                                        Boolean?                        @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                                                                                DateTime?                       @db.Timestamptz(6)
+  status_changed_by                                                                                                String?                         @db.Uuid
+  created_at                                                                                                       DateTime                        @default(now()) @db.Timestamptz(6)
+  created_by                                                                                                       String                          @db.Uuid
+  updated_at                                                                                                       DateTime?                       @db.Timestamptz(6)
+  updated_by                                                                                                       String?                         @db.Uuid
+  cycle_task_dependency_cycle_task_dependency_tenant_id_cycle_type_id_predecessor_template_idTocycle_task_template control_cycle_task_dependency[] @relation("cycle_task_dependency_tenant_id_cycle_type_id_predecessor_template_idTocycle_task_template")
+  cycle_task_dependency_cycle_task_dependency_tenant_id_cycle_type_id_successor_template_idTocycle_task_template   control_cycle_task_dependency[] @relation("cycle_task_dependency_tenant_id_cycle_type_id_successor_template_idTocycle_task_template")
+  cycle_task_category                                                                                              cycle_task_category             @relation(fields: [tenant_id, cycle_type_id, category_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_category_fk")
+  principal_cycle_task_template_tenant_id_created_byToprincipal                                                    principal                       @relation("cycle_task_template_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_created_by_fk")
+  principal_cycle_task_template_tenant_id_default_owner_principal_idToprincipal                                    principal?                      @relation("cycle_task_template_tenant_id_default_owner_principal_idToprincipal", fields: [tenant_id, default_owner_principal_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_default_owner_fk")
+  cycle_phase                                                                                                      cycle_phase                     @relation(fields: [tenant_id, cycle_type_id, phase_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_phase_fk")
+  principal_cycle_task_template_tenant_id_status_changed_byToprincipal                                             principal?                      @relation("cycle_task_template_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_status_changed_by_fk")
+  tenant                                                                                                           tenant                          @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_tenant_fk")
+  cycle_type                                                                                                       cycle_type                      @relation(fields: [tenant_id, cycle_type_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_type_fk")
+  principal_cycle_task_template_tenant_id_updated_byToprincipal                                                    principal?                      @relation("cycle_task_template_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_updated_by_fk")
   cycle_task                                                                                                       cycle_task[]
 
   @@unique([tenant_id, cycle_type_id, entity_code, code], map: "cycle_task_template_code_uq")
@@ -1986,38 +2064,70 @@ model cycle_task_template {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model cycle_template_revision {
+  id                                                                  String      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                           String      @db.Uuid
+  cycle_type_id                                                       String      @db.Uuid
+  revision_number                                                     Int
+  schema_code                                                         String      @default("athyper.cycle-template/1.0")
+  template_json                                                       Json
+  template_hash                                                       String      @db.Char(64)
+  topological_task_ids                                                String[]    @default([]) @db.Uuid
+  idempotency_key                                                     String
+  published_at                                                        DateTime    @default(now()) @db.Timestamptz(6)
+  published_by                                                        String      @db.Uuid
+  created_at                                                          DateTime    @default(now()) @db.Timestamptz(6)
+  created_by                                                          String      @db.Uuid
+  principal_cycle_template_revision_tenant_id_created_byToprincipal   principal   @relation("cycle_template_revision_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_template_revision_created_by_fk")
+  principal_cycle_template_revision_tenant_id_published_byToprincipal principal   @relation("cycle_template_revision_tenant_id_published_byToprincipal", fields: [tenant_id, published_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_template_revision_published_by_fk")
+  tenant                                                              tenant      @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_template_revision_tenant_fk")
+  cycle_type                                                          cycle_type  @relation(fields: [tenant_id, cycle_type_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_template_revision_type_fk")
+  cycle_run                                                           cycle_run[]
+
+  @@unique([tenant_id, cycle_type_id, revision_number], map: "cycle_template_revision_coordinate_uq")
+  @@unique([tenant_id, cycle_type_id, idempotency_key], map: "cycle_template_revision_idempotency_uq")
+  @@unique([tenant_id, cycle_type_id, id, revision_number, template_hash], map: "cycle_template_revision_pin_uq")
+  @@unique([tenant_id, id], map: "cycle_template_revision_tenant_id_uq")
+  @@index([tenant_id, cycle_type_id, revision_number(sort: Desc)], map: "cycle_template_revision_latest_idx")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model cycle_type {
-  id                                                                                      String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                               String                    @db.Uuid
+  id                                                                                      String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                               String                          @db.Uuid
   code                                                                                    String
   name                                                                                    String
   description                                                                             String?
   domain_code                                                                             String
   frequency                                                                               String
-  clean_cycle_policy                                                                      Json                      @default("{}")
-  approval_policy                                                                         Json                      @default("{}")
-  run_data_schema                                                                         Json                      @default("{}")
-  task_data_schema                                                                        Json                      @default("{}")
-  status                                                                                  String                    @default("draft")
-  is_active                                                                               Boolean?                  @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                                                       DateTime?                 @db.Timestamptz(6)
-  status_changed_by                                                                       String?                   @db.Uuid
-  created_at                                                                              DateTime                  @default(now()) @db.Timestamptz(6)
-  created_by                                                                              String                    @db.Uuid
-  updated_at                                                                              DateTime?                 @db.Timestamptz(6)
-  updated_by                                                                              String?                   @db.Uuid
+  clean_cycle_policy                                                                      Json                            @default("{}")
+  approval_policy                                                                         Json                            @default("{}")
+  run_data_schema                                                                         Json                            @default("{}")
+  task_data_schema                                                                        Json                            @default("{}")
+  status                                                                                  String                          @default("draft")
+  is_active                                                                               Boolean?                        @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                                                       DateTime?                       @db.Timestamptz(6)
+  status_changed_by                                                                       String?                         @db.Uuid
+  created_at                                                                              DateTime                        @default(now()) @db.Timestamptz(6)
+  created_by                                                                              String                          @db.Uuid
+  updated_at                                                                              DateTime?                       @db.Timestamptz(6)
+  updated_by                                                                              String?                         @db.Uuid
   cycle_carryforward_rule                                                                 cycle_carryforward_rule[]
-  cycle_cross_dependency_cycle_cross_dependency_tenant_id_predecessor_type_idTocycle_type cycle_cross_dependency[]  @relation("cycle_cross_dependency_tenant_id_predecessor_type_idTocycle_type")
-  cycle_cross_dependency_cycle_cross_dependency_tenant_id_successor_type_idTocycle_type   cycle_cross_dependency[]  @relation("cycle_cross_dependency_tenant_id_successor_type_idTocycle_type")
+  cycle_cross_dependency_cycle_cross_dependency_tenant_id_predecessor_type_idTocycle_type cycle_cross_dependency[]        @relation("cycle_cross_dependency_tenant_id_predecessor_type_idTocycle_type")
+  cycle_cross_dependency_cycle_cross_dependency_tenant_id_successor_type_idTocycle_type   cycle_cross_dependency[]        @relation("cycle_cross_dependency_tenant_id_successor_type_idTocycle_type")
   cycle_phase                                                                             cycle_phase[]
   cycle_task_category                                                                     cycle_task_category[]
-  cycle_task_dependency                                                                   cycle_task_dependency[]
+  cycle_task_dependency                                                                   control_cycle_task_dependency[]
   cycle_task_template                                                                     cycle_task_template[]
-  principal_cycle_type_tenant_id_created_byToprincipal                                    principal                 @relation("cycle_type_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_type_created_by_fk")
-  principal_cycle_type_tenant_id_status_changed_byToprincipal                             principal?                @relation("cycle_type_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_type_status_changed_by_fk")
-  tenant                                                                                  tenant                    @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_type_tenant_fk")
-  principal_cycle_type_tenant_id_updated_byToprincipal                                    principal?                @relation("cycle_type_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_type_updated_by_fk")
+  cycle_template_revision                                                                 cycle_template_revision[]
+  principal_cycle_type_tenant_id_created_byToprincipal                                    principal                       @relation("cycle_type_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_type_created_by_fk")
+  principal_cycle_type_tenant_id_status_changed_byToprincipal                             principal?                      @relation("cycle_type_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_type_status_changed_by_fk")
+  tenant                                                                                  tenant                          @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_type_tenant_fk")
+  principal_cycle_type_tenant_id_updated_byToprincipal                                    principal?                      @relation("cycle_type_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_type_updated_by_fk")
   cycle_run                                                                               cycle_run[]
 
   @@unique([tenant_id, code], map: "cycle_type_code_uq")
@@ -4550,7 +4660,9 @@ model comment_moderation {
   comment_flag_id                                                          String       @db.Uuid
   moderator_principal_id                                                   String?      @db.Uuid
   decision_code                                                            String?
+  reason_code                                                              String?
   decision_note                                                            String?
+  reviewer_evidence                                                        Json         @default("{}")
   status                                                                   String       @default("open")
   status_changed_at                                                        DateTime?    @db.Timestamptz(6)
   status_changed_by                                                        String?      @db.Uuid
@@ -4579,15 +4691,25 @@ model cycle_certification {
   cycle_run_id                                                    String     @db.Uuid
   certification_type_code                                         String
   statement                                                       String
+  evidence_snapshot                                               Json?
+  submitted_by                                                    String?    @db.Uuid
+  submitted_at                                                    DateTime?  @db.Timestamptz(6)
   certified_by                                                    String?    @db.Uuid
   certified_at                                                    DateTime?  @db.Timestamptz(6)
   evidence_snapshot_id                                            String?    @db.Uuid
+  signature                                                       String?
+  rejected_by                                                     String?    @db.Uuid
+  rejected_at                                                     DateTime?  @db.Timestamptz(6)
+  rejection_reason                                                String?
   status                                                          String     @default("draft")
   created_at                                                      DateTime   @default(now()) @db.Timestamptz(6)
   created_by                                                      String     @db.Uuid
+  version                                                         Int        @default(1)
   principal_cycle_certification_tenant_id_certified_byToprincipal principal? @relation("cycle_certification_tenant_id_certified_byToprincipal", fields: [tenant_id, certified_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_certification_certified_by_fk")
   principal_cycle_certification_tenant_id_created_byToprincipal   principal  @relation("cycle_certification_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_certification_created_by_fk")
+  principal_cycle_certification_tenant_id_rejected_byToprincipal  principal? @relation("cycle_certification_tenant_id_rejected_byToprincipal", fields: [tenant_id, rejected_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_certification_rejected_by_fk")
   cycle_run                                                       cycle_run  @relation(fields: [tenant_id, cycle_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_certification_run_fk")
+  principal_cycle_certification_tenant_id_submitted_byToprincipal principal? @relation("cycle_certification_tenant_id_submitted_byToprincipal", fields: [tenant_id, submitted_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_certification_submitted_by_fk")
   tenant                                                          tenant     @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_certification_tenant_fk")
 
   @@unique([tenant_id, cycle_run_id, certification_type_code], map: "cycle_certification_coordinate_uq")
@@ -4599,26 +4721,33 @@ model cycle_certification {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model cycle_deviation {
-  id                                                                     String      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                              String      @db.Uuid
-  cycle_run_id                                                           String      @db.Uuid
-  cycle_task_id                                                          String?     @db.Uuid
+  id                                                                     String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                              String            @db.Uuid
+  cycle_run_id                                                           String            @db.Uuid
+  cycle_task_id                                                          String?           @db.Uuid
   deviation_type                                                         String
   description                                                            String
-  severity_code                                                          String      @default("medium")
+  severity_code                                                          String            @default("medium")
+  status                                                                 String            @default("open")
   resolution                                                             String?
-  carried_to_cycle_run_id                                                String?     @db.Uuid
-  resolved_at                                                            DateTime?   @db.Timestamptz(6)
-  resolved_by                                                            String?     @db.Uuid
-  created_at                                                             DateTime    @default(now()) @db.Timestamptz(6)
-  created_by                                                             String      @db.Uuid
-  cycle_run_cycle_deviation_tenant_id_carried_to_cycle_run_idTocycle_run cycle_run?  @relation("cycle_deviation_tenant_id_carried_to_cycle_run_idTocycle_run", fields: [tenant_id, carried_to_cycle_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_carry_run_fk")
-  principal_cycle_deviation_tenant_id_created_byToprincipal              principal   @relation("cycle_deviation_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_created_by_fk")
-  principal_cycle_deviation_tenant_id_resolved_byToprincipal             principal?  @relation("cycle_deviation_tenant_id_resolved_byToprincipal", fields: [tenant_id, resolved_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_resolved_by_fk")
-  cycle_run_cycle_deviation_tenant_id_cycle_run_idTocycle_run            cycle_run   @relation("cycle_deviation_tenant_id_cycle_run_idTocycle_run", fields: [tenant_id, cycle_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_run_fk")
-  cycle_task                                                             cycle_task? @relation(fields: [tenant_id, cycle_task_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_task_fk")
-  tenant                                                                 tenant      @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_tenant_fk")
+  carried_from_deviation_id                                              String?           @db.Uuid
+  carried_to_cycle_run_id                                                String?           @db.Uuid
+  carry_count                                                            Int               @default(0)
+  carry_idempotency_key                                                  String?
+  resolved_at                                                            DateTime?         @db.Timestamptz(6)
+  resolved_by                                                            String?           @db.Uuid
+  created_at                                                             DateTime          @default(now()) @db.Timestamptz(6)
+  created_by                                                             String            @db.Uuid
+  cycle_run_cycle_deviation_tenant_id_carried_to_cycle_run_idTocycle_run cycle_run?        @relation("cycle_deviation_tenant_id_carried_to_cycle_run_idTocycle_run", fields: [tenant_id, carried_to_cycle_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_carry_run_fk")
+  cycle_deviation                                                        cycle_deviation?  @relation("cycle_deviationTocycle_deviation", fields: [tenant_id, carried_from_deviation_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_carry_source_fk")
+  other_cycle_deviation                                                  cycle_deviation[] @relation("cycle_deviationTocycle_deviation")
+  principal_cycle_deviation_tenant_id_created_byToprincipal              principal         @relation("cycle_deviation_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_created_by_fk")
+  principal_cycle_deviation_tenant_id_resolved_byToprincipal             principal?        @relation("cycle_deviation_tenant_id_resolved_byToprincipal", fields: [tenant_id, resolved_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_resolved_by_fk")
+  cycle_run_cycle_deviation_tenant_id_cycle_run_idTocycle_run            cycle_run         @relation("cycle_deviation_tenant_id_cycle_run_idTocycle_run", fields: [tenant_id, cycle_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_run_fk")
+  cycle_task                                                             cycle_task?       @relation(fields: [tenant_id, cycle_task_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_task_fk")
+  tenant                                                                 tenant            @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_deviation_tenant_fk")
 
+  @@unique([tenant_id, carry_idempotency_key], map: "cycle_deviation_carry_idempotency_uq")
   @@unique([tenant_id, id], map: "cycle_deviation_tenant_id_uq")
   @@index([tenant_id, cycle_run_id, cycle_task_id], map: "cycle_deviation_run_idx")
   @@schema("governance")
@@ -4627,41 +4756,49 @@ model cycle_deviation {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model cycle_run {
-  id                                                                           String                @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                    String                @db.Uuid
-  cycle_type_id                                                                String                @db.Uuid
+  id                                                                           String                             @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                    String                             @db.Uuid
+  cycle_type_id                                                                String                             @db.Uuid
+  template_revision_id                                                         String                             @db.Uuid
+  template_revision_number                                                     Int
+  template_hash                                                                String                             @db.Char(64)
   code                                                                         String
   name                                                                         String
-  period_start                                                                 DateTime?             @db.Date
-  period_end                                                                   DateTime?             @db.Date
-  scheduled_start_at                                                           DateTime?             @db.Timestamptz(6)
-  started_at                                                                   DateTime?             @db.Timestamptz(6)
-  due_at                                                                       DateTime?             @db.Timestamptz(6)
-  completed_at                                                                 DateTime?             @db.Timestamptz(6)
-  parent_cycle_run_id                                                          String?               @db.Uuid
-  owner_principal_id                                                           String?               @db.Uuid
-  data                                                                         Json                  @default("{}")
-  status                                                                       String                @default("draft")
-  status_changed_at                                                            DateTime?             @db.Timestamptz(6)
-  status_changed_by                                                            String?               @db.Uuid
-  created_at                                                                   DateTime              @default(now()) @db.Timestamptz(6)
-  created_by                                                                   String                @db.Uuid
-  updated_at                                                                   DateTime?             @db.Timestamptz(6)
-  updated_by                                                                   String?               @db.Uuid
+  period_start                                                                 DateTime?                          @db.Date
+  period_end                                                                   DateTime?                          @db.Date
+  scheduled_start_at                                                           DateTime?                          @db.Timestamptz(6)
+  started_at                                                                   DateTime?                          @db.Timestamptz(6)
+  due_at                                                                       DateTime?                          @db.Timestamptz(6)
+  completed_at                                                                 DateTime?                          @db.Timestamptz(6)
+  parent_cycle_run_id                                                          String?                            @db.Uuid
+  owner_principal_id                                                           String?                            @db.Uuid
+  idempotency_key                                                              String
+  data                                                                         Json                               @default("{}")
+  status                                                                       String                             @default("draft")
+  status_changed_at                                                            DateTime?                          @db.Timestamptz(6)
+  status_changed_by                                                            String?                            @db.Uuid
+  created_at                                                                   DateTime                           @default(now()) @db.Timestamptz(6)
+  created_by                                                                   String                             @db.Uuid
+  updated_at                                                                   DateTime?                          @db.Timestamptz(6)
+  updated_by                                                                   String?                            @db.Uuid
+  version                                                                      Int                                @default(1)
   cycle_certification                                                          cycle_certification[]
-  cycle_deviation_cycle_deviation_tenant_id_carried_to_cycle_run_idTocycle_run cycle_deviation[]     @relation("cycle_deviation_tenant_id_carried_to_cycle_run_idTocycle_run")
-  cycle_deviation_cycle_deviation_tenant_id_cycle_run_idTocycle_run            cycle_deviation[]     @relation("cycle_deviation_tenant_id_cycle_run_idTocycle_run")
-  principal_cycle_run_tenant_id_created_byToprincipal                          principal             @relation("cycle_run_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_created_by_fk")
-  principal_cycle_run_tenant_id_owner_principal_idToprincipal                  principal?            @relation("cycle_run_tenant_id_owner_principal_idToprincipal", fields: [tenant_id, owner_principal_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_owner_fk")
-  cycle_run                                                                    cycle_run?            @relation("cycle_runTocycle_run", fields: [tenant_id, parent_cycle_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_parent_fk")
-  other_cycle_run                                                              cycle_run[]           @relation("cycle_runTocycle_run")
-  principal_cycle_run_tenant_id_status_changed_byToprincipal                   principal?            @relation("cycle_run_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_status_changed_by_fk")
-  tenant                                                                       tenant                @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_tenant_fk")
-  cycle_type                                                                   cycle_type            @relation(fields: [tenant_id, cycle_type_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_type_fk")
-  principal_cycle_run_tenant_id_updated_byToprincipal                          principal?            @relation("cycle_run_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_updated_by_fk")
+  cycle_deviation_cycle_deviation_tenant_id_carried_to_cycle_run_idTocycle_run cycle_deviation[]                  @relation("cycle_deviation_tenant_id_carried_to_cycle_run_idTocycle_run")
+  cycle_deviation_cycle_deviation_tenant_id_cycle_run_idTocycle_run            cycle_deviation[]                  @relation("cycle_deviation_tenant_id_cycle_run_idTocycle_run")
+  principal_cycle_run_tenant_id_created_byToprincipal                          principal                          @relation("cycle_run_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_created_by_fk")
+  principal_cycle_run_tenant_id_owner_principal_idToprincipal                  principal?                         @relation("cycle_run_tenant_id_owner_principal_idToprincipal", fields: [tenant_id, owner_principal_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_owner_fk")
+  cycle_run                                                                    cycle_run?                         @relation("cycle_runTocycle_run", fields: [tenant_id, parent_cycle_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_parent_fk")
+  other_cycle_run                                                              cycle_run[]                        @relation("cycle_runTocycle_run")
+  principal_cycle_run_tenant_id_status_changed_byToprincipal                   principal?                         @relation("cycle_run_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_status_changed_by_fk")
+  cycle_template_revision                                                      cycle_template_revision            @relation(fields: [tenant_id, cycle_type_id, template_revision_id, template_revision_number, template_hash], references: [tenant_id, cycle_type_id, id, revision_number, template_hash], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_template_revision_fk")
+  tenant                                                                       tenant                             @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_tenant_fk")
+  cycle_type                                                                   cycle_type                         @relation(fields: [tenant_id, cycle_type_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_type_fk")
+  principal_cycle_run_tenant_id_updated_byToprincipal                          principal?                         @relation("cycle_run_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_updated_by_fk")
   cycle_task                                                                   cycle_task[]
+  cycle_task_dependency                                                        governance_cycle_task_dependency[]
 
   @@unique([tenant_id, cycle_type_id, code], map: "cycle_run_code_uq")
+  @@unique([tenant_id, idempotency_key], map: "cycle_run_idempotency_uq")
   @@unique([tenant_id, id], map: "cycle_run_tenant_id_uq")
   @@unique([tenant_id, cycle_type_id, id], map: "cycle_run_type_id_uq")
   @@index([tenant_id, parent_cycle_run_id], map: "cycle_run_parent_idx", where: raw("(parent_cycle_run_id IS NOT NULL)"))
@@ -4672,43 +4809,75 @@ model cycle_run {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model cycle_task {
-  id                                                           String              @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                    String              @db.Uuid
-  cycle_run_id                                                 String              @db.Uuid
-  cycle_type_id                                                String              @db.Uuid
-  task_template_id                                             String              @db.Uuid
-  phase_id                                                     String              @db.Uuid
-  code                                                         String
-  name                                                         String
-  owner_principal_id                                           String?             @db.Uuid
-  assigned_team_id                                             String?             @db.Uuid
-  due_at                                                       DateTime?           @db.Timestamptz(6)
-  started_at                                                   DateTime?           @db.Timestamptz(6)
-  completed_at                                                 DateTime?           @db.Timestamptz(6)
-  completion_evidence                                          Json                @default("{}")
-  status                                                       String              @default("pending")
-  status_changed_at                                            DateTime?           @db.Timestamptz(6)
-  status_changed_by                                            String?             @db.Uuid
-  created_at                                                   DateTime            @default(now()) @db.Timestamptz(6)
-  created_by                                                   String              @db.Uuid
-  updated_at                                                   DateTime?           @db.Timestamptz(6)
-  updated_by                                                   String?             @db.Uuid
-  work_item                                                    work_item[]
-  cycle_deviation                                              cycle_deviation[]
-  principal_cycle_task_tenant_id_created_byToprincipal         principal           @relation("cycle_task_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_created_by_fk")
-  principal_cycle_task_tenant_id_owner_principal_idToprincipal principal?          @relation("cycle_task_tenant_id_owner_principal_idToprincipal", fields: [tenant_id, owner_principal_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_owner_fk")
-  cycle_phase                                                  cycle_phase         @relation(fields: [tenant_id, cycle_type_id, phase_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_phase_fk")
-  cycle_run                                                    cycle_run           @relation(fields: [tenant_id, cycle_type_id, cycle_run_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_run_fk")
-  principal_cycle_task_tenant_id_status_changed_byToprincipal  principal?          @relation("cycle_task_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_status_changed_by_fk")
-  team                                                         team?               @relation(fields: [tenant_id, assigned_team_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_team_fk")
-  cycle_task_template                                          cycle_task_template @relation(fields: [tenant_id, cycle_type_id, task_template_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_fk")
-  tenant                                                       tenant              @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_tenant_fk")
-  principal_cycle_task_tenant_id_updated_byToprincipal         principal?          @relation("cycle_task_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_updated_by_fk")
+  id                                                                                                 String                             @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                          String                             @db.Uuid
+  cycle_run_id                                                                                       String                             @db.Uuid
+  cycle_type_id                                                                                      String                             @db.Uuid
+  task_template_id                                                                                   String                             @db.Uuid
+  phase_id                                                                                           String                             @db.Uuid
+  code                                                                                               String
+  name                                                                                               String
+  completion_mode                                                                                    String
+  is_mandatory                                                                                       Boolean                            @default(true)
+  is_waivable                                                                                        Boolean                            @default(false)
+  owner_principal_id                                                                                 String?                            @db.Uuid
+  assigned_team_id                                                                                   String?                            @db.Uuid
+  due_at                                                                                             DateTime?                          @db.Timestamptz(6)
+  started_at                                                                                         DateTime?                          @db.Timestamptz(6)
+  completed_at                                                                                       DateTime?                          @db.Timestamptz(6)
+  completion_evidence                                                                                Json                               @default("{}")
+  status                                                                                             String                             @default("pending")
+  status_changed_at                                                                                  DateTime?                          @db.Timestamptz(6)
+  status_changed_by                                                                                  String?                            @db.Uuid
+  created_at                                                                                         DateTime                           @default(now()) @db.Timestamptz(6)
+  created_by                                                                                         String                             @db.Uuid
+  updated_at                                                                                         DateTime?                          @db.Timestamptz(6)
+  updated_by                                                                                         String?                            @db.Uuid
+  version                                                                                            Int                                @default(1)
+  work_item                                                                                          work_item[]
+  cycle_deviation                                                                                    cycle_deviation[]
+  principal_cycle_task_tenant_id_created_byToprincipal                                               principal                          @relation("cycle_task_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_created_by_fk")
+  principal_cycle_task_tenant_id_owner_principal_idToprincipal                                       principal?                         @relation("cycle_task_tenant_id_owner_principal_idToprincipal", fields: [tenant_id, owner_principal_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_owner_fk")
+  cycle_phase                                                                                        cycle_phase                        @relation(fields: [tenant_id, cycle_type_id, phase_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_phase_fk")
+  cycle_run                                                                                          cycle_run                          @relation(fields: [tenant_id, cycle_type_id, cycle_run_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_run_fk")
+  principal_cycle_task_tenant_id_status_changed_byToprincipal                                        principal?                         @relation("cycle_task_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_status_changed_by_fk")
+  team                                                                                               team?                              @relation(fields: [tenant_id, assigned_team_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_team_fk")
+  cycle_task_template                                                                                cycle_task_template                @relation(fields: [tenant_id, cycle_type_id, task_template_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_template_fk")
+  tenant                                                                                             tenant                             @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_tenant_fk")
+  principal_cycle_task_tenant_id_updated_byToprincipal                                               principal?                         @relation("cycle_task_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_updated_by_fk")
+  cycle_task_dependency_cycle_task_dependency_tenant_id_cycle_run_id_predecessor_task_idTocycle_task governance_cycle_task_dependency[] @relation("cycle_task_dependency_tenant_id_cycle_run_id_predecessor_task_idTocycle_task")
+  cycle_task_dependency_cycle_task_dependency_tenant_id_cycle_run_id_successor_task_idTocycle_task   governance_cycle_task_dependency[] @relation("cycle_task_dependency_tenant_id_cycle_run_id_successor_task_idTocycle_task")
 
+  @@unique([tenant_id, cycle_run_id, id], map: "cycle_task_run_id_uq")
   @@unique([tenant_id, cycle_run_id, task_template_id], map: "cycle_task_run_template_uq")
   @@unique([tenant_id, id], map: "cycle_task_tenant_id_uq")
   @@index([tenant_id, owner_principal_id, status], map: "cycle_task_owner_idx", where: raw("(owner_principal_id IS NOT NULL)"))
   @@index([tenant_id, cycle_type_id, cycle_run_id, status, due_at], map: "cycle_task_run_status_idx")
+  @@schema("governance")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model governance_cycle_task_dependency {
+  id                                                                                      String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                               String     @db.Uuid
+  cycle_run_id                                                                            String     @db.Uuid
+  predecessor_task_id                                                                     String     @db.Uuid
+  successor_task_id                                                                       String     @db.Uuid
+  dependency_type                                                                         String     @default("finish_to_start")
+  is_hard                                                                                 Boolean    @default(true)
+  created_at                                                                              DateTime   @default(now()) @db.Timestamptz(6)
+  created_by                                                                              String     @db.Uuid
+  principal                                                                               principal  @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_dependency_created_by_fk")
+  cycle_task_cycle_task_dependency_tenant_id_cycle_run_id_predecessor_task_idTocycle_task cycle_task @relation("cycle_task_dependency_tenant_id_cycle_run_id_predecessor_task_idTocycle_task", fields: [tenant_id, cycle_run_id, predecessor_task_id], references: [tenant_id, cycle_run_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_dependency_predecessor_fk")
+  cycle_run                                                                               cycle_run  @relation(fields: [tenant_id, cycle_run_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_dependency_run_fk")
+  cycle_task_cycle_task_dependency_tenant_id_cycle_run_id_successor_task_idTocycle_task   cycle_task @relation("cycle_task_dependency_tenant_id_cycle_run_id_successor_task_idTocycle_task", fields: [tenant_id, cycle_run_id, successor_task_id], references: [tenant_id, cycle_run_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_dependency_successor_fk")
+  tenant                                                                                  tenant     @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_dependency_tenant_fk")
+
+  @@unique([tenant_id, cycle_run_id, predecessor_task_id, successor_task_id], map: "cycle_task_dependency_edge_uq")
+  @@unique([tenant_id, id], map: "cycle_task_dependency_tenant_id_uq")
+  @@index([tenant_id, cycle_run_id, successor_task_id], map: "cycle_task_dependency_successor_idx")
+  @@map("cycle_task_dependency")
   @@schema("governance")
 }
 
@@ -4766,6 +4935,7 @@ model governance_legal_hold_manifest {
   legal_hold      governance_legal_hold @relation(fields: [tenant_id, legal_hold_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "legal_hold_manifest_hold_fk")
   tenant          tenant                @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "legal_hold_manifest_tenant_fk")
 
+  @@unique([tenant_id, legal_hold_id, resource_kind, resource_id, resource_uri], map: "legal_hold_manifest_resource_uq")
   @@unique([tenant_id, id], map: "legal_hold_manifest_tenant_id_uq")
   @@index([tenant_id, legal_hold_id], map: "legal_hold_manifest_hold_idx")
   @@index([tenant_id, resource_kind, resource_id], map: "legal_hold_manifest_resource_idx")
@@ -4783,13 +4953,16 @@ model report_pack {
   name                                                  String
   source_entity_code                                    String?
   source_entity_id                                      String?       @db.Uuid
+  source_revision                                       Json?
   parameters                                            Json          @default("{}")
   artifact_uri                                          String?
   artifact_hash                                         String?
   generated_at                                          DateTime?     @db.Timestamptz(6)
   expires_at                                            DateTime?     @db.Timestamptz(6)
   supersedes_report_pack_id                             String?       @db.Uuid
+  job_id                                                String
   status                                                String        @default("draft")
+  evidence                                              Json          @default("{}")
   created_at                                            DateTime      @default(now()) @db.Timestamptz(6)
   created_by                                            String        @db.Uuid
   updated_at                                            DateTime?     @db.Timestamptz(6)
@@ -4801,6 +4974,7 @@ model report_pack {
   principal_report_pack_tenant_id_updated_byToprincipal principal?    @relation("report_pack_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "report_pack_updated_by_fk")
 
   @@unique([tenant_id, code], map: "report_pack_code_uq")
+  @@unique([tenant_id, job_id], map: "report_pack_job_id_uq")
   @@unique([tenant_id, id], map: "report_pack_tenant_id_uq")
   @@index([tenant_id, source_entity_code, source_entity_id], map: "report_pack_source_idx")
   @@schema("governance")
@@ -4810,26 +4984,29 @@ model report_pack {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model integration_delivery_attempt {
-  id                    String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id             String               @db.Uuid
-  delivery_id           String               @db.Uuid
-  attempt               Int                  @db.SmallInt
-  started_at            DateTime             @db.Timestamptz(6)
-  completed_at          DateTime             @db.Timestamptz(6)
-  request_url           String
-  request_method        String
-  request_headers       Json                 @default("{}")
-  request_body_hash     String               @db.Char(64)
-  response_status       Int?
-  response_headers      Json                 @default("{}")
-  response_body_hash    String?              @db.Char(64)
-  response_body_preview String?
-  duration_ms           Int
-  disposition           String
-  error_code            String?
-  created_at            DateTime             @default(now()) @db.Timestamptz(6)
-  created_by            String               @db.Uuid
-  integration_delivery  integration_delivery @relation(fields: [tenant_id, delivery_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "integration_delivery_attempt_delivery_fk")
+  id                            String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                     String               @db.Uuid
+  delivery_id                   String               @db.Uuid
+  attempt                       Int                  @db.SmallInt
+  started_at                    DateTime             @db.Timestamptz(6)
+  completed_at                  DateTime             @db.Timestamptz(6)
+  request_url                   String
+  request_method                String
+  request_headers               Json                 @default("{}")
+  request_body_hash             String               @db.Char(64)
+  response_status               Int?
+  response_headers              Json                 @default("{}")
+  response_body_hash            String?              @db.Char(64)
+  response_body_preview         String?
+  response_error                Json?
+  response_error_classification String?
+  response_error_purge_after    DateTime?            @db.Timestamptz(6)
+  duration_ms                   Int
+  disposition                   String
+  error_code                    String?
+  created_at                    DateTime             @default(now()) @db.Timestamptz(6)
+  created_by                    String               @db.Uuid
+  integration_delivery          integration_delivery @relation(fields: [tenant_id, delivery_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "integration_delivery_attempt_delivery_fk")
 
   @@unique([tenant_id, delivery_id, attempt], map: "integration_delivery_attempt_coordinate_uq")
   @@schema("log")
@@ -5359,6 +5536,13 @@ model principal {
   atlas_run_atlas_run_tenant_id_created_byToprincipal                                                     atlas_run[]                               @relation("atlas_run_tenant_id_created_byToprincipal")
   atlas_run_atlas_run_tenant_id_principal_idToprincipal                                                   atlas_run[]                               @relation("atlas_run_tenant_id_principal_idToprincipal")
   atlas_run_atlas_run_tenant_id_updated_byToprincipal                                                     atlas_run[]                               @relation("atlas_run_tenant_id_updated_byToprincipal")
+  atlas_tenant_quota_policy_atlas_tenant_quota_policy_tenant_id_created_byToprincipal                     atlas_tenant_quota_policy?                @relation("atlas_tenant_quota_policy_tenant_id_created_byToprincipal")
+  atlas_tenant_quota_policy_atlas_tenant_quota_policy_tenant_id_updated_byToprincipal                     atlas_tenant_quota_policy?                @relation("atlas_tenant_quota_policy_tenant_id_updated_byToprincipal")
+  atlas_tenant_quota_reservation_atlas_tenant_quota_reservation_tenant_id_created_byToprincipal           atlas_tenant_quota_reservation[]          @relation("atlas_tenant_quota_reservation_tenant_id_created_byToprincipal")
+  atlas_tenant_quota_reservation_atlas_tenant_quota_reservation_tenant_id_principal_idToprincipal         atlas_tenant_quota_reservation[]          @relation("atlas_tenant_quota_reservation_tenant_id_principal_idToprincipal")
+  atlas_tenant_quota_reservation_atlas_tenant_quota_reservation_tenant_id_updated_byToprincipal           atlas_tenant_quota_reservation[]          @relation("atlas_tenant_quota_reservation_tenant_id_updated_byToprincipal")
+  atlas_tenant_quota_window_atlas_tenant_quota_window_tenant_id_created_byToprincipal                     atlas_tenant_quota_window[]               @relation("atlas_tenant_quota_window_tenant_id_created_byToprincipal")
+  atlas_tenant_quota_window_atlas_tenant_quota_window_tenant_id_updated_byToprincipal                     atlas_tenant_quota_window[]               @relation("atlas_tenant_quota_window_tenant_id_updated_byToprincipal")
   atlas_thread_atlas_thread_tenant_id_created_byToprincipal                                               atlas_thread[]                            @relation("atlas_thread_tenant_id_created_byToprincipal")
   atlas_thread_atlas_thread_tenant_id_owner_principal_idToprincipal                                       atlas_thread[]                            @relation("atlas_thread_tenant_id_owner_principal_idToprincipal")
   atlas_thread_atlas_thread_tenant_id_updated_byToprincipal                                               atlas_thread[]                            @relation("atlas_thread_tenant_id_updated_byToprincipal")
@@ -5402,12 +5586,14 @@ model principal {
   cycle_task_category_cycle_task_category_tenant_id_created_byToprincipal                                 cycle_task_category[]                     @relation("cycle_task_category_tenant_id_created_byToprincipal")
   cycle_task_category_cycle_task_category_tenant_id_status_changed_byToprincipal                          cycle_task_category[]                     @relation("cycle_task_category_tenant_id_status_changed_byToprincipal")
   cycle_task_category_cycle_task_category_tenant_id_updated_byToprincipal                                 cycle_task_category[]                     @relation("cycle_task_category_tenant_id_updated_byToprincipal")
-  cycle_task_dependency_cycle_task_dependency_tenant_id_created_byToprincipal                             cycle_task_dependency[]                   @relation("cycle_task_dependency_tenant_id_created_byToprincipal")
-  cycle_task_dependency_cycle_task_dependency_tenant_id_updated_byToprincipal                             cycle_task_dependency[]                   @relation("cycle_task_dependency_tenant_id_updated_byToprincipal")
+  cycle_task_dependency_cycle_task_dependency_tenant_id_created_byToprincipal                             control_cycle_task_dependency[]           @relation("cycle_task_dependency_tenant_id_created_byToprincipal")
+  cycle_task_dependency_cycle_task_dependency_tenant_id_updated_byToprincipal                             control_cycle_task_dependency[]           @relation("cycle_task_dependency_tenant_id_updated_byToprincipal")
   cycle_task_template_cycle_task_template_tenant_id_created_byToprincipal                                 cycle_task_template[]                     @relation("cycle_task_template_tenant_id_created_byToprincipal")
   cycle_task_template_cycle_task_template_tenant_id_default_owner_principal_idToprincipal                 cycle_task_template[]                     @relation("cycle_task_template_tenant_id_default_owner_principal_idToprincipal")
   cycle_task_template_cycle_task_template_tenant_id_status_changed_byToprincipal                          cycle_task_template[]                     @relation("cycle_task_template_tenant_id_status_changed_byToprincipal")
   cycle_task_template_cycle_task_template_tenant_id_updated_byToprincipal                                 cycle_task_template[]                     @relation("cycle_task_template_tenant_id_updated_byToprincipal")
+  cycle_template_revision_cycle_template_revision_tenant_id_created_byToprincipal                         cycle_template_revision[]                 @relation("cycle_template_revision_tenant_id_created_byToprincipal")
+  cycle_template_revision_cycle_template_revision_tenant_id_published_byToprincipal                       cycle_template_revision[]                 @relation("cycle_template_revision_tenant_id_published_byToprincipal")
   cycle_type_cycle_type_tenant_id_created_byToprincipal                                                   cycle_type[]                              @relation("cycle_type_tenant_id_created_byToprincipal")
   cycle_type_cycle_type_tenant_id_status_changed_byToprincipal                                            cycle_type[]                              @relation("cycle_type_tenant_id_status_changed_byToprincipal")
   cycle_type_cycle_type_tenant_id_updated_byToprincipal                                                   cycle_type[]                              @relation("cycle_type_tenant_id_updated_byToprincipal")
@@ -5535,6 +5721,8 @@ model principal {
   comment_moderation_comment_moderation_tenant_id_updated_byToprincipal                                   comment_moderation[]                      @relation("comment_moderation_tenant_id_updated_byToprincipal")
   cycle_certification_cycle_certification_tenant_id_certified_byToprincipal                               cycle_certification[]                     @relation("cycle_certification_tenant_id_certified_byToprincipal")
   cycle_certification_cycle_certification_tenant_id_created_byToprincipal                                 cycle_certification[]                     @relation("cycle_certification_tenant_id_created_byToprincipal")
+  cycle_certification_cycle_certification_tenant_id_rejected_byToprincipal                                cycle_certification[]                     @relation("cycle_certification_tenant_id_rejected_byToprincipal")
+  cycle_certification_cycle_certification_tenant_id_submitted_byToprincipal                               cycle_certification[]                     @relation("cycle_certification_tenant_id_submitted_byToprincipal")
   cycle_deviation_cycle_deviation_tenant_id_created_byToprincipal                                         cycle_deviation[]                         @relation("cycle_deviation_tenant_id_created_byToprincipal")
   cycle_deviation_cycle_deviation_tenant_id_resolved_byToprincipal                                        cycle_deviation[]                         @relation("cycle_deviation_tenant_id_resolved_byToprincipal")
   cycle_run_cycle_run_tenant_id_created_byToprincipal                                                     cycle_run[]                               @relation("cycle_run_tenant_id_created_byToprincipal")
@@ -5545,6 +5733,7 @@ model principal {
   cycle_task_cycle_task_tenant_id_owner_principal_idToprincipal                                           cycle_task[]                              @relation("cycle_task_tenant_id_owner_principal_idToprincipal")
   cycle_task_cycle_task_tenant_id_status_changed_byToprincipal                                            cycle_task[]                              @relation("cycle_task_tenant_id_status_changed_byToprincipal")
   cycle_task_cycle_task_tenant_id_updated_byToprincipal                                                   cycle_task[]                              @relation("cycle_task_tenant_id_updated_byToprincipal")
+  cycle_task_dependency                                                                                   governance_cycle_task_dependency[]
   legal_hold_legal_hold_tenant_id_created_byToprincipal                                                   governance_legal_hold[]                   @relation("legal_hold_tenant_id_created_byToprincipal")
   legal_hold_legal_hold_tenant_id_owner_principal_idToprincipal                                           governance_legal_hold[]                   @relation("legal_hold_tenant_id_owner_principal_idToprincipal")
   legal_hold_legal_hold_tenant_id_status_changed_byToprincipal                                            governance_legal_hold[]                   @relation("legal_hold_tenant_id_status_changed_byToprincipal")
@@ -6044,6 +6233,8 @@ model tenant {
   atlas_run                                                                      atlas_run[]
   atlas_tenant_provider_credential                                               atlas_tenant_provider_credential[]
   atlas_tenant_provider_credential_epoch                                         atlas_tenant_provider_credential_epoch[]
+  atlas_tenant_quota_policy                                                      atlas_tenant_quota_policy?
+  atlas_tenant_quota_window                                                      atlas_tenant_quota_window[]
   atlas_thread                                                                   atlas_thread[]
   audit_log                                                                      audit_log[]
   authorization_decision_evidence                                                authorization_decision_evidence[]
@@ -6077,8 +6268,9 @@ model tenant {
   cycle_cross_dependency                                                         cycle_cross_dependency[]
   cycle_phase                                                                    cycle_phase[]
   cycle_task_category                                                            cycle_task_category[]
-  cycle_task_dependency                                                          cycle_task_dependency[]
+  cycle_task_dependency                                                          control_cycle_task_dependency[]
   cycle_task_template                                                            cycle_task_template[]
+  cycle_template_revision                                                        cycle_template_revision[]
   cycle_type                                                                     cycle_type[]
   delivery_policy                                                                delivery_policy[]
   feature_flag_override                                                          feature_flag_override[]
@@ -6141,6 +6333,7 @@ model tenant {
   cycle_deviation                                                                cycle_deviation[]
   cycle_run                                                                      cycle_run[]
   cycle_task                                                                     cycle_task[]
+  cycle_task_dependency                                                          governance_cycle_task_dependency[]
   legal_hold                                                                     governance_legal_hold[]
   legal_hold_manifest                                                            governance_legal_hold_manifest[]
   report_pack                                                                    report_pack[]
@@ -7393,6 +7586,82 @@ model authorization_shadow_comparison {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model control_runtime_command_approval_decision {
+  id                                       String                                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  approval_id                              String                                   @unique(map: "control_runtime_command_approval_decision_approval_uq") @db.Uuid
+  decision                                 String
+  reason                                   String
+  decided_by                               String                                   @db.Uuid
+  decided_at                               DateTime                                 @db.Timestamptz(6)
+  control_runtime_command_approval_request control_runtime_command_approval_request @relation(fields: [approval_id], references: [id], onUpdate: NoAction, map: "control_runtime_command_approval_decision_request_fk")
+
+  @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model control_runtime_command_approval_request {
+  id                                        String                                     @id @db.Uuid
+  tenant_id                                 String                                     @db.Uuid
+  plane_code                                String
+  command_id                                String
+  kind                                      String
+  command_fingerprint                       String
+  requested_by                              String                                     @db.Uuid
+  requested_at                              DateTime                                   @db.Timestamptz(6)
+  control_runtime_command_approval_decision control_runtime_command_approval_decision?
+
+  @@index([tenant_id, requested_at(sort: Desc)], map: "control_runtime_command_approval_request_tenant_idx")
+  @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model control_runtime_command_history {
+  sequence_no   BigInt   @unique(map: "control_runtime_command_history_sequence_uq") @default(autoincrement())
+  id            String   @id @db.Uuid
+  tenant_id     String   @db.Uuid
+  plane_code    String
+  command_id    String
+  kind          String
+  event         String
+  actor_id      String   @db.Uuid
+  reason        String
+  fingerprint   String
+  detail        Json     @default("{}")
+  occurred_at   DateTime @db.Timestamptz(6)
+  previous_hash String?
+  entry_hash    String
+
+  @@index([tenant_id, plane_code, sequence_no(sort: Desc)], map: "control_runtime_command_history_tenant_idx")
+  @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model control_runtime_command_submission {
+  id              String   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id       String   @db.Uuid
+  plane_code      String
+  command_id      String
+  idempotency_key String
+  fingerprint     String
+  outcome         String
+  submission      Json
+  occurred_at     DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by      String   @db.Uuid
+
+  @@unique([tenant_id, idempotency_key, outcome], map: "control_runtime_command_submission_idempotency_uq")
+  @@index([tenant_id, idempotency_key, occurred_at(sort: Desc)], map: "control_runtime_command_submission_lookup_idx")
+  @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model identity_admission_shadow_comparison {
   id                    String   @id(map: "identity_admission_shadow_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id             String   @db.Uuid
@@ -7549,6 +7818,74 @@ model record_edit_lock {
   @@id([tenant_id, entity_code, record_id])
   @@index([tenant_id, expires_at], map: "record_edit_lock_expiry_idx")
   @@index([tenant_id, owner_principal_id, expires_at(sort: Desc)], map: "record_edit_lock_owner_idx")
+  @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model record_export_request {
+  id                 String    @db.Uuid
+  tenant_id          String    @db.Uuid
+  entity_code        String
+  exact_filter       Json
+  actor_principal_id String    @db.Uuid
+  status             String
+  artifact_key       String?
+  row_count          Int?
+  error_code         String?
+  requested_at       DateTime  @default(now()) @db.Timestamptz(6)
+  started_at         DateTime? @db.Timestamptz(6)
+  completed_at       DateTime? @db.Timestamptz(6)
+  cancelled_at       DateTime? @db.Timestamptz(6)
+
+  @@id([tenant_id, id])
+  @@index([tenant_id, actor_principal_id, requested_at(sort: Desc)], map: "record_export_request_owner_idx")
+  @@index([tenant_id, status, requested_at], map: "record_export_request_status_idx")
+  @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model record_import_chunk {
+  tenant_id             String                @db.Uuid
+  session_id            String                @db.Uuid
+  chunk_index           Int
+  row_count             Int
+  rows                  Json
+  chunk_checksum        String
+  cumulative_checksum   String
+  created_at            DateTime              @default(now()) @db.Timestamptz(6)
+  record_import_session record_import_session @relation(fields: [tenant_id, session_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "record_import_chunk_session_fk")
+
+  @@id([tenant_id, session_id, chunk_index])
+  @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model record_import_session {
+  id                  String                @db.Uuid
+  tenant_id           String                @db.Uuid
+  entity_code         String
+  status              String
+  staged_row_count    Int                   @default(0)
+  valid_row_count     Int                   @default(0)
+  invalid_row_count   Int                   @default(0)
+  checksum            String
+  next_chunk_index    Int                   @default(0)
+  validation_rows     Json?
+  validation_summary  Json?
+  error_report_key    String?
+  created_at          DateTime              @db.Timestamptz(6)
+  created_by          String                @db.Uuid
+  cancelled_at        DateTime?             @db.Timestamptz(6)
+  completed_at        DateTime?             @db.Timestamptz(6)
+  updated_at          DateTime?             @db.Timestamptz(6)
+  record_import_chunk record_import_chunk[]
+
+  @@id([tenant_id, id])
+  @@index([tenant_id, created_by, created_at(sort: Desc)], map: "record_import_session_owner_idx")
+  @@index([tenant_id, status, created_at], map: "record_import_session_status_idx")
   @@schema("ops")
 }
 

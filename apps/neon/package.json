@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@athyper/neon",
   "version": "0.1.0",
   "private": true,
@@ -11,6 +11,15 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@athyper/platform-gateway-bff-relay": "workspace:*",
+    "@athyper/platform-iam-identity-gate": "workspace:*",
+    "@athyper/platform-iam-auth-bff": "workspace:*",
+    "@athyper/platform-api-client": "workspace:*",
+    "@athyper/platform-query": "workspace:*",
+    "@athyper/platform-shell-app-foundation": "workspace:*",
+    "@athyper/product-neon-shell": "workspace:*",
+    "@athyper/platform-theme": "workspace:*",
+    "geist": "^1.3.1",
     "next": "^16.2.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

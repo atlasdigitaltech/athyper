@@ -42,10 +42,5 @@
 
   document.title = "${iamBrowserTitle}";
 
-  document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll(".kc-panel-left, .kc-carousel, .kc-dots").forEach(function (node) {
-      node.remove();
-    });
-  }, { once: true });
 })();
 </script>

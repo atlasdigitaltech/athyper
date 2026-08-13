@@ -2,12 +2,13 @@ import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contrac
 import type { PolicyService } from "@athyper/server-contract-policy";
 import type { Application, RequestHandler, Response } from "express";
 import { PolicyRouteError } from "./errors.js";
+import type { ExplainablePolicyService } from "./policy-service.js";
 
 export interface PolicyRouteOptions {
   readonly authenticate: RequestHandler;
   readonly readContext: (response: Response) => VerifiedRequestContext;
   readonly authorizer: Authorizer;
-  readonly policy: PolicyService;
+  readonly policy: PolicyService&Partial<ExplainablePolicyService>;
 }
 
 export function registerPolicyRoutes(application: Application, options: PolicyRouteOptions): void {
@@ -24,6 +25,7 @@ export function registerPolicyRoutes(application: Application, options: PolicyRo
       response.status(200).json(decision);
     } catch (error) { if (error instanceof PolicyRouteError) response.status(error.statusCode).json({ error: error.code, message: error.message }); else next(error); }
   });
+  application.post("/api/policy/simulate",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response);const authorization=await options.authorizer.authorize({context,permissionCode:"policy.simulate"});if(!authorization.allowed){response.status(403).json({error:"FORBIDDEN",message:"Policy simulation is not permitted"});return;}if(!options.policy.simulate){response.status(501).json({error:"POLICY_SIMULATION_UNAVAILABLE"});return;}const value=body(request.body),entityId=optionalText(value,"entityId"),policyDefinitionIds=uuidArray(value["policyDefinitionIds"]),pipelineId=optionalText(value,"pipelineId");response.status(200).json(await options.policy.simulate({context,entityType:requiredText(value,"entityType"),...(entityId?{entityId}:{}),facts:object(value["facts"]),...(policyDefinitionIds?{policyDefinitionIds}:{}),...(pipelineId?{pipelineId}:{})}));}catch(error){if(error instanceof PolicyRouteError)response.status(error.statusCode).json({error:error.code,message:error.message});else next(error);}});
 }
 
 function body(value: unknown): Record<string, unknown> { if (!value || typeof value !== "object" || Array.isArray(value)) throw new PolicyRouteError(400, "INVALID_BODY", "Policy request body must be an object"); return value as Record<string, unknown>; }

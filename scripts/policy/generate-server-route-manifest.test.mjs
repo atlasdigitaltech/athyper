@@ -21,6 +21,30 @@ test("extracts defineRouteContract routes", () => {
   assert.deepEqual(extractRoutesFromSource(source).map(({ method, path, kind }) => [method, path, kind]), [["PATCH", "/api/preferences/:param", "contract"]]);
 });
 
+test("extracts local contract-factory routes and expands their loops", () => {
+  const source = `
+    for (const action of ["activate", "suspend"] as const) registerContractRoute(app, contract("post", \`/api/connectors/:id/\${action}\`, \`connectors.\${action}\`), handler);
+    registerContractRoute(app, contract("get", "/api/connectors", "connectors.list"), handler);
+    function contract(method, path, operationId) { return defineRouteContract({ method, path, operationId, summary: operationId, responses: { 200: { description: "OK" } } }); }
+  `;
+  assert.deepEqual(extractRoutesFromSource(source).map(({ method, path }) => [method, path]).sort(), [
+    ["GET", "/api/connectors"],
+    ["POST", "/api/connectors/:param/activate"],
+    ["POST", "/api/connectors/:param/suspend"],
+  ]);
+});
+
+test("extracts a contract factory that computes response metadata before defining the contract", () => {
+  const source = `
+    registerContractRoute(app, contract("post", "/api/atlas/runs", "atlas.run"), handler);
+    function contract(method, path, operationId) {
+      const success = { description: "Stream", contentType: "text/event-stream" };
+      return defineRouteContract({ method, path, operationId, responses: { 200: success } });
+    }
+  `;
+  assert.deepEqual(extractRoutesFromSource(source).map(({ method, path }) => [method, path]), [["POST", "/api/atlas/runs"]]);
+});
+
 test("expands inline and named finite route loops", () => {
   const source = `
     const lifecycle = [["publish", "/publish"], ["archive", "/archive"]] as const;

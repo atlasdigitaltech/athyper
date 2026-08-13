@@ -8,6 +8,7 @@ import org.keycloak.authentication.authenticators.browser.UsernamePasswordForm;
 import org.keycloak.forms.login.LoginFormsProvider;
 import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.UserModel;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
@@ -62,12 +63,27 @@ final class IamPresentationUsernamePasswordForm extends UsernamePasswordForm {
                 trustedDisplayName = IamPresentationContext.normalizeLabel(
                         authSession.getAuthNote(DISPLAY_NAME_AUTH_NOTE),
                         120);
+                if (trustedDisplayName == null) {
+                    trustedDisplayName = profileDisplayName(authSession.getAuthenticatedUser());
+                    if (trustedDisplayName != null) {
+                        authSession.setAuthNote(DISPLAY_NAME_AUTH_NOTE, trustedDisplayName);
+                    }
+                }
             }
         }
         if (trustedDisplayName != null) {
             form.setAttribute(TEMPLATE_ATTRIBUTE, trustedDisplayName);
             LOG.debug("iam_presentation_context_applied");
         }
+    }
+
+    private static String profileDisplayName(UserModel user) {
+        if (user == null) return null;
+        String firstName = IamPresentationContext.normalizeLabel(user.getFirstName(), 60);
+        String lastName = IamPresentationContext.normalizeLabel(user.getLastName(), 60);
+        String fullName = ((firstName == null ? "" : firstName) + " " + (lastName == null ? "" : lastName)).trim();
+        if (!fullName.isEmpty()) return IamPresentationContext.normalizeLabel(fullName, 120);
+        return IamPresentationContext.normalizeLabel(user.getUsername(), 120);
     }
 
     private void resolvePresentationContext(AuthenticationFlowContext context) {

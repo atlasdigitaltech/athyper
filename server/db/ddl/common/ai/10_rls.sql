@@ -25,6 +25,13 @@ ALTER TABLE "ai"."atlas_tenant_provider_credential_epoch" ENABLE ROW LEVEL SECUR
 
 ALTER TABLE "ai"."atlas_tenant_provider_credential_epoch" FORCE ROW LEVEL SECURITY;
 
+ALTER TABLE "ai"."atlas_tenant_quota_policy" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ai"."atlas_tenant_quota_policy" FORCE ROW LEVEL SECURITY;
+ALTER TABLE "ai"."atlas_tenant_quota_window" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ai"."atlas_tenant_quota_window" FORCE ROW LEVEL SECURITY;
+ALTER TABLE "ai"."atlas_tenant_quota_reservation" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "ai"."atlas_tenant_quota_reservation" FORCE ROW LEVEL SECURITY;
+
 CREATE POLICY "admin_write" ON "ai"."ai_action_policy"
   AS PERMISSIVE
   FOR ALL
@@ -118,6 +125,13 @@ CREATE POLICY "atlas_byok_epoch_tenant_scope" ON "ai"."atlas_tenant_provider_cre
   TO athyperapp
   USING (tenant_id = shared.current_tenant_id())
   WITH CHECK (tenant_id = shared.current_tenant_id());
+
+CREATE POLICY "admin_write" ON "ai"."atlas_tenant_quota_policy" FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY "tenant_scope" ON "ai"."atlas_tenant_quota_policy" FOR ALL TO PUBLIC USING (tenant_id = shared.current_tenant_id_soft()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY "admin_write" ON "ai"."atlas_tenant_quota_window" FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY "tenant_scope" ON "ai"."atlas_tenant_quota_window" FOR ALL TO PUBLIC USING (tenant_id = shared.current_tenant_id_soft()) WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY "admin_write" ON "ai"."atlas_tenant_quota_reservation" FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY "tenant_scope" ON "ai"."atlas_tenant_quota_reservation" FOR ALL TO PUBLIC USING (tenant_id = shared.current_tenant_id_soft()) WITH CHECK (tenant_id = shared.current_tenant_id());
 
 -- ============================================================================
 -- event/08_rls.sql

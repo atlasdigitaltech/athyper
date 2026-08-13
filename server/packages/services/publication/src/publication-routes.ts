@@ -2,9 +2,10 @@ import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { JobPublisher } from "@athyper/server-contract-jobs";
 import type { PublicationAuthorityRepository } from "@athyper/server-contract-publication";
-import type { Application, RequestHandler, Response } from "@athyper/server-runtime-http";
+import { defineRouteContract, registerContractRoute, type Application, type RequestHandler, type Response } from "@athyper/server-runtime-http";
 
 import { COMPILE_PUBLICATION_ARTIFACT_JOB, PUBLICATION_APPLY_QUEUE, PUBLICATION_AUTHORITY_QUEUE, ROLLBACK_PUBLICATION_RELEASE_JOB } from "./publication-jobs.js";
+import type { PublicationOperationsService } from "./publication-operations.js";
 
 export interface PublicationRouteOptions {
   readonly authenticate: RequestHandler;
@@ -14,10 +15,59 @@ export interface PublicationRouteOptions {
   readonly authority: PublicationAuthorityRepository;
   readonly jobs: JobPublisher;
   readonly apiEnabled: boolean;
+  readonly operations?: PublicationOperationsService;
 }
 
+const objectSchema = { type: "object", additionalProperties: true } as const;
+const contracts = {
+  deadLetters: defineRouteContract({ method: "get", path: "/api/publication/operations/dead-letters", operationId: "publication.listDeadLetters", summary: "List publication delivery dead letters", tags: ["Publication Operations"], authenticated: true, permission: "publication.deployment.view", responses: { 200: { description: "Publication dead letters", body: objectSchema }, 400: { description: "Invalid query" }, 403: { description: "Forbidden", body: objectSchema }, 503: { description: "Publication operations unavailable", body: objectSchema } } }),
+  destinationHealth: defineRouteContract({ method: "get", path: "/api/publication/operations/destinations/:plane/:targetInstance/health", operationId: "publication.getDestinationHealth", summary: "Get publication destination health", tags: ["Publication Operations"], authenticated: true, permission: "publication.deployment.view", responses: { 200: { description: "Destination health", body: objectSchema }, 400: { description: "Invalid destination" }, 403: { description: "Forbidden", body: objectSchema }, 503: { description: "Publication operations unavailable", body: objectSchema } } }),
+  provenance: defineRouteContract({ method: "get", path: "/api/publication/deployments/:deploymentId/provenance", operationId: "publication.getDeploymentProvenance", summary: "Get publication deployment provenance", tags: ["Publication Operations"], authenticated: true, permission: "publication.deployment.view", responses: { 200: { description: "Deployment provenance", body: objectSchema }, 400: { description: "Invalid deployment identifier" }, 403: { description: "Forbidden", body: objectSchema }, 503: { description: "Publication operations unavailable", body: objectSchema } } }),
+  replayDelivery: defineRouteContract({ method: "post", path: "/api/publication/operations/deliveries/:deliveryId/replay", operationId: "publication.replayDelivery", summary: "Replay a publication delivery", tags: ["Publication Operations"], authenticated: true, permission: "publication.deployment.retry", request: { body: { type: "object", required: ["reason"], properties: { reason: { type: "string" }, forceUnhealthy: { type: "boolean" } } } }, responses: { 202: { description: "Replay queued", body: objectSchema }, 400: { description: "Invalid replay request" }, 403: { description: "Forbidden", body: objectSchema }, 503: { description: "Publication operations unavailable", body: objectSchema } } }),
+  release: defineRouteContract({ method: "get", path: "/api/publication/releases/:releaseId", operationId: "publication.getRelease", summary: "Get a publication release", tags: ["Publication"], authenticated: true, permission: "publication.release.view", responses: { 200: { description: "Publication release", body: objectSchema }, 400: { description: "Invalid release identifier" }, 403: { description: "Forbidden" }, 404: { description: "Release not found", body: objectSchema } } }),
+  deployment: defineRouteContract({ method: "get", path: "/api/publication/deployments/:deploymentId", operationId: "publication.getDeployment", summary: "Get a publication deployment", tags: ["Publication"], authenticated: true, permission: "publication.deployment.view", responses: { 200: { description: "Publication deployment", body: objectSchema }, 400: { description: "Invalid deployment identifier" }, 403: { description: "Forbidden" }, 404: { description: "Deployment not found", body: objectSchema } } }),
+  publish: defineRouteContract({ method: "post", path: "/api/publication/releases/:releaseId/publish", operationId: "publication.publishRelease", summary: "Publish a release", tags: ["Publication"], authenticated: true, permission: "publication.release.publish", responses: { 202: { description: "Publication queued", body: objectSchema }, 400: { description: "Invalid release identifier" }, 403: { description: "Forbidden" }, 404: { description: "Release not found", body: objectSchema }, 503: { description: "Publication API disabled", body: objectSchema } } }),
+  retry: defineRouteContract({ method: "post", path: "/api/publication/deployments/:deploymentId/retry", operationId: "publication.retryDeployment", summary: "Retry a publication deployment", tags: ["Publication"], authenticated: true, permission: "publication.deployment.retry", responses: { 202: { description: "Retry queued", body: objectSchema }, 400: { description: "Invalid deployment identifier" }, 403: { description: "Forbidden" }, 404: { description: "Deployment not found", body: objectSchema }, 503: { description: "Publication API disabled", body: objectSchema } } }),
+  rollback: defineRouteContract({ method: "post", path: "/api/publication/publication-keys/:key/rollback", operationId: "publication.rollbackRelease", summary: "Roll back a publication key", tags: ["Publication"], authenticated: true, permission: "publication.release.rollback", request: { body: { type: "object", required: ["plane", "targetAppliedReleaseId", "reason"], properties: { plane: { type: "string", enum: ["studio", "neon", "mesh"] }, targetAppliedReleaseId: { type: "string" }, reason: { type: "string" } } } }, responses: { 202: { description: "Rollback queued", body: objectSchema }, 400: { description: "Invalid rollback request" }, 403: { description: "Forbidden" }, 503: { description: "Publication API disabled", body: objectSchema } } }),
+} as const;
+
 export function registerPublicationRoutes(application: Application, options: PublicationRouteOptions): void {
-  application.get("/api/publication/releases/:releaseId", options.authenticate, async (request, response, next) => {
+  registerContractRoute(application, contracts.deadLetters, options.authenticate, async (request, response, next) => {
+    try {
+      const context = await requirePermission(options, response, "publication.deployment.view"); if (!context) return;
+      if (!options.operations) { response.status(503).json({ error: "PUBLICATION_OPERATIONS_UNAVAILABLE" }); return; }
+      const plane = optionalPlane(request.query["plane"]), targetInstance = optionalString(request.query["targetInstance"]), cursor = optionalString(request.query["cursor"]), limit = optionalLimit(request.query["limit"]);
+      response.json(await options.operations.listDeadLetters({ tenantId: context.tenantId, ...(plane ? { plane } : {}), ...(targetInstance ? { targetInstance } : {}), ...(cursor ? { cursor } : {}), ...(limit ? { limit } : {}) }));
+    } catch (error) { next(error); }
+  });
+
+  registerContractRoute(application, contracts.destinationHealth, options.authenticate, async (request, response, next) => {
+    try {
+      const context = await requirePermission(options, response, "publication.deployment.view"); if (!context) return;
+      if (!options.operations) { response.status(503).json({ error: "PUBLICATION_OPERATIONS_UNAVAILABLE" }); return; }
+      response.json(await options.operations.destinationHealth(context.tenantId, planeValue(request.params["plane"]), requiredString(request.params, "targetInstance")));
+    } catch (error) { next(error); }
+  });
+
+  registerContractRoute(application, contracts.provenance, options.authenticate, async (request, response, next) => {
+    try {
+      const context = await requirePermission(options, response, "publication.deployment.view"); if (!context) return;
+      if (!options.operations) { response.status(503).json({ error: "PUBLICATION_OPERATIONS_UNAVAILABLE" }); return; }
+      response.json(await options.operations.provenance(context.tenantId, uuid(request.params["deploymentId"])));
+    } catch (error) { next(error); }
+  });
+
+  registerContractRoute(application, contracts.replayDelivery, options.authenticate, async (request, response, next) => {
+    try {
+      const context = await requirePermission(options, response, "publication.deployment.retry"); if (!context) return;
+      if (!options.apiEnabled) { response.status(503).json({ error: "PUBLICATION_API_DISABLED" }); return; }
+      if (!options.operations) { response.status(503).json({ error: "PUBLICATION_OPERATIONS_UNAVAILABLE" }); return; }
+      const result = await options.operations.replay({ deliveryId: uuid(request.params["deliveryId"]), actorId: context.principalId, tenantId: context.tenantId, requestId: context.requestId, reason: requiredString(request.body,"reason"), ...(request.body && typeof request.body === "object" && Reflect.get(request.body,"forceUnhealthy") === true ? { forceUnhealthy: true } : {}) });
+      response.status(202).json(result);
+    } catch (error) { next(error); }
+  });
+
+  registerContractRoute(application, contracts.release, options.authenticate, async (request, response, next) => {
     try {
       const context = await requirePermission(options, response, "publication.release.view");
       if (!context) return;
@@ -26,7 +76,7 @@ export function registerPublicationRoutes(application: Application, options: Pub
     } catch (error) { next(error); }
   });
 
-  application.get("/api/publication/deployments/:deploymentId", options.authenticate, async (request, response, next) => {
+  registerContractRoute(application, contracts.deployment, options.authenticate, async (request, response, next) => {
     try {
       const context = await requirePermission(options, response, "publication.deployment.view");
       if (!context) return;
@@ -35,7 +85,7 @@ export function registerPublicationRoutes(application: Application, options: Pub
     } catch (error) { next(error); }
   });
 
-  application.post("/api/publication/releases/:releaseId/publish", options.authenticate, async (request, response, next) => {
+  registerContractRoute(application, contracts.publish, options.authenticate, async (request, response, next) => {
     try {
       const context = await requirePermission(options, response, "publication.release.publish");
       if (!context) return;
@@ -52,7 +102,7 @@ export function registerPublicationRoutes(application: Application, options: Pub
     } catch (error) { next(error); }
   });
 
-  application.post("/api/publication/deployments/:deploymentId/retry", options.authenticate, async (request, response, next) => {
+  registerContractRoute(application, contracts.retry, options.authenticate, async (request, response, next) => {
     try {
       const context = await requirePermission(options, response, "publication.deployment.retry");
       if (!context) return;
@@ -68,7 +118,7 @@ export function registerPublicationRoutes(application: Application, options: Pub
     } catch (error) { next(error); }
   });
 
-  application.post("/api/publication/publication-keys/:key/rollback", options.authenticate, async (request, response, next) => {
+  registerContractRoute(application, contracts.rollback, options.authenticate, async (request, response, next) => {
     try {
       const context = await requirePermission(options, response, "publication.release.rollback");
       if (!context) return;
@@ -93,4 +143,8 @@ function coordinate(context: VerifiedRequestContext) { return { planeKey: contex
 function uuid(value: unknown): string { const result=String(value??""); if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(result))throw new TypeError("Invalid UUID"); return result; }
 function requiredString(value: unknown,key:string):string{const result=value&&typeof value==="object"?Reflect.get(value,key):undefined;if(typeof result!=="string"||!result.trim())throw new TypeError(`${key} is required`);return result.trim();}
 function requiredPlane(value:unknown):"studio"|"neon"|"mesh"{const plane=requiredString(value,"plane");if(plane!=="studio"&&plane!=="neon"&&plane!=="mesh")throw new TypeError("plane is invalid");return plane;}
+function planeValue(value:unknown):"studio"|"neon"|"mesh"{const plane=String(value??"");if(plane!=="studio"&&plane!=="neon"&&plane!=="mesh")throw new TypeError("plane is invalid");return plane;}
+function optionalPlane(value:unknown):"studio"|"neon"|"mesh"|undefined{return value===undefined?undefined:planeValue(Array.isArray(value)?value[0]:value);}
+function optionalString(value:unknown):string|undefined{const raw=Array.isArray(value)?value[0]:value;return typeof raw==="string"&&raw.trim()?raw.trim():undefined;}
+function optionalLimit(value:unknown):number|undefined{if(value===undefined)return undefined;const result=Number(Array.isArray(value)?value[0]:value);if(!Number.isSafeInteger(result)||result<1||result>200)throw new TypeError("limit is invalid");return result;}
 async function audit(options:PublicationRouteOptions,context:VerifiedRequestContext,action:string,entityId:string,outcome:"success"|"failure",metadata:Readonly<Record<string,unknown>>){await options.audit.record({eventCode:action,action,outcome,severity:"critical",actor:{kind:"user",principalId:context.principalId},tenantId:context.tenantId,entityType:"publication",entityId,requestId:context.requestId,correlationId:context.correlationId,metadata});}

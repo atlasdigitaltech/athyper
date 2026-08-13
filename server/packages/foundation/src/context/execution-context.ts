@@ -15,6 +15,7 @@ export function isPlaneKeyInput(value: unknown): value is PlaneKeyInput {
 
 /** Minimal context shared by requests, jobs, and scheduled work. */
 export interface ExecutionContext {
+  signal?: AbortSignal;
   requestId: string;
   correlationId?: string;
   planeKey?: PlaneKey;

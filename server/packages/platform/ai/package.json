@@ -16,6 +16,7 @@
     "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-records": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
+    "@athyper/server-runtime-http": "workspace:*",
     "kysely": "^0.28.16",
     "express": "^5.0.0"
   },

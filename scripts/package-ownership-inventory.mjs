@@ -6,6 +6,7 @@ import { readdirSync } from "node:fs";
 const root = resolve(import.meta.dirname, "..");
 const normalize = (value) => value.replaceAll("\\", "/");
 const relPath = (value) => normalize(relative(root, value));
+const frontendSpine = JSON.parse(readFileSync(resolve(root, "config/governance/frontend-spine-packages.json"), "utf8"));
 
 const tracked = execFileSync("git", ["ls-files", "**/package.json", "package.json"], {
   cwd: root,
@@ -243,6 +244,14 @@ const markdown = [
   "",
   "Every package must have exactly one classification, one intended owner, one runtime plane, and one proposed final location. Duplicate package names are tracked explicitly and are not treated as independent authorities.",
   "",
+  "## Frontend spine governance",
+  "",
+  "The Phase 0 frontend spine adds an explicit runtime/workspace dependency budget. The generated matrix and `config/governance/frontend-spine-packages.json` must be updated together.",
+  "",
+  "| Package | Physical path | Owner | Classification | Runtime dependency budget | Workspace dependency budget |",
+  "|---|---|---|---|---:|---:|",
+  ...frontendSpine.packages.map((item) => `| ${item.name} | ${item.path} | ${item.owner} | ${item.classification} | ${item.dependencyBudget.runtime} | ${item.dependencyBudget.workspace} |`),
+  "",
   "## Detailed matrix",
   "",
   "| Package | Physical path | Consumers | Owner | Runtime plane | Deployment targets | Duplicate status | Proposed final location | Migration status | Classification |",
@@ -262,6 +271,6 @@ const markdown = [
   "- Windows source junctions are not deployment authorities; pnpm `node_modules` links are generated dependencies and are allowed.",
 ].join("\n");
 
-writeFileSync(jsonPath, JSON.stringify({ generatedAt: new Date().toISOString(), categoryValues, counts, rows }, null, 2) + "\n");
+writeFileSync(jsonPath, JSON.stringify({ generatedAt: new Date().toISOString(), categoryValues, counts, frontendSpine, rows }, null, 2) + "\n");
 writeFileSync(markdownPath, markdown + "\n");
 console.log(`Wrote ${rows.length} package rows to ${relPath(markdownPath)} and ${relPath(jsonPath)}.`);

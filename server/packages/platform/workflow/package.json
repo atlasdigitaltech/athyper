@@ -15,6 +15,7 @@
     "@athyper/server-contract-audit": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-events": "workspace:*",
+    "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-policy": "workspace:*",
     "@athyper/server-contract-workflow": "workspace:*",

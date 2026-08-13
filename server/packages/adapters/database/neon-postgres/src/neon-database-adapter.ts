@@ -41,10 +41,12 @@ export interface NeonDatabaseAdapter<Database = NeonDatabase> {
   /** System-level query builder. Tenant mutations must use withTenantTransaction. */
   readonly database: Kysely<Database>;
   withTenantTransaction<Result>(
-    work: (transaction: NeonTenantTransaction<Database>) => Promise<Result>,
+    work: (transaction: NeonTenantTransaction<Database>, signal?: AbortSignal) => Promise<Result>,
+    signal?: AbortSignal,
   ): Promise<Result>;
   withSystemTransaction<Result>(
-    work: (transaction: NeonSystemTransaction<Database>) => Promise<Result>,
+    work: (transaction: NeonSystemTransaction<Database>, signal?: AbortSignal) => Promise<Result>,
+    signal?: AbortSignal,
   ): Promise<Result>;
   health(): Promise<DatabaseHealth>;
   poolStats(): PostgresPoolStats;
@@ -83,18 +85,25 @@ export function createNeonAdapterRuntime<Database>(
   return {
     database: dependencies.database,
 
-    async withTenantTransaction(work) {
+    async withTenantTransaction(work, signal) {
       const actor = requireActor(dependencies.actorProvider);
-      return dependencies.runner.run(
-        (transaction) => work(transaction as NeonTenantTransaction<Database>),
-        actor,
+      const runWork = (transaction: Transaction<Database>, propagatedSignal?: AbortSignal) => work(
+        transaction as NeonTenantTransaction<Database>,
+        propagatedSignal ?? signal,
       );
+      return signal
+        ? dependencies.runner.run(runWork, actor, signal)
+        : dependencies.runner.run(runWork, actor);
     },
 
-    async withSystemTransaction(work) {
-      return dependencies.runner.run((transaction) =>
-        work(transaction as NeonSystemTransaction<Database>),
+    async withSystemTransaction(work, signal) {
+      const runWork = (transaction: Transaction<Database>, propagatedSignal?: AbortSignal) => work(
+        transaction as NeonSystemTransaction<Database>,
+        propagatedSignal ?? signal,
       );
+      return signal
+        ? dependencies.runner.run(runWork, undefined, signal)
+        : dependencies.runner.run(runWork);
     },
 
     health: () => checkPostgresPoolHealth(dependencies.pool),

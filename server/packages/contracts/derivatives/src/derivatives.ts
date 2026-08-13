@@ -81,6 +81,7 @@ export interface DerivativeScheduleRequest {
   readonly principalId: string;
   /** Hex SHA-256 of the source file — used as deduplication key. */
   readonly sourceSha256: string;
+  readonly rebuild?: { readonly mode: "missing" | "failed" | "all"; readonly reason: string; readonly requestId: string };
 }
 
 /** Schedules derivative generation jobs. */
@@ -108,6 +109,7 @@ export interface DerivativeRepository<Transaction> {
       specificationHash: string;
       contentType: string;
       principalId: string;
+      forceRebuild?: boolean;
     },
     tx: Transaction,
   ): Promise<AttachmentDerivativeRecord>;

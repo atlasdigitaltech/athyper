@@ -34,9 +34,13 @@ export interface AthyperDatabaseAdapterConfig extends PostgresPoolConfig {
 export interface AthyperDatabaseAdapter<Database = AthyperDatabase> {
   /** Administrative query builder; this plane intentionally spans tenants. */
   readonly database: Kysely<Database>;
-  withTenantTransaction<Result>(work: (transaction: AthyperTenantTransaction<Database>) => Promise<Result>): Promise<Result>;
+  withTenantTransaction<Result>(
+    work: (transaction: AthyperTenantTransaction<Database>, signal?: AbortSignal) => Promise<Result>,
+    signal?: AbortSignal,
+  ): Promise<Result>;
   withSystemTransaction<Result>(
-    work: (transaction: AthyperSystemTransaction<Database>) => Promise<Result>,
+    work: (transaction: AthyperSystemTransaction<Database>, signal?: AbortSignal) => Promise<Result>,
+    signal?: AbortSignal,
   ): Promise<Result>;
   health(): Promise<DatabaseHealth>;
   poolStats(): PostgresPoolStats;
@@ -74,14 +78,25 @@ export function createAthyperAdapterRuntime<Database>(
 
   return {
     database: dependencies.database,
-    withTenantTransaction: (work) => dependencies.runner.run(
-      (transaction) => work(transaction as AthyperTenantTransaction<Database>),
-      requireActor(dependencies.actorProvider),
-    ),
-    withSystemTransaction: (work) =>
-      dependencies.runner.run((transaction) =>
-        work(transaction as AthyperSystemTransaction<Database>),
-      ),
+    withTenantTransaction: (work, signal) => {
+      const runWork = (transaction: Transaction<Database>, propagatedSignal?: AbortSignal) => work(
+        transaction as AthyperTenantTransaction<Database>,
+        propagatedSignal ?? signal,
+      );
+      const actor = requireActor(dependencies.actorProvider);
+      return signal
+        ? dependencies.runner.run(runWork, actor, signal)
+        : dependencies.runner.run(runWork, actor);
+    },
+    withSystemTransaction: (work, signal) => {
+      const runWork = (transaction: Transaction<Database>, propagatedSignal?: AbortSignal) => work(
+        transaction as AthyperSystemTransaction<Database>,
+        propagatedSignal ?? signal,
+      );
+      return signal
+        ? dependencies.runner.run(runWork, undefined, signal)
+        : dependencies.runner.run(runWork);
+    },
     health: () => checkPostgresPoolHealth(dependencies.pool),
     poolStats: () =>
       getPostgresPoolStats(dependencies.pool, dependencies.poolMax),

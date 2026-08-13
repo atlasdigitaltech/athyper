@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type {
   AuditEventFilter,
@@ -13,6 +13,7 @@ import type {
   PiiInventoryEntry,
   RetentionPolicy,
 } from "@athyper/server-contract-audit";
+import {createAuditIntegrityVerifier} from "./audit-integrity.js";
 
 export class AuditGovernanceError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) { super(message); this.name = "AuditGovernanceError"; }
@@ -67,17 +68,19 @@ export function createAuditGovernanceService(options: AuditGovernanceServiceOpti
     async verifyIntegrity(context: VerifiedRequestContext, filter: AuditEventFilter): Promise<AuditIntegrityEvidence> {
       validateFilter(filter, 3_650);
       await permit(options.authorizer, context, "audit.integrity.verify", { filter });
-      const hash = createHash("sha256"); let eventCount = 0;
-      for await (const batch of options.store.stream(context.tenantId, filter, 500)) for (const event of batch) { hash.update(stableJson(event)); eventCount += 1; }
-      const calculatedHash = hash.digest("hex");
+      const precedingAnchor = await options.store.findAnchor(context.tenantId, filter.occurredFrom);
+      const verifier=createAuditIntegrityVerifier(precedingAnchor ? { precedingHash: precedingAnchor.hash } : {});
+      for await (const batch of options.store.stream(context.tenantId, filter, 500)) for (const event of batch) verifier.append(event);
+      const diagnostic=verifier.finish(),calculatedHash=diagnostic.chainHead??diagnostic.snapshotHash,eventCount=diagnostic.eventCount;
       const anchor = await options.store.findAnchor(context.tenantId, filter.occurredUntil);
-      const evidence: AuditIntegrityEvidence = Object.freeze({ id: id(), tenantId: context.tenantId, checkedFrom: filter.occurredFrom, checkedUntil: filter.occurredUntil, eventCount, valid: !anchor || anchor.hash === calculatedHash, calculatedHash, ...(anchor ? { anchorHash: anchor.hash } : {}), createdAt: now().toISOString(), actorPrincipalId: context.principalId });
+      const evidence: AuditIntegrityEvidence = Object.freeze({ id: id(), tenantId: context.tenantId, checkedFrom: filter.occurredFrom, checkedUntil: filter.occurredUntil, eventCount, valid: diagnostic.valid&&(!anchor || anchor.hash === calculatedHash), verificationStatus: diagnostic.verificationStatus, integrityIssues: diagnostic.issues.map(issue=>issue.code), calculatedHash, ...(anchor ? { anchorHash: anchor.hash } : {}), createdAt: now().toISOString(), actorPrincipalId: context.principalId });
       await options.store.appendIntegrityEvidence(evidence);
       return evidence;
     },
     async createHashAnchor(context: VerifiedRequestContext, filter: AuditEventFilter): Promise<AuditHashAnchor> {
       await permit(options.authorizer, context, "audit.integrity.anchor", { filter });
       const evidence = await this.verifyIntegrity(context, filter);
+      if (!evidence.valid || evidence.verificationStatus !== "verified") throw new AuditGovernanceError(409, "AUDIT_INTEGRITY_NOT_VERIFIED", "Only fully verified chained evidence can be anchored");
       const anchor: AuditHashAnchor = Object.freeze({ tenantId: context.tenantId, periodEnd: filter.occurredUntil, hash: evidence.calculatedHash, createdAt: now().toISOString() });
       await options.store.appendAnchor(anchor); return anchor;
     },
@@ -96,4 +99,3 @@ export function createAuditGovernanceService(options: AuditGovernanceServiceOpti
 
 function validateFilter(filter: AuditEventFilter, maxDays: number): void { const from = new Date(filter.occurredFrom); const until = new Date(filter.occurredUntil); if (!Number.isFinite(from.getTime()) || !Number.isFinite(until.getTime()) || until <= from) throw new AuditGovernanceError(400, "AUDIT_FILTER_RANGE_INVALID", "Audit filter requires a valid increasing time range"); if (until.getTime() - from.getTime() > maxDays * 86_400_000) throw new AuditGovernanceError(400, "AUDIT_FILTER_RANGE_TOO_LARGE", `Audit filter range exceeds ${maxDays} days`); if ((filter.eventCodes?.length ?? 0) > 50 || (filter.actorPrincipalIds?.length ?? 0) > 50) throw new AuditGovernanceError(400, "AUDIT_FILTER_TOO_BROAD", "Audit filter contains too many values"); }
 async function permit(authorizer: Authorizer, context: VerifiedRequestContext, permissionCode: string, resource: Readonly<Record<string, unknown>>): Promise<void> { if (!(await authorizer.authorize({ context, permissionCode, resource })).allowed) throw new AuditGovernanceError(403, "FORBIDDEN", `Permission denied: ${permissionCode}`); }
-function stableJson(value: unknown): string { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`; return `{${Object.entries(value as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${stableJson(item)}`).join(",")}}`; }

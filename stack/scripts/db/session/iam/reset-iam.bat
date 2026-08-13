@@ -110,6 +110,12 @@ if errorlevel 1 (
 
 echo Using checked-in realm-athyper.json.
 
+node "%REPO_DIR%\tools\scripts\normalize-keycloak-plane-contract.mjs"
+if errorlevel 1 (
+    echo Error: realm-athyper.json does not satisfy the active plane contract
+    exit /b 1
+)
+
 set "DEMO_REALM_NAME="
 for /f "usebackq delims=" %%r in (`node -e "const fs=require('fs'); const file=process.argv[1]; const realm=JSON.parse(fs.readFileSync(file,'utf8')).realm; if(realm===undefined||realm===null||realm==='') process.exit(1); process.stdout.write(realm);" "%IMPORT_FILE%"`) do set "DEMO_REALM_NAME=%%r"
 if errorlevel 1 (

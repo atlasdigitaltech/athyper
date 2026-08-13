@@ -15,6 +15,10 @@ CREATE UNIQUE INDEX atlas_tenant_provider_credential_active_uq ON ai.atlas_tenan
 
 CREATE INDEX atlas_tenant_provider_credential_rotation_idx ON ai.atlas_tenant_provider_credential USING btree (tenant_id, key_version, status);
 
+CREATE INDEX atlas_tenant_quota_window_active_idx ON ai.atlas_tenant_quota_window USING btree (tenant_id, window_ends_at DESC);
+
+CREATE INDEX atlas_tenant_quota_reservation_expiry_idx ON ai.atlas_tenant_quota_reservation USING btree (tenant_id, window_started_at, expires_at) WHERE status = 'reserved'::text;
+
 -- ============================================================================
 -- event/04_indexes.sql
 -- Non-constraint indexes reconstructed from the live catalog.

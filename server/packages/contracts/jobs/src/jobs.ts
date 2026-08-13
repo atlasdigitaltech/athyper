@@ -49,6 +49,8 @@ export interface JobEnvelope<
 
 export interface EnqueueOptions {
   readonly jobId?: string;
+  /** Stable semantic key used to derive a BullMQ-safe job id. Mutually exclusive with jobId. */
+  readonly enqueueKey?: string;
   readonly delayMs?: number;
   readonly maxAttempts?: number;
   readonly priority?: number;

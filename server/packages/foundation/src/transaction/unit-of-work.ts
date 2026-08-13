@@ -12,6 +12,7 @@ export interface PlaneTransactionCoordinator<Transaction = unknown> {
   run<Result>(
     planeKey: PlaneKey,
     actor: TransactionActor,
-    work: (transaction: Transaction) => Promise<Result>,
+    work: (transaction: Transaction, signal?: AbortSignal) => Promise<Result>,
+    signal?: AbortSignal,
   ): Promise<Result>;
 }

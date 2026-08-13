@@ -22,9 +22,11 @@ import type { ClosableJobScheduler } from "@athyper/server-runtime-scheduling";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type { Authenticator, Authorizer, AuthorizationManagementService } from "@athyper/server-contract-auth";
 import type { IdentityProvisioningService, OrganizationProjectionService, OrganizationService, ProjectionScopeService, ProvisioningVertical } from "@athyper/server-platform-iam";
+import type { createExperienceInvalidationHooks, createExperienceService } from "@athyper/server-platform-experience";
 import type { MetadataReader } from "@athyper/server-contract-metadata";
 import type { PolicyService } from "@athyper/server-contract-policy";
 import type { RecordMutationService, RecordQueryService, RecordSnapshotService } from "@athyper/server-contract-records";
+import type { RecordTransferService } from "@athyper/server-service-records";
 import type { WorkflowService } from "@athyper/server-contract-workflow";
 import type { DocumentService } from "@athyper/server-contract-documents";
 import type { AttachmentLifecycle } from "@athyper/server-service-attachments";
@@ -36,7 +38,7 @@ import type { BookPeriodService, FinancePostingGuard, RoundingResolver } from "@
 import type { NeonFinanceRegistration } from "@athyper/server-plane-neon";
 import type { ChannelConsentService, CycleCertificationService, CycleDeviationService, CycleRunService, CycleTaskService, LegalHoldService, ModerationService, ReportPackService } from "@athyper/server-contract-governance";
 import type { CycleConfigReader, CycleConfigService } from "@athyper/server-contract-control-admin";
-import type { ControlServices, ControlServiceRouteFlags } from "@athyper/server-platform-control-admin";
+import type { ControlServices, ControlServiceRouteFlags, RuntimeCommandService } from "@athyper/server-platform-control-admin";
 import type { AtlasToolProposalStore } from "@athyper/server-contract-ai";
 import type { AtlasA2Services, AtlasAgentRuntime, AtlasThreadService, AtlasToolService } from "@athyper/server-platform-ai";
 import type { Application } from "@athyper/server-runtime-http";
@@ -97,9 +99,10 @@ export interface Container {
     metadata?: MetadataReader;
     policy?: PolicyService;
     governance?: { readonly consent: ChannelConsentService; readonly moderation:ModerationService; readonly cycleConfig: CycleConfigReader; readonly cycleRuns: CycleRunService; readonly cycleTasks: CycleTaskService; readonly cycleDeviations: CycleDeviationService; readonly cycleCertifications: CycleCertificationService; readonly legalHolds?:LegalHoldService; readonly reportPacks?:ReportPackService; readonly routesEnabled: boolean };
-    controlAdmin?: { readonly cycleConfig?: CycleConfigService; readonly services?: ControlServices; readonly authorizationManagement?: AuthorizationManagementService; readonly routeFlags: ControlServiceRouteFlags; readonly routesEnabled: boolean };
+    controlAdmin?: { readonly cycleConfig?: CycleConfigService; readonly services?: ControlServices; readonly runtimeCommands?: RuntimeCommandService; readonly authorizationManagement?: AuthorizationManagementService; readonly routeFlags: ControlServiceRouteFlags; readonly routesEnabled: boolean };
     ai?: { readonly ledger: AtlasToolProposalStore; readonly threads?: AtlasThreadService; readonly runtime?: AtlasAgentRuntime; readonly tools?: AtlasToolService; readonly operations?: AtlasA2Services; readonly routesEnabled: boolean; readonly toolsEnabled: boolean };
     search?: DocumentSearchService;
+    experience?: { readonly service: ReturnType<typeof createExperienceService>; readonly invalidation: ReturnType<typeof createExperienceInvalidationHooks> };
     readonly httpRegistrars: Array<(application: Application) => void>;
   };
   readonly services: {
@@ -107,6 +110,7 @@ export interface Container {
       readonly queries: RecordQueryService;
       readonly mutations: RecordMutationService;
       readonly snapshots?: RecordSnapshotService;
+      readonly transfers?: RecordTransferService;
     };
     finance?: { readonly executionPlane: "neon"; readonly routesEnabled: boolean; readonly periods?: BookPeriodService<any>; readonly rounding?: RoundingResolver; readonly postingGuard?: FinancePostingGuard; readonly slices?: NeonFinanceRegistration["slices"] };
     workflow?: WorkflowService;

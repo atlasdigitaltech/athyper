@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Queue, Worker, type JobsOptions, type Processor } from "bullmq";
 import type {
   EnqueueOptions,
@@ -35,11 +36,19 @@ export interface BullMqQueueLike {
   add(name: string, data: JobPayload, options: JobsOptions): Promise<{ readonly id?: string }>;
   close(): Promise<void>;
   getJob?(jobId: string): Promise<BullMqStoredJobLike | undefined>;
+  getJobs?(types: "failed"[], start: number, end: number): Promise<readonly BullMqStoredJobLike[]>;
 }
 
 export interface BullMqStoredJobLike {
+  readonly id?: string;
+  readonly name?: string;
+  readonly data?: unknown;
+  readonly opts?: JobsOptions;
+  readonly attemptsMade?: number;
+  readonly failedReason?: string;
   remove(): Promise<void>;
   retry(state?: "failed" | "completed"): Promise<void>;
+  getState?(): Promise<string>;
 }
 
 export interface BullMqWorkerLike {
@@ -68,6 +77,16 @@ export interface BullMqJobRuntimeOptions extends BullMqJobRuntimeFactories {
 export interface JobRuntime extends JobPublisher, JobHandlerRegistry, JobTransportControl {
   start(): Promise<void>;
   close(): Promise<void>;
+  listDeadLetters(queue: string, input?: { readonly offset?: number; readonly limit?: number }): Promise<readonly BullMqDeadLetter[]>;
+  replayDeadLetter(queue: string, jobId: string, replayKey: string): Promise<string | undefined>;
+}
+
+export interface BullMqDeadLetter {
+  readonly jobId: string;
+  readonly queue: string;
+  readonly name: string;
+  readonly attemptsMade: number;
+  readonly failureReason?: string;
 }
 
 export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRuntime {
@@ -122,12 +141,19 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
           ? { execution: enqueueOptions.execution }
           : inferredExecution ? { execution: inferredExecution } : {}),
       };
+      if (effectiveOptions.jobId && effectiveOptions.enqueueKey) {
+        throw new Error("enqueue options jobId and enqueueKey are mutually exclusive");
+      }
+      const resolvedJobId = effectiveOptions.jobId
+        ?? (effectiveOptions.enqueueKey
+          ? createDeterministicEnqueueId(queue, name, effectiveOptions.enqueueKey)
+          : undefined);
       validateExecution(effectiveOptions.execution);
       const storedData = encodeBullMqJobData(data, effectiveOptions);
       const job = await queueFor(queue).add(
         name,
         storedData,
-        toBullMqOptions(effectiveOptions),
+        toBullMqOptions(effectiveOptions, resolvedJobId),
       );
       if (!job.id) throw new Error(`BullMQ did not assign an id to ${queue}/${name}`);
       await options.lifecycle?.enqueued({
@@ -136,7 +162,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
         name,
         data,
         maxAttempts: effectiveOptions.maxAttempts ?? 1,
-        executionKey: effectiveOptions.jobId ?? job.id,
+        executionKey: effectiveOptions.enqueueKey ?? resolvedJobId ?? job.id,
         ...(effectiveOptions.execution ? { execution: effectiveOptions.execution } : {}),
         ...(effectiveOptions.subject ? { subject: effectiveOptions.subject } : {}),
         ...(effectiveOptions.payloadSchema ? { payloadSchema: effectiveOptions.payloadSchema } : {}),
@@ -166,6 +192,41 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
       if (!target) return false;
       await target.retry("failed");
       return true;
+    },
+
+    async listDeadLetters(queue, input = {}) {
+      assertOpen(closed);
+      validateName("queue", queue);
+      const offset = positiveOrZeroInteger("offset", input.offset ?? 0);
+      const limit = boundedInteger("limit", input.limit ?? 50, 1, 200);
+      const failed = await queueFor(queue).getJobs?.(["failed"], offset, offset + limit - 1) ?? [];
+      return failed.flatMap((job): BullMqDeadLetter[] => {
+        if (!job.id || !job.name) return [];
+        return [{
+          jobId: job.id,
+          queue,
+          name: job.name,
+          attemptsMade: job.attemptsMade ?? 0,
+          ...(job.failedReason ? { failureReason: job.failedReason } : {}),
+        }];
+      });
+    },
+
+    async replayDeadLetter(queue, jobId, replayKey) {
+      assertOpen(closed);
+      validateName("queue", queue);
+      validateEnqueueKey(replayKey);
+      const targetQueue = queueFor(queue);
+      const source = await targetQueue.getJob?.(jobId);
+      if (!source || !source.id || !source.name || !isPayload(source.data)) return undefined;
+      if (source.getState && await source.getState() !== "failed") return undefined;
+      const replayId = createDeterministicEnqueueId(queue, source.name, `replay:${jobId}:${replayKey}`);
+      const replay = await targetQueue.add(source.name, source.data as JobPayload, {
+        ...replayableOptions(source.opts),
+        jobId: replayId,
+      });
+      if (!replay.id) throw new Error(`BullMQ did not assign an id to replay ${queue}/${source.name}`);
+      return replay.id;
     },
 
     async start() {
@@ -256,9 +317,9 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
   };
 }
 
-function toBullMqOptions(options: EnqueueOptions): JobsOptions {
+function toBullMqOptions(options: EnqueueOptions, resolvedJobId = options.jobId): JobsOptions {
   return {
-    ...(options.jobId ? { jobId: options.jobId } : {}),
+    ...(resolvedJobId ? { jobId: resolvedJobId } : {}),
     ...(options.delayMs !== undefined ? { delay: positiveOrZero("delayMs", options.delayMs) } : {}),
     ...(options.maxAttempts !== undefined
       ? { attempts: positiveInteger("maxAttempts", options.maxAttempts) }
@@ -275,6 +336,33 @@ function toBullMqOptions(options: EnqueueOptions): JobsOptions {
           },
         }
       : {}),
+    ...(options.removeOnComplete !== undefined ? { removeOnComplete: options.removeOnComplete } : {}),
+    ...(options.removeOnFail !== undefined ? { removeOnFail: options.removeOnFail } : {}),
+  };
+}
+
+export function createDeterministicEnqueueId(queue: string, name: string, enqueueKey: string): string {
+  validateName("queue", queue);
+  validateName("job", name);
+  validateEnqueueKey(enqueueKey);
+  const digest = createHash("sha256")
+    .update(queue).update("\0").update(name).update("\0").update(enqueueKey)
+    .digest("hex");
+  return `athyper-${digest}`;
+}
+
+function validateEnqueueKey(value: string): void {
+  if (!value.trim() || value.length > 512 || /[\u0000-\u001f]/.test(value)) {
+    throw new Error("enqueueKey is invalid");
+  }
+}
+
+function replayableOptions(options: JobsOptions | undefined): JobsOptions {
+  if (!options) return {};
+  return {
+    ...(options.attempts !== undefined ? { attempts: options.attempts } : {}),
+    ...(options.priority !== undefined ? { priority: options.priority } : {}),
+    ...(options.backoff !== undefined ? { backoff: options.backoff } : {}),
     ...(options.removeOnComplete !== undefined ? { removeOnComplete: options.removeOnComplete } : {}),
     ...(options.removeOnFail !== undefined ? { removeOnFail: options.removeOnFail } : {}),
   };
@@ -428,6 +516,18 @@ function positiveOrZero(name: string, value: number): number {
 
 function positiveInteger(name: string, value: number): number {
   if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`);
+  return value;
+}
+
+function positiveOrZeroInteger(name: string, value: number): number {
+  if (!Number.isInteger(value) || value < 0) throw new Error(`${name} must be a non-negative integer`);
+  return value;
+}
+
+function boundedInteger(name: string, value: number, minimum: number, maximum: number): number {
+  if (!Number.isInteger(value) || value < minimum || value > maximum) {
+    throw new Error(`${name} must be between ${minimum} and ${maximum}`);
+  }
   return value;
 }
 

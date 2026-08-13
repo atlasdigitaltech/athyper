@@ -373,3 +373,10 @@ GRANT INSERT ON TABLE "ai"."atlas_thread" TO athyperapp;
 GRANT SELECT ON TABLE "ai"."atlas_thread" TO athyperapp;
 
 GRANT UPDATE ON TABLE "ai"."atlas_thread" TO athyperapp;
+
+GRANT ALL PRIVILEGES ON TABLE "ai"."atlas_tenant_quota_policy" TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE ON TABLE "ai"."atlas_tenant_quota_policy" TO athyperapp;
+GRANT ALL PRIVILEGES ON TABLE "ai"."atlas_tenant_quota_window" TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE ON TABLE "ai"."atlas_tenant_quota_window" TO athyperapp;
+GRANT ALL PRIVILEGES ON TABLE "ai"."atlas_tenant_quota_reservation" TO athyperadmin;
+GRANT SELECT, INSERT, UPDATE ON TABLE "ai"."atlas_tenant_quota_reservation" TO athyperapp;

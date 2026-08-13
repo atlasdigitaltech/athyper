@@ -1,4 +1,4 @@
-<#-- Neon Theme — webauthn-error.ftl -->
+ï»¿<#-- Neon Theme â€” webauthn-error.ftl -->
 <#include "_iam-context.ftl">
 <!DOCTYPE html>
 <html lang="${locale!'en'}">
@@ -13,21 +13,10 @@
 </head>
 <body>
 <div class="iam-shell kc-page" data-plane="${iamPlane}">
-  <div class="kc-panel-left">
-    <#include "_neon-brand-logo.ftl">
-    <div class="kc-carousel">
-      <div class="kc-slide active">
-        <p class="kc-slide-ws">Security</p>
-        <h3>Protect Every<br>Access Point.</h3>
-        <p class="kc-slide-desc">Hardware security keys and passkeys provide phishing-resistant authentication — the strongest second factor available.</p>
-      </div>
-    </div>
-    <div class="kc-dots"><button class="kc-dot active"></button></div>
-  </div>
+  <#include "_iam-header.ftl">
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
       <div class="kc-form-card">
-        <#include "_neon-brand-mobile.ftl">
         <div style="display:flex;justify-content:center;margin-bottom:1.25rem;">
           <div style="width:3rem;height:3rem;border-radius:50%;background:#ef4444;display:flex;align-items:center;justify-content:center;">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -61,8 +50,8 @@
         </div>
       </div>
     </div>
-    <div class="kc-footer"><p>&copy; ${.now?string("yyyy")} athyper. All rights reserved.</p></div>
   </div>
+  <#include "_footer.ftl">
 </div>
 </body>
 </html>

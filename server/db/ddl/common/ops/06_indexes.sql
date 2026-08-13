@@ -51,3 +51,13 @@ CREATE INDEX authorization_session_shadow_gate_idx ON ops.authorization_session_
 CREATE INDEX authorization_session_shadow_tenant_idx ON ops.authorization_session_shadow_comparison(tenant_id,principal_id,observed_at DESC);
 CREATE INDEX record_edit_lock_expiry_idx ON ops.record_edit_lock (tenant_id, expires_at);
 CREATE INDEX record_edit_lock_owner_idx ON ops.record_edit_lock (tenant_id, owner_principal_id, expires_at DESC);
+CREATE INDEX control_runtime_command_submission_lookup_idx
+ ON ops.control_runtime_command_submission(tenant_id,idempotency_key,occurred_at DESC);
+CREATE INDEX control_runtime_command_approval_request_tenant_idx
+ ON ops.control_runtime_command_approval_request(tenant_id,requested_at DESC);
+CREATE INDEX control_runtime_command_history_tenant_idx
+ ON ops.control_runtime_command_history(tenant_id,plane_code,sequence_no DESC);
+CREATE INDEX record_import_session_status_idx ON ops.record_import_session(tenant_id,status,created_at);
+CREATE INDEX record_import_session_owner_idx ON ops.record_import_session(tenant_id,created_by,created_at DESC);
+CREATE INDEX record_export_request_status_idx ON ops.record_export_request(tenant_id,status,requested_at);
+CREATE INDEX record_export_request_owner_idx ON ops.record_export_request(tenant_id,actor_principal_id,requested_at DESC);

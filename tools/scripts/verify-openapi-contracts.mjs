@@ -8,6 +8,7 @@ const baseline = new Set(baselineDocument.routes);
 const sourceExclusions = new Map(baselineDocument.sources.map((entry) => [entry.source, entry.reason]));
 const observedBaseline = new Set();
 const observedSourceExclusions = new Set();
+let sourceExcludedRouteCount = 0;
 const operationIds = new Map();
 const failures = [];
 
@@ -22,12 +23,18 @@ for (const scanRoot of scanRoots) {
       if (previous) failures.push(`Duplicate operationId ${operationId}: ${previous}, ${relative(root, file)}`);
       else operationIds.set(operationId, relative(root, file));
     }
+    for (const match of source.matchAll(/registerContractRoute\s*\([^,]+,\s*contract\(\s*["'`](?:get|post|put|patch|delete)["'`]\s*,\s*["'`][^"'`]+["'`]\s*,\s*["'`]([^"'`]+)["'`]/g)) {
+      const operationId = match[1];
+      const previous = operationIds.get(operationId);
+      if (previous) failures.push(`Duplicate operationId ${operationId}: ${previous}, ${relative(root, file)}`);
+      else operationIds.set(operationId, relative(root, file));
+    }
     if (file.includes(join("runtime", "http"))) continue;
     for (const match of source.matchAll(/\b(?:application|app|router)\.(get|post|put|patch|delete)\s*\(\s*["'`]([^"'`]+)["'`]/g)) {
       const line = source.slice(0, match.index).split("\n").length;
       const key = `${match[1].toUpperCase()} ${match[2]}`;
       if (baseline.has(key)) observedBaseline.add(key);
-      else if (sourceExclusions.has(sourcePath)) observedSourceExclusions.add(sourcePath);
+      else if (sourceExclusions.has(sourcePath)) { observedSourceExclusions.add(sourcePath); sourceExcludedRouteCount += 1; }
       else failures.push(`Undocumented route ${key} at ${relative(root, file)}:${line}; use registerContractRoute or add an explicit source exclusion with a reason`);
     }
   }
@@ -40,10 +47,19 @@ for (const [source, reason] of sourceExclusions) {
   if (typeof reason !== "string" || !reason.trim()) failures.push(`Source exclusion requires a reason: ${source}`);
   if (!observedSourceExclusions.has(source)) failures.push(`Stale source exclusion (remove it): ${source}`);
 }
+const debtSnapshot = baselineDocument.debtSnapshot;
+const totalRawRoutes = baseline.size + sourceExcludedRouteCount;
+if (!debtSnapshot || typeof debtSnapshot !== "object") failures.push("Raw-route baseline requires a debtSnapshot");
+else {
+  const observed = { namedRoutes: baseline.size, sourceExcludedRoutes: sourceExcludedRouteCount, sourceExclusions: observedSourceExclusions.size, totalRawRoutes };
+  for (const [name, value] of Object.entries(observed)) {
+    if (debtSnapshot[name] !== value) failures.push(`OpenAPI debt snapshot ${name} is ${debtSnapshot[name]}; observed ${value}. Update it only when intentionally migrating or baselining routes.`);
+  }
+}
 if (failures.length) {
   console.error(failures.join("\n"));
   process.exitCode = 1;
-} else console.log(`Verified ${operationIds.size} unique OpenAPI operation contracts; ${baseline.size} legacy raw routes and ${observedSourceExclusions.size} raw-route sources are explicitly excluded with reasons; no unclassified public routes.`);
+} else console.log(`Verified ${operationIds.size} unique OpenAPI operation contracts; ${totalRawRoutes} raw routes remain (${baseline.size} named, ${sourceExcludedRouteCount} in ${observedSourceExclusions.size} source exclusions); the debt snapshot is exact and no public route is unclassified.`);
 
 async function files(directory) {
   const output = [];

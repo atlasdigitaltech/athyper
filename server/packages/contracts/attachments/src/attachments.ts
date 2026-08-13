@@ -1,9 +1,12 @@
 /** Public, capability-neutral attachment lifecycle vocabulary. */
 export type AttachmentStatus="pending"|"uploading"|"uploaded"|"processing"|"active"|"quarantined"|"rejected"|"orphaned"|"archived"|"expired"|"deleted"|"failed";
 export interface AttachmentIdentity { readonly planeKey:"studio"|"neon"|"mesh"; readonly tenantId:string; readonly attachmentId:string; readonly principalId:string; }
-export interface AttachmentUploadIntent extends AttachmentIdentity { readonly fileName:string; readonly contentType:string; readonly sizeBytes?:number; readonly entityType?:string; readonly entityId?:string; readonly parentAttachmentId?:string; readonly seriesId?:string; }
+export interface AttachmentProvenance { readonly source:"user_upload"|"system_generated"|"import"|"external"; readonly sourceId?:string; readonly sourceVersion?:string; readonly acquiredAt?:string; }
+export interface AttachmentUploadIntent extends AttachmentIdentity { readonly fileName:string; readonly contentType:string; readonly sizeBytes?:number; readonly entityType?:string; readonly entityId?:string; readonly parentAttachmentId?:string; readonly seriesId?:string; readonly provenance?:AttachmentProvenance; }
 export interface StagedUpload { readonly attachmentId:string; readonly storageKey:string; readonly uploadUrl:string; readonly expiresAt:string; }
-export interface AttachmentLifecycleScheduler { scheduleExtraction(identity:AttachmentIdentity):Promise<void>; scheduleDerivatives(identity:AttachmentIdentity&{readonly sourceSha256:string}):Promise<void>; schedulePurge(identity:AttachmentIdentity):Promise<void>; scheduleSearchRemoval?(identity:AttachmentIdentity,reason:string):Promise<void>; }
+export type DerivativeRebuildMode="missing"|"failed"|"all";
+export interface DerivativeRebuildControl { readonly mode:DerivativeRebuildMode; readonly reason:string; readonly requestId:string; }
+export interface AttachmentLifecycleScheduler { scheduleExtraction(identity:AttachmentIdentity,options?:{readonly jobId:string}):Promise<void>; scheduleDerivatives(identity:AttachmentIdentity&{readonly sourceSha256:string},options?:{readonly jobId:string;readonly rebuild?:DerivativeRebuildControl}):Promise<void>; schedulePurge(identity:AttachmentIdentity,options?:{readonly jobId:string}):Promise<void>; scheduleSearchRemoval?(identity:AttachmentIdentity,reason:string,options?:{readonly jobId:string}):Promise<void>; }
 export interface AttachmentSearchRemoval { remove(identity:Pick<AttachmentIdentity,"planeKey"|"tenantId"|"attachmentId">):Promise<void>; }
 /** Lifecycle status of an attachment series. */
 export type AttachmentSeriesStatus="active"|"expired"|"deleted"|"purge_requested"|"purge_processing"|"purged";

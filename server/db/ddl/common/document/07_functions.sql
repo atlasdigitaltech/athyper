@@ -16,3 +16,35 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+-- Plane-global discovery boundary for the scheduler. Tenant work is returned
+-- as coordinates only; each child sweep re-enters tenant RLS independently.
+CREATE OR REPLACE FUNCTION document.fn_workflow_sla_due_tenants(
+    p_at timestamptz,
+    p_limit integer DEFAULT 500
+)
+RETURNS TABLE (tenant_id uuid)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = document, master, pg_catalog
+AS $$
+BEGIN
+    IF p_at IS NULL OR p_limit NOT BETWEEN 1 AND 1000 THEN
+        RAISE EXCEPTION 'invalid workflow SLA tenant-discovery arguments';
+    END IF;
+    RETURN QUERY
+    SELECT tenant.id
+      FROM master.tenant AS tenant
+     WHERE tenant.status = 'active'
+       AND EXISTS (
+           SELECT 1
+             FROM document.work_item AS item
+            WHERE item.tenant_id = tenant.id
+              AND item.status IN ('open','claimed','in_progress','blocked')
+              AND item.due_at <= p_at
+              AND NOT (item.payload ? 'sla_breach')
+       )
+     ORDER BY tenant.id
+     LIMIT p_limit;
+END;
+$$;

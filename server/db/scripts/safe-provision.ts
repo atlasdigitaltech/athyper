@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 
-export type ProvisionPlane = "neon" | "mesh";
+export type ProvisionPlane = "studio" | "neon" | "mesh";
 
 export interface QueryClient {
   query<Row extends object = Record<string, unknown>>(
@@ -36,6 +36,7 @@ const DISPOSABLE_MARKER = "I_UNDERSTAND_DATA_WILL_BE_DESTROYED";
 const DEVELOPMENT_CLEAN_RESET_PROFILE = "development_clean_reset";
 const DEVELOPMENT_CLEAN_RESET_APPROVAL = "LOCAL-AUTH-V2-RESET";
 const RESET_ACKNOWLEDGEMENT: Record<ProvisionPlane, string> = {
+  studio: "RESET_STUDIO",
   neon: "RESET_NEON",
   mesh: "RESET_MESH",
 };
@@ -58,7 +59,7 @@ export function resolveDestructiveResetCliApproval(
   }
 
   const shorthand = confirm === DEVELOPMENT_CLEAN_RESET_APPROVAL;
-  const exactDatabase = plane === "neon" ? "athyper_neon" : "athyper_mesh";
+  const exactDatabase = `athyper_${plane}`;
   const explicitExpectedDatabase = readCliOption(args, "--expected-database");
   const explicitAcknowledgement = readCliOption(
     args,
@@ -189,7 +190,7 @@ export async function ensureResetGuardTable(
       marked_at                   timestamptz NOT NULL DEFAULT now(),
       marked_by                   text NOT NULL DEFAULT session_user,
       CONSTRAINT database_reset_guard_v2_plane_chk
-        CHECK (plane IN ('neon', 'mesh')),
+        CHECK (plane IN ('studio', 'neon', 'mesh')),
       CONSTRAINT database_reset_guard_v2_environment_chk
         CHECK (environment_class IN ('disposable_local', 'disposable_ci')),
       CONSTRAINT database_reset_guard_v2_sha_chk
@@ -197,6 +198,13 @@ export async function ensureResetGuardTable(
       CONSTRAINT database_reset_guard_v2_ticket_chk
         CHECK (btrim(approval_ticket) <> '')
     )
+  `);
+  await client.query(`
+    ALTER TABLE public.database_reset_guard_v2
+      DROP CONSTRAINT IF EXISTS database_reset_guard_v2_plane_chk;
+    ALTER TABLE public.database_reset_guard_v2
+      ADD CONSTRAINT database_reset_guard_v2_plane_chk
+      CHECK (plane IN ('studio', 'neon', 'mesh'))
   `);
   await client.query("REVOKE ALL ON public.database_reset_guard_v2 FROM PUBLIC");
 }
@@ -241,7 +249,8 @@ export async function assertDestructiveResetAllowed(
         WHERE nspname = ANY(
           CASE $1
             WHEN 'neon' THEN ARRAY['mesh', 'metadata']
-            ELSE ARRAY['ledger', 'metadata', 'aggregate']
+            WHEN 'mesh' THEN ARRAY['ledger', 'metadata', 'aggregate']
+            ELSE ARRAY['ledger', 'mesh', 'aggregate']
           END
         )
       ) AS opposite_schema_count
@@ -310,7 +319,9 @@ export async function readSchemaFingerprintSha256(
   ];
   const ownedSchemas = plane === "neon"
     ? [...commonSchemas, "aggregate", "ledger"]
-    : [...commonSchemas, "mesh"];
+    : plane === "mesh"
+    ? [...commonSchemas, "mesh"]
+    : [...commonSchemas, "metadata", "onboarding", "publication", "trustiam"];
   const result = await client.query<{
     object_identity: string;
   }>(`
@@ -348,7 +359,7 @@ export async function ensureSeedLedger(
       registered_by       text NOT NULL DEFAULT session_user,
       PRIMARY KEY (plane, pack_key, pack_version),
       CONSTRAINT seed_pack_ledger_v2_plane_chk
-        CHECK (plane IN ('neon', 'mesh')),
+        CHECK (plane IN ('studio', 'neon', 'mesh')),
       CONSTRAINT seed_pack_ledger_v2_key_chk
         CHECK (
           length(pack_key) BETWEEN 2 AND 512
@@ -363,6 +374,11 @@ export async function ensureSeedLedger(
     )
   `);
   await client.query(`
+    ALTER TABLE public.seed_pack_ledger_v2
+      DROP CONSTRAINT IF EXISTS seed_pack_ledger_v2_plane_chk;
+    ALTER TABLE public.seed_pack_ledger_v2
+      ADD CONSTRAINT seed_pack_ledger_v2_plane_chk
+      CHECK (plane IN ('studio', 'neon', 'mesh'));
     ALTER TABLE public.seed_pack_ledger_v2
       DROP CONSTRAINT IF EXISTS seed_pack_ledger_v2_key_chk;
     ALTER TABLE public.seed_pack_ledger_v2

@@ -19,6 +19,15 @@ ALTER TABLE ONLY "ai"."atlas_tenant_provider_credential"
 ALTER TABLE ONLY "ai"."atlas_tenant_provider_credential_epoch"
   ADD CONSTRAINT "atlas_tenant_provider_credential_epoch_pkey" PRIMARY KEY (tenant_id, provider_id);
 
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_policy"
+  ADD CONSTRAINT "atlas_tenant_quota_policy_pkey" PRIMARY KEY (tenant_id);
+
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_window"
+  ADD CONSTRAINT "atlas_tenant_quota_window_pkey" PRIMARY KEY (tenant_id, window_started_at);
+
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_pkey" PRIMARY KEY (id);
+
 ALTER TABLE ONLY "ai"."ai_action_policy"
   ADD CONSTRAINT "ai_action_policy_aap_natural_uq" UNIQUE NULLS NOT DISTINCT (tenant_id, action_code, doc_class);
 
@@ -118,6 +127,21 @@ ALTER TABLE ONLY "ai"."atlas_tenant_provider_credential_epoch"
 ALTER TABLE ONLY "ai"."atlas_tenant_provider_credential_epoch"
   ADD CONSTRAINT "atlas_tenant_provider_epoch_provider_chk" CHECK (provider_id = ANY (ARRAY['anthropic'::text, 'openai'::text, 'gemini'::text]));
 
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_policy"
+  ADD CONSTRAINT "atlas_tenant_quota_policy_limits_chk" CHECK (max_requests > 0 AND max_input_tokens > 0 AND max_output_tokens > 0 AND window_seconds > 0 AND revision > 0);
+
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_window"
+  ADD CONSTRAINT "atlas_tenant_quota_window_values_chk" CHECK (window_ends_at > window_started_at AND used_requests >= 0 AND used_input_tokens >= 0 AND used_output_tokens >= 0 AND reserved_input_tokens >= 0 AND reserved_output_tokens >= 0);
+
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_values_chk" CHECK (reserved_input_tokens >= 0 AND reserved_output_tokens >= 0 AND (actual_input_tokens IS NULL OR actual_input_tokens >= 0) AND (actual_output_tokens IS NULL OR actual_output_tokens >= 0) AND expires_at > created_at);
+
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_status_chk" CHECK (status = ANY (ARRAY['reserved'::text, 'settled'::text, 'released'::text, 'expired'::text]));
+
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_terminal_chk" CHECK ((status = 'settled' AND settled_at IS NOT NULL AND actual_input_tokens IS NOT NULL AND actual_output_tokens IS NOT NULL) OR (status IN ('released','expired') AND released_at IS NOT NULL) OR status = 'reserved');
+
 -- Every mutable AI relation keeps the actor/time columns as an atomic pair.
 ALTER TABLE ai.ai_action_policy
   ADD CONSTRAINT ai_action_policy_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL));
@@ -131,6 +155,12 @@ ALTER TABLE ai.atlas_tenant_provider_credential
   ADD CONSTRAINT atlas_tenant_provider_credential_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL));
 ALTER TABLE ai.atlas_tenant_provider_credential_epoch
   ADD CONSTRAINT atlas_tenant_provider_epoch_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL));
+ALTER TABLE ai.atlas_tenant_quota_policy
+  ADD CONSTRAINT atlas_tenant_quota_policy_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL));
+ALTER TABLE ai.atlas_tenant_quota_window
+  ADD CONSTRAINT atlas_tenant_quota_window_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL));
+ALTER TABLE ai.atlas_tenant_quota_reservation
+  ADD CONSTRAINT atlas_tenant_quota_reservation_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL));
 ALTER TABLE ai.ai_tool_invocation
   ADD CONSTRAINT ai_tool_invocation_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL));
 ALTER TABLE ai.atlas_run
@@ -783,3 +813,24 @@ ALTER TABLE ONLY "ai"."atlas_thread"
 
 ALTER TABLE ONLY "ai"."atlas_thread"
   ADD CONSTRAINT "atlas_thread_updated_by_fk" FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_policy"
+  ADD CONSTRAINT "atlas_tenant_quota_policy_tenant_fk" FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_policy"
+  ADD CONSTRAINT "atlas_tenant_quota_policy_created_by_fk" FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_policy"
+  ADD CONSTRAINT "atlas_tenant_quota_policy_updated_by_fk" FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_window"
+  ADD CONSTRAINT "atlas_tenant_quota_window_tenant_fk" FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE;
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_window"
+  ADD CONSTRAINT "atlas_tenant_quota_window_created_by_fk" FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_window"
+  ADD CONSTRAINT "atlas_tenant_quota_window_updated_by_fk" FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_window_fk" FOREIGN KEY (tenant_id, window_started_at) REFERENCES ai.atlas_tenant_quota_window(tenant_id, window_started_at) ON DELETE CASCADE;
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_principal_fk" FOREIGN KEY (tenant_id, principal_id) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_created_by_fk" FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_updated_by_fk" FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;

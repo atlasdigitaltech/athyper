@@ -1,8 +1,9 @@
-import type { JobScheduler, ScheduledJobDefinition } from "@athyper/server-contract-jobs";
+import type { JobScheduler, ScheduleDriftReport, ScheduledJobDefinition } from "@athyper/server-contract-jobs";
 
 export interface SchedulingRuntimeOptions {
   readonly scheduler: JobScheduler;
   readonly definitions: readonly ScheduledJobDefinition[];
+  readonly onDrift?: (report: ScheduleDriftReport) => void | Promise<void>;
 }
 
 export interface SchedulingRuntime {
@@ -21,7 +22,13 @@ export function createSchedulingRuntime(options: SchedulingRuntimeOptions): Sche
         }
         ids.add(definition.scheduleId);
       }
-      for (const definition of options.definitions) await options.scheduler.upsert(definition);
+      for (const definition of options.definitions) {
+        if (options.scheduler.inspect) {
+          const report = await options.scheduler.inspect(definition);
+          if (report.status !== "in_sync") await options.onDrift?.(report);
+        }
+        await options.scheduler.upsert(definition);
+      }
       started = true;
     },
   };

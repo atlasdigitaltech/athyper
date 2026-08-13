@@ -38,10 +38,12 @@ export interface MeshDatabaseAdapter<Database = MeshDatabase> {
   /** Mesh query builder; network/account scoping belongs to Mesh capabilities. */
   readonly database: Kysely<Database>;
   withTenantTransaction<Result>(
-    work: (transaction: MeshTenantTransaction<Database>) => Promise<Result>,
+    work: (transaction: MeshTenantTransaction<Database>, signal?: AbortSignal) => Promise<Result>,
+    signal?: AbortSignal,
   ): Promise<Result>;
   withSystemTransaction<Result>(
-    work: (transaction: MeshSystemTransaction<Database>) => Promise<Result>,
+    work: (transaction: MeshSystemTransaction<Database>, signal?: AbortSignal) => Promise<Result>,
+    signal?: AbortSignal,
   ): Promise<Result>;
   health(): Promise<DatabaseHealth>;
   poolStats(): PostgresPoolStats;
@@ -79,15 +81,25 @@ export function createMeshAdapterRuntime<Database>(
 
   return {
     database: dependencies.database,
-    withTenantTransaction: (work) =>
-      dependencies.runner.run(
-        (transaction) => work(transaction as MeshTenantTransaction<Database>),
-        requireActor(dependencies.actorProvider),
-      ),
-    withSystemTransaction: (work) =>
-      dependencies.runner.run((transaction) =>
-        work(transaction as MeshSystemTransaction<Database>),
-      ),
+    withTenantTransaction: (work, signal) => {
+      const runWork = (transaction: Transaction<Database>, propagatedSignal?: AbortSignal) => work(
+        transaction as MeshTenantTransaction<Database>,
+        propagatedSignal ?? signal,
+      );
+      const actor = requireActor(dependencies.actorProvider);
+      return signal
+        ? dependencies.runner.run(runWork, actor, signal)
+        : dependencies.runner.run(runWork, actor);
+    },
+    withSystemTransaction: (work, signal) => {
+      const runWork = (transaction: Transaction<Database>, propagatedSignal?: AbortSignal) => work(
+        transaction as MeshSystemTransaction<Database>,
+        propagatedSignal ?? signal,
+      );
+      return signal
+        ? dependencies.runner.run(runWork, undefined, signal)
+        : dependencies.runner.run(runWork);
+    },
     health: () => checkPostgresPoolHealth(dependencies.pool),
     poolStats: () =>
       getPostgresPoolStats(dependencies.pool, dependencies.poolMax),

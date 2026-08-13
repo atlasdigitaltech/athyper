@@ -2,7 +2,7 @@
 
 The three-plane CMS implementation is owned by `@athyper/server-service-content` and
 `@athyper/server-contract-content`. New callers must use `/api/content/*`; the retired
-legacy `server/framework/runtime/services/content` route is not a fallback.
+the former monolithic content-service route is retired and is not a fallback.
 
 Implemented boundaries:
 

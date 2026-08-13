@@ -32,6 +32,7 @@ export interface DerivativeRenderRequest {
   readonly renditionCode: string;
   readonly specificationHash: string;
   readonly expectedContentType: string;
+  readonly rebuild?: { readonly mode: "missing" | "failed" | "all"; readonly reason: string; readonly requestId: string };
 }
 
 export interface DerivativeSourceRepository<Transaction> {
@@ -60,9 +61,10 @@ export function createDerivativeScheduler(jobs: JobPublisher): DerivativeSchedul
               renditionCode: rendition.renditionCode,
               specificationHash: specHash(rendition.renditionCode),
               expectedContentType: rendition.contentType,
+              ...(request.rebuild ? { rebuild: request.rebuild } : {}),
             } satisfies DerivativeRenderRequest,
             {
-              jobId: `derivative-${request.planeKey}-${request.tenantId}-${request.attachmentId}-${rendition.renditionCode}-${request.sourceSha256.slice(0, 16)}-${specHash(rendition.renditionCode).slice(0, 12)}`,
+              jobId: `derivative-${request.planeKey}-${request.tenantId}-${request.attachmentId}-${rendition.renditionCode}-${request.sourceSha256.slice(0, 16)}-${specHash(rendition.renditionCode).slice(0, 12)}${request.rebuild ? `-${request.rebuild.requestId}` : ""}`,
               maxAttempts: 5,
               removeOnComplete: 1000,
               removeOnFail: 5000,
@@ -106,8 +108,11 @@ export function createDerivativeRenderHandler<T>(
           ),
       );
 
-      if (existing?.status === "ready") {
+      if (existing?.status === "ready" && request.rebuild?.mode !== "all") {
         return { status: "completed", output: { skipped: true, reason: "already_ready" } };
+      }
+      if (request.rebuild?.mode === "failed" && existing && existing.status !== "failed") {
+        return { status: "completed", output: { skipped: true, reason: "not_failed" } };
       }
 
       const record = await options.transactions.run(request.planeKey, actor, (tx) =>
@@ -121,6 +126,7 @@ export function createDerivativeRenderHandler<T>(
             specificationHash: request.specificationHash,
             contentType: request.expectedContentType,
             principalId: request.principalId,
+            forceRebuild: request.rebuild?.mode === "all",
           },
           tx,
         ),
@@ -267,7 +273,7 @@ export function createKyselyDerivativeRepository(): DerivativeRepository<Derivat
            ${input.contentType}, 'pending', 0, now(), now(), ${input.principalId}::uuid)
         ON CONFLICT (tenant_id, attachment_id, derivative_type, rendition_code, source_sha256, specification_hash)
         DO UPDATE SET
-          status = CASE WHEN document.attachment_derivative.status = 'ready' THEN 'ready' ELSE 'pending' END,
+          status = CASE WHEN document.attachment_derivative.status = 'ready' AND NOT ${input.forceRebuild ?? false} THEN 'ready' ELSE 'pending' END,
           updated_at = now()
         RETURNING *
       `.execute(tx);

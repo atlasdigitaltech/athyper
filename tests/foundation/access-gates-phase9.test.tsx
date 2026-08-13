@@ -1,0 +1,9 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { AccessProvider, FeatureGate, PermissionGate, RouteGuard, createAccessSnapshot } from "../../packages/platform/shell/shell-runtime/src/index";
+const access = createAccessSnapshot({ sessionState: "authenticated", contextAvailable: true, entitledModules: ["acc"], knownModules: ["acc"], permissions: ["finance.invoice.read"], knownPermissions: ["finance.invoice.read", "finance.invoice.write"], features: { "finance.invoice_ui": { enabled: true } }, knownFeatures: ["finance.invoice_ui", "finance.beta"] });
+function render(children: React.ReactNode) { return renderToStaticMarkup(<AccessProvider snapshot={access}>{children}</AccessProvider>); }
+test("PermissionGate and FeatureGate are presentation-only exact consumers", () => { assert.match(render(<PermissionGate code="finance.invoice.read"><button>Read</button></PermissionGate>), /Read/); assert.doesNotMatch(render(<PermissionGate code="finance.invoice.write"><button>Write</button></PermissionGate>), /Write/); assert.match(render(<FeatureGate code="finance.invoice_ui"><span>Feature</span></FeatureGate>), /Feature/); assert.equal(render(<FeatureGate code="finance.beta"><span>Beta</span></FeatureGate>), ""); });
+test("RouteGuard returns explicit safe presentation decisions", () => { const markup = render(<RouteGuard requirement={{ moduleCode: "acc", requiredPermissions: ["finance.invoice.write"], requiredFeatures: [] }} renderDecision={(decision, message) => <p data-presentation={decision.presentation}>{message}</p>}><div>Secret route</div></RouteGuard>); assert.match(markup, /data-presentation="hidden"/); assert.match(markup, /do not have access/i); assert.doesNotMatch(markup, /Secret route|finance\.invoice/); });

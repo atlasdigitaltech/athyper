@@ -14,3 +14,4 @@ export * from "./kysely-webhook-repository.js";
 export * from "./notification-coordinator.js";
 export * from "./notification-preferences.js";
 export * from "./kysely-notification-preferences.js";
+export * from "./notification-operations.js";

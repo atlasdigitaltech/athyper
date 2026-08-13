@@ -1,4 +1,5 @@
-import type { Application, Request, RequestHandler } from "express";
+import type { Application, Request, RequestHandler, Response } from "express";
+import Ajv2020, { type ValidateFunction } from "ajv/dist/2020.js";
 import { HttpError } from "./http-error.js";
 
 export type HttpMethod = "get" | "post" | "put" | "patch" | "delete";
@@ -25,7 +26,7 @@ export interface RouteContract {
     readonly query?: RuntimeSchema;
     readonly body?: RuntimeSchema;
   };
-  readonly responses: Readonly<Record<number, { readonly description: string; readonly body?: RuntimeSchema }>>;
+  readonly responses: Readonly<Record<number, { readonly description: string; readonly body?: RuntimeSchema; readonly contentType?: string }>>;
 }
 
 export interface ContractIssue {
@@ -34,6 +35,15 @@ export interface ContractIssue {
 }
 
 const ROUTES = Symbol.for("athyper.http.route-contracts");
+const ROUTE_MIDDLEWARE = Symbol.for("athyper.http.contract-route-middleware");
+const RESPONSE_ENFORCEMENT = Symbol.for("athyper.http.response-contract-enforcement");
+const ajv = new Ajv2020({ allErrors: true, strict: false });
+const compiledSchemas = new WeakMap<object, ValidateFunction>();
+
+interface ContractRouteMiddleware {
+  readonly authenticated?: RequestHandler;
+  readonly unauthenticated?: RequestHandler;
+}
 
 export function defineRouteContract<const Contract extends RouteContract>(contract: Contract): Contract {
   if (!/^[A-Za-z][A-Za-z0-9._-]{2,127}$/.test(contract.operationId)) throw new TypeError(`Invalid HTTP operationId: ${contract.operationId}`);
@@ -44,7 +54,24 @@ export function registerContractRoute(application: Application, contract: RouteC
   const issues = inspectContractAddition(routeContracts(application), contract);
   if (issues.length) throw new Error(issues[0]!.message);
   routeContracts(application).push(contract);
-  application[contract.method](contract.path, contractValidator(contract), ...handlers);
+  const target = application as Application & { [ROUTE_MIDDLEWARE]?: ContractRouteMiddleware; [RESPONSE_ENFORCEMENT]?: boolean };
+  const validation = [contractValidator(contract), ...(target[RESPONSE_ENFORCEMENT] ? [contractResponseValidator(contract)] : [])];
+  const scoped = target[ROUTE_MIDDLEWARE];
+  if (contract.authenticated && scoped?.authenticated && handlers.length > 0) {
+    application[contract.method](contract.path, ...validation, handlers[0]!, scoped.authenticated, ...handlers.slice(1));
+    return;
+  }
+  application[contract.method](contract.path, ...validation, ...(scoped?.unauthenticated ? [scoped.unauthenticated] : []), ...handlers);
+}
+
+/** Configures runtime middleware that must run inside a contract route (for example, after authentication). */
+export function configureContractRouteMiddleware(application: Application, middleware: ContractRouteMiddleware): void {
+  (application as Application & { [ROUTE_MIDDLEWARE]?: ContractRouteMiddleware })[ROUTE_MIDDLEWARE] = middleware;
+}
+
+/** Enables runtime validation of declared response statuses and JSON response bodies. */
+export function enforceContractResponses(application: Application): void {
+  (application as Application & { [RESPONSE_ENFORCEMENT]?: boolean })[RESPONSE_ENFORCEMENT] = true;
 }
 
 export function routeContracts(application: Application): RouteContract[] {
@@ -85,9 +112,9 @@ export function createOpenApiDocument(application: Application, info: { readonly
     const operation: Record<string, unknown> = {
       operationId: route.operationId, summary: route.summary, tags: route.tags ?? [],
       ...(route.permission ? { "x-athyper-permission": route.permission } : {}),
-      responses: Object.fromEntries(Object.entries(route.responses).map(([status, response]) => [status, {
+      responses: Object.fromEntries(Object.entries(withInternalError(route.responses)).map(([status, response]) => [status, {
         description: response.description,
-        ...(response.body ? { content: { "application/json": { schema: jsonSchema(response.body) } } } : {}),
+        ...(response.body ? { content: { [response.contentType ?? "application/json"]: { schema: jsonSchema(response.body) } } } : {}),
       }])),
     };
     if (route.authenticated) operation["security"] = [{ bearerAuth: [] }];
@@ -141,26 +168,16 @@ export function validateRuntimeSchema(schema: RuntimeSchema, value: unknown): un
     const result = schema.safeParse(value); if (!result.success) throw result.error ?? new TypeError("Schema validation failed"); return result.data;
   }
   if ("parse" in schema && typeof schema.parse === "function") return schema.parse(value);
-  validateJsonSchema(schema as JsonSchema, value, "$" );
+  const json = schema as JsonSchema;
+  let validate = compiledSchemas.get(json);
+  if (!validate) {
+    validate = ajv.compile(json);
+    compiledSchemas.set(json, validate);
+  }
+  if (!validate(value)) {
+    throw new TypeError(ajv.errorsText(validate.errors, { dataVar: "$" }));
+  }
   return value;
-}
-
-function validateJsonSchema(schema: JsonSchema, value: unknown, path: string): void {
-  const type = schema["type"];
-  if (type === "object") {
-    if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${path} must be an object`);
-    const record = value as Record<string, unknown>;
-    for (const name of Array.isArray(schema["required"]) ? schema["required"] : []) if (typeof name === "string" && record[name] === undefined) throw new TypeError(`${path}.${name} is required`);
-    const properties = schema["properties"] as Record<string, JsonSchema> | undefined;
-    for (const [name, child] of Object.entries(properties ?? {})) if (record[name] !== undefined) validateJsonSchema(child, record[name], `${path}.${name}`);
-  } else if (type === "array") {
-    if (!Array.isArray(value)) throw new TypeError(`${path} must be an array`);
-    const items = schema["items"] as JsonSchema | undefined; if (items) value.forEach((item, index) => validateJsonSchema(items, item, `${path}[${index}]`));
-  } else if (type === "string" && typeof value !== "string") throw new TypeError(`${path} must be a string`);
-  else if (type === "number" && typeof value !== "number") throw new TypeError(`${path} must be a number`);
-  else if (type === "integer" && (!Number.isInteger(value))) throw new TypeError(`${path} must be an integer`);
-  else if (type === "boolean" && typeof value !== "boolean") throw new TypeError(`${path} must be a boolean`);
-  const values = schema["enum"]; if (Array.isArray(values) && !values.includes(value)) throw new TypeError(`${path} is not an allowed value`);
 }
 
 function contractValidator(contract: RouteContract): RequestHandler {
@@ -173,6 +190,32 @@ function contractValidator(contract: RouteContract): RequestHandler {
       next();
     } catch { next(new HttpError(400, "REQUEST_SCHEMA_INVALID", "Request does not match the operation contract")); }
   };
+}
+
+function contractResponseValidator(contract: RouteContract): RequestHandler {
+  return (_request, response, next) => {
+    const original = response.json.bind(response);
+    response.json = ((body: unknown) => {
+      const declared = contract.responses[response.statusCode] ?? (response.statusCode === 500 ? { description: "Internal server error" } : undefined);
+      if (!declared) {
+        response.json = original;
+        throw new HttpError(500, "RESPONSE_STATUS_UNDOCUMENTED", `Operation ${contract.operationId} returned undocumented status ${response.statusCode}`);
+      }
+      if (declared.body) {
+        try { validateRuntimeSchema(declared.body, body); }
+        catch {
+          response.json = original;
+          throw new HttpError(500, "RESPONSE_SCHEMA_INVALID", `Response does not match the operation contract: ${contract.operationId}`);
+        }
+      }
+      return original(body);
+    }) as Response["json"];
+    next();
+  };
+}
+
+function withInternalError(responses: RouteContract["responses"]): RouteContract["responses"] {
+  return responses[500] ? responses : { ...responses, 500: { description: "Internal server error" } };
 }
 
 function contractHeaders(schema: RuntimeSchema, headers: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {

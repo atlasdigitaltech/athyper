@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./context": "./src/context/index.ts",
+    "./dependencies": "./src/dependencies/index.ts",
     "./errors": "./src/errors/index.ts",
     "./lifecycle": "./src/lifecycle/index.ts",
     "./observability": "./src/observability/index.ts",

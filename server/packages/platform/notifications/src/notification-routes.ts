@@ -3,6 +3,7 @@ import type { InAppNotificationRepository, NotificationEventPublisher, Notificat
 import type { Application, RequestHandler, Response } from "express";
 import { openNotificationSseStream } from "./notification-event-bus.js";
 import type { NotificationPreference, createNotificationPreferenceService } from "./notification-preferences.js";
+import type { createNotificationOperations } from "./notification-operations.js";
 
 export function registerNotificationRoutes(application:Application,options:{
   readonly authenticate:RequestHandler;
@@ -11,10 +12,17 @@ export function registerNotificationRoutes(application:Application,options:{
   readonly push:PushSubscriptionRepository;
   readonly events:NotificationEventPublisher&NotificationEventSubscriber;
   readonly preferences?:ReturnType<typeof createNotificationPreferenceService>;
+  readonly operations?:ReturnType<typeof createNotificationOperations>;
 }){
   if(options.preferences){
     application.get("/api/notifications/preferences",options.authenticate,async(_request,response,next)=>{try{const context=options.readContext(response);const snapshot=await options.preferences!.get(context);response.setHeader("ETag",`\"${snapshot.version}\"`);response.status(200).json(snapshot);}catch(error){next(error);}});
     application.patch("/api/notifications/preferences",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response);const expectedVersion=ifMatch(request.headers["if-match"]);const body=record(request.body);if(!Array.isArray(body["preferences"]))throw new TypeError("preferences must be an array");const preferences=body["preferences"].map(preferenceInput);const snapshot=await options.preferences!.patch(context,expectedVersion,preferences);response.setHeader("ETag",`\"${snapshot.version}\"`);response.status(200).json(snapshot);}catch(error){next(error);}});
+    application.post("/api/notifications/preferences/preview",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response);const body=record(request.body);if(!Array.isArray(body["preferences"]))throw new TypeError("preferences must be an array");response.status(200).json({previews:await options.preferences!.preview(context,body["preferences"].map(preferenceInput))});}catch(error){next(error);}});
+  }
+  if(options.operations){
+    application.get("/api/notifications/deliveries/:id/timeline",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response);const timeline=await options.operations!.subscriberTimeline(context,uuid(request.params["id"]));if(!timeline){response.status(404).json({error:"NOTIFICATION_DELIVERY_NOT_FOUND"});return;}response.status(200).json(timeline);}catch(error){next(error);}});
+    application.get("/api/operations/notifications/deliveries/:id/timeline",options.authenticate,async(request,response,next)=>{try{const timeline=await options.operations!.operatorTimeline(options.readContext(response),uuid(request.params["id"]));if(!timeline){response.status(404).json({error:"NOTIFICATION_DELIVERY_NOT_FOUND"});return;}response.status(200).json(timeline);}catch(error){next(error);}});
+    application.post("/api/operations/notifications/deliveries/:id/replay",options.authenticate,async(request,response,next)=>{try{const body=record(request.body);const receipt=await options.operations!.replay(options.readContext(response),uuid(request.params["id"]),text(body["replayKey"]??request.header("idempotency-key"),"replayKey"));response.status(receipt.replayed?200:202).json(receipt);}catch(error){next(error);}});
   }
   application.get("/api/notifications/inbox",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response);const notifications=await options.inbox.list({tenantId:context.tenantId,principalId:context.principalId,planeKey:context.planeKey,limit:integer(request.query["limit"],50)});response.status(200).json({notifications});}catch(error){next(error);}});
   application.post("/api/notifications/:id/read",options.authenticate,async(request,response,next)=>{try{const context=options.readContext(response);const id=uuid(request.params["id"]);const occurredAt=new Date().toISOString();const updated=await options.inbox.markRead({tenantId:context.tenantId,principalId:context.principalId,planeKey:context.planeKey,notificationId:id,readAt:occurredAt});if(!updated){response.status(404).json({error:"NOTIFICATION_NOT_FOUND"});return;}await options.events.publish({type:"notification.read",tenantId:context.tenantId,principalId:context.principalId,notificationId:id,occurredAt});response.status(204).end();}catch(error){next(error);}});

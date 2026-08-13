@@ -65,3 +65,22 @@ DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT INSERT ON ops.identity_admission_shadow_comparison TO athyperapp; END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT ON ops.identity_admission_shadow_comparison,ops.identity_admission_shadow_gate TO athyperadmin; END IF;
 END $$;
+REVOKE ALL ON ops.record_import_session,ops.record_import_chunk,ops.record_export_request FROM PUBLIC;
+GRANT SELECT,INSERT,UPDATE,DELETE ON ops.record_import_session,ops.record_import_chunk,ops.record_export_request TO athyperapp;
+GRANT ALL PRIVILEGES ON ops.record_import_session,ops.record_import_chunk,ops.record_export_request TO athyperadmin;
+REVOKE ALL ON ops.control_runtime_command_submission,ops.control_runtime_command_approval_request,
+ ops.control_runtime_command_approval_decision,ops.control_runtime_command_history FROM PUBLIC;
+REVOKE ALL ON FUNCTION ops.trg_guard_control_runtime_evidence() FROM PUBLIC;
+REVOKE ALL ON FUNCTION ops.trg_prepare_control_runtime_history() FROM PUBLIC;
+REVOKE ALL ON SEQUENCE ops.control_runtime_command_history_sequence_no_seq FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+  GRANT SELECT,INSERT ON ops.control_runtime_command_submission,ops.control_runtime_command_approval_request,
+   ops.control_runtime_command_approval_decision,ops.control_runtime_command_history TO athyperapp;
+  GRANT USAGE ON SEQUENCE ops.control_runtime_command_history_sequence_no_seq TO athyperapp;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+  GRANT SELECT ON ops.control_runtime_command_submission,ops.control_runtime_command_approval_request,
+   ops.control_runtime_command_approval_decision,ops.control_runtime_command_history TO athyperadmin;
+ END IF;
+END $$;

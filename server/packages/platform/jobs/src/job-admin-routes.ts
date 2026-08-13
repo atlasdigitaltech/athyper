@@ -1,7 +1,20 @@
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { JobAdministration, JobAdministrationRequest, JobGovernance, ScheduleMutation } from "@athyper/server-contract-jobs";
-import type { Application, RequestHandler, Response } from "@athyper/server-runtime-http";
+import { defineRouteContract, registerContractRoute, type Application, type RequestHandler, type Response } from "@athyper/server-runtime-http";
 type HttpRequest = Parameters<RequestHandler>[0];
+
+const objectSchema = { type: "object", additionalProperties: true } as const;
+const contracts = {
+  deadLetters: defineRouteContract({ method: "get", path: "/api/jobs/admin/dead-letters", operationId: "jobs.listDeadLetters", summary: "List dead-lettered jobs", tags: ["Jobs"], authenticated: true, permission: "jobs.board.view", responses: { 200: { description: "Dead-letter entries", body: objectSchema }, 400: { description: "Invalid query" }, 403: { description: "Forbidden", body: objectSchema } } }),
+  queues: defineRouteContract({ method: "get", path: "/api/jobs/admin/queues", operationId: "jobs.listQueues", summary: "List job queues", tags: ["Jobs"], authenticated: true, permission: "jobs.board.view", responses: { 200: { description: "Job queues", body: objectSchema }, 403: { description: "Forbidden", body: objectSchema } } }),
+  executions: defineRouteContract({ method: "get", path: "/api/jobs/admin/executions", operationId: "jobs.listExecutions", summary: "List job executions", tags: ["Jobs"], authenticated: true, permission: "jobs.board.view", responses: { 200: { description: "Job executions", body: objectSchema }, 400: { description: "Invalid query" }, 403: { description: "Forbidden", body: objectSchema } } }),
+  schedules: defineRouteContract({ method: "get", path: "/api/jobs/admin/schedules", operationId: "jobs.listSchedules", summary: "List job schedules", tags: ["Jobs"], authenticated: true, permission: "jobs.schedule.view", responses: { 200: { description: "Job schedules", body: objectSchema }, 403: { description: "Forbidden", body: objectSchema } } }),
+  previewSchedule: defineRouteContract({ method: "post", path: "/api/jobs/admin/schedules/preview", operationId: "jobs.previewSchedule", summary: "Preview a job schedule", tags: ["Jobs"], authenticated: true, permission: "jobs.schedule.view", request: { body: objectSchema }, responses: { 200: { description: "Schedule preview", body: objectSchema }, 400: { description: "Invalid schedule" }, 403: { description: "Forbidden", body: objectSchema } } }),
+  createSchedule: defineRouteContract({ method: "post", path: "/api/jobs/admin/schedules", operationId: "jobs.createSchedule", summary: "Create a job schedule", tags: ["Jobs"], authenticated: true, permission: "jobs.schedule.manage", request: { body: objectSchema }, responses: { 201: { description: "Schedule created", body: objectSchema }, 400: { description: "Invalid schedule" }, 403: { description: "Forbidden", body: objectSchema } } }),
+  updateSchedule: defineRouteContract({ method: "put", path: "/api/jobs/admin/schedules/:id", operationId: "jobs.updateSchedule", summary: "Update a job schedule", tags: ["Jobs"], authenticated: true, permission: "jobs.schedule.manage", request: { body: objectSchema }, responses: { 200: { description: "Schedule updated", body: objectSchema }, 400: { description: "Invalid schedule" }, 403: { description: "Forbidden", body: objectSchema } } }),
+  deactivateSchedule: defineRouteContract({ method: "post", path: "/api/jobs/admin/schedules/:id/deactivate", operationId: "jobs.deactivateSchedule", summary: "Deactivate a job schedule", tags: ["Jobs"], authenticated: true, permission: "jobs.schedule.manage", request: { body: objectSchema }, responses: { 204: { description: "Schedule deactivated" }, 400: { description: "Invalid request" }, 403: { description: "Forbidden", body: objectSchema } } }),
+  scheduleAudit: defineRouteContract({ method: "get", path: "/api/jobs/admin/schedules/:id/audit", operationId: "jobs.getScheduleAudit", summary: "Get job schedule audit history", tags: ["Jobs"], authenticated: true, permission: "jobs.schedule.view", responses: { 200: { description: "Schedule audit history", body: objectSchema }, 400: { description: "Invalid schedule identifier" }, 403: { description: "Forbidden", body: objectSchema } } }),
+} as const;
 
 export function registerJobAdministrationRoutes(application: Application, options: {
   readonly authenticate: RequestHandler;
@@ -11,7 +24,7 @@ export function registerJobAdministrationRoutes(application: Application, option
   readonly governance?: JobGovernance;
 }): void {
   if (options.governance) registerGovernanceRoutes(application, options as typeof options & { governance: JobGovernance });
-  application.get("/api/jobs/admin/dead-letters", options.authenticate, async (request, response, next) => {
+  registerContractRoute(application, contracts.deadLetters, options.authenticate, async (request, response, next) => {
     try {
       const context = options.readContext(response);
       if (!await allowed(options.authorizer, context, "jobs.board.view")) {
@@ -26,7 +39,7 @@ export function registerJobAdministrationRoutes(application: Application, option
   });
 
   for (const command of ["cancel", "retry", "replay"] as const) {
-    application.post(`/api/jobs/admin/executions/:id/${command}`, options.authenticate, async (request, response, next) => {
+    registerContractRoute(application, defineRouteContract({ method: "post", path: `/api/jobs/admin/executions/:id/${command}`, operationId: `jobs.${command}Execution`, summary: `${command} a job execution`, tags: ["Jobs"], authenticated: true, permission: "jobs.queue.manage", request: { body: objectSchema }, responses: { 200: { description: "Command applied", body: objectSchema }, 400: { description: "Invalid command" }, 403: { description: "Forbidden", body: objectSchema }, 409: { description: "Command not applied", body: objectSchema } } }), options.authenticate, async (request, response, next) => {
       try {
         const context = options.readContext(response);
         if (!await allowed(options.authorizer, context, "jobs.queue.manage")) {
@@ -48,24 +61,24 @@ function registerGovernanceRoutes(application: Application, options: {
   readonly authenticate: RequestHandler; readonly readContext: (response: Response) => VerifiedRequestContext;
   readonly authorizer: Authorizer; readonly governance: JobGovernance;
 }) {
-  application.get("/api/jobs/admin/queues", options.authenticate, async (_request, response, next) => {
+  registerContractRoute(application, contracts.queues, options.authenticate, async (_request, response, next) => {
     try { const context=options.readContext(response); if(!await allowed(options.authorizer,context,"jobs.board.view")){response.status(403).json({error:"FORBIDDEN"});return;} response.status(200).json({entries:await options.governance.listQueues()}); } catch(error){next(error);}
   });
-  application.get("/api/jobs/admin/executions", options.authenticate, async (request,response,next)=>{
+  registerContractRoute(application, contracts.executions, options.authenticate, async (request,response,next)=>{
     try { const context=options.readContext(response); if(!await allowed(options.authorizer,context,"jobs.board.view")){response.status(403).json({error:"FORBIDDEN"});return;} response.status(200).json({entries:await options.governance.listExecutions({execution:coordinate(context),limit:integer(request.query["limit"],50),...(request.query["cursor"]?{cursor:uuid(request.query["cursor"])}:{})})}); } catch(error){next(error);}
   });
-  application.get("/api/jobs/admin/schedules",options.authenticate,async(_request,response,next)=>{
+  registerContractRoute(application, contracts.schedules,options.authenticate,async(_request,response,next)=>{
     try{const context=options.readContext(response);if(!await allowed(options.authorizer,context,"jobs.schedule.view")){response.status(403).json({error:"FORBIDDEN"});return;}response.status(200).json({entries:await options.governance.listSchedules(coordinate(context))});}catch(error){next(error);}
   });
-  application.post("/api/jobs/admin/schedules/preview",options.authenticate,async(request,response,next)=>{
+  registerContractRoute(application, contracts.previewSchedule,options.authenticate,async(request,response,next)=>{
     try{const context=options.readContext(response);if(!await allowed(options.authorizer,context,"jobs.schedule.view")){response.status(403).json({error:"FORBIDDEN"});return;}const body=objectBody(request.body);response.status(200).json(options.governance.previewCron({expression:text(body,"expression"),timezone:text(body,"timezone"),...(body["from"]?{from:text(body,"from")} : {}),...(body["count"]?{count:Number(body["count"])}:{})}));}catch(error){next(error);}
   });
-  application.post("/api/jobs/admin/schedules",options.authenticate,async(request,response,next)=>mutateSchedule("create",request,response,next,options));
-  application.put("/api/jobs/admin/schedules/:id",options.authenticate,async(request,response,next)=>mutateSchedule("update",request,response,next,options));
-  application.post("/api/jobs/admin/schedules/:id/deactivate",options.authenticate,async(request,response,next)=>{
+  registerContractRoute(application, contracts.createSchedule,options.authenticate,async(request,response,next)=>mutateSchedule("create",request,response,next,options));
+  registerContractRoute(application, contracts.updateSchedule,options.authenticate,async(request,response,next)=>mutateSchedule("update",request,response,next,options));
+  registerContractRoute(application, contracts.deactivateSchedule,options.authenticate,async(request,response,next)=>{
     try{const context=options.readContext(response);if(!await allowed(options.authorizer,context,"jobs.schedule.manage")){response.status(403).json({error:"FORBIDDEN"});return;}await options.governance.deactivateSchedule({execution:coordinate(context),scheduleId:uuid(request.params["id"]),reason:requiredReason(request.body)});response.status(204).send();}catch(error){next(error);}
   });
-  application.get("/api/jobs/admin/schedules/:id/audit",options.authenticate,async(request,response,next)=>{
+  registerContractRoute(application, contracts.scheduleAudit,options.authenticate,async(request,response,next)=>{
     try{const context=options.readContext(response);if(!await allowed(options.authorizer,context,"jobs.schedule.view")){response.status(403).json({error:"FORBIDDEN"});return;}response.status(200).json({entries:await options.governance.listScheduleAudit({execution:coordinate(context),scheduleId:uuid(request.params["id"])})});}catch(error){next(error);}
   });
 }

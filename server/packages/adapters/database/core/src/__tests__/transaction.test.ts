@@ -54,6 +54,41 @@ describe("KyselyTransactionRunner", () => {
     ).rejects.toThrow("mutation failed");
   });
 
+  it("propagates cancellation through actor stamping and transaction work", async () => {
+    const transaction = {} as Transaction<TestDatabase>;
+    const controller = new AbortController();
+    const stamp = vi.fn(async (
+      _transaction: Transaction<TestDatabase>,
+      _actor: { tenantId: string; principalId: string },
+      signal?: AbortSignal,
+    ) => {
+      expect(signal).toBe(controller.signal);
+    });
+    const runner = new KyselyTransactionRunner(fakeDatabase(transaction), stamp);
+
+    await expect(runner.run(
+      async (received, signal) => {
+        expect(received).toBe(transaction);
+        expect(signal).toBe(controller.signal);
+        return "done";
+      },
+      { tenantId: "tenant-a", principalId: "principal-a" },
+      controller.signal,
+    )).resolves.toBe("done");
+    expect(stamp).toHaveBeenCalledOnce();
+  });
+
+  it("does not open a transaction for an already aborted operation", async () => {
+    const reason = new Error("cancelled");
+    const signal = AbortSignal.abort(reason);
+    const database = fakeDatabase({} as Transaction<TestDatabase>);
+    const transaction = vi.spyOn(database, "transaction");
+    const runner = new KyselyTransactionRunner(database);
+
+    await expect(runner.run(async () => undefined, undefined, signal)).rejects.toBe(reason);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
   it("compiles actor values as bound parameters", () => {
     const compilerDatabase = new Kysely<TestDatabase>({
       dialect: new PostgresDialect({ pool: {} as never }),

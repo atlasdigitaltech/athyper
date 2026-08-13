@@ -32,6 +32,8 @@ describe("policy service", () => {
     await cached.findActive(query, {}); await cached.findActive(query, {}); expect(reads).toBe(1);
     cached.clear("tenant"); await cached.findActive(query, {}); expect(reads).toBe(2);
   });
+
+  it("simulates with an ordered rule explanation without writing audit evidence",async()=>{const audit:AuditEvent[]=[];const service=createPolicyService({repository:repository(definitions),transactions:{run:async(plane,_actor,work)=>work({plane})},audit:{record:async input=>{const event=auditEvent(input);audit.push(event);return event;}},now:()=>new Date("2026-08-09T00:00:00Z")});const simulation=await service.simulate({context:context("neon"),entityType:"purchase_order",facts:{amount:50,supplier:{risk:"clear"}}});expect(simulation).toMatchObject({audited:false,decision:{action:"allow"},trace:[{ruleId:definitions[0]!.rules[0]!.id,matched:false},{ruleId:definitions[0]!.rules[1]!.id,matched:true},{ruleId:definitions[1]!.rules[0]!.id,matched:false}]});expect(audit).toEqual([]);});
 });
 
 function repository(value: readonly PolicyDefinition[]): PolicyRepository<Tx> { return { findActive: async (_query, transaction) => { expect(transaction.plane).toBeDefined(); return value; } }; }

@@ -20,7 +20,7 @@ export function createNotificationEventBus(): NotificationEventBus {
       if (closed) return;
       const scoped = listeners.get(key(event.tenantId, event.principalId));
       if (!scoped) return;
-      await Promise.allSettled([...scoped].map((listener) => listener(event)));
+      await Promise.allSettled([...scoped].map((listener) => Promise.resolve().then(() => listener(event))));
     },
     subscribe(scope, listener) {
       if (closed) throw new Error("Notification event bus is closed");
@@ -57,23 +57,30 @@ export function openNotificationSseStream(input: {
   readonly heartbeatMs?: number;
 }): () => void {
   if (input.signal.aborted) return () => undefined;
-  input.write(": connected\n\n");
-  const unsubscribe = input.subscriber.subscribe(
-    { tenantId: input.tenantId, principalId: input.principalId },
-    (event) => input.write(serializeNotificationSseEvent(event)),
-  );
-  const heartbeat = setInterval(
-    () => input.write(`: heartbeat ${Date.now()}\n\n`),
-    input.heartbeatMs ?? 15_000,
-  );
   let open = true;
+  let unsubscribe = (): void => undefined;
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
   const close = (): void => {
     if (!open) return;
     open = false;
-    clearInterval(heartbeat);
+    if (heartbeat) clearInterval(heartbeat);
     unsubscribe();
     input.signal.removeEventListener("abort", close);
   };
+  const write = (chunk: string): void => {
+    if (!open) return;
+    try { input.write(chunk); } catch { close(); }
+  };
+  write(": connected\n\n");
+  if (!open) return close;
+  unsubscribe = input.subscriber.subscribe(
+    { tenantId: input.tenantId, principalId: input.principalId },
+    (event) => write(serializeNotificationSseEvent(event)),
+  );
+  heartbeat = setInterval(
+    () => write(`: heartbeat ${Date.now()}\n\n`),
+    input.heartbeatMs ?? 15_000,
+  );
   input.signal.addEventListener("abort", close, { once: true });
   return close;
 }

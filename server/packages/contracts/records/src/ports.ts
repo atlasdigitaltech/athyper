@@ -57,7 +57,7 @@ export interface RecordAggregateExecutor<Transaction> {
 export type RecordTransactionCoordinator<Transaction> = PlaneTransactionCoordinator<Transaction>;
 
 export interface RecordBulkService { preflight(command: BulkCommand): Promise<BulkPreflightResult>; execute(command: BulkCommand): Promise<BulkExecutionResult>; }
-export interface GovernedRecordJobDispatcher { enqueue(kind: "bulk" | "import" | "export", payload: Readonly<Record<string, unknown>>): Promise<string>; }
+export interface GovernedRecordJobDispatcher { enqueue(kind: "bulk" | "import" | "export", payload: Readonly<Record<string, unknown>>, options?: { readonly jobId: string }): Promise<string>; }
 export interface RecordActionHandler { execute(command: RegisteredActionCommand): Promise<RegisteredActionResult>; }
 export interface RecordActionService { execute(command: RegisteredActionCommand): Promise<RegisteredActionResult>; }
 export interface RecordSnapshotRepository { capture(input: RecordSnapshotCaptureInput): Promise<SnapshotCaptureReceipt>; latest(scope: SnapshotReadScope, entityType: string, entityId: string): Promise<RecordSnapshot | null>; get(scope: SnapshotReadScope, snapshotId: string): Promise<RecordSnapshot | null>; }

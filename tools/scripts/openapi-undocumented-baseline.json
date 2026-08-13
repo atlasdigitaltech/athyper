@@ -1,5 +1,11 @@
 {
   "defaultReason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
+  "debtSnapshot": {
+    "namedRoutes": 32,
+    "sourceExcludedRoutes": 67,
+    "sourceExclusions": 7,
+    "totalRawRoutes": 99
+  },
   "routes": [
   "POST /api/meta-entity-authoring/change-sets",
   "PUT /api/meta-entity-authoring/change-sets/:id/graph",
@@ -7,24 +13,19 @@
   "POST /api/meta-entity-authoring/releases/:id/rollback",
   "POST /api/meta-entity-authoring/change-sets/:id/${name}",
   "GET /api/audit/status",
-  "GET /api/jobs/admin/dead-letters",
-  "POST /api/jobs/admin/executions/:id/${command}",
-  "GET /api/jobs/admin/queues",
-  "GET /api/jobs/admin/executions",
-  "GET /api/jobs/admin/schedules",
-  "POST /api/jobs/admin/schedules/preview",
-  "POST /api/jobs/admin/schedules",
-  "PUT /api/jobs/admin/schedules/:id",
-  "POST /api/jobs/admin/schedules/:id/deactivate",
-  "GET /api/jobs/admin/schedules/:id/audit",
   "GET /api/notifications/preferences",
   "PATCH /api/notifications/preferences",
+  "POST /api/notifications/preferences/preview",
+  "GET /api/notifications/deliveries/:id/timeline",
+  "GET /api/operations/notifications/deliveries/:id/timeline",
+  "POST /api/operations/notifications/deliveries/:id/replay",
   "GET /api/notifications/inbox",
   "POST /api/notifications/:id/read",
   "GET /api/notifications/stream",
   "POST /api/notifications/push-subscriptions",
   "DELETE /api/notifications/push-subscriptions/:id",
   "POST /api/policy/evaluate",
+  "POST /api/policy/simulate",
   "GET /api/platform/preferences/saved-views",
   "POST /api/platform/preferences/saved-views",
   "PUT /api/platform/preferences/saved-views/:id",
@@ -37,21 +38,12 @@
   "POST /api/attachments/stage",
   "POST /api/attachments/:attachmentId/finalize",
   "POST /api/documents/render",
-  "POST /api/documents/:documentId/download",
-  "GET /api/publication/releases/:releaseId",
-  "GET /api/publication/deployments/:deploymentId",
-  "POST /api/publication/releases/:releaseId/publish",
-  "POST /api/publication/deployments/:deploymentId/retry",
-  "POST /api/publication/publication-keys/:key/rollback"
+  "POST /api/documents/:documentId/download"
   ],
   "sources": [
     {
       "source": "server/packages/planes/studio/onboarding/src/routes.ts",
       "reason": "New conditional adapter; its durable repository and transport composition must stabilize before publishing the external schema."
-    },
-    {
-      "source": "server/packages/platform/ai/src/atlas-routes.ts",
-      "reason": "Atlas adapter is deployment-disabled until durable stores, admission policy, credentials, bindings, and a provider are composed."
     },
     {
       "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",

@@ -9,4 +9,6 @@ export * from "./approver-resolution.js";
 export * from "./approvals.js";
 export * from "./domain-commands.js";
 export * from "./sla.js";
+export * from "./sla-automation.js";
+export * from "./workflow-jobs.js";
 export * from "./recovery.js";

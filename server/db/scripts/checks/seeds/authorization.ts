@@ -21,7 +21,7 @@ interface Pack {
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
-const databaseRoot = resolve(here, "../..");
+const databaseRoot = resolve(here, "../../..");
 const repositoryRoot = resolve(databaseRoot, "../..");
 const strict = process.argv.includes("--strict");
 const failures: string[] = [];
@@ -30,7 +30,7 @@ const afterInventoryPath = option("--identity-after");
 const packs: Record<string, { hash: string; subjects: number }> = {};
 for (const target of ["neon-admin", "mesh"]) {
   const root = resolve(databaseRoot, `seed/packs/authorization-v2/${target}`);
-  const pack = JSON.parse(await readFile(resolve(root, "seed-pack.v1.json"), "utf8")) as Pack;
+  const pack = await readJson<Pack>(resolve(root, "seed-pack.v1.json"));
   const expected = (await readFile(resolve(root, "seed-pack.sha256"), "utf8")).trim();
   const actual = sha256(canonical(pack));
   if (expected !== actual) failures.push(`${target}: deterministic content hash mismatch`);
@@ -81,25 +81,31 @@ if (retiredIdentitySeedReferences.length > 0) {
   failures.push(`${retiredIdentitySeedReferences.length} retired identity seed reference(s) remain`);
 }
 
-const keycloakSetup = JSON.parse(await readFile(resolve(
+const keycloakSetup = await readJson<{
+  tenantOrganizations?: Array<{
+    alias?: string;
+    attributes?: { context_kind?: string[] };
+  }>;
+}>(resolve(
   repositoryRoot,
   "stack/config/iam/realm-athyper-demosetup.json",
-), "utf8")) as { organizations?: Array<{ alias?: string }> };
-const invalidOrganizationAliases = (keycloakSetup.organizations ?? [])
+));
+const invalidOrganizationAliases = (keycloakSetup.tenantOrganizations ?? [])
+  .filter((organization) => organization.attributes?.context_kind?.includes("tenant"))
   .map((organization) => organization.alias ?? "")
   .filter((alias) => !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(alias));
 if (invalidOrganizationAliases.length > 0) {
   failures.push(`${invalidOrganizationAliases.length} Keycloak organization alias(es) are not tenant UUIDs`);
 }
 
-const userManifest = JSON.parse(await readFile(resolve(
-  databaseRoot,
-  "seed/contracts/authorization/authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
-), "utf8")) as {
+const userManifest = await readJson<{
   enabledSubjectCount: number;
   mappedSubjectCount: number;
   unmanagedKeycloakUsers: string;
-};
+}>(resolve(
+  databaseRoot,
+  "seed/contracts/authorization/authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
+));
 if (
   userManifest.enabledSubjectCount !== userManifest.mappedSubjectCount
   || userManifest.unmanagedKeycloakUsers !== "unchanged"
@@ -137,6 +143,10 @@ const report = {
 };
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
 if (strict && failures.length > 0) process.exitCode = 1;
+
+async function readJson<T>(path: string): Promise<T> {
+  return JSON.parse((await readFile(path, "utf8")).replace(/^\uFEFF/, "")) as T;
+}
 
 async function walk(root: string): Promise<string[]> {
   const output: string[] = [];

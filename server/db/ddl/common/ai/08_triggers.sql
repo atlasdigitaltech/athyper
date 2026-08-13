@@ -19,6 +19,12 @@ CREATE TRIGGER trg_atlas_provider_credential_updated_at BEFORE UPDATE ON ai.atla
 
 CREATE TRIGGER trg_atlas_provider_epoch_updated_at BEFORE UPDATE ON ai.atlas_tenant_provider_credential_epoch FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
+CREATE TRIGGER trg_atlas_quota_policy_updated_at BEFORE UPDATE ON ai.atlas_tenant_quota_policy FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_atlas_quota_window_updated_at BEFORE UPDATE ON ai.atlas_tenant_quota_window FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_atlas_quota_reservation_updated_at BEFORE UPDATE ON ai.atlas_tenant_quota_reservation FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
 CREATE TRIGGER trg_atlas_knowledge_source_updated_at BEFORE UPDATE ON ai.atlas_knowledge_source FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 -- ============================================================================

@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "@athyper/product-neon-navigation",
   "version": "0.0.0",
   "private": true,
@@ -7,7 +7,7 @@
   "types": "./src/index.ts",
   "exports": { ".": "./src/index.ts" },
   "scripts": { "typecheck": "tsc --noEmit" },
-  "peerDependencies": { "react": "^19.2.5" },
+  "dependencies": { "@athyper/platform-shell": "workspace:*" },
   "devDependencies": {
     "@athyper/config": "workspace:*",
     "@types/react": "^19.2.14",

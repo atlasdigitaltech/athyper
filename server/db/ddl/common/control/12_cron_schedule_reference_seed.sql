@@ -35,6 +35,37 @@ DO UPDATE SET
     updated_at = now(),
     updated_by = EXCLUDED.created_by;
 
+-- Workflow SLA discovery is plane-global; each run fans out only to active
+-- tenants that currently have an overdue, unprocessed work item.
+INSERT INTO control.cron_schedule (
+    tenant_id, code, name, description, handler_type, cron_expression,
+    timezone, target_queue, payload_template, priority, max_retries,
+    concurrency_limit, lock_key, is_enabled, created_by
+) VALUES (
+    NULL, 'workflow-sla-discovery', 'Workflow SLA breach discovery',
+    'Discovers active plane-local tenants with overdue workflow items.',
+    'workflow.sla.discover', '* * * * *', 'UTC',
+    'workflow.maintenance', '{"limit":500}'::jsonb, 0, 2, 1,
+    'workflow:sla:discovery', true,
+    '00000000-0000-0000-0000-000000000000'
+)
+ON CONFLICT (tenant_id, code)
+DO UPDATE SET
+    name = EXCLUDED.name,
+    description = EXCLUDED.description,
+    handler_type = EXCLUDED.handler_type,
+    cron_expression = EXCLUDED.cron_expression,
+    timezone = EXCLUDED.timezone,
+    target_queue = EXCLUDED.target_queue,
+    payload_template = EXCLUDED.payload_template,
+    priority = EXCLUDED.priority,
+    max_retries = EXCLUDED.max_retries,
+    concurrency_limit = EXCLUDED.concurrency_limit,
+    lock_key = EXCLUDED.lock_key,
+    is_enabled = EXCLUDED.is_enabled,
+    updated_at = now(),
+    updated_by = EXCLUDED.created_by;
+
 -- Notification discovery is plane-global. The scheduler repository injects
 -- the physical plane key and the trusted system principal into each payload;
 -- the discovery handler then emits tenant-scoped child jobs only for tenants

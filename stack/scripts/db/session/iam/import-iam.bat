@@ -42,6 +42,8 @@ set "DEMO_FILE=%CONFIG_DIR%\realm-athyper-demosetup.json"
 set "PLATFORM_DEMO_FILE=%CONFIG_DIR%\realm-platform-control-demosetup.json"
 set "TEMP_IMPORT_DIR=%TEMP%\keycloak-import-%RANDOM%%RANDOM%"
 
+node "%REPO_DIR%\tools\scripts\normalize-keycloak-plane-contract.mjs"
+if errorlevel 1 exit /b 1
 node "%REPO_DIR%\tools\scripts\generate-athyper-demo-iam.cjs" --check
 if errorlevel 1 exit /b 1
 node "%REPO_DIR%\tools\scripts\verify-athyper-demo-iam.cjs"

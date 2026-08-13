@@ -9,6 +9,7 @@
     "@athyper/server-contract-attachments": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-content": "workspace:*",
+    "@athyper/server-contract-events": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-contract-malware-scanning": "workspace:*",
     "@athyper/server-contract-object-storage": "workspace:*",

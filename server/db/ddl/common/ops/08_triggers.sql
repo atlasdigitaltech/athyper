@@ -28,3 +28,18 @@ CREATE TRIGGER job_execution_command_immutable
     FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_job_execution_evidence();
 CREATE TRIGGER identity_admission_shadow_immutable BEFORE UPDATE OR DELETE ON ops.identity_admission_shadow_comparison
 FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_identity_admission_shadow_comparison();
+CREATE TRIGGER control_runtime_command_submission_immutable
+BEFORE UPDATE OR DELETE ON ops.control_runtime_command_submission
+FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_control_runtime_evidence();
+CREATE TRIGGER control_runtime_command_approval_request_immutable
+BEFORE UPDATE OR DELETE ON ops.control_runtime_command_approval_request
+FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_control_runtime_evidence();
+CREATE TRIGGER control_runtime_command_approval_decision_immutable
+BEFORE UPDATE OR DELETE ON ops.control_runtime_command_approval_decision
+FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_control_runtime_evidence();
+CREATE TRIGGER control_runtime_command_history_immutable
+BEFORE UPDATE OR DELETE ON ops.control_runtime_command_history
+FOR EACH ROW EXECUTE FUNCTION ops.trg_guard_control_runtime_evidence();
+CREATE TRIGGER control_runtime_command_history_prepare
+BEFORE INSERT ON ops.control_runtime_command_history
+FOR EACH ROW EXECUTE FUNCTION ops.trg_prepare_control_runtime_history();

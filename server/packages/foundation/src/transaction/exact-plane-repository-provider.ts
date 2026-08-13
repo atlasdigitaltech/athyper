@@ -9,11 +9,11 @@ export interface PlaneRepositoryHealth {
 
 export interface ExactPlaneRepositoryProvider<Repository> {
   require(planeKey: PlaneKey): Repository;
-  health(planeKey: PlaneKey): Promise<PlaneRepositoryHealth>;
+  health(planeKey: PlaneKey, signal?: AbortSignal): Promise<PlaneRepositoryHealth>;
 }
 
 export interface ExactPlaneRepositoryProviderOptions<Repository> {
-  readonly health?: Readonly<Partial<Record<PlaneKey, (repository: Repository) => Promise<PlaneRepositoryHealth>>>>;
+  readonly health?: Readonly<Partial<Record<PlaneKey, (repository: Repository, signal?: AbortSignal) => Promise<PlaneRepositoryHealth>>>>;
   readonly unavailableCode?: string;
 }
 
@@ -35,14 +35,18 @@ export function createExactPlaneRepositoryProvider<Repository>(
       if (repository === undefined) throw unavailable(unavailableCode, planeKey);
       return repository;
     },
-    async health(planeKey: PlaneKey): Promise<PlaneRepositoryHealth> {
+    async health(planeKey: PlaneKey, signal?: AbortSignal): Promise<PlaneRepositoryHealth> {
+      signal?.throwIfAborted();
       const repository = repositories[planeKey];
       if (repository === undefined) return { status: "unavailable", message: `${unavailableCode}:${planeKey}` };
       const probe = probes[planeKey];
       if (!probe) return { status: "healthy" };
       try {
-        return await probe(repository);
+        const result = await probe(repository, signal);
+        signal?.throwIfAborted();
+        return result;
       } catch (error) {
+        signal?.throwIfAborted();
         return { status: "unhealthy", message: error instanceof Error ? error.message : "Repository health probe failed" };
       }
     },

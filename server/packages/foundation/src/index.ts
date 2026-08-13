@@ -1,6 +1,7 @@
 // Capability-neutral server primitives. Prefer explicit subpath imports so a
 // consumer's dependency is visible at the import site.
 export * from "./context/index.js";
+export * from "./dependencies/index.js";
 export * from "./errors/index.js";
 export * from "./lifecycle/index.js";
 export * from "./observability/index.js";

@@ -9,7 +9,7 @@ DECLARE
 BEGIN
   PERFORM set_config('app.current_tenant_id', v_tid::text, true);
   PERFORM set_config('app.current_principal_id', v_su::text, true);
-  PERFORM set_config('app.database_plane', 'athyper', true);
+  PERFORM set_config('app.database_plane', 'studio', true);
 
   INSERT INTO authz.scope_target (
     id, tenant_id, scope_kind, scope_key, target_id, display_name,

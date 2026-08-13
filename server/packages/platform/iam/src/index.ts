@@ -13,3 +13,4 @@ export * from "./trustiam-authority.js";
 export * from "./kysely-trustiam-authority-repository.js";
 export * from "./identity-provisioning-service.js";
 export * from "./kysely-identity-provisioning-attempt-repository.js";
+export * from "./legacy-compatibility.js";

@@ -15,3 +15,5 @@ export {
 export * from "./publication-jobs.js";
 export * from "./publication-routes.js";
 export * from "./publication-artifact-loader.js";
+export * from "./publication-operations.js";
+export * from "./kysely-publication-operations-repository.js";

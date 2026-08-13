@@ -1,4 +1,6 @@
 import type { AuthorizationManagementCommand, AuthorizationManagementService, AuthorizationMutationKind, VerifiedRequestContext } from "@athyper/server-contract-auth";
+import { controlAdminSchemas } from "@athyper/server-contract-control-admin";
+import { defineRouteContract, registerContractRoute } from "@athyper/server-runtime-http";
 import type { Application, Request, RequestHandler, Response } from "express";
 import { authorizationManagementPermissionFor } from "./authorization-management-service.js";
 
@@ -9,9 +11,9 @@ type MutationRoute = "manage" | "approve" | "revoke" | "break-glass";
  * approve, revoke, or invoke break-glass through a generic command endpoint.
  */
 export function registerAuthorizationManagementRoutes(application: Application, options: { readonly authenticate: RequestHandler; readonly readContext: (response: Response) => VerifiedRequestContext; readonly service: AuthorizationManagementService }): void {
-  application.get("/api/control-admin/authorization", options.authenticate, route(async (_request, response) => options.service.readStatus(options.readContext(response))));
+  registerContractRoute(application, defineRouteContract({ method: "get", path: "/api/control-admin/authorization", operationId: "controlAdmin.authorization.read", summary: "Read authorization administration status", tags: ["Control Administration"], authenticated: true, permission: "authorization.management.read", responses: { 200: { description: "Authorization administration status", body: controlAdminSchemas.response }, 403: { description: "Permission denied" } } }), options.authenticate, route(async (_request, response) => options.service.readStatus(options.readContext(response))));
   for (const action of ["manage", "approve", "revoke", "break-glass"] as const) {
-    application.post(`/api/control-admin/authorization/${action}`, options.authenticate, route(async (request, response) => {
+    registerContractRoute(application, defineRouteContract({ method: "post", path: `/api/control-admin/authorization/${action}`, operationId: `controlAdmin.authorization.${action.replace("-", "_")}`, summary: `${action} an authorization administration command`, tags: ["Control Administration"], authenticated: true, permission: `authorization.management.${action === "break-glass" ? "break_glass" : action}`, request: { body: controlAdminSchemas.authorizationCommand }, responses: { 200: { description: "Authorization command result", body: controlAdminSchemas.response }, 400: { description: "Invalid command" }, 403: { description: "Permission denied" } } }), options.authenticate, route(async (request, response) => {
       const command = parseCommand(request, options.readContext(response));
       assertRouteMatchesPermission(action, command.kind);
       return options.service.execute(command);

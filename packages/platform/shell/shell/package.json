@@ -1,12 +1,14 @@
-﻿{
+{
   "name": "@athyper/platform-shell",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "sideEffects": ["./src/styles.css"],
+  "exports": { ".": "./src/index.tsx", "./core": "./src/core.ts", "./styles.css": "./src/styles.css" },
   "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": { "@athyper/platform-icons": "workspace:*", "@athyper/platform-shell-runtime": "workspace:*" },
   "peerDependencies": { "react": "^19.2.5" },
   "devDependencies": {
     "@athyper/config": "workspace:*",

@@ -1,0 +1,1 @@
+export default function ProcurementPage() { return <section aria-labelledby="page-title"><p>Supply Chain</p><h1 id="page-title">Procurement</h1><p>Procurement capabilities will arrive through governed vertical slices.</p></section>; }

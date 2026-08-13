@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { JobAdministration, JobAdministrationCommand, JobAdministrationRequest, JobAdministrationResult, JobDeadLetterSummary, JobExecutionCoordinate, JobPublisher, JobReplaySource, JobTransportControl } from "@athyper/server-contract-jobs";
 
 export interface JobAdministrationStore {
@@ -47,9 +46,8 @@ export function createJobAdministrationService(options: {
       validateRequest(request);
       const source = await options.store.load(request);
       if (!source) return { command: "replay", applied: false, reason: "Job execution was not found" };
-      const jobId = `replay-${randomUUID()}`;
       const publishedId = await options.publisher.enqueue(source.queue, source.name, source.data, {
-        jobId,
+        enqueueKey: `replay:${source.executionKey}:${request.executionId}`,
         maxAttempts: source.maxAttempts,
         execution: request.execution,
         removeOnComplete: 1_000,

@@ -9,10 +9,11 @@ export interface BulkPreflightResult { readonly batchId: string; readonly accept
 export interface BulkRecordResult { readonly recordId: string; readonly result: RecordMutationResult | { readonly kind: "ActionCompleted"; readonly output?: Readonly<Record<string, unknown>> }; }
 export interface BulkExecutionResult { readonly batchId: string; readonly status: "completed" | "queued"; readonly jobId?: string; readonly items: readonly BulkRecordResult[]; }
 
-export type ImportStageStatus = "staged" | "validated" | "previewed" | "commit_queued" | "committed" | "failed";
-export interface RecordImportSession { readonly id: string; readonly tenantId: string; readonly entityCode: string; readonly status: ImportStageStatus; readonly stagedRowCount: number; readonly validRowCount: number; readonly invalidRowCount: number; readonly checksum: string; readonly createdAt: string; }
+export type ImportStageStatus = "uploading" | "staged" | "validated" | "previewed" | "commit_queued" | "running" | "committed" | "cancelled" | "failed";
+export interface RecordImportSession { readonly id: string; readonly tenantId: string; readonly entityCode: string; readonly status: ImportStageStatus; readonly stagedRowCount: number; readonly validRowCount: number; readonly invalidRowCount: number; readonly checksum: string; readonly createdAt: string; readonly createdBy?:string; readonly nextChunkIndex?: number; readonly errorReportKey?: string; readonly cancelledAt?: string; }
 export interface ImportValidationRow { readonly rowNumber: number; readonly valid: boolean; readonly errors: readonly string[]; }
-export interface RecordImportPreview { readonly sessionId: string; readonly rows: readonly ImportValidationRow[]; readonly validCount: number; readonly invalidCount: number; }
+export interface ImportValidationSummary { readonly totalCount:number; readonly validCount:number; readonly invalidCount:number; readonly errorsByCode:Readonly<Record<string,number>>; readonly sample:readonly ImportValidationRow[]; readonly truncated:boolean; }
+export interface RecordImportPreview { readonly sessionId: string; readonly rows: readonly ImportValidationRow[]; readonly validCount: number; readonly invalidCount: number; readonly summary?:ImportValidationSummary; }
 export interface RecordTransferFilter { readonly filters?: readonly RecordFilter[]; }
 
 export type SnapshotCaptureKind = "create" | "version" | "publish" | "release" | "submit" | "approval" | "commitment" | "fulfillment" | "financial_post" | "amendment" | "reversal" | "withdrawal" | "reconcile" | "migration" | "manual";

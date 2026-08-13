@@ -217,6 +217,10 @@ if /I "!_PLANE!"=="studio" (
 )
 set "PUBLIC_BASE_URL=!_PLANE_URL!"
 set "PUBLIC_WEB_URL=!_PLANE_URL!"
+REM Auth BFF redirect URIs must use the browser-facing plane origin. Without
+REM this, the shared auth runtime falls back to localhost:3000.
+set "APP_ORIGIN=!_PLANE_URL!"
+set "NEXT_PUBLIC_APP_ORIGIN=!_PLANE_URL!"
 exit /b 0
 
 :start_plane_window

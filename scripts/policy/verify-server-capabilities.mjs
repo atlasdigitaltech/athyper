@@ -7,6 +7,7 @@ const profiles = JSON.parse(readFileSync(join(root, "config/deployment/profiles.
 const document = JSON.parse(readFileSync(join(root, "config/deployment/server-capabilities.json"), "utf8"));
 const errors = [];
 const ids = new Set();
+const profileNames = Object.keys(profiles);
 for (const capability of document.capabilities ?? []) {
   if (!/^[a-z][a-z0-9-]*$/.test(capability.id ?? "") || ids.has(capability.id)) errors.push(`invalid or duplicate capability id: ${capability.id}`);
   ids.add(capability.id);
@@ -17,7 +18,11 @@ for (const capability of document.capabilities ?? []) {
     if (typeof enabled !== "boolean") errors.push(`${capability.id}: ${profile} availability must be boolean`);
     if (capability.registration === "not registered" && enabled) errors.push(`${capability.id}: not registered capability cannot be enabled`);
   }
-  if (!Object.prototype.hasOwnProperty.call(capability.profiles ?? {}, "athyper-server")) errors.push(`${capability.id}: missing athyper-server availability`);
+  for (const profile of profileNames) {
+    if (!Object.prototype.hasOwnProperty.call(capability.profiles ?? {}, profile)) {
+      errors.push(`${capability.id}: missing ${profile} availability`);
+    }
+  }
 }
 if (errors.length) { console.error(`Server capability manifest validation failed:\n${errors.map((item) => `- ${item}`).join("\n")}`); process.exitCode = 1; }
 else console.log(`Server capability manifest verified (${document.capabilities.length} capabilities).`);

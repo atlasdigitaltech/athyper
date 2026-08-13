@@ -93,15 +93,74 @@ export function planKeycloakReconciliation(current, desired) {
   };
 }
 
+export function planTenantOrganizationReconciliation(current, tenantManifest, realm) {
+  if (
+    tenantManifest.contractVersion !== "athyper.three-plane-provision.v1"
+    || tenantManifest.realmKey !== realm
+    || tenantManifest.keycloak?.organizationModel !== "tenant"
+    || tenantManifest.keycloak?.businessScopesRemainPlaneLocal !== true
+    || !Array.isArray(tenantManifest.tenants)
+    || tenantManifest.tenants.length !== 3
+  ) {
+    throw new Error("invalid three-plane tenant organization manifest");
+  }
+  const existing = new Map((current ?? []).map((organization) => [organization.alias, organization]));
+  const operations = [];
+  for (const tenant of tenantManifest.tenants) {
+    if (tenant.keycloakOrganizationAlias !== tenant.id || !isUuid(tenant.id)) {
+      throw new Error(`tenant organization alias must equal tenant UUID: ${tenant.code}`);
+    }
+    const desired = {
+      name: tenant.displayName,
+      alias: tenant.id,
+      enabled: true,
+      attributes: {
+        "athyper.context.kind": ["tenant"],
+        "athyper.context.tenant_code": [tenant.code],
+        "athyper.context.managed": ["true"],
+      },
+    };
+    const actual = existing.get(tenant.id);
+    if (!actual) {
+      operations.push({ kind: "create", resource: "organization", key: tenant.code, body: desired });
+      continue;
+    }
+    const managedAttributes = { ...(actual.attributes ?? {}), ...desired.attributes };
+    if (
+      actual.name !== desired.name
+      || actual.enabled !== true
+      || JSON.stringify(actual.attributes ?? {}) !== JSON.stringify(managedAttributes)
+    ) {
+      operations.push({
+        kind: "patch",
+        resource: "organization",
+        key: tenant.code,
+        id: actual.id,
+        body: { ...actual, ...desired, attributes: managedAttributes },
+      });
+    }
+  }
+  return {
+    operations,
+    deletes: 0,
+    legalEntityOrganizationsMutated: 0,
+    tenantOrganizationCount: tenantManifest.tenants.length,
+  };
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
   const manifestPath = option(args, "--manifest")
     ?? "config/iam/keycloak-authorization-v2.manifest.json";
   const userManifestPath = option(args, "--user-manifest");
+  const tenantManifestPath = option(args, "--tenant-manifest");
   const desired = JSON.parse(await readFile(manifestPath, "utf8"));
   const userManifest = userManifestPath
     ? JSON.parse(await readFile(userManifestPath, "utf8"))
+    : null;
+  const tenantManifest = tenantManifestPath
+    ? JSON.parse(await readFile(tenantManifestPath, "utf8"))
     : null;
   const desiredMemberships = userManifest
     ? compileDesiredMemberships(userManifest, desired.realm)
@@ -123,11 +182,17 @@ async function main() {
   const password = requiredEnv("KEYCLOAK_ADMIN_PASSWORD");
   const token = await adminToken(baseUrl, adminRealm, username, password);
   const realmPath = `/admin/realms/${encodeURIComponent(desired.realm)}`;
-  const [clients, groups] = await Promise.all([
+  const [clients, groups, organizations] = await Promise.all([
     requestJson(baseUrl, `${realmPath}/clients?first=0&max=500`, token),
     requestJson(baseUrl, `${realmPath}/groups?first=0&max=500&briefRepresentation=false`, token),
+    tenantManifest
+      ? requestJson(baseUrl, `${realmPath}/organizations?first=0&max=500&briefRepresentation=false`, token)
+      : Promise.resolve([]),
   ]);
   const plan = planKeycloakReconciliation({ clients, groups }, desired);
+  const organizationPlan = tenantManifest
+    ? planTenantOrganizationReconciliation(organizations, tenantManifest, desired.realm)
+    : { operations: [], deletes: 0, legalEntityOrganizationsMutated: 0, tenantOrganizationCount: 0 };
   if (plan.conflicts.length > 0) {
     throw new Error(
       `Keycloak conflict-fail reconciliation blocked: ${JSON.stringify(plan.conflicts)}`,
@@ -143,6 +208,19 @@ async function main() {
         await requestJson(
           baseUrl,
           `${realmPath}/groups/${encodeURIComponent(operation.id)}`,
+          token,
+          "PUT",
+          operation.body,
+        );
+      }
+    }
+    for (const operation of organizationPlan.operations) {
+      if (operation.kind === "create") {
+        await requestJson(baseUrl, `${realmPath}/organizations`, token, "POST", operation.body);
+      } else if (operation.kind === "patch") {
+        await requestJson(
+          baseUrl,
+          `${realmPath}/organizations/${encodeURIComponent(operation.id)}`,
           token,
           "PUT",
           operation.body,
@@ -194,6 +272,9 @@ async function main() {
   }
   process.stdout.write(`${JSON.stringify({
     ...plan,
+    tenantOrganizationOperations: organizationPlan.operations,
+    tenantOrganizationCount: organizationPlan.tenantOrganizationCount,
+    legalEntityOrganizationsMutated: organizationPlan.legalEntityOrganizationsMutated,
     membershipOperations,
     managedMembershipCount: desiredMemberships.length,
     unmanagedUsersTouched: 0,
@@ -278,6 +359,10 @@ function requiredEnv(name) {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`${name} is required`);
   return value;
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function option(args, name) {

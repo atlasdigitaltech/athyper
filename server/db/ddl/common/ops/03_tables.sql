@@ -406,3 +406,127 @@ CREATE TABLE ops.record_edit_lock (
 );
 
 COMMENT ON TABLE ops.record_edit_lock IS 'Database-time edit leases. Rows are retained so fencing tokens remain monotonic across release and reacquisition.';
+CREATE TABLE ops.record_import_session (
+    id uuid NOT NULL, tenant_id uuid NOT NULL, entity_code text NOT NULL,
+    status text NOT NULL, staged_row_count integer NOT NULL DEFAULT 0,
+    valid_row_count integer NOT NULL DEFAULT 0, invalid_row_count integer NOT NULL DEFAULT 0,
+    checksum text NOT NULL, next_chunk_index integer NOT NULL DEFAULT 0,
+    validation_rows jsonb, validation_summary jsonb, error_report_key text,
+    created_at timestamptz NOT NULL, created_by uuid NOT NULL,
+    cancelled_at timestamptz, completed_at timestamptz, updated_at timestamptz,
+    CONSTRAINT record_import_session_pkey PRIMARY KEY (tenant_id,id),
+    CONSTRAINT record_import_session_entity_chk CHECK(entity_code~'^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT record_import_session_status_chk CHECK(status IN('uploading','staged','validated','previewed','commit_queued','running','committed','cancelled','failed')),
+    CONSTRAINT record_import_session_count_chk CHECK(staged_row_count>=0 AND valid_row_count>=0 AND invalid_row_count>=0 AND next_chunk_index>=0),
+    CONSTRAINT record_import_session_checksum_chk CHECK(checksum~'^[a-f0-9]{64}$'),
+    CONSTRAINT record_import_session_validation_chk CHECK((validation_rows IS NULL OR jsonb_typeof(validation_rows)='array') AND (validation_summary IS NULL OR jsonb_typeof(validation_summary)='object'))
+);
+
+CREATE TABLE ops.record_import_chunk (
+    tenant_id uuid NOT NULL, session_id uuid NOT NULL, chunk_index integer NOT NULL,
+    row_count integer NOT NULL, rows jsonb NOT NULL, chunk_checksum text NOT NULL,
+    cumulative_checksum text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT record_import_chunk_pkey PRIMARY KEY(tenant_id,session_id,chunk_index),
+    CONSTRAINT record_import_chunk_session_fk FOREIGN KEY(tenant_id,session_id) REFERENCES ops.record_import_session(tenant_id,id) ON DELETE CASCADE,
+    CONSTRAINT record_import_chunk_index_chk CHECK(chunk_index>=0 AND row_count>0),
+    CONSTRAINT record_import_chunk_rows_chk CHECK(jsonb_typeof(rows)='array' AND jsonb_array_length(rows)=row_count),
+    CONSTRAINT record_import_chunk_hash_chk CHECK(chunk_checksum~'^[a-f0-9]{64}$' AND cumulative_checksum~'^[a-f0-9]{64}$')
+);
+
+CREATE TABLE ops.record_export_request (
+    id uuid NOT NULL, tenant_id uuid NOT NULL, entity_code text NOT NULL,
+    exact_filter jsonb NOT NULL, actor_principal_id uuid NOT NULL, status text NOT NULL,
+    artifact_key text, row_count integer, error_code text,
+    requested_at timestamptz NOT NULL DEFAULT now(), started_at timestamptz,
+    completed_at timestamptz, cancelled_at timestamptz,
+    CONSTRAINT record_export_request_pkey PRIMARY KEY(tenant_id,id),
+    CONSTRAINT record_export_request_entity_chk CHECK(entity_code~'^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT record_export_request_filter_chk CHECK(jsonb_typeof(exact_filter)='object'),
+    CONSTRAINT record_export_request_status_chk CHECK(status IN('queued','running','completed','cancelled','failed')),
+    CONSTRAINT record_export_request_count_chk CHECK(row_count IS NULL OR row_count>=0)
+);
+CREATE TABLE ops.control_runtime_command_submission (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    plane_code          text        NOT NULL,
+    command_id          text        NOT NULL,
+    idempotency_key     text        NOT NULL,
+    fingerprint         text        NOT NULL,
+    outcome             text        NOT NULL,
+    submission          jsonb       NOT NULL,
+    occurred_at         timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by          uuid        NOT NULL,
+    CONSTRAINT control_runtime_command_submission_pkey PRIMARY KEY (id),
+    CONSTRAINT control_runtime_command_submission_idempotency_uq UNIQUE (tenant_id,idempotency_key,outcome),
+    CONSTRAINT control_runtime_command_submission_plane_chk CHECK (plane_code IN ('studio','neon','mesh')),
+    CONSTRAINT control_runtime_command_submission_outcome_chk CHECK (outcome IN ('approval_required','pending','applied','failed')),
+    CONSTRAINT control_runtime_command_submission_hash_chk CHECK (fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT control_runtime_command_submission_text_chk CHECK (
+      btrim(command_id)<>'' AND btrim(idempotency_key)<>'' AND jsonb_typeof(submission)='object')
+);
+COMMENT ON TABLE ops.control_runtime_command_submission IS
+  'Append-only runtime command state events. Pending claims are persisted before external apply; terminal states are immutable follow-up rows.';
+
+CREATE TABLE ops.control_runtime_command_approval_request (
+    id                  uuid        NOT NULL,
+    tenant_id           uuid        NOT NULL,
+    plane_code          text        NOT NULL,
+    command_id          text        NOT NULL,
+    kind                text        NOT NULL,
+    command_fingerprint text        NOT NULL,
+    requested_by        uuid        NOT NULL,
+    requested_at        timestamptz NOT NULL,
+    CONSTRAINT control_runtime_command_approval_request_pkey PRIMARY KEY (id),
+    CONSTRAINT control_runtime_command_approval_request_plane_chk CHECK (plane_code IN ('studio','neon','mesh')),
+    CONSTRAINT control_runtime_command_approval_request_kind_chk CHECK (kind ~ '^[a-z][a-z0-9_.-]{2,127}$'),
+    CONSTRAINT control_runtime_command_approval_request_hash_chk CHECK (command_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT control_runtime_command_approval_request_text_chk CHECK (btrim(command_id)<>'')
+);
+COMMENT ON TABLE ops.control_runtime_command_approval_request IS
+  'Immutable high-risk runtime command approval request bound to an exact command fingerprint.';
+
+CREATE TABLE ops.control_runtime_command_approval_decision (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    approval_id         uuid        NOT NULL,
+    decision            text        NOT NULL,
+    reason              text        NOT NULL,
+    decided_by          uuid        NOT NULL,
+    decided_at          timestamptz NOT NULL,
+    CONSTRAINT control_runtime_command_approval_decision_pkey PRIMARY KEY (id),
+    CONSTRAINT control_runtime_command_approval_decision_approval_uq UNIQUE (approval_id),
+    CONSTRAINT control_runtime_command_approval_decision_value_chk CHECK (decision IN ('approved','rejected')),
+    CONSTRAINT control_runtime_command_approval_decision_reason_chk CHECK (btrim(reason)<>''),
+    CONSTRAINT control_runtime_command_approval_decision_request_fk FOREIGN KEY (approval_id)
+      REFERENCES ops.control_runtime_command_approval_request(id) ON DELETE RESTRICT
+);
+COMMENT ON TABLE ops.control_runtime_command_approval_decision IS
+  'Append-only two-person approval decision; at most one decision exists per request.';
+
+CREATE TABLE ops.control_runtime_command_history (
+    sequence_no         bigint GENERATED ALWAYS AS IDENTITY,
+    id                  uuid        NOT NULL,
+    tenant_id           uuid        NOT NULL,
+    plane_code          text        NOT NULL,
+    command_id          text        NOT NULL,
+    kind                text        NOT NULL,
+    event               text        NOT NULL,
+    actor_id            uuid        NOT NULL,
+    reason              text        NOT NULL,
+    fingerprint         text        NOT NULL,
+    detail              jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    occurred_at         timestamptz NOT NULL,
+    previous_hash       text,
+    entry_hash          text        NOT NULL,
+    CONSTRAINT control_runtime_command_history_pkey PRIMARY KEY (id),
+    CONSTRAINT control_runtime_command_history_sequence_uq UNIQUE (sequence_no),
+    CONSTRAINT control_runtime_command_history_plane_chk CHECK (plane_code IN ('studio','neon','mesh')),
+    CONSTRAINT control_runtime_command_history_kind_chk CHECK (kind ~ '^[a-z][a-z0-9_.-]{2,127}$'),
+    CONSTRAINT control_runtime_command_history_event_chk CHECK (event IN ('submitted','approval_requested','approved','rejected','applied')),
+    CONSTRAINT control_runtime_command_history_reason_chk CHECK (btrim(reason)<>''),
+    CONSTRAINT control_runtime_command_history_hash_chk CHECK (
+      fingerprint ~ '^[a-f0-9]{64}$' AND entry_hash ~ '^[a-f0-9]{64}$'
+      AND (previous_hash IS NULL OR previous_hash ~ '^[a-f0-9]{64}$')),
+    CONSTRAINT control_runtime_command_history_detail_chk CHECK (jsonb_typeof(detail)='object')
+);
+COMMENT ON TABLE ops.control_runtime_command_history IS
+  'Append-only per-tenant/per-plane hash chain for runtime command and approval events.';

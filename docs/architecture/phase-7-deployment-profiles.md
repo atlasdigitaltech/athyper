@@ -3,7 +3,7 @@
 Deployment profiles are defined in `config/deployment/profiles.json`:
 
 - `athyper-neon`
-- `athyper-admin`
+- `athyper-studio`
 - `athyper-mesh`
 - `athyper-server`
 
@@ -15,7 +15,7 @@ Builds must run after `pnpm install` in the target Linux environment or deployme
 
 ```text
 pnpm --filter @athyper/neon... build
-pnpm --filter @athyper/admin... build
+pnpm --filter @athyper/studio... build
 pnpm --filter @athyper/mesh... build
 pnpm --filter @athyper/runtime-server... build
 ```
@@ -27,4 +27,16 @@ Profile validation is available through:
 
 ```text
 pnpm policy:deployment-profiles
+```
+
+Server endpoint registration and profile availability are recorded separately
+in `config/deployment/server-capabilities.json`. Every capability must publish a
+boolean assertion for every deployment profile. A `false` assertion means the
+profile alone does not guarantee the capability's runtime prerequisites; it
+does not override the capability's registration state.
+
+Capability validation is available through:
+
+```text
+pnpm policy:server-capabilities
 ```

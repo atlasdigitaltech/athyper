@@ -119,6 +119,60 @@ CREATE TABLE "ai"."atlas_tenant_provider_credential_epoch" (
   "updated_by" uuid DEFAULT '00000000-0000-0000-0000-000000000000'::uuid NOT NULL
 );
 
+CREATE TABLE "ai"."atlas_tenant_quota_policy" (
+  "tenant_id" uuid NOT NULL,
+  "max_requests" bigint NOT NULL,
+  "max_input_tokens" bigint NOT NULL,
+  "max_output_tokens" bigint NOT NULL,
+  "window_seconds" integer NOT NULL,
+  "revision" integer DEFAULT 1 NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL,
+  "updated_at" timestamp with time zone,
+  "updated_by" uuid
+);
+
+COMMENT ON TABLE "ai"."atlas_tenant_quota_policy" IS 'Tenant-specific Atlas request and token limits. Runtime counters are stored separately in immutable time windows.';
+
+CREATE TABLE "ai"."atlas_tenant_quota_window" (
+  "tenant_id" uuid NOT NULL,
+  "window_started_at" timestamp with time zone NOT NULL,
+  "window_ends_at" timestamp with time zone NOT NULL,
+  "used_requests" bigint DEFAULT 0 NOT NULL,
+  "used_input_tokens" bigint DEFAULT 0 NOT NULL,
+  "used_output_tokens" bigint DEFAULT 0 NOT NULL,
+  "reserved_input_tokens" bigint DEFAULT 0 NOT NULL,
+  "reserved_output_tokens" bigint DEFAULT 0 NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL,
+  "updated_at" timestamp with time zone,
+  "updated_by" uuid
+);
+
+COMMENT ON TABLE "ai"."atlas_tenant_quota_window" IS 'Serialized per-tenant Atlas request/token accounting window. Reserved counters prevent concurrent calls from overcommitting capacity.';
+
+CREATE TABLE "ai"."atlas_tenant_quota_reservation" (
+  "id" uuid DEFAULT shared.uuidv7() NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "window_started_at" timestamp with time zone NOT NULL,
+  "plane_key" text NOT NULL,
+  "principal_id" uuid NOT NULL,
+  "reserved_input_tokens" bigint NOT NULL,
+  "reserved_output_tokens" bigint NOT NULL,
+  "actual_input_tokens" bigint,
+  "actual_output_tokens" bigint,
+  "status" text DEFAULT 'reserved' NOT NULL,
+  "expires_at" timestamp with time zone NOT NULL,
+  "settled_at" timestamp with time zone,
+  "released_at" timestamp with time zone,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "created_by" uuid NOT NULL,
+  "updated_at" timestamp with time zone,
+  "updated_by" uuid
+);
+
+COMMENT ON TABLE "ai"."atlas_tenant_quota_reservation" IS 'Idempotent Atlas capacity reservation. Expiry reclaims abandoned streams; late settlement still records actual usage in the originating window.';
+
 -- ============================================================================
 -- event/01_tables.sql
 -- Tables reconstructed from the live catalog.

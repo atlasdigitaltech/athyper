@@ -17,7 +17,13 @@ const inside = (file, directory) => {
 };
 const packageBoundary = (path) => {
   const normalized = posix(path);
+  const plane = normalized.match(/^packages\/planes\/([^/]+)/)?.[1];
+  if (plane) return { kind: "product", product: plane };
   if (normalized.startsWith("packages/shared/")) return { kind: "shared", product: null };
+  if (normalized.startsWith("packages/contracts/")) return { kind: "contract", product: null };
+  if (normalized.startsWith("packages/platform/") || normalized.startsWith("packages/domain/") || normalized.startsWith("tooling/")) {
+    return { kind: "shared", product: null };
+  }
   const product = normalized.match(/^packages\/product\/([^/]+)/)?.[1];
   if (product) return { kind: "product", product };
   const appPackage = normalized.match(/^packages\/apps\/([^/]+)/)?.[1];
@@ -102,11 +108,12 @@ function checkDependency(owner, dependency, source) {
   for (const target of targets) {
     const from = owner.boundary;
     const to = target.boundary;
-    if (from.kind === "shared" && ["app", "product", "deprecated"].includes(to.kind)) {
+    if ((from.kind === "shared" || from.kind === "contract") && ["app", "product", "deprecated", "server"].includes(to.kind)) {
       violations.push(`${source}: shared package ${owner.name} depends on non-shared package ${dependency}`);
     }
-    if (from.kind === "product" && to.kind !== "shared" && to.kind !== "other") {
-      violations.push(`${source}: product package ${owner.name} depends on ${dependency}; product packages may depend only on shared packages`);
+    if (from.kind === "product" && !["shared", "contract", "other"].includes(to.kind)
+      && !(to.kind === "product" && from.product === to.product)) {
+      violations.push(`${source}: ${from.product} product package ${owner.name} crosses into ${dependency}`);
     }
     if (from.kind === "app" && to.kind === "product" && from.product !== to.product) {
       violations.push(`${source}: ${from.product} application imports ${to.product} product package ${dependency}`);

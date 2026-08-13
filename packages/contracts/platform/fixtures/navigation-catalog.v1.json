@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "revision": "catalog-r1",
+  "workspaces": [
+    { "code": "operations", "name": "Operations", "iconKey": "workspace", "sortOrder": 10, "modules": ["records"] }
+  ],
+  "modules": [
+    { "code": "records", "name": "Records", "iconKey": "records", "primaryWorkspaceCode": "operations" }
+  ]
+}

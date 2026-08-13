@@ -83,7 +83,13 @@ export function registerRuntimes(
   }
 
   if (config.bullMq.url && config.mode === "scheduler") {
-    const scheduler = dependencies.createScheduler({ redisUrl: config.bullMq.url });
+    const scheduler = dependencies.createScheduler({
+      redisUrl: config.bullMq.url,
+      leaderElection: {
+        key: `athyper:${config.env}:scheduling:leader`,
+        onLeadershipLost: (error) => console.error("[scheduler] leadership_lost", error.message),
+      },
+    });
     container.runtimes.scheduler = scheduler;
     lifecycle.onShutdown(() => scheduler.close());
     container.runtimes.scheduleReconcileMs = config.jobs.scheduleReconcileMs;
@@ -101,6 +107,9 @@ export async function startRuntimes(container: Container, mode: string): Promise
     await createSchedulingRuntime({
       scheduler: container.runtimes.scheduler,
       definitions: container.runtimes.scheduledJobs,
+      onDrift: (report) => console.warn(
+        `[scheduler] schedule_drift schedule=${report.scheduleId} queue=${report.queue} status=${report.status} differences=${report.differences.join(",")}`,
+      ),
     }).start();
     if (container.runtimes.scheduleReconcile) {
       await container.runtimes.scheduleReconcile();

@@ -1,0 +1,5 @@
+import { neonRoutes } from "@athyper/product-neon-navigation";
+import { PlatformShell, deriveShellNavigation, type NavigationDiagnostic, type ShellExperienceInput } from "@athyper/platform-shell";
+import type { ReactNode } from "react";
+export function NeonShell({ bootstrap, principalId, children, onNavigationDiagnostic }: { readonly bootstrap: ShellExperienceInput & { readonly tenantId: string }; readonly principalId: string; readonly children: ReactNode; readonly onNavigationDiagnostic?: (event: NavigationDiagnostic) => void }) { return <PlatformShell applicationName="Athyper Neon" tenantLabel={bootstrap.tenantId} accountLabel={principalId} navigation={deriveShellNavigation(neonRoutes, bootstrap, onNavigationDiagnostic ?? planeDiagnostic("neon"))}>{children}</PlatformShell>; }
+function planeDiagnostic(plane: string) { return (event: NavigationDiagnostic) => { const production = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process?.env?.NODE_ENV === "production"; (production ? console.error : console.warn)(production ? "[navigation-telemetry]" : "[navigation-warning]", { plane, ...event }); }; }

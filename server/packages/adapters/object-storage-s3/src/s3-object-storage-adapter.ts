@@ -14,7 +14,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { ObjectPutOptions, ObjectStorage } from "@athyper/server-contract-object-storage";
 import type { Logger } from "@athyper/server-foundation/observability";
 import { randomUUID } from "node:crypto";
-import type { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
 
 export interface S3ObjectStorageAdapterConfig {
   readonly region: string;
@@ -63,7 +63,7 @@ export interface S3ObjectStorageAdapter extends ObjectStorage {
   ): Promise<boolean>;
   putStream(
     key: string,
-    stream: Readable,
+    stream: Readable | AsyncIterable<Uint8Array>,
     options?: PutStreamOptions,
   ): Promise<{ etag?: string }>;
   get(key: string): Promise<Buffer>;
@@ -169,7 +169,7 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
 
   async putStream(
     key: string,
-    stream: Readable,
+    stream: Readable | AsyncIterable<Uint8Array>,
     options: PutStreamOptions = {},
   ): Promise<{ etag?: string }> {
     const normalizedKey = requireObjectKey(key);
@@ -185,12 +185,13 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
       "s3_put_stream_failed",
       { key: normalizedKey },
       async () => {
+        const body = boundedUploadStream(stream, this.config.maxUploadBytes);
         const upload = new Upload({
           client: this.client,
           params: {
             Bucket: this.config.bucket,
             Key: normalizedKey,
-            Body: stream,
+            Body: body,
             ...(options.contentType ? { ContentType: options.contentType } : {}),
             ...(options.contentLength !== undefined
               ? { ContentLength: options.contentLength }
@@ -201,8 +202,13 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
           partSize,
           leavePartsOnError: false,
         });
-        const result = await upload.done();
-        return result.ETag ? { etag: result.ETag } : {};
+        try {
+          const result = await upload.done();
+          return result.ETag ? { etag: result.ETag } : {};
+        } catch (error) {
+          if (isUploadLimitError(error)) upload.abort();
+          throw error;
+        }
       },
     );
   }
@@ -459,6 +465,36 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+const UPLOAD_LIMIT_CODE = "S3_UPLOAD_TOO_LARGE";
+
+function boundedUploadStream(
+  source: Readable | AsyncIterable<Uint8Array>,
+  maxBytes: number,
+): Readable {
+  let total = 0;
+  const counter = new Transform({
+    transform(chunk: Buffer | Uint8Array | string, encoding, callback) {
+      const size = typeof chunk === "string" ? Buffer.byteLength(chunk, encoding) : chunk.byteLength;
+      total += size;
+      if (total > maxBytes) {
+        callback(Object.assign(
+          new RangeError(`Upload exceeds configured maximum size of ${maxBytes} bytes`),
+          { code: UPLOAD_LIMIT_CODE },
+        ));
+        return;
+      }
+      callback(null, chunk);
+    },
+  });
+  const readable = source instanceof Readable ? source : Readable.from(source);
+  readable.on("error", (error) => counter.destroy(error));
+  return readable.pipe(counter);
+}
+
+function isUploadLimitError(error: unknown): boolean {
+  return Boolean(error && typeof error === "object" && Reflect.get(error, "code") === UPLOAD_LIMIT_CODE);
 }
 
 function validateConfig(config: S3ObjectStorageAdapterConfig): ResolvedConfig {

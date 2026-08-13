@@ -5,6 +5,14 @@ discovery.docker "linux" {
 loki.process "normalize" {
   forward_to = [loki.write.loki.receiver]
 
+  // Drop entries older than 2h before any send attempt. Prevents Loki 400
+  // rejection storms after a system resume/freeze where Alloy accumulates a
+  // large backlog that Loki would reject as "too far behind".
+  stage.drop {
+    older_than          = "2h"
+    drop_counter_reason = "entry_too_old"
+  }
+
   // Defense-in-depth for framework or proxy request lines that include auth
   // callback/login URLs. Traefik staging/prod access logs drop RequestPath;
   // this backstop redacts sensitive query values from any container log that
@@ -85,6 +93,8 @@ loki.source.docker "docker_logs" {
 
 loki.write "loki" {
   endpoint {
-    url = "http://logging:3100/loki/api/v1/push"
+    url                = "http://logging:3100/loki/api/v1/push"
+    min_backoff_period = "1s"
+    max_backoff_period = "30s"
   }
 }

@@ -20,7 +20,7 @@ function walk(dir) {
 
 function packageDirsFromWorkspace() {
   const output = process.platform === "win32"
-    ? execFileSync("powershell.exe", ["-NoProfile", "-Command", "pnpm list -r --depth -1 --json"], { cwd: root, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 })
+    ? execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "pnpm.cmd list -r --depth -1 --json"], { cwd: root, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 })
     : execFileSync("pnpm", ["list", "-r", "--depth", "-1", "--json"], { cwd: root, encoding: "utf8", maxBuffer: 32 * 1024 * 1024 });
   const rows = JSON.parse(output);
   return new Set(rows.map((row) => realpathSync(row.path)));
@@ -42,6 +42,7 @@ function dependencyNames(pkg) {
 
 const active = packageDirsFromWorkspace();
 const manifests = packageManifests();
+const sharedCanonicalRoot = existsSync(sharedRoot) ? realpathSync(sharedRoot) : sharedRoot;
 const errors = [];
 const duplicateNames = new Map();
 
@@ -84,5 +85,5 @@ if (errors.length) {
   for (const error of errors) console.error(`  - ${error}`);
   process.exitCode = 1;
 } else {
-  console.log(`Shared package purity verified (${[...active].filter((path) => path.startsWith(realpathSync(sharedRoot))).length} active shared packages).`);
+  console.log(`Shared package purity verified (${[...active].filter((path) => path.startsWith(sharedCanonicalRoot)).length} active shared packages).`);
 }

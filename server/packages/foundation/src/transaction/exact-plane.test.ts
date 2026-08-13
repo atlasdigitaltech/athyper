@@ -27,4 +27,37 @@ describe("exact-plane transactions", () => {
     expect(() => { brandExactPlaneTransaction(transaction, "studio"); work(); }).toThrowError(expect.objectContaining({ code: "EXACT_PLANE_TRANSACTION_MISMATCH" }));
     expect(work).not.toHaveBeenCalled();
   });
+
+  it("propagates an abort signal through the coordinator boundary", async () => {
+    const controller = new AbortController();
+    const transaction = {};
+    const coordinator = createExactPlaneTransactionCoordinator({
+      run: async (_plane, _actor, work, signal) => {
+        expect(signal).toBe(controller.signal);
+        return work(transaction, signal);
+      },
+    });
+
+    await expect(coordinator.run(
+      "mesh",
+      { tenantId: "tenant", principalId: "principal" },
+      async (_transaction, signal) => signal,
+      controller.signal,
+    )).resolves.toBe(controller.signal);
+  });
+
+  it("rejects an already aborted transaction before opening the boundary", async () => {
+    const reason = new Error("cancelled");
+    const signal = AbortSignal.abort(reason);
+    const run = vi.fn();
+    const coordinator = createExactPlaneTransactionCoordinator({ run });
+
+    await expect(coordinator.run(
+      "neon",
+      { tenantId: "tenant", principalId: "principal" },
+      async () => undefined,
+      signal,
+    )).rejects.toBe(reason);
+    expect(run).not.toHaveBeenCalled();
+  });
 });

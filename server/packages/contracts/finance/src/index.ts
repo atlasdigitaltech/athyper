@@ -9,3 +9,4 @@ export * from "./foundation.js";
 export * from "./permissions.js";
 export * from "./ports.js";
 export * from "./results.js";
+export * from "./numbering.js";

@@ -3,6 +3,7 @@ import type {
   EnqueueOptions,
   JobPayload,
   JobScheduler,
+  ScheduleDriftReport,
   ScheduledJobDefinition,
 } from "@athyper/server-contract-jobs";
 import {
@@ -10,6 +11,25 @@ import {
   encodeBullMqJobData,
   type BullMqConnectionOptions,
 } from "@athyper/server-runtime-jobs";
+import {
+  createRedisSchedulerLeaderLease,
+  SchedulerLeadershipError,
+  type RedisSchedulerLeaderLeaseOptions,
+  type SchedulerLeaderLease,
+} from "./scheduler-leader-lease.js";
+import {
+  createRedisScheduleOwnerRegistry,
+  type RedisScheduleOwnerRegistryOptions,
+  type ScheduleOwnerRegistry,
+} from "./schedule-owner-registry.js";
+
+export interface BullMqJobSchedulerSnapshot {
+  readonly name: string;
+  readonly pattern?: string;
+  readonly every?: number;
+  readonly tz?: string;
+  readonly next?: number;
+}
 
 export interface BullMqScheduleQueue {
   upsertJobScheduler(
@@ -18,6 +38,7 @@ export interface BullMqScheduleQueue {
     template: { readonly name: string; readonly data: JobPayload; readonly opts: JobsOptions },
   ): Promise<unknown>;
   removeJobScheduler(scheduleId: string): Promise<boolean>;
+  getJobScheduler?(scheduleId: string): Promise<BullMqJobSchedulerSnapshot | undefined>;
   close(): Promise<void>;
 }
 
@@ -27,6 +48,11 @@ export interface BullMqJobSchedulerOptions {
     queue: string,
     connection: BullMqConnectionOptions,
   ) => BullMqScheduleQueue;
+  /** Enables Redis-backed single-leader fencing for all scheduler mutations. */
+  readonly leaderElection?: RedisSchedulerLeaderLeaseOptions | false;
+  readonly leaderLease?: SchedulerLeaderLease;
+  readonly ownerRegistry?: ScheduleOwnerRegistry;
+  readonly ownerRegistryOptions?: RedisScheduleOwnerRegistryOptions;
 }
 
 export interface ClosableJobScheduler extends JobScheduler {
@@ -39,8 +65,29 @@ export function createBullMqJobScheduler(
   const connection = createBullMqConnectionOptions(options.redisUrl);
   const createQueue = options.createQueue ?? ((name, value) => new Queue(name, { connection: value }));
   const queues = new Map<string, BullMqScheduleQueue>();
-  const owners = new Map<string, string>();
+  const leaderLease = options.leaderLease
+    ?? (options.leaderElection === false
+      ? undefined
+      : createRedisSchedulerLeaderLease(options.redisUrl, options.leaderElection));
+  if (!leaderLease && !options.ownerRegistry) {
+    throw new Error("Disabling scheduler leader fencing requires an explicit owner registry");
+  }
+  const ownerRegistry = options.ownerRegistry ?? createRedisScheduleOwnerRegistry(
+    options.redisUrl,
+    { ...options.ownerRegistryOptions, leaseKey: leaderLease!.leaseKey },
+  );
   let closed = false;
+
+  const acquireMutationFence = async (): Promise<string> => {
+    if (leaderLease && !await leaderLease.acquire()) throw new SchedulerLeadershipError();
+    const token = leaderLease?.fencingToken ?? "in-memory-test-fence";
+    if (!token) throw new SchedulerLeadershipError("Scheduler leader lease has no fencing token");
+    return token;
+  };
+
+  const assertMutationFence = async (): Promise<void> => {
+    await leaderLease?.assertLeadership();
+  };
 
   const queueFor = (name: string): BullMqScheduleQueue => {
     validateQueue(name);
@@ -54,13 +101,15 @@ export function createBullMqJobScheduler(
   return {
     async upsert(definition) {
       assertOpen(closed);
+      const fencingToken = await acquireMutationFence();
       validateScheduleId(definition.scheduleId);
-      const previousOwner = owners.get(definition.scheduleId);
+      const previousOwner = await ownerRegistry.get(definition.scheduleId);
       if (previousOwner && previousOwner !== definition.queue) {
-        throw new Error(
-          `Schedule ${definition.scheduleId} is already owned by queue ${previousOwner}`,
-        );
+        await assertMutationFence();
+        await queueFor(previousOwner).removeJobScheduler(definition.scheduleId);
       }
+      await ownerRegistry.claim(definition.scheduleId, definition.queue, fencingToken);
+      await assertMutationFence();
       await queueFor(definition.queue).upsertJobScheduler(
         definition.scheduleId,
         toRepeatOptions(definition),
@@ -70,25 +119,70 @@ export function createBullMqJobScheduler(
           opts: toJobOptions(definition.options),
         },
       );
-      owners.set(definition.scheduleId, definition.queue);
     },
 
     async remove(scheduleId) {
       assertOpen(closed);
+      const fencingToken = await acquireMutationFence();
       validateScheduleId(scheduleId);
-      const owner = owners.get(scheduleId);
+      const owner = await ownerRegistry.get(scheduleId);
       if (!owner) return false;
+      await assertMutationFence();
       const removed = await queueFor(owner).removeJobScheduler(scheduleId);
-      if (removed) owners.delete(scheduleId);
+      if (removed) await ownerRegistry.release(scheduleId, owner, fencingToken);
       return removed;
+    },
+
+    async inspect(definition): Promise<ScheduleDriftReport> {
+      assertOpen(closed);
+      validateScheduleId(definition.scheduleId);
+      const queue = queueFor(definition.queue);
+      if (!queue.getJobScheduler) {
+        return {
+          scheduleId: definition.scheduleId,
+          queue: definition.queue,
+          status: "unknown",
+          differences: ["BullMQ scheduler inspection is unavailable"],
+        };
+      }
+      const observed = await queue.getJobScheduler(definition.scheduleId);
+      if (!observed) {
+        return {
+          scheduleId: definition.scheduleId,
+          queue: definition.queue,
+          status: "missing",
+          differences: ["schedule is absent from Redis"],
+        };
+      }
+      const desired = toRepeatOptions(definition);
+      const differences: string[] = [];
+      if (observed.name !== definition.name) differences.push(`name:${observed.name}->${definition.name}`);
+      if (desired.pattern !== undefined && observed.pattern !== desired.pattern) {
+        differences.push(`pattern:${observed.pattern ?? "missing"}->${desired.pattern}`);
+      }
+      if (desired.every !== undefined && observed.every !== desired.every) {
+        differences.push(`every:${observed.every ?? "missing"}->${desired.every}`);
+      }
+      if (desired.tz !== undefined && observed.tz !== desired.tz) {
+        differences.push(`timezone:${observed.tz ?? "missing"}->${desired.tz}`);
+      }
+      return {
+        scheduleId: definition.scheduleId,
+        queue: definition.queue,
+        status: differences.length ? "drifted" : "in_sync",
+        differences,
+        ...(observed.next !== undefined
+          ? { observedNextRunAt: new Date(observed.next).toISOString() }
+          : {}),
+      };
     },
 
     async close() {
       if (closed) return;
       closed = true;
       await Promise.all([...queues.values()].map((queue) => queue.close()));
+      await Promise.all([ownerRegistry.close(), leaderLease?.close()]);
       queues.clear();
-      owners.clear();
     },
   };
 }

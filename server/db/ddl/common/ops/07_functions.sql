@@ -179,3 +179,26 @@ BEGIN
     RETURN v_count = 1;
 END;
 $$;
+CREATE OR REPLACE FUNCTION ops.trg_guard_control_runtime_evidence()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,ops AS $$
+BEGIN
+  RAISE EXCEPTION 'control runtime command evidence is append-only'
+    USING ERRCODE='integrity_constraint_violation';
+END $$;
+
+CREATE OR REPLACE FUNCTION ops.trg_prepare_control_runtime_history()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,ops,public AS $$
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtextextended(NEW.plane_code||':'||NEW.tenant_id::text,0));
+  SELECT entry_hash INTO NEW.previous_hash
+    FROM ops.control_runtime_command_history
+   WHERE tenant_id=NEW.tenant_id AND plane_code=NEW.plane_code
+   ORDER BY sequence_no DESC LIMIT 1;
+  NEW.entry_hash := encode(public.digest(convert_to(jsonb_build_object(
+    'historyId',NEW.id,'tenantId',NEW.tenant_id,'planeKey',NEW.plane_code,
+    'commandId',NEW.command_id,'kind',NEW.kind,'event',NEW.event,'actorId',NEW.actor_id,
+    'reason',NEW.reason,'fingerprint',NEW.fingerprint,'detail',NEW.detail,
+    'occurredAt',NEW.occurred_at,'previousHash',NEW.previous_hash
+  )::text,'UTF8'),'sha256'),'hex');
+  RETURN NEW;
+END $$;

@@ -30,16 +30,16 @@
 </#if>
 
 <#assign iamProductName = "Athyper">
-<#assign iamBrowserTitle = "Athyper - Business Technology Platform">
+<#assign iamBrowserTitle = "Athyper Studio - Business Technology Platform">
 <#if iamPlane == "neon">
   <#assign iamProductName = "Neon">
-  <#assign iamBrowserTitle = "Neon - Business Operating Platform">
+  <#assign iamBrowserTitle = "Athyper Neon - Business Operating Platform">
 <#elseif iamPlane == "mesh">
   <#assign iamProductName = "Mesh">
-  <#assign iamBrowserTitle = "Mesh - Business Collaboration Network">
+  <#assign iamBrowserTitle = "Athyper Mesh - Business Collaboration Network">
 <#elseif iamPlane == "admin">
-  <#assign iamProductName = "Admin">
-  <#assign iamBrowserTitle = "Athyper - Business Technology Platform">
+  <#assign iamProductName = "Studio">
+  <#assign iamBrowserTitle = "Athyper Studio - Business Technology Platform">
 </#if>
 
 <#function iamTitle pageTitle>

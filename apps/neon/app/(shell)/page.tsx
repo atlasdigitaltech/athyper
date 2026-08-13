@@ -1,0 +1,1 @@
+export default function HomePage() { return <section aria-labelledby="page-title"><p>Finance</p><h1 id="page-title">Athyper Neon</h1><p>Your permitted enterprise workspaces and modules are ready.</p></section>; }

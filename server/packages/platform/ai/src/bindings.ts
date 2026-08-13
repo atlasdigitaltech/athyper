@@ -23,12 +23,15 @@ export class AtlasProviderRegistry {
 
 export class AtlasBindingRegistry {
   private readonly byPublicModel = new Map<AtlasPublicModelId, AtlasModelBinding>();
+  private readonly byBindingId = new Map<string, AtlasModelBinding>();
   constructor(bindings: readonly AtlasModelBinding[]) {
     for (const binding of bindings) {
       validateBinding(binding);
-      if (this.byPublicModel.has(binding.publicModelId)) throw new TypeError(`Ambiguous Atlas public model binding: ${binding.publicModelId}`);
-      this.byPublicModel.set(binding.publicModelId, Object.freeze({ ...binding }));
+      if(this.byBindingId.has(binding.bindingId))throw new TypeError(`Duplicate Atlas binding id: ${binding.bindingId}`);
+      const frozen=Object.freeze({ ...binding });this.byBindingId.set(binding.bindingId,frozen);
+      if(binding.exposure==="product"){if (this.byPublicModel.has(binding.publicModelId)) throw new TypeError(`Ambiguous Atlas public model binding: ${binding.publicModelId}`);this.byPublicModel.set(binding.publicModelId,frozen);}
     }
+    for(const binding of this.byBindingId.values())for(const id of binding.fallbackBindingIds??[]){const fallback=this.byBindingId.get(id);if(!fallback)throw new TypeError(`Unknown Atlas fallback binding: ${id}`);if(fallback.publicModelId!==binding.publicModelId)throw new TypeError("Atlas fallback bindings must preserve the public model id.");}
   }
   resolve(publicModelId: AtlasPublicModelId): AtlasModelBinding {
     const binding = this.byPublicModel.get(publicModelId);
@@ -36,11 +39,13 @@ export class AtlasBindingRegistry {
     return binding;
   }
   list(): readonly AtlasModelBinding[] { return Object.freeze([...this.byPublicModel.values()]); }
+  resolveChain(binding:AtlasModelBinding):readonly AtlasModelBinding[]{return Object.freeze([binding,...(binding.fallbackBindingIds??[]).map(id=>this.byBindingId.get(id)!)]);}
 }
 
 function validateBinding(binding: AtlasModelBinding): void {
   const required = [binding.bindingId, binding.bindingRevision, binding.publicModelId, binding.upstreamModelId, binding.adapterId, binding.adapterVersion, binding.credentialOwnerId, binding.providerRegion, binding.dataHandlingProfileId, binding.priceVersion];
   if (required.some((value) => !value.trim())) throw new TypeError("Atlas model bindings require exact non-empty identifiers.");
-  if (binding.routingPolicyId !== "no-fallback-v1") throw new TypeError("Atlas bindings must use the explicit no-fallback routing policy.");
+  if(binding.routingPolicyId==="no-fallback-v1"&&(binding.fallbackBindingIds?.length??0)>0)throw new TypeError("No-fallback Atlas bindings cannot declare fallback bindings.");
+  if(binding.routingPolicyId==="ordered-failover-v1"&&!(binding.fallbackBindingIds?.length))throw new TypeError("Ordered Atlas failover requires at least one fallback binding.");
   if (binding.capabilities.maxContextTokens < 1 || binding.capabilities.maxOutputTokens < 1) throw new TypeError("Atlas model token limits must be positive.");
 }

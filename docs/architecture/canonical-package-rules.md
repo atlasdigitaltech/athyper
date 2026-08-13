@@ -1,4 +1,4 @@
-# Phase 2 — Canonical package rules
+# Canonical package rules
 
 The repository has one canonical package graph. These rules are enforced by:
 
@@ -10,17 +10,17 @@ pnpm policy:canonical-packages
 
 | Boundary | Rule |
 |---|---|
-| Shared packages | `packages/shared/*` may depend on shared packages and external libraries, but not `apps/*`, `packages/apps/*`, `packages/product/*`, or deprecated product packages. |
-| Product packages | `packages/product/<product>/*` may depend on shared packages and external libraries only. |
-| Application composition | `apps/<app>` and `packages/apps/<app>` may consume shared packages and their own product packages; they may not consume another product's package. |
+| Shared packages | `packages/shared/*`, `packages/platform/*`, and `packages/domain/*` may depend on shared/contract packages and external libraries, but not applications, plane products, deprecated products, or server implementations. |
+| Contract packages | `packages/contracts/*` contain browser-safe wire contracts and may not depend on React, Next.js, Node built-ins, databases, applications, plane products, or server implementations. |
+| Product packages | `packages/planes/<plane>/*` may depend on shared/contract packages, external libraries, and packages in the same plane only. |
+| Application composition | `apps/<plane>` may consume shared packages and packages from its own `packages/planes/<plane>` tree; it may not consume another plane. |
 | Product isolation | Product packages may not depend on another product package. |
 | Server isolation | `server/packages/*` may not depend on application or UI packages. |
-| Shared contracts | Contract packages may not depend on product/application code. Product-specific behavior belongs in product adapters or applications. |
 | Package identity | Only one active workspace implementation may expose a package name. Retired or duplicate authorities must be removed or excluded from the active graph. |
 | Source layout | Source junctions and symlinks are forbidden under `apps`, `packages`, and `server`. pnpm-generated links under `node_modules` are allowed. |
 
-The validator checks both package manifest dependencies and source imports, including relative cross-package imports. It resolves duplicate package names against the active pnpm workspace so inactive legacy copies do not become runtime authorities.
+The validator checks package manifest dependencies and source imports, including relative cross-package imports. It resolves duplicate package names against the active pnpm workspace so inactive reference copies do not become runtime authorities.
 
-## Migration policy
+## Reference-tree policy
 
-The rule set intentionally keeps `packages/apps/<app>` as a recognized transitional application-package location while the target location is `packages/product/<app>`. New product packages must use `packages/product/<app>`; existing `packages/apps` packages are tracked by the Phase 1 ownership matrix for migration.
+`apps-backup/*`, `packages-backup/*`, and `server-backup/*` are read-only evidence. They are excluded from the workspace and may not be imported, required, exported, aliased, or used as package authorities by active code. New frontend product code belongs under `packages/planes/<plane>/*`.

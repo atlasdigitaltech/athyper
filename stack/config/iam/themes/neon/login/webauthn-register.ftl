@@ -1,5 +1,5 @@
-<#-- =======================================================================
-     Neon Keycloak Theme — webauthn-register.ftl
+ï»¿<#-- =======================================================================
+     Neon Keycloak Theme â€” webauthn-register.ftl
      Uses KC's own webauthn-register.js for correct WebAuthn handling.
      ======================================================================= -->
 <#include "_iam-context.ftl">
@@ -8,6 +8,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
   <title>${iamTitle("Register Security Key")}</title>
   <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
   <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
@@ -16,39 +17,12 @@
 </head>
 <body>
 <div class="iam-shell kc-page" data-plane="${iamPlane}">
-
-  <!-- -- Left panel -- -->
-  <div class="kc-panel-left">
-    <#include "_neon-brand-logo.ftl">
-    <div class="kc-carousel" id="kc-carousel">
-      <div class="kc-slide active">
-        <p class="kc-slide-ws">Security</p>
-        <h3>Protect Every<br>Access Point.</h3>
-        <p class="kc-slide-desc">Hardware security keys and passkeys provide phishing-resistant authentication — the strongest second factor available.</p>
-      </div>
-      <div class="kc-slide">
-        <p class="kc-slide-ws">Finance</p>
-        <h3>Master Every Dollar.<br>Command Every Decision.</h3>
-        <p class="kc-slide-desc">Unify accounting, payments, cash flow, budgets, and digital transactions into a single financial command center.</p>
-      </div>
-      <div class="kc-slide">
-        <p class="kc-slide-ws">Supply Chain</p>
-        <h3>Orchestrate<br>Complexity.</h3>
-        <p class="kc-slide-desc">Command sourcing, procurement, inventory, warehousing, logistics, and supplier performance through one intelligent backbone.</p>
-      </div>
-    </div>
-    <div class="kc-dots" id="kc-dots">
-      <button class="kc-dot active" aria-label="Slide 1"></button>
-      <button class="kc-dot" aria-label="Slide 2"></button>
-      <button class="kc-dot" aria-label="Slide 3"></button>
-    </div>
-  </div>
+  <#include "_iam-header.ftl">
 
   <!-- -- Right panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
       <div class="kc-form-card">
-        <#include "_neon-brand-mobile.ftl">
 
         <div style="display:flex;justify-content:center;margin-bottom:1.25rem;">
           <div style="width:3rem;height:3rem;border-radius:50%;background:var(--color-primary,#18181b);display:flex;align-items:center;justify-content:center;">
@@ -70,7 +44,7 @@
           </div>
         </#if>
 
-        <!-- KC standard webauthn form — field names/ids must match KC expectations -->
+        <!-- KC standard webauthn form â€” field names/ids must match KC expectations -->
         <form id="register" action="${url.loginAction}" method="post">
           <input type="hidden" id="clientDataJSON"        name="clientDataJSON"/>
           <input type="hidden" id="attestationObject"     name="attestationObject"/>
@@ -103,26 +77,12 @@
           </div>
         </form>
 
-      </div>
-    </div>
-    <div class="kc-footer">
-      <p>&copy; ${.now?string("yyyy")} athyper. All rights reserved.</p>
-    </div>
-  </div>
+      </div><!-- /.kc-form-card -->
+    </div><!-- /.kc-form-wrapper -->
+  </div><!-- /.kc-panel-right -->
+  <#include "_footer.ftl">
 
-</div>
-
-<!-- Carousel script -->
-<script>
-(function(){
-  var slides=document.querySelectorAll('#kc-carousel .kc-slide');
-  var dots=document.querySelectorAll('#kc-dots .kc-dot');
-  var cur=0;
-  function show(n){slides[cur].classList.remove('active');dots[cur].classList.remove('active');cur=n%slides.length;slides[cur].classList.add('active');dots[cur].classList.add('active');}
-  dots.forEach(function(d,i){d.addEventListener('click',function(){show(i);clearInterval(t);t=setInterval(function(){show((cur+1)%slides.length);},5000);});});
-  var t=setInterval(function(){show((cur+1)%slides.length);},5000);
-})();
-</script>
+</div><!-- /.kc-page -->
 
 <script type="module">
   <#outputformat "JavaScript">
@@ -130,7 +90,7 @@
   const btn = document.getElementById('registerWebAuthn');
   btn.addEventListener('click', function() {
     btn.disabled = true;
-    btn.textContent = 'Waiting for device\u2026';
+    btn.textContent = 'Waiting for deviceâ€¦';
     const input = {
       challenge:                      ${challenge?c},
       userid:                         ${userid?c},

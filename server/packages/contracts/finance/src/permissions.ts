@@ -26,4 +26,6 @@ export const financePermissions = {
   closeRecover: "finance.close.recover",
   planningRun: "finance.planning.run",
   planningApprove: "finance.planning.approve",
+  numberingAllocate: "finance.numbering.allocate",
+  numberingReconcile: "finance.numbering.reconcile",
 } as const;

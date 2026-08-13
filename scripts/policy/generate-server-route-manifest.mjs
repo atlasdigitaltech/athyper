@@ -174,20 +174,33 @@ function callBodies(source, callName) {
   return bodies;
 }
 
-function contractRoutes(source, constants) {
+function contractRoutes(source, constants, environment = {}, offset = 0, localFactory = hasLocalContractFactory(source)) {
   const routes = [];
   for (const body of callBodies(source, "defineRouteContract")) {
     const method = body.source.match(/\bmethod\s*:\s*["'](get|post|put|patch|delete)["']/)?.[1];
     const pathStart = body.source.match(/\bpath\s*:\s*/);
     const parsed = pathStart ? readQuoted(body.source, pathStart.index + pathStart[0].length) : null;
-    const declaredPath = parsed ? expandTemplate(parsed.value, {}, constants) : null;
-    if (method && declaredPath?.startsWith("/")) routes.push({ method, declaredPath, kind: "contract", index: body.index });
+    const declaredPath = parsed ? expandTemplate(parsed.value, environment, constants) : null;
+    if (method && declaredPath?.startsWith("/")) routes.push({ method, declaredPath, kind: "contract", index: offset + body.index });
+  }
+  // Route modules may use a local typed factory around defineRouteContract.
+  if (localFactory) {
+    for (const body of callBodies(source, "contract")) {
+      const methodValue = readQuoted(body.source, body.source.search(/\S/));
+      if (!methodValue || !HTTP_METHODS.has(methodValue.value)) continue;
+      const comma = body.source.indexOf(",", methodValue.end);
+      const pathStart = comma < 0 ? -1 : comma + 1 + (body.source.slice(comma + 1).match(/^\s*/)?.[0].length ?? 0);
+      const parsed = pathStart >= 0 ? readQuoted(body.source, pathStart) : null;
+      const declaredPath = parsed ? expandTemplate(parsed.value, environment, constants) : null;
+      if (declaredPath?.startsWith("/")) routes.push({ method: methodValue.value, declaredPath, kind: "contract", index: offset + body.index });
+    }
   }
   return routes;
 }
 
 function loopRoutes(source, constants, mounts, arrays) {
   const routes = [];
+  const localContractFactory = hasLocalContractFactory(source);
   const pattern = /for\s*\(\s*const\s+(\[[^\]]+\]|[A-Za-z_$][\w$]*)\s+of\s+/g;
   for (const match of source.matchAll(pattern)) {
     const expressionStart = match.index + match[0].length;
@@ -207,9 +220,14 @@ function loopRoutes(source, constants, mounts, arrays) {
       const row = Array.isArray(item) ? item : [item];
       const environment = Object.fromEntries(bindings.map((name, index) => [name, row[index]]).filter(([, value]) => typeof value === "string"));
       routes.push(...directRoutes(body, environment, constants, mounts, bodyStart));
+      routes.push(...contractRoutes(body, constants, environment, bodyStart, localContractFactory));
     }
   }
   return routes;
+}
+
+function hasLocalContractFactory(source) {
+  return /function\s+contract\s*\([^)]*\)[^{]*\{[\s\S]{0,4000}?\bdefineRouteContract\s*\(/.test(source);
 }
 
 export function extractRoutesFromSource(source, options = {}) {

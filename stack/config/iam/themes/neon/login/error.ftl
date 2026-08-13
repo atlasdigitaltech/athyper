@@ -1,4 +1,4 @@
-<#-- =======================================================================
+﻿<#-- =======================================================================
      Neon Keycloak Login Theme — error.ftl
      Styled error page matching the Neon split-panel layout.
      ======================================================================= -->
@@ -17,38 +17,12 @@
 </head>
 <body>
 <div class="iam-shell kc-page" data-plane="${iamPlane}">
-
-  <!-- -- Left branding panel -- -->
-  <div class="kc-panel-left">
-
-    <#include "_neon-brand-logo.ftl">
-    <div class="kc-carousel" id="kc-carousel">
-      <div class="kc-slide active"><p class="kc-slide-ws">Finance</p><h3>Master Every Dollar.<br>Command Every Decision.</h3><p class="kc-slide-desc">Unify accounting, payments, cash flow, budgets, and digital transactions into a single financial command center.</p></div>
-      <div class="kc-slide"><p class="kc-slide-ws">Supply Chain</p><h3>Orchestrate<br>Complexity.</h3><p class="kc-slide-desc">Command sourcing, procurement, inventory, warehousing, logistics, and supplier performance through one intelligent backbone.</p></div>
-      <div class="kc-slide"><p class="kc-slide-ws">Commercial</p><h3>Turn Every Conversation<br>into Revenue.</h3><p class="kc-slide-desc">Capture, nurture, and convert demand with a seamlessly connected engine across customer engagement, sales, and order execution.</p></div>
-      <div class="kc-slide"><p class="kc-slide-ws">People</p><h3>Empower Every Person.<br>Elevate the Organization.</h3><p class="kc-slide-desc">Fuel the full workforce lifecycle with intelligent HR and payroll capabilities that keep talent engaged, aligned, and compliant.</p></div>
-      <div class="kc-slide"><p class="kc-slide-ws">Projects &amp; Services</p><h3>Deliver Brilliance.<br>Control Every Cost.</h3><p class="kc-slide-desc">Manage projects, service workflows, budgets, and revenue-linked execution all in one command center.</p></div>
-      <div class="kc-slide"><p class="kc-slide-ws">Operations</p><h3>Run Without<br>Interruption.</h3><p class="kc-slide-desc">Power production and maintenance with intelligent tools that maximize uptime, sharpen planning, and drive operational excellence.</p></div>
-      <div class="kc-slide"><p class="kc-slide-ws">Assets &amp; Facilities</p><h3>Maximize What<br>You Own.</h3><p class="kc-slide-desc">Command fixed assets, property portfolios, leases, facilities, and spaces with lifecycle visibility and bulletproof accountability.</p></div>
-    </div>
-    <div class="kc-dots" id="kc-dots">
-      <button class="kc-dot active" aria-label="Slide 1"></button>
-      <button class="kc-dot" aria-label="Slide 2"></button>
-      <button class="kc-dot" aria-label="Slide 3"></button>
-      <button class="kc-dot" aria-label="Slide 4"></button>
-      <button class="kc-dot" aria-label="Slide 5"></button>
-      <button class="kc-dot" aria-label="Slide 6"></button>
-      <button class="kc-dot" aria-label="Slide 7"></button>
-    </div>
-  </div>
+  <#include "_iam-header.ftl">
 
   <!-- -- Right error panel -- -->
   <div class="kc-panel-right">
     <div class="kc-form-wrapper">
-    <div class="kc-form-card">
-
-
-        <#include "_neon-brand-mobile.ftl">
+      <div class="kc-form-card">
 
       <!-- Header -->
       <div class="kc-header">
@@ -80,30 +54,9 @@
       </div><!-- /.kc-form-card -->
     </div><!-- /.kc-form-wrapper -->
 
-    <div class="kc-footer">
-      <p>&copy; ${.now?string("yyyy")} athyper. All rights reserved.</p>
-    </div>
   </div><!-- /.kc-panel-right -->
+  <#include "_footer.ftl">
 
 </div><!-- /.kc-page -->
-<script>
-(function () {
-  var slides = document.querySelectorAll('#kc-carousel .kc-slide');
-  var dots   = document.querySelectorAll('#kc-dots .kc-dot');
-  var current = 0;
-  function show(n) {
-    slides[current].classList.remove('active'); dots[current].classList.remove('active');
-    current = n % slides.length;
-    slides[current].classList.add('active'); dots[current].classList.add('active');
-  }
-  dots.forEach(function (dot, i) {
-    dot.addEventListener('click', function () {
-      show(i); clearInterval(timer);
-      timer = setInterval(function () { show((current + 1) % slides.length); }, 5000);
-    });
-  });
-  var timer = setInterval(function () { show((current + 1) % slides.length); }, 5000);
-})();
-</script>
 </body>
 </html>

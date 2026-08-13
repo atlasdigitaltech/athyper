@@ -37,8 +37,18 @@ export function exactPlaneOf(transaction: unknown): PlaneKey | undefined {
 
 export function createExactPlaneTransactionCoordinator<Transaction>(coordinator: PlaneTransactionCoordinator<Transaction>): PlaneTransactionCoordinator<ExactPlaneTransaction<Transaction>> {
   return {
-    run(planeKey, actor, work) {
-      return coordinator.run(planeKey, actor, (transaction) => work(brandExactPlaneTransaction(transaction, planeKey)));
+    async run(planeKey, actor, work, signal) {
+      signal?.throwIfAborted();
+      return await coordinator.run(
+        planeKey,
+        actor,
+        (transaction, propagatedSignal) => {
+          const activeSignal = propagatedSignal ?? signal;
+          activeSignal?.throwIfAborted();
+          return work(brandExactPlaneTransaction(transaction, planeKey), activeSignal);
+        },
+        signal,
+      );
     },
   };
 }

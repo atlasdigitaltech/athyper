@@ -4,41 +4,41 @@
   "profiles": {
     "athyper-neon": {
       "entryApplication": "@athyper/neon",
-      "requiredProductPackages": [],
-      "requiredSharedPackages": ["@athyper/config"],
+      "requiredProductPackages": ["@athyper/product-neon-navigation", "@athyper/product-neon-shell"],
+      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui"],
       "requiredServerServices": ["@athyper/server-platform-host"],
-      "environmentVariables": ["NODE_ENV", "PORT", "ATHYPER_ENV"],
+      "environmentVariables": ["NODE_ENV", "PORT", "APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"],
       "buildCommand": "pnpm --filter @athyper/neon... build",
       "runtimeCommand": "pnpm --filter @athyper/neon start",
       "healthChecks": [
-        {"path": "/", "expectedStatus": 200},
-        {"path": "/readyz", "expectedStatus": 200, "target": "athyper-server"}
+        {"path": "/livez", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200}
       ]
     },
     "athyper-studio": {
       "entryApplication": "@athyper/studio",
-      "requiredProductPackages": [],
-      "requiredSharedPackages": ["@athyper/config"],
+      "requiredProductPackages": ["@athyper/product-studio-shell"],
+      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui"],
       "requiredServerServices": ["@athyper/server-platform-host"],
-      "environmentVariables": ["NODE_ENV", "PORT", "ATHYPER_ENV"],
+      "environmentVariables": ["NODE_ENV", "PORT", "APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"],
       "buildCommand": "pnpm --filter @athyper/studio... build",
       "runtimeCommand": "pnpm --filter @athyper/studio start",
       "healthChecks": [
-        {"path": "/", "expectedStatus": 200},
-        {"path": "/readyz", "expectedStatus": 200, "target": "athyper-server"}
+        {"path": "/livez", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200}
       ]
     },
     "athyper-mesh": {
       "entryApplication": "@athyper/mesh",
-      "requiredProductPackages": [],
-      "requiredSharedPackages": ["@athyper/config"],
+      "requiredProductPackages": ["@athyper/product-mesh-shell"],
+      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui"],
       "requiredServerServices": ["@athyper/server-platform-host"],
-      "environmentVariables": ["NODE_ENV", "PORT", "ATHYPER_ENV"],
+      "environmentVariables": ["NODE_ENV", "PORT", "APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"],
       "buildCommand": "pnpm --filter @athyper/mesh... build",
       "runtimeCommand": "pnpm --filter @athyper/mesh start",
       "healthChecks": [
-        {"path": "/", "expectedStatus": 200},
-        {"path": "/readyz", "expectedStatus": 200, "target": "athyper-server"}
+        {"path": "/livez", "expectedStatus": 200},
+        {"path": "/readyz", "expectedStatus": 200}
       ]
     },
     "athyper-server": {
@@ -67,6 +67,9 @@
         "@athyper/server-contract-workflow"
       ],
       "requiredServerServices": [
+        "@athyper/server-plane-mesh",
+        "@athyper/server-plane-neon",
+        "@athyper/server-plane-studio",
         "@athyper/server-adapter-auth-keycloak",
         "@athyper/server-adapter-cache-redis",
         "@athyper/server-adapter-communications",

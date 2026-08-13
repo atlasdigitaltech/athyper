@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createBullMqConnectionOptions, createBullMqJobRuntime } from "../index.js";
+import { createBullMqConnectionOptions, createBullMqJobRuntime, createDeterministicEnqueueId } from "../index.js";
 
 describe("BullMQ job runtime", () => {
   it("uses BullMQ-safe Redis connection settings", () => {
@@ -155,6 +155,72 @@ describe("BullMQ job runtime", () => {
     await expect(runtime.retry("notifications", "missing")).resolves.toBe(false);
     expect(remove).toHaveBeenCalledOnce();
     expect(retry).toHaveBeenCalledWith("failed");
+    await runtime.close();
+  });
+
+  it("derives BullMQ-safe deterministic enqueue ids from semantic keys", async () => {
+    const add = vi.fn(async (_name, _data, options) => ({ id: String(options.jobId) }));
+    const runtime = createBullMqJobRuntime({
+      redisUrl: "redis://localhost/2",
+      createQueue: () => ({ add, close: async () => undefined }),
+    });
+    const expected = createDeterministicEnqueueId("billing", "settle", "invoice:42");
+    await expect(runtime.enqueue("billing", "settle", { invoiceId: "42" }, {
+      enqueueKey: "invoice:42",
+    })).resolves.toBe(expected);
+    expect(expected).toMatch(/^athyper-[a-f0-9]{64}$/);
+    expect(add).toHaveBeenCalledWith("settle", { invoiceId: "42" }, { jobId: expected });
+    await expect(runtime.enqueue("billing", "settle", {}, {
+      jobId: "manual",
+      enqueueKey: "semantic",
+    })).rejects.toThrow("mutually exclusive");
+    await runtime.close();
+  });
+
+  it("lists failed jobs and replays them with a deterministic administration key", async () => {
+    const add = vi.fn(async (_name, _data, options) => ({ id: String(options.jobId) }));
+    const failed = {
+      id: "failed-7",
+      name: "deliver",
+      data: { notificationId: "n-7" },
+      opts: { attempts: 5, removeOnFail: false },
+      attemptsMade: 5,
+      failedReason: "provider unavailable",
+      remove: async () => undefined,
+      retry: async () => undefined,
+      getState: async () => "failed",
+    };
+    const runtime = createBullMqJobRuntime({
+      redisUrl: "redis://localhost/2",
+      createQueue: () => ({
+        add,
+        getJob: async (id) => id === failed.id ? failed : undefined,
+        getJobs: async () => [failed],
+        close: async () => undefined,
+      }),
+    });
+    await expect(runtime.listDeadLetters("notifications")).resolves.toEqual([{
+      jobId: "failed-7",
+      queue: "notifications",
+      name: "deliver",
+      attemptsMade: 5,
+      failureReason: "provider unavailable",
+    }]);
+    const expected = createDeterministicEnqueueId(
+      "notifications",
+      "deliver",
+      "replay:failed-7:operator-command-9",
+    );
+    await expect(runtime.replayDeadLetter(
+      "notifications",
+      "failed-7",
+      "operator-command-9",
+    )).resolves.toBe(expected);
+    expect(add).toHaveBeenCalledWith("deliver", failed.data, {
+      attempts: 5,
+      removeOnFail: false,
+      jobId: expected,
+    });
     await runtime.close();
   });
 });

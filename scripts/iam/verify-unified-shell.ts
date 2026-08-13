@@ -102,6 +102,7 @@ async function main(): Promise<void> {
       ["single document root", (source.match(/<!DOCTYPE html>/g) ?? []).length === 1],
       ["single body root", (source.match(/<body(?:\s|>)/g) ?? []).length === 1],
       ["single title element", (source.match(/<title>/g) ?? []).length === 1],
+      ["no promotional IAM panel", !/kc-panel-left|kc-carousel|kc-slide|kc-dots/.test(source)],
     ];
 
     for (const [label, passed] of checks) {
@@ -138,11 +139,13 @@ async function main(): Promise<void> {
     assert(context.includes("client.clientId"), "plane context does not inspect client.clientId");
     assert(context.includes("iamLegacyPlane"), "plane context has no constrained legacy fallback");
     assert(resolver.includes("data-plane"), "resolver does not bind the resolved plane");
-    assert(resolver.includes("DOMContentLoaded"), "resolver does not remove legacy carousel markup");
+    assert(!/kc-panel-left|kc-carousel|kc-slide|kc-dots/.test(resolver), "resolver still manages retired promotional markup");
     assert(identityField.includes('id="kc-identity-label"'), "locked identity field has no visible username label");
     assert(identityField.includes("iamLockedIdentity"), "shared locked identity macro is missing");
     assert(loginTemplate.includes("<@iamLockedIdentity"), "login page does not use the shared locked identity row");
     assert(changeUserScript.includes("applicationLoginHint"), "login_hint is not explicitly distinguished from editable usernames");
+    assert(changeUserScript.includes("url.loginRestartFlowUrl"), "change-user action does not preserve the active Keycloak flow");
+    assert(!/new URL\(['\"]\/(?:login|sign-in)/.test(changeUserScript), "change-user action escapes to an application route");
     assert(greeting.includes("new Date().getHours()"), "IAM greeting does not use browser-local time");
     assert(greeting.includes("Good morning") && greeting.includes("Good afternoon") && greeting.includes("Good evening"), "IAM greeting day periods are incomplete");
     assert(!greeting.includes("URLSearchParams"), "IAM greeting must not read a display name from request parameters");
@@ -152,13 +155,15 @@ async function main(): Promise<void> {
     assert(presentationForm.includes("OIDCLoginProtocol.STATE_PARAM"), "presentation context is not bound to OIDC state");
     assert(presentationForm.includes("OIDCLoginProtocol.LOGIN_HINT_PARAM"), "presentation context is not bound to login_hint");
     assert(presentationForm.includes("protected Response challenge"), "initial username/password challenge does not receive the trusted presentation context");
+    assert(presentationForm.includes("getAuthenticatedUser()"), "recognized-user password challenges do not receive the Keycloak profile display name");
+    assert(presentationForm.includes("getFirstName()") && presentationForm.includes("getLastName()"), "recognized-user greeting does not use the Keycloak profile name");
     assert(presentationStore.includes('command(output, "GETDEL"'), "presentation context is not consumed atomically");
     assert(redisAclTemplate.includes("~iam:presentation:v1:*"), "Redis app ACL does not scope the IAM presentation namespace");
     assert(redisAclTemplate.includes("+getdel"), "Redis app ACL does not allow atomic presentation-context consumption");
     assert((realm.match(/athyper-iam-username-password-form/g) ?? []).length === 2, "user and Admin browser flows must use the Athyper presentation authenticator");
     assert(iamDockerfile.includes("iam-presentation-context-0.1.0.jar"), "Keycloak image does not package the presentation provider");
     assert(loginCss.includes(".iam-shell"), "unified shell CSS is missing");
-    assert(loginCss.includes(".kc-panel-left"), "legacy panel removal contract is missing");
+    assert(!/\.kc-panel-left|\.kc-carousel|\.kc-slide|\.kc-dots/.test(loginCss), "IAM CSS still contains retired promotional selectors");
     assert(!loginCss.includes("fonts.bunny.net"), "IAM CSS still depends on an external font CDN");
     assert(tokenCss.includes('@font-face'), "IAM CSS does not bundle its application font");
     assert(tokenCss.includes('Geist-Variable.woff2'), "IAM CSS is not bound to the Geist application font");

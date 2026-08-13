@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "profileHash": "phase0-profile-hash",
+  "allowed": ["iam.profile.read", "records.entity.read"],
+  "features": {
+    "experience.new_shell": {
+      "code": "experience.new_shell",
+      "enabled": true,
+      "source": "tenant_override",
+      "revision": "flag-r1"
+    }
+  }
+}

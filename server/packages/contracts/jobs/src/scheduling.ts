@@ -19,4 +19,15 @@ export interface ScheduledJobDefinition<
 export interface JobScheduler {
   upsert(definition: ScheduledJobDefinition): Promise<void>;
   remove(scheduleId: string): Promise<boolean>;
+  inspect?(definition: ScheduledJobDefinition): Promise<ScheduleDriftReport>;
+}
+
+export type ScheduleDriftStatus = "in_sync" | "missing" | "drifted" | "unknown";
+
+export interface ScheduleDriftReport {
+  readonly scheduleId: string;
+  readonly queue: string;
+  readonly status: ScheduleDriftStatus;
+  readonly differences: readonly string[];
+  readonly observedNextRunAt?: string;
 }

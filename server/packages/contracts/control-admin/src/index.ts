@@ -20,6 +20,10 @@ export const controlAdminErrorCodes = [
   "CONTROL_ADMIN_BANK_RULE_INVALID",
   "CONTROL_ADMIN_CONNECTOR_INVALID",
   "CONTROL_ADMIN_LIFECYCLE_INVALID",
+  "CONTROL_ADMIN_APPROVAL_REQUIRED",
+  "CONTROL_ADMIN_APPROVAL_NOT_FOUND",
+  "CONTROL_ADMIN_APPROVAL_INVALID",
+  "CONTROL_ADMIN_SELF_APPROVAL_FORBIDDEN",
 ] as const;
 export type ControlAdminErrorCode = (typeof controlAdminErrorCodes)[number];
 export interface ControlAdminPageRequest { readonly limit?: number; readonly cursor?: string; }
@@ -28,6 +32,8 @@ export interface ControlAdminCommand<T extends Readonly<Record<string, unknown>>
 export type ControlAdminResult<T> = { readonly kind: "applied" | "replayed"; readonly value: T; readonly version: number } | { readonly kind: "version_conflict"; readonly expectedVersion: number; readonly actualVersion: number };
 export interface MutableAdminRepository<T, Transaction = unknown> { execute(command: ControlAdminCommand, transaction: Transaction): Promise<ControlAdminResult<T>>; }
 export interface CatalogReader<T> { get(code: string, version?: number): Promise<T | null>; list(page: ControlAdminPageRequest): Promise<ControlAdminPage<T>>; }
-export const controlAdminPermissions = { catalogRead: "control.catalog.read", catalogPublish: "control.catalog.publish", tenantOverrideManage: "control.tenant_override.manage", financeConfigManage: "control.finance_config.manage", cycleTemplateManage: "control.cycle_template.manage", connectorManage: "control.connector.manage" } as const;
+export const controlAdminPermissions = { catalogRead: "control.catalog.read", catalogPublish: "control.catalog.publish", tenantOverrideManage: "control.tenant_override.manage", financeConfigManage: "control.finance_config.manage", cycleTemplateManage: "control.cycle_template.manage", connectorManage: "control.connector.manage", runtimeCommandManage: "control.runtime_command.manage", runtimeCommandApprove: "control.runtime_command.approve", runtimeHistoryRead: "control.runtime_history.read" } as const;
 export * from "./control-services.js";
+export * from "./runtime-schemas.js";
+export * from "./runtime-commands.js";
 export * from "./cycle-config.js";

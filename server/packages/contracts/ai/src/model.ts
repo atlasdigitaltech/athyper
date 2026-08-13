@@ -28,7 +28,9 @@ export interface AtlasModelBinding {
   readonly credentialOwnerId: string;
   readonly providerRegion: string;
   readonly dataHandlingProfileId: string;
-  readonly routingPolicyId: "no-fallback-v1";
+  readonly routingPolicyId: "no-fallback-v1" | "ordered-failover-v1";
+  /** Ordered immutable binding ids. Failover is attempted only before response content is exposed. */
+  readonly fallbackBindingIds?: readonly string[];
   readonly allowedDataClasses: readonly AtlasDataClass[];
   readonly priceVersion: string;
   readonly inputPricePerMtokUsd: number | null;

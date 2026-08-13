@@ -67,6 +67,8 @@ export interface AuditIntegrityEvidence {
   readonly checkedUntil: string;
   readonly eventCount: number;
   readonly valid: boolean;
+  readonly verificationStatus?: "verified" | "partial" | "unsupported";
+  readonly integrityIssues?: readonly string[];
   readonly calculatedHash: string;
   readonly anchorHash?: string;
   readonly createdAt: string;

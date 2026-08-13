@@ -25,4 +25,34 @@ describe("exact-plane repository provider", () => {
     source.neon = { name: "late fallback" };
     expect(() => provider.require("neon")).toThrowError(expect.objectContaining({ code: "EXACT_PLANE_REPOSITORY_UNAVAILABLE" }));
   });
+
+  it("propagates cancellation to repository health dependencies", async () => {
+    const controller = new AbortController();
+    const repository = {};
+    const probe = vi.fn(async (received: object, signal?: AbortSignal) => {
+      expect(received).toBe(repository);
+      expect(signal).toBe(controller.signal);
+      return { status: "healthy" as const };
+    });
+    const provider = createExactPlaneRepositoryProvider(
+      { studio: repository },
+      { health: { studio: probe } },
+    );
+
+    await expect(provider.health("studio", controller.signal))
+      .resolves.toEqual({ status: "healthy" });
+  });
+
+  it("does not convert cancellation into an unhealthy result", async () => {
+    const reason = new Error("cancelled");
+    const signal = AbortSignal.abort(reason);
+    const probe = vi.fn();
+    const provider = createExactPlaneRepositoryProvider(
+      { studio: {} },
+      { health: { studio: probe } },
+    );
+
+    await expect(provider.health("studio", signal)).rejects.toBe(reason);
+    expect(probe).not.toHaveBeenCalled();
+  });
 });

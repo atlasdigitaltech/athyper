@@ -11,6 +11,7 @@ export * from "./kysely-tool-proposal-store.js";
 export * from "./record-data-gateway.js";
 export * from "./monitoring.js";
 export * from "./policy-administration.js";
+export * from "./quota.js";
 export * from "./runtime-tool-coordinator.js";
 export * from "./stream.js";
 export * from "./thread-service.js";
