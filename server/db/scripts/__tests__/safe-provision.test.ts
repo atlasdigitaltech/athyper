@@ -35,7 +35,7 @@ class FakeClient implements QueryClient {
 }
 
 describe("Wave 6 safe provision contract", () => {
-  it("expands the local confirmation shorthand for both planes", () => {
+  it("expands the local confirmation shorthand for every plane", () => {
     assert.deepEqual(
       resolveDestructiveResetCliApproval(
         ["--reset", "--confirm", "LOCAL-AUTH-V2-RESET"],
@@ -59,6 +59,14 @@ describe("Wave 6 safe provision contract", () => {
         undefined,
       ).expectedDatabase,
       "athyper_mesh",
+    );
+    assert.equal(
+      resolveDestructiveResetCliApproval(
+        ["--reset", "--confirm=LOCAL-AUTH-V2-RESET"],
+        "studio",
+        undefined,
+      ).acknowledgement,
+      "RESET_STUDIO",
     );
   });
 

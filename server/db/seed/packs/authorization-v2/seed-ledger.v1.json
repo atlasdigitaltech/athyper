@@ -6,7 +6,7 @@
     {
       "target": "neon-admin",
       "path": "seed/packs/authorization-v2/neon-admin/seed-pack.v1.json",
-      "contentSha256": "38a93227897af12fbb3586af8a1f65e2e327f466f67970fbcdb606840bacda05",
+      "contentSha256": "77e0f810fd70b3a52e581e92b2faa4c9ce1c36f5d553d835059108b62b61fe1c",
       "permissionCount": 0,
       "roleCount": 10,
       "groupCount": 10,
@@ -22,5 +22,5 @@
       "mappedSubjectCount": 47
     }
   ],
-  "ledgerSha256": "1780dfef287126b1b1c0fd6a617cf82ba4eda12b2d9c29426467053c1560d59e"
+  "ledgerSha256": "a4c757e242ff6496b05ac3317fea19c46de8a311ddfd6b9baad1b3c8bcbf25af"
 }

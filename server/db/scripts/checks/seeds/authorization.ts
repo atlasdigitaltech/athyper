@@ -48,12 +48,25 @@ for (const target of ["neon-admin", "mesh"]) {
   packs[target] = { hash: actual, subjects: pack.subjectAssignments.length };
 }
 
+const retiredManifest = await readJson<{
+  contractVersion: string;
+  paths: string[];
+}>(resolve(databaseRoot, "seed/contracts/authorization/retired-seed-sources.v1.json"));
+if (retiredManifest.contractVersion !== "authorization-v2.retired-seed-sources.v1") {
+  failures.push("invalid retired authorization seed manifest");
+}
+const retiredPaths = new Set(retiredManifest.paths);
 const seedSql = (await walk(resolve(databaseRoot, "seed")))
   .filter((path) => extname(path) === ".sql");
-const seedSources = await Promise.all(seedSql.map(async (path) => ({
+const allSeedSources = await Promise.all(seedSql.map(async (path) => ({
   path,
+  relativePath: path.replace(`${databaseRoot}\\`, "").replace(/\\/g, "/"),
   sql: stripComments(await readFile(path, "utf8")),
 })));
+const discoveredPaths = new Set(allSeedSources.map((source) => source.relativePath));
+const missingRetiredPaths = [...retiredPaths].filter((path) => !discoveredPaths.has(path));
+if (missingRetiredPaths.length > 0) failures.push("retired authorization seed manifest contains missing paths");
+const seedSources = allSeedSources.filter((source) => !retiredPaths.has(source.relativePath));
 const sql = seedSources.map((source) => source.sql).join("\n");
 const destructive = [
   /\bTRUNCATE(?:\s+TABLE)?\s+(?:master|mesh)\.(?:auth_|principal|access_grant)/i,

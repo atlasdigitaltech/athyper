@@ -13,17 +13,15 @@ export async function runPlaneProvisionCli(
     );
   }
   const requestedTenant = readOption(args, "--tenant");
-  if (
-    requestedTenant
-    && !["athyper", "technostat", "cirrusatlantic", "all"].includes(requestedTenant)
-  ) {
+  if (requestedTenant && requestedTenant !== "all") {
     throw new Error(
-      `tenant is not declared by the canonical manifest: ${requestedTenant}`,
+      "the canonical provisioner applies all three manifest tenants atomically within the plane; use --tenant=all",
     );
   }
   const dryRun = args.includes("--dry-run")
     || args.includes("--plan")
-    || args.includes("--status");
+    || args.includes("--status")
+    || args.includes("--discover");
   const result = await applyAuthorizationSeedPack({
     plane,
     manifestPath: readOption(args, "--manifest"),

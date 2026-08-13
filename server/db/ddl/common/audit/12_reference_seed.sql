@@ -1,3 +1,25 @@
+-- seed-contract-version: 1
+-- seed-pack: common.audit.event-contracts
+-- seed-pack-version: 1.0.0
+-- seed-dataset: master.audit-event-contract
+-- seed-data-class: production_reference
+-- seed-provenance: {"source":"internal-audit-contract","publisher":"Athyper","source_version":"1","retrieved_at":"2026-08-13","license":"internal"}
+-- seed-plane: common
+-- seed-tenant-scope: none
+-- seed-natural-key: master.audit_event_contract(code)
+-- seed-cross-file-ids: false
+-- seed-id-strategy: natural-key-only
+-- seed-expected-row-count: exact:23
+-- seed-assertions: expected-count,orphan,uniqueness,semantic
+-- seed-demo-data: false
+
+DO $seed_plane_guard$
+BEGIN
+    IF current_setting('app.database_plane', true) NOT IN ('studio', 'neon', 'mesh') THEN
+        RAISE EXCEPTION '[common.audit.event-contracts] app.database_plane is missing or invalid';
+    END IF;
+END $seed_plane_guard$;
+
 INSERT INTO master.audit_event_contract (
     code, event_code_pattern, priority, allowed_operations, default_severity,
     allowed_actor_types, allowed_scope, reason_required, capture_mode,
@@ -281,6 +303,55 @@ ON CONFLICT(code) DO UPDATE SET
     max_payload_bytes   = EXCLUDED.max_payload_bytes,
     schema_version      = EXCLUDED.schema_version,
     metadata            = EXCLUDED.metadata,
-    status              = EXCLUDED.status;
+    status              = EXCLUDED.status
+WHERE (
+    master.audit_event_contract.event_code_pattern,
+    master.audit_event_contract.priority,
+    master.audit_event_contract.allowed_operations,
+    master.audit_event_contract.default_severity,
+    master.audit_event_contract.allowed_actor_types,
+    master.audit_event_contract.allowed_scope,
+    master.audit_event_contract.reason_required,
+    master.audit_event_contract.capture_mode,
+    master.audit_event_contract.max_payload_bytes,
+    master.audit_event_contract.schema_version,
+    master.audit_event_contract.metadata,
+    master.audit_event_contract.status
+) IS DISTINCT FROM (
+    EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations,
+    EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope,
+    EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes,
+    EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status
+);
 
 SELECT audit.ensure_monthly_partitions(date_trunc('month',CURRENT_DATE)::date,4);
+
+DO $seed_assertions$
+DECLARE
+    v_codes text[] := ARRAY[
+      'pci_event','pii_access_event','pii_modification_event','audit_system_event',
+      'iam_authentication_event','iam_session_event','iam_authorization_event',
+      'iam_provisioning_event','iam_general_event','entity_row_change_event',
+      'entity_access_event','finance_period_event','entity_business_event',
+      'inbox_routing_event','integration_event','data_import_event','ai_support_event',
+      'ai_event','schema_authoring_event','notification_event','config_change_event',
+      'platform_system_event','generic_action_event'
+    ];
+BEGIN
+    -- seed-assertion: expected-count
+    IF (SELECT count(*) FROM master.audit_event_contract WHERE code = ANY(v_codes)) <> 23 THEN
+        RAISE EXCEPTION '[common.audit.event-contracts] expected 23 rows';
+    END IF;
+    -- seed-assertion: orphan
+    IF EXISTS (SELECT 1 FROM master.audit_event_contract WHERE code = ANY(v_codes) AND allowed_operations IS NULL) THEN
+        RAISE EXCEPTION '[common.audit.event-contracts] orphan operation contract';
+    END IF;
+    -- seed-assertion: uniqueness
+    IF EXISTS (SELECT code FROM master.audit_event_contract WHERE code = ANY(v_codes) GROUP BY code HAVING count(*) <> 1) THEN
+        RAISE EXCEPTION '[common.audit.event-contracts] duplicate code';
+    END IF;
+    -- seed-assertion: semantic
+    IF EXISTS (SELECT 1 FROM master.audit_event_contract WHERE code = ANY(v_codes) AND status <> 'active') THEN
+        RAISE EXCEPTION '[common.audit.event-contracts] inactive contract';
+    END IF;
+END $seed_assertions$;

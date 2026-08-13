@@ -3,10 +3,12 @@
 -- seed-pack-version: 2.0.0
 -- seed-dataset: control.bank-format-rule.global-defaults
 -- seed-data-class: production_reference
--- seed-plane: athyper
--- seed-tenant-scope: global
+-- seed-provenance: {"source":"internal-payment-format-catalog","publisher":"Athyper","source_version":"2","retrieved_at":"2026-08-13","license":"internal"}
+-- seed-plane: studio
+-- seed-tenant-scope: none
 -- seed-natural-key: control.bank_format_rule(tenant_id,code,version_no)
--- seed-id-strategy: deterministic-uuid:tenant-or-global,code,version
+-- seed-cross-file-ids: true
+-- seed-id-strategy: deterministic-uuid:athyper-bank-format-v2
 -- seed-expected-row-count: exact:14
 -- seed-assertions: expected-count,orphan,uniqueness,semantic,idempotent-convergence
 -- seed-demo-data: false
@@ -52,21 +54,65 @@ BEGIN
       v_effective_from,'{"_seed":{"pack":"bank-formats","version":"2.0.0"}}'::jsonb,
       'active',now(),v_actor,v_actor
     FROM desired d
-    ON CONFLICT (tenant_id,code,version_no) DO NOTHING;
+    ON CONFLICT (tenant_id,code,version_no) DO UPDATE SET
+      name=EXCLUDED.name,
+      country_code=EXCLUDED.country_code,
+      payment_network=EXCLUDED.payment_network,
+      direction=EXCLUDED.direction,
+      account_id_type=EXCLUDED.account_id_type,
+      bank_id_type=EXCLUDED.bank_id_type,
+      account_id_required=EXCLUDED.account_id_required,
+      bank_id_required=EXCLUDED.bank_id_required,
+      bic_allowed=EXCLUDED.bic_allowed,
+      bic_required=EXCLUDED.bic_required,
+      branch_code_required=EXCLUDED.branch_code_required,
+      national_bank_code_required=EXCLUDED.national_bank_code_required,
+      account_pattern=EXCLUDED.account_pattern,
+      iban_country_prefix=EXCLUDED.iban_country_prefix,
+      checksum_validation=EXCLUDED.checksum_validation,
+      priority=EXCLUDED.priority,
+      effective_from=EXCLUDED.effective_from,
+      metadata=EXCLUDED.metadata,
+      status=EXCLUDED.status,
+      updated_at=now(),
+      updated_by=v_actor
+    WHERE (
+      control.bank_format_rule.name,control.bank_format_rule.country_code,
+      control.bank_format_rule.payment_network,control.bank_format_rule.direction,
+      control.bank_format_rule.account_id_type,control.bank_format_rule.bank_id_type,
+      control.bank_format_rule.account_id_required,control.bank_format_rule.bank_id_required,
+      control.bank_format_rule.bic_allowed,control.bank_format_rule.bic_required,
+      control.bank_format_rule.branch_code_required,control.bank_format_rule.national_bank_code_required,
+      control.bank_format_rule.account_pattern,control.bank_format_rule.iban_country_prefix,
+      control.bank_format_rule.checksum_validation,control.bank_format_rule.priority,
+      control.bank_format_rule.effective_from,control.bank_format_rule.metadata,
+      control.bank_format_rule.status
+    ) IS DISTINCT FROM (
+      EXCLUDED.name,EXCLUDED.country_code,EXCLUDED.payment_network,EXCLUDED.direction,
+      EXCLUDED.account_id_type,EXCLUDED.bank_id_type,EXCLUDED.account_id_required,
+      EXCLUDED.bank_id_required,EXCLUDED.bic_allowed,EXCLUDED.bic_required,
+      EXCLUDED.branch_code_required,EXCLUDED.national_bank_code_required,
+      EXCLUDED.account_pattern,EXCLUDED.iban_country_prefix,EXCLUDED.checksum_validation,
+      EXCLUDED.priority,EXCLUDED.effective_from,EXCLUDED.metadata,EXCLUDED.status
+    );
 
+    -- seed-assertion: expected-count
     IF (SELECT count(*) FROM control.bank_format_rule
          WHERE tenant_id IS NULL AND version_no=1 AND metadata->'_seed'->>'pack'='bank-formats') <> 14 THEN
       RAISE EXCEPTION 'bank-formats expected 14 global version-1 rules';
     END IF;
+    -- seed-assertion: orphan
     IF EXISTS (SELECT 1 FROM control.bank_format_rule r LEFT JOIN shared.country c ON c.code=r.country_code
                 WHERE r.tenant_id IS NULL AND r.metadata->'_seed'->>'pack'='bank-formats' AND c.code IS NULL) THEN
       RAISE EXCEPTION 'bank-formats contains an invalid country reference';
     END IF;
+    -- seed-assertion: uniqueness
     IF EXISTS (SELECT code,version_no FROM control.bank_format_rule
                 WHERE tenant_id IS NULL AND metadata->'_seed'->>'pack'='bank-formats'
                 GROUP BY code,version_no HAVING count(*) > 1) THEN
       RAISE EXCEPTION 'bank-formats contains duplicate global revisions';
     END IF;
+    -- seed-assertion: semantic
     IF EXISTS (SELECT 1 FROM control.bank_format_rule
                 WHERE tenant_id IS NULL AND metadata->'_seed'->>'pack'='bank-formats'
                   AND (code <> lower(code) OR status <> 'active' OR effective_until IS NOT NULL)) THEN

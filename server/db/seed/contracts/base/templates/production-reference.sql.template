@@ -15,7 +15,7 @@
 
 DO $seed_plane_guard$
 BEGIN
-    IF current_setting('app.database_plane', true) NOT IN ('athyper', 'neon', 'mesh') THEN
+    IF current_setting('app.database_plane', true) NOT IN ('studio', 'neon', 'mesh') THEN
         RAISE EXCEPTION '[common.shared.example] app.database_plane is missing or invalid';
     END IF;
 END;

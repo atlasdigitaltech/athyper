@@ -1,3 +1,25 @@
+-- seed-contract-version: 1
+-- seed-pack: common.control.plane-cron-schedules
+-- seed-pack-version: 1.0.0
+-- seed-dataset: control.cron-schedule
+-- seed-data-class: production_reference
+-- seed-provenance: {"source":"internal-runtime-schedule-catalog","publisher":"Athyper","source_version":"1","retrieved_at":"2026-08-13","license":"internal"}
+-- seed-plane: common
+-- seed-tenant-scope: none
+-- seed-natural-key: control.cron_schedule(tenant_id,code)
+-- seed-cross-file-ids: false
+-- seed-id-strategy: natural-key-only
+-- seed-expected-row-count: exact:6
+-- seed-assertions: expected-count,orphan,uniqueness,semantic
+-- seed-demo-data: false
+
+DO $seed_plane_guard$
+BEGIN
+    IF current_setting('app.database_plane', true) NOT IN ('studio', 'neon', 'mesh') THEN
+        RAISE EXCEPTION '[common.control.plane-cron-schedules] app.database_plane is missing or invalid';
+    END IF;
+END $seed_plane_guard$;
+
 -- Each physical plane owns its own backup schedule and database connection.
 INSERT INTO control.cron_schedule (
     tenant_id, code, name, description, handler_type, cron_expression,
@@ -33,7 +55,18 @@ DO UPDATE SET
     lock_key = EXCLUDED.lock_key,
     is_enabled = EXCLUDED.is_enabled,
     updated_at = now(),
-    updated_by = EXCLUDED.created_by;
+    updated_by = EXCLUDED.created_by
+WHERE (
+    control.cron_schedule.name,control.cron_schedule.description,
+    control.cron_schedule.handler_type,control.cron_schedule.cron_expression,
+    control.cron_schedule.timezone,control.cron_schedule.target_queue,
+    control.cron_schedule.max_retries,control.cron_schedule.concurrency_limit,
+    control.cron_schedule.lock_key,control.cron_schedule.is_enabled
+) IS DISTINCT FROM (
+    EXCLUDED.name,EXCLUDED.description,EXCLUDED.handler_type,EXCLUDED.cron_expression,
+    EXCLUDED.timezone,EXCLUDED.target_queue,EXCLUDED.max_retries,
+    EXCLUDED.concurrency_limit,EXCLUDED.lock_key,EXCLUDED.is_enabled
+);
 
 -- Workflow SLA discovery is plane-global; each run fans out only to active
 -- tenants that currently have an overdue, unprocessed work item.
@@ -64,7 +97,19 @@ DO UPDATE SET
     lock_key = EXCLUDED.lock_key,
     is_enabled = EXCLUDED.is_enabled,
     updated_at = now(),
-    updated_by = EXCLUDED.created_by;
+    updated_by = EXCLUDED.created_by
+WHERE (
+    control.cron_schedule.name,control.cron_schedule.description,
+    control.cron_schedule.handler_type,control.cron_schedule.cron_expression,
+    control.cron_schedule.timezone,control.cron_schedule.target_queue,
+    control.cron_schedule.payload_template,control.cron_schedule.priority,
+    control.cron_schedule.max_retries,control.cron_schedule.concurrency_limit,
+    control.cron_schedule.lock_key,control.cron_schedule.is_enabled
+) IS DISTINCT FROM (
+    EXCLUDED.name,EXCLUDED.description,EXCLUDED.handler_type,EXCLUDED.cron_expression,
+    EXCLUDED.timezone,EXCLUDED.target_queue,EXCLUDED.payload_template,EXCLUDED.priority,
+    EXCLUDED.max_retries,EXCLUDED.concurrency_limit,EXCLUDED.lock_key,EXCLUDED.is_enabled
+);
 
 -- Notification discovery is plane-global. The scheduler repository injects
 -- the physical plane key and the trusted system principal into each payload;
@@ -111,4 +156,41 @@ DO UPDATE SET
     lock_key = EXCLUDED.lock_key,
     is_enabled = EXCLUDED.is_enabled,
     updated_at = now(),
-    updated_by = EXCLUDED.created_by;
+    updated_by = EXCLUDED.created_by
+WHERE (
+    control.cron_schedule.name,control.cron_schedule.description,
+    control.cron_schedule.handler_type,control.cron_schedule.cron_expression,
+    control.cron_schedule.timezone,control.cron_schedule.target_queue,
+    control.cron_schedule.payload_template,control.cron_schedule.priority,
+    control.cron_schedule.max_retries,control.cron_schedule.concurrency_limit,
+    control.cron_schedule.lock_key,control.cron_schedule.is_enabled
+) IS DISTINCT FROM (
+    EXCLUDED.name,EXCLUDED.description,EXCLUDED.handler_type,EXCLUDED.cron_expression,
+    EXCLUDED.timezone,EXCLUDED.target_queue,EXCLUDED.payload_template,EXCLUDED.priority,
+    EXCLUDED.max_retries,EXCLUDED.concurrency_limit,EXCLUDED.lock_key,EXCLUDED.is_enabled
+);
+
+DO $seed_assertions$
+DECLARE
+    v_codes text[] := ARRAY[
+      'platform-backup-daily','workflow-sla-discovery','notifications-discovery',
+      'notifications-digest-hourly','notifications-digest-daily','notifications-digest-weekly'
+    ];
+BEGIN
+    -- seed-assertion: expected-count
+    IF (SELECT count(*) FROM control.cron_schedule WHERE tenant_id IS NULL AND code = ANY(v_codes)) <> 6 THEN
+        RAISE EXCEPTION '[common.control.plane-cron-schedules] expected 6 global rows';
+    END IF;
+    -- seed-assertion: orphan
+    IF EXISTS (SELECT 1 FROM control.cron_schedule WHERE tenant_id IS NULL AND code = ANY(v_codes) AND target_queue IS NULL) THEN
+        RAISE EXCEPTION '[common.control.plane-cron-schedules] orphan target queue';
+    END IF;
+    -- seed-assertion: uniqueness
+    IF EXISTS (SELECT code FROM control.cron_schedule WHERE tenant_id IS NULL AND code = ANY(v_codes) GROUP BY code HAVING count(*) <> 1) THEN
+        RAISE EXCEPTION '[common.control.plane-cron-schedules] duplicate global code';
+    END IF;
+    -- seed-assertion: semantic
+    IF EXISTS (SELECT 1 FROM control.cron_schedule WHERE tenant_id IS NULL AND code = ANY(v_codes) AND NOT is_enabled) THEN
+        RAISE EXCEPTION '[common.control.plane-cron-schedules] disabled canonical schedule';
+    END IF;
+END $seed_assertions$;

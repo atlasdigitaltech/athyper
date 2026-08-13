@@ -16,7 +16,7 @@
     "seed-assertions",
     "seed-demo-data"
   ],
-  "allowedPlanes": ["common", "athyper", "neon", "mesh"],
+  "allowedPlanes": ["common", "studio", "athyper", "neon", "mesh"],
   "allowedTenantScopes": ["none", "tenant"],
   "allowedDataClasses": ["production_reference", "test_fixture", "validation_only"],
   "requiredAssertions": ["expected-count", "orphan", "uniqueness", "semantic"],

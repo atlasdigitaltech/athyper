@@ -62,21 +62,40 @@ The normative contract and template are under `contracts/base`.
 
 ## Provisioning
 
-Plan the three-plane foundation without executing SQL:
+Plan the complete canonical three-plane foundation, tenant, authorization, and
+Keycloak workflow without executing SQL:
 
 ```powershell
-pnpm.cmd --dir server/db run db:foundation:plan
+pnpm.cmd run db:provision:three-plane:plan
 ```
 
-Provision one Neon tenant after its database foundation exists:
+Apply the complete workflow to fresh Studio, Neon, and Mesh databases. Each
+database commits independently; the final Studio receipt records all three
+successful plane applications before Keycloak reconciliation and context
+verification run:
 
 ```powershell
-pnpm.cmd --dir server/db exec tsx scripts/provision.ts --stage=2 --stage=3 --no-mesh --tenant=030_cirrusatlantic
+pnpm.cmd run db:provision:three-plane
 ```
 
-Provision Mesh through its dedicated runner:
+For an existing DDL foundation, explicitly skip the fresh-database DDL phase:
 
 ```powershell
+pnpm.cmd --dir server/db exec tsx scripts/provision-three-plane.ts --apply --skip-foundation
+```
+
+The canonical manifest is `seed/manifests/three-plane-demo.v1.json`. It owns the
+stable tenant UUIDs for `athyper`, `technostat`, and `cirrusatlantic`. Keycloak
+subjects remain opaque external identities; plane-and-tenant-local principals
+are deterministically derived and connected through
+`master.principal_identity_binding`.
+
+The restored plane commands apply the same manifest and authorization contract
+to one already-founded database:
+
+```powershell
+pnpm.cmd --dir server/db run db:provision:studio
+pnpm.cmd --dir server/db run db:provision:neon
 pnpm.cmd --dir server/db run db:provision:mesh
 ```
 

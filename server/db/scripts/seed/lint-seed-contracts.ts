@@ -58,7 +58,7 @@ function maskSqlLiteralsAndComments(source: string): string {
 
 function cteNames(source: string): Set<string> {
   const names = new Set<string>();
-  for (const match of source.matchAll(/(?:\bwith\b|,)\s*([a-z_][a-z0-9_]*)\s+as\s*(?:materialized\s*)?\(/gi)) {
+  for (const match of source.matchAll(/(?:\bwith\b|,)\s*([a-z_][a-z0-9_]*)(?:\s*\([^)]*\))?\s+as\s*(?:materialized\s*)?\(/gi)) {
     names.add(match[1]!.toLowerCase());
   }
   return names;
