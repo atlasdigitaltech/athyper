@@ -144,6 +144,20 @@ expect(
     && seed.includes("entity_row_change_event"),
 );
 expect(
+  "seeded IAM contracts cover runtime authentication and provisioning evidence",
+  seed.includes("authentication\\.(succeeded|failed|denied)")
+    && seed.includes("^iam\\.provisioning\\.[a-z][a-z0-9_]*$")
+    && seed.includes("'grant','revoke','login','logout'")
+    && seed.includes("-- seed-pack-version: 1.1.0"),
+);
+expect(
+  "platform transaction writer uses the granted canonical append function",
+  (await read("server/apps/platform-host/src/composition/register-platform.ts"))
+    .includes("SELECT audit.append_event(")
+    && !(await read("server/apps/platform-host/src/composition/register-platform.ts"))
+      .includes("INSERT INTO audit.audit_log"),
+);
+expect(
   "document audit capture is metadata-only for baseline row changes",
   functions.includes("FUNCTION audit.trg_capture_row_change()")
     && functions.includes("'capture_mode','database_metadata'")

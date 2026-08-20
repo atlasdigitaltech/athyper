@@ -16,7 +16,7 @@
 services:
   alertmanager:
     image: prom/alertmanager:v0.32.0
-    profiles: ["core", "telemetry"]
+    profiles: ["telemetry"]
     user: "9104:9104"
     deploy:
       resources:

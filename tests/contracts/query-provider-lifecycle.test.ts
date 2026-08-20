@@ -4,13 +4,13 @@ import test from "node:test";
 import { ApiTransportError, experienceQueryKeys, parseExperienceBootstrap, type ExperienceBootstrap } from "@athyper/platform-api-client";
 import { applyVersionedOptimisticUpdate, createServerQueryClient, dehydratePrincipalQueries, PrincipalQueryLifecycle, shouldRetrySafeRead } from "@athyper/platform-query/server";
 import { readProtectedBootstrap } from "@athyper/platform-shell-app-foundation/server";
-import { sessionExpiryWarningDelay } from "@athyper/platform-shell-app-foundation";
+import { sessionExpiryWarningDelay, sessionExpiryWarningTarget, shouldSendSessionTouch } from "@athyper/platform-shell-app-foundation";
 import type { PrincipalQueryScope, SanitizedSession } from "@athyper/contract-platform-auth-session";
 
 const scopeA: PrincipalQueryScope = { plane: "neon", tenantId: "tenant-a", principalId: "principal-a", authEpoch: 1 };
 const scopeB: PrincipalQueryScope = { plane: "mesh", tenantId: "tenant-b", principalId: "principal-b", authEpoch: 2 };
 const session: SanitizedSession = { schemaVersion: 1, state: "authenticated", plane: "neon", realmKey: "athyper", tenantId: scopeA.tenantId, principalId: scopeA.principalId, authEpoch: 1, sessionVersion: 1, configurationRevision: "1", expiresAt: "2099-08-12T12:00:00.000Z", idleExpiresAt: "2099-08-12T12:00:00.000Z", absoluteExpiresAt: "2099-08-12T18:00:00.000Z", assurance: "baseline", requiredActions: [], allowedNextActions: ["continue", "logout"] };
-const bootstrap: ExperienceBootstrap = parseExperienceBootstrap({ schemaVersion: 1, state: "ready", planeKey: "neon", tenantId: scopeA.tenantId, principalId: scopeA.principalId, revision: "experience-1", profile: { localeCode: "en-MY", languageCode: "en", timezoneCode: "Asia/Kuala_Lumpur", dateFormat: "yyyy-MM-dd", numberFormat: "latn", weekStart: 1, weekendDays: [0, 6], appearanceMode: "dark", densityCode: "compact" }, workspaces: [{ code: "finance", name: "Finance", sortOrder: 1, modules: [{ code: "invoice", name: "Invoice", sortOrder: 1, primary: true }] }], permissions: ["finance.invoice.read"], features: { "finance.invoice_v2": { code: "finance.invoice_v2", enabled: true, source: "tenant_override" } }, nextActions: [] });
+const bootstrap: ExperienceBootstrap = parseExperienceBootstrap({ schemaVersion: 1, state: "ready", planeKey: "neon", tenantId: scopeA.tenantId, principalId: scopeA.principalId, revision: "experience-1", identity:{displayName:"User One",secondaryLabel:"user.one",initials:"UO"},tenant:{id:scopeA.tenantId,code:"tenant-alpha",displayName:"Tenant Alpha"}, profile: { localeCode: "en-MY", languageCode: "en", timezoneCode: "Asia/Kuala_Lumpur", dateFormat: "yyyy-MM-dd", numberFormat: "latn", weekStart: 1, weekendDays: [0, 6], appearanceMode: "dark", densityCode: "compact" }, workspaces: [{ code: "finance", name: "Finance", sortOrder: 1, modules: [{ code: "invoice", name: "Invoice", sortOrder: 1, primary: true }] }], permissions: ["finance.invoice.read"], features: { "finance.invoice_v2": { code: "finance.invoice_v2", enabled: true, source: "tenant_override" } }, nextActions: [] });
 
 test("principal lifecycle cancels in-flight work before removing the previous context", async () => {
   const client = createServerQueryClient(), lifecycle = new PrincipalQueryLifecycle(client); await lifecycle.replace(scopeA);
@@ -60,12 +60,18 @@ test("provider source preserves the required focused nesting order", async () =>
   const source = await readFile(new URL("../../packages/platform/shell/app-foundation/src/index.tsx", import.meta.url), "utf8");
   const names = ["AppearanceProvider", "SessionProvider", "ExperienceBootstrapProvider", "ApiClientProvider", "PlatformQueryProvider", "PermissionProvider", "FeatureProvider", "ToastProvider", "SurfaceStackProvider", "AuthenticationFailureBridge"];
   let cursor = source.indexOf("export function AppFoundationProviders"); for (const name of names) { const next = source.indexOf(`<${name}`, cursor); assert.ok(next > cursor, `${name} must appear in provider order`); cursor = next; }
+  assert.match(source, /fetch\("\/api\/auth\/touch"/);
+  assert.match(source, /"x-csrf-token": csrfToken/);
 });
 
-test("absolute session expiry warning is scheduled once inside the five-minute safety window", () => {
+test("session expiry warning selects the earliest idle or absolute deadline", () => {
   const now = Date.parse("2026-08-13T10:00:00.000Z");
   assert.equal(sessionExpiryWarningDelay("2026-08-13T10:30:00.000Z", now), 25 * 60_000);
   assert.equal(sessionExpiryWarningDelay("2026-08-13T10:03:00.000Z", now), 0);
   assert.equal(sessionExpiryWarningDelay("2026-08-13T09:59:59.000Z", now), undefined);
   assert.equal(sessionExpiryWarningDelay(undefined, now), undefined);
+  assert.deepEqual(sessionExpiryWarningTarget({ idleExpiresAt: "2026-08-13T10:15:00.000Z", absoluteExpiresAt: "2026-08-13T14:00:00.000Z" }, now), { kind: "idle", expiresAt: "2026-08-13T10:15:00.000Z", delayMs: 10 * 60_000 });
+  assert.deepEqual(sessionExpiryWarningTarget({ idleExpiresAt: "2026-08-13T14:00:00.000Z", absoluteExpiresAt: "2026-08-13T10:30:00.000Z" }, now), { kind: "absolute", expiresAt: "2026-08-13T10:30:00.000Z", delayMs: 25 * 60_000 });
+  assert.equal(shouldSendSessionTouch(now, now + 59_999), false);
+  assert.equal(shouldSendSessionTouch(now, now + 60_000), true);
 });

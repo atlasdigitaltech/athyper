@@ -174,13 +174,26 @@ CREATE OR REPLACE FUNCTION event.fn_authorization_emit_invalidation(
     p_effective_at timestamptz DEFAULT clock_timestamp()
 ) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = event, runtime_meta, pg_catalog AS $$
-DECLARE v_id uuid; v_epoch record; v_now timestamptz := clock_timestamp();
+DECLARE
+    v_id uuid;
+    v_epoch record;
+    v_now timestamptz := clock_timestamp();
+    v_authority_schema text := 'authz';
+    v_authority_table text := p_authority_table;
 BEGIN
+    IF p_authority_table LIKE '%.%' THEN
+        IF p_authority_table !~ '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$' THEN
+            RAISE EXCEPTION 'invalid authorization authority coordinate: %', p_authority_table
+                USING ERRCODE = 'invalid_parameter_value';
+        END IF;
+        v_authority_schema := split_part(p_authority_table, '.', 1);
+        v_authority_table := split_part(p_authority_table, '.', 2);
+    END IF;
     INSERT INTO event.authorization_invalidation_outbox
-        (idempotency_key, scope_kind, tenant_id, plane_code, authority_table,
+        (idempotency_key, scope_kind, tenant_id, plane_code, authority_schema, authority_table,
          authority_operation, source_row_key, effective_at, available_at, created_at)
     VALUES (p_idempotency_key, p_scope_kind, p_tenant_id, p_plane_code,
-            p_authority_table, p_authority_operation, p_source_row_key,
+            v_authority_schema, v_authority_table, p_authority_operation, p_source_row_key,
             p_effective_at, GREATEST(p_effective_at, v_now), v_now)
     ON CONFLICT (idempotency_key) DO NOTHING RETURNING id INTO v_id;
     IF v_id IS NULL THEN

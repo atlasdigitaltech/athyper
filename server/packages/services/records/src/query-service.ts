@@ -14,7 +14,12 @@ export function createRecordQueryService<Transaction = unknown>(options: RecordQ
   return {
     async list(query) {
       const descriptor = await descriptorFor(options.metadata, query.context, query.entityCode);
-      await authorize(options.authorizer, query.context, descriptor.operations["read"]?.permissionCode);
+      await authorize(options.authorizer, query.context, descriptor.operations["read"]?.permissionCode, {
+        tenantId: query.context.tenantId,
+        entityCode: query.entityCode,
+        operationKey: "read",
+        resourceCode: query.entityCode,
+      });
       const projection = await readableProjection(options.authorizer, query.context, descriptor.fields);
       validateQueryFields(descriptor.fields, query, new Set(projection));
       const limit = query.limit ?? 50;
@@ -23,7 +28,13 @@ export function createRecordQueryService<Transaction = unknown>(options: RecordQ
     },
     async get(query) {
       const descriptor = await descriptorFor(options.metadata, query.context, query.entityCode);
-      await authorize(options.authorizer, query.context, descriptor.operations["read"]?.permissionCode);
+      await authorize(options.authorizer, query.context, descriptor.operations["read"]?.permissionCode, {
+        tenantId: query.context.tenantId,
+        entityCode: query.entityCode,
+        operationKey: "read",
+        resourceCode: query.entityCode,
+        recordId: query.recordId,
+      });
       const projection = await readableProjection(options.authorizer, query.context, descriptor.fields);
       return { data: await options.transactions.run(query.context.planeKey, { tenantId: query.context.tenantId, principalId: query.context.principalId }, (transaction) => options.repository.get(descriptor, query.context.tenantId, query.recordId, projection, transaction)) };
     },
@@ -48,8 +59,13 @@ export async function descriptorFor(metadata: MetadataReader, context: Parameter
   return descriptor;
 }
 
-export async function authorize(authorizer: Authorizer, context: Parameters<Authorizer["authorize"]>[0]["context"], permissionCode: string | undefined): Promise<void> {
+export async function authorize(
+  authorizer: Authorizer,
+  context: Parameters<Authorizer["authorize"]>[0]["context"],
+  permissionCode: string | undefined,
+  resource: Readonly<Record<string, unknown>>,
+): Promise<void> {
   if (!permissionCode) throw new RecordServiceError(409, "ENTITY_OPERATION_UNAVAILABLE", "Entity operation is not published");
-  const decision = await authorizer.authorize({ context, permissionCode });
+  const decision = await authorizer.authorize({ context, permissionCode, resource });
   if (!decision.allowed) throw new RecordServiceError(403, "FORBIDDEN", "Record operation is not permitted");
 }

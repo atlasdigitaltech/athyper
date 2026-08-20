@@ -13,13 +13,39 @@
  *   node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.studio.prisma
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { createRequire } from "node:module";
+import { execSync } from "node:child_process";
+
+// Resolve @mrleebo/prisma-ast: local node_modules first, then global npm.
+function resolvePrismaAst() {
+  const __dir = dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1"));
+  const candidates = [
+    resolve(__dir, "../node_modules/@mrleebo/prisma-ast/dist/index.js"),
+    resolve(__dir, "../../../../../../node_modules/.pnpm/node_modules/@mrleebo/prisma-ast/dist/index.js"),
+    resolve(__dir, "../../../../../../node_modules/@mrleebo/prisma-ast/dist/index.js"),
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  try {
+    const globalRoot = execSync("npm root -g", { encoding: "utf-8" }).trim();
+    // prisma-kysely bundles it; prisma itself may also carry it via @prisma/dev
+    for (const sub of [
+      "prisma-kysely/node_modules/@mrleebo/prisma-ast/dist/index.js",
+      "prisma/node_modules/@prisma/dev/node_modules/@mrleebo/prisma-ast/dist/index.js",
+      "@mrleebo/prisma-ast/dist/index.js",
+    ]) {
+      const p = resolve(globalRoot, sub);
+      if (existsSync(p)) return p;
+    }
+  } catch {}
+  throw new Error("Cannot locate @mrleebo/prisma-ast — run: npm install -g prisma-kysely");
+}
 
 const require = createRequire(import.meta.url);
-
-const { getSchema } = require("@mrleebo/prisma-ast");
+const { getSchema } = require(resolvePrismaAst());
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 const args = process.argv.slice(2);

@@ -22,7 +22,7 @@ services:
   # Runs on every stack start; `mc mb --ignore-existing` is idempotent.
   logging-bucket-init:
     image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    profiles: ["core", "telemetry"]
+    profiles: ["telemetry"]
     environment:
       LOKI_STORAGE_BACKEND: ${LOKI_STORAGE_BACKEND}
       LOKI_S3_BUCKET: ${LOKI_S3_BUCKET}
@@ -79,7 +79,7 @@ services:
 
   logging:
     image: grafana/loki:3.6.10
-    profiles: ["core", "telemetry"]
+    profiles: ["telemetry"]
     user: "9103:9103"
     deploy:
       resources:

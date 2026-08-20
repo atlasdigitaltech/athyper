@@ -17,15 +17,17 @@ Objects move into this tree table by table. Review the table definition and its
 constraints, indexes, functions, triggers, RLS, grants, and reference data
 together before treating it as locked.
 
-The first relocated slice contains `public.schema_provisions`, the Common
-reference catalog, and the first plane-owned catalogs. Ownership is locked as:
+The foundation contains `public.schema_provisions`, the Common reference
+catalog, a common plane-local master core, and plane-owned extensions.
+Ownership is locked as:
 
-- `<plane>.master.workspace` and `<plane>.master.module`
+- `<plane>.master.workspace` and `<plane>.master.module`, defined once by
+  `common/master/03_platform_tables.sql`
 - `<plane>.control.subscription_plan`
 - `<plane>.control.policy_definition` for common policy consumers, including Atlas AI
 - subscription history in each plane's `snapshot` schema
 
-Here, `<plane>` means the matching Athyper, Neon, or Mesh database; the SQL
+Here, `<plane>` means the matching Studio, Neon, or Mesh database; the SQL
 schema names inside each database are `master`, `control`, and `snapshot`.
 There is intentionally no `shared.subscription_plan_version` or plane-local
 `subscription_plan_version` table.
@@ -41,6 +43,13 @@ includes so it remains manually executable. For Docker builds, the foundation
 runner expands those includes on the host before streaming one transaction to
 PostgreSQL. Bulk taxonomy loading defers recursive row checks and finishes with
 `shared.validate_reference_seed()` plus immediate FK validation.
+
+The common master table file is installed by all three manifests before the
+plane-specific master table file. It defines the same table contract in each
+physical database, but it does not imply cross-database foreign keys or shared
+rows. Studio then adds canonical-party authority tables, Neon adds ERP master
+data, and Mesh currently adds no master-table extension. Cross-plane visibility
+must use explicit identifiers, projections, or service contracts.
 
 ## Runner
 

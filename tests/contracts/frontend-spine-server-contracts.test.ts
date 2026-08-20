@@ -26,4 +26,14 @@ describe("server producer compatibility for frontend spine contracts", () => {
     const snapshot = fixture("authorization-snapshot.v1") as Record<string, unknown>;
     assert.throws(() => parseAuthorizationSnapshot({ ...snapshot, features: { "experience.new_shell": { code: "experience.new_shell", enabled: true, source: "browser", revision: "r1" } } }), /source is invalid/);
   });
+
+  it("accepts legacy schema-v1 sessions that omit an empty requiredActions field", () => {
+    const parsed = parseSanitizedSession({ schemaVersion: 1, state: "anonymous", plane: "neon" });
+    assert.deepEqual(parsed.requiredActions, []);
+    assert.deepEqual(parseSanitizedSession({ schemaVersion: 1, state: "anonymous", plane: "neon", requiredActions: null }).requiredActions, []);
+    assert.deepEqual(parseSanitizedSession({ schemaVersion: 1, state: "anonymous", plane: "neon", requiredActions: {} }).requiredActions, []);
+    assert.throws(() => parseSanitizedSession({ schemaVersion: 1, state: "anonymous", plane: "neon", requiredActions: "UPDATE_PASSWORD" }), /requiredActions must be an array/);
+    assert.throws(() => parseSanitizedSession({ schemaVersion: 1, state: "anonymous", plane: "neon", requiredActions: { UPDATE_PASSWORD: true } }), /requiredActions must be an array/);
+    assert.throws(() => parseSanitizedSession({ schemaVersion: 1, state: "required_action", plane: "neon" }), /requires actions/);
+  });
 });

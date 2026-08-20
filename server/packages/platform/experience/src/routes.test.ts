@@ -8,5 +8,7 @@ describe("experience route contract", () => {
     const application = express();
     registerExperienceRoutes(application, { authenticate: (_request, _response, next) => next(), readContext: vi.fn() as never, service: { bootstrap: vi.fn() } as never });
     expect(routeContracts(application)).toContainEqual(expect.objectContaining({ method: "get", path: "/api/platform/experience/bootstrap", operationId: "platformExperienceBootstrap", authenticated: true }));
+    expect(routeContracts(application)).toContainEqual(expect.objectContaining({ method: "get", path: "/api/neon/work-contexts", operationId: "neonWorkContexts", authenticated: true }));
+    expect(routeContracts(application)).toContainEqual(expect.objectContaining({ method: "get", path: "/api/neon/operating-organizations", operationId: "neonOperatingOrganizations", authenticated: true }));
   });
 });

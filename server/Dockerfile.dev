@@ -14,20 +14,12 @@ RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /app
 
 # ─── Dependency install ───────────────────────────────────────────────────────
-COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
-COPY tooling/tsconfig/ ./tooling/tsconfig/
-
-# Server workspace manifests
-COPY server/package.json ./server/
-COPY server/apps/platform-host/package.json ./server/apps/platform-host/
-COPY server/packages/foundation/package.json ./server/packages/foundation/
-COPY server/db/package.json ./server/db/
-
-RUN pnpm install --frozen-lockfile \
-      --filter "@athyper/server-platform-host..."
+COPY . .
+RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile --filter "@athyper/server-platform-host..."
 
 # ─── Source ───────────────────────────────────────────────────────────────────
-COPY server/ ./server/
 
 WORKDIR /app/server/apps/platform-host
 

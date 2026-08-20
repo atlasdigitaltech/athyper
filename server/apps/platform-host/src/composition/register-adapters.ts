@@ -41,6 +41,7 @@ import {
   type NeonDatabaseAdapter,
   type NeonDatabaseAdapterConfig,
 } from "@athyper/server-adapter-db-neon";
+import { qualifyRuntimePlaneDatabase } from "./database-qualification.js";
 import {
   createS3ObjectStorageAdapter,
   type S3ObjectStorageAdapter,
@@ -328,6 +329,7 @@ export function registerAdapters(
       observer: poolObserver("neon", container),
     });
     container.adapters.neonDatabase = neonDatabase;
+    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(neonDatabase.database as never, "neon"); });
     lifecycle.onShutdown(() => neonDatabase.close());
   }
 
@@ -343,6 +345,7 @@ export function registerAdapters(
       observer: poolObserver("studio", container),
     });
     container.adapters.athyperDatabase = athyperDatabase;
+    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(athyperDatabase.database as never, "studio"); });
     lifecycle.onShutdown(() => athyperDatabase.close());
   }
 
@@ -358,6 +361,7 @@ export function registerAdapters(
       observer: poolObserver("mesh", container),
     });
     container.adapters.meshDatabase = meshDatabase;
+    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(meshDatabase.database as never, "mesh"); });
     lifecycle.onShutdown(() => meshDatabase.close());
   }
 
@@ -383,6 +387,7 @@ export function registerAdapters(
       observer: poolObserver("neon", container),
     });
     container.adapters.jobNeonDatabase = database;
+    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(database.database as never, "neon"); });
     lifecycle.onShutdown(() => database.close());
   }
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.studio) {
@@ -392,6 +397,7 @@ export function registerAdapters(
       observer: poolObserver("studio", container),
     });
     container.adapters.jobAthyperDatabase = database;
+    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(database.database as never, "studio"); });
     lifecycle.onShutdown(() => database.close());
   }
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.mesh) {
@@ -401,6 +407,7 @@ export function registerAdapters(
       observer: poolObserver("mesh", container),
     });
     container.adapters.jobMeshDatabase = database;
+    lifecycle.onReady(async () => { await qualifyRuntimePlaneDatabase(database.database as never, "mesh"); });
     lifecycle.onShutdown(() => database.close());
   }
 

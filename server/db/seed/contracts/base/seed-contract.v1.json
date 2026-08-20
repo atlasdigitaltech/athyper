@@ -21,6 +21,19 @@
   "allowedDataClasses": ["production_reference", "test_fixture", "validation_only"],
   "requiredAssertions": ["expected-count", "orphan", "uniqueness", "semantic"],
   "provenanceRequiredFields": ["source", "publisher", "source_version", "retrieved_at", "license"],
+  "runtimeOnlyRelations": [
+    "authz.delegation",
+    "authz.delegation_grant",
+    "authz.deny_rule",
+    "authz.override",
+    "authz.record_acl",
+    "authz.trusted_device"
+  ],
+  "reconciliationOnlyRelations": [
+    "authz.application_projection",
+    "authz.projection_provider",
+    "authz.projection_scope"
+  ],
   "legacyRelations": [
     "shared.workspace",
     "shared.module",

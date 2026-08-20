@@ -4,7 +4,7 @@ import type { ApiProblem } from "@athyper/contract-platform-api";
 export type RelayMethod = "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type RelayRequestClass = "json" | "upload" | "download" | "stream";
 export interface RelayOperation { readonly id: string; readonly method: RelayMethod; readonly path: `/api/${string}`; readonly requestClass?: RelayRequestClass; readonly requiresTenant?: boolean; readonly tenantParam?: string; readonly idempotency?: "none" | "optional" | "required"; readonly maxBodyBytes?: number; }
-export interface RelaySessionContext { readonly accessToken: string; readonly plane: string; readonly realmKey: string; readonly tenantId?: string; readonly principalId: string; readonly authEpoch: number; readonly csrfToken: string; }
+export interface RelaySessionContext { readonly accessToken: string; readonly plane: string; readonly realmKey: string; readonly tenantId?: string; readonly principalId: string; readonly authEpoch: number; readonly assurance?: "baseline" | "elevated"; readonly csrfToken: string; readonly acceptedCsrfTokens?: readonly string[]; }
 export interface RelaySessionAuthority { resolve(request: Request): Promise<RelaySessionContext | undefined>; refresh(request: Request): Promise<RelaySessionContext | undefined>; invalidate(request: Request, reason: "context_mismatch"): Promise<void>; }
 export interface RelayDiagnostic { readonly event: "request" | "failure" | "refresh" | "context_mismatch"; readonly operationId?: string; readonly method: string; readonly status?: number; readonly requestId?: string; }
 export interface RelayOptions { readonly plane: string; readonly runtimeApiUrl: string; readonly appOrigin: string; readonly operations: readonly RelayOperation[]; readonly session: RelaySessionAuthority; readonly fetch?: typeof fetch; readonly maxHeaderBytes?: number; readonly defaultBodyBytes?: number; readonly timeouts?: Partial<Record<RelayRequestClass, number>>; readonly onDiagnostic?: (diagnostic: RelayDiagnostic) => void; }
@@ -21,13 +21,13 @@ const DEFAULT_TIMEOUTS: Readonly<Record<RelayRequestClass, number>> = { json: 15
 
 export const IAM_ME_OPERATION: RelayOperation = Object.freeze({ id: "iam.me", method: "GET", path: "/api/iam/me", requestClass: "json", requiresTenant: false });
 export const EXPERIENCE_BOOTSTRAP_OPERATION: RelayOperation = Object.freeze({ id: "platform.experience.bootstrap", method: "GET", path: "/api/platform/experience/bootstrap", requestClass: "json", requiresTenant: true });
+export const NEON_WORK_CONTEXTS_OPERATION: RelayOperation = Object.freeze({ id: "neon.work-contexts", method: "GET", path: "/api/neon/work-contexts", requestClass: "json", requiresTenant: true });
+export const NEON_OPERATING_ORGANIZATIONS_OPERATION: RelayOperation = Object.freeze({ id: "neon.operating-organizations", method: "GET", path: "/api/neon/operating-organizations", requestClass: "json", requiresTenant: true });
 
 export function createRelayHandler(options: RelayOptions): RelayHandler {
   const runtime = runtimeOrigin(options.runtimeApiUrl); const expectedOrigin = new URL(options.appOrigin).origin; const fetcher = options.fetch ?? globalThis.fetch;
   const operations = options.operations.map(compileOperation); if (!operations.length) throw new TypeError("Relay requires at least one allowlisted operation");
   const maxHeaderBytes = options.maxHeaderBytes ?? 32 * 1024; const defaultBodyBytes = options.defaultBodyBytes ?? 1024 * 1024; const timeouts = { ...DEFAULT_TIMEOUTS, ...options.timeouts };
-  let refreshInFlight: Promise<RelaySessionContext | undefined> | undefined;
-  const refreshSession = (request: Request) => refreshInFlight ??= options.session.refresh(request).finally(() => { refreshInFlight = undefined; });
   return async (request, context) => {
     try {
       enforceHeaderLimit(request.headers, maxHeaderBytes); const { path } = await context.params; const requestPath = new URL(request.url).pathname;
@@ -39,14 +39,14 @@ export function createRelayHandler(options: RelayOptions): RelayHandler {
       if (session.plane !== options.plane) return problem(403, "AUTH_CONTEXT_MISMATCH", "The verified session belongs to another plane");
       if (operation.requiresTenant !== false && !session.tenantId) return problem(409, "AUTH_CONTEXT_MISMATCH", "Select a tenant context before continuing");
       if (operation.tenantParam && params[operation.tenantParam] !== session.tenantId) return problem(403, "AUTH_CONTEXT_MISMATCH", "The requested tenant does not match the verified session");
-      if (UNSAFE.has(method)) { const originFailure = verifyUnsafeRequest(request, expectedOrigin, session.csrfToken); if (originFailure) return originFailure; }
+      if (UNSAFE.has(method)) { const originFailure = verifyUnsafeRequest(request, expectedOrigin, session.acceptedCsrfTokens ?? [session.csrfToken]); if (originFailure) return originFailure; }
       const idempotencyKey = request.headers.get("idempotency-key"); if (idempotencyKey && !validIdempotencyKey(idempotencyKey)) return problem(400, "RELAY_INVALID_IDEMPOTENCY_KEY", "Idempotency-Key is invalid");
       if (operation.idempotency === "required" && !idempotencyKey) return problem(428, "RELAY_IDEMPOTENCY_REQUIRED", "This operation requires an Idempotency-Key");
       if (operation.idempotency === "none" && idempotencyKey) return problem(400, "RELAY_IDEMPOTENCY_NOT_ALLOWED", "This operation does not accept an Idempotency-Key");
       const body = await prepareBody(request, operation, defaultBodyBytes); const canRetry = body.replayable && (IDEMPOTENT.has(method) || !!idempotencyKey);
       options.onDiagnostic?.({ event: "request", operationId: operation.id, method });
       let activeSession = session; let response = await forward(activeSession, 0);
-      if (response.status === 401 && canRetry) { options.onDiagnostic?.({ event: "refresh", operationId: operation.id, method, status: 401 }); const refreshed = await refreshSession(request); if (refreshed && refreshed.plane === options.plane && (!session.tenantId || refreshed.tenantId === session.tenantId)) { activeSession = refreshed; response = await forward(activeSession, 1); } }
+      if (response.status === 401 && canRetry) { options.onDiagnostic?.({ event: "refresh", operationId: operation.id, method, status: 401 }); const refreshResult = await options.session.refresh(request); const refreshed = refreshResult ? await options.session.resolve(request) : undefined; if (sameAuthority(session, refreshed, options.plane)) { activeSession = refreshed; response = await forward(activeSession, 1); } }
       if (await isContextMismatch(response)) { await options.session.invalidate(request, "context_mismatch"); options.onDiagnostic?.({ event: "context_mismatch", operationId: operation.id, method, status: response.status, requestId: response.headers.get("x-request-id") ?? undefined }); return problem(409, "AUTH_CONTEXT_MISMATCH", "Session context changed; select context again", response.headers.get("x-request-id") ?? undefined, { "x-athyper-session-action": "select_context" }); }
       return relayResponse(response, request.signal, operation.requestClass ?? "json");
 
@@ -71,7 +71,8 @@ function normalizePath(segments: readonly string[]): `/api/${string}` { if (!seg
 function runtimeOrigin(value: string): URL { const url = new URL(value); if (!/^https?:$/.test(url.protocol) || url.username || url.password || url.search || url.hash) throw new TypeError("RUNTIME_API_URL must be a server-side HTTP(S) base URL without credentials, query, or fragment"); url.pathname = url.pathname.replace(/\/+$/, "").replace(/\/api$/i, "") + "/"; return url; }
 function requestHeaders(input: Headers): Headers { const output = new Headers(); for (const [name, value] of input) { const lower = name.toLowerCase(); if (BLOCKED_REQUEST_HEADERS.has(lower) || !SAFE_REQUEST_HEADERS.has(lower) || lower === "content-length" || lower === "content-encoding") continue; output.set(lower, value); } return output; }
 function enforceHeaderLimit(headers: Headers, limit: number): void { let bytes = 0; for (const [name, value] of headers) bytes += Buffer.byteLength(name) + Buffer.byteLength(value) + 4; if (bytes > limit) throw new RelayInputError(431, "RELAY_HEADERS_TOO_LARGE", "Request headers exceed the relay limit"); }
-function verifyUnsafeRequest(request: Request, expectedOrigin: string, expectedCsrf: string): Response | undefined { const origin = request.headers.get("origin"); const fetchSite = request.headers.get("sec-fetch-site"); if (origin !== expectedOrigin || (fetchSite && fetchSite !== "same-origin")) return problem(403, "RELAY_CROSS_ORIGIN", "Unsafe relay requests must be same-origin"); const supplied = request.headers.get("x-csrf-token"); if (!supplied || !safeEqual(supplied, expectedCsrf)) return problem(403, "RELAY_CSRF_INVALID", "CSRF validation failed"); return undefined; }
+function verifyUnsafeRequest(request: Request, expectedOrigin: string, expectedCsrf: readonly string[]): Response | undefined { const origin = request.headers.get("origin"); const fetchSite = request.headers.get("sec-fetch-site"); if (origin !== expectedOrigin || (fetchSite && fetchSite !== "same-origin")) return problem(403, "RELAY_CROSS_ORIGIN", "Unsafe relay requests must be same-origin"); const supplied = request.headers.get("x-csrf-token"); if (!supplied || !expectedCsrf.some((candidate) => safeEqual(supplied, candidate))) return problem(403, "RELAY_CSRF_INVALID", "CSRF validation failed"); return undefined; }
+function sameAuthority(previous: RelaySessionContext, refreshed: RelaySessionContext | undefined, plane: string): refreshed is RelaySessionContext { return !!refreshed && refreshed.plane === plane && refreshed.realmKey === previous.realmKey && refreshed.tenantId === previous.tenantId && refreshed.principalId === previous.principalId && refreshed.authEpoch === previous.authEpoch; }
 function safeEqual(left: string, right: string): boolean { const a = Buffer.from(left); const b = Buffer.from(right); return a.length === b.length && timingSafeEqual(a, b); }
 function validIdempotencyKey(value: string): boolean { return value.length <= 200 && /^[A-Za-z0-9._:-]+$/.test(value); }
 

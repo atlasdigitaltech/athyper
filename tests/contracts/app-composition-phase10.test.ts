@@ -14,7 +14,7 @@ const planes = [
   { plane: "mesh", routes: meshRoutes, validate: validateMesh },
   { plane: "studio", routes: studioRoutes, validate: validateStudio },
 ] as const;
-const validEnvironment = { APP_ORIGIN: "https://app.example.test", RUNTIME_API_URL: "https://host.example.test", REDIS_URL: "redis://redis:6379", KEYCLOAK_BASE_URL: "https://identity.example.test", SESSION_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64") } as NodeJS.ProcessEnv;
+const validEnvironment = { APP_ORIGIN: "https://app.example.test", RUNTIME_API_URL: "https://host.example.test", REDIS_URL: "redis://redis:6379", KEYCLOAK_BASE_URL: "https://identity.example.test", KEYCLOAK_CLIENT_SECRET: "test-confidential-client-secret", SESSION_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 7).toString("base64") } as NodeJS.ProcessEnv;
 
 for (const pilot of planes) test(`${pilot.plane} runs the common environment, auth/bootstrap, health, and shell smoke contract`, async () => {
   assert.deepEqual(pilot.validate(validEnvironment), { ready: true, missing: [], invalid: [] });

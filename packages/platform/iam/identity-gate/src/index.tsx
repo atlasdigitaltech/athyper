@@ -80,7 +80,7 @@ function AuthShell({ plane, children }: { readonly plane: BrandPlane; readonly c
   return <PublicIdentitySurface plane={plane} labelledBy="identity-title" brand={
       <picture>
         <source media="(prefers-color-scheme: dark)" srcSet={brand.inverseWordmark.src} />
-        <img src={brand.wordmark.src} width={brand.wordmark.width} height={brand.wordmark.height} alt={brand.wordmark.alt} />
+        <img src={brand.wordmark.src} width={brand.wordmark.width} height={brand.wordmark.height} alt={brand.wordmark.alt} decoding="sync" fetchPriority="high" />
       </picture>
     } footer={<><span>© {new Date().getFullYear()} Athyper</span><span aria-hidden="true">·</span><span className="a-identity-assurance"><LockIcon />Encrypted · Credentials with Athyper Identity</span></>}>{children}</PublicIdentitySurface>;
 }

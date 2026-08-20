@@ -35,6 +35,9 @@ const adminPassword = args["admin-password"] || process.env.IAM_ADMIN_PASSWORD;
 const realmFile = args["realm-file"];
 const demoFile = args["demo-file"];
 const forceReconcile = args.reconcile === "1" || args.reconcile === "true" || process.env.IAM_DEMO_RECONCILE === "1";
+const fastReconcile = args.fast === "1" || args.fast === "true";
+const remapExistingUsers = new Set(["catl.admin", "tksa.admin", "ssk.admin", "tegy.admin", "sdtx.admin"]);
+const remapAdmins = args["remap-admins"] === "1" || args["remap-admins"] === "true";
 
 if (!adminUser || !adminPassword || !realmFile || !demoFile) {
   console.error("Usage: node apply-realm-demo-setup.cjs --container athyper-iam-1 --admin-user USER --admin-password PASS --realm-file realm-neon.json --demo-file realm-neon-demosetup.json");
@@ -160,7 +163,7 @@ function ensureUser(user) {
     if (user.id && existing.id !== user.id) {
       keycloakAssignedIdCount += 1;
     }
-    if (forceReconcile) {
+    if (forceReconcile && !fastReconcile) {
       tryKcadm(["update", `users/${existing.id}`, "-r", realmName, "-b", body({ ...payload, id: existing.id })]);
     }
     return { id: existing.id, created: false };
@@ -371,9 +374,11 @@ for (const user of demo.users || []) {
   const userId = ensured.id;
   if (!userId) continue;
   usersByUsername.set(user.username, userId);
-  assignRealmRoles(userId, user.realmRoles);
-  assignClientRoles(userId, user.clientRoles);
-  assignGroups(userId, user.groups, groupsByRef);
+  if (!fastReconcile || ensured.created || (remapAdmins && remapExistingUsers.has(user.username))) {
+    assignRealmRoles(userId, user.realmRoles);
+    assignClientRoles(userId, user.clientRoles);
+    assignGroups(userId, user.groups, groupsByRef);
+  }
 }
 console.log(`  users: ${usersByUsername.size}`);
 if (keycloakAssignedIdCount > 0) {
@@ -394,7 +399,7 @@ for (const org of allOrgs) {
   organizationCount += 1;
   const memberCount = (org.members || []).length;
   console.log(`  org [${organizationCount}/${allOrgs.length}] ${org.alias}: ${ensured.created ? "created" : "exists"}, ${memberCount} member(s)`);
-  if (forceReconcile) {
+  if (forceReconcile && !fastReconcile) {
     replaceOrganizationMembers(orgId, org.members, usersByUsername);
   } else {
     ensureOrganizationMembers(orgId, org.members, usersByUsername);

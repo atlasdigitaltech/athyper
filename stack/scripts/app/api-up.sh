@@ -181,9 +181,29 @@ EOF
   # Cronwatch ping port not published to host by default — disable.
   export CRONWATCH_BASE_URL=""
 
-  # Local dev always uses development mode and relaxed TLS (self-signed certs).
+  # Prefer the trusted mkcert CA. Fall back only when local certificate tooling
+  # is unavailable so a fresh checkout can still start.
   export NODE_ENV=development
-  export NODE_TLS_REJECT_UNAUTHORIZED=0
+  mkcert_root=""
+  mkcert_ca=""
+  if command -v mkcert >/dev/null 2>&1; then
+    mkcert_root="$(mkcert -CAROOT 2>/dev/null || true)"
+    if command -v cygpath >/dev/null 2>&1; then
+      mkcert_ca="$(cygpath -u "$mkcert_root")/rootCA.pem"
+    else
+      mkcert_ca="$mkcert_root/rootCA.pem"
+    fi
+  fi
+  if [[ -n "$mkcert_ca" && -f "$mkcert_ca" ]]; then
+    if command -v cygpath >/dev/null 2>&1; then
+      export NODE_EXTRA_CA_CERTS="$(cygpath -w "$mkcert_ca")"
+    else
+      export NODE_EXTRA_CA_CERTS="$mkcert_ca"
+    fi
+    unset NODE_TLS_REJECT_UNAUTHORIZED
+  else
+    export NODE_TLS_REJECT_UNAUTHORIZED=0
+  fi
 
   cd "$REPO_ROOT"
   pnpm --filter @athyper/runtime-server "$PNPM_SCRIPT"

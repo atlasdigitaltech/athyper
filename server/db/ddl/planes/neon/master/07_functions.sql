@@ -991,6 +991,11 @@ AS $$
 DECLARE
     v_parent_id uuid := nullif(to_jsonb(NEW) ->> TG_ARGV[0], '')::uuid;
     v_cycle boolean;
+    v_depth integer;
+    v_max_depth integer := CASE
+        WHEN array_length(TG_ARGV, 1) > 1 THEN TG_ARGV[1]::integer
+        ELSE NULL
+    END;
 BEGIN
     IF v_parent_id IS NULL THEN
         RETURN NEW;
@@ -998,24 +1003,32 @@ BEGIN
 
     EXECUTE format(
         'WITH RECURSIVE ancestors AS (
-             SELECT id, %1$I AS parent_id
+             SELECT id, %1$I AS parent_id, 1 AS depth, ARRAY[id] AS visited
                FROM master.%2$I
               WHERE tenant_id = $1 AND id = $2
              UNION ALL
-             SELECT parent.id, parent.%1$I
+             SELECT parent.id, parent.%1$I, ancestors.depth + 1, ancestors.visited || parent.id
                FROM master.%2$I AS parent
                JOIN ancestors ON parent.id = ancestors.parent_id
               WHERE parent.tenant_id = $1
+                AND NOT parent.id = ANY(ancestors.visited)
          )
-         SELECT EXISTS (SELECT 1 FROM ancestors WHERE id = $3)',
+         SELECT EXISTS (SELECT 1 FROM ancestors WHERE id = $3),
+                COALESCE(MAX(depth), 0)
+           FROM ancestors',
         TG_ARGV[0], TG_TABLE_NAME
     )
-    INTO v_cycle
+    INTO v_cycle, v_depth
     USING NEW.tenant_id, v_parent_id, NEW.id;
 
     IF v_cycle THEN
         RAISE EXCEPTION '%.% hierarchy cycle detected',
             TG_TABLE_SCHEMA, TG_TABLE_NAME
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF v_max_depth IS NOT NULL AND v_depth >= v_max_depth THEN
+        RAISE EXCEPTION '%.% hierarchy exceeds maximum depth %',
+            TG_TABLE_SCHEMA, TG_TABLE_NAME, v_max_depth
             USING ERRCODE = 'check_violation';
     END IF;
     RETURN NEW;
@@ -1029,6 +1042,8 @@ SET search_path = pg_catalog, master
 AS $$
 DECLARE
     v_domain master.operating_organization_domain_d;
+    v_company_ids uuid[];
+    v_company_id uuid;
 BEGIN
     SELECT organization.domain
       INTO v_domain
@@ -1050,6 +1065,33 @@ BEGIN
         RAISE EXCEPTION 'Sales profile requires sales or both domain'
             USING ERRCODE = 'check_violation';
     END IF;
+
+    v_company_ids := CASE TG_TABLE_NAME
+        WHEN 'procurement_organization_profile' THEN ARRAY[
+            nullif(to_jsonb(NEW) ->> 'lead_company_code_id', '')::uuid
+        ]
+        WHEN 'sales_organization_profile' THEN ARRAY[
+            nullif(to_jsonb(NEW) ->> 'booking_company_code_id', '')::uuid,
+            nullif(to_jsonb(NEW) ->> 'invoicing_company_code_id', '')::uuid
+        ]
+        ELSE ARRAY[]::uuid[]
+    END;
+
+    FOREACH v_company_id IN ARRAY v_company_ids LOOP
+        IF v_company_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1
+              FROM master.operating_organization_company_assignment AS assignment
+             WHERE assignment.tenant_id = NEW.tenant_id
+               AND assignment.operating_organization_id = NEW.operating_organization_id
+               AND assignment.company_code_id = v_company_id
+               AND assignment.status = 'active'
+               AND assignment.effective_from <= CURRENT_DATE
+               AND (assignment.effective_until IS NULL OR assignment.effective_until > CURRENT_DATE)
+        ) THEN
+            RAISE EXCEPTION 'Operating organization profile default company is not an effective member'
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END LOOP;
     RETURN NEW;
 END;
 $$;
@@ -4571,10 +4613,14 @@ AS $$
 DECLARE v_kind authz.scope_kind_d:=TG_ARGV[0]::authz.scope_kind_d; v_parent uuid; v_status authz.scope_status_d; v_scope_id uuid; v_actor uuid;
 BEGIN
   v_actor:=COALESCE(NEW.updated_by,NEW.status_changed_by,NEW.created_by);
-  IF v_kind='legal_entity' AND NEW.parent_legal_entity_id IS NOT NULL THEN
-    SELECT id INTO v_parent FROM authz.scope_target WHERE tenant_id=NEW.tenant_id AND scope_kind='legal_entity' AND target_id=NEW.parent_legal_entity_id;
-  ELSIF v_kind='operating_organization' AND NEW.parent_operating_organization_id IS NOT NULL THEN
-    SELECT id INTO v_parent FROM authz.scope_target WHERE tenant_id=NEW.tenant_id AND scope_kind='operating_organization' AND target_id=NEW.parent_operating_organization_id;
+  IF v_kind='legal_entity' THEN
+    IF NEW.parent_legal_entity_id IS NOT NULL THEN
+      SELECT id INTO v_parent FROM authz.scope_target WHERE tenant_id=NEW.tenant_id AND scope_kind='legal_entity' AND target_id=NEW.parent_legal_entity_id;
+    END IF;
+  ELSIF v_kind='operating_organization' THEN
+    IF NEW.parent_operating_organization_id IS NOT NULL THEN
+      SELECT id INTO v_parent FROM authz.scope_target WHERE tenant_id=NEW.tenant_id AND scope_kind='operating_organization' AND target_id=NEW.parent_operating_organization_id;
+    END IF;
   END IF;
   IF v_parent IS NULL THEN SELECT id INTO v_parent FROM authz.scope_target WHERE tenant_id=NEW.tenant_id AND scope_kind='tenant' AND target_id=NEW.tenant_id; END IF;
   IF v_parent IS NULL THEN
@@ -4595,7 +4641,7 @@ CREATE OR REPLACE FUNCTION master.trg_emit_operating_assignment_invalidation() R
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,event AS $$
 DECLARE v_tenant uuid:=COALESCE(NEW.tenant_id,OLD.tenant_id); v_id uuid:=COALESCE(NEW.id,OLD.id); v_op char(1):=substr(TG_OP,1,1);
 BEGIN
-  PERFORM event.fn_authorization_emit_invalidation('wave6:operating_assignment:'||v_id||':'||pg_current_xact_id()::text,'tenant',v_tenant,NULL,'master.operating_organization_company_assignment',v_op,jsonb_build_object('id',v_id));
+  PERFORM event.fn_authorization_emit_invalidation('wave6:operating_assignment:'||v_id||':'||pg_current_xact_id()::text,'plane',v_tenant,'neon','master.operating_organization_company_assignment',v_op,jsonb_build_object('id',v_id));
   IF TG_OP='DELETE' THEN RETURN OLD; END IF;
   RETURN NEW;
 END $$;

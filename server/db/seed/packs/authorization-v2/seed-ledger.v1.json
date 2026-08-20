@@ -1,26 +1,47 @@
 {
-  "contractVersion": "authorization-v2.final-seed-ledger.v1",
+  "contractVersion": "athyper.authorization.clean-slate-seed-ledger.v1",
   "generatedFrom": "canonical_json_sorted_keys",
   "immutableContentDrift": "fail",
   "packs": [
     {
-      "target": "neon-admin",
-      "path": "seed/packs/authorization-v2/neon-admin/seed-pack.v1.json",
-      "contentSha256": "77e0f810fd70b3a52e581e92b2faa4c9ce1c36f5d553d835059108b62b61fe1c",
-      "permissionCount": 0,
-      "roleCount": 10,
-      "groupCount": 10,
-      "mappedSubjectCount": 142
+      "target": "studio",
+      "path": "seed/packs/authorization-v2/studio/seed-pack.v1.json",
+      "contentSha256": "dc06cf3cd2d6b125c2565d1b3daf2a8de9b866beb1ab4630f1f2345a66013160",
+      "permissionCount": 26,
+      "roleCount": 0,
+      "groupCount": 1,
+      "mappedSubjectCount": 28,
+      "materializedRoleCount": 0,
+      "materializedRolePermissionCount": 0,
+      "materializedGroupCount": 3,
+      "assignmentRowCount": 59
+    },
+    {
+      "target": "neon",
+      "path": "seed/packs/authorization-v2/neon/seed-pack.v1.json",
+      "contentSha256": "1e89d3ada5c6105ab6b7f9597b376279b8510d1856aabe8e25b44d16776450f2",
+      "permissionCount": 24,
+      "roleCount": 0,
+      "groupCount": 1,
+      "mappedSubjectCount": 151,
+      "materializedRoleCount": 0,
+      "materializedRolePermissionCount": 0,
+      "materializedGroupCount": 3,
+      "assignmentRowCount": 305
     },
     {
       "target": "mesh",
       "path": "seed/packs/authorization-v2/mesh/seed-pack.v1.json",
-      "contentSha256": "77529533f4d6b1d650400f8785a05bc08bbfe7ba76b37cbf98783f65ad75e43b",
+      "contentSha256": "5bc2f17bbe70f5c549fdc17b2a53376aa9f40e9ce8a78b11bd8961fb021b0b63",
       "permissionCount": 32,
-      "roleCount": 4,
-      "groupCount": 5,
-      "mappedSubjectCount": 47
+      "roleCount": 0,
+      "groupCount": 1,
+      "mappedSubjectCount": 54,
+      "materializedRoleCount": 0,
+      "materializedRolePermissionCount": 0,
+      "materializedGroupCount": 3,
+      "assignmentRowCount": 111
     }
   ],
-  "ledgerSha256": "a4c757e242ff6496b05ac3317fea19c46de8a311ddfd6b9baad1b3c8bcbf25af"
+  "ledgerSha256": "d6c8b64e1e280583b0c1be486da3df5ba178d164daab30025137e2ac9cf23ceb"
 }

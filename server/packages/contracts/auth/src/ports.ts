@@ -26,7 +26,7 @@ export interface AuthenticationRequest {
   readonly correlationId?: string;
   readonly route?: { readonly path: string; readonly method: string };
   /** Untrusted selectors may only narrow matching issuer claims; they never establish identity. */
-  readonly requestedContext?: { readonly tenantId?: string; readonly realmKey?: string; readonly organizationId?: string };
+  readonly requestedContext?: { readonly tenantId?: string; readonly realmKey?: string; readonly organizationId?: string; readonly authEpoch?: number };
 }
 
 export type AuthenticationFailureCode =
@@ -35,6 +35,7 @@ export type AuthenticationFailureCode =
   | "AUTH_CONTEXT_MISMATCH"
   | "AUTH_ACCESS_DENIED"
   | "AUTH_REQUIRED_ACTION_PENDING"
+  | "AUTH_AUTHORIZATION_UNAVAILABLE"
   | "AUTH_AUDIT_UNAVAILABLE";
 
 export type AuthenticationResult =

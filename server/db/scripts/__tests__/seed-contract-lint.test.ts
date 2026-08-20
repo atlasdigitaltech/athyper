@@ -85,4 +85,56 @@ END $guard$;
 ${assertions}`;
     assert(lintSeedSource(source).some((item) => item.ruleId === "identity.deterministic"));
   });
+
+  it("rejects production seed writes to runtime-only authorization state", () => {
+    const relations = [
+      "delegation",
+      "delegation_grant",
+      "deny_rule",
+      "override",
+      "record_acl",
+      "trusted_device",
+    ];
+    const writes = relations.map((relation) =>
+      `UPDATE authz.${relation} SET status = 'active' WHERE false;`).join("\n");
+    const findings = lintSeedSource(`${header}
+DO $guard$ BEGIN
+  PERFORM current_setting('app.database_plane', true);
+  IF false THEN RAISE EXCEPTION 'guard'; END IF;
+END $guard$;
+${writes}
+${assertions}`).filter((finding) => finding.ruleId === "runtime-only.authorization-write");
+    assert.equal(findings.length, relations.length);
+    for (const relation of relations) {
+      assert(findings.some((finding) => finding.message.includes(`authz.${relation}`)));
+    }
+  });
+
+  it("routes application projection writes through Studio-to-plane reconciliation", () => {
+    const source = `${header}
+DO $guard$ BEGIN
+  PERFORM current_setting('app.database_plane', true);
+  IF false THEN RAISE EXCEPTION 'guard'; END IF;
+END $guard$;
+INSERT INTO authz.application_projection (id) VALUES (gen_random_uuid()) ON CONFLICT (id) DO UPDATE SET id=EXCLUDED.id WHERE authz.application_projection.id IS DISTINCT FROM EXCLUDED.id;
+MERGE INTO "authz"."projection_provider" AS target USING shared.example AS source ON false WHEN NOT MATCHED THEN INSERT (id) VALUES (source.id);
+COPY authz.projection_scope (id) FROM STDIN;
+${assertions}`;
+    const findings = lintSeedSource(source)
+      .filter((finding) => finding.ruleId === "runtime-only.application-projection-write");
+    assert.equal(findings.length, 3);
+    assert(findings.every((finding) => finding.message.includes("Studio-to-plane reconciliation")));
+  });
+
+  it("allows reads and ignores protected relation names in comments and literals", () => {
+    const source = `${header}
+DO $guard$ BEGIN
+  PERFORM current_setting('app.database_plane', true);
+  PERFORM 'INSERT INTO authz.deny_rule';
+  -- UPDATE authz.application_projection SET status = 'active';
+  IF EXISTS (SELECT 1 FROM authz.trusted_device WHERE false) THEN RAISE EXCEPTION 'guard'; END IF;
+END $guard$;
+${assertions}`;
+    assert.equal(lintSeedSource(source).some((finding) => finding.ruleId.startsWith("runtime-only.")), false);
+  });
 });

@@ -18,6 +18,8 @@ type Contract = {
   allowedDataClasses: string[];
   requiredAssertions: string[];
   provenanceRequiredFields: string[];
+  runtimeOnlyRelations: string[];
+  reconciliationOnlyRelations: string[];
   legacyRelations: string[];
 };
 
@@ -69,6 +71,14 @@ function insertSegments(source: string): Array<{ index: number; text: string }> 
   return matches.map((match, index) => ({
     index: match.index!,
     text: source.slice(match.index!, matches[index + 1]?.index ?? source.length),
+  }));
+}
+
+function writeRelations(source: string): Array<{ match: RegExpExecArray; relation: string }> {
+  const pattern = /\b(insert\s+into|update(?!\s+set\b)|delete\s+from|merge\s+into|copy|truncate(?:\s+table)?)\s+(?:only\s+)?(?:"([a-z_][a-z0-9_]*)"|([a-z_][a-z0-9_]*))\s*\.\s*(?:"([a-z_][a-z0-9_]*)"|([a-z_][a-z0-9_]*))/gi;
+  return [...source.matchAll(pattern)].map((match) => ({
+    match,
+    relation: `${match[2] ?? match[3]}.${match[4] ?? match[5]}`.toLowerCase(),
   }));
 }
 
@@ -187,6 +197,25 @@ export function lintSeedSource(source: string, file = "seed.sql", activeContract
 
   const destructive = structuralSql.match(/\bdelete\s+from\b/i) ?? structuralSql.match(/\btruncate(?:\s+table)?\b/i);
   if (destructive) add("lifecycle.destructive-delete", destructive, "retire obsolete values through status/effectivity; DELETE/TRUNCATE is prohibited");
+
+  const runtimeOnly = new Set(activeContract.runtimeOnlyRelations.map((relation) => relation.toLowerCase()));
+  const reconciliationOnly = new Set(activeContract.reconciliationOnlyRelations.map((relation) => relation.toLowerCase()));
+  for (const write of writeRelations(structuralSql)) {
+    if (runtimeOnly.has(write.relation)) {
+      add(
+        "runtime-only.authorization-write",
+        write.match,
+        `${write.relation} is runtime-managed authorization state and cannot be written by a production seed`,
+      );
+    }
+    if (reconciliationOnly.has(write.relation)) {
+      add(
+        "runtime-only.application-projection-write",
+        write.match,
+        `${write.relation} must be produced by the Studio-to-plane reconciliation path; static seed writes are prohibited`,
+      );
+    }
+  }
 
   const ctes = cteNames(structuralSql);
   const relationPattern = /\b(?:insert\s+into|update(?!\s+set\b)|delete\s+from|merge\s+into|from|join)\s+(?:only\s+)?([a-z_][a-z0-9_.]*)\b/gi;

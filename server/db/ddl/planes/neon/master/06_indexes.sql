@@ -329,6 +329,14 @@ CREATE INDEX operating_organization_parent_idx
     WHERE parent_operating_organization_id IS NOT NULL;
 CREATE INDEX operating_organization_domain_status_idx
     ON master.operating_organization (tenant_id, domain, status, code);
+CREATE INDEX operating_organization_company_active_org_idx
+    ON master.operating_organization_company_assignment
+       (tenant_id, operating_organization_id, effective_from, effective_until, company_code_id)
+    WHERE status = 'active';
+CREATE INDEX operating_organization_company_active_company_idx
+    ON master.operating_organization_company_assignment
+       (tenant_id, company_code_id, effective_from, effective_until, operating_organization_id)
+    WHERE status = 'active';
 CREATE INDEX procurement_organization_profile_lead_company_idx
     ON master.procurement_organization_profile (tenant_id, lead_company_code_id)
     WHERE lead_company_code_id IS NOT NULL;

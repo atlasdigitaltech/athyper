@@ -105,18 +105,24 @@ export function planTenantOrganizationReconciliation(current, tenantManifest, re
     throw new Error("invalid three-plane tenant organization manifest");
   }
   const existing = new Map((current ?? []).map((organization) => [organization.alias, organization]));
+  const existingNames = new Map((current ?? []).map((organization) => [organization.name, organization]));
   const operations = [];
   for (const tenant of tenantManifest.tenants) {
     if (tenant.keycloakOrganizationAlias !== tenant.id || !isUuid(tenant.id)) {
       throw new Error(`tenant organization alias must equal tenant UUID: ${tenant.code}`);
     }
+    const nameOwner = existingNames.get(tenant.displayName);
+    const organizationName = nameOwner && nameOwner.alias !== tenant.id
+      ? `Tenant: ${tenant.displayName}`
+      : tenant.displayName;
     const desired = {
-      name: tenant.displayName,
+      name: organizationName,
       alias: tenant.id,
       enabled: true,
       attributes: {
         "athyper.context.kind": ["tenant"],
         "athyper.context.tenant_code": [tenant.code],
+        "athyper.context.display_name": [tenant.displayName],
         "athyper.context.managed": ["true"],
       },
     };
@@ -228,46 +234,142 @@ async function main() {
       }
     }
   }
-  const membershipOperations = [];
-  if (desiredMemberships.length > 0) {
+  let tenantOrganizationMembershipOperations = [];
+  if (tenantManifest && userManifest) {
+    const refreshedOrganizations = await requestJson(
+      baseUrl,
+      `${realmPath}/organizations?first=0&max=500&briefRepresentation=false`,
+      token,
+    );
+    const organizationsByAlias = new Map(
+      refreshedOrganizations.map((organization) => [organization.alias, organization]),
+    );
+    const desiredOrganizationMemberships = compileDesiredTenantOrganizationMemberships(
+      userManifest,
+      tenantManifest,
+      desired.realm,
+    );
+    const currentOrganizationMemberships = [];
+    for (const tenant of tenantManifest.tenants) {
+      const organization = organizationsByAlias.get(tenant.keycloakOrganizationAlias);
+      if (!organization) continue;
+      const members = await requestJson(
+        baseUrl,
+        `${realmPath}/organizations/${encodeURIComponent(organization.id)}/members?first=0&max=1000`,
+        token,
+      );
+      for (const member of members) {
+        currentOrganizationMemberships.push({
+          organizationAlias: tenant.keycloakOrganizationAlias,
+          keycloakSubject: member.id,
+        });
+      }
+    }
+    tenantOrganizationMembershipOperations = planTenantOrganizationMembershipReconciliation(
+      currentOrganizationMemberships,
+      desiredOrganizationMemberships,
+    );
+    for (const operation of tenantOrganizationMembershipOperations) {
+      const organization = organizationsByAlias.get(operation.organizationAlias);
+      if (!organization && !apply) {
+        operation.kind = "add_after_organization_create";
+        continue;
+      }
+      if (!organization) {
+        throw new Error(`managed tenant organization missing after reconcile: ${operation.organizationAlias}`);
+      }
+      if (!apply) continue;
+      await requestJson(
+        baseUrl,
+        `${realmPath}/organizations/${encodeURIComponent(organization.id)}/members`,
+        token,
+        "POST",
+        operation.keycloakSubject,
+      );
+    }
+  }
+  let membershipOperations = [];
+  let groupClientRoleOperations = [];
+  if (desired.groups.length > 0) {
     const refreshedGroups = await requestJson(
       baseUrl,
       `${realmPath}/groups?first=0&max=500&briefRepresentation=false`,
       token,
     );
     const groupsByName = new Map(refreshedGroups.map((group) => [group.name, group]));
-    for (const membership of desiredMemberships) {
-      const group = groupsByName.get(membership.groupName);
-      if (!group && !apply) {
-        membershipOperations.push({
-          kind: "add_after_group_create",
-          resource: "user_group_membership",
-          keycloakSubject: membership.keycloakSubject,
-          groupName: membership.groupName,
-        });
-        continue;
+    const clientsByClientId = new Map(clients.map((client) => [client.clientId, client]));
+    const desiredGroupClientRoles = [];
+    const currentGroupClientRoles = [];
+    const rolesByPlane = new Map();
+    for (const expectedGroup of desired.groups) {
+      const plane = expectedGroup.attributes?.["athyper.authorization-v2.plane"]?.[0];
+      if (!plane) continue;
+      const group = groupsByName.get(expectedGroup.name);
+      const client = clientsByClientId.get(`${plane}-web`);
+      if (!group?.id || !client?.id) {
+        if (!apply) continue;
+        throw new Error(`managed group/client missing for plane admission: ${expectedGroup.name}/${plane}`);
       }
-      if (!group) throw new Error(`managed Keycloak group missing after reconcile: ${membership.groupName}`);
-      const currentGroups = await requestJson(
+      let role = rolesByPlane.get(plane);
+      if (!role) {
+        role = await requestJson(baseUrl, `${realmPath}/clients/${encodeURIComponent(client.id)}/roles/AUTHORIZED`, token);
+        rolesByPlane.set(plane, role);
+      }
+      desiredGroupClientRoles.push({ groupName: expectedGroup.name, plane, clientUuid: client.id, role });
+      const mapped = await requestJson(
         baseUrl,
-        `${realmPath}/users/${encodeURIComponent(membership.keycloakSubject)}/groups`,
+        `${realmPath}/groups/${encodeURIComponent(group.id)}/role-mappings/clients/${encodeURIComponent(client.id)}`,
         token,
       );
-      if (currentGroups.some((item) => item.id === group.id)) continue;
-      membershipOperations.push({
-        kind: "add",
-        resource: "user_group_membership",
-        keycloakSubject: membership.keycloakSubject,
-        groupName: membership.groupName,
-      });
-      if (apply) {
-        await requestJson(
-          baseUrl,
-          `${realmPath}/users/${encodeURIComponent(membership.keycloakSubject)}/groups/${encodeURIComponent(group.id)}`,
-          token,
-          "PUT",
-        );
+      if (mapped.some((candidate) => candidate.name === "AUTHORIZED")) {
+        currentGroupClientRoles.push({ groupName: expectedGroup.name, plane });
       }
+    }
+    groupClientRoleOperations = planManagedGroupClientRoleReconciliation(
+      currentGroupClientRoles,
+      desiredGroupClientRoles,
+    );
+    for (const operation of groupClientRoleOperations) {
+      if (!apply) continue;
+      const group = groupsByName.get(operation.groupName);
+      if (!group?.id) throw new Error(`managed Keycloak group missing after reconcile: ${operation.groupName}`);
+      await requestJson(
+        baseUrl,
+        `${realmPath}/groups/${encodeURIComponent(group.id)}/role-mappings/clients/${encodeURIComponent(operation.clientUuid)}`,
+        token,
+        "POST",
+        [operation.role],
+      );
+    }
+    const managedGroupNames = new Set(desired.groups
+      .filter((group) => group.attributes?.["athyper.authorization-v2.managed"]?.includes("true"))
+      .map((group) => group.name));
+    const currentMemberships = [];
+    for (const groupName of managedGroupNames) {
+      const group = groupsByName.get(groupName);
+      if (!group) continue;
+      const members = await requestJson(
+        baseUrl,
+        `${realmPath}/groups/${encodeURIComponent(group.id)}/members?first=0&max=1000`,
+        token,
+      );
+      for (const member of members) currentMemberships.push({ keycloakSubject: member.id, groupName });
+    }
+    membershipOperations = planManagedMembershipReconciliation(currentMemberships, desiredMemberships, managedGroupNames);
+    for (const operation of membershipOperations) {
+      const group = groupsByName.get(operation.groupName);
+      if (!group && !apply && operation.kind === "add") {
+        operation.kind = "add_after_group_create";
+        continue;
+      }
+      if (!group) throw new Error(`managed Keycloak group missing after reconcile: ${operation.groupName}`);
+      if (!apply) continue;
+      await requestJson(
+        baseUrl,
+        `${realmPath}/users/${encodeURIComponent(operation.keycloakSubject)}/groups/${encodeURIComponent(group.id)}`,
+        token,
+        operation.kind === "remove" ? "DELETE" : "PUT",
+      );
     }
   }
   process.stdout.write(`${JSON.stringify({
@@ -276,25 +378,106 @@ async function main() {
     tenantOrganizationCount: organizationPlan.tenantOrganizationCount,
     legalEntityOrganizationsMutated: organizationPlan.legalEntityOrganizationsMutated,
     membershipOperations,
+    groupClientRoleOperations,
+    tenantOrganizationMembershipOperations,
     managedMembershipCount: desiredMemberships.length,
     unmanagedUsersTouched: 0,
     mode: apply ? "applied" : "dry_run",
   }, null, 2)}\n`);
 }
 
-function compileDesiredMemberships(manifest, realm) {
+export function planManagedGroupClientRoleReconciliation(current, desired) {
+  const currentCoordinates = new Set(current.map((mapping) => `${mapping.groupName}\0${mapping.plane}`));
+  return desired
+    .filter((mapping) => !currentCoordinates.has(`${mapping.groupName}\0${mapping.plane}`))
+    .map((mapping) => ({
+      kind: "add",
+      resource: "group_client_role",
+      groupName: mapping.groupName,
+      plane: mapping.plane,
+      clientUuid: mapping.clientUuid,
+      role: mapping.role,
+    }))
+    .sort((left, right) => left.groupName.localeCompare(right.groupName) || left.plane.localeCompare(right.plane));
+}
+
+export function planTenantOrganizationMembershipReconciliation(current, desired) {
+  const key = (membership) => `${membership.organizationAlias}\0${membership.keycloakSubject}`;
+  const currentKeys = new Set(current.map(key));
+  return desired
+    .filter((membership) => !currentKeys.has(key(membership)))
+    .map((membership) => ({
+      kind: "add",
+      resource: "user_organization_membership",
+      ...membership,
+    }))
+    .sort((left, right) => left.organizationAlias.localeCompare(right.organizationAlias)
+      || left.keycloakSubject.localeCompare(right.keycloakSubject));
+}
+
+export function compileDesiredTenantOrganizationMemberships(manifest, tenantManifest, realm) {
   if (
-    manifest.contractVersion !== "authorization-v2.approved-existing-user-groups.v1"
+    manifest.contractVersion !== "athyper.authorization.keycloak-admission.v1"
     || manifest.realm !== realm
-    || manifest.deliberatelyClassifiedCount !== manifest.enabledSubjectCount
+    || manifest.unresolvedSubjectBehavior !== "deny"
+    || manifest.mappedSubjectCount !== manifest.enabledSubjectCount
     || !manifest.subjectMappings
   ) {
-    throw new Error("invalid approved subject-keyed user group manifest");
+    throw new Error("invalid clean-slate Keycloak admission manifest");
+  }
+  const tenantsByCode = new Map(tenantManifest.tenants.map((tenant) => [tenant.code, tenant]));
+  const memberships = [];
+  for (const [keycloakSubject, mapping] of Object.entries(manifest.subjectMappings)) {
+    for (const tenantCode of mapping.tenantCodes ?? []) {
+      const tenant = tenantsByCode.get(tenantCode);
+      if (!tenant) throw new Error(`unknown tenant code for subject ${keycloakSubject}: ${tenantCode}`);
+      memberships.push({
+        keycloakSubject,
+        organizationAlias: tenant.keycloakOrganizationAlias,
+        tenantCode,
+      });
+    }
+  }
+  return memberships.sort((left, right) => left.organizationAlias.localeCompare(right.organizationAlias)
+    || left.keycloakSubject.localeCompare(right.keycloakSubject));
+}
+
+export function planManagedMembershipReconciliation(current, desired, managedGroupNames) {
+  const key = (membership) => `${membership.keycloakSubject}\0${membership.groupName}`;
+  const desiredByKey = new Map(desired.map((membership) => [key(membership), membership]));
+  const currentByKey = new Map(current
+    .filter((membership) => managedGroupNames.has(membership.groupName))
+    .map((membership) => [key(membership), membership]));
+  return [
+    ...[...desiredByKey].filter(([coordinate]) => !currentByKey.has(coordinate)).map(([, membership]) => ({
+      kind: "add",
+      resource: "user_group_membership",
+      ...membership,
+    })),
+    ...[...currentByKey].filter(([coordinate]) => !desiredByKey.has(coordinate)).map(([, membership]) => ({
+      kind: "remove",
+      resource: "user_group_membership",
+      ...membership,
+    })),
+  ].sort((left, right) => left.groupName.localeCompare(right.groupName)
+    || left.keycloakSubject.localeCompare(right.keycloakSubject)
+    || left.kind.localeCompare(right.kind));
+}
+
+function compileDesiredMemberships(manifest, realm) {
+  if (
+    manifest.contractVersion !== "athyper.authorization.keycloak-admission.v1"
+    || manifest.realm !== realm
+    || manifest.unresolvedSubjectBehavior !== "deny"
+    || manifest.mappedSubjectCount !== manifest.enabledSubjectCount
+    || !manifest.subjectMappings
+  ) {
+    throw new Error("invalid clean-slate Keycloak admission manifest");
   }
   const memberships = [];
   for (const [keycloakSubject, mapping] of Object.entries(manifest.subjectMappings)) {
     for (const plane of mapping.planes ?? []) {
-      const groupName = plane.group?.code;
+      const groupName = plane.quarantineGroupCode;
       if (!groupName) throw new Error(`missing canonical group for subject ${keycloakSubject}`);
       memberships.push({ keycloakSubject, groupName, plane: plane.plane });
     }

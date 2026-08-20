@@ -26,7 +26,7 @@ describe("Workflow host vertical", () => {
     const events: OutboxEventInput[] = [];
     const container = createContainer();
     const config = loadConfig();
-    registerPlatform(container, { ...config, env: "production", iam: { ...config.iam, defaultRealmKey: "athyper", claimContextMode: "on" } }, { tokenVerifier: { verify: async () => token }, auditSink: audit });
+    registerPlatform(container, { ...config, env: "production", iam: { ...config.iam, defaultRealmKey: "athyper", claimContextMode: "on" } }, { tokenVerifier: { verify: async () => token }, resolveIdentityContext: async () => ({ tenantId: ids.tenant, principalId: ids.principal, authEpoch: 1 }), auditSink: audit });
     registerServices(container, { metadata, workflowRepository: persistence.repository as never, transactions: persistence.transactions as never, outbox: { append: async (event) => { events.push(event); } } });
     const app = createHttpApplication({ configure(application) { for (const register of container.platform.httpRegistrars) register(application); } });
     const baseUrl = await listen(app);

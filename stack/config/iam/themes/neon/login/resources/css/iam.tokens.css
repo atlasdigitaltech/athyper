@@ -69,6 +69,8 @@
   --a-icon-sm:1rem;
   --a-icon-md:1.25rem;
   --a-logo-md:1.75rem;
+  --a-control-height:2.5rem;
+  --a-touch-target:2.75rem;
   --a-opacity-interactive:0.88;
   --a-opacity-disabled:0.55;
   --athyper-color-bg:var(--a-background);

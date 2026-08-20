@@ -135,7 +135,7 @@ export function seedPackVersion(source: string): string {
   const match = canonicalSourceText(source).match(
     /^\s*--\s*seed-pack-version:\s*([a-zA-Z0-9][a-zA-Z0-9._-]{0,63})\s*$/m,
   );
-  return match?.[1] ?? "legacy-v1";
+  return match?.[1] ?? "unversioned";
 }
 
 export function assertPlaneFileBoundary(

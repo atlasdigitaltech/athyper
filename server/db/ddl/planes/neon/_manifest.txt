@@ -37,6 +37,7 @@ planes/neon/control/02_domains.sql
 planes/neon/document/02_domains.sql
 planes/neon/ledger/02_domains.sql
 common/shared/03_tables.sql
+common/master/03_platform_tables.sql
 planes/neon/master/03_tables.sql
 common/snapshot/03_tables.sql
 common/audit/03_tables.sql
@@ -179,7 +180,7 @@ common/ai/11_grants.sql
 common/master/12_system_authority_reference_seed.sql
 planes/neon/master/12_platform_catalog_reference_seed.sql
 planes/neon/control/12_platform_catalog_reference_seed.sql
-planes/neon/authz/12_compiled_permission_reference_seed.sql
+common/authz/15_permission_scope_compatibility_seed.sql
 common/shared/12_reference_seed.sql
 common/audit/12_reference_seed.sql
 common/control/12_lookup_reference_entrypoint.sql

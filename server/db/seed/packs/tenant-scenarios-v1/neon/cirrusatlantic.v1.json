@@ -1,0 +1,94 @@
+{
+  "contractVersion": "athyper.tenant-scenario.v1",
+  "packVersion": "2.0.0",
+  "plane": "neon",
+  "tenantCode": "cirrusatlantic",
+  "complexity": "simple",
+  "tenantProfile": {
+    "countryCode": "GB",
+    "localeCode": "en-GB",
+    "timezoneCode": "Europe/London",
+    "languageCode": "en",
+    "dateFormat": "DD/MM/YYYY",
+    "numberFormat": "1,234.56",
+    "weekStart": 1,
+    "weekendDays": [
+      0,
+      6
+    ]
+  },
+  "legalEntities": [
+    {
+      "scopeKey": "ORG-1000000022",
+      "code": "catl",
+      "name": "CirrusAtlantic Ltd",
+      "legalName": "CirrusAtlantic Limited",
+      "registrationCountryCode": "GB",
+      "functionalCurrency": "GBP",
+      "reportingCurrency": "GBP",
+      "regionCode": "uk"
+    }
+  ],
+  "companyCodes": [
+    {
+      "code": "catl",
+      "legalEntityScopeKey": "ORG-1000000022",
+      "name": "CirrusAtlantic UK",
+      "functionalCurrency": "GBP",
+      "countryCode": "GB",
+      "fiscalYearStartMonth": 4,
+      "timezoneCode": "Europe/London",
+      "localeCode": "en-GB",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    }
+  ],
+  "operatingOrganizations": [
+    {
+      "code": "catl.operations",
+      "name": "CirrusAtlantic Operations",
+      "domain": "corporate"
+    }
+  ],
+  "operatingOrganizationCompanyAssignments": [
+    {
+      "organizationCode": "catl.operations",
+      "companyCode": "catl",
+      "participationRole": "lead"
+    }
+  ],
+  "orgUnitTypes": [
+    {
+      "code": "company",
+      "name": "Company",
+      "levelOrder": 10
+    },
+    {
+      "code": "department",
+      "name": "Department",
+      "levelOrder": 20
+    }
+  ],
+  "orgUnits": [
+    {
+      "code": "catl",
+      "name": "CirrusAtlantic",
+      "typeCode": "company",
+      "sortOrder": 10
+    },
+    {
+      "code": "catl.finance",
+      "name": "Finance",
+      "typeCode": "department",
+      "parentCode": "catl",
+      "sortOrder": 20
+    },
+    {
+      "code": "catl.operations",
+      "name": "Operations",
+      "typeCode": "department",
+      "parentCode": "catl",
+      "sortOrder": 30
+    }
+  ]
+}

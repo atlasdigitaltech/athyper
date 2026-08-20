@@ -7,9 +7,18 @@ CREATE INDEX permission_module_idx
     ON authz.permission (module_id, status)
     WHERE module_id IS NOT NULL;
 
-CREATE UNIQUE INDEX plane_membership_current_uidx
-    ON authz.plane_membership (tenant_id, principal_id)
-    WHERE status <> 'revoked';
+ALTER TABLE authz.plane_membership
+    ADD CONSTRAINT plane_membership_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        principal_id WITH =,
+        tstzrange(effective_from, effective_until, '[)') WITH &&
+    ) WHERE (status IN ('pending', 'active', 'suspended'));
+
+CREATE INDEX plane_membership_current_idx
+    ON authz.plane_membership
+       (tenant_id, principal_id, effective_from, effective_until)
+    WHERE status = 'active';
 
 CREATE INDEX scope_target_parent_idx
     ON authz.scope_target (tenant_id, parent_scope_target_id)
@@ -27,17 +36,38 @@ CREATE UNIQUE INDEX principal_group_iam_source_uidx
     WHERE group_kind = 'iam_managed'
       AND status <> 'retired';
 
-CREATE UNIQUE INDEX group_member_current_uidx
-    ON authz.group_member (tenant_id, group_id, principal_id)
-    WHERE status <> 'revoked';
+ALTER TABLE authz.group_member
+    ADD CONSTRAINT group_member_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        group_id WITH =,
+        principal_id WITH =,
+        tstzrange(effective_from, effective_until, '[)') WITH &&
+    ) WHERE (status IN ('active', 'suspended'));
+
+CREATE INDEX group_member_current_idx
+    ON authz.group_member
+       (tenant_id, group_id, principal_id, effective_from, effective_until)
+    WHERE status = 'active';
 
 CREATE INDEX group_member_principal_idx
     ON authz.group_member (tenant_id, principal_id, group_id)
     WHERE status = 'active';
 
-CREATE UNIQUE INDEX group_role_current_uidx
-    ON authz.group_role (tenant_id, group_id, role_id, scope_target_id)
-    WHERE status <> 'revoked';
+ALTER TABLE authz.group_role
+    ADD CONSTRAINT group_role_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        group_id WITH =,
+        role_id WITH =,
+        scope_target_id WITH =,
+        tstzrange(effective_from, effective_until, '[)') WITH &&
+    ) WHERE (status IN ('active', 'suspended'));
+
+CREATE INDEX group_role_current_idx
+    ON authz.group_role
+       (tenant_id, group_id, role_id, scope_target_id, effective_from, effective_until)
+    WHERE status = 'active';
 
 CREATE INDEX group_role_scope_idx
     ON authz.group_role (tenant_id, scope_target_id, role_id)
@@ -167,7 +197,12 @@ CREATE INDEX trusted_device_revoked_by_fk_idx
 -- Athyper-published and reconciled authorization projections.
 CREATE INDEX application_projection_tenant_status_idx ON authz.application_projection(tenant_id,status,effective_from,effective_until);
 CREATE UNIQUE INDEX application_projection_effective_org_uq ON authz.application_projection(realm_key,external_organization_id) WHERE status='active' AND effective_until IS NULL;
-ALTER TABLE authz.application_projection ADD CONSTRAINT application_projection_no_overlap EXCLUDE USING gist (realm_key WITH =,external_organization_id WITH =,tstzrange(effective_from,effective_until,'[)') WITH &&) WHERE(status IN ('pending','active','suspended'));
+ALTER TABLE authz.application_projection ADD CONSTRAINT application_projection_no_overlap
+EXCLUDE USING gist (
+  realm_key WITH =,
+  external_organization_id WITH =,
+  tstzrange(effective_from,effective_until,'[)') WITH &&
+) WHERE(status IN ('active','suspended','retired') AND effective_from IS NOT NULL);
 CREATE INDEX projection_scope_effective_idx ON authz.projection_scope(tenant_id,projection_id,status,effective_from,effective_until);
 
 CREATE INDEX entity_operation_binding_runtime_ix

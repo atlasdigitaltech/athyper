@@ -2,8 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
-const root = resolve(import.meta.dirname, "../../../..");
-const db = resolve(root, "server/db");
+const db = resolve(import.meta.dirname, "../../..");
 const referenceDir = resolve(db, "ddl/common/shared/reference-data");
 const legacyDir = resolve(db, "seed/platform/001_global_reference");
 const entrypointPath = resolve(db, "ddl/common/shared/12_reference_seed.sql");
@@ -48,7 +47,7 @@ const documented = new Set(provenance.datasets.flatMap((dataset) => {
 }));
 assert.deepEqual([...documented].sort(), expectedFiles, "every payload needs publisher, edition, and extraction provenance");
 
-for (const plane of ["athyper", "neon", "mesh"]) {
+for (const plane of ["studio", "neon", "mesh"]) {
   const manifest = readFileSync(resolve(db, `ddl/planes/${plane}/_manifest.txt`), "utf8");
   assert.match(manifest, /^common\/shared\/12_reference_seed\.sql$/m,
     `${plane} must execute the common layer-12 reference entrypoint`);

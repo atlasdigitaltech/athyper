@@ -313,7 +313,7 @@ Consumed by Traefik router rules and upstream URL configs. All values are DNS na
 | `DATABASE_ADMIN_URL` | Direct Postgres connection string (port 5432). Bypasses PgBouncer — used by migrations. ⚡ | `postgresql://…@db:5432/athyper_neon` | — (CI/CD only) | — (CI/CD only) |
 | `MESH_DATABASE_URL` | PgBouncer apps pool connection string for the `athyper_mesh` database. Required in staging/production for IAM and metadata routes. Auto-derived locally from `DATABASE_URL`. ⚡ | `postgresql://…@dbpool-apps:6432/athyper_mesh` | `secrets/.env` | `secrets/.env` |
 | `MESH_DATABASE_ADMIN_URL` | Direct Postgres connection string for mesh DB. Used by mesh migrations. ⚡ | `postgresql://…@db:5432/athyper_mesh` | — (CI/CD only) | — (CI/CD only) |
-| `DB_POOL_MAX` | Max connections in the app-side pool. | `5` | `20` | `50` |
+| `DATABASE_POOL_MAX` | Max connections in the app-side pool. (`DB_POOL_MAX` is accepted temporarily for migration.) | `5` | `20` | `50` |
 | `DBPOOL_APPS_CONFIG` | PgBouncer apps config path relative to `ATHYPER_CONFIG`. | `db/local/dbpool/pgbouncer-apps.ini` | `db/staging/dbpool/pgbouncer-apps.ini` | `db/production/…` |
 | `DBPOOL_SESSION_CONFIG` | PgBouncer session config path. | `db/local/dbpool/pgbouncer-session.ini` | `db/staging/dbpool/pgbouncer-session.ini` | `db/production/…` |
 | `DBPOOL_APPS_USER` | PgBouncer apps pool application user. Written to `userlist.txt`. | `athyperadmin` | `athyper_user` | `athyper_user` |
@@ -374,15 +374,15 @@ Consumed by Traefik router rules and upstream URL configs. All values are DNS na
 | `IAM_DB_URL` | Keycloak JDBC URL (uses PgBouncer session pool, port 6433). | `jdbc:postgresql://dbpool-session:6433/athyper_iam?preferQueryMode=simple` | same pattern | same pattern |
 | `IAM_DB_USERNAME` / `IAM_DB_PASSWORD` | Keycloak Postgres role. ⚡ | `athyperadmin` | `secrets/.env` | `secrets/.env` |
 | `IAM_ISSUER_URL` | Keycloak token issuer (full URL including realm). Consumed by the API server. | `https://iam.athyper.local/realms/athyper` | `https://iam-stg.athyper.com/realms/athyper` | `https://iam.athyper.com/realms/athyper` |
-| `IAM_CLIENT_ID` | Keycloak client ID used by the API server for token introspection. | `athyper-api` | `athyper-api` | `athyper-api` |
+| `IAM_CLIENT_ID` | Expected Keycloak audience used by the API server to verify access tokens. | `athyper-api-runtime` | `athyper-api-runtime` | `athyper-api-runtime` |
 | `IAM_CLIENT_SECRET` | Shared secret between API and the KC `athyper-api-runtime` client. Must be updated in both KC and `.env` atomically. ⚡ | `athyperadmin` | `secrets/.env` | `secrets/.env` |
 | `IAM_DEFAULT_REALM` | Default Keycloak realm name. | `athyper` | `athyper` | `athyper` |
-| `ADMIN_WEB_CLIENT_SECRET` | KC client secret for the admin-web client. ⚡ | `AdminWeb@1234` | `secrets/.env` | `secrets/.env` |
+| `STUDIO_WEB_CLIENT_SECRET` | KC client secret for the studio-web client. ⚡ | `AdminWeb@1234` | `secrets/.env` | `secrets/.env` |
 | `ATHYPER_SVC_RUNTIME_WORKER_CLIENT_SECRET` | KC client secret for the runtime worker service. ⚡ | `(empty)` | `secrets/.env` | `secrets/.env` |
 | `NEON_SVC_BFF_CLIENT_SECRET` | KC client secret for the Neon BFF service. ⚡ | `(empty)` | `secrets/.env` | `secrets/.env` |
 | `NEON_KEYCLOAK_REALM` / `NEON_KEYCLOAK_CLIENT_ID` | KC realm and client ID for the Neon plane. | `athyper` / `neon-web` | `athyper` / `neon-web` | `athyper` / `neon-web` |
 | `MESH_KEYCLOAK_REALM` / `MESH_KEYCLOAK_CLIENT_ID` | KC realm and client ID for the Mesh plane. | `athyper` / `mesh-web` | `athyper` / `mesh-web` | `athyper` / `mesh-web` |
-| `ADMIN_KEYCLOAK_REALM` / `ADMIN_KEYCLOAK_CLIENT_ID` | KC realm and client ID for the Admin plane. | `athyper` / `admin-web` | `athyper` / `admin-web` | `athyper` / `admin-web` |
+| `STUDIO_KEYCLOAK_REALM` / `STUDIO_KEYCLOAK_CLIENT_ID` | KC realm and client ID for the Studio plane. | `athyper` / `studio-web` | `athyper` / `studio-web` | `athyper` / `studio-web` |
 | `KEYCLOAK_BASE_URL` | KC base URL without realm path. App-plane var (used by Next.js BFF). `NODE_TLS_REJECT_UNAUTHORIZED=0` auto-set for `*.athyper.local`. | `https://iam.athyper.local` | `https://iam-stg.athyper.com` | `https://iam.athyper.com` |
 | `IAM_DEMO_USER_PASSWORD` | Seed password for demo users — set by `seed-iam-credentials.sh` via `kcadm.sh`. Rotate regularly in upper envs. ⚡ | `Demo@1234` | `secrets/.env` | `secrets/.env` |
 | `IAM_PLATFORM_CONTROL_USER_PASSWORD` | Seed password for platform admin users. ⚡ | `Admin@1234` | `secrets/.env` | `secrets/.env` |

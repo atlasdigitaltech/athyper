@@ -107,6 +107,8 @@ load_stack_env() {
 
 export_common_local_env() {
   local redis_url="${REDIS_URL:-}"
+  local mkcert_root=""
+  local mkcert_ca=""
   export REDIS_URL="${redis_url/memorycache/127.0.0.1}"
   export REDIS_SOCKET_TIMEOUT_MS=0
   export RUNTIME_API_URL="http://localhost:4000"
@@ -121,7 +123,24 @@ export_common_local_env() {
   export NEXT_PUBLIC_GITHUB_LOGIN_ENABLED="${NEXT_PUBLIC_GITHUB_LOGIN_ENABLED:-false}"
   export NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED="${NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED:-false}"
   export NODE_ENV=development
-  export NODE_TLS_REJECT_UNAUTHORIZED=0
+  if command -v mkcert >/dev/null 2>&1; then
+    mkcert_root="$(mkcert -CAROOT 2>/dev/null || true)"
+    if command -v cygpath >/dev/null 2>&1; then
+      mkcert_ca="$(cygpath -u "$mkcert_root")/rootCA.pem"
+    else
+      mkcert_ca="$mkcert_root/rootCA.pem"
+    fi
+  fi
+  if [[ -n "$mkcert_ca" && -f "$mkcert_ca" ]]; then
+    if command -v cygpath >/dev/null 2>&1; then
+      export NODE_EXTRA_CA_CERTS="$(cygpath -w "$mkcert_ca")"
+    else
+      export NODE_EXTRA_CA_CERTS="$mkcert_ca"
+    fi
+    unset NODE_TLS_REJECT_UNAUTHORIZED
+  else
+    export NODE_TLS_REJECT_UNAUTHORIZED=0
+  fi
 }
 
 plane_label() {
@@ -185,6 +204,12 @@ start_plane_dev() {
     export "${upper}_PUBLIC_WEB_URL=$public_url"
     export KEYCLOAK_REALM="$realm"
     export KEYCLOAK_CLIENT_ID="$client_id"
+    if [[ "$plane" == "studio" ]]; then
+      # Studio is the only confidential browser client. Translate the stack
+      # secret into the plane-qualified environment consumed by the BFF.
+      export STUDIO_KEYCLOAK_CLIENT_SECRET="${STUDIO_KEYCLOAK_CLIENT_SECRET:-${STUDIO_WEB_CLIENT_SECRET:-}}"
+      export KEYCLOAK_CLIENT_SECRET="$STUDIO_KEYCLOAK_CLIENT_SECRET"
+    fi
     pnpm --filter "@athyper/${plane}" exec next dev --port "$port"
   )
 }

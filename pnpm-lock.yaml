@@ -120,6 +120,9 @@ importers:
       '@athyper/platform-theme':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/theme
+      '@athyper/product-neon-procurement':
+        specifier: workspace:*
+        version: link:../../packages/planes/neon/modules/procurement
       '@athyper/product-neon-shell':
         specifier: workspace:*
         version: link:../../packages/planes/neon/shell
@@ -652,9 +655,15 @@ importers:
 
   packages/planes/neon/shell:
     dependencies:
+      '@athyper/platform-api-client':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/api-client
       '@athyper/platform-shell':
         specifier: workspace:*
         version: link:../../../platform/shell/shell
+      '@athyper/platform-shell-app-foundation':
+        specifier: workspace:*
+        version: link:../../../platform/shell/app-foundation
       '@athyper/product-neon-navigation':
         specifier: workspace:*
         version: link:../navigation

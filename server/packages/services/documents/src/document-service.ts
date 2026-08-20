@@ -25,12 +25,13 @@ export function createDocumentService<Transaction>(options: DocumentServiceOptio
   return {
     async render(command) {
       validateRender(command);
-      await requirePermission(options.authorizer, command.context, "documents.render");
+      const resource = { tenantId: command.context.tenantId, resourceCode: command.entityType, recordId: command.entityId };
+      await requirePermission(options.authorizer, command.context, "documents.render", resource);
       const descriptor = await options.metadata.getEntityDescriptor(command.context, command.entityType);
       if (!descriptor) throw new DocumentError(404, "ENTITY_DESCRIPTOR_NOT_FOUND", `No active descriptor for ${command.entityType}`);
       const operation = descriptor.operations[command.operationCode];
       if (!operation) throw new DocumentError(422, "DOCUMENT_OPERATION_NOT_PUBLISHED", `Document operation is not published: ${command.operationCode}`);
-      if (operation.permissionCode !== "documents.render") await requirePermission(options.authorizer, command.context, operation.permissionCode);
+      if (operation.permissionCode !== "documents.render") await requirePermission(options.authorizer, command.context, operation.permissionCode, resource);
       if (command.idempotencyKey) {
         const replay = await options.transactions.run(command.context.planeKey, actor(command.context), async (transaction) => {
           const existing = await options.artifacts.findIdempotent(command.context, command.idempotencyKey!, transaction);
@@ -76,7 +77,11 @@ export function createDocumentService<Transaction>(options: DocumentServiceOptio
     },
     async createDownload(command) {
       if (!uuid(command.documentId)) throw new DocumentError(400, "INVALID_DOCUMENT_ID", "documentId must be a UUID");
-      await requirePermission(options.authorizer, command.context, "documents.download");
+      await requirePermission(options.authorizer, command.context, "documents.download", {
+        tenantId: command.context.tenantId,
+        resourceCode: "document.generated",
+        recordId: command.documentId,
+      });
       const found = await options.transactions.run(command.context.planeKey, actor(command.context), (transaction) => options.artifacts.findAccessible(command.context, command.documentId, transaction));
       if (!found) throw new DocumentError(404, "DOCUMENT_NOT_FOUND", "Generated document was not found");
       const ttl = options.downloadTtlSeconds ?? 300;
@@ -112,7 +117,7 @@ async function recordScanRejection<Transaction>(options: DocumentServiceOptions<
 }
 
 function validateRender(command: RenderDocumentCommand): void { if (!/^[a-z][a-z0-9_.-]{1,126}$/.test(command.entityType) || !/^[a-z][a-z0-9_.:-]{1,126}$/.test(command.operationCode)) throw new DocumentError(400, "INVALID_DOCUMENT_COORDINATE", "Invalid entity or operation code"); if (!uuid(command.entityId)) throw new DocumentError(400, "INVALID_ENTITY_ID", "entityId must be a UUID"); if (command.idempotencyKey && (command.idempotencyKey.length > 128 || !/^[\x21-\x7e]+$/.test(command.idempotencyKey))) throw new DocumentError(400,"INVALID_IDEMPOTENCY_KEY","Idempotency key must be 1-128 visible ASCII characters"); }
-async function requirePermission(authorizer: Authorizer, context: VerifiedRequestContext, permissionCode: string): Promise<void> { if (!(await authorizer.authorize({ context, permissionCode })).allowed) throw new DocumentError(403, "FORBIDDEN", `Missing permission: ${permissionCode}`); }
+async function requirePermission(authorizer: Authorizer, context: VerifiedRequestContext, permissionCode: string, resource: Readonly<Record<string, unknown>>): Promise<void> { if (!(await authorizer.authorize({ context, permissionCode, resource })).allowed) throw new DocumentError(403, "FORBIDDEN", `Missing permission: ${permissionCode}`); }
 function actor(context: VerifiedRequestContext) { return { tenantId: context.tenantId, principalId: context.principalId }; }
 function uuid(value: string): boolean { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
 function safeFileName(value: string): string { const base = value.trim().replace(/\.pdf$/i, "").replace(/[/\\]/g, "-").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 180) || "document"; return `${base}.pdf`; }

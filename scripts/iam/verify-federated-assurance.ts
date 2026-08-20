@@ -98,7 +98,7 @@ function main(): void {
     (entry) => entry.authenticator === "webauthn-authenticator",
   )?.priority ?? Number.POSITIVE_INFINITY;
   const otpPriority = secondFactor!.authenticationExecutions?.find(
-    (entry) => entry.authenticator === "auth-otp-form",
+    (entry) => entry.authenticator === "athyper-iam-otp-form" || entry.authenticator === "auth-otp-form",
   )?.priority ?? Number.NEGATIVE_INFINITY;
   if (webauthnPriority >= otpPriority) fail("Admin second-factor flow must prefer WebAuthn before OTP");
 

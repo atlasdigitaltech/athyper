@@ -48,6 +48,10 @@ DO $$ BEGIN
       runtime_meta.fn_active_entity_descriptor(text,text)
       TO athyperadmin;
   END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_projection_owner') THEN
+    GRANT USAGE ON SCHEMA runtime_meta TO athyper_projection_owner;
+    GRANT SELECT ON runtime_meta.applied_release,runtime_meta.release_activation_head,runtime_meta.release_activation_event TO athyper_projection_owner;
+  END IF;
 END $$;
 
 REVOKE ALL ON runtime_meta.entity_number_counter,runtime_meta.entity_number_allocation FROM PUBLIC;

@@ -95,7 +95,7 @@ async function reconcileKeycloak(): Promise<void> {
     "iam:reconcile:authorization-v2",
     "--",
     "--apply",
-    "--user-manifest=server/db/seed/contracts/authorization/authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
+    "--user-manifest=server/db/seed/contracts/authorization/admission/compiled/keycloak-admission.v1.json",
     "--tenant-manifest=server/db/seed/manifests/three-plane-demo.v1.json",
   ], repositoryRoot);
 }

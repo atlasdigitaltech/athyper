@@ -62,7 +62,7 @@ export async function applyAuthorizationSeedPack(options: ApplyAuthorizationOpti
     const packSource = await readFile(inputs.authorizationPackPaths[options.plane], "utf8");
     const receipt = seedReceipt({
       plane: options.plane,
-      packKey: `authorization-v2/${options.plane}/three-tenant`,
+      packKey: `authorization-clean-slate-v1/${options.plane}/three-tenant`,
       sourcePath: relativePath(inputs.authorizationPackPaths[options.plane]),
       source: `-- seed-pack-version: ${inputs.manifest.manifestVersion}\n${packSource}`,
       manifestSha256: inputs.manifestSha256,
@@ -111,6 +111,7 @@ async function main(): Promise<void> {
   const result = await applyAuthorizationSeedPack({
     plane: parsePlane(option(args, "--plane")),
     manifestPath: option(args, "--manifest"),
+    databaseUrl: option(args, "--database-url"),
     dryRun: args.includes("--dry-run") || args.includes("--plan"),
   });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

@@ -390,7 +390,8 @@ $$;
 CREATE OR REPLACE FUNCTION authz.fn_internal_permission_is_assignable_at_scope(
     p_permission_id   uuid,
     p_tenant_id       uuid,
-    p_scope_target_id uuid
+    p_scope_target_id uuid,
+    p_propagation_mode authz.propagation_mode_d DEFAULT 'exact'
 )
 RETURNS boolean
 LANGUAGE sql
@@ -404,6 +405,11 @@ AS $$
           JOIN authz.scope_target AS target
             ON target.tenant_id = p_tenant_id
            AND target.id = p_scope_target_id
+          JOIN authz.permission_scope_kind AS compatibility
+            ON compatibility.permission_id = permission.id
+           AND compatibility.scope_kind = target.scope_kind
+           AND compatibility.propagation_mode = p_propagation_mode
+           AND compatibility.status = 'active'
          WHERE permission.id = p_permission_id
            AND permission.status = 'published'
            AND target.status = 'active'
@@ -411,7 +417,7 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION authz.fn_internal_permission_is_assignable_at_scope(
-    uuid, uuid, uuid
+    uuid, uuid, uuid, authz.propagation_mode_d
 ) IS
   'Private authorization-engine helper. Callers must establish tenant authority before invoking it.';
 
@@ -434,7 +440,7 @@ BEGIN
     END IF;
 
     RETURN authz.fn_internal_permission_is_assignable_at_scope(
-        p_permission_id, p_tenant_id, p_scope_target_id
+        p_permission_id, p_tenant_id, p_scope_target_id, 'exact'
     );
 END;
 $$;
@@ -681,7 +687,8 @@ BEGIN
            AND NOT authz.fn_internal_permission_is_assignable_at_scope(
                 role_permission.permission_id,
                 NEW.tenant_id,
-                NEW.scope_target_id
+                NEW.scope_target_id,
+                NEW.propagation_mode
            )
     ) THEN
         RAISE EXCEPTION
@@ -1238,6 +1245,7 @@ BEGIN
     IF NEW.id IS DISTINCT FROM OLD.id
        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
        OR NEW.principal_id IS DISTINCT FROM OLD.principal_id
+       OR NEW.auth_epoch IS DISTINCT FROM OLD.auth_epoch
        OR NEW.device_token_hash IS DISTINCT FROM OLD.device_token_hash
        OR NEW.expires_at IS DISTINCT FROM OLD.expires_at
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
@@ -1277,11 +1285,18 @@ CREATE OR REPLACE FUNCTION authz.fn_revoke_principal_trusted_devices(
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, authz
+SET search_path = pg_catalog, authz, master, shared
 AS $$
 DECLARE
     v_count integer;
 BEGIN
+    IF p_tenant_id IS DISTINCT FROM shared.current_tenant_id()
+       OR p_principal_id IS DISTINCT FROM master.current_principal_id_soft()
+       OR p_revoked_by IS DISTINCT FROM master.current_principal_id_soft() THEN
+        RAISE EXCEPTION 'trusted-device revocation is restricted to the current tenant and principal'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
     IF p_reason IS NULL OR btrim(p_reason) = '' OR length(p_reason) > 240 THEN
         RAISE EXCEPTION 'trusted-device revocation reason is required (maximum 240 characters)'
             USING ERRCODE = 'check_violation';
@@ -1300,16 +1315,243 @@ BEGIN
 END;
 $$;
 
--- Athyper-published and reconciled authorization projections.
-CREATE OR REPLACE FUNCTION authz.fn_activate_application_projection(p_tenant_id uuid,p_projection_id uuid,p_source_version bigint,p_source_hash text,p_actor_id uuid) RETURNS authz.application_projection LANGUAGE plpgsql SECURITY DEFINER SET search_path=authz,event,shared,pg_catalog AS $$
-DECLARE v_projection authz.application_projection%ROWTYPE;
+CREATE OR REPLACE FUNCTION authz.fn_reconcile_expired_authority(
+    p_tenant_id uuid,
+    p_effective_at timestamptz,
+    p_actor_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, authz
+AS $$
+DECLARE
+    v_changed_at timestamptz := clock_timestamp();
+    v_memberships integer;
+    v_group_members integer;
+    v_group_roles integer;
+    v_delegations integer;
+    v_overrides integer;
+    v_record_acls integer;
+    v_trusted_devices integer;
 BEGIN
- SELECT * INTO v_projection FROM authz.application_projection WHERE tenant_id=p_tenant_id AND id=p_projection_id FOR UPDATE;
- IF NOT FOUND THEN RAISE EXCEPTION 'application projection not found'; END IF;
- IF v_projection.source_version<>p_source_version OR v_projection.source_hash<>p_source_hash THEN RAISE EXCEPTION 'application projection desired-state version/hash mismatch'; END IF;
- IF NOT EXISTS(SELECT 1 FROM authz.projection_scope s JOIN authz.scope_target t ON (t.tenant_id,t.id)=(s.tenant_id,s.scope_target_id) WHERE s.tenant_id=p_tenant_id AND s.projection_id=p_projection_id AND s.status='active' AND s.effective_from<=clock_timestamp() AND (s.effective_until IS NULL OR s.effective_until>clock_timestamp()) AND t.status='active') THEN RAISE EXCEPTION 'application projection requires an active same-tenant scope'; END IF;
- UPDATE authz.application_projection SET status='active',effective_from=COALESCE(effective_from,clock_timestamp()),reconciled_at=clock_timestamp(),reconciliation_error_code=NULL,updated_at=clock_timestamp(),updated_by=p_actor_id WHERE id=p_projection_id RETURNING * INTO v_projection;
- RETURN v_projection;
+    IF p_tenant_id IS NULL OR p_actor_id IS NULL OR p_effective_at IS NULL
+       OR p_effective_at > clock_timestamp() + interval '1 minute' THEN
+        RAISE EXCEPTION 'invalid authority reconciliation arguments'
+            USING ERRCODE = 'invalid_parameter_value';
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM master.principal
+         WHERE tenant_id=p_tenant_id AND id=p_actor_id AND status='active'
+    ) THEN
+        RAISE EXCEPTION 'authority reconciliation actor is not active in tenant'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text || ':authz-expiry', 0));
+
+    UPDATE authz.plane_membership
+       SET status='revoked', updated_at=v_changed_at, updated_by=p_actor_id
+     WHERE tenant_id=p_tenant_id AND status IN ('active','suspended')
+       AND effective_until IS NOT NULL AND effective_until<=p_effective_at;
+    GET DIAGNOSTICS v_memberships = ROW_COUNT;
+
+    UPDATE authz.group_member
+       SET status='revoked', updated_at=v_changed_at, updated_by=p_actor_id
+     WHERE tenant_id=p_tenant_id AND status IN ('active','suspended')
+       AND effective_until IS NOT NULL AND effective_until<=p_effective_at;
+    GET DIAGNOSTICS v_group_members = ROW_COUNT;
+
+    UPDATE authz.group_role
+       SET status='revoked', updated_at=v_changed_at, updated_by=p_actor_id
+     WHERE tenant_id=p_tenant_id AND status IN ('active','suspended')
+       AND effective_until IS NOT NULL AND effective_until<=p_effective_at;
+    GET DIAGNOSTICS v_group_roles = ROW_COUNT;
+
+    UPDATE authz.delegation
+       SET status='revoked', revoked_at=v_changed_at, revoked_by=p_actor_id,
+           revocation_reason='expired', updated_at=v_changed_at, updated_by=p_actor_id
+     WHERE tenant_id=p_tenant_id AND status='active' AND effective_until<=p_effective_at;
+    GET DIAGNOSTICS v_delegations = ROW_COUNT;
+
+    UPDATE authz.override
+       SET status='revoked', revoked_at=v_changed_at, revoked_by=p_actor_id,
+           revocation_reason='expired', updated_at=v_changed_at, updated_by=p_actor_id
+     WHERE tenant_id=p_tenant_id AND status='active' AND effective_until<=p_effective_at;
+    GET DIAGNOSTICS v_overrides = ROW_COUNT;
+
+    UPDATE authz.record_acl
+       SET status='revoked', revoked_at=v_changed_at, revoked_by=p_actor_id,
+           revocation_reason='expired', updated_at=v_changed_at, updated_by=p_actor_id
+     WHERE tenant_id=p_tenant_id AND status='active'
+       AND effective_until IS NOT NULL AND effective_until<=p_effective_at;
+    GET DIAGNOSTICS v_record_acls = ROW_COUNT;
+
+    UPDATE authz.trusted_device
+       SET revoked_at = v_changed_at,
+           revoked_by = p_actor_id,
+           revocation_reason = 'expired'
+     WHERE tenant_id = p_tenant_id
+       AND expires_at <= p_effective_at
+       AND revoked_at IS NULL;
+    GET DIAGNOSTICS v_trusted_devices = ROW_COUNT;
+
+    RETURN jsonb_build_object(
+      'planeMemberships',v_memberships,'groupMembers',v_group_members,
+      'groupRoles',v_group_roles,'delegations',v_delegations,
+      'overrides',v_overrides,'recordAcls',v_record_acls,
+      'trustedDevices',v_trusted_devices);
+END;
+$$;
+
+-- Projection mutation routines are ultimately owned by the dedicated NOLOGIN
+-- role. Temporary membership lets repeatable DDL replace an already-owned
+-- routine; it is revoked at the end of this file and grants no persistent
+-- runtime/admin authority.
+GRANT athyper_projection_owner TO CURRENT_USER;
+
+-- Athyper-published and reconciled authorization projections.
+CREATE OR REPLACE FUNCTION authz.fn_stage_application_projection(
+  p_tenant_id uuid,
+  p_projection jsonb,
+  p_providers jsonb,
+  p_scopes jsonb,
+  p_actor_id uuid
+) RETURNS authz.application_projection
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path=pg_catalog,authz
+AS $$
+DECLARE
+  v_projection authz.application_projection%ROWTYPE;
+  v_existing authz.application_projection%ROWTYPE;
+  v_projection_id uuid:=NULLIF(p_projection->>'id','')::uuid;
+  v_source_projection_id uuid:=NULLIF(p_projection->>'sourceProjectionId','')::uuid;
+  v_source_version bigint:=NULLIF(p_projection->>'sourceVersion','')::bigint;
+  v_source_hash text:=p_projection->>'sourceHash';
+BEGIN
+  IF p_tenant_id IS NULL OR p_actor_id IS NULL OR jsonb_typeof(p_projection)<>'object'
+     OR jsonb_typeof(p_providers)<>'array' OR jsonb_array_length(p_providers)=0
+     OR jsonb_typeof(p_scopes)<>'array' OR jsonb_array_length(p_scopes)=0
+     OR v_projection_id IS NULL OR v_source_projection_id IS NULL OR v_source_version<1
+     OR v_source_hash !~ '^[a-f0-9]{64}$' THEN
+    RAISE EXCEPTION 'APPLICATION_PROJECTION_PAYLOAD_INVALID' USING ERRCODE='check_violation';
+  END IF;
+  IF NOT EXISTS(SELECT 1 FROM master.tenant WHERE id=p_tenant_id AND status='active') THEN
+    RAISE EXCEPTION 'APPLICATION_PROJECTION_TARGET_TENANT_INACTIVE' USING ERRCODE='foreign_key_violation';
+  END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_providers) item
+    WHERE COALESCE(item->>'id','') !~ '^[0-9a-f-]{36}$'
+       OR COALESCE(item->>'sourceProviderId','') !~ '^[0-9a-f-]{36}$'
+       OR NULLIF(item->>'sourceVersion','')::bigint<1) THEN
+    RAISE EXCEPTION 'APPLICATION_PROJECTION_PROVIDER_INVALID' USING ERRCODE='check_violation';
+  END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_scopes) item
+    WHERE COALESCE(item->>'id','') !~ '^[0-9a-f-]{36}$'
+       OR COALESCE(item->>'scopeTargetId','') !~ '^[0-9a-f-]{36}$'
+       OR COALESCE(item->>'sourceScopeId','') !~ '^[0-9a-f-]{36}$'
+       OR NULLIF(item->>'sourceVersion','')::bigint<1) THEN
+    RAISE EXCEPTION 'APPLICATION_PROJECTION_SCOPE_INVALID' USING ERRCODE='check_violation';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_source_projection_id::text || ':' || v_source_version::text,0));
+  SELECT * INTO v_existing FROM authz.application_projection
+   WHERE source_projection_id=v_source_projection_id AND source_version=v_source_version FOR UPDATE;
+  IF FOUND THEN
+    IF v_existing.id<>v_projection_id OR v_existing.tenant_id<>p_tenant_id OR v_existing.source_hash<>v_source_hash THEN
+      RAISE EXCEPTION 'APPLICATION_PROJECTION_IDEMPOTENCY_CONFLICT' USING ERRCODE='unique_violation';
+    END IF;
+    RETURN v_existing;
+  END IF;
+
+  INSERT INTO authz.application_projection(
+    id,tenant_id,realm_key,external_organization_id,organization_alias,organization_name,
+    source_projection_id,source_version,source_hash,status,metadata,created_by)
+  VALUES(
+    v_projection_id,p_tenant_id,lower(btrim(p_projection->>'realmKey')),
+    p_projection->>'externalOrganizationId',NULLIF(btrim(p_projection->>'organizationAlias'),''),
+    p_projection->>'organizationName',v_source_projection_id,v_source_version,v_source_hash,
+    'pending',COALESCE(p_projection->'metadata','{}'::jsonb),p_actor_id)
+  RETURNING * INTO v_projection;
+
+  INSERT INTO authz.projection_provider(
+    id,tenant_id,projection_id,provider_code,protocol,external_provider_id,
+    source_provider_id,source_version,status,created_by)
+  SELECT (item->>'id')::uuid,p_tenant_id,v_projection_id,lower(btrim(item->>'providerCode')),
+    lower(btrim(item->>'protocol')),NULLIF(item->>'externalProviderId',''),
+    (item->>'sourceProviderId')::uuid,(item->>'sourceVersion')::bigint,'active',p_actor_id
+  FROM jsonb_array_elements(p_providers) item;
+
+  INSERT INTO authz.projection_scope(
+    id,tenant_id,projection_id,scope_target_id,ceiling_mode,network_role_ceiling,
+    source_scope_id,source_version,status,effective_from,effective_until,created_by)
+  SELECT (item->>'id')::uuid,p_tenant_id,v_projection_id,(item->>'scopeTargetId')::uuid,
+    COALESCE(NULLIF(item->>'ceilingMode',''),'exact')::authz.projection_ceiling_mode_d,
+    NULLIF(item->>'networkRoleCeiling',''),(item->>'sourceScopeId')::uuid,
+    (item->>'sourceVersion')::bigint,'active',
+    COALESCE(NULLIF(item->>'effectiveFrom','')::timestamptz,statement_timestamp()),
+    NULLIF(item->>'effectiveUntil','')::timestamptz,p_actor_id
+  FROM jsonb_array_elements(p_scopes) item;
+  RETURN v_projection;
+END $$;
+
+CREATE OR REPLACE FUNCTION authz.fn_activate_application_projection(
+  p_tenant_id uuid,
+  p_projection_id uuid,
+  p_source_version bigint,
+  p_source_hash text,
+  p_actor_id uuid
+) RETURNS authz.application_projection
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path=authz,event,shared,pg_catalog
+AS $$
+DECLARE
+  v_projection authz.application_projection%ROWTYPE;
+  v_now timestamptz := clock_timestamp();
+BEGIN
+  SELECT * INTO v_projection
+    FROM authz.application_projection
+   WHERE tenant_id=p_tenant_id AND id=p_projection_id
+   FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'application projection not found'; END IF;
+  IF v_projection.source_version<>p_source_version OR v_projection.source_hash<>p_source_hash THEN
+    RAISE EXCEPTION 'application projection desired-state version/hash mismatch';
+  END IF;
+  IF v_projection.status='active' THEN RETURN v_projection; END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended(
+    v_projection.realm_key || ':' || v_projection.external_organization_id, 0));
+
+  IF NOT EXISTS(
+    SELECT 1
+      FROM authz.projection_scope s
+      JOIN authz.scope_target t ON (t.tenant_id,t.id)=(s.tenant_id,s.scope_target_id)
+     WHERE s.tenant_id=p_tenant_id AND s.projection_id=p_projection_id
+       AND s.status='active' AND s.effective_from<=v_now
+       AND (s.effective_until IS NULL OR s.effective_until>v_now)
+       AND t.status='active'
+  ) THEN
+    RAISE EXCEPTION 'application projection requires an active same-tenant scope';
+  END IF;
+
+  UPDATE authz.application_projection
+     SET status='retired', effective_until=v_now, reconciled_at=v_now,
+         updated_at=v_now, updated_by=p_actor_id
+   WHERE id<>p_projection_id
+     AND realm_key=v_projection.realm_key
+     AND external_organization_id=v_projection.external_organization_id
+     AND status IN ('active','suspended')
+     AND effective_from IS NOT NULL
+     AND (effective_until IS NULL OR effective_until>v_now);
+
+  UPDATE authz.application_projection
+     SET status='active', effective_from=v_now, effective_until=NULL,
+         reconciled_at=v_now, reconciliation_error_code=NULL,
+         updated_at=v_now, updated_by=p_actor_id
+   WHERE id=p_projection_id
+   RETURNING * INTO v_projection;
+  RETURN v_projection;
 END $$;
 
 CREATE OR REPLACE FUNCTION authz.fn_resolve_active_application_projections(
@@ -1474,6 +1716,26 @@ BEGIN
     IF jsonb_typeof(v_bindings)<>'array' THEN RAISE EXCEPTION 'OPERATION_BINDINGS_SHAPE_INVALID' USING ERRCODE='check_violation'; END IF;
     IF jsonb_array_length(v_bindings)=0 THEN RETURN 0; END IF;
     IF v_source_entity_id IS NULL OR v_release_hash !~ '^[a-f0-9]{64}$' THEN RAISE EXCEPTION 'OPERATION_BINDINGS_SOURCE_INVALID' USING ERRCODE='check_violation'; END IF;
+    IF EXISTS(SELECT 1 FROM jsonb_array_elements(v_bindings) item
+      WHERE item->>'permissionCode' LIKE 'legacy.%'
+         OR array_length(string_to_array(item->>'permissionCode','.'),1)<>4
+         OR split_part(item->>'permissionCode','.',1)<>lower(p_plane_code)
+         OR split_part(item->>'permissionCode','.',2)='action'
+         OR split_part(item->>'permissionCode','.',3)='action'
+         OR COALESCE(item->>'permissionId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+         OR COALESCE(item->>'bindingId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+         OR COALESCE(item->>'scopeBindingId','') !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') THEN
+      RAISE EXCEPTION 'OPERATION_BINDING_CANONICAL_PERMISSION_REQUIRED' USING ERRCODE='check_violation';
+    END IF;
+    IF EXISTS(SELECT 1 FROM jsonb_array_elements(v_bindings) item
+      GROUP BY item->>'sourceEntityOperationId'
+      HAVING count(DISTINCT (item->>'permissionId',item->>'permissionCode'))<>1) THEN
+      RAISE EXCEPTION 'OPERATION_BINDING_PERMISSION_AMBIGUOUS' USING ERRCODE='check_violation';
+    END IF;
+    IF EXISTS(SELECT 1 FROM jsonb_array_elements(v_bindings) item
+      GROUP BY item->>'sourceEntityOperationId',item->>'scopeKind' HAVING count(*)<>1) THEN
+      RAISE EXCEPTION 'OPERATION_SCOPE_COORDINATE_AMBIGUOUS' USING ERRCODE='check_violation';
+    END IF;
     SELECT count(DISTINCT item->>'sourceEntityOperationId') INTO v_expected FROM jsonb_array_elements(v_bindings) item;
     SELECT count(*) INTO v_actual FROM authz.entity_operation_binding WHERE applied_release_id=p_applied_release_id;
     IF v_actual>0 THEN
@@ -1486,24 +1748,26 @@ BEGIN
     END IF;
     IF EXISTS(SELECT 1 FROM jsonb_array_elements(v_bindings) item
       LEFT JOIN authz.permission p ON p.canonical_code=item->>'permissionCode' AND p.status='published'
+        AND p.id=(item->>'permissionId')::uuid
       WHERE p.id IS NULL OR p.permission_kind::text<>COALESCE(item->>'permissionKind','entity_operation')) THEN
       RAISE EXCEPTION 'OPERATION_BINDING_PERMISSION_UNRESOLVED' USING ERRCODE='foreign_key_violation';
     END IF;
     INSERT INTO authz.entity_operation_binding(
-      tenant_id,applied_release_id,plane_code,source_entity_id,source_entity_operation_id,
+      id,tenant_id,applied_release_id,plane_code,source_entity_id,source_entity_operation_id,
       source_release_id,source_release_hash,source_compiled_hash,entity_code,operation_key,
       permission_id,decision_mode,created_by)
-    SELECT DISTINCT ON (item->>'sourceEntityOperationId') p_tenant_id,p_applied_release_id,lower(p_plane_code),
+    SELECT DISTINCT ON (item->>'sourceEntityOperationId') (item->>'bindingId')::uuid,p_tenant_id,p_applied_release_id,lower(p_plane_code),
       v_source_entity_id,(item->>'sourceEntityOperationId')::uuid,p_source_release_id,v_release_hash,
       p_source_compiled_hash,item->>'entityCode',item->>'operationKey',p.id,
       (item->>'decisionMode')::authz.operation_decision_mode_d,v_actor
-    FROM jsonb_array_elements(v_bindings) item JOIN authz.permission p ON p.canonical_code=item->>'permissionCode'
+    FROM jsonb_array_elements(v_bindings) item JOIN authz.permission p
+      ON p.canonical_code=item->>'permissionCode' AND p.id=(item->>'permissionId')::uuid
     ORDER BY item->>'sourceEntityOperationId',item->>'scopeKind';
     GET DIAGNOSTICS v_actual=ROW_COUNT;
     IF v_actual<>v_expected THEN RAISE EXCEPTION 'OPERATION_BINDING_STAGE_COUNT_MISMATCH' USING ERRCODE='check_violation'; END IF;
     INSERT INTO authz.entity_operation_scope_binding(
-      entity_operation_binding_id,scope_kind,coordinate_source,coordinate_key,resolver_key,created_by)
-    SELECT b.id,(item->>'scopeKind')::authz.scope_kind_d,
+      id,entity_operation_binding_id,scope_kind,coordinate_source,coordinate_key,resolver_key,created_by)
+    SELECT (item->>'scopeBindingId')::uuid,b.id,(item->>'scopeKind')::authz.scope_kind_d,
       (item->>'coordinateSource')::authz.scope_coordinate_source_d,item->>'coordinateKey',item->>'resolverKey',v_actor
     FROM jsonb_array_elements(v_bindings) item
     JOIN authz.entity_operation_binding b ON b.applied_release_id=p_applied_release_id
@@ -1544,3 +1808,5 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   PERFORM set_config('authz.rollback_restore','off',true); RAISE;
 END; $$;
+
+REVOKE athyper_projection_owner FROM CURRENT_USER;

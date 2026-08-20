@@ -6,11 +6,11 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 
 | Measure | Count |
 | --- | ---: |
-| Matched identities | 60 |
-| Legacy-only identities | 808 |
-| Current-only identities | 192 |
+| Matched identities | 62 |
+| Legacy-only identities | 806 |
+| Current-only identities | 196 |
 | Legacy occurrences | 898 |
-| Current occurrences | 252 |
+| Current occurrences | 258 |
 
 | Status | Method | Normalized path | Legacy sources | Current sources |
 | --- | --- | --- | ---: | ---: |
@@ -288,6 +288,7 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/iam/parameters` | 1 | 0 |
 | legacy-only | GET | `/api/iam/parameters/effective` | 1 | 0 |
 | legacy-only | GET | `/api/iam/permissions` | 1 | 0 |
+| current-only | GET | `/api/iam/projection-health` | 0 | 1 |
 | legacy-only | GET | `/api/iam/roles` | 1 | 0 |
 | legacy-only | GET | `/api/iam/trusted-devices` | 1 | 0 |
 | legacy-only | GET | `/api/integration/connections` | 1 | 0 |
@@ -376,6 +377,8 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | GET | `/api/moderation/comments/:param` | 1 | 0 |
 | legacy-only | GET | `/api/moderation/flags` | 1 | 0 |
 | legacy-only | GET | `/api/moderation/flags/:param` | 1 | 0 |
+| current-only | GET | `/api/neon/operating-organizations` | 0 | 1 |
+| current-only | GET | `/api/neon/work-contexts` | 0 | 1 |
 | legacy-only | GET | `/api/notifications/capabilities` | 1 | 0 |
 | legacy-only | GET | `/api/notifications/categories` | 1 | 0 |
 | current-only | GET | `/api/notifications/deliveries/:param/timeline` | 0 | 1 |
@@ -825,9 +828,10 @@ The comparison resolves literal router mounts, route contracts, and finite strin
 | legacy-only | POST | `/api/iam/mfa/sync` | 1 | 0 |
 | legacy-only | POST | `/api/iam/mfa/totp/begin` | 1 | 0 |
 | legacy-only | POST | `/api/iam/mfa/webauthn/start` | 1 | 0 |
+| current-only | POST | `/api/iam/projection-reconciliation-attempts/:param/replay` | 0 | 1 |
 | current-only | POST | `/api/iam/provisioning-requests` | 0 | 1 |
-| legacy-only | POST | `/api/iam/trusted-devices` | 1 | 0 |
-| legacy-only | POST | `/api/iam/trusted-devices/verify` | 1 | 0 |
+| matched | POST | `/api/iam/trusted-devices` | 1 | 1 |
+| matched | POST | `/api/iam/trusted-devices/verify` | 1 | 1 |
 | legacy-only | POST | `/api/intake/ap/invoice` | 1 | 0 |
 | legacy-only | POST | `/api/intake/ap/invoice/edifact` | 1 | 0 |
 | legacy-only | POST | `/api/integration/connections` | 1 | 0 |

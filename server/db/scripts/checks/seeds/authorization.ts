@@ -7,13 +7,17 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 interface Pack {
+  planePack: string;
   identityContract: {
     enabledSubjectCount: number;
     mappedSubjectCount: number;
     unmanagedKeycloakUsers: string;
     fieldConflictBehavior: string;
   };
-  subjectAssignments: Array<{ keycloakSubject: string; planes: unknown[] }>;
+  subjectAssignments: Array<{
+    keycloakSubject: string;
+    planes: Array<{ plane: string }>;
+  }>;
   mutationPolicy: {
     truncate: string;
     authorizationWideDelete: string;
@@ -28,14 +32,15 @@ const failures: string[] = [];
 const beforeInventoryPath = option("--identity-before");
 const afterInventoryPath = option("--identity-after");
 const packs: Record<string, { hash: string; subjects: number }> = {};
-for (const target of ["neon-admin", "mesh"]) {
+for (const target of ["studio", "neon", "mesh"]) {
   const root = resolve(databaseRoot, `seed/packs/authorization-v2/${target}`);
   const pack = await readJson<Pack>(resolve(root, "seed-pack.v1.json"));
   const expected = (await readFile(resolve(root, "seed-pack.sha256"), "utf8")).trim();
   const actual = sha256(canonical(pack));
+  if (pack.planePack !== target) failures.push(`${target}: plane pack identity mismatch`);
   if (expected !== actual) failures.push(`${target}: deterministic content hash mismatch`);
   if (
-    pack.identityContract.unmanagedKeycloakUsers !== "unchanged"
+    pack.identityContract.unmanagedKeycloakUsers !== "deny"
     || pack.identityContract.fieldConflictBehavior !== "fail"
   ) failures.push(`${target}: identity preservation policy mismatch`);
   if (
@@ -43,19 +48,13 @@ for (const target of ["neon-admin", "mesh"]) {
     || pack.mutationPolicy.authorizationWideDelete !== "forbidden"
   ) failures.push(`${target}: destructive seed mutation policy`);
   if (pack.subjectAssignments.some((subject) =>
-    !subject.keycloakSubject || subject.planes.length === 0
+    !subject.keycloakSubject
+    || subject.planes.length === 0
+    || subject.planes.some((assignment) => assignment.plane !== target)
   )) failures.push(`${target}: incomplete subject assignment`);
   packs[target] = { hash: actual, subjects: pack.subjectAssignments.length };
 }
 
-const retiredManifest = await readJson<{
-  contractVersion: string;
-  paths: string[];
-}>(resolve(databaseRoot, "seed/contracts/authorization/retired-seed-sources.v1.json"));
-if (retiredManifest.contractVersion !== "authorization-v2.retired-seed-sources.v1") {
-  failures.push("invalid retired authorization seed manifest");
-}
-const retiredPaths = new Set(retiredManifest.paths);
 const seedSql = (await walk(resolve(databaseRoot, "seed")))
   .filter((path) => extname(path) === ".sql");
 const allSeedSources = await Promise.all(seedSql.map(async (path) => ({
@@ -63,10 +62,7 @@ const allSeedSources = await Promise.all(seedSql.map(async (path) => ({
   relativePath: path.replace(`${databaseRoot}\\`, "").replace(/\\/g, "/"),
   sql: stripComments(await readFile(path, "utf8")),
 })));
-const discoveredPaths = new Set(allSeedSources.map((source) => source.relativePath));
-const missingRetiredPaths = [...retiredPaths].filter((path) => !discoveredPaths.has(path));
-if (missingRetiredPaths.length > 0) failures.push("retired authorization seed manifest contains missing paths");
-const seedSources = allSeedSources.filter((source) => !retiredPaths.has(source.relativePath));
+const seedSources = allSeedSources;
 const sql = seedSources.map((source) => source.sql).join("\n");
 const destructive = [
   /\bTRUNCATE(?:\s+TABLE)?\s+(?:master|mesh)\.(?:auth_|principal|access_grant)/i,
@@ -83,15 +79,15 @@ const legacyAuthoritySeedWrites = seedSources.flatMap((source) =>
 if (legacyAuthoritySeedWrites.length > 0) {
   failures.push(`${legacyAuthoritySeedWrites.length} legacy authorization seed write(s) remain`);
 }
-const retiredIdentityToken = /\b(?:idp_enabled|idp_email_verified|principal_source|is_service_account|keycloak_id|keycloak_username|keycloak_sync_status)\b/gi;
-const retiredIdentitySeedReferences = seedSources.flatMap((source) =>
-  [...source.sql.matchAll(retiredIdentityToken)].map((match) => ({
+const prohibitedIdentityToken = /\b(?:idp_enabled|idp_email_verified|principal_source|is_service_account|keycloak_id|keycloak_username|keycloak_sync_status)\b/gi;
+const prohibitedIdentitySeedReferences = seedSources.flatMap((source) =>
+  [...source.sql.matchAll(prohibitedIdentityToken)].map((match) => ({
     path: source.path.replace(`${databaseRoot}\\`, "").replace(/\\/g, "/"),
     identifier: match[0],
   }))
 );
-if (retiredIdentitySeedReferences.length > 0) {
-  failures.push(`${retiredIdentitySeedReferences.length} retired identity seed reference(s) remain`);
+if (prohibitedIdentitySeedReferences.length > 0) {
+  failures.push(`${prohibitedIdentitySeedReferences.length} prohibited identity seed reference(s) remain`);
 }
 
 const keycloakSetup = await readJson<{
@@ -112,16 +108,19 @@ if (invalidOrganizationAliases.length > 0) {
 }
 
 const userManifest = await readJson<{
+  contractVersion: string;
   enabledSubjectCount: number;
   mappedSubjectCount: number;
-  unmanagedKeycloakUsers: string;
+  unresolvedSubjectBehavior: string;
 }>(resolve(
   databaseRoot,
-  "seed/contracts/authorization/authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json",
+  "seed/contracts/authorization/admission/compiled/keycloak-admission.v1.json",
 ));
 if (
+  userManifest.contractVersion !== "athyper.authorization.keycloak-admission.v1"
+  || userManifest.unresolvedSubjectBehavior !== "deny"
+  ||
   userManifest.enabledSubjectCount !== userManifest.mappedSubjectCount
-  || userManifest.unmanagedKeycloakUsers !== "unchanged"
 ) failures.push("development enabled-subject mapping is incomplete");
 const identityConservation = beforeInventoryPath && afterInventoryPath
   ? await compareIdentityInventories(beforeInventoryPath, afterInventoryPath)
@@ -141,8 +140,8 @@ const report = {
       failures.every((value) => !value.includes("enabled-subject")),
     canonicalPacksAreOnlyAuthorizationSeeds:
       failures.every((value) => !value.includes("legacy authorization seed write")),
-    retiredIdentitySeedReferencesZero:
-      retiredIdentitySeedReferences.length === 0,
+    prohibitedIdentitySeedReferencesZero:
+      prohibitedIdentitySeedReferences.length === 0,
     keycloakOrganizationAliasesAreTenantUuids:
       invalidOrganizationAliases.length === 0,
     keycloakIdentityCountAndHashUnchanged: identityConservation,
@@ -151,7 +150,7 @@ const report = {
   ready: failures.length === 0 && identityConservation === true,
   failures,
   legacyAuthoritySeedWrites,
-  retiredIdentitySeedReferences,
+  prohibitedIdentitySeedReferences,
   invalidOrganizationAliases,
 };
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

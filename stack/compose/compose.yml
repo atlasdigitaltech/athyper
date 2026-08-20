@@ -21,6 +21,8 @@ include:
   - db/athyper-db.yml
   - db/athyper-dbpool-apps.yml
   - db/athyper-dbpool-session.yml
+  - security/athyper-socket-proxy-gateway.yml
+  - security/athyper-socket-proxy-logshipper.yml
   - gateway/athyper-gateway.yml
   - iam/athyper-iam.yml
   - mail/athyper-mailtrap.yml

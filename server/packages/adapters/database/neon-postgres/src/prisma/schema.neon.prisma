@@ -1277,6 +1277,7 @@ model entity_operation_scope_binding {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model group_member {
   id                String          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
@@ -1299,13 +1300,14 @@ model group_member {
   principal         principal       @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "group_member_principal_fk")
   tenant            tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "group_member_tenant_fk")
 
-  @@unique([tenant_id, group_id, principal_id], map: "group_member_current_uidx", where: raw("((status)::text <> 'revoked'::text)"))
   @@unique([tenant_id, id], map: "group_member_tenant_id_uq")
+  @@index([tenant_id, group_id, principal_id, effective_from, effective_until], map: "group_member_current_idx", where: raw("((status)::text = 'active'::text)"))
   @@index([tenant_id, principal_id, group_id], map: "group_member_principal_idx", where: raw("((status)::text = 'active'::text)"))
   @@schema("authz")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model group_role {
   id                String          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
@@ -1331,8 +1333,8 @@ model group_role {
   scope_target      scope_target    @relation(fields: [tenant_id, scope_target_id], references: [tenant_id, id], onUpdate: NoAction, map: "group_role_scope_fk")
   tenant            tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "group_role_tenant_fk")
 
-  @@unique([tenant_id, group_id, role_id, scope_target_id], map: "group_role_current_uidx", where: raw("((status)::text <> 'revoked'::text)"))
   @@unique([tenant_id, id], map: "group_role_tenant_id_uq")
+  @@index([tenant_id, group_id, role_id, scope_target_id, effective_from, effective_until], map: "group_role_current_idx", where: raw("((status)::text = 'active'::text)"))
   @@index([tenant_id, role_id], map: "group_role_role_fk_idx")
   @@index([tenant_id, scope_target_id, role_id], map: "group_role_scope_idx", where: raw("((status)::text = 'active'::text)"))
   @@schema("authz")
@@ -1408,6 +1410,7 @@ model permission {
   entity_operation_binding entity_operation_binding[]
   override                 override[]
   module                   control_module             @relation(fields: [module_id], references: [id], onUpdate: NoAction, map: "permission_module_fk")
+  permission_scope_kind    permission_scope_kind[]
   record_acl               record_acl[]
   role_permission          role_permission[]
 
@@ -1417,6 +1420,26 @@ model permission {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model permission_scope_kind {
+  id               String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  permission_id    String     @db.Uuid
+  scope_kind       String
+  propagation_mode String     @default("exact")
+  status           String     @default("active")
+  created_at       DateTime   @default(now()) @db.Timestamptz(6)
+  created_by       String     @db.Uuid
+  updated_at       DateTime?  @db.Timestamptz(6)
+  updated_by       String?    @db.Uuid
+  permission       permission @relation(fields: [permission_id], references: [id], onUpdate: NoAction, map: "permission_scope_kind_permission_fk")
+
+  @@unique([permission_id, scope_kind, propagation_mode], map: "permission_scope_kind_uq")
+  @@schema("authz")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model plane_membership {
@@ -1439,9 +1462,9 @@ model plane_membership {
   principal         principal @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "plane_membership_principal_fk")
   tenant            tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "plane_membership_tenant_fk")
 
-  @@unique([tenant_id, principal_id], map: "plane_membership_current_uidx", where: raw("((status)::text <> 'revoked'::text)"))
   @@unique([tenant_id, principal_id, id], map: "plane_membership_principal_id_uq")
   @@unique([tenant_id, id], map: "plane_membership_tenant_id_uq")
+  @@index([tenant_id, principal_id, effective_from, effective_until], map: "plane_membership_current_idx", where: raw("((status)::text = 'active'::text)"))
   @@schema("authz")
 }
 
@@ -1664,6 +1687,7 @@ model trusted_device {
   id                                                         String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                  String     @db.Uuid
   principal_id                                               String     @db.Uuid
+  auth_epoch                                                 Int
   device_token_hash                                          String
   device_name                                                String?
   user_agent                                                 String?
@@ -15453,6 +15477,7 @@ model operating_organization {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model operating_organization_company_assignment {
   id                        String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
@@ -15477,6 +15502,8 @@ model operating_organization_company_assignment {
 
   @@unique([tenant_id, operating_organization_id, company_code_id, effective_from], map: "operating_organization_company_assignment_coordinate_uq")
   @@unique([tenant_id, id], map: "operating_organization_company_assignment_tenant_id_uq")
+  @@index([tenant_id, company_code_id, effective_from, effective_until, operating_organization_id], map: "operating_organization_company_active_company_idx", where: raw("((status)::text = 'active'::text)"))
+  @@index([tenant_id, operating_organization_id, effective_from, effective_until, company_code_id], map: "operating_organization_company_active_org_idx", where: raw("((status)::text = 'active'::text)"))
   @@index([tenant_id, company_code_id, status], map: "operating_organization_company_assignment_company_idx")
   @@index([tenant_id, operating_organization_id, status], map: "operating_organization_company_assignment_organization_idx")
   @@schema("master")
@@ -16361,7 +16388,7 @@ model principal {
   override_override_tenant_id_approved_byToprincipal                                                                                           override[]                                           @relation("override_tenant_id_approved_byToprincipal")
   override_override_tenant_id_principal_idToprincipal                                                                                          override[]                                           @relation("override_tenant_id_principal_idToprincipal")
   override_override_tenant_id_revoked_byToprincipal                                                                                            override[]                                           @relation("override_tenant_id_revoked_byToprincipal")
-  plane_membership                                                                                                                             plane_membership?
+  plane_membership                                                                                                                             plane_membership[]
   record_acl_record_acl_tenant_id_granted_byToprincipal                                                                                        record_acl[]                                         @relation("record_acl_tenant_id_granted_byToprincipal")
   record_acl_record_acl_tenant_id_principal_idToprincipal                                                                                      record_acl[]                                         @relation("record_acl_tenant_id_principal_idToprincipal")
   record_acl_record_acl_tenant_id_revoked_byToprincipal                                                                                        record_acl[]                                         @relation("record_acl_tenant_id_revoked_byToprincipal")
@@ -18879,24 +18906,6 @@ model master_workspace {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model authorization_legacy_retirement_approval {
-  id                         String   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  plane_code                 String
-  activation_manifest_sha256 String
-  covered_operation_count    Int
-  approval_action            String
-  ticket_reference           String
-  decision_reason            String
-  decided_at                 DateTime @default(now()) @db.Timestamptz(6)
-  decided_by                 String   @db.Uuid
-
-  @@index([plane_code, decided_at(sort: Desc)], map: "authorization_legacy_retirement_approval_latest_idx")
-  @@schema("ops")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model authorization_operation_cutover_drill {
   id                                 String                             @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   plane_code                         String
@@ -18909,9 +18918,9 @@ model authorization_operation_cutover_drill {
   activation_audit_evidence_id       String                             @db.Uuid
   activated_observed_at              DateTime                           @db.Timestamptz(6)
   rolled_back_observed_at            DateTime                           @db.Timestamptz(6)
-  legacy_observed_at                 DateTime                           @db.Timestamptz(6)
+  disabled_observed_at               DateTime                           @db.Timestamptz(6)
   reactivated_observed_at            DateTime                           @db.Timestamptz(6)
-  legacy_fallback_count              Int                                @default(0)
+  disabled_fallback_count            Int                                @default(0)
   outcome                            String
   ticket_reference                   String
   performed_at                       DateTime                           @default(now()) @db.Timestamptz(6)
@@ -18931,7 +18940,7 @@ model authorization_operation_rollout {
   source_entity_operation_id         String                              @db.Uuid
   source_release_hash                String
   source_artifact_hash               String
-  mode                               String                              @default("legacy")
+  mode                               String                              @default("disabled")
   certification_id                   String?                             @db.Uuid
   change_reason                      String
   change_ticket                      String?
@@ -19006,10 +19015,10 @@ model authorization_session_shadow_comparison {
   request_id            String
   comparison_status     String
   mismatch_areas        String[]  @default([])
-  legacy_result         Json
+  baseline_result       Json
   candidate_result      Json?
   candidate_error       String?
-  legacy_fingerprint    String
+  baseline_fingerprint  String
   candidate_fingerprint String?
   resolver_revision     String
   observed_at           DateTime  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
@@ -19034,13 +19043,13 @@ model authorization_shadow_comparison {
   source_release_hash        String
   source_artifact_hash       String
   request_id                 String
-  cohort_code                String    @default("legacy_baseline")
+  cohort_code                String    @default("clean_slate_baseline")
   correlation_id             String?   @db.Uuid
   principal_id               String    @db.Uuid
   comparison_status          String
-  legacy_decision            String
-  legacy_reason              String
-  legacy_fingerprint         String
+  baseline_decision          String
+  baseline_reason            String
+  baseline_fingerprint       String
   candidate_decision         String?
   candidate_reason           String?
   candidate_fingerprint      String?
@@ -19148,10 +19157,10 @@ model identity_admission_shadow_comparison {
   comparison_status     String
   mismatch_areas        String[] @default([])
   severity              String
-  legacy_result         Json
+  baseline_result       Json
   candidate_result      Json?
   candidate_error       String?
-  legacy_fingerprint    String
+  baseline_fingerprint  String
   candidate_fingerprint String?
   resolver_revision     String
   observed_at           DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
@@ -19370,6 +19379,37 @@ model schema_provisions {
   checksum    String
   executed_at DateTime @default(now()) @db.Timestamptz(6)
 
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model seed_pack_execution_v2 {
+  execution_id        String              @id @db.Uuid
+  plane               String
+  pack_key            String
+  pack_version        String
+  content_sha256      String
+  execution_mode      String
+  applied_at          DateTime            @default(now()) @db.Timestamptz(6)
+  applied_by          String              @default(dbgenerated("SESSION_USER"))
+  seed_pack_ledger_v2 seed_pack_ledger_v2 @relation(fields: [plane, pack_key, pack_version], references: [plane, pack_key, pack_version], onDelete: NoAction, onUpdate: NoAction, map: "seed_pack_execution_v2_pack_fk")
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model seed_pack_ledger_v2 {
+  plane                  String
+  pack_key               String
+  pack_version           String
+  source_path            String
+  content_sha256         String
+  manifest_sha256        String
+  registered_at          DateTime                 @default(now()) @db.Timestamptz(6)
+  registered_by          String                   @default(dbgenerated("SESSION_USER"))
+  seed_pack_execution_v2 seed_pack_execution_v2[]
+
+  @@id([plane, pack_key, pack_version])
   @@schema("public")
 }
 

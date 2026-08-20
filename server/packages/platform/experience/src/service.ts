@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { EffectiveFeature, ExperienceBootstrap, ExperienceModule, ExperienceProfile, ExperienceWorkspace } from "./contracts.js";
+import type { EffectiveFeature, ExperienceBootstrap, ExperienceModule, ExperienceProfile, ExperienceWorkspace, NeonCapabilityGroup, NeonOperatingOrganizationCapability, NeonOperatingOrganizationCatalog, NeonWorkContextBootstrap } from "./contracts.js";
 import type { ExperienceCache, ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceInvalidationHooks, ExperienceRepositoryProvider } from "./ports.js";
 
 export class ExperienceAccessError extends Error {
@@ -37,14 +37,15 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       if (!identity.membershipActive) deny("EXPERIENCE_MEMBERSHIP_INACTIVE", "The principal has no active membership in this plane");
 
       const profile = await readProfileOrDefault(repository.readProfile.bind(repository), context);
+      const presentation = identityPresentation(context, identity);
       if (!identity.subscriptionPlanId) {
-        const result = contextNotReady(context, profile, revision({ identity, auth: authorizationRevision(context) }));
+        const result = contextNotReady(context, profile, presentation, revision({ identity, auth: authorizationRevision(context) }));
         await cache(options.cache, cacheKey, result, tags(context));
         return result;
       }
       const catalog = await repository.readCatalog(context, identity.subscriptionPlanId);
       if (!catalog?.planActive) {
-        const result = contextNotReady(context, profile, revision({ identity, plan: catalog?.planRevision ?? "missing", auth: authorizationRevision(context) }));
+        const result = contextNotReady(context, profile, presentation, revision({ identity, plan: catalog?.planRevision ?? "missing", auth: authorizationRevision(context) }));
         await cache(options.cache, cacheKey, result, tags(context));
         return result;
       }
@@ -61,10 +62,47 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       const result: ExperienceBootstrap = {
         schemaVersion: 1, state: "ready", planeKey: context.planeKey, tenantId: context.tenantId, principalId: context.principalId,
         revision: revision({ identity, profile, plan: catalog.planRevision, catalog: [...catalog.associations, ...catalog.permissions], features: featureRows, auth: authorizationRevision(context) }),
-        profile, workspaces, permissions, features, nextActions: [],
+        ...presentation, profile, workspaces, permissions, features, nextActions: [],
       };
       await cache(options.cache, cacheKey, result, tags(context));
       return result;
+    },
+    async neonWorkContexts(context: VerifiedRequestContext): Promise<NeonWorkContextBootstrap> {
+      assertSnapshotBoundToContext(context);
+      if (context.planeKey !== "neon") deny("EXPERIENCE_NEON_CONTEXT_REQUIRED", "Company work contexts are available only in Neon");
+      const repository = options.repositories.require("neon");
+      const rows = await repository.readWorkContexts(context);
+      const scopes = context.permissions.authorizationScopes;
+      const tenantWide = scopes.some((scope) => scope.tenantWide);
+      const companyIds = new Set(scopes.flatMap((scope) => scope.companyCodeIds));
+      const legalEntityIds = new Set(scopes.flatMap((scope) => scope.legalEntityIds));
+      const visible = rows.filter((row) => tenantWide || companyIds.has(row.companyCodeId) || legalEntityIds.has(row.legalEntityId));
+      const companies = visible.map((row) => ({
+        companyCodeId: row.companyCodeId, code: row.companyCode, displayName: row.companyDisplayName,
+        legalEntityId: row.legalEntityId, legalEntityCode: row.legalEntityCode, legalEntityName: row.legalEntityName,
+        ...(row.countryCode ? { countryCode: row.countryCode } : {}), functionalCurrency: row.functionalCurrency,
+        capabilityGroups: capabilityGroups(scopes.filter((scope) => scope.tenantWide || scope.companyCodeIds.includes(row.companyCodeId) || scope.legalEntityIds.includes(row.legalEntityId)).map((scope) => scope.permissionCode)),
+      }));
+      return Object.freeze({ schemaVersion: 1, revision: revision({ tenantId: context.tenantId, auth: authorizationRevision(context), rows: visible }), tenantId: context.tenantId, supportsAllPermitted: companies.length > 1, companies: Object.freeze(companies) });
+    },
+    async neonOperatingOrganizations(context: VerifiedRequestContext): Promise<NeonOperatingOrganizationCatalog> {
+      assertSnapshotBoundToContext(context);
+      if (context.planeKey !== "neon") deny("EXPERIENCE_NEON_CONTEXT_REQUIRED", "Operating organizations are available only in Neon");
+      const repository=options.repositories.require("neon"),at=now();
+      const [organizations,companies]=await Promise.all([repository.readOperatingOrganizations(context,at),repository.readWorkContexts(context)]);
+      const scopes=context.permissions.authorizationScopes;
+      const tenantWide=scopes.some((scope)=>scope.tenantWide);
+      const companyIds=new Set(scopes.flatMap((scope)=>scope.companyCodeIds));
+      const legalEntityIds=new Set(scopes.flatMap((scope)=>scope.legalEntityIds));
+      const permittedCompanies=new Set(companies.filter((company)=>tenantWide||companyIds.has(company.companyCodeId)||legalEntityIds.has(company.legalEntityId)).map((company)=>company.companyCodeId));
+      const organizationIds=new Set(scopes.flatMap((scope)=>scope.operatingOrganizationIds));
+      const visible=organizations.flatMap((organization)=>{
+        if(!tenantWide&&!organizationIds.has(organization.id))return[];
+        const assignments=organization.assignments.filter((assignment)=>permittedCompanies.has(assignment.companyCodeId));
+        if(!assignments.length)return[];
+        return [{id:organization.id,code:organization.code,displayName:organization.displayName,domain:organization.domain,...(organization.parentId?{parentId:organization.parentId}:{}),path:organization.path,capabilities:operatingOrganizationCapabilities(organization.domain),procurementProfileConfigured:organization.procurementProfileConfigured,salesProfileConfigured:organization.salesProfileConfigured,companyAssignments:Object.freeze(assignments.map((assignment)=>({companyCodeId:assignment.companyCodeId,participationRole:assignment.participationRole,effectiveFrom:assignment.effectiveFrom,...(assignment.effectiveUntil?{effectiveUntil:assignment.effectiveUntil}:{})}))),defaults:Object.freeze({...(organization.leadCompanyCodeId&&permittedCompanies.has(organization.leadCompanyCodeId)?{leadCompanyCodeId:organization.leadCompanyCodeId}:{}),...(organization.bookingCompanyCodeId&&permittedCompanies.has(organization.bookingCompanyCodeId)?{bookingCompanyCodeId:organization.bookingCompanyCodeId}:{}),...(organization.invoicingCompanyCodeId&&permittedCompanies.has(organization.invoicingCompanyCodeId)?{invoicingCompanyCodeId:organization.invoicingCompanyCodeId}:{}),...(organization.defaultCurrency?{currency:organization.defaultCurrency}:{})})}];
+      });
+      return Object.freeze({schemaVersion:1,revision:revision({tenantId:context.tenantId,effectiveAt:at.toISOString(),auth:authorizationRevision(context),rows:visible}),tenantId:context.tenantId,effectiveAt:at.toISOString(),organizations:Object.freeze(visible)});
     },
   });
 }
@@ -123,7 +161,12 @@ async function readProfileOrDefault(read: (context: VerifiedRequestContext) => P
   } catch { return PLATFORM_PROFILE; }
 }
 
-function contextNotReady(context: VerifiedRequestContext, profile: ExperienceProfile, fingerprint: string): ExperienceBootstrap { return { schemaVersion: 1, state: "context_not_ready", planeKey: context.planeKey, tenantId: context.tenantId, principalId: context.principalId, revision: fingerprint, profile, workspaces: [], permissions: [], features: {}, nextActions: ["retry_later"] }; }
+function contextNotReady(context: VerifiedRequestContext, profile: ExperienceProfile, presentation: Pick<ExperienceBootstrap,"identity"|"tenant">, fingerprint: string): ExperienceBootstrap { return { schemaVersion: 1, state: "context_not_ready", planeKey: context.planeKey, tenantId: context.tenantId, principalId: context.principalId, revision: fingerprint, ...presentation, profile, workspaces: [], permissions: [], features: {}, nextActions: ["retry_later"] }; }
+function identityPresentation(context:VerifiedRequestContext,identity:import("./ports.js").ExperienceIdentityRecord):Pick<ExperienceBootstrap,"identity"|"tenant"> { const displayName=cleanDisplay(identity.principalDisplayName)??cleanDisplay(identity.principalCode)??"Account"; return { identity:Object.freeze({displayName,...(cleanDisplay(identity.principalSecondaryLabel)?{secondaryLabel:cleanDisplay(identity.principalSecondaryLabel)}:{}),initials:initials(displayName)}),tenant:Object.freeze({id:context.tenantId,code:identity.tenantCode,displayName:cleanDisplay(identity.tenantDisplayName)??identity.tenantCode}) }; }
+function cleanDisplay(value:string|undefined):string|undefined { const clean=value?.trim().replace(/\s+/g," "); return clean?clean.slice(0,256):undefined; }
+function initials(value:string):string { const parts=value.trim().split(/\s+/u).filter(Boolean); const chosen=parts.length>1?[parts[0]!,parts.at(-1)!]:parts; return chosen.map((part)=>Array.from(part)[0]??"").join("").toLocaleUpperCase().slice(0,8)||"A"; }
+function capabilityGroups(codes:readonly string[]):readonly NeonCapabilityGroup[] { const groups=new Set<NeonCapabilityGroup>(); for(const code of codes){ const lower=code.toLowerCase(); if(/finance|account|ledger|journal|invoice|payment|tax/.test(lower))groups.add("finance"); if(/procure|purchase|supplier|sourcing|contract/.test(lower))groups.add("procurement"); if(/inventory|warehouse|stock/.test(lower))groups.add("inventory"); if(/sales|customer|order|crm/.test(lower))groups.add("sales"); if(/people|employee|payroll|workforce|hr\./.test(lower))groups.add("people"); if(/project|task|wbs/.test(lower))groups.add("projects"); } return Object.freeze([...groups].sort()); }
+function operatingOrganizationCapabilities(domain:string):readonly NeonOperatingOrganizationCapability[]{const capabilities:NeonOperatingOrganizationCapability[]=[];if(domain==="procurement"||domain==="both")capabilities.push("procurement");if(domain==="sales"||domain==="both")capabilities.push("sales");if(domain==="shared_services")capabilities.push("shared_services");return Object.freeze(capabilities);}
 function resolveWorkspaces(catalog: ExperienceCatalogRecord): readonly ExperienceWorkspace[] {
   const groups = new Map<string, ExperienceWorkspace & { modules: ExperienceModule[] }>();
   for (const row of [...catalog.associations].sort((a, b) => a.workspaceSortOrder - b.workspaceSortOrder || a.workspaceCode.localeCompare(b.workspaceCode) || a.moduleSortOrder - b.moduleSortOrder || a.moduleCode.localeCompare(b.moduleCode))) {

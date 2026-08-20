@@ -12,7 +12,11 @@ export function createRecordLifecycleService<Transaction>(options: RecordExecuti
       catch { return { kind: "CapabilityUnavailable", entityCode: command.entityCode }; }
       const transition = descriptor.lifecycle?.transitions.find((item) => item.code === command.transitionCode);
       if (!transition || !descriptor.storage.statusField) return { kind: "InvalidTransition", transitionCode: command.transitionCode, reason: "Transition is not published" };
-      const decision = await options.authorizer.authorize({ context: command.context, permissionCode: transition.permissionCode });
+      const decision = await options.authorizer.authorize({
+        context: command.context,
+        permissionCode: transition.permissionCode,
+        resource: { tenantId: command.context.tenantId, resourceCode: command.entityCode, recordId: command.recordId },
+      });
       if (!decision.allowed) return { kind: "Forbidden", permissionCode: transition.permissionCode };
       if (descriptor.storage.versionField && command.expectedVersion === undefined) return { kind: "VersionRequired" };
       return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {

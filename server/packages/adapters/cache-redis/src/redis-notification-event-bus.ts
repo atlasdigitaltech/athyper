@@ -10,6 +10,10 @@ export function createRedisNotificationEventBus(client:Redis,namespace="athyper:
   const pattern=`${namespace}:*`;
   let closed=false;
   const ready=(async()=>{if(subscriber.status==="wait")await subscriber.connect();await subscriber.psubscribe(pattern);})();
+  // Subscription fan-out is optional and must fail closed. Keep the rejected
+  // promise observable by publish/close without allowing an unavailable or
+  // ACL-denied subscriber to terminate the entire API during startup.
+  void ready.catch(()=>undefined);
   subscriber.on("pmessage",(_pattern,channel,message)=>{const scoped=listeners.get(channel);if(!scoped)return;let event:NotificationStreamEvent;try{event=parse(message);}catch{return;}void Promise.allSettled([...scoped].map(listener=>listener(event)));});
   return {
     async publish(event){if(closed)return;await ready;await client.publish(key(namespace,event.tenantId,event.principalId),JSON.stringify(event));},

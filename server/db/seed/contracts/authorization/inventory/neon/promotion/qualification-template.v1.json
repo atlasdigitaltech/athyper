@@ -1,0 +1,778 @@
+{
+  "contractVersion": "athyper.authorization.inventory-promotion-qualification.v1",
+  "plane": "neon",
+  "defaultDecision": "deny_unqualified",
+  "qualifications": [
+    {
+      "permissionCode": "neon.collaboration.attachment.archive",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "attachment",
+        "transitionCode": "archive"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-attachments"
+      }
+    },
+    {
+      "permissionCode": "neon.collaboration.attachment.create",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-attachments"
+      }
+    },
+    {
+      "permissionCode": "neon.collaboration.attachment.download",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-documents"
+      }
+    },
+    {
+      "permissionCode": "neon.collaboration.attachment.finalize",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "attachment",
+        "transitionCode": "finalize"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-attachments"
+      }
+    },
+    {
+      "permissionCode": "neon.collaboration.attachment.read",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "not_applicable"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-attachments"
+      }
+    },
+    {
+      "permissionCode": "neon.content.content_item.archive",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "content_item",
+        "transitionCode": "archive"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-content"
+      }
+    },
+    {
+      "permissionCode": "neon.content.content_item.create",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-content"
+      }
+    },
+    {
+      "permissionCode": "neon.content.content_item.grant_access",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-content"
+      }
+    },
+    {
+      "permissionCode": "neon.content.content_item.publish",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "content_item",
+        "transitionCode": "publish"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-content"
+      }
+    },
+    {
+      "permissionCode": "neon.content.content_item.read",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "not_applicable"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-content"
+      }
+    },
+    {
+      "permissionCode": "neon.content.content_item.revoke_access",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-content"
+      }
+    },
+    {
+      "permissionCode": "neon.content.content_item.submit",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "content_item",
+        "transitionCode": "submit"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-content"
+      }
+    },
+    {
+      "permissionCode": "neon.content.content_item.update",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-content"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.company_code.activate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "company_code",
+        "transitionCode": "activate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.company_code.archive",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "company_code",
+        "transitionCode": "archive"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.company_code.create",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.company_code.deactivate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "company_code",
+        "transitionCode": "deactivate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.company_code.read",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "not_applicable"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.company_code.retire",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "company_code",
+        "transitionCode": "retire"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.company_code.update",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.legal_entity.activate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "legal_entity",
+        "transitionCode": "activate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.legal_entity.archive",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "legal_entity",
+        "transitionCode": "archive"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.legal_entity.create",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.legal_entity.deactivate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "legal_entity",
+        "transitionCode": "deactivate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.legal_entity.read",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "not_applicable"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.legal_entity.retire",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "legal_entity",
+        "transitionCode": "retire"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.legal_entity.update",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.activate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "operating_organization",
+        "transitionCode": "activate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.archive",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "operating_organization",
+        "transitionCode": "archive"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.assign_company_code",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.configure_profile",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.create",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.deactivate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "operating_organization",
+        "transitionCode": "deactivate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.read",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "not_applicable"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.retire",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "operating_organization",
+        "transitionCode": "retire"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.unassign_company_code",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.organization.operating_organization.update",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-service-master-data"
+      }
+    },
+    {
+      "permissionCode": "neon.relationship.business_partner.activate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "business_partner",
+        "transitionCode": "activate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-records"
+      }
+    },
+    {
+      "permissionCode": "neon.relationship.business_partner.archive",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "business_partner",
+        "transitionCode": "archive"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-records"
+      }
+    },
+    {
+      "permissionCode": "neon.relationship.business_partner.create",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-records"
+      }
+    },
+    {
+      "permissionCode": "neon.relationship.business_partner.deactivate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "business_partner",
+        "transitionCode": "deactivate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-records"
+      }
+    },
+    {
+      "permissionCode": "neon.relationship.business_partner.read",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "not_applicable"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-records"
+      }
+    },
+    {
+      "permissionCode": "neon.relationship.business_partner.update",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/svc-records"
+      }
+    }
+  ]
+}

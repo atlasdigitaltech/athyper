@@ -6,7 +6,7 @@
   "rules": {
     "canonicalPermissionCode": "{product}.{domain}.{entity}.{operation}",
     "entityOperationCardinality": "one_operation_to_one_entity_bound_permission",
-    "aliases": "migration_import_only_and_contextual",
+    "aliases": "forbidden",
     "runtimeResolution": "exact_permission_id_only",
     "genericMutationAuthority": "forbidden",
     "highRiskMetadata": [
@@ -55,15 +55,5 @@
     "delegable",
     "planes",
     "provenance"
-  ],
-  "requiredAliasContext": [
-    "legacyCode",
-    "entityCode",
-    "operationCode",
-    "plane",
-    "canonicalPermissionCode",
-    "reason",
-    "introducedVersion",
-    "removalVersion"
   ]
 }

@@ -23,6 +23,8 @@ services:
     environment:
       POSTGRES_USER: ${DB_ADMIN_USER}
       POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD}
+      DBPOOL_APPS_USER: ${DBPOOL_APPS_USER}
+      DBPOOL_APPS_PASSWORD: ${DBPOOL_APPS_PASSWORD}
       POSTGRES_DB: athyper_neon
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:

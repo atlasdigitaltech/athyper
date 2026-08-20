@@ -66,6 +66,7 @@ for (const plane of planes) {
     "common/authz/08_triggers.sql",
     "common/authz/10_rls.sql",
     "common/authz/11_grants.sql",
+    "common/authz/15_permission_scope_compatibility_seed.sql",
   ]) {
     if (!entries.includes(projectionFile)) fail(`${plane} manifest omits ${projectionFile}`);
   }
@@ -104,6 +105,38 @@ else pass("active provisioning references only common and plane DDL");
 await access(resolve(databaseRoot, "ddl/common/_manifest.txt"));
 await access(resolve(repositoryRoot, "scripts/policy/authorization-legacy-freeze.ts"));
 pass("common manifest and authorization freeze policy are present");
+
+const commonMasterTables = await readFile(
+  resolve(databaseRoot, "ddl/common/master/03_platform_tables.sql"),
+  "utf8",
+);
+const commonMasterRelations = [
+  "tenant", "tenant_profile", "tenant_relationship", "workspace", "module",
+  "address", "address_link", "contact_link", "contact_email", "contact_phone",
+  "principal", "principal_profile", "principal_identity_binding",
+  "principal_ui_profile", "principal_ui_preference",
+  "principal_notification_preference", "saved_view", "record_bookmark",
+  "external_reference", "team", "team_member", "brand_profile", "letterhead",
+  "print_profile", "template", "template_binding",
+];
+for (const relation of commonMasterRelations) {
+  if (!commonMasterTables.includes(`CREATE TABLE master.${relation}`)) {
+    fail(`common master core omits master.${relation}`);
+  }
+}
+for (const plane of planes) {
+  const manifest = await readFile(resolve(databaseRoot, `ddl/planes/${plane}/_manifest.txt`), "utf8");
+  if (!manifest.includes("common/master/03_platform_tables.sql")) {
+    fail(`${plane} manifest omits the common master table core`);
+  }
+  const extension = await readFile(resolve(databaseRoot, `ddl/planes/${plane}/master/03_tables.sql`), "utf8");
+  for (const relation of commonMasterRelations) {
+    if (extension.includes(`CREATE TABLE master.${relation}`)) {
+      fail(`${plane} master extension duplicates common master.${relation}`);
+    }
+  }
+}
+if (failures === 0) pass("all planes install one non-duplicated common master table core");
 
 const controlTables = await readFile(resolve(databaseRoot, "ddl/common/control/03_tables.sql"), "utf8");
 for (const relation of ["workspace", "module", "workspace_module", "subscription_plan_module"]) {
@@ -150,6 +183,7 @@ for (const forbiddenColumn of ["tenant_id", "permission_id", "plane_code", "sour
 const planeAuthorityTables = localProjectionTables;
 for (const relation of [
   "permission", "plane_membership", "scope_target", "role", "role_permission",
+  "permission_scope_kind",
   "principal_group", "group_member", "group_role", "deny_rule", "delegation",
   "delegation_grant", "override", "record_acl", "trusted_device",
 ]) {
@@ -157,6 +191,43 @@ for (const relation of [
   else pass(`common plane-local authz.${relation} is defined`);
 }
 const localProjectionFunctions = await readFile(resolve(databaseRoot, "ddl/common/authz/07_functions.sql"), "utf8");
+const serviceRoles = await readFile(resolve(databaseRoot, "ddl/common/_database/01_service_roles.sql"), "utf8");
+const localProjectionRls = await readFile(resolve(databaseRoot, "ddl/common/authz/10_rls.sql"), "utf8");
+const localAuthorityIndexes = await readFile(resolve(databaseRoot, "ddl/common/authz/06_indexes.sql"), "utf8");
+for (const constraint of ["plane_membership_no_overlap", "group_member_no_overlap", "group_role_no_overlap", "application_projection_no_overlap"]) {
+  if (!localAuthorityIndexes.includes(constraint)) fail(`temporal authority constraint ${constraint} is missing`);
+  else pass(`temporal authority constraint ${constraint} is defined`);
+}
+if (!/fn_reconcile_expired_authority[\s\S]*v_trusted_devices integer[\s\S]*UPDATE authz\.trusted_device[\s\S]*tenant_id = p_tenant_id[\s\S]*expires_at <= p_effective_at[\s\S]*'trustedDevices',v_trusted_devices/.test(localProjectionFunctions)) {
+  fail("expired authority lifecycle reconciler omits coordinate-bounded trusted-device revocation evidence");
+} else {
+  pass("expired authority lifecycle reconciler revokes trusted devices at supplied tenant/time coordinates");
+}
+if (!/fn_revoke_principal_trusted_devices[\s\S]*current_tenant_id\(\)[\s\S]*current_principal_id_soft\(\)/.test(localProjectionFunctions)) {
+  fail("trusted-device bulk revocation is not bound to current tenant and principal");
+} else {
+  pass("trusted-device bulk revocation is bound to current tenant and principal");
+}
+if (!/fn_activate_application_projection[\s\S]*pg_advisory_xact_lock[\s\S]*status='retired'[\s\S]*status='active'/.test(localProjectionFunctions)) {
+  fail("application projection rollover is not serialized and atomic");
+} else {
+  pass("application projection rollover is serialized and atomic");
+}
+for (const role of ["athyper_projection_owner", "athyper_projection_breakglass"]) {
+  if (!new RegExp(`CREATE ROLE ${role}[\\s\\S]*?NOLOGIN[\\s\\S]*?NOBYPASSRLS`).test(serviceRoles)) {
+    fail(`${role} is not a NOLOGIN NOBYPASSRLS role`);
+  } else pass(`${role} is a NOLOGIN NOBYPASSRLS role`);
+}
+if (!localProjectionFunctions.includes("authz.fn_stage_application_projection")) {
+  fail("function-only application projection staging API is missing");
+} else pass("function-only application projection staging API is defined");
+if (/projection_(?:seed_)?write[^\n]*CURRENT_USER|entity_operation_(?:scope_)?binding_(?:seed_)?write[\s\S]{0,80}CURRENT_USER/.test(localProjectionRls)) {
+  fail("projection RLS still grants writes to CURRENT_USER");
+} else pass("projection RLS contains no CURRENT_USER write policy");
+if (!/projection_owner_write[\s\S]*athyper_projection_owner/.test(localProjectionRls)
+  || !/projection_breakglass_write[\s\S]*athyper_projection_breakglass/.test(localProjectionRls)) {
+  fail("projection owner and break-glass write policies are incomplete");
+} else pass("projection owner and break-glass write policies are explicit");
 if (!localProjectionFunctions.includes("authz.fn_resolve_active_application_projections")) {
   fail("cross-tenant immutable organization projection resolver is missing");
 } else {
@@ -172,6 +243,15 @@ if (!localProjectionGrants.includes("GRANT EXECUTE ON FUNCTION authz.fn_resolve_
 } else {
   pass("application role can execute the organization projection resolver");
 }
+const projectionApplierDirectDml = localProjectionGrants.split(";").some((statement) =>
+  /\bGRANT\b[\s\S]*\b(?:INSERT|UPDATE|DELETE|TRUNCATE)\b[\s\S]*\bTO\s+athyper_projection_applier\b/i.test(statement),
+);
+if (projectionApplierDirectDml) {
+  fail("projection applier still has direct table mutation privileges");
+} else pass("projection applier is function-only");
+if (!/ALTER FUNCTION authz\.fn_stage_application_projection[\s\S]*OWNER TO athyper_projection_owner/.test(localProjectionGrants)) {
+  fail("projection mutation APIs are not transferred to the dedicated owner");
+} else pass("projection mutation APIs use the dedicated owner");
 
 const runtimeTables = await readFile(resolve(databaseRoot, "ddl/common/runtime_meta/03_tables.sql"), "utf8");
 for (const relation of ["entity_contract", "entity_descriptor"]) {

@@ -1,0 +1,2568 @@
+{
+  "contractVersion": "athyper.authorization.mesh-table-coverage.v1",
+  "plane": "mesh",
+  "mode": "inventory_only_non_enforcing",
+  "source": {
+    "ddlSources": [
+      "ddl/common/master/03_platform_tables.sql",
+      "ddl/common/master/03_tables.sql",
+      "ddl/planes/mesh/master/03_tables.sql",
+      "ddl/common/document/03_tables.sql",
+      "ddl/planes/mesh/document/03_tables.sql",
+      "ddl/planes/mesh/mesh/03_tables.sql"
+    ],
+    "repositoryRoots": [
+      "apps",
+      "packages",
+      "server/apps",
+      "server/packages",
+      "tools/scripts"
+    ],
+    "reviewedSlicesContract": "seed/contracts/authorization/inventory/mesh/reviewed-slices.v1.json",
+    "studioMeshNetworkBoundary": "seed/contracts/authorization/inventory/mesh/studio-mesh-network-boundary.v1.json",
+    "rlsSource": "ddl/planes/mesh/mesh/10_rls.sql"
+  },
+  "counts": {
+    "tables": 78,
+    "masterTables": 28,
+    "documentTables": 24,
+    "meshTables": 26,
+    "reviewedTables": 8,
+    "pendingReviewTables": 70,
+    "operations": 18,
+    "lifecycles": 2,
+    "crossPlaneNetworkResources": 1,
+    "broadParticipantMutationPolicies": 1,
+    "currentUserBroadWritePolicies": 8,
+    "roles": 0,
+    "grants": 0
+  },
+  "tables": [
+    {
+      "table": "document.attachment",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/adapters/search-meilisearch/src/meilisearch-index.ts",
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
+        "../packages/services/attachments/src/attachment-lifecycle.ts",
+        "../packages/services/attachments/src/attachment-routes.ts",
+        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts",
+        "../packages/services/attachments/src/kysely-attachment-repository.ts",
+        "../packages/services/content/src/kysely-content-resources.ts",
+        "../packages/services/document-derivatives/src/document-derivatives.ts",
+        "../packages/services/document-processing/src/kysely-document-processing-repository.ts",
+        "../packages/services/documents/src/document-service.ts",
+        "../packages/services/documents/src/kysely-document-repositories.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/attachments/src/kysely-attachment-repository.ts",
+        "../packages/services/document-processing/src/kysely-document-processing-repository.ts",
+        "../packages/services/documents/src/kysely-document-repositories.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.attachment_derivative",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/document-derivatives/src/document-derivatives.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/document-derivatives/src/document-derivatives.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.attachment_folder",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.attachment_legal_hold",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/attachments/src/kysely-attachment-repository.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.attachment_legal_hold_event",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.attachment_link",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
+        "../packages/services/attachments/src/kysely-attachment-repository.ts",
+        "../packages/services/content/src/kysely-content-resources.ts",
+        "../packages/services/document-processing/src/kysely-document-processing-repository.ts",
+        "../packages/services/documents/src/kysely-document-repositories.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
+        "../packages/services/attachments/src/kysely-attachment-repository.ts",
+        "../packages/services/content/src/kysely-content-resources.ts",
+        "../packages/services/documents/src/kysely-document-repositories.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.attachment_quota_reservation",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.attachment_quota_usage",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.attachment_series",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/attachments/src/kysely-attachment-repository.ts",
+        "../packages/services/documents/src/kysely-document-repositories.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/attachments/src/kysely-attachment-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.comment",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../../packages/platform/communications/collaboration-ui/src/attachment-client.ts",
+        "../packages/platform/collaboration/src/collaboration-service.ts",
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.comment_draft",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.comment_feed_cursor",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.comment_mention",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.comment_reaction",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.content_item",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [
+        "../packages/services/content/src/content-service.ts",
+        "../packages/services/content/src/kysely-content-acl.ts",
+        "../packages/services/content/src/kysely-content-quota.ts",
+        "../packages/services/content/src/kysely-content-repository.ts",
+        "../packages/services/content/src/kysely-content-resources.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/content/src/kysely-content-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.content_item_access_grant",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/content/src/kysely-content-acl.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/content/src/kysely-content-acl.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.content_item_link",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/content/src/kysely-content-resources.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/content/src/kysely-content-resources.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.content_quota_reservation",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/content/src/kysely-content-quota.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/content/src/kysely-content-quota.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.content_quota_usage",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/content/src/kysely-content-quota.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/content/src/kysely-content-quota.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.conversation",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.conversation_participant",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.multipart_upload",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.multipart_upload_part",
+      "ddlSource": "ddl/planes/mesh/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.work_item",
+      "ddlSource": "ddl/common/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [
+        "../packages/platform/workflow/src/kysely-workflow-repository.ts",
+        "../packages/platform/workflow/src/sla-automation.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/workflow/src/kysely-workflow-repository.ts",
+        "../packages/platform/workflow/src/sla-automation.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.address",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/master-data/src/services.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.address_link",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.brand_profile",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.contact_email",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.contact_link",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/platform/notifications/src/kysely-notification-preferences.ts",
+        "../packages/platform/notifications/src/kysely-notification-repositories.ts",
+        "../packages/platform/notifications/src/notification-planner.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.contact_person",
+      "ddlSource": "ddl/common/master/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.contact_person_role",
+      "ddlSource": "ddl/common/master/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.contact_phone",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.external_reference",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.letterhead",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/documents/src/kysely-document-repositories.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.module",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.principal",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
+        "../packages/platform/iam/src/kysely-permission-resolver.ts",
+        "../packages/platform/notifications/src/kysely-notification-preferences.ts",
+        "../packages/platform/notifications/src/notification-planner.ts",
+        "../packages/platform/preferences/src/kysely-saved-view-repository.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.principal_identity_binding",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.principal_notification_preference",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/platform/notifications/src/kysely-notification-preferences.ts",
+        "../packages/platform/notifications/src/notification-planner.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/notifications/src/kysely-notification-preferences.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.principal_profile",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.principal_ui_preference",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/platform/preferences/src/kysely-saved-view-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/preferences/src/kysely-saved-view-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.principal_ui_profile",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.print_profile",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/documents/src/kysely-document-repositories.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.record_bookmark",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.saved_view",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/platform/preferences/src/kysely-saved-view-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/platform/preferences/src/kysely-saved-view-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.team",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.team_member",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.template",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/documents/src/kysely-document-repositories.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.template_binding",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/documents/src/kysely-document-repositories.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.tenant",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-platform.ts",
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/platform/iam/src/kysely-permission-resolver.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.tenant_profile",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.tenant_relationship",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.workspace",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.bank_account",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.bank_account_disclosure",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.bank_account_link",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.bank_party",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.catalog",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.catalog_audience",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.catalog_availability",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.catalog_item",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.catalog_item_classification",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.catalog_item_identifier",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.catalog_item_uom",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.catalog_price",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.certification",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.certification_type",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.document_acknowledgement",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.document_envelope",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.document_event",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.document_payload",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.network_account",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-platform.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "aggregate_root",
+      "aggregateRoots": [
+        "mesh.network_account"
+      ],
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-mesh",
+      "externallyReadable": true,
+      "externallyWritable": true,
+      "sensitivity": "confidential",
+      "requiredScopeKinds": [
+        "network_account"
+      ],
+      "notes": "Mesh-owned participant boundary. Studio may request pending materialization only; Keycloak and TrustIAM do not own or activate this record."
+    },
+    {
+      "table": "mesh.network_account_commodity_capability",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "aggregate_child",
+      "aggregateRoots": [
+        "mesh.network_account"
+      ],
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-mesh",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "standard",
+      "requiredScopeKinds": [
+        "network_account"
+      ],
+      "notes": "Trade-role capability must remain compatible with the account role and projected role ceiling."
+    },
+    {
+      "table": "mesh.network_account_identifier",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "aggregate_child",
+      "aggregateRoots": [
+        "mesh.network_account"
+      ],
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-mesh",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "confidential",
+      "requiredScopeKinds": [
+        "network_account"
+      ],
+      "notes": "Mutated through explicit network-account identifier operations, never generic child CRUD."
+    },
+    {
+      "table": "mesh.network_account_profile",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "aggregate_child",
+      "aggregateRoots": [
+        "mesh.network_account"
+      ],
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-mesh",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "confidential",
+      "requiredScopeKinds": [
+        "network_account"
+      ],
+      "notes": "Mutated only through the network-account configure-profile operation."
+    },
+    {
+      "table": "mesh.network_account_reference",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "aggregate_child",
+      "aggregateRoots": [
+        "mesh.network_account"
+      ],
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-mesh",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "confidential",
+      "requiredScopeKinds": [
+        "network_account"
+      ],
+      "notes": "External reference coordinates remain account-owned and cannot establish network authority."
+    },
+    {
+      "table": "mesh.network_account_tax_registration",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "sensitive_overlay",
+      "aggregateRoots": [
+        "mesh.network_account"
+      ],
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-mesh",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "restricted",
+      "requiredScopeKinds": [
+        "network_account"
+      ],
+      "notes": "Tax registration mutation and verification require a later sensitive-data overlay review; no operation is published in this slice."
+    },
+    {
+      "table": "mesh.network_lifecycle_event",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "immutable_evidence",
+      "aggregateRoots": [
+        "mesh.network_account",
+        "mesh.network_relationship"
+      ],
+      "writerKind": "database_only",
+      "writerOwner": "mesh.trg_record_network_lifecycle",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "confidential",
+      "requiredScopeKinds": [
+        "network_account",
+        "network_relationship"
+      ],
+      "notes": "Append-only lifecycle evidence. It is written by the database trigger in the same transaction and never directly mutated."
+    },
+    {
+      "table": "mesh.network_relationship",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "aggregate_root",
+      "aggregateRoots": [
+        "mesh.network_relationship"
+      ],
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-mesh",
+      "externallyReadable": true,
+      "externallyWritable": true,
+      "sensitivity": "confidential",
+      "requiredScopeKinds": [
+        "network_relationship",
+        "network_account"
+      ],
+      "notes": "Bilateral buyer/supplier edge. Participant and tenant coordinates are immutable; no Studio workflow or unilateral generic update may fabricate acceptance."
+    }
+  ],
+  "operations": [
+    {
+      "entityCode": "network_account",
+      "operationKey": "read",
+      "permissionCode": "mesh.network.network_account.read",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "create",
+      "permissionCode": "mesh.network.network_account.create",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "tenantId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "medium",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "update",
+      "permissionCode": "mesh.network.network_account.update",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "medium",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "configure_profile",
+      "permissionCode": "mesh.network.network_account.configure_profile",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "medium",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "add_identifier",
+      "permissionCode": "mesh.network.network_account.add_identifier",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "medium",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "revoke_identifier",
+      "permissionCode": "mesh.network.network_account.revoke_identifier",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "change_network_role",
+      "permissionCode": "mesh.network.network_account.change_network_role",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "critical",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "activate",
+      "permissionCode": "mesh.network.network_account.activate",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "suspend",
+      "permissionCode": "mesh.network.network_account.suspend",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "reinstate",
+      "permissionCode": "mesh.network.network_account.reinstate",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_account",
+      "operationKey": "retire",
+      "permissionCode": "mesh.network.network_account.retire",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_account",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "networkAccountId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        }
+      ],
+      "participantRule": "single_owner",
+      "riskTier": "critical",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_relationship",
+      "operationKey": "read",
+      "permissionCode": "mesh.network.network_relationship.read",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_relationship",
+      "coordinates": [
+        {
+          "scopeKind": "network_relationship",
+          "coordinateKey": "networkRelationshipId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "actorNetworkAccountId",
+          "coordinateRole": "actor_account",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "buyerNetworkAccountId",
+          "coordinateRole": "buyer_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "supplierNetworkAccountId",
+          "coordinateRole": "supplier_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "buyerTenantId",
+          "coordinateRole": "buyer_tenant",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "supplierTenantId",
+          "coordinateRole": "supplier_tenant",
+          "authorizationRequired": false
+        }
+      ],
+      "participantRule": "either_participant",
+      "riskTier": "low",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_relationship",
+      "operationKey": "request",
+      "permissionCode": "mesh.network.network_relationship.request",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_relationship",
+      "coordinates": [
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "actorNetworkAccountId",
+          "coordinateRole": "actor_account",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "buyerNetworkAccountId",
+          "coordinateRole": "buyer_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "supplierNetworkAccountId",
+          "coordinateRole": "supplier_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "buyerTenantId",
+          "coordinateRole": "buyer_tenant",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "supplierTenantId",
+          "coordinateRole": "supplier_tenant",
+          "authorizationRequired": false
+        }
+      ],
+      "participantRule": "initiator_only",
+      "riskTier": "medium",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_relationship",
+      "operationKey": "accept",
+      "permissionCode": "mesh.network.network_relationship.accept",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_relationship",
+      "coordinates": [
+        {
+          "scopeKind": "network_relationship",
+          "coordinateKey": "networkRelationshipId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "actorNetworkAccountId",
+          "coordinateRole": "actor_account",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "buyerNetworkAccountId",
+          "coordinateRole": "buyer_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "supplierNetworkAccountId",
+          "coordinateRole": "supplier_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "buyerTenantId",
+          "coordinateRole": "buyer_tenant",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "supplierTenantId",
+          "coordinateRole": "supplier_tenant",
+          "authorizationRequired": false
+        }
+      ],
+      "participantRule": "counterparty_only",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_relationship",
+      "operationKey": "reject",
+      "permissionCode": "mesh.network.network_relationship.reject",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_relationship",
+      "coordinates": [
+        {
+          "scopeKind": "network_relationship",
+          "coordinateKey": "networkRelationshipId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "actorNetworkAccountId",
+          "coordinateRole": "actor_account",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "buyerNetworkAccountId",
+          "coordinateRole": "buyer_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "supplierNetworkAccountId",
+          "coordinateRole": "supplier_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "buyerTenantId",
+          "coordinateRole": "buyer_tenant",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "supplierTenantId",
+          "coordinateRole": "supplier_tenant",
+          "authorizationRequired": false
+        }
+      ],
+      "participantRule": "counterparty_only",
+      "riskTier": "medium",
+      "requiresMfa": false,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_relationship",
+      "operationKey": "suspend",
+      "permissionCode": "mesh.network.network_relationship.suspend",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_relationship",
+      "coordinates": [
+        {
+          "scopeKind": "network_relationship",
+          "coordinateKey": "networkRelationshipId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "actorNetworkAccountId",
+          "coordinateRole": "actor_account",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "buyerNetworkAccountId",
+          "coordinateRole": "buyer_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "supplierNetworkAccountId",
+          "coordinateRole": "supplier_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "buyerTenantId",
+          "coordinateRole": "buyer_tenant",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "supplierTenantId",
+          "coordinateRole": "supplier_tenant",
+          "authorizationRequired": false
+        }
+      ],
+      "participantRule": "either_participant",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "requiresSod": false,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_relationship",
+      "operationKey": "resume",
+      "permissionCode": "mesh.network.network_relationship.resume",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_relationship",
+      "coordinates": [
+        {
+          "scopeKind": "network_relationship",
+          "coordinateKey": "networkRelationshipId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "actorNetworkAccountId",
+          "coordinateRole": "actor_account",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "buyerNetworkAccountId",
+          "coordinateRole": "buyer_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "supplierNetworkAccountId",
+          "coordinateRole": "supplier_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "buyerTenantId",
+          "coordinateRole": "buyer_tenant",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "supplierTenantId",
+          "coordinateRole": "supplier_tenant",
+          "authorizationRequired": false
+        }
+      ],
+      "participantRule": "both_participants",
+      "riskTier": "high",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    },
+    {
+      "entityCode": "network_relationship",
+      "operationKey": "terminate",
+      "permissionCode": "mesh.network.network_relationship.terminate",
+      "permissionKind": "entity_operation",
+      "storageRoot": "mesh.network_relationship",
+      "coordinates": [
+        {
+          "scopeKind": "network_relationship",
+          "coordinateKey": "networkRelationshipId",
+          "coordinateRole": "target",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "actorNetworkAccountId",
+          "coordinateRole": "actor_account",
+          "authorizationRequired": true
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "buyerNetworkAccountId",
+          "coordinateRole": "buyer_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "network_account",
+          "coordinateKey": "supplierNetworkAccountId",
+          "coordinateRole": "supplier_account",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "buyerTenantId",
+          "coordinateRole": "buyer_tenant",
+          "authorizationRequired": false
+        },
+        {
+          "scopeKind": "tenant",
+          "coordinateKey": "supplierTenantId",
+          "coordinateRole": "supplier_tenant",
+          "authorizationRequired": false
+        }
+      ],
+      "participantRule": "either_participant",
+      "riskTier": "critical",
+      "requiresMfa": true,
+      "requiresSod": true,
+      "serviceOwner": "@athyper/server-plane-mesh"
+    }
+  ],
+  "lifecycles": [
+    {
+      "entityCode": "network_account",
+      "storageRoot": "mesh.network_account",
+      "statusField": "status",
+      "transitions": [
+        {
+          "code": "activate",
+          "from": [
+            "pending"
+          ],
+          "to": "active",
+          "permissionCode": "mesh.network.network_account.activate"
+        },
+        {
+          "code": "suspend",
+          "from": [
+            "active"
+          ],
+          "to": "suspended",
+          "permissionCode": "mesh.network.network_account.suspend"
+        },
+        {
+          "code": "reinstate",
+          "from": [
+            "suspended"
+          ],
+          "to": "active",
+          "permissionCode": "mesh.network.network_account.reinstate"
+        },
+        {
+          "code": "retire",
+          "from": [
+            "pending",
+            "active",
+            "suspended"
+          ],
+          "to": "retired",
+          "permissionCode": "mesh.network.network_account.retire"
+        }
+      ]
+    },
+    {
+      "entityCode": "network_relationship",
+      "storageRoot": "mesh.network_relationship",
+      "statusField": "status",
+      "transitions": [
+        {
+          "code": "accept",
+          "from": [
+            "requested"
+          ],
+          "to": "active",
+          "permissionCode": "mesh.network.network_relationship.accept"
+        },
+        {
+          "code": "reject",
+          "from": [
+            "requested"
+          ],
+          "to": "terminated",
+          "permissionCode": "mesh.network.network_relationship.reject"
+        },
+        {
+          "code": "suspend",
+          "from": [
+            "active"
+          ],
+          "to": "suspended",
+          "permissionCode": "mesh.network.network_relationship.suspend"
+        },
+        {
+          "code": "resume",
+          "from": [
+            "suspended"
+          ],
+          "to": "active",
+          "permissionCode": "mesh.network.network_relationship.resume"
+        },
+        {
+          "code": "terminate",
+          "from": [
+            "active",
+            "suspended"
+          ],
+          "to": "terminated",
+          "permissionCode": "mesh.network.network_relationship.terminate"
+        }
+      ]
+    }
+  ],
+  "studioMeshNetworkBoundary": {
+    "contractVersion": "athyper.authorization.studio-mesh-network-boundary.v1",
+    "source": {
+      "plane": "studio",
+      "orchestrationTables": [
+        "onboarding.onboarding_case",
+        "onboarding.onboarding_case_target",
+        "onboarding.onboarding_case_resource",
+        "onboarding.onboarding_compilation_decision",
+        "onboarding.onboarding_case_revision"
+      ],
+      "authorizationProjectionTables": [
+        "trustiam.organization",
+        "trustiam.application_projection",
+        "trustiam.projection_scope"
+      ],
+      "directMeshSql": false,
+      "grantsMeshBusinessAuthority": false,
+      "mayCreateOrAcceptRelationship": false
+    },
+    "target": {
+      "plane": "mesh",
+      "applierKind": "plane_local_provisioner",
+      "applierOwner": "@athyper/server-plane-mesh",
+      "implementationStatus": "required_not_implemented",
+      "requiresExactDatabasePlane": true,
+      "defaultNetworkAccountStatus": "pending",
+      "forbidsAuthorizationCatalogMutation": true,
+      "forbidsBusinessActivation": true,
+      "forbidsRelationshipMutation": true
+    },
+    "trustIamCeiling": {
+      "projectedScopeKind": "network_account",
+      "requiredCeilingMode": "exact",
+      "networkRoleCeilingRequired": true,
+      "relationshipScopeMode": "derived_descendant_per_participant",
+      "missingOrSuspendedProjection": "deny",
+      "roleCeilingViolation": "deny"
+    },
+    "commandBoundary": {
+      "schemaVersion": 1,
+      "exactAudienceBinding": true,
+      "authenticatedServiceActor": true,
+      "allowlistedCommandCode": true,
+      "targetTenantBinding": true,
+      "desiredVersionAndHash": true,
+      "idempotencyFingerprint": true,
+      "staleAndSameVersionConflictDenial": true,
+      "atomicMutationReceiptAndOutbox": true
+    },
+    "lifecycleSeparation": {
+      "keycloakAdmissionMeans": "identity_organization_and_assurance_only",
+      "onboardingActiveMeans": "orchestration_converged",
+      "trustIamProjectionMeans": "network_account_and_role_ceiling_only",
+      "meshAccountActiveMeans": "plane_local_network_activation",
+      "meshRelationshipActiveMeans": "bilateral_participant_acceptance"
+    },
+    "resource": {
+      "resourceKind": "network_account",
+      "targetTable": "mesh.network_account",
+      "createScopeKind": "tenant",
+      "createScopeCoordinateKey": "tenantId",
+      "allowedCommandOperations": [
+        "apply",
+        "retain"
+      ],
+      "retention": "retain_legal_and_audit",
+      "applyConstraint": "create_pending_or_update_existing_pending",
+      "allowedDesiredStateFields": [
+        "canonicalPartyId",
+        "accountPurposeCode",
+        "accountCode",
+        "displayName",
+        "legalName",
+        "networkRole",
+        "countryCode",
+        "defaultCurrency",
+        "capabilities",
+        "metadata",
+        "profile"
+      ],
+      "immutableAfterCreateFields": [
+        "canonicalPartyId",
+        "accountPurposeCode",
+        "accountCode",
+        "networkRole"
+      ],
+      "activationPermissionCode": "mesh.network.network_account.activate"
+    },
+    "bilateralRules": {
+      "bothAccountCoordinatesRequired": true,
+      "bothTenantCoordinatesRequired": true,
+      "initiatorCannotAccept": true,
+      "bothAccountsMustBeActive": true,
+      "relationshipMustBeActiveForExchange": true,
+      "missingParticipantCoordinate": "deny"
+    },
+    "requiredBeforeEnforcement": [
+      "Implement a Mesh-only network-account provisioner with an allowlist for pending account and profile state.",
+      "Bind every command to source authority tenant, onboarding case, canonical party, target tenant, desired version and desired hash with verifiable provenance.",
+      "Reject unknown command codes, wrong plane, wrong tenant, stale version, same-version hash conflict, network-role ceiling violations and non-pending target mutation.",
+      "Prevent Studio provisioning from creating, accepting, suspending, resuming or terminating network relationships.",
+      "Replace participant FOR ALL mutation RLS with participant SELECT policies and function-only, side-aware lifecycle transitions.",
+      "Remove or qualify CURRENT_USER broad-write policies under actual runtime, provisioner, worker and administrator roles.",
+      "Persist mutation, lifecycle evidence, receipt, audit record and outbox event atomically under non-owner, non-BYPASSRLS identities.",
+      "Define durable two-party consent evidence for relationship resume and decide whether same-tenant buyer/supplier relationships are permitted.",
+      "Prove wrong-side acceptance, missing coordinates, inactive account, suspended projection, role-ceiling, replay, cross-tenant and double-apply behavior against live databases."
+    ]
+  },
+  "rlsQualification": {
+    "broadParticipantForAllTables": [
+      "mesh.network_relationship"
+    ],
+    "currentUserBroadWriteTables": [
+      "mesh.network_account",
+      "mesh.network_account_commodity_capability",
+      "mesh.network_account_identifier",
+      "mesh.network_account_profile",
+      "mesh.network_account_reference",
+      "mesh.network_account_tax_registration",
+      "mesh.network_lifecycle_event",
+      "mesh.network_relationship"
+    ]
+  },
+  "releaseBlockers": [
+    "CURRENT_USER broad-write RLS on reviewed tables: mesh.network_account, mesh.network_account_commodity_capability, mesh.network_account_identifier, mesh.network_account_profile, mesh.network_account_reference, mesh.network_account_tax_registration, mesh.network_lifecycle_event, mesh.network_relationship",
+    "broad participant FOR ALL mutation RLS: mesh.network_relationship",
+    "cross-plane applier not implemented: @athyper/server-plane-mesh",
+    "pending table review: document.attachment",
+    "pending table review: document.attachment_derivative",
+    "pending table review: document.attachment_folder",
+    "pending table review: document.attachment_legal_hold",
+    "pending table review: document.attachment_legal_hold_event",
+    "pending table review: document.attachment_link",
+    "pending table review: document.attachment_quota_reservation",
+    "pending table review: document.attachment_quota_usage",
+    "pending table review: document.attachment_series",
+    "pending table review: document.comment",
+    "pending table review: document.comment_draft",
+    "pending table review: document.comment_feed_cursor",
+    "pending table review: document.comment_mention",
+    "pending table review: document.comment_reaction",
+    "pending table review: document.content_item",
+    "pending table review: document.content_item_access_grant",
+    "pending table review: document.content_item_link",
+    "pending table review: document.content_quota_reservation",
+    "pending table review: document.content_quota_usage",
+    "pending table review: document.conversation",
+    "pending table review: document.conversation_participant",
+    "pending table review: document.multipart_upload",
+    "pending table review: document.multipart_upload_part",
+    "pending table review: document.work_item",
+    "pending table review: master.address",
+    "pending table review: master.address_link",
+    "pending table review: master.brand_profile",
+    "pending table review: master.contact_email",
+    "pending table review: master.contact_link",
+    "pending table review: master.contact_person",
+    "pending table review: master.contact_person_role",
+    "pending table review: master.contact_phone",
+    "pending table review: master.external_reference",
+    "pending table review: master.letterhead",
+    "pending table review: master.module",
+    "pending table review: master.principal",
+    "pending table review: master.principal_identity_binding",
+    "pending table review: master.principal_notification_preference",
+    "pending table review: master.principal_profile",
+    "pending table review: master.principal_ui_preference",
+    "pending table review: master.principal_ui_profile",
+    "pending table review: master.print_profile",
+    "pending table review: master.record_bookmark",
+    "pending table review: master.saved_view",
+    "pending table review: master.team",
+    "pending table review: master.team_member",
+    "pending table review: master.template",
+    "pending table review: master.template_binding",
+    "pending table review: master.tenant",
+    "pending table review: master.tenant_profile",
+    "pending table review: master.tenant_relationship",
+    "pending table review: master.workspace",
+    "pending table review: mesh.bank_account",
+    "pending table review: mesh.bank_account_disclosure",
+    "pending table review: mesh.bank_account_link",
+    "pending table review: mesh.bank_party",
+    "pending table review: mesh.catalog",
+    "pending table review: mesh.catalog_audience",
+    "pending table review: mesh.catalog_availability",
+    "pending table review: mesh.catalog_item",
+    "pending table review: mesh.catalog_item_classification",
+    "pending table review: mesh.catalog_item_identifier",
+    "pending table review: mesh.catalog_item_uom",
+    "pending table review: mesh.catalog_price",
+    "pending table review: mesh.certification",
+    "pending table review: mesh.certification_type",
+    "pending table review: mesh.document_acknowledgement",
+    "pending table review: mesh.document_envelope",
+    "pending table review: mesh.document_event",
+    "pending table review: mesh.document_payload"
+  ],
+  "sha256": "c21255c1435608c4d146afe5c352989a46578b22bf73bed24ac2b99ff4475429"
+}

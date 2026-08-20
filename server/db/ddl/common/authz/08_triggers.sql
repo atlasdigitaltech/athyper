@@ -20,6 +20,10 @@ CREATE TRIGGER trg_permission_50_updated_at
 BEFORE UPDATE ON authz.permission
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
+CREATE TRIGGER trg_permission_scope_kind_50_updated_at
+BEFORE UPDATE ON authz.permission_scope_kind
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
 CREATE CONSTRAINT TRIGGER trg_permission_publish_valid
 AFTER INSERT OR UPDATE OF status ON authz.permission
 DEFERRABLE INITIALLY DEFERRED

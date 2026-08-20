@@ -346,7 +346,7 @@ BEGIN
         operation,outcome,severity,entity_type,entity_id,scope_type,scope_id,
         actor_principal_id,actor_type,audit_reason_code_id,reason_comment,
         old_values,new_values,changed_fields,context,source_service,
-        trace_id,span_id,correlation_id,request_id,occurred_at
+        trace_id,span_id,correlation_id,request_id,occurred_at,recorded_at
     ) VALUES (
         v_tenant_id,v_plane,p_event_code,'pending',1,
         p_operation,p_outcome,v_severity,p_entity_type,p_entity_id,
@@ -354,7 +354,8 @@ BEGIN
         v_actor_id,v_actor_type,p_audit_reason_code_id,p_reason_comment,
         p_old_values,p_new_values,p_changed_fields,coalesce(p_context,'{}'::jsonb),
         coalesce(nullif(current_setting('application_name',true),''),'unknown'),
-        v_trace_id,v_span_id,p_correlation_id,p_request_id,p_occurred_at
+        v_trace_id,v_span_id,p_correlation_id,p_request_id,p_occurred_at,
+        greatest(clock_timestamp(),p_occurred_at)
     ) RETURNING id INTO v_id;
     RETURN v_id;
 END;

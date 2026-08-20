@@ -1,0 +1,311 @@
+{
+  "contractVersion": "athyper.authorization.scope-compatibility.v1",
+  "scopeVersion": "1.0.0",
+  "plane": "studio",
+  "defaultScopeBehavior": "deny_undeclared",
+  "permissions": [
+    {
+      "permissionCode": "studio.iam.application_projection.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.iam.application_projection.replay",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.iam.idp.manage",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.iam.idp.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.iam.parameter.manage",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.jobs.board.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.jobs.queue.manage",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract.break_glass",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract.edit",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract.export",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract.import",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract.publish",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract.review",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract.rollback",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract.submit",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.contract_draft.create",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.metadata.overlay.edit",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "workspace",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.platform.catalog.manage",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "module",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.platform.catalog.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "module",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.platform.reference.import",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "module",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.platform.reference.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "module",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.platform.subscriptions.manage",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.platform.subscriptions.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.platform.taxonomy.import",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "module",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "studio.platform.taxonomy.view",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "module",
+          "propagation": "exact"
+        }
+      ]
+    }
+  ],
+  "sha256": "8d04b85b5f9fe13dcb32758e7ee9d20cabd6df44fde772bf99a29e85694f5176"
+}

@@ -18,6 +18,23 @@ export interface EffectivePermissionEntry {
   readonly reason: EffectiveGrantReason;
 }
 
+export interface EffectivePermissionRequirement {
+  readonly permissionCode: string;
+  readonly moduleId: string;
+  readonly riskTier: "low" | "medium" | "high" | "critical";
+  readonly requiresMfa: boolean;
+  readonly requiresSod: boolean;
+  readonly entitled: boolean;
+}
+
+export interface EffectiveOperationBinding {
+  readonly entityCode: string;
+  readonly operationKey: string;
+  readonly permissionCode: string;
+  readonly decisionMode: string;
+  readonly requiredScopeKinds: readonly string[];
+}
+
 /** JSON-safe authorization scope suitable for crossing package boundaries. */
 export interface EffectiveAuthorizationScope {
   readonly permissionCode: string;
@@ -27,6 +44,22 @@ export interface EffectiveAuthorizationScope {
   readonly operatingOrganizationIds: readonly string[];
   readonly networkMembershipIds: readonly string[];
   readonly visibility: "all" | "team" | "own";
+}
+
+export type EffectiveAuthorizationProofKind = "role" | "delegation" | "record_acl" | "override" | "deny";
+
+/** Exact-plane evidence retained in the immutable request snapshot. */
+export interface EffectiveAuthorizationEvidence {
+  readonly permissionCode: string;
+  readonly effect: "allow" | "deny";
+  readonly proof: EffectiveAuthorizationProofKind;
+  readonly scopeTargetId: string;
+  readonly scopeKind: string;
+  readonly targetId: string;
+  readonly propagationMode: "exact" | "subtree" | "member_companies" | "relationship_participants";
+  readonly resourceCode?: string;
+  readonly recordId?: string;
+  readonly effectiveUntil?: string;
 }
 
 export interface EffectivePermissionSnapshot {
@@ -45,6 +78,9 @@ export interface EffectivePermissionSnapshot {
   readonly planeExcluded: readonly string[];
   readonly entries: readonly EffectivePermissionEntry[];
   readonly authorizationScopes: readonly EffectiveAuthorizationScope[];
+  readonly evidence?: readonly EffectiveAuthorizationEvidence[];
+  readonly requirements?: readonly EffectivePermissionRequirement[];
+  readonly operationBindings?: readonly EffectiveOperationBinding[];
 }
 
 export interface VerifiedRequestContext extends VerifiedIdentity {

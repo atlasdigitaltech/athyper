@@ -5,20 +5,33 @@ const path = require("path");
 
 const repoRoot = path.resolve(__dirname, "..", "..");
 const fixturePath = path.join(repoRoot, "stack", "config", "iam", "realm-athyper-demosetup.json");
-const principalSeedPath = path.join(
-  repoRoot,
-  "server",
-  "db",
-  "seed",
-  "tenants",
-  "neon",
-  "010_demo",
-  "900_principals",
-  "001_demo_principals.sql",
+const seedRoot = path.join(repoRoot, "server", "db", "seed");
+const manifestPath = path.join(seedRoot, "manifests", "three-plane-demo.v1.json");
+
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, ""));
+}
+
+const fixture = readJson(fixturePath);
+const manifest = readJson(manifestPath);
+const authorizationPacks = Object.fromEntries(
+  Object.entries(manifest.planes).map(([plane, definition]) => [
+    plane,
+    readJson(path.resolve(path.dirname(manifestPath), definition.authorizationPack)),
+  ]),
 );
-const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
-const principalSeed = fs.readFileSync(principalSeedPath, "utf8");
+const scenarioPacks = Object.fromEntries(
+  manifest.tenants.map((tenant) => [
+    tenant.code,
+    readJson(path.resolve(path.dirname(manifestPath), tenant.scenarioPack)),
+  ]),
+);
 const errors = [];
+const expectedStudioTenantAdmins = new Map([
+  ["athyper", ["athyper.admin", "athq.admin"]],
+  ["technostat", ["tksa.admin"]],
+  ["cirrusatlantic", ["catl.admin"]],
+]);
 
 const legalEntities = [
   ["01", "athq", "LE-ATHQ"], ["02", "acfb", "LE-ACFB"], ["03", "adpm", "LE-ADPM"],
@@ -43,6 +56,24 @@ for (const user of users) {
   byId.set(user.id, user);
 }
 
+const configuredStudioTenantAdmins = new Map(
+  (fixture.studioTenantAdmins || []).map((entry) => [entry.tenantCode, entry.usernames]),
+);
+for (const [tenantCode, expectedUsernames] of expectedStudioTenantAdmins) {
+  const configured = configuredStudioTenantAdmins.get(tenantCode) || [];
+  if (JSON.stringify([...configured].sort()) !== JSON.stringify([...expectedUsernames].sort())) {
+    errors.push(`${tenantCode}: Studio tenant admins do not match the explicit demo contract`);
+  }
+  for (const username of configured) {
+    const user = byName.get(username);
+    if (!user) errors.push(`${tenantCode}: missing Studio tenant admin ${username}`);
+    else {
+      if (!user.realmRoles?.includes("STUDIO_USER")) errors.push(`${username}: missing STUDIO_USER`);
+      if (!user.clientRoles?.["studio-web"]?.includes("AUTHORIZED")) errors.push(`${username}: missing studio-web.AUTHORIZED`);
+    }
+  }
+}
+
 function requireUser(username, expectedId, elevated) {
   const user = byName.get(username);
   if (!user) {
@@ -58,25 +89,22 @@ function requireUser(username, expectedId, elevated) {
   if (!user.clientRoles?.["neon-web"]?.includes("AUTHORIZED")) errors.push(`${username}: missing neon-web.AUTHORIZED`);
   if (elevated) {
     if (!user.realmRoles?.includes("MESH_BUYER_USER")) errors.push(`${username}: missing MESH_BUYER_USER`);
-    if (!user.realmRoles?.includes("STUDIO_USER")) errors.push(`${username}: missing STUDIO_USER`);
     if (!user.clientRoles?.["mesh-web"]?.includes("AUTHORIZED")) errors.push(`${username}: missing mesh-web.AUTHORIZED`);
+  }
+  if (username.endsWith(".admin")) {
+    if (!user.realmRoles?.includes("MESH_PARTNER_USER")) errors.push(`${username}: missing MESH_PARTNER_USER`);
+    if (!user.realmRoles?.includes("STUDIO_USER")) errors.push(`${username}: missing STUDIO_USER`);
     if (!user.clientRoles?.["studio-web"]?.includes("AUTHORIZED")) errors.push(`${username}: missing studio-web.AUTHORIZED`);
   }
 }
 
 for (const [leHex, code, legalEntityCode] of legalEntities) {
-  if (!principalSeed.includes(`('${leHex}','${code}')`)) {
-    errors.push(`database principal seed is missing legal entity tuple: ${leHex}/${code}`);
-  }
   const organization = (fixture.organizations || []).find(
     (entry) => entry.attributes?.legal_entity_code?.[0] === legalEntityCode,
   );
   if (!organization) errors.push(`missing organization for ${legalEntityCode}`);
   const members = new Map((organization?.members || []).map((entry) => [entry.username, entry.id]));
   for (const [personaHex, persona] of personas) {
-    if (!principalSeed.includes(`('${personaHex}','${persona}')`)) {
-      errors.push(`database principal seed is missing persona tuple: ${personaHex}/${persona}`);
-    }
     const username = `${code}.${persona}`;
     const id = `aa01${leHex}${personaHex}-0000-0000-0000-000000000000`;
     requireUser(username, id, persona === "owner" || persona === "admin");
@@ -86,6 +114,109 @@ for (const [leHex, code, legalEntityCode] of legalEntities) {
     const expectedId = byName.get(username)?.id;
     if (members.get(username) !== expectedId) {
       errors.push(`${legalEntityCode}: missing tenant-level member ${username}`);
+    }
+  }
+}
+
+const tenantByCode = new Map(manifest.tenants.map((tenant) => [tenant.code, tenant]));
+const fixtureTenantOrganizations = new Map(
+  (fixture.tenantOrganizations || []).map((organization) => [organization.alias, organization]),
+);
+for (const tenant of manifest.tenants) {
+  if (tenant.keycloakOrganizationAlias !== tenant.id) {
+    errors.push(`${tenant.code}: tenant organization alias must equal tenant UUID`);
+  }
+  const organization = fixtureTenantOrganizations.get(tenant.id);
+  if (!organization) {
+    errors.push(`${tenant.code}: missing tenant organization declaration ${tenant.id}`);
+  } else {
+    if (organization.name !== tenant.displayName) {
+      errors.push(`${tenant.code}: tenant organization name does not match manifest`);
+    }
+    if (organization.enabled !== true) errors.push(`${tenant.code}: tenant organization is disabled`);
+    if (organization.attributes?.tenant_code?.[0] !== tenant.code) {
+      errors.push(`${tenant.code}: tenant organization declaration has the wrong tenant_code`);
+    }
+  }
+
+  const scenario = scenarioPacks[tenant.code];
+  if (!scenario || scenario.tenantCode !== tenant.code || scenario.plane !== "neon") {
+    errors.push(`${tenant.code}: missing or invalid Neon tenant scenario pack`);
+    continue;
+  }
+  for (const entity of scenario.legalEntities || []) {
+    const legalOrganization = (fixture.organizations || []).find(
+      (entry) => entry.alias === entity.scopeKey,
+    );
+    if (!legalOrganization) {
+      errors.push(`${tenant.code}: missing legal-entity organization ${entity.scopeKey}`);
+      continue;
+    }
+    if (legalOrganization.attributes?.tenant_code?.[0] !== tenant.code) {
+      errors.push(`${entity.scopeKey}: Keycloak tenant_code does not match ${tenant.code}`);
+    }
+    if (legalOrganization.attributes?.legal_entity_code?.[0]?.toLowerCase() !== entity.code) {
+      errors.push(`${entity.scopeKey}: Keycloak legal_entity_code does not match ${entity.code}`);
+    }
+    if (legalOrganization.name !== entity.name) {
+      errors.push(`${entity.scopeKey}: Keycloak organization name does not match scenario pack`);
+    }
+    const buyer = legalOrganization.attributes?.buyer_account_code?.[0];
+    const supplier = legalOrganization.attributes?.supplier_account_code?.[0];
+    if (!/^BNA-[0-9]{10}$/.test(buyer || "")) errors.push(`${entity.scopeKey}: invalid buyer account`);
+    if (!/^SNA-[0-9]{10}$/.test(supplier || "")) errors.push(`${entity.scopeKey}: invalid supplier account`);
+    if (buyer === supplier) errors.push(`${entity.scopeKey}: buyer and supplier accounts must be distinct`);
+  }
+}
+
+const organizationMembers = new Map(
+  (fixture.organizations || []).map((organization) => [
+    organization.alias,
+    new Set((organization.members || []).map((member) => member.id)),
+  ]),
+);
+let compiledContextCount = 0;
+let compiledLegalScopeCount = 0;
+for (const [plane, pack] of Object.entries(authorizationPacks)) {
+  const expectedRealmRole = plane === "studio" ? "STUDIO_USER" : plane === "neon" ? "NEON_USER" : null;
+  const expectedClient = `${plane}-web`;
+  for (const subject of pack.subjectAssignments || []) {
+    const assignments = (subject.planes || []).filter((assignment) => assignment.plane === plane);
+    if (assignments.length === 0) continue;
+    const user = byId.get(subject.keycloakSubject);
+    if (!user) {
+      errors.push(`${plane}/${subject.username}: compiled Keycloak subject does not exist`);
+      continue;
+    }
+    if (user.username !== subject.username) {
+      errors.push(`${plane}/${subject.keycloakSubject}: compiled username does not match Keycloak`);
+    }
+    if (subject.principalId !== subject.keycloakSubject) {
+      errors.push(`${plane}/${subject.username}: compiled external principal coordinate differs from subject`);
+    }
+    for (const tenantCode of subject.tenantCodes || []) {
+      if (!tenantByCode.has(tenantCode)) errors.push(`${plane}/${subject.username}: unknown tenant ${tenantCode}`);
+      compiledContextCount += 1;
+    }
+    if (expectedRealmRole && !user.realmRoles?.includes(expectedRealmRole)) {
+      errors.push(`${plane}/${subject.username}: missing ${expectedRealmRole}`);
+    }
+    if (plane === "mesh" && !(user.realmRoles || []).some((role) => /^MESH_.+_USER$/.test(role))) {
+      errors.push(`${plane}/${subject.username}: missing a Mesh realm access role`);
+    }
+    if (!user.clientRoles?.[expectedClient]?.includes("AUTHORIZED")) {
+      errors.push(`${plane}/${subject.username}: missing ${expectedClient}.AUTHORIZED`);
+    }
+    for (const assignment of assignments) {
+      for (const scope of assignment.scopedRoleAssignments || []) {
+        if (scope.scopeKind !== "legal_entity") continue;
+        compiledLegalScopeCount += 1;
+        const members = organizationMembers.get(scope.scopeKey);
+        if (!members) errors.push(`${plane}/${subject.username}: unknown legal-entity scope ${scope.scopeKey}`);
+        else if (!members.has(subject.keycloakSubject)) {
+          errors.push(`${plane}/${subject.username}: not a Keycloak member of ${scope.scopeKey}`);
+        }
+      }
     }
   }
 }
@@ -113,4 +244,8 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`IAM demo fixture contract passed: ${users.length} users, 121 systematic identities, ${fixture.organizations.length} organizations.`);
+console.log(
+  `IAM demo fixture contract passed: ${users.length} users, 121 systematic identities, `
+  + `${manifest.tenants.length} tenants, ${fixture.organizations.length} business organizations, `
+  + `${compiledContextCount} compiled plane contexts, ${compiledLegalScopeCount} legal-scope grants.`,
+);

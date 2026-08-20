@@ -1,0 +1,545 @@
+{
+  "contractVersion": "athyper.authorization.scope-compatibility.v1",
+  "scopeVersion": "1.0.0",
+  "plane": "mesh",
+  "defaultScopeBehavior": "deny_undeclared",
+  "permissions": [
+    {
+      "permissionCode": "mesh.catalog.attachment.create",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.attachment.delete",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.attachment.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.attachment.share",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.bank_account.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.bank_account.update",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.bank_account.verify",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.catalog.publish",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.catalog.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.content_item.create",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.content_item.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.content_item.share",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.content_item.update",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.conversation.add_participant",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.conversation.create",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.conversation.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.conversation.remove_participant",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.document_envelope.acknowledge",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_relationship",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.document_envelope.publish",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_relationship",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.document_envelope.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_relationship",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.document_envelope.replay",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_relationship",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.network_account.connect",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.network_account.invite",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.network_account.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.network_account.update",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.network_relationship.accept",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_relationship",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.network_relationship.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_relationship",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.network_relationship.suspend",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_relationship",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.network_relationship.terminate",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_relationship",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.supplier_profile_verification.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.supplier_profile_verification.reject",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "mesh.catalog.supplier_profile_verification.verify",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    }
+  ],
+  "sha256": "6d25ef074944c14117b44819de953d21e705daa94916349b9120cce00b94871c"
+}

@@ -23,7 +23,7 @@ services:
   # Runs on every stack start; `mc mb --ignore-existing` is idempotent.
   tracing-bucket-init:
     image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    profiles: ["core", "telemetry"]
+    profiles: ["telemetry"]
     environment:
       TEMPO_STORAGE_BACKEND: ${TEMPO_STORAGE_BACKEND}
       TEMPO_S3_BUCKET: ${TEMPO_S3_BUCKET}
@@ -79,7 +79,7 @@ services:
 
   tracing:
     image: grafana/tempo:2.10.4
-    profiles: ["core", "telemetry"]
+    profiles: ["telemetry"]
     user: "9103:9103"
     deploy:
       resources:

@@ -22,8 +22,18 @@ services:
       resources:
         limits:
           memory: "${IAM_MEMORY_LIMIT}"
-    command: ["start-dev", "--import-realm"]
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        # --import-realm is bootstrap-only: Keycloak skips realms that already
+        # exist. Staging/production changes require an explicit, reviewed realm
+        # reconciliation before auth-dependent application code is deployed.
+        if [ "$${ENVIRONMENT:-local}" = "local" ]; then
+          exec /opt/keycloak/bin/kc.sh start-dev --import-realm
+        fi
+        exec /opt/keycloak/bin/kc.sh start --optimized --import-realm
     environment:
+      ENVIRONMENT: ${ENVIRONMENT}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${IAM_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${IAM_ADMIN_PASSWORD}
       KC_PROXY_HEADERS: xforwarded

@@ -1,0 +1,2393 @@
+{
+  "contractVersion": "athyper.authorization.keycloak-admission.v1",
+  "realm": "athyper",
+  "source": "../../../../stack/config/iam/realm-athyper-demosetup.json",
+  "sourceSha256": "6a7f06733d4ac0ac0440faa40494f4b7e658f416e0cd802a89811eccae056b8a",
+  "enabledSubjectCount": 161,
+  "mappedSubjectCount": 161,
+  "unresolvedSubjectBehavior": "deny",
+  "subjectMappings": {
+    "aa000001-0000-0000-0000-000000000001": {
+      "username": "kumar",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa000001-0000-0000-0000-000000000002": {
+      "username": "raja",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa000001-0000-0000-0000-000000000003": {
+      "username": "rama",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa000001-0000-0000-0000-000000000004": {
+      "username": "laks",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa000002-0000-0000-0000-000000000001": {
+      "username": "priya",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa001000-0000-0000-0000-00000000000d": {
+      "username": "partner.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa001000-0000-0000-0000-00000000000e": {
+      "username": "partner.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa001000-0000-0000-0000-00000000000f": {
+      "username": "partner.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa001000-0000-0000-0000-000000000010": {
+      "username": "partner.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa001000-0000-0000-0000-000000000011": {
+      "username": "karim.dual",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa003000-0000-0000-0000-000000000001": {
+      "username": "catl.admin",
+      "tenantCodes": [
+        "cirrusatlantic"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa003000-0000-0000-0000-000000000002": {
+      "username": "catl.owner",
+      "tenantCodes": [
+        "cirrusatlantic"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa003000-0000-0000-0000-000000000003": {
+      "username": "catl.finance",
+      "tenantCodes": [
+        "cirrusatlantic"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010006-0000-0000-0000-000000000000": {
+      "username": "athyper.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010007-0000-0000-0000-000000000000": {
+      "username": "athyper.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010101-0000-0000-0000-000000000000": {
+      "username": "athq.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010102-0000-0000-0000-000000000000": {
+      "username": "athq.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010103-0000-0000-0000-000000000000": {
+      "username": "athq.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010104-0000-0000-0000-000000000000": {
+      "username": "athq.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010105-0000-0000-0000-000000000000": {
+      "username": "athq.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010106-0000-0000-0000-000000000000": {
+      "username": "athq.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010107-0000-0000-0000-000000000000": {
+      "username": "athq.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010201-0000-0000-0000-000000000000": {
+      "username": "acfb.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010202-0000-0000-0000-000000000000": {
+      "username": "acfb.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010203-0000-0000-0000-000000000000": {
+      "username": "acfb.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010204-0000-0000-0000-000000000000": {
+      "username": "acfb.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010205-0000-0000-0000-000000000000": {
+      "username": "acfb.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010206-0000-0000-0000-000000000000": {
+      "username": "acfb.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010207-0000-0000-0000-000000000000": {
+      "username": "acfb.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010301-0000-0000-0000-000000000000": {
+      "username": "adpm.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010302-0000-0000-0000-000000000000": {
+      "username": "adpm.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010303-0000-0000-0000-000000000000": {
+      "username": "adpm.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010304-0000-0000-0000-000000000000": {
+      "username": "adpm.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010305-0000-0000-0000-000000000000": {
+      "username": "adpm.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010306-0000-0000-0000-000000000000": {
+      "username": "adpm.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010307-0000-0000-0000-000000000000": {
+      "username": "adpm.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010401-0000-0000-0000-000000000000": {
+      "username": "aitm.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010402-0000-0000-0000-000000000000": {
+      "username": "aitm.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010403-0000-0000-0000-000000000000": {
+      "username": "aitm.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010404-0000-0000-0000-000000000000": {
+      "username": "aitm.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010405-0000-0000-0000-000000000000": {
+      "username": "aitm.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010406-0000-0000-0000-000000000000": {
+      "username": "aitm.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010407-0000-0000-0000-000000000000": {
+      "username": "aitm.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010501-0000-0000-0000-000000000000": {
+      "username": "ajed.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010502-0000-0000-0000-000000000000": {
+      "username": "ajed.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010503-0000-0000-0000-000000000000": {
+      "username": "ajed.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010504-0000-0000-0000-000000000000": {
+      "username": "ajed.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010505-0000-0000-0000-000000000000": {
+      "username": "ajed.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010506-0000-0000-0000-000000000000": {
+      "username": "ajed.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010507-0000-0000-0000-000000000000": {
+      "username": "ajed.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010601-0000-0000-0000-000000000000": {
+      "username": "amre.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010602-0000-0000-0000-000000000000": {
+      "username": "amre.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010603-0000-0000-0000-000000000000": {
+      "username": "amre.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010604-0000-0000-0000-000000000000": {
+      "username": "amre.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010605-0000-0000-0000-000000000000": {
+      "username": "amre.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010606-0000-0000-0000-000000000000": {
+      "username": "amre.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010607-0000-0000-0000-000000000000": {
+      "username": "amre.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010701-0000-0000-0000-000000000000": {
+      "username": "aphs.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010702-0000-0000-0000-000000000000": {
+      "username": "aphs.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010703-0000-0000-0000-000000000000": {
+      "username": "aphs.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010704-0000-0000-0000-000000000000": {
+      "username": "aphs.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010705-0000-0000-0000-000000000000": {
+      "username": "aphs.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010706-0000-0000-0000-000000000000": {
+      "username": "aphs.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010707-0000-0000-0000-000000000000": {
+      "username": "aphs.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010801-0000-0000-0000-000000000000": {
+      "username": "aqts.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010802-0000-0000-0000-000000000000": {
+      "username": "aqts.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010803-0000-0000-0000-000000000000": {
+      "username": "aqts.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010804-0000-0000-0000-000000000000": {
+      "username": "aqts.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010805-0000-0000-0000-000000000000": {
+      "username": "aqts.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010806-0000-0000-0000-000000000000": {
+      "username": "aqts.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010807-0000-0000-0000-000000000000": {
+      "username": "aqts.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010901-0000-0000-0000-000000000000": {
+      "username": "aqtu.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010902-0000-0000-0000-000000000000": {
+      "username": "aqtu.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010903-0000-0000-0000-000000000000": {
+      "username": "aqtu.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010904-0000-0000-0000-000000000000": {
+      "username": "aqtu.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010905-0000-0000-0000-000000000000": {
+      "username": "aqtu.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010906-0000-0000-0000-000000000000": {
+      "username": "aqtu.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010907-0000-0000-0000-000000000000": {
+      "username": "aqtu.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010a01-0000-0000-0000-000000000000": {
+      "username": "asac.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010a02-0000-0000-0000-000000000000": {
+      "username": "asac.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010a03-0000-0000-0000-000000000000": {
+      "username": "asac.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010a04-0000-0000-0000-000000000000": {
+      "username": "asac.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010a05-0000-0000-0000-000000000000": {
+      "username": "asac.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010a06-0000-0000-0000-000000000000": {
+      "username": "asac.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010a07-0000-0000-0000-000000000000": {
+      "username": "asac.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010b01-0000-0000-0000-000000000000": {
+      "username": "asah.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010b02-0000-0000-0000-000000000000": {
+      "username": "asah.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010b03-0000-0000-0000-000000000000": {
+      "username": "asah.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010b04-0000-0000-0000-000000000000": {
+      "username": "asah.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010b05-0000-0000-0000-000000000000": {
+      "username": "asah.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010b06-0000-0000-0000-000000000000": {
+      "username": "asah.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010b07-0000-0000-0000-000000000000": {
+      "username": "asah.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010c01-0000-0000-0000-000000000000": {
+      "username": "asgf.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010c02-0000-0000-0000-000000000000": {
+      "username": "asgf.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010c03-0000-0000-0000-000000000000": {
+      "username": "asgf.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010c04-0000-0000-0000-000000000000": {
+      "username": "asgf.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010c05-0000-0000-0000-000000000000": {
+      "username": "asgf.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010c06-0000-0000-0000-000000000000": {
+      "username": "asgf.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010c07-0000-0000-0000-000000000000": {
+      "username": "asgf.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010d01-0000-0000-0000-000000000000": {
+      "username": "aspe.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010d02-0000-0000-0000-000000000000": {
+      "username": "aspe.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010d03-0000-0000-0000-000000000000": {
+      "username": "aspe.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010d04-0000-0000-0000-000000000000": {
+      "username": "aspe.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010d05-0000-0000-0000-000000000000": {
+      "username": "aspe.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010d06-0000-0000-0000-000000000000": {
+      "username": "aspe.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010d07-0000-0000-0000-000000000000": {
+      "username": "aspe.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010e01-0000-0000-0000-000000000000": {
+      "username": "atem.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010e02-0000-0000-0000-000000000000": {
+      "username": "atem.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010e03-0000-0000-0000-000000000000": {
+      "username": "atem.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010e04-0000-0000-0000-000000000000": {
+      "username": "atem.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010e05-0000-0000-0000-000000000000": {
+      "username": "atem.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010e06-0000-0000-0000-000000000000": {
+      "username": "atem.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010e07-0000-0000-0000-000000000000": {
+      "username": "atem.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010f01-0000-0000-0000-000000000000": {
+      "username": "auet.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010f02-0000-0000-0000-000000000000": {
+      "username": "auet.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010f03-0000-0000-0000-000000000000": {
+      "username": "auet.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010f04-0000-0000-0000-000000000000": {
+      "username": "auet.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010f05-0000-0000-0000-000000000000": {
+      "username": "auet.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa010f06-0000-0000-0000-000000000000": {
+      "username": "auet.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa010f07-0000-0000-0000-000000000000": {
+      "username": "auet.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa011001-0000-0000-0000-000000000000": {
+      "username": "auic.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011002-0000-0000-0000-000000000000": {
+      "username": "auic.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011003-0000-0000-0000-000000000000": {
+      "username": "auic.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011004-0000-0000-0000-000000000000": {
+      "username": "auic.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011005-0000-0000-0000-000000000000": {
+      "username": "auic.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011006-0000-0000-0000-000000000000": {
+      "username": "auic.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa011007-0000-0000-0000-000000000000": {
+      "username": "auic.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa011101-0000-0000-0000-000000000000": {
+      "username": "auka.viewer",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011102-0000-0000-0000-000000000000": {
+      "username": "auka.reporter",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011103-0000-0000-0000-000000000000": {
+      "username": "auka.requester",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011104-0000-0000-0000-000000000000": {
+      "username": "auka.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011105-0000-0000-0000-000000000000": {
+      "username": "auka.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa011106-0000-0000-0000-000000000000": {
+      "username": "auka.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa011107-0000-0000-0000-000000000000": {
+      "username": "auka.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa020001-0000-0000-0000-000000000000": {
+      "username": "athyper.apac.procurement",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa020002-0000-0000-0000-000000000000": {
+      "username": "athyper.apac.finance",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa020003-0000-0000-0000-000000000000": {
+      "username": "athyper.apac.people",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa020004-0000-0000-0000-000000000000": {
+      "username": "athyper.emea.procurement",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa020005-0000-0000-0000-000000000000": {
+      "username": "athyper.emea.finance",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa020006-0000-0000-0000-000000000000": {
+      "username": "athyper.emea.people",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa020007-0000-0000-0000-000000000000": {
+      "username": "athyper.americas.procurement",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "aa020008-0000-0000-0000-000000000000": {
+      "username": "athyper.americas.finance",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "aa020009-0000-0000-0000-000000000000": {
+      "username": "athyper.americas.people",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "cc001000-0000-0000-0000-000000000001": {
+      "username": "tksa.owner",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "cc001000-0000-0000-0000-000000000002": {
+      "username": "tksa.admin",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "cc001000-0000-0000-0000-000000000003": {
+      "username": "ssk.admin",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "cc001000-0000-0000-0000-000000000004": {
+      "username": "tegy.admin",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "cc001000-0000-0000-0000-000000000005": {
+      "username": "sdtx.admin",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        },
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "cc002001-0000-0000-0000-000000000000": {
+      "username": "tech.procurement",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        },
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "cc002002-0000-0000-0000-000000000000": {
+      "username": "tech.finance",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "cc002003-0000-0000-0000-000000000000": {
+      "username": "tech.people",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "neon",
+          "quarantineGroupCode": "neon.access.quarantine"
+        }
+      ]
+    },
+    "ee001000-0000-0000-0000-000000000011": {
+      "username": "nim.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "ee001000-0000-0000-0000-000000000012": {
+      "username": "nim.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "ee001000-0000-0000-0000-000000000013": {
+      "username": "nim.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "ee001000-0000-0000-0000-000000000014": {
+      "username": "nim.finance",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "ee002000-0000-0000-0000-000000000011": {
+      "username": "str.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "ee002000-0000-0000-0000-000000000012": {
+      "username": "str.manager",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "ee002000-0000-0000-0000-000000000013": {
+      "username": "str.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "quarantineGroupCode": "mesh.access.quarantine"
+        }
+      ]
+    },
+    "ff001000-0000-0000-0000-000000000001": {
+      "username": "platform.owner",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        }
+      ]
+    },
+    "ff001000-0000-0000-0000-000000000002": {
+      "username": "platform.admin",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        }
+      ]
+    },
+    "ff001000-0000-0000-0000-000000000003": {
+      "username": "support.agent",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "quarantineGroupCode": "studio.access.quarantine"
+        }
+      ]
+    }
+  },
+  "sha256": "478abc7ebdba64fbb24a285661e51cada9b2f05e8225609a1f493a8cfc99d25a"
+}

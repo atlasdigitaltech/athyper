@@ -15,12 +15,12 @@
     "current": "server"
   },
   "summary": {
-    "identities": 1060,
-    "matched": 60,
-    "legacyOnly": 808,
-    "currentOnly": 192,
+    "identities": 1064,
+    "matched": 62,
+    "legacyOnly": 806,
+    "currentOnly": 196,
     "legacyOccurrences": 898,
-    "currentOccurrences": 252
+    "currentOccurrences": 258
   },
   "routes": [
     {
@@ -4234,7 +4234,7 @@
       "current": [
         {
           "source": "server/apps/platform-host/src/composition/register-platform.ts",
-          "line": 97,
+          "line": 218,
           "declaredPath": "/api/iam/contexts",
           "kind": "contract"
         }
@@ -4345,6 +4345,21 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "GET /api/iam/projection-health",
+      "method": "GET",
+      "path": "/api/iam/projection-health",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 144,
+          "declaredPath": "/api/iam/projection-health",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "GET /api/iam/roles",
@@ -5700,6 +5715,36 @@
       ],
       "current": [],
       "status": "legacy-only"
+    },
+    {
+      "identity": "GET /api/neon/operating-organizations",
+      "method": "GET",
+      "path": "/api/neon/operating-organizations",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 25,
+          "declaredPath": "/api/neon/operating-organizations",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
+      "identity": "GET /api/neon/work-contexts",
+      "method": "GET",
+      "path": "/api/neon/work-contexts",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/packages/platform/experience/src/routes.ts",
+          "line": 24,
+          "declaredPath": "/api/neon/work-contexts",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
     },
     {
       "identity": "GET /api/notifications/capabilities",
@@ -12740,6 +12785,21 @@
       "status": "legacy-only"
     },
     {
+      "identity": "POST /api/iam/projection-reconciliation-attempts/:param/replay",
+      "method": "POST",
+      "path": "/api/iam/projection-reconciliation-attempts/:param/replay",
+      "legacy": [],
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 145,
+          "declaredPath": "/api/iam/projection-reconciliation-attempts/:attemptId/replay",
+          "kind": "contract"
+        }
+      ],
+      "status": "current-only"
+    },
+    {
       "identity": "POST /api/iam/provisioning-requests",
       "method": "POST",
       "path": "/api/iam/provisioning-requests",
@@ -12766,8 +12826,15 @@
           "kind": "direct"
         }
       ],
-      "current": [],
-      "status": "legacy-only"
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 156,
+          "declaredPath": "/api/iam/trusted-devices",
+          "kind": "contract"
+        }
+      ],
+      "status": "matched"
     },
     {
       "identity": "POST /api/iam/trusted-devices/verify",
@@ -12781,8 +12848,15 @@
           "kind": "direct"
         }
       ],
-      "current": [],
-      "status": "legacy-only"
+      "current": [
+        {
+          "source": "server/apps/platform-host/src/composition/register-platform.ts",
+          "line": 188,
+          "declaredPath": "/api/iam/trusted-devices/verify",
+          "kind": "contract"
+        }
+      ],
+      "status": "matched"
     },
     {
       "identity": "POST /api/intake/ap/invoice",

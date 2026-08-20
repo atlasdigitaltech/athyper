@@ -873,11 +873,11 @@
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "http://localhost:3003/*",
-        "http://localhost:3103/*",
-        "https://studio.athyper.local/*",
-        "https://studio-stg.athyper.com/*",
-        "https://studio.athyper.com/*"
+        "http://localhost:3003/api/auth/callback",
+        "http://localhost:3103/api/auth/callback",
+        "https://studio.athyper.local/api/auth/callback",
+        "https://studio-stg.athyper.com/api/auth/callback",
+        "https://studio.athyper.com/api/auth/callback"
       ],
       "webOrigins": [
         "http://localhost:3003",
@@ -940,6 +940,7 @@
       "optionalClientScopes": [
         "address",
         "phone",
+        "organization",
         "microprofile-jwt"
       ],
       "protocolMappers": [
@@ -1016,11 +1017,11 @@
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "http://localhost:3002/*",
-        "http://localhost:3102/*",
-        "https://mesh.athyper.local/*",
-        "https://mesh-stg.athyper.com/*",
-        "https://mesh.athyper.com/*"
+        "http://localhost:3002/api/auth/callback",
+        "http://localhost:3102/api/auth/callback",
+        "https://mesh.athyper.local/api/auth/callback",
+        "https://mesh-stg.athyper.com/api/auth/callback",
+        "https://mesh.athyper.com/api/auth/callback"
       ],
       "webOrigins": [
         "http://localhost:3002",
@@ -1080,6 +1081,7 @@
         "address",
         "phone",
         "offline_access",
+        "organization",
         "microprofile-jwt"
       ],
       "protocolMappers": [
@@ -1113,11 +1115,11 @@
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "http://localhost:3000/*",
-        "https://neon.athyper.local/*",
-        "http://localhost:3101/*",
-        "https://neon.athyper.com/*",
-        "https://neon-stg.athyper.com/*"
+        "http://localhost:3000/api/auth/callback",
+        "https://neon.athyper.local/api/auth/callback",
+        "http://localhost:3101/api/auth/callback",
+        "https://neon.athyper.com/api/auth/callback",
+        "https://neon-stg.athyper.com/api/auth/callback"
       ],
       "webOrigins": [
         "http://localhost:3000",
@@ -1187,6 +1189,7 @@
         "address",
         "phone",
         "offline_access",
+        "organization",
         "microprofile-jwt"
       ],
       "protocolMappers": [
@@ -2297,7 +2300,9 @@
             "access.token.claim": "true",
             "claim.name": "resource_access.${client_id}.roles",
             "jsonType.label": "String",
-            "multivalued": "true"
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "false"
           }
         },
         {
@@ -4004,7 +4009,7 @@
         {
           "authenticator": "auth-cookie",
           "authenticatorFlow": false,
-          "requirement": "ALTERNATIVE",
+          "requirement": "DISABLED",
           "priority": 10,
           "autheticatorFlow": false,
           "userSetupAllowed": false
@@ -4020,17 +4025,25 @@
         {
           "authenticator": "identity-provider-redirector",
           "authenticatorFlow": false,
-          "requirement": "ALTERNATIVE",
+          "requirement": "DISABLED",
           "priority": 25,
           "autheticatorFlow": false,
           "userSetupAllowed": false
         },
         {
           "authenticatorFlow": true,
-          "requirement": "ALTERNATIVE",
+          "requirement": "REQUIRED",
           "priority": 30,
           "autheticatorFlow": true,
           "flowAlias": "admin-mfa-required forms",
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "requirement": "REQUIRED",
+          "priority": 40,
+          "autheticatorFlow": true,
+          "flowAlias": "admin-mfa-required second factor",
           "userSetupAllowed": false
         }
       ]
@@ -4051,15 +4064,6 @@
           "priority": 10,
           "autheticatorFlow": false,
           "userSetupAllowed": false
-        },
-        {
-          "authenticatorConfig": "athyper-amr-otp",
-          "authenticator": "athyper-iam-otp-form",
-          "authenticatorFlow": false,
-          "requirement": "REQUIRED",
-          "priority": 20,
-          "autheticatorFlow": false,
-          "userSetupAllowed": true
         }
       ]
     },
@@ -4075,7 +4079,7 @@
           "authenticatorConfig": "athyper-amr-otp",
           "authenticator": "athyper-iam-otp-form",
           "authenticatorFlow": false,
-          "requirement": "ALTERNATIVE",
+          "requirement": "REQUIRED",
           "priority": 20,
           "autheticatorFlow": false,
           "userSetupAllowed": true
@@ -4084,7 +4088,7 @@
           "authenticatorConfig": "athyper-amr-webauthn",
           "authenticator": "webauthn-authenticator",
           "authenticatorFlow": false,
-          "requirement": "ALTERNATIVE",
+          "requirement": "DISABLED",
           "priority": 10,
           "autheticatorFlow": false,
           "userSetupAllowed": false

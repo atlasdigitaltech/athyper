@@ -17,6 +17,9 @@ export interface VerifiedIdentity {
   readonly tenantId: string;
   readonly principalId: string;
   readonly authEpoch: number;
+  /** Authentication strength proven by the issuer; never sourced from request headers. */
+  readonly assurance?: "baseline" | "elevated";
+  readonly authenticationMethods?: readonly string[];
   readonly organizationId?: string;
   readonly companyCodeId?: string;
   readonly legalEntityId?: string;

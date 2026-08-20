@@ -5,6 +5,12 @@ ALTER TABLE authz.permission
     REFERENCES control.module (id)
     ON DELETE RESTRICT;
 
+ALTER TABLE authz.permission_scope_kind
+    ADD CONSTRAINT permission_scope_kind_permission_fk
+    FOREIGN KEY (permission_id)
+    REFERENCES authz.permission (id)
+    ON DELETE RESTRICT;
+
 ALTER TABLE authz.plane_membership
     ADD CONSTRAINT plane_membership_tenant_fk
     FOREIGN KEY (tenant_id)

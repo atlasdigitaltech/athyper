@@ -20,7 +20,7 @@
 services:
   socket-proxy-logshipper:
     image: tecnativa/docker-socket-proxy:0.3.0
-    profiles: ["core", "telemetry"]
+    profiles: ["telemetry"]
     deploy:
       resources:
         limits:

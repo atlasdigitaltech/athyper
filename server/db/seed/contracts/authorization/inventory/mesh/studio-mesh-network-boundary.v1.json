@@ -1,0 +1,106 @@
+{
+  "contractVersion": "athyper.authorization.studio-mesh-network-boundary.v1",
+  "source": {
+    "plane": "studio",
+    "orchestrationTables": [
+      "onboarding.onboarding_case",
+      "onboarding.onboarding_case_target",
+      "onboarding.onboarding_case_resource",
+      "onboarding.onboarding_compilation_decision",
+      "onboarding.onboarding_case_revision"
+    ],
+    "authorizationProjectionTables": [
+      "trustiam.organization",
+      "trustiam.application_projection",
+      "trustiam.projection_scope"
+    ],
+    "directMeshSql": false,
+    "grantsMeshBusinessAuthority": false,
+    "mayCreateOrAcceptRelationship": false
+  },
+  "target": {
+    "plane": "mesh",
+    "applierKind": "plane_local_provisioner",
+    "applierOwner": "@athyper/server-plane-mesh",
+    "implementationStatus": "required_not_implemented",
+    "requiresExactDatabasePlane": true,
+    "defaultNetworkAccountStatus": "pending",
+    "forbidsAuthorizationCatalogMutation": true,
+    "forbidsBusinessActivation": true,
+    "forbidsRelationshipMutation": true
+  },
+  "trustIamCeiling": {
+    "projectedScopeKind": "network_account",
+    "requiredCeilingMode": "exact",
+    "networkRoleCeilingRequired": true,
+    "relationshipScopeMode": "derived_descendant_per_participant",
+    "missingOrSuspendedProjection": "deny",
+    "roleCeilingViolation": "deny"
+  },
+  "commandBoundary": {
+    "schemaVersion": 1,
+    "exactAudienceBinding": true,
+    "authenticatedServiceActor": true,
+    "allowlistedCommandCode": true,
+    "targetTenantBinding": true,
+    "desiredVersionAndHash": true,
+    "idempotencyFingerprint": true,
+    "staleAndSameVersionConflictDenial": true,
+    "atomicMutationReceiptAndOutbox": true
+  },
+  "lifecycleSeparation": {
+    "keycloakAdmissionMeans": "identity_organization_and_assurance_only",
+    "onboardingActiveMeans": "orchestration_converged",
+    "trustIamProjectionMeans": "network_account_and_role_ceiling_only",
+    "meshAccountActiveMeans": "plane_local_network_activation",
+    "meshRelationshipActiveMeans": "bilateral_participant_acceptance"
+  },
+  "resource": {
+    "resourceKind": "network_account",
+    "targetTable": "mesh.network_account",
+    "createScopeKind": "tenant",
+    "createScopeCoordinateKey": "tenantId",
+    "allowedCommandOperations": ["apply", "retain"],
+    "retention": "retain_legal_and_audit",
+    "applyConstraint": "create_pending_or_update_existing_pending",
+    "allowedDesiredStateFields": [
+      "canonicalPartyId",
+      "accountPurposeCode",
+      "accountCode",
+      "displayName",
+      "legalName",
+      "networkRole",
+      "countryCode",
+      "defaultCurrency",
+      "capabilities",
+      "metadata",
+      "profile"
+    ],
+    "immutableAfterCreateFields": [
+      "canonicalPartyId",
+      "accountPurposeCode",
+      "accountCode",
+      "networkRole"
+    ],
+    "activationPermissionCode": "mesh.network.network_account.activate"
+  },
+  "bilateralRules": {
+    "bothAccountCoordinatesRequired": true,
+    "bothTenantCoordinatesRequired": true,
+    "initiatorCannotAccept": true,
+    "bothAccountsMustBeActive": true,
+    "relationshipMustBeActiveForExchange": true,
+    "missingParticipantCoordinate": "deny"
+  },
+  "requiredBeforeEnforcement": [
+    "Implement a Mesh-only network-account provisioner with an allowlist for pending account and profile state.",
+    "Bind every command to source authority tenant, onboarding case, canonical party, target tenant, desired version and desired hash with verifiable provenance.",
+    "Reject unknown command codes, wrong plane, wrong tenant, stale version, same-version hash conflict, network-role ceiling violations and non-pending target mutation.",
+    "Prevent Studio provisioning from creating, accepting, suspending, resuming or terminating network relationships.",
+    "Replace participant FOR ALL mutation RLS with participant SELECT policies and function-only, side-aware lifecycle transitions.",
+    "Remove or qualify CURRENT_USER broad-write policies under actual runtime, provisioner, worker and administrator roles.",
+    "Persist mutation, lifecycle evidence, receipt, audit record and outbox event atomically under non-owner, non-BYPASSRLS identities.",
+    "Define durable two-party consent evidence for relationship resume and decide whether same-tenant buyer/supplier relationships are permitted.",
+    "Prove wrong-side acceptance, missing coordinates, inactive account, suspended projection, role-ceiling, replay, cross-tenant and double-apply behavior against live databases."
+  ]
+}

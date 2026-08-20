@@ -37,6 +37,7 @@ planes/mesh/control/02_domains.sql
 planes/mesh/mesh/02_domains.sql
 planes/mesh/document/02_domains.sql
 common/shared/03_tables.sql
+common/master/03_platform_tables.sql
 planes/mesh/master/03_tables.sql
 common/snapshot/03_tables.sql
 common/audit/03_tables.sql
@@ -194,6 +195,7 @@ common/control/12_operational_governance_reference_seed.sql
 common/control/12_banking_reference_seed.sql
 common/control/12_usage_metric_catalog_seed.sql
 common/master/12_contact_person_reference_seed.sql
+common/authz/15_permission_scope_compatibility_seed.sql
 planes/mesh/mesh/12_certification_reference_seed.sql
 planes/mesh/control/12_lookup_reference_entrypoint.sql
 planes/mesh/control/12_reference_seed.sql

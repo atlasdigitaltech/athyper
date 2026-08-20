@@ -1,0 +1,102 @@
+name: Authorization Pack Idempotency
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/authorization-idempotency.yml'
+      - 'server/db/package.json'
+      - 'server/db/ddl/**'
+      - 'server/db/scripts/apply-authorization-seed-pack.ts'
+      - 'server/db/scripts/safe-provision.ts'
+      - 'server/db/scripts/provisioning/**'
+      - 'server/db/scripts/seed/**'
+      - 'server/db/scripts/checks/seeds/authorization-release-gates.ts'
+      - 'server/db/seed/contracts/authorization/**'
+      - 'server/db/seed/contracts/base/seed-contract.v1.json'
+      - 'server/db/seed/manifests/three-plane-demo.v1.json'
+      - 'server/db/seed/packs/authorization-v2/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/authorization-idempotency.yml'
+      - 'server/db/package.json'
+      - 'server/db/ddl/**'
+      - 'server/db/scripts/apply-authorization-seed-pack.ts'
+      - 'server/db/scripts/safe-provision.ts'
+      - 'server/db/scripts/provisioning/**'
+      - 'server/db/scripts/seed/**'
+      - 'server/db/scripts/checks/seeds/authorization-release-gates.ts'
+      - 'server/db/seed/contracts/authorization/**'
+      - 'server/db/seed/contracts/base/seed-contract.v1.json'
+      - 'server/db/seed/manifests/three-plane-demo.v1.json'
+      - 'server/db/seed/packs/authorization-v2/**'
+  workflow_dispatch:
+
+concurrency:
+  group: authorization-idempotency-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20.20.0'
+  PNPM_VERSION: '10.33.0'
+  PGPASSWORD: athyper-ci
+  ATHYPER_PLATFORM_DATABASE_ADMIN_URL: postgresql://athyperadmin:athyper-ci@localhost:5432/athyper_studio
+  ATHYPER_NEON_DATABASE_ADMIN_URL: postgresql://athyperadmin:athyper-ci@localhost:5432/athyper_neon
+  ATHYPER_MESH_DATABASE_ADMIN_URL: postgresql://athyperadmin:athyper-ci@localhost:5432/athyper_mesh
+
+jobs:
+  apply-twice:
+    name: Three-plane authority snapshot parity
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.13-bookworm
+        env:
+          POSTGRES_USER: athyperadmin
+          POSTGRES_PASSWORD: athyper-ci
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U athyperadmin -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create separate plane databases
+        run: |
+          psql --host=localhost --username=athyperadmin --dbname=postgres --set=ON_ERROR_STOP=1 --command="CREATE ROLE athyperapp NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS"
+          psql --host=localhost --username=athyperadmin --dbname=postgres --set=ON_ERROR_STOP=1 --command="CREATE ROLE athyperadmin_atlas_maintenance NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS"
+          createdb --host=localhost --username=athyperadmin --owner=athyperadmin athyper_studio
+          createdb --host=localhost --username=athyperadmin --owner=athyperadmin athyper_neon
+          createdb --host=localhost --username=athyperadmin --owner=athyperadmin athyper_mesh
+
+      - name: Build Studio foundation
+        run: pwsh -NoProfile -File server/db/ddl/foundation-runner.ps1 -Plane studio -AuthorizationIdempotency
+
+      - name: Build Neon foundation
+        run: pwsh -NoProfile -File server/db/ddl/foundation-runner.ps1 -Plane neon -AuthorizationIdempotency
+
+      - name: Build Mesh foundation
+        run: pwsh -NoProfile -File server/db/ddl/foundation-runner.ps1 -Plane mesh -AuthorizationIdempotency
+
+      - name: Apply all plane packs twice and compare authority snapshots
+        run: pnpm --filter @athyper/server-db run db:verify:authorization:release:idempotency

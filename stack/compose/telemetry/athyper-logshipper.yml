@@ -12,7 +12,7 @@
 services:
   logshipper:
     image: grafana/alloy:v1.15.1
-    profiles: ["core", "telemetry"]
+    profiles: ["telemetry"]
     deploy:
       resources:
         limits:

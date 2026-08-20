@@ -49,7 +49,12 @@ export function parseSanitizedSession(value: unknown): SanitizedSession {
   if (record.schemaVersion !== 1) throw new TypeError("schemaVersion must be 1");
   const state = oneOf(record.state, ["anonymous", "authenticated", "required_action", "context_required"] as const, "state");
   const plane = oneOf(record.plane, SESSION_PLANES, "plane");
-  const requiredActions = strings(record.requiredActions, "requiredActions");
+  // `requiredActions` was introduced without a schema-version bump. Treat an
+  // omitted field from an older schema-v1 producer as the semantic empty set,
+  // while continuing to reject malformed values and empty required-action
+  // sessions below.
+  const legacyEmptyRequiredActions = record.requiredActions !== null && typeof record.requiredActions === "object" && !Array.isArray(record.requiredActions) && Object.keys(record.requiredActions).length === 0;
+  const requiredActions = record.requiredActions == null || legacyEmptyRequiredActions ? Object.freeze([] as string[]) : strings(record.requiredActions, "requiredActions");
   const tenantId = optionalText(record.tenantId, "tenantId");
   const principalId = optionalText(record.principalId, "principalId");
   const authEpoch = optionalInteger(record.authEpoch, "authEpoch");
@@ -64,6 +69,7 @@ export function parseSanitizedSession(value: unknown): SanitizedSession {
   const assurance = record.assurance === undefined ? undefined : oneOf(record.assurance, ["baseline", "elevated"] as const, "assurance");
   const allowedNextActions = record.allowedNextActions === undefined ? undefined : oneOfStrings(record.allowedNextActions, ["login", "select_context", "complete_required_action", "continue", "logout", "refresh"] as const, "allowedNextActions");
   if (state === "anonymous" && (tenantId || principalId || authEpoch !== undefined)) throw new TypeError("anonymous session cannot expose principal context");
+  if (state === "context_required" && (tenantId || principalId || authEpoch !== undefined)) throw new TypeError("context_required session cannot expose unselected principal context");
   if (state === "authenticated" && (!tenantId || !principalId || !realmKey || authEpoch === undefined || sessionVersion === undefined || !configurationRevision || !expiresAt || !idleExpiresAt || !absoluteExpiresAt || !assurance)) throw new TypeError("authenticated session requires realm, context, epoch, version, configuration, assurance, and expiry");
   if (state === "required_action" && requiredActions.length === 0) throw new TypeError("required_action session requires actions");
   return Object.freeze({ schemaVersion: 1, state, plane, ...(realmKey ? { realmKey } : {}), ...(expiresAt ? { expiresAt } : {}), ...(idleExpiresAt ? { idleExpiresAt } : {}), ...(absoluteExpiresAt ? { absoluteExpiresAt } : {}), ...(accessExpiresAt ? { accessExpiresAt } : {}), ...(tenantId ? { tenantId } : {}), ...(principalId ? { principalId } : {}), ...(authEpoch !== undefined ? { authEpoch } : {}), ...(sessionVersion !== undefined ? { sessionVersion } : {}), ...(configurationRevision ? { configurationRevision } : {}), ...(assurance ? { assurance } : {}), ...(elevationExpiresAt ? { elevationExpiresAt } : {}), requiredActions, ...(allowedNextActions ? { allowedNextActions } : {}) });

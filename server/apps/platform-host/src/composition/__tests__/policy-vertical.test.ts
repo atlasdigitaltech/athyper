@@ -21,7 +21,7 @@ describe("Policy host vertical", () => {
     const container = createContainer();
     const audit = createInMemoryAuditSink();
     const config = loadConfig();
-    registerPlatform(container, { ...config, env: "production", iam: { ...config.iam, defaultRealmKey: "athyper", claimContextMode: "on" } }, { tokenVerifier: { verify: async () => token }, auditSink: audit });
+    registerPlatform(container, { ...config, env: "production", iam: { ...config.iam, defaultRealmKey: "athyper", claimContextMode: "on" } }, { tokenVerifier: { verify: async () => token }, resolveIdentityContext: async () => ({ tenantId, principalId, authEpoch: 1 }), auditSink: audit });
     registerServices(container, { metadata: { getEntityDescriptor: async () => null }, policyRepository: { findActive: async () => definitions } as never, transactions: { run: async (_plane, _actor, work) => work({}) } as never });
     const app = createHttpApplication({ configure(application) { for (const register of container.platform.httpRegistrars) register(application); } });
     const baseUrl = await listen(app);

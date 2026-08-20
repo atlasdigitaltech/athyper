@@ -40,7 +40,7 @@ CREATE OR REPLACE FUNCTION ops.set_authorization_operation_rollout(
 RETURNS void LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,ops,shared AS $$
 DECLARE c ops.authorization_parity_certification%ROWTYPE; old_mode text;
 BEGIN
-  IF p_mode NOT IN ('legacy','shadow','active') THEN RAISE EXCEPTION 'authorization_rollout.mode_invalid'; END IF;
+  IF p_mode NOT IN ('disabled','shadow','active') THEN RAISE EXCEPTION 'authorization_rollout.mode_invalid'; END IF;
   IF btrim(coalesce(p_reason,''))='' THEN RAISE EXCEPTION 'authorization_rollout.reason_required'; END IF;
   SELECT mode INTO old_mode FROM ops.authorization_operation_rollout
    WHERE plane_code=p_plane_code AND source_entity_operation_id=p_source_entity_operation_id FOR UPDATE;

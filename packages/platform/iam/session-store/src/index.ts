@@ -9,6 +9,8 @@ export interface StoredSession {
   readonly tenantId?: string;
   readonly availableContexts?: readonly StoredSessionContext[];
   readonly principalId: string;
+  /** Immutable upstream subject used to bind step-up callbacks to the login identity. */
+  readonly providerSubject?: string;
   readonly providerSessionId: string;
   readonly encryptedTokenBundle?: string;
   readonly opaqueTokenReference?: string;
@@ -33,6 +35,8 @@ export interface StoredSessionContext {
   readonly tenantCode: string;
   readonly tenantName: string;
   readonly principalId: string;
+  /** Database authority epoch resolved with this exact tenant projection. */
+  readonly authEpoch?: number;
   readonly description?: string;
   readonly badges?: readonly string[];
 }
@@ -48,7 +52,17 @@ export interface RedisLike {
   eval: Redis["eval"];
   quit?(): Promise<unknown>;
 }
-export interface RedisSessionStoreOptions { readonly redis: RedisLike; readonly namespace?: string; readonly keyVersion?: number; readonly touchIntervalMs?: number; readonly now?: () => number; readonly observe?: (metric: SessionStoreMetric) => void; }
+export interface RedisSessionStoreOptions {
+  readonly redis: RedisLike;
+  readonly namespace?: string;
+  /** Version of the Redis key namespace. Rotate independently from token-encryption keys. */
+  readonly namespaceVersion?: number;
+  /** @deprecated Use namespaceVersion. */
+  readonly keyVersion?: number;
+  readonly touchIntervalMs?: number;
+  readonly now?: () => number;
+  readonly observe?: (metric: SessionStoreMetric) => void;
+}
 export interface SessionStore {
   health(): Promise<void>;
   create(sessionIdHash: string, session: StoredSession): Promise<void>;
@@ -70,12 +84,17 @@ export class SessionStoreUnavailableError extends Error {
   constructor(options?: ErrorOptions) { super("Authenticated session storage is unavailable", options); this.name = "SessionStoreUnavailableError"; }
 }
 
-const CREATE = `if redis.call('EXISTS',KEYS[1])==1 then return 0 end redis.call('SET',KEYS[1],ARGV[1],'PXAT',ARGV[2]); redis.call('SADD',KEYS[2],KEYS[1]); redis.call('PEXPIREAT',KEYS[2],ARGV[2]); redis.call('SADD',KEYS[3],KEYS[1]); redis.call('PEXPIREAT',KEYS[3],ARGV[2]); return 1`;
-const ROTATE = `if KEYS[1]~=KEYS[2] then redis.call('DEL',KEYS[1]); redis.call('SREM',KEYS[3],KEYS[1]); redis.call('SREM',KEYS[4],KEYS[1]) end redis.call('SET',KEYS[2],ARGV[1],'PXAT',ARGV[2]); redis.call('SADD',KEYS[3],KEYS[2]); redis.call('PEXPIREAT',KEYS[3],ARGV[2]); redis.call('SADD',KEYS[4],KEYS[2]); redis.call('PEXPIREAT',KEYS[4],ARGV[2]); return 1`;
+const CREATE = `if redis.call('EXISTS',KEYS[1])==1 then return 0 end redis.call('SET',KEYS[1],ARGV[1],'PXAT',ARGV[2]); redis.call('SADD',KEYS[2],KEYS[1]); redis.call('PEXPIREAT',KEYS[2],ARGV[2],'NX'); redis.call('PEXPIREAT',KEYS[2],ARGV[2],'GT'); redis.call('SADD',KEYS[3],KEYS[1]); redis.call('PEXPIREAT',KEYS[3],ARGV[2],'NX'); redis.call('PEXPIREAT',KEYS[3],ARGV[2],'GT'); return 1`;
+const ROTATE = `if KEYS[1]~=KEYS[2] then redis.call('DEL',KEYS[1]); redis.call('SREM',KEYS[3],KEYS[1]); redis.call('SREM',KEYS[4],KEYS[1]) end redis.call('SET',KEYS[2],ARGV[1],'PXAT',ARGV[2]); redis.call('SADD',KEYS[3],KEYS[2]); redis.call('PEXPIREAT',KEYS[3],ARGV[2],'NX'); redis.call('PEXPIREAT',KEYS[3],ARGV[2],'GT'); redis.call('SADD',KEYS[4],KEYS[2]); redis.call('PEXPIREAT',KEYS[4],ARGV[2],'NX'); redis.call('PEXPIREAT',KEYS[4],ARGV[2],'GT'); return 1`;
 const REVOKE = `local value=redis.call('GET',KEYS[1]); if not value then return 0 end; redis.call('DEL',KEYS[1]); redis.call('SREM',KEYS[2],KEYS[1]); redis.call('SREM',KEYS[3],KEYS[1]); return 1`;
 const REVOKE_INDEX = `local members=redis.call('SMEMBERS',KEYS[1]); for _,key in ipairs(members) do redis.call('DEL',key) end; redis.call('DEL',KEYS[1]); return #members`;
 const CONSUME = `local value=redis.call('GET',KEYS[1]); if value then redis.call('DEL',KEYS[1]) end; return value`;
-const TOUCH = `local raw=redis.call('GET',KEYS[1]); if not raw then return false end; local s=cjson.decode(raw); local now=tonumber(ARGV[1]); if now-s.lastSeenAt<tonumber(ARGV[2]) then return raw end; s.lastSeenAt=now; s.idleExpiresAt=math.min(now+tonumber(ARGV[3]),s.absoluteExpiresAt); local updated=cjson.encode(s); redis.call('SET',KEYS[1],updated,'PXAT',s.idleExpiresAt); redis.call('PEXPIREAT',KEYS[2],s.idleExpiresAt); redis.call('PEXPIREAT',KEYS[3],s.idleExpiresAt); return updated`;
+// Do not cjson.encode the decoded session here. Redis Lua loses the array
+// identity of an empty JSON array and serializes requiredActions: [] as {},
+// corrupting the public session contract on the first idle touch. The caller
+// supplies canonical JSON; the script applies it only while the version still
+// matches the record it read.
+const TOUCH = `local raw=redis.call('GET',KEYS[1]); if not raw then return false end; local s=cjson.decode(raw); local now=tonumber(ARGV[1]); if now-s.lastSeenAt<tonumber(ARGV[2]) then return raw end; if s.sessionVersion~=tonumber(ARGV[4]) then return raw end; local updated=ARGV[5]; local idleExpiresAt=tonumber(ARGV[6]); redis.call('SET',KEYS[1],updated,'PXAT',idleExpiresAt); redis.call('PEXPIREAT',KEYS[2],idleExpiresAt,'NX'); redis.call('PEXPIREAT',KEYS[2],idleExpiresAt,'GT'); redis.call('PEXPIREAT',KEYS[3],idleExpiresAt,'NX'); redis.call('PEXPIREAT',KEYS[3],idleExpiresAt,'GT'); return updated`;
 const RELEASE_LOCK = `if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) end; return 0`;
 const REPLACE_REFRESH = `local raw=redis.call('GET',KEYS[1]); if not raw then return 0 end; local s=cjson.decode(raw); if s.refreshGeneration~=tonumber(ARGV[1]) then return 0 end; redis.call('SET',KEYS[1],ARGV[2],'PXAT',ARGV[3]); return 1`;
 
@@ -86,7 +105,7 @@ export function createRedisClient(redisUrl: string): Redis {
 }
 
 export function createRedisSessionStore(options: RedisSessionStoreOptions): SessionStore {
-  const prefix = options.namespace ?? "athyper:session"; const version = options.keyVersion ?? 1; const now = options.now ?? Date.now; const touchInterval = options.touchIntervalMs ?? 60_000;
+  const prefix = options.namespace ?? "athyper:session"; const version = options.namespaceVersion ?? options.keyVersion ?? 1; const now = options.now ?? Date.now; const touchInterval = options.touchIntervalMs ?? 60_000;
   const base = (binding: SessionBinding) => `${prefix}:v${version}:${safe(binding.plane)}:${safe(binding.realmKey)}`;
   const sessionKey = (binding: SessionBinding, id: string) => `${base(binding)}:session:${safe(id)}`;
   const principalKey = (binding: SessionBinding, id: string) => `${base(binding)}:principal:${digest(id)}`;
@@ -107,14 +126,14 @@ export function createRedisSessionStore(options: RedisSessionStoreOptions): Sess
     putOneTimeState: (binding, id, value, ttl) => call("put-state", async () => { if (await options.redis.set(stateKey(binding, id), value, "PX", ttl, "NX") !== "OK") throw new Error("OAuth state collision"); }),
     consumeOneTimeState: (binding, id) => call("consume-state", async () => { const value = await options.redis.eval(CONSUME, 1, stateKey(binding, id)); return typeof value === "string" ? value : undefined; }, (value) => value === undefined),
     claimLogoutToken: (binding, id, ttl) => call("claim-logout-token", async () => (await options.redis.set(logoutTokenKey(binding, id), "1", "PX", ttl, "NX")) === "OK", (value) => value === false),
-    touch: (binding, id, ttl) => call("touch", async () => { const current = parseStoredSession(await options.redis.get(sessionKey(binding, id)), now()); if (!current) return undefined; const [principal, provider] = indexes(binding, current); const result = await options.redis.eval(TOUCH, 3, sessionKey(binding, id), principal, provider, now(), touchInterval, ttl); return parseStoredSession(typeof result === "string" ? result : null, now()); }, (value) => value === undefined),
+    touch: (binding, id, ttl) => call("touch", async () => { const currentTime = now(); const current = parseStoredSession(await options.redis.get(sessionKey(binding, id)), currentTime); if (!current) return undefined; const [principal, provider] = indexes(binding, current); const touched = Object.freeze({ ...current, lastSeenAt: currentTime, idleExpiresAt: Math.min(currentTime + ttl, current.absoluteExpiresAt) }); const result = await options.redis.eval(TOUCH, 3, sessionKey(binding, id), principal, provider, currentTime, touchInterval, ttl, current.sessionVersion, JSON.stringify(touched), touched.idleExpiresAt); return parseStoredSession(typeof result === "string" ? result : null, now()); }, (value) => value === undefined),
     acquireRefreshLock: (binding, id, owner, ttl) => call("refresh-lock", async () => (await options.redis.set(lockKey(binding, id), owner, "PX", ttl, "NX")) === "OK"),
     releaseRefreshLock: (binding, id, owner) => call("refresh-unlock", async () => { await options.redis.eval(RELEASE_LOCK, 1, lockKey(binding, id), owner); }),
     replaceAfterRefresh: (binding, id, generation, session) => call("refresh-replace", async () => Number(await options.redis.eval(REPLACE_REFRESH, 1, sessionKey(binding, id), generation, JSON.stringify(session), session.idleExpiresAt)) === 1),
   };
 }
 
-function validateStoredSession(session: StoredSession): void { if (session.schemaVersion !== 1 || !session.realmKey || !session.principalId || !session.providerSessionId) throw new TypeError("Stored session identity is incomplete"); if (!!session.encryptedTokenBundle === !!session.opaqueTokenReference) throw new TypeError("Exactly one server token representation is required"); if (session.idleExpiresAt > session.absoluteExpiresAt || session.lastSeenAt < session.createdAt) throw new TypeError("Stored session expiry is invalid"); }
-function parseStoredSession(raw: string | null, currentTime: number, enforceExpiry = true): StoredSession | undefined { if (!raw) return undefined; const value = JSON.parse(raw) as StoredSession; validateStoredSession(value); if (enforceExpiry && (value.idleExpiresAt <= currentTime || value.absoluteExpiresAt <= currentTime)) return undefined; return Object.freeze(value); }
+function validateStoredSession(session: StoredSession): void { if (session.schemaVersion !== 1 || !session.realmKey || !session.principalId || !session.providerSessionId) throw new TypeError("Stored session identity is incomplete"); if (!Array.isArray(session.requiredActions)) throw new TypeError("Stored session requiredActions must be an array"); if (!!session.encryptedTokenBundle === !!session.opaqueTokenReference) throw new TypeError("Exactly one server token representation is required"); if (session.idleExpiresAt > session.absoluteExpiresAt || session.lastSeenAt < session.createdAt) throw new TypeError("Stored session expiry is invalid"); }
+function parseStoredSession(raw: string | null, currentTime: number, enforceExpiry = true): StoredSession | undefined { if (!raw) return undefined; const decoded = JSON.parse(raw) as StoredSession & { readonly requiredActions?: unknown }; const legacyEmptyObject = decoded.requiredActions !== null && typeof decoded.requiredActions === "object" && !Array.isArray(decoded.requiredActions) && Object.keys(decoded.requiredActions).length === 0; const value = (decoded.requiredActions == null || legacyEmptyObject ? { ...decoded, requiredActions: [] } : decoded) as StoredSession; validateStoredSession(value); if (enforceExpiry && (value.idleExpiresAt <= currentTime || value.absoluteExpiresAt <= currentTime)) return undefined; return Object.freeze(value); }
 function digest(value: string): string { return createHash("sha256").update(value, "utf8").digest("hex"); }
 function safe(value: string): string { if (!/^[A-Za-z0-9._-]+$/.test(value)) throw new TypeError("Unsafe Redis key component"); return value; }

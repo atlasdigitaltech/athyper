@@ -62,7 +62,7 @@ CREATE TABLE ops.authorization_operation_rollout (
     source_entity_operation_id uuid        NOT NULL,
     source_release_hash        text        NOT NULL,
     source_artifact_hash       text        NOT NULL,
-    mode                       text        NOT NULL DEFAULT 'legacy',
+    mode                       text        NOT NULL DEFAULT 'disabled',
     certification_id           uuid,
     change_reason              text        NOT NULL,
     change_ticket              text,
@@ -76,7 +76,7 @@ CREATE TABLE ops.authorization_operation_rollout (
     updated_by                 uuid        NOT NULL,
     CONSTRAINT authorization_operation_rollout_pkey PRIMARY KEY (plane_code,source_entity_operation_id),
     CONSTRAINT authorization_operation_rollout_plane_chk CHECK (plane_code IN ('neon','mesh')),
-    CONSTRAINT authorization_operation_rollout_mode_chk CHECK (mode IN ('legacy','shadow','active')),
+    CONSTRAINT authorization_operation_rollout_mode_chk CHECK (mode IN ('disabled','shadow','active')),
     CONSTRAINT authorization_operation_rollout_hash_chk CHECK (
       source_release_hash ~ '^[a-f0-9]{64}$' AND source_artifact_hash ~ '^[a-f0-9]{64}$'),
     CONSTRAINT authorization_operation_rollout_reason_chk CHECK (btrim(change_reason) <> ''),
@@ -90,43 +90,29 @@ CREATE TABLE ops.authorization_operation_rollout (
 );
 
 COMMENT ON TABLE ops.authorization_operation_rollout IS
-  'Fail-closed per-operation rollout switch. Missing rows resolve to legacy; active rows require exact-coordinate parity certification.';
+  'Fail-closed per-operation rollout switch. Missing or disabled rows deny; active rows require exact-coordinate qualification.';
 
 CREATE TABLE ops.authorization_operation_cutover_drill (
     id uuid NOT NULL DEFAULT shared.uuidv7(), plane_code text NOT NULL, entity_code text NOT NULL,
     source_entity_operation_id uuid NOT NULL, source_release_hash text NOT NULL, source_artifact_hash text NOT NULL,
     certification_id uuid NOT NULL, activation_request_id text NOT NULL, activation_audit_evidence_id uuid NOT NULL,
     activated_observed_at timestamptz NOT NULL, rolled_back_observed_at timestamptz NOT NULL,
-    legacy_observed_at timestamptz NOT NULL, reactivated_observed_at timestamptz NOT NULL,
-    legacy_fallback_count integer NOT NULL DEFAULT 0, outcome text NOT NULL, ticket_reference text NOT NULL,
+    disabled_observed_at timestamptz NOT NULL, reactivated_observed_at timestamptz NOT NULL,
+    disabled_fallback_count integer NOT NULL DEFAULT 0, outcome text NOT NULL, ticket_reference text NOT NULL,
     performed_at timestamptz NOT NULL DEFAULT now(), performed_by uuid NOT NULL,
     CONSTRAINT authorization_operation_cutover_drill_pkey PRIMARY KEY(id),
     CONSTRAINT authorization_operation_cutover_drill_plane_chk CHECK(plane_code IN('neon','mesh')),
     CONSTRAINT authorization_operation_cutover_drill_hash_chk CHECK(source_release_hash~'^[a-f0-9]{64}$' AND source_artifact_hash~'^[a-f0-9]{64}$'),
     CONSTRAINT authorization_operation_cutover_drill_outcome_chk CHECK(outcome IN('passed','failed')),
-    CONSTRAINT authorization_operation_cutover_drill_fallback_chk CHECK(legacy_fallback_count>=0 AND (outcome='failed' OR legacy_fallback_count=0)),
-    CONSTRAINT authorization_operation_cutover_drill_time_chk CHECK(activated_observed_at<=rolled_back_observed_at AND rolled_back_observed_at<=legacy_observed_at AND legacy_observed_at<=reactivated_observed_at AND reactivated_observed_at<=performed_at+interval '5 minutes'),
+    CONSTRAINT authorization_operation_cutover_drill_fallback_chk CHECK(disabled_fallback_count>=0 AND (outcome='failed' OR disabled_fallback_count=0)),
+    CONSTRAINT authorization_operation_cutover_drill_time_chk CHECK(activated_observed_at<=rolled_back_observed_at AND rolled_back_observed_at<=disabled_observed_at AND disabled_observed_at<=reactivated_observed_at AND reactivated_observed_at<=performed_at+interval '5 minutes'),
     CONSTRAINT authorization_operation_cutover_drill_ticket_chk CHECK(btrim(ticket_reference)<>'')
     ,CONSTRAINT authorization_operation_cutover_drill_certification_fk FOREIGN KEY(certification_id)
       REFERENCES ops.authorization_parity_certification(id) ON DELETE RESTRICT
 );
 
 COMMENT ON TABLE ops.authorization_operation_cutover_drill IS
-  'Append-only proof that one qualified exact operation coordinate was activated, audited, rolled back, observed on legacy, and reactivated without fallback.';
-
-CREATE TABLE ops.authorization_legacy_retirement_approval (
- id uuid NOT NULL DEFAULT shared.uuidv7(),plane_code text NOT NULL,activation_manifest_sha256 text NOT NULL,
- covered_operation_count integer NOT NULL,approval_action text NOT NULL,ticket_reference text NOT NULL,
- decision_reason text NOT NULL,decided_at timestamptz NOT NULL DEFAULT now(),decided_by uuid NOT NULL,
- CONSTRAINT authorization_legacy_retirement_approval_pkey PRIMARY KEY(id),
- CONSTRAINT authorization_legacy_retirement_approval_plane_chk CHECK(plane_code IN('neon','mesh')),
- CONSTRAINT authorization_legacy_retirement_approval_hash_chk CHECK(activation_manifest_sha256~'^[a-f0-9]{64}$'),
- CONSTRAINT authorization_legacy_retirement_approval_count_chk CHECK(covered_operation_count>0),
- CONSTRAINT authorization_legacy_retirement_approval_action_chk CHECK(approval_action IN('approve','revoke')),
- CONSTRAINT authorization_legacy_retirement_approval_text_chk CHECK(btrim(ticket_reference)<>'' AND btrim(decision_reason)<>'')
-);
-COMMENT ON TABLE ops.authorization_legacy_retirement_approval IS
- 'Append-only human approval/revocation ledger bound to one exact activation-manifest hash.';
+  'Append-only proof that one qualified exact operation coordinate was activated, audited, disabled, observed fail-closed, and reactivated without fallback.';
 
 CREATE TABLE ops.authorization_shadow_comparison (
     id                         uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -137,13 +123,13 @@ CREATE TABLE ops.authorization_shadow_comparison (
     source_release_hash        text        NOT NULL,
     source_artifact_hash       text        NOT NULL,
     request_id                 text        NOT NULL,
-    cohort_code               text        NOT NULL DEFAULT 'legacy_baseline',
+    cohort_code               text        NOT NULL DEFAULT 'clean_slate_baseline',
     correlation_id             uuid,
     principal_id               uuid        NOT NULL,
     comparison_status          text        NOT NULL,
-    legacy_decision            text        NOT NULL,
-    legacy_reason              text        NOT NULL,
-    legacy_fingerprint         text        NOT NULL,
+    baseline_decision          text        NOT NULL,
+    baseline_reason            text        NOT NULL,
+    baseline_fingerprint       text        NOT NULL,
     candidate_decision         text,
     candidate_reason           text,
     candidate_fingerprint      text,
@@ -162,12 +148,12 @@ CREATE TABLE ops.authorization_shadow_comparison (
     CONSTRAINT authorization_shadow_comparison_cohort_chk CHECK (cohort_code ~ '^[a-z][a-z0-9_]{1,62}$'),
     CONSTRAINT authorization_shadow_comparison_status_chk CHECK (comparison_status IN ('match','mismatch','candidate_error')),
     CONSTRAINT authorization_shadow_comparison_decision_chk CHECK (
-        legacy_decision IN ('allow','deny') AND (candidate_decision IS NULL OR candidate_decision IN ('allow','deny'))),
+        baseline_decision IN ('allow','deny') AND (candidate_decision IS NULL OR candidate_decision IN ('allow','deny'))),
     CONSTRAINT authorization_shadow_comparison_reason_chk CHECK (
-        btrim(legacy_reason) <> '' AND length(legacy_reason) <= 128
+        btrim(baseline_reason) <> '' AND length(baseline_reason) <= 128
         AND (candidate_reason IS NULL OR (btrim(candidate_reason) <> '' AND length(candidate_reason) <= 128))),
     CONSTRAINT authorization_shadow_comparison_fingerprint_chk CHECK (
-        legacy_fingerprint ~ '^[a-f0-9]{64}$'
+        baseline_fingerprint ~ '^[a-f0-9]{64}$'
         AND (candidate_fingerprint IS NULL OR candidate_fingerprint ~ '^[a-f0-9]{64}$')),
     CONSTRAINT authorization_shadow_comparison_shape_chk CHECK (
         (comparison_status IN ('match','mismatch')
@@ -179,13 +165,13 @@ CREATE TABLE ops.authorization_shadow_comparison (
           AND btrim(candidate_error) <> '' AND length(candidate_error) <= 1000)),
     CONSTRAINT authorization_shadow_comparison_semantics_chk CHECK (
         comparison_status <> 'match'
-        OR (legacy_decision=candidate_decision AND legacy_reason=candidate_reason)),
+        OR (baseline_decision=candidate_decision AND baseline_reason=candidate_reason)),
     CONSTRAINT authorization_shadow_comparison_time_chk CHECK (observed_at <= created_at + interval '5 minutes'),
     CONSTRAINT authorization_shadow_comparison_actor_chk CHECK (created_by=principal_id)
 );
 
 COMMENT ON TABLE ops.authorization_shadow_comparison IS
-  'Append-only, non-authorizing comparison evidence between legacy and candidate authorization decisions. Plane/release/artifact coordinates prevent cross-release qualification.';
+  'Append-only, non-authorizing comparison evidence between a reviewed baseline and a candidate authorization decision. Plane/release/artifact coordinates prevent cross-release qualification.';
 
 CREATE TABLE ops.identity_admission_shadow_comparison (
     id uuid NOT NULL DEFAULT shared.uuidv7(),
@@ -198,10 +184,10 @@ CREATE TABLE ops.identity_admission_shadow_comparison (
     comparison_status text NOT NULL,
     mismatch_areas text[] NOT NULL DEFAULT '{}'::text[],
     severity text NOT NULL,
-    legacy_result jsonb NOT NULL,
+    baseline_result jsonb NOT NULL,
     candidate_result jsonb,
     candidate_error text,
-    legacy_fingerprint text NOT NULL,
+    baseline_fingerprint text NOT NULL,
     candidate_fingerprint text,
     resolver_revision text NOT NULL,
     observed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
@@ -215,13 +201,13 @@ CREATE TABLE ops.identity_admission_shadow_comparison (
     CONSTRAINT identity_admission_shadow_status_chk CHECK(comparison_status IN ('match','mismatch','candidate_error')),
     CONSTRAINT identity_admission_shadow_area_chk CHECK(array_position(mismatch_areas,NULL) IS NULL AND mismatch_areas <@ ARRAY['tenant','principal','binding','membership','scope','permission']::text[]),
     CONSTRAINT identity_admission_shadow_severity_chk CHECK(severity IN ('none','low','high','critical')),
-    CONSTRAINT identity_admission_shadow_legacy_json_chk CHECK(jsonb_typeof(legacy_result)='object'),
+    CONSTRAINT identity_admission_shadow_baseline_json_chk CHECK(jsonb_typeof(baseline_result)='object'),
     CONSTRAINT identity_admission_shadow_candidate_json_chk CHECK(candidate_result IS NULL OR jsonb_typeof(candidate_result)='object'),
-    CONSTRAINT identity_admission_shadow_hash_chk CHECK(legacy_fingerprint~'^[a-f0-9]{64}$' AND (candidate_fingerprint IS NULL OR candidate_fingerprint~'^[a-f0-9]{64}$')),
+    CONSTRAINT identity_admission_shadow_hash_chk CHECK(baseline_fingerprint~'^[a-f0-9]{64}$' AND (candidate_fingerprint IS NULL OR candidate_fingerprint~'^[a-f0-9]{64}$')),
     CONSTRAINT identity_admission_shadow_shape_chk CHECK(
       (comparison_status IN ('match','mismatch') AND candidate_result IS NOT NULL AND candidate_fingerprint IS NOT NULL AND candidate_error IS NULL)
       OR (comparison_status='candidate_error' AND candidate_result IS NULL AND candidate_fingerprint IS NULL AND candidate_error IS NOT NULL)),
-    CONSTRAINT identity_admission_shadow_match_chk CHECK(comparison_status<>'match' OR (cardinality(mismatch_areas)=0 AND legacy_fingerprint=candidate_fingerprint AND severity='none'))
+    CONSTRAINT identity_admission_shadow_match_chk CHECK(comparison_status<>'match' OR (cardinality(mismatch_areas)=0 AND baseline_fingerprint=candidate_fingerprint AND severity='none'))
 );
 COMMENT ON TABLE ops.identity_admission_shadow_comparison IS 'Append-only, pre-session-safe comparison evidence. Subject identifiers are stored only as SHA-256 fingerprints and the candidate never authorizes shadow traffic.';
 
@@ -233,10 +219,10 @@ CREATE TABLE ops.authorization_session_shadow_comparison (
     request_id text NOT NULL,
     comparison_status text NOT NULL,
     mismatch_areas text[] NOT NULL DEFAULT '{}'::text[],
-    legacy_result jsonb NOT NULL,
+    baseline_result jsonb NOT NULL,
     candidate_result jsonb,
     candidate_error text,
-    legacy_fingerprint text NOT NULL,
+    baseline_fingerprint text NOT NULL,
     candidate_fingerprint text,
     resolver_revision text NOT NULL,
     observed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
@@ -245,8 +231,8 @@ CREATE TABLE ops.authorization_session_shadow_comparison (
     CONSTRAINT authorization_session_shadow_plane_chk CHECK(plane_code IN ('studio','neon','mesh')),
     CONSTRAINT authorization_session_shadow_status_chk CHECK(comparison_status IN ('match','mismatch','candidate_error')),
     CONSTRAINT authorization_session_shadow_area_chk CHECK(mismatch_areas <@ ARRAY['tenant','principal','binding','catalog','scope','permission']::text[]),
-    CONSTRAINT authorization_session_shadow_json_chk CHECK(jsonb_typeof(legacy_result)='object' AND (candidate_result IS NULL OR jsonb_typeof(candidate_result)='object')),
-    CONSTRAINT authorization_session_shadow_hash_chk CHECK(legacy_fingerprint~'^[a-f0-9]{64}$' AND (candidate_fingerprint IS NULL OR candidate_fingerprint~'^[a-f0-9]{64}$')),
+    CONSTRAINT authorization_session_shadow_json_chk CHECK(jsonb_typeof(baseline_result)='object' AND (candidate_result IS NULL OR jsonb_typeof(candidate_result)='object')),
+    CONSTRAINT authorization_session_shadow_hash_chk CHECK(baseline_fingerprint~'^[a-f0-9]{64}$' AND (candidate_fingerprint IS NULL OR candidate_fingerprint~'^[a-f0-9]{64}$')),
     CONSTRAINT authorization_session_shadow_shape_chk CHECK(
       (comparison_status IN ('match','mismatch') AND candidate_result IS NOT NULL AND candidate_fingerprint IS NOT NULL AND candidate_error IS NULL)
       OR (comparison_status='candidate_error' AND candidate_result IS NULL AND candidate_fingerprint IS NULL AND candidate_error IS NOT NULL))

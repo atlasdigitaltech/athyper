@@ -14,7 +14,8 @@ REM   api-up.bat --build scheduler  : rebuild image, then start scheduler
 REM
 REM Behaviour (auto-detected from ENVIRONMENT in stack\env\.env):
 REM   local      : load stack\env\.env, translate Docker hostnames to 127.0.0.1,
-REM                 then: pnpm --filter @athyper/server-platform-host run dev:<mode>
+REM                 then run the workspace-pinned tsx watcher directly so the
+REM                 injected environment is preserved.
 REM                 (--build is ignored in local mode; tsx handles incremental reloads)
 REM   staging    : optional build, then docker compose up selected api/worker/scheduler service
 REM   production : optional build, then docker compose up selected api/worker/scheduler service
@@ -137,8 +138,6 @@ REM ----------------------------
 REM Local: translate Docker hostnames → 127.0.0.1, then run pnpm dev
 REM ----------------------------
 if /I "!ENVIRONMENT!"=="local" (
-  set "PNPM_SCRIPT=dev:!MODE!"
-
   REM Shadow-detection: if the containerized counterpart is running, host edits
   REM will silently NOT take effect because the bundle inside the container is
   REM stale. Stop the container before starting host dev.
@@ -174,9 +173,31 @@ if /I "!ENVIRONMENT!"=="local" (
   set "MESH_DATABASE_ADMIN_URL=!MESH_DATABASE_ADMIN_URL:@db:=@127.0.0.1:!"
   set "MESH_DB_URL=!MESH_DB_URL:dbpool-apps=127.0.0.1!"
   set "REDIS_URL=!REDIS_URL:memorycache=127.0.0.1!"
-  set "REDIS_BULLMQ_URL=!REDIS_BULLMQ_URL:memorycache-jobs=127.0.0.1!"
-  set "REDIS_BULLMQ_URL=!REDIS_BULLMQ_URL:memorycache=127.0.0.1!"
+  REM Local API mode explicitly shares the published Redis endpoint. Do not
+  REM inherit a stale machine-level BullMQ URL that is absent from stack .env.
+  set "REDIS_BULLMQ_URL=!REDIS_URL!"
   set "S3_ENDPOINT=!S3_ENDPOINT:objectstorage=127.0.0.1!"
+
+  REM Normalize the shared IAM settings into the platform-host Keycloak
+  REM contract. Without these values the API starts without its IAM adapter,
+  REM leaving login-critical routes such as /api/iam/contexts unregistered.
+  if "!IAM_ISSUER_URL!"=="" for /f "usebackq tokens=1,* delims==" %%A in (`findstr /B /C:"IAM_ISSUER_URL=" "%ENV_FILE%"`) do set "IAM_ISSUER_URL=%%B"
+  if "!IAM_CLIENT_ID!"=="" for /f "usebackq tokens=1,* delims==" %%A in (`findstr /B /C:"IAM_CLIENT_ID=" "%ENV_FILE%"`) do set "IAM_CLIENT_ID=%%B"
+  if "!KEYCLOAK_ISSUER_URL!"=="" set "KEYCLOAK_ISSUER_URL=!IAM_ISSUER_URL!"
+  if "!KEYCLOAK_CLIENT_ID!"=="" set "KEYCLOAK_CLIENT_ID=!IAM_CLIENT_ID!"
+  if "!KEYCLOAK_REALM!"=="" set "KEYCLOAK_REALM=athyper"
+  if "!KEYCLOAK_ISSUER_URL!"=="" (
+    echo ERROR: IAM_ISSUER_URL or KEYCLOAK_ISSUER_URL is required for the local API.
+    exit /b 1
+  )
+  if "!KEYCLOAK_CLIENT_ID!"=="" (
+    echo ERROR: IAM_CLIENT_ID or KEYCLOAK_CLIENT_ID is required for the local API.
+    exit /b 1
+  )
+  if /I not "!KEYCLOAK_CLIENT_ID!"=="athyper-api-runtime" (
+    echo ERROR: Local API token audience must be athyper-api-runtime; got !KEYCLOAK_CLIENT_ID!.
+    exit /b 1
+  )
 
   REM docrender port 3000 conflicts with Next.js dev server -- clear it.
   set "DOCRENDER_BASE_URL="
@@ -197,11 +218,14 @@ if /I "!ENVIRONMENT!"=="local" (
   set "NODE_ENV=development"
   set "NODE_TLS_REJECT_UNAUTHORIZED=0"
 
+  node -e "if (process.env.KEYCLOAK_ISSUER_URL && process.env.KEYCLOAK_CLIENT_ID && process.env.KEYCLOAK_REALM) { console.log('IAM environment preflight: configured'); } else { console.error('ERROR: local API IAM environment was not inherited by Node.'); process.exit(1); }"
+  if errorlevel 1 exit /b 1
+
   echo Local mode: starting backend server
-  echo   MODE=!MODE! pnpm --filter @athyper/server-platform-host run !PNPM_SCRIPT!
+  echo   MODE=!MODE! node node_modules\tsx\dist\cli.mjs watch src\main.ts
   echo.
-  pushd "%REPO_ROOT%" >nul
-  pnpm --filter @athyper/server-platform-host run !PNPM_SCRIPT!
+  pushd "%REPO_ROOT%\server\apps\platform-host" >nul
+  node "node_modules\tsx\dist\cli.mjs" watch "src\main.ts"
   popd >nul
   goto :end
 )

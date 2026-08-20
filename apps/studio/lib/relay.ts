@@ -6,7 +6,7 @@ export const platformRelay: RelayHandler = (request, context) => {
   relay ??= createRelayHandler({
     plane: "studio",
     runtimeApiUrl: requiredEnvironment("RUNTIME_API_URL"),
-    appOrigin: process.env.APP_ORIGIN ?? process.env.NEXT_PUBLIC_APP_ORIGIN ?? "http://localhost:3000",
+    appOrigin: process.env.APP_ORIGIN ?? process.env.NEXT_PUBLIC_APP_ORIGIN ?? "http://localhost:3200",
     operations: [IAM_ME_OPERATION, EXPERIENCE_BOOTSTRAP_OPERATION],
     session: {
       resolve: (input) => authRuntime.resolveRelaySession(input),

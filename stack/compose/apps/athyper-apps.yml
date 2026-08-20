@@ -53,10 +53,11 @@ x-athyper-shared-env: &athyper-shared-env
   MESH_DATABASE_URL: "${MESH_DATABASE_URL:-}"
   MESH_WORKER_DATABASE_URL: "${MESH_WORKER_DATABASE_URL:-}"
   MESH_DATABASE_POOL_MAX: "${MESH_DATABASE_POOL_MAX:-2}"
-  DB_POOL_MAX: "${DB_POOL_MAX}"
+  DATABASE_POOL_MAX: "${DATABASE_POOL_MAX:-${DB_POOL_MAX:-10}}"
   # Cache
   REDIS_URL: "${REDIS_URL}"
   REDIS_CONNECT_TIMEOUT_MS: "${REDIS_CONNECT_TIMEOUT_MS:-5000}"
+  REDIS_MAX_RETRIES_PER_REQUEST: "${REDIS_MAX_RETRIES_PER_REQUEST:-2}"
   REDIS_MAX_RETRIES: "${REDIS_MAX_RETRIES:-2}"
   REDIS_ERROR_LOG_COOLDOWN_MS: "${REDIS_ERROR_LOG_COOLDOWN_MS:-10000}"
   # Optional dedicated BullMQ Redis (memorycache-jobs profile)
@@ -314,6 +315,7 @@ services:
       # ── Public base URL (used to build OAuth2 redirect_uri) ───────────
       PUBLIC_BASE_URL: "https://${APPS_ATHYPER_NEON_HOST}"
       PUBLIC_WEB_URL: "https://${APPS_ATHYPER_NEON_HOST}"
+      APP_ORIGIN: "https://${APPS_ATHYPER_NEON_HOST}"
       NEON_PUBLIC_WEB_URL: "https://${APPS_ATHYPER_NEON_HOST}"
       # ── Keycloak / IAM ────────────────────────────────────────────────
       # KC is fronted by Traefik at IAM_HOST in all non-local envs; DNS
@@ -346,6 +348,13 @@ services:
       DOCUMENT_EDIT_SAVE_AND_TRANSITION_DISABLED: "${DOCUMENT_EDIT_SAVE_AND_TRANSITION_DISABLED:-}"
       # ── Redis (session storage) ────────────────────────────────────────
       REDIS_URL: "${REDIS_URL}"
+      SESSION_TOKEN_ENCRYPTION_KEY: "${SESSION_TOKEN_ENCRYPTION_KEY}"
+      SESSION_TOKEN_PREVIOUS_KEYS: "${SESSION_TOKEN_PREVIOUS_KEYS:-}"
+      SESSION_KEY_VERSION: "${SESSION_KEY_VERSION:-1}"
+      SESSION_STORE_VERSION: "${SESSION_STORE_VERSION:-1}"
+      SESSION_REDIS_NAMESPACE: "${SESSION_REDIS_NAMESPACE:-athyper:session}"
+      AUTH_CONFIGURATION_REVISION: "${AUTH_CONFIGURATION_REVISION:-1}"
+      AUTH_TRUSTED_DEVICE_TTL_DAYS: "${AUTH_TRUSTED_DEVICE_TTL_DAYS:-30}"
       # ── Feature flags (NEXT_PUBLIC_* baked into browser bundle at build) ─
       NEXT_PUBLIC_GITHUB_LOGIN_ENABLED:     "${NEXT_PUBLIC_GITHUB_LOGIN_ENABLED:-false}"
       NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED: "${NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED:-false}"
@@ -370,7 +379,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget --no-check-certificate -qO- http://localhost:${WEB_PORT:-3000}/livez || exit 1",
+          "wget --no-check-certificate -qO- http://localhost:${WEB_PORT:-3000}/readyz || exit 1",
         ]
       interval: 15s
       timeout: 5s
@@ -397,7 +406,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=athyper-edge
       - traefik.http.services.neon-web.loadbalancer.server.port=3000
-      - traefik.http.services.neon-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.neon-web.loadbalancer.healthcheck.path=/readyz
       - traefik.http.services.neon-web.loadbalancer.healthcheck.interval=15s
       - traefik.http.services.neon-web.loadbalancer.healthcheck.timeout=5s
 
@@ -429,6 +438,7 @@ services:
       GATEWAY_ORIGIN: "${MESH_GATEWAY_ORIGIN}"
       PUBLIC_BASE_URL: "https://${APPS_ATHYPER_MESH_HOST}"
       PUBLIC_WEB_URL: "https://${APPS_ATHYPER_MESH_HOST}"
+      APP_ORIGIN: "https://${APPS_ATHYPER_MESH_HOST}"
       MESH_PUBLIC_WEB_URL: "https://${APPS_ATHYPER_MESH_HOST}"
       KEYCLOAK_BASE_URL: "https://${IAM_HOST}"
       KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
@@ -447,6 +457,13 @@ services:
       AUTH_DISCOVERY_EXPOSE_DEV_LINK: "${AUTH_DISCOVERY_EXPOSE_DEV_LINK:-false}"
       IAM_PRESENTATION_CONTEXT_TTL_SECONDS: "${IAM_PRESENTATION_CONTEXT_TTL_SECONDS:-60}"
       REDIS_URL: "${REDIS_URL}"
+      SESSION_TOKEN_ENCRYPTION_KEY: "${SESSION_TOKEN_ENCRYPTION_KEY}"
+      SESSION_TOKEN_PREVIOUS_KEYS: "${SESSION_TOKEN_PREVIOUS_KEYS:-}"
+      SESSION_KEY_VERSION: "${SESSION_KEY_VERSION:-1}"
+      SESSION_STORE_VERSION: "${SESSION_STORE_VERSION:-1}"
+      SESSION_REDIS_NAMESPACE: "${SESSION_REDIS_NAMESPACE:-athyper:session}"
+      AUTH_CONFIGURATION_REVISION: "${AUTH_CONFIGURATION_REVISION:-1}"
+      AUTH_TRUSTED_DEVICE_TTL_DAYS: "${AUTH_TRUSTED_DEVICE_TTL_DAYS:-30}"
       NEXT_PUBLIC_GITHUB_LOGIN_ENABLED: "${NEXT_PUBLIC_GITHUB_LOGIN_ENABLED:-false}"
       NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED: "${NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED:-false}"
       GITHUB_TENANT_ID: "${GITHUB_TENANT_ID:-}"
@@ -462,7 +479,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget --no-check-certificate -qO- http://localhost:${WEB_PORT:-3000}/livez || exit 1",
+          "wget --no-check-certificate -qO- http://localhost:${WEB_PORT:-3000}/readyz || exit 1",
         ]
       interval: 15s
       timeout: 5s
@@ -482,7 +499,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=athyper-edge
       - traefik.http.services.mesh-web.loadbalancer.server.port=3000
-      - traefik.http.services.mesh-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.mesh-web.loadbalancer.healthcheck.path=/readyz
       - traefik.http.services.mesh-web.loadbalancer.healthcheck.interval=15s
       - traefik.http.services.mesh-web.loadbalancer.healthcheck.timeout=5s
 
@@ -514,12 +531,14 @@ services:
       GATEWAY_ORIGIN: "${STUDIO_GATEWAY_ORIGIN}"
       PUBLIC_BASE_URL: "https://${APPS_ATHYPER_STUDIO_HOST}"
       PUBLIC_WEB_URL: "https://${APPS_ATHYPER_STUDIO_HOST}"
+      APP_ORIGIN: "https://${APPS_ATHYPER_STUDIO_HOST}"
       STUDIO_PUBLIC_WEB_URL: "https://${APPS_ATHYPER_STUDIO_HOST}"
       KEYCLOAK_BASE_URL: "https://${IAM_HOST}"
       KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
       STUDIO_KEYCLOAK_REALM: "${KEYCLOAK_REALM:-athyper}"
       STUDIO_KEYCLOAK_CLIENT_ID: "${STUDIO_KEYCLOAK_CLIENT_ID:-studio-web}"
       STUDIO_KEYCLOAK_CLIENT_SECRET: "${STUDIO_WEB_CLIENT_SECRET:-}"
+      KEYCLOAK_CLIENT_SECRET: "${STUDIO_WEB_CLIENT_SECRET:-}"
       KEYCLOAK_ADMIN_USERNAME: "${KEYCLOAK_ADMIN_USERNAME}"
       KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD}"
       PLATFORM_CONTROL_ENABLED: "${PLATFORM_CONTROL_ENABLED:-false}"
@@ -533,6 +552,13 @@ services:
       AUTH_DISCOVERY_EXPOSE_DEV_LINK: "${AUTH_DISCOVERY_EXPOSE_DEV_LINK:-false}"
       IAM_PRESENTATION_CONTEXT_TTL_SECONDS: "${IAM_PRESENTATION_CONTEXT_TTL_SECONDS:-60}"
       REDIS_URL: "${REDIS_URL}"
+      SESSION_TOKEN_ENCRYPTION_KEY: "${SESSION_TOKEN_ENCRYPTION_KEY}"
+      SESSION_TOKEN_PREVIOUS_KEYS: "${SESSION_TOKEN_PREVIOUS_KEYS:-}"
+      SESSION_KEY_VERSION: "${SESSION_KEY_VERSION:-1}"
+      SESSION_STORE_VERSION: "${SESSION_STORE_VERSION:-1}"
+      SESSION_REDIS_NAMESPACE: "${SESSION_REDIS_NAMESPACE:-athyper:session}"
+      AUTH_CONFIGURATION_REVISION: "${AUTH_CONFIGURATION_REVISION:-1}"
+      AUTH_TRUSTED_DEVICE_TTL_DAYS: "${AUTH_TRUSTED_DEVICE_TTL_DAYS:-30}"
       NEXT_PUBLIC_GITHUB_LOGIN_ENABLED: "${NEXT_PUBLIC_GITHUB_LOGIN_ENABLED:-false}"
       NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED: "${NEXT_PUBLIC_PLATFORM_CONTROL_ENABLED:-false}"
       GITHUB_TENANT_ID: "${GITHUB_TENANT_ID:-}"
@@ -548,7 +574,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget --no-check-certificate -qO- http://localhost:${WEB_PORT:-3000}/livez || exit 1",
+          "wget --no-check-certificate -qO- http://localhost:${WEB_PORT:-3000}/readyz || exit 1",
         ]
       interval: 15s
       timeout: 5s
@@ -568,7 +594,7 @@ services:
       - traefik.enable=true
       - traefik.docker.network=athyper-edge
       - traefik.http.services.studio-web.loadbalancer.server.port=3000
-      - traefik.http.services.studio-web.loadbalancer.healthcheck.path=/livez
+      - traefik.http.services.studio-web.loadbalancer.healthcheck.path=/readyz
       - traefik.http.services.studio-web.loadbalancer.healthcheck.interval=15s
       - traefik.http.services.studio-web.loadbalancer.healthcheck.timeout=5s
 

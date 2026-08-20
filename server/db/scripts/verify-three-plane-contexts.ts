@@ -27,24 +27,46 @@ export async function verifyThreePlaneContexts(manifestPath = THREE_PLANE_MANIFE
         || identity.rows[0]?.plane !== plane
       ) throw new Error(`${plane} context verification target mismatch`);
       const assignments = planeAssignments(inputs.authorizationPacks[plane], plane, tenantCodes);
+      const activeProjections = await client.query<{ tenantId: string; organizationId: string }>(`
+        SELECT tenant_id::text AS "tenantId",external_organization_id AS "organizationId"
+          FROM authz.fn_resolve_active_application_projections($1,$2::text[],'keycloak')
+         ORDER BY tenant_id
+      `, [inputs.manifest.realmKey, inputs.manifest.tenants.map((tenant) => tenant.keycloakOrganizationAlias)]);
+      const expectedProjections = new Set(inputs.manifest.tenants.map((tenant) =>
+        `${tenant.id}:${tenant.keycloakOrganizationAlias}`));
+      const actualProjections = new Set(activeProjections.rows.map((row) =>
+        `${row.tenantId}:${row.organizationId}`));
+      const missingProjections = [...expectedProjections].filter((coordinate) => !actualProjections.has(coordinate));
+      const unexpectedProjections = [...actualProjections].filter((coordinate) => !expectedProjections.has(coordinate));
+      if (missingProjections.length > 0 || unexpectedProjections.length > 0) {
+        throw new Error(`${plane} application projection mismatch: missing=${missingProjections.join(",")}; unexpected=${unexpectedProjections.join(",")}`);
+      }
       const expected = new Set(assignments.map((item) => `${item.tenantCode}:${item.subject.keycloakSubject}`));
-      const actual = await client.query<{ tenantCode: string; subject: string }>(`
-        SELECT tenant.code AS "tenantCode",binding.subject_id AS subject
-        FROM master.principal_identity_binding binding
-        JOIN master.principal principal
-          ON principal.tenant_id=binding.tenant_id AND principal.id=binding.principal_id AND principal.status='active'
-        JOIN master.tenant tenant ON tenant.id=principal.tenant_id AND tenant.status='active'
-        JOIN authz.plane_membership membership
-          ON membership.tenant_id=principal.tenant_id AND membership.principal_id=principal.id
-         AND membership.status='active' AND membership.effective_from<=now()
-         AND (membership.effective_until IS NULL OR membership.effective_until>now())
-        WHERE binding.provider_code='keycloak' AND binding.realm_key=$1 AND binding.status='active'
-          AND tenant.code=ANY($2::text[])
-      `, [inputs.manifest.realmKey, [...tenantCodes]]);
-      const actualSet = new Set(actual.rows.map((row) => `${row.tenantCode}:${row.subject}`));
+      const actualSet = new Set<string>();
+      for (const assignment of assignments) {
+        const tenant = inputs.manifest.tenants.find((item) => item.code === assignment.tenantCode)!;
+        await client.query("SELECT set_config('app.current_tenant_id',$1,false)", [tenant.id]);
+        const actual = await client.query<{ tenantCode: string; subject: string }>(`
+          SELECT $1::text AS "tenantCode",$2::text AS subject
+          FROM master.fn_resolve_principal_identity(
+            $3::uuid,'keycloak'::master.identity_provider_d,$4,$2
+          ) resolved
+          JOIN authz.plane_membership membership
+            ON membership.tenant_id=$3::uuid AND membership.principal_id=resolved.principal_id
+           AND membership.status='active' AND membership.effective_from<=now()
+           AND (membership.effective_until IS NULL OR membership.effective_until>now())
+          LIMIT 1
+        `, [assignment.tenantCode, assignment.subject.keycloakSubject, tenant.id, inputs.manifest.realmKey]);
+        if (actual.rows[0]) actualSet.add(`${actual.rows[0].tenantCode}:${actual.rows[0].subject}`);
+      }
       const missing = [...expected].filter((coordinate) => !actualSet.has(coordinate));
       if (missing.length > 0) throw new Error(`${plane} missing context rows: ${missing.slice(0, 10).join(", ")}`);
-      results.push({ plane, expectedContexts: expected.size, verifiedContexts: expected.size });
+      results.push({
+        plane,
+        expectedContexts: expected.size,
+        verifiedContexts: expected.size,
+        verifiedApplicationProjections: actualProjections.size,
+      });
     } finally {
       await client.end();
     }
@@ -58,11 +80,13 @@ export async function verifyThreePlaneContexts(manifestPath = THREE_PLANE_MANIFE
 
 function databaseUrl(primary: string): string {
   const fallbacks: Readonly<Record<string, readonly string[]>> = {
-    ATHYPER_NEON_DATABASE_ADMIN_URL: ["DATABASE_ADMIN_URL"],
-    ATHYPER_MESH_DATABASE_ADMIN_URL: ["MESH_DATABASE_ADMIN_URL"],
-    ATHYPER_PLATFORM_DATABASE_ADMIN_URL: [],
+    ATHYPER_NEON_DATABASE_ADMIN_URL: ["ATHYPER_NEON_DATABASE_URL", "DATABASE_URL", "DATABASE_ADMIN_URL"],
+    ATHYPER_MESH_DATABASE_ADMIN_URL: ["ATHYPER_MESH_DATABASE_URL", "MESH_DATABASE_URL", "MESH_DATABASE_ADMIN_URL"],
+    ATHYPER_PLATFORM_DATABASE_ADMIN_URL: ["ATHYPER_PLATFORM_DATABASE_URL"],
   };
-  for (const name of [primary, ...(fallbacks[primary] ?? [])]) {
+  // Verify through the least-privilege runtime connection first. Admin access
+  // can prove rows exist while masking missing grants on the actual API path.
+  for (const name of [...(fallbacks[primary] ?? []), primary]) {
     const value = process.env[name]?.trim();
     if (value) return value;
   }

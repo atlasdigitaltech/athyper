@@ -5,7 +5,7 @@ const manifest = JSON.parse(read("packages/platform/gateway/bff-relay/package.js
 if (relayExport?.node !== "./src/index.ts" || relayExport?.browser !== "./src/browser-denied.ts" || relayExport?.default !== "./src/browser-denied.ts") failures.push("Relay package must retain server-only conditional exports");
 
 const relay = read("packages/platform/gateway/bff-relay/src/index.ts");
-for (const marker of ["operations.map(compileOperation)", "RELAY_OPERATION_NOT_ALLOWED", "BLOCKED_REQUEST_HEADERS", "authorization", "x-plane", "x-tenant-id", "x-principal-id", "x-realm", "verifyUnsafeRequest", "RELAY_BODY_TOO_LARGE", "RELAY_HEADERS_TOO_LARGE", "CONTENT_ENCODING_UNSUPPORTED", "refreshInFlight", "AUTH_CONTEXT_MISMATCH", "cancelOnDisconnect", "SAFE_RESPONSE_HEADERS"]) if (!relay.includes(marker)) failures.push(`Relay implementation is missing ${marker}`);
+for (const marker of ["operations.map(compileOperation)", "RELAY_OPERATION_NOT_ALLOWED", "BLOCKED_REQUEST_HEADERS", "authorization", "x-plane", "x-tenant-id", "x-principal-id", "x-realm", "verifyUnsafeRequest", "RELAY_BODY_TOO_LARGE", "RELAY_HEADERS_TOO_LARGE", "CONTENT_ENCODING_UNSUPPORTED", "sameAuthority", "AUTH_CONTEXT_MISMATCH", "cancelOnDisconnect", "SAFE_RESPONSE_HEADERS"]) if (!relay.includes(marker)) failures.push(`Relay implementation is missing ${marker}`);
 if (/console\.(?:log|info|warn|error)/.test(relay)) failures.push("Relay implementation must use structured redacted diagnostics rather than console logging");
 if (/routePrefix|\[\.\.\.path\].*forward/i.test(relay)) failures.push("Relay must not restore unrestricted proxy routing");
 

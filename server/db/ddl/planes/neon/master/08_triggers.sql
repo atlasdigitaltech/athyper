@@ -379,7 +379,7 @@ ON master.operating_organization FOR EACH ROW EXECUTE FUNCTION shared.trg_set_up
 CREATE TRIGGER trg_operating_organization_hierarchy_cycle
 BEFORE INSERT OR UPDATE OF parent_operating_organization_id ON master.operating_organization
 FOR EACH ROW EXECUTE FUNCTION master.trg_guard_organization_hierarchy_cycle(
-    'parent_operating_organization_id'
+    'parent_operating_organization_id', '12'
 );
 
 CREATE TRIGGER trg_procurement_organization_profile_identity_immutable
@@ -388,7 +388,7 @@ FOR EACH ROW EXECUTE FUNCTION master.trg_guard_organization_identity();
 CREATE TRIGGER trg_procurement_organization_profile_updated_at BEFORE UPDATE
 ON master.procurement_organization_profile FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 CREATE TRIGGER trg_procurement_organization_profile_domain
-BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id
+BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id, lead_company_code_id
 ON master.procurement_organization_profile
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_operating_organization_profile();
 
@@ -398,7 +398,7 @@ FOR EACH ROW EXECUTE FUNCTION master.trg_guard_organization_identity();
 CREATE TRIGGER trg_sales_organization_profile_updated_at BEFORE UPDATE
 ON master.sales_organization_profile FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 CREATE TRIGGER trg_sales_organization_profile_domain
-BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id
+BEFORE INSERT OR UPDATE OF tenant_id, operating_organization_id, booking_company_code_id, invoicing_company_code_id
 ON master.sales_organization_profile
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_operating_organization_profile();
 

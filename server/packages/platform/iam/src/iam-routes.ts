@@ -77,6 +77,7 @@ export function createIamAuthenticationMiddleware(authenticator: Authenticator):
     const requestedTenant = header(request, "x-tenant-id");
     const requestedRealm = header(request, "x-realm");
     const requestedOrganization = header(request, "x-organization-id");
+    const requestedAuthEpoch = nonnegativeIntegerHeader(request, "x-auth-epoch");
     const result = await authenticator.authenticate({
       token,
       planeKey,
@@ -87,6 +88,7 @@ export function createIamAuthenticationMiddleware(authenticator: Authenticator):
         ...(requestedTenant ? { tenantId: requestedTenant } : {}),
         ...(requestedRealm ? { realmKey: requestedRealm } : {}),
         ...(requestedOrganization ? { organizationId: requestedOrganization } : {}),
+        ...(requestedAuthEpoch !== undefined ? { authEpoch: requestedAuthEpoch } : {}),
       },
     });
     if (!result.ok) {
@@ -102,6 +104,12 @@ export function createIamAuthenticationMiddleware(authenticator: Authenticator):
       principalId: result.context.principalId,
     }), next);
   };
+}
+
+function nonnegativeIntegerHeader(request: Request, name: string): number | undefined {
+  const value = header(request, name); if (value === undefined) return undefined;
+  if (!/^\d+$/.test(value)) return Number.NaN;
+  const parsed = Number(value); return Number.isSafeInteger(parsed) ? parsed : Number.NaN;
 }
 
 function bearerToken(request: Request): string | undefined {

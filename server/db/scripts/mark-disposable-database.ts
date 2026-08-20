@@ -14,8 +14,8 @@ const executionProfile = option(args, "--execution-profile");
 const approvalLabel = option(args, "--approval-label");
 const acknowledgement = option(args, "--acknowledge");
 
-if (plane !== "neon" && plane !== "mesh") {
-  throw new Error("--plane=neon|mesh is required");
+if (plane !== "studio" && plane !== "neon" && plane !== "mesh") {
+  throw new Error("--plane=studio|neon|mesh is required");
 }
 if (!expectedDatabase) {
   throw new Error("--expected-database is required");
@@ -35,9 +35,11 @@ if (acknowledgement !== `MARK_DISPOSABLE_${plane.toUpperCase()}`) {
   throw new Error(`--acknowledge=MARK_DISPOSABLE_${plane.toUpperCase()} is required`);
 }
 
-const variables = plane === "mesh"
-  ? ["ATHYPER_MESH_DATABASE_ADMIN_URL", "MESH_DATABASE_ADMIN_URL"]
-  : ["ATHYPER_NEON_DATABASE_ADMIN_URL", "DATABASE_ADMIN_URL"];
+const variables = plane === "studio"
+  ? ["ATHYPER_PLATFORM_DATABASE_ADMIN_URL"]
+  : plane === "mesh"
+    ? ["ATHYPER_MESH_DATABASE_ADMIN_URL", "MESH_DATABASE_ADMIN_URL"]
+    : ["ATHYPER_NEON_DATABASE_ADMIN_URL", "DATABASE_ADMIN_URL"];
 const connectionString = variables
   .map((variable) => process.env[variable]?.trim())
   .find((value): value is string => Boolean(value));
@@ -66,7 +68,8 @@ try {
         WHERE nspname = ANY(
           CASE $1
             WHEN 'neon' THEN ARRAY['mesh', 'metadata']
-            ELSE ARRAY['ledger', 'metadata', 'aggregate']
+            WHEN 'mesh' THEN ARRAY['ledger', 'metadata', 'aggregate']
+            ELSE ARRAY['ledger', 'mesh', 'aggregate']
           END
         )
       ) AS opposite_schema_count

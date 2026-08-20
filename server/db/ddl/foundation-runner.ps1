@@ -15,7 +15,8 @@ param(
 
     [string] $DatabaseUser,
 
-    [switch] $CreateDatabaseOnly
+    [switch] $CreateDatabaseOnly,
+    [switch] $AuthorizationIdempotency
 )
 
 $ErrorActionPreference = "Stop"
@@ -366,17 +367,26 @@ SELECT set_config(
 );
 "@
 
-    ($sessionPrelude + [Environment]::NewLine + $sqlContent) |
-        & docker exec -i $DockerContainer psql `
-            --username $DatabaseUser `
-            --dbname $DatabaseName `
-            --single-transaction `
-            --no-psqlrc `
-            --set ON_ERROR_STOP=1 `
-            --file -
-    if ($LASTEXITCODE -ne 0) {
-        throw "DDL failed: $($File.RelativePath)"
+    $sqlInput = $sessionPrelude + [Environment]::NewLine + $sqlContent
+    $maximumAttempts = 3
+    for ($attempt = 1; $attempt -le $maximumAttempts; $attempt++) {
+        $sqlInput |
+            & docker exec -i $DockerContainer psql `
+                --username $DatabaseUser `
+                --dbname $DatabaseName `
+                --single-transaction `
+                --no-psqlrc `
+                --set ON_ERROR_STOP=1 `
+                --file -
+        if ($LASTEXITCODE -eq 0) {
+            return
+        }
+        if ($attempt -lt $maximumAttempts) {
+            Write-Warning "DDL transport failed for $($File.RelativePath); retrying Docker exec ($attempt/$maximumAttempts)."
+            Start-Sleep -Seconds $attempt
+        }
     }
+    throw "DDL failed after $maximumAttempts attempts: $($File.RelativePath)"
 }
 
 function Invoke-PlaneBuild {
@@ -386,6 +396,24 @@ function Invoke-PlaneBuild {
     )
 
     $files = @(Get-ManifestFiles -ManifestRelativePath $Definition.Manifest)
+    if ($AuthorizationIdempotency) {
+        $files = @($files | Where-Object {
+            $path = $_.RelativePath
+            $isReferencePhase = $path -match '/(?:12|13|14|15)_[^/]+\.sql$'
+            $isRequiredAuthorityReference =
+                $path -eq 'common/master/12_system_authority_reference_seed.sql' -or
+                $path -eq 'common/audit/12_reference_seed.sql' -or
+                $path -eq "planes/$PlaneName/master/12_platform_catalog_reference_seed.sql" -or
+                $path -eq "planes/$PlaneName/control/12_platform_catalog_reference_seed.sql" -or
+                $path -match "^planes/$PlaneName/authz/(?:12|13|14)_.+permission_reference_seed\.sql$"
+            -not $isReferencePhase -or $isRequiredAuthorityReference
+        })
+        $currencyPath = [IO.Path]::GetFullPath((Join-Path $ddlRoot 'common/shared/reference-data/003_currency.sql'))
+        $files += [pscustomobject]@{
+            RelativePath = 'common/shared/reference-data/003_currency.sql'
+            FullPath = $currencyPath
+        }
+    }
     Write-Host ""
     Write-Host "=== $PlaneName -> $($Definition.Database) ==="
 

@@ -36,6 +36,7 @@ describe("IAM plus Audit vertical", () => {
         if (value !== "signed-token") throw new Error("invalid");
         return token;
       } },
+      resolveIdentityContext: async () => ({ tenantId: "tenant-1", principalId: "principal-1", authEpoch: 2 }),
       auditSink: sink,
     });
     const app = createHttpApplication({
@@ -77,7 +78,7 @@ describe("IAM plus Audit vertical", () => {
     } };
     const config = loadConfig();
     registerPlatform(container, { ...config, env: "production", iam: { ...config.iam, defaultRealmKey: "athyper", claimContextMode: "enforce" } }, {
-      tokenVerifier: { verify: async () => token }, auditSink: createInMemoryAuditSink(), provisioning: { request } as never,
+      tokenVerifier: { verify: async () => token }, resolveIdentityContext: async () => ({ tenantId: "tenant-1", principalId: "principal-1", authEpoch: 0 }), auditSink: createInMemoryAuditSink(), provisioning: { request } as never,
     });
     const app = createHttpApplication({ configure(application) { for (const register of container.platform.httpRegistrars) register(application); } });
     const baseUrl = await listen(app);

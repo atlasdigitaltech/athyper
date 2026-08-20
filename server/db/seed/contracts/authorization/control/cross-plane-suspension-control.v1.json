@@ -1,0 +1,194 @@
+{
+  "contractVersion": "athyper.authorization.cross-plane-suspension-control.v1",
+  "controlVersion": "1.0.0",
+  "scopeStatement": "This contract records current enforcement boundaries. It does not assert a global suspension orchestrator, cross-plane convergence, token auth-epoch enforcement, or a platform kill switch where the implementation has not established one.",
+  "controls": [
+    {
+      "id": "local-business-deny",
+      "controlClass": "local_business_deny",
+      "implementationStatus": "implemented_local",
+      "authoritativeSource": {
+        "ownership": "plane_local",
+        "coordinates": ["authz.deny_rule"],
+        "statement": "The exact target plane owns tenant, principal, and group deny evidence for its business permissions."
+      },
+      "targetPlanes": ["origin_plane"],
+      "propagation": {
+        "mode": "local_transaction",
+        "mechanisms": ["Exact-plane resolver evaluates active, effective authz.deny_rule rows with absolute precedence over allow evidence."],
+        "orchestrator": null,
+        "convergence": {
+          "guarantee": "transactional_local",
+          "objectiveSeconds": 0,
+          "measured": false,
+          "statement": "The deny is authoritative after its local database transaction commits; no cross-plane propagation is implied."
+        },
+        "failureBehavior": "Authorization fails closed when the exact-plane database is unavailable; a deny created in one plane does not silently deny another plane."
+      },
+      "auditEvidence": {
+        "required": ["deny_rule identity, subject, permission, scope, reason, effective interval, actor, and status history"],
+        "current": ["authz.deny_rule row evidence", "database row-change audit event"],
+        "gaps": []
+      },
+      "recovery": {
+        "authority": "Authorized security operator in the owning plane",
+        "steps": ["Suspend or revoke the exact deny rule through a runtime mutation API.", "Do not delete immutable audit evidence."],
+        "verification": ["Resolve the affected principal in the exact plane.", "Verify the deny proof is absent only after the approved effective time."]
+      },
+      "limitations": ["This is a permission-and-scope deny, not identity suspension, tenant suspension, session revocation, or a platform kill switch."]
+    },
+    {
+      "id": "principal-suspension",
+      "controlClass": "principal_suspension",
+      "implementationStatus": "implemented_local",
+      "authoritativeSource": {
+        "ownership": "plane_local",
+        "coordinates": ["master.principal.status", "authz.plane_membership.status"],
+        "statement": "Each physical plane owns its principal and plane-membership admission state."
+      },
+      "targetPlanes": ["origin_plane"],
+      "propagation": {
+        "mode": "local_transaction",
+        "mechanisms": ["Exact-plane resolver requires active master.principal and active, currently effective authz.plane_membership rows."],
+        "orchestrator": null,
+        "convergence": {
+          "guarantee": "transactional_local",
+          "objectiveSeconds": 0,
+          "measured": false,
+          "statement": "New exact-plane authorization resolutions deny after the local status transaction commits; other planes are unchanged."
+        },
+        "failureBehavior": "The exact-plane resolver fails closed when admission state cannot be read. Existing identity-provider and BFF sessions are not claimed to be revoked by this control."
+      },
+      "auditEvidence": {
+        "required": ["principal or membership status transition, actor, reason, request correlation, and affected tenant"],
+        "current": ["master.principal status evidence", "authz.plane_membership status evidence", "database row-change audit event"],
+        "gaps": ["No cross-plane principal-suspension command receipt.", "Token auth_epoch is not currently compared with master.principal.auth_epoch by the exact-plane resolver."]
+      },
+      "recovery": {
+        "authority": "Authorized tenant security administrator in each affected plane",
+        "steps": ["Reactivate the principal and membership separately in every intended plane.", "Re-resolve authorization instead of restoring cached permission claims."],
+        "verification": ["Verify active principal and membership state per plane.", "Verify suspended principals remain denied in planes not explicitly recovered."]
+      },
+      "limitations": ["There is no orchestrator that applies principal suspension to Studio, Neon, and Mesh together.", "Local auth_epoch storage alone does not prove session invalidation."]
+    },
+    {
+      "id": "tenant-organization-suspension",
+      "controlClass": "tenant_organization_suspension",
+      "implementationStatus": "partial",
+      "authoritativeSource": {
+        "ownership": "studio",
+        "coordinates": ["master.tenant.status", "trustiam.organization.status", "trustiam.application_projection.status"],
+        "statement": "Plane-local master.tenant is authoritative for local tenant admission; Studio TrustIAM owns desired organization and application-projection lifecycle."
+      },
+      "targetPlanes": ["origin_plane", "exact_projection_targets"],
+      "propagation": {
+        "mode": "studio_reconciliation",
+        "mechanisms": ["Local resolver requires master.tenant.status=active.", "Studio reconciliation can carry an organization application-projection lifecycle to an exact target plane."],
+        "orchestrator": "Studio projection reconciliation worker covers application-projection desired state only",
+        "convergence": {
+          "guarantee": "best_effort",
+          "objectiveSeconds": null,
+          "measured": false,
+          "statement": "Local tenant suspension is transactional. End-to-end organization suspension across every plane has no established SLO or convergence proof."
+        },
+        "failureBehavior": "A local inactive tenant fails exact-plane admission. Reconciliation failure remains visible as pending, drifted, failed, or dead-letter evidence and must not be described as globally converged."
+      },
+      "auditEvidence": {
+        "required": ["Studio desired-state version and hash", "durable reconciliation attempt", "exact target result", "local tenant lifecycle event"],
+        "current": ["trustiam.application_projection desired state", "trustiam.projection_reconciliation_attempt", "plane-local projection error evidence", "master.tenant status evidence"],
+        "gaps": ["No single command currently proves that organization suspension changed every plane tenant admission state."]
+      },
+      "recovery": {
+        "authority": "Studio organization authority plus an authorized operator for each plane-local tenant",
+        "steps": ["Restore the approved Studio desired state.", "Replay dead-lettered exact-version reconciliation attempts where required.", "Reactivate each plane-local tenant only after projection hash verification."],
+        "verification": ["Verify desired and observed version/hash for every target projection.", "Verify master.tenant admission state in each intended plane."]
+      },
+      "limitations": ["Application projection controls organization-level application admission and is not a principal-specific suspension mechanism.", "Organization suspension does not itself prove identity-provider session revocation."]
+    },
+    {
+      "id": "identity-provider-session-invalidation",
+      "controlClass": "identity_provider_session_invalidation",
+      "implementationStatus": "partial",
+      "authoritativeSource": {
+        "ownership": "identity_provider",
+        "coordinates": ["Keycloak user/session state", "BFF relay-session store"],
+        "statement": "The identity provider owns upstream login sessions; the BFF session store owns Athyper relay sessions."
+      },
+      "targetPlanes": ["identity_realm", "active_bff_session_bindings"],
+      "propagation": {
+        "mode": "external_api_and_session_store",
+        "mechanisms": ["Identity-provider administrative session invalidation.", "BFF can revoke an identified relay session from its session store."],
+        "orchestrator": null,
+        "convergence": {
+          "guarantee": "best_effort",
+          "objectiveSeconds": null,
+          "measured": false,
+          "statement": "Individual mechanisms exist, but no durable fan-out workflow or measured convergence objective joins provider and all BFF sessions."
+        },
+        "failureBehavior": "Database suspension must still deny new exact-plane authorization. Failure to revoke an upstream or relay session remains an explicit security incident and retry condition."
+      },
+      "auditEvidence": {
+        "required": ["provider revocation request and result", "relay-session revocation result", "subject, realm, actor, reason, and correlation ID"],
+        "current": ["Individual BFF session revocation result", "identity-provider administrative audit when enabled"],
+        "gaps": ["No durable combined revocation receipt across provider and every plane session binding.", "No resolver-enforced token-to-principal auth_epoch comparison."]
+      },
+      "recovery": {
+        "authority": "Identity security administrator",
+        "steps": ["Restore provider login eligibility only after the suspension incident is resolved.", "Require a new authenticated session; never resurrect revoked relay-session material."],
+        "verification": ["Verify old provider and relay sessions cannot refresh.", "Verify new login receives only currently admitted plane contexts."]
+      },
+      "limitations": ["Principal database status, provider sessions, and BFF sessions are separate authorities and are not currently coordinated by one workflow."]
+    },
+    {
+      "id": "emergency-platform-kill-switch",
+      "controlClass": "emergency_platform_kill_switch",
+      "implementationStatus": "not_implemented",
+      "authoritativeSource": {
+        "ownership": "unassigned",
+        "coordinates": ["No canonical platform authorization kill-switch source is published"],
+        "statement": "No authoritative source has been assigned for a Studio, Neon, and Mesh authorization kill switch."
+      },
+      "targetPlanes": ["intended_studio_neon_mesh"],
+      "propagation": {
+        "mode": "none",
+        "mechanisms": ["No implemented propagation mechanism; incident responders must use separately authorized local controls."],
+        "orchestrator": null,
+        "convergence": {
+          "guarantee": "none",
+          "objectiveSeconds": null,
+          "measured": false,
+          "statement": "No convergence guarantee or SLO exists."
+        },
+        "failureBehavior": "The platform must not report a global shutdown. Operators must treat every plane as potentially available until exact local verification succeeds."
+      },
+      "auditEvidence": {
+        "required": ["immutable activation receipt", "per-plane fenced acknowledgement", "timeout and failure evidence", "recovery approval"],
+        "current": [],
+        "gaps": ["No source table or service API.", "No fenced cross-plane fan-out.", "No all-plane acknowledgement or recovery workflow."]
+      },
+      "recovery": {
+        "authority": "Future platform security incident commander under dual control",
+        "steps": ["No automated recovery exists.", "Recover separately applied local controls under their owning authorities."],
+        "verification": ["Verify each plane independently.", "Do not claim platform recovery without future durable acknowledgements from all intended planes."]
+      },
+      "limitations": ["This entry is a required design boundary, not an implemented control."]
+    }
+  ],
+  "deliveryPriorities": [
+    { "id": "W1A", "title": "Contextual mapping publication", "criterion": "release_blocker" },
+    { "id": "W1B", "title": "Canonical migration and parity proof", "criterion": "release_blocker" },
+    { "id": "W2", "title": "Projection ownership design and role integration tests", "criterion": "release_blocker" },
+    { "id": "W5", "title": "Live double-apply CI proof", "criterion": "release_blocker" },
+    { "id": "W4", "title": "Durable Studio-to-plane reconciliation worker", "criterion": "operational_release_criterion" },
+    { "id": "W3", "title": "Trusted-device expiry reconciliation and resolver test", "criterion": "security_hardening" },
+    { "id": "W6", "title": "Cross-plane suspension control contract", "criterion": "control_contract" }
+  ],
+  "reportCorrections": {
+    "removedClaims": [
+      "Global suspension automatically propagates through principal status, membership, Keycloak revocation, auth epoch, and projection suspension.",
+      "Application projection is a principal-specific suspension mechanism.",
+      "W1 is the only release blocker."
+    ],
+    "releaseBlockerStatement": "W1A, W1B, W2, and W5 are release blockers; W4 is an operational release criterion, followed by W3 and W6 as separately tracked security and control work."
+  }
+}

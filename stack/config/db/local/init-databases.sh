@@ -16,6 +16,17 @@
 # ========================================================
 set -e
 
+runtime_user="${DBPOOL_APPS_USER:?DBPOOL_APPS_USER is required}"
+runtime_password="${DBPOOL_APPS_PASSWORD:?DBPOOL_APPS_PASSWORD is required}"
+if ! [[ "$runtime_user" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    echo "DBPOOL_APPS_USER must be a simple PostgreSQL identifier" >&2
+    exit 1
+fi
+if [ "$runtime_user" = "$POSTGRES_USER" ]; then
+    echo "DBPOOL_APPS_USER must not be the PostgreSQL administrator" >&2
+    exit 1
+fi
+
 create_db_if_missing() {
     local db="$1"
     local description="$2"
@@ -38,6 +49,27 @@ create_db_if_missing "athyper_health"    "Healthchecks, monitoring profile"
 create_db_if_missing "athyper_errors"    "GlitchTip error tracking, monitoring profile"
 create_db_if_missing "athyper_secrets"   "Infisical secrets vault, security-infisical profile"
 create_db_if_missing "athyper_analytics" "Metabase BI, analytics profile"
+
+echo "=== Provisioning least-privilege application login (idempotent) ==="
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
+    --set=runtime_user="$runtime_user" --set=runtime_password="$runtime_password" <<-'EOSQL'
+    DO $$
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+            CREATE ROLE athyperapp NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+        END IF;
+    END;
+    $$;
+    SELECT format(
+        'CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L',
+        :'runtime_user', :'runtime_password'
+    ) WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'runtime_user') \gexec
+    SELECT format(
+        'ALTER ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L',
+        :'runtime_user', :'runtime_password'
+    ) \gexec
+    GRANT athyperapp TO :"runtime_user";
+EOSQL
 
 echo "=== Granting privileges (idempotent) ==="
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL

@@ -110,3 +110,38 @@ CREATE TABLE trustiam.identity_provisioning_attempt (
  CONSTRAINT trustiam_identity_provisioning_attempt_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
 );
 COMMENT ON TABLE trustiam.identity_provisioning_attempt IS 'Durable worker claim and bounded content-free receipt for one identity provisioning attempt. Terminal attempts are immutable; retry creates the next attempt.';
+
+CREATE TABLE trustiam.projection_reconciliation_attempt (
+ id uuid NOT NULL DEFAULT shared.uuidv7(), authority_tenant_id uuid NOT NULL,
+ projection_id uuid NOT NULL, desired_version bigint NOT NULL, desired_hash char(64) NOT NULL,
+ target_plane shared.application_plane_d NOT NULL, target_tenant_id uuid NOT NULL,
+ attempt_no integer NOT NULL, job_identity_hash char(64) NOT NULL,
+ worker_id text NOT NULL, claim_token_hash char(64) NOT NULL, fencing_token bigint NOT NULL,
+ status text NOT NULL DEFAULT 'claimed', failure_class text, error_code text,
+ lease_expires_at timestamptz NOT NULL, next_attempt_at timestamptz,
+ started_at timestamptz, terminal_at timestamptz,
+ receipt jsonb NOT NULL DEFAULT '{}'::jsonb, manual_replay_of uuid,
+ replay_requested_at timestamptz, replay_requested_by uuid,
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp(), created_by uuid NOT NULL,
+ updated_at timestamptz, updated_by uuid,
+ CONSTRAINT trustiam_projection_reconciliation_attempt_pkey PRIMARY KEY(id),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_tenant_id_uq UNIQUE(authority_tenant_id,id),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_no_uq UNIQUE(authority_tenant_id,projection_id,desired_version,desired_hash,attempt_no),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_job_uq UNIQUE(job_identity_hash),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_version_chk CHECK(desired_version>0 AND attempt_no>0 AND fencing_token>0),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_hash_chk CHECK(desired_hash~'^[a-f0-9]{64}$' AND job_identity_hash~'^[a-f0-9]{64}$' AND claim_token_hash~'^[a-f0-9]{64}$'),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_worker_chk CHECK(btrim(worker_id)<>'' AND octet_length(worker_id)<=128),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_status_chk CHECK(status IN ('claimed','running','retrying','succeeded','failed','dead_letter','cancelled')),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_failure_chk CHECK(failure_class IS NULL OR failure_class IN ('transient','permanent','stale')),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_time_chk CHECK(lease_expires_at>created_at AND (started_at IS NULL OR started_at>=created_at) AND (terminal_at IS NULL OR terminal_at>=coalesce(started_at,created_at))),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_terminal_chk CHECK(
+   (status IN ('claimed','running') AND terminal_at IS NULL AND failure_class IS NULL AND error_code IS NULL)
+   OR (status='retrying' AND terminal_at IS NULL AND failure_class='transient' AND btrim(error_code)<>'' AND next_attempt_at IS NOT NULL)
+   OR (status='succeeded' AND terminal_at IS NOT NULL AND failure_class IS NULL AND error_code IS NULL)
+   OR (status IN ('failed','dead_letter','cancelled') AND terminal_at IS NOT NULL AND failure_class IS NOT NULL AND btrim(error_code)<>'')
+ ),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_receipt_chk CHECK(jsonb_typeof(receipt)='object' AND octet_length(receipt::text)<=32768),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_replay_chk CHECK((replay_requested_at IS NULL)=(replay_requested_by IS NULL) AND (replay_requested_at IS NULL OR status='dead_letter')),
+ CONSTRAINT trustiam_projection_reconciliation_attempt_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+COMMENT ON TABLE trustiam.projection_reconciliation_attempt IS 'Studio-owned durable claim, fencing, retry, dead-letter, and replay evidence for one exact desired projection version/hash. It never changes desired business lifecycle status.';

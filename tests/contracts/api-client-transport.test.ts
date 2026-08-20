@@ -17,6 +17,16 @@ describe("same-origin API transport", () => {
     assert.equal(observed?.headers.has("authorization"), false); assert.equal(observed?.headers.has("cookie"), false); assert.equal(observed?.headers.has("x-tenant-id"), false);
   });
 
+  it("removes the canonical upstream api prefix when constructing a relay URL", async () => {
+    let observedUrl: string | undefined;
+    const client = createHttpClient({ fetch: async (input) => { observedUrl = String(input); return json({ ok: true }); } });
+    const operation = createOperation<{ ok: boolean }>({ method: "GET", path: "/api/neon/work-contexts" });
+
+    await client.request(operation);
+
+    assert.equal(observedUrl, "/api/relay/neon/work-contexts");
+  });
+
   it("parses the current platform problem and preserves request/correlation IDs without leaking diagnostics", async () => {
     const diagnostics: unknown[] = [];
     const fixture = JSON.parse(readFileSync("packages/contracts/platform/fixtures/api-problem.v1.json", "utf8"));

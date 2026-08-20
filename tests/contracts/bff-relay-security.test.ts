@@ -25,6 +25,7 @@ describe("Phase 4 hardened BFF relay", () => {
     const operation: RelayOperation = { id: "tenant.item", method: "POST", path: "/api/tenants/:tenantId/items", tenantParam: "tenantId", idempotency: "required" }; const handler = relay({ operation });
     const request = (headers: HeadersInit = {}, tenant = "tenant-1") => new Request(`https://neon.example/api/relay/tenants/${tenant}/items`, { method: "POST", headers: { origin: "https://neon.example", "sec-fetch-site": "same-origin", "x-csrf-token": "csrf-proof", "idempotency-key": "create-1", "content-type": "application/json", ...headers }, body: "{}" });
     assert.equal((await handler(request(), context("tenants", "tenant-1", "items"))).status, 200); assert.equal((await handler(request({ origin: "https://evil.example" }), context("tenants", "tenant-1", "items"))).status, 403); assert.equal((await handler(request({ "x-csrf-token": "wrong" }), context("tenants", "tenant-1", "items"))).status, 403); assert.equal((await handler(request({}, "tenant-2"), context("tenants", "tenant-2", "items"))).status, 403);
+    const rotating = { ...session(), csrfToken: "csrf-current", acceptedCsrfTokens: ["csrf-current", "csrf-previous"] }; assert.equal((await relay({ operation, authority: authority(rotating) })(request({ "x-csrf-token": "csrf-previous" }), context("tenants", "tenant-1", "items"))).status, 200);
     assert.equal((await relay({ operation, authority: authority(session("mesh")) })(request(), context("tenants", "tenant-1", "items"))).status, 403);
   });
 
@@ -45,9 +46,33 @@ describe("Phase 4 hardened BFF relay", () => {
     const client = new AbortController(); const pending = relay({ fetch: waitingFetch, timeout: 1000 })(new Request("https://neon.example/api/relay/iam/me", { signal: client.signal }), context("iam", "me")); client.abort(); assert.equal((await pending).status, 499);
   });
 
-  it("coalesces eligible 401 refresh through the session authority and retries only once", async () => {
-    let refreshCalls = 0; const active = session(); const sharedAuthority: RelaySessionAuthority = { resolve: async () => active, refresh: async () => { refreshCalls++; return new Promise((resolve) => setTimeout(() => resolve({ ...active, accessToken: "refreshed-token" }), 20)); }, invalidate: async () => undefined };
-    let upstreamCalls = 0; const handler = relay({ authority: sharedAuthority, fetch: async (_url, init) => { upstreamCalls++; return new Headers(init?.headers).get("authorization") === "Bearer refreshed-token" ? new Response("{}") : new Response("", { status: 401 }); } }); const request = () => handler(new Request("https://neon.example/api/relay/iam/me"), context("iam", "me")); const [first, second] = await Promise.all([request(), request()]); assert.equal(first.status, 200); assert.equal(second.status, 200); assert.equal(refreshCalls, 1); assert.equal(upstreamCalls, 4);
+  it("delegates eligible 401 refresh to the session authority and retries only once", async () => {
+    let refreshCalls = 0; let active = session(); const sharedAuthority: RelaySessionAuthority = { resolve: async () => active, refresh: async () => { refreshCalls++; await new Promise((resolve) => setTimeout(resolve, 20)); active = { ...active, accessToken: "refreshed-token" }; return active; }, invalidate: async () => undefined };
+    let upstreamCalls = 0; const handler = relay({ authority: sharedAuthority, fetch: async (_url, init) => { upstreamCalls++; return new Headers(init?.headers).get("authorization") === "Bearer refreshed-token" ? new Response("{}") : new Response("", { status: 401 }); } }); const request = () => handler(new Request("https://neon.example/api/relay/iam/me"), context("iam", "me")); const [first, second] = await Promise.all([request(), request()]); assert.equal(first.status, 200); assert.equal(second.status, 200); assert.equal(refreshCalls, 2); assert.equal(upstreamCalls, 4);
+  });
+
+  it("never shares refreshed authority between concurrent browser sessions", async () => {
+    const sessions = new Map<string, RelaySessionContext>([
+      ["a", { ...session("neon", "tenant-1", "expired-a"), principalId: "principal-a" }],
+      ["b", { ...session("neon", "tenant-1", "expired-b"), principalId: "principal-b" }],
+    ]);
+    const sessionId = (request: Request) => request.headers.get("cookie")?.match(/sid=([^;]+)/)?.[1] ?? "";
+    const isolatedAuthority: RelaySessionAuthority = {
+      resolve: async (request) => sessions.get(sessionId(request)),
+      refresh: async (request) => {
+        const id = sessionId(request); const current = sessions.get(id); if (!current) return undefined;
+        await new Promise((resolve) => setTimeout(resolve, id === "a" ? 20 : 5));
+        const refreshed = { ...current, accessToken: `token-${id}` }; sessions.set(id, refreshed); return refreshed;
+      },
+      invalidate: async () => undefined,
+    };
+    const handler = relay({ authority: isolatedAuthority, fetch: async (_url, init) => {
+      const authorization = new Headers(init?.headers).get("authorization")!;
+      return authorization.startsWith("Bearer token-") ? new Response(authorization) : new Response("", { status: 401 });
+    } });
+    const call = (id: string) => handler(new Request("https://neon.example/api/relay/iam/me", { headers: { cookie: `sid=${id}` } }), context("iam", "me"));
+    const [a, b] = await Promise.all([call("a"), call("b")]);
+    assert.equal(await a.text(), "Bearer token-a"); assert.equal(await b.text(), "Bearer token-b");
   });
 
   it("does not retry non-idempotent mutations without an idempotency key", async () => {

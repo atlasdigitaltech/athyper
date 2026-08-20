@@ -1,6 +1,6 @@
 -- seed-contract-version: 1
 -- seed-pack: common.audit.event-contracts
--- seed-pack-version: 1.0.0
+-- seed-pack-version: 1.1.0
 -- seed-dataset: master.audit-event-contract
 -- seed-data-class: production_reference
 -- seed-provenance: {"source":"internal-audit-contract","publisher":"Athyper","source_version":"1","retrieved_at":"2026-08-13","license":"internal"}
@@ -75,56 +75,56 @@ VALUES
     -- ─── IAM — specific before catch-all (5–9) ────────────────────────────────
     (
         'iam_authentication_event',
-        '^iam\.(login|logout|mfa)[_a-z0-9]*$',
+        '^iam\.(authentication\.(succeeded|failed|denied)|login([._][a-z][a-z0-9_]*)?|logout([._][a-z][a-z0-9_]*)?|mfa([._][a-z][a-z0-9_]*)?)$',
         5,
         ARRAY['login','logout','execute']::audit.operation_d[],
         'warning',
         ARRAY['user','service_account','support','system']::audit.actor_type_d[],
-        'either', false, 'metadata', 16384, 1,
+        'either', false, 'metadata', 16384, 2,
         '{"event_category":"security","owner":"iam","purpose":"authentication_evidence"}'::jsonb,
         'active'
     ),
     (
         'iam_session_event',
-        '^iam\.session[_a-z0-9]*$',
+        '^iam\.session([._][a-z][a-z0-9_]*)?$',
         6,
         ARRAY['execute','delete']::audit.operation_d[],
         'warning',
         ARRAY['user','service_account','support','system']::audit.actor_type_d[],
-        'either', true, 'metadata', 16384, 1,
+        'either', true, 'metadata', 16384, 2,
         '{"event_category":"security","owner":"iam","purpose":"session_lifecycle_evidence"}'::jsonb,
         'active'
     ),
     (
         'iam_authorization_event',
-        '^iam\.(role|permission|delegation)[_a-z0-9]*$',
+        '^iam\.(authorization|role|permission|delegation)([._][a-z][a-z0-9_]*)?$',
         7,
-        ARRAY['create','update','delete','grant','revoke']::audit.operation_d[],
+        ARRAY['create','update','delete','execute','grant','revoke']::audit.operation_d[],
         'warning',
         ARRAY['user','service_account','support','system']::audit.actor_type_d[],
-        'either', true, 'safe_values', 65536, 1,
+        'either', true, 'safe_values', 65536, 2,
         '{"event_category":"security","owner":"iam","purpose":"authorization_change_evidence"}'::jsonb,
         'active'
     ),
     (
         'iam_provisioning_event',
-        '^iam\.provisioning\.(requested|started|invited|activated|suspended|failed|deprovisioning|deprovisioned)$',
+        '^iam\.provisioning\.[a-z][a-z0-9_]*$',
         8,
         ARRAY['create','update','execute']::audit.operation_d[],
         'warning',
         ARRAY['user','service_account','support','system']::audit.actor_type_d[],
-        'tenant', false, 'metadata', 16384, 1,
+        'tenant', false, 'metadata', 16384, 2,
         '{"event_category":"security","owner":"iam","purpose":"identity_provisioning_evidence"}'::jsonb,
         'active'
     ),
     (
         'iam_general_event',
-        '^iam\.[a-z][a-z0-9_]*$',
+        '^iam\.[a-z][a-z0-9_]*([._][a-z][a-z0-9_]*)?$',
         9,
-        ARRAY['create','update','delete','execute','grant','revoke']::audit.operation_d[],
+        ARRAY['create','update','delete','execute','grant','revoke','login','logout']::audit.operation_d[],
         'warning',
         ARRAY['user','service_account','support','system']::audit.actor_type_d[],
-        'either', false, 'metadata', 16384, 1,
+        'either', false, 'metadata', 16384, 2,
         '{"event_category":"security","owner":"iam","purpose":"iam_general_evidence"}'::jsonb,
         'active'
     ),

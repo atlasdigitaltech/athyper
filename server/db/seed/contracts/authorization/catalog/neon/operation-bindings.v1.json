@@ -1,0 +1,6 @@
+{
+  "contractVersion": "athyper.authorization.operation-bindings.v1",
+  "plane": "neon",
+  "defaultBehavior": "deny_unbound_operation",
+  "authzEntityOperationBindings": []
+}

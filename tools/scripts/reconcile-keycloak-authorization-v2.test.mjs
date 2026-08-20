@@ -1,9 +1,83 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  compileDesiredTenantOrganizationMemberships,
+  planManagedMembershipReconciliation,
+  planManagedGroupClientRoleReconciliation,
   planKeycloakReconciliation,
+  planTenantOrganizationMembershipReconciliation,
   planTenantOrganizationReconciliation,
 } from "./reconcile-keycloak-authorization-v2.mjs";
+
+test("managed plane groups receive only their matching AUTHORIZED client role", () => {
+  const role = { id: "role-neon", name: "AUTHORIZED", clientRole: true };
+  const operations = planManagedGroupClientRoleReconciliation(
+    [{ groupName: "studio.access.quarantine", plane: "studio" }],
+    [
+      { groupName: "studio.access.quarantine", plane: "studio", clientUuid: "studio-client", role: { ...role, id: "role-studio" } },
+      { groupName: "neon.access.quarantine", plane: "neon", clientUuid: "neon-client", role },
+    ],
+  );
+  assert.deepEqual(operations, [{
+    kind: "add",
+    resource: "group_client_role",
+    groupName: "neon.access.quarantine",
+    plane: "neon",
+    clientUuid: "neon-client",
+    role,
+  }]);
+});
+
+test("compiled subjects are added to tenant organizations without removing legacy memberships", () => {
+  const tenantManifest = {
+    tenants: [
+      { code: "athyper", keycloakOrganizationAlias: "11111111-1111-4111-8111-111111111111" },
+      { code: "technostat", keycloakOrganizationAlias: "22222222-2222-4222-8222-222222222222" },
+    ],
+  };
+  const manifest = {
+    contractVersion: "athyper.authorization.keycloak-admission.v1",
+    realm: "athyper",
+    unresolvedSubjectBehavior: "deny",
+    mappedSubjectCount: 2,
+    enabledSubjectCount: 2,
+    subjectMappings: {
+      "aa010107-0000-0000-0000-000000000000": { tenantCodes: ["athyper"] },
+      "cc001000-0000-0000-0000-000000000002": { tenantCodes: ["technostat"] },
+    },
+  };
+  const desired = compileDesiredTenantOrganizationMemberships(manifest, tenantManifest, "athyper");
+  const operations = planTenantOrganizationMembershipReconciliation(
+    [{ organizationAlias: "11111111-1111-4111-8111-111111111111", keycloakSubject: "aa010107-0000-0000-0000-000000000000" }],
+    desired,
+  );
+  assert.deepEqual(operations, [{
+    kind: "add",
+    resource: "user_organization_membership",
+    keycloakSubject: "cc001000-0000-0000-0000-000000000002",
+    organizationAlias: "22222222-2222-4222-8222-222222222222",
+    tenantCode: "technostat",
+  }]);
+});
+
+test("managed admission membership is exact while unmanaged groups remain untouched", () => {
+  const operations = planManagedMembershipReconciliation(
+    [
+      { keycloakSubject: "keep", groupName: "studio.access.quarantine" },
+      { keycloakSubject: "stale", groupName: "studio.access.quarantine" },
+      { keycloakSubject: "customer", groupName: "customer-owned" },
+    ],
+    [
+      { keycloakSubject: "keep", groupName: "studio.access.quarantine", plane: "studio" },
+      { keycloakSubject: "new", groupName: "studio.access.quarantine", plane: "studio" },
+    ],
+    new Set(["studio.access.quarantine"]),
+  );
+  assert.deepEqual(operations.map((operation) => [operation.kind, operation.keycloakSubject]), [
+    ["add", "new"],
+    ["remove", "stale"],
+  ]);
+});
 
 test("reconciler is additive and leaves unmanaged users/resources untouched", () => {
   const current = {
@@ -115,4 +189,24 @@ test("tenant organizations use stable tenant UUID aliases and preserve legal-ent
   const patch = plan.operations.find((operation) => operation.kind === "patch");
   assert.deepEqual(patch.body.attributes["customer.attribute"], ["preserved"]);
   assert.equal(JSON.stringify(plan).includes("legacy-org"), false);
+});
+
+test("tenant organization names avoid legacy legal-entity collisions", () => {
+  const manifest = {
+    contractVersion: "athyper.three-plane-provision.v1",
+    realmKey: "athyper",
+    keycloak: { organizationModel: "tenant", businessScopesRemainPlaneLocal: true },
+    tenants: [
+      { id: "11111111-1111-4111-8111-111111111111", code: "athyper", displayName: "Athyper Group Holdings", keycloakOrganizationAlias: "11111111-1111-4111-8111-111111111111" },
+      { id: "22222222-2222-4222-8222-222222222222", code: "technostat", displayName: "Technostat", keycloakOrganizationAlias: "22222222-2222-4222-8222-222222222222" },
+      { id: "44444444-4444-4444-8444-444444444444", code: "cirrusatlantic", displayName: "CirrusAtlantic", keycloakOrganizationAlias: "44444444-4444-4444-8444-444444444444" },
+    ],
+  };
+  const plan = planTenantOrganizationReconciliation([
+    { id: "legacy-org", alias: "ORG-1000000001", name: "Athyper Group Holdings" },
+  ], manifest, "athyper");
+  const athyper = plan.operations.find((operation) => operation.key === "athyper");
+  assert.equal(athyper.body.name, "Tenant: Athyper Group Holdings");
+  assert.deepEqual(athyper.body.attributes["athyper.context.display_name"], ["Athyper Group Holdings"]);
+  assert.equal(plan.legalEntityOrganizationsMutated, 0);
 });

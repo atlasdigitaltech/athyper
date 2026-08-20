@@ -4,8 +4,6 @@ ALTER TABLE ops.authorization_operation_rollout ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ops.authorization_operation_rollout FORCE ROW LEVEL SECURITY;
 ALTER TABLE ops.authorization_operation_cutover_drill ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ops.authorization_operation_cutover_drill FORCE ROW LEVEL SECURITY;
-ALTER TABLE ops.authorization_legacy_retirement_approval ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ops.authorization_legacy_retirement_approval FORCE ROW LEVEL SECURITY;
 ALTER TABLE ops.authorization_qualification_cohort_requirement ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ops.authorization_qualification_cohort_requirement FORCE ROW LEVEL SECURITY;
 
@@ -22,9 +20,6 @@ DO $$ BEGIN
     CREATE POLICY authorization_operation_cutover_drill_admin ON ops.authorization_operation_cutover_drill
       FOR ALL TO athyperadmin USING (plane_code=current_setting('app.database_plane',true))
       WITH CHECK (plane_code=current_setting('app.database_plane',true));
-    CREATE POLICY authorization_legacy_retirement_approval_admin ON ops.authorization_legacy_retirement_approval
-      FOR ALL TO athyperadmin USING(plane_code=current_setting('app.database_plane',true))
-      WITH CHECK(plane_code=current_setting('app.database_plane',true));
   END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
     CREATE POLICY authorization_rollout_runtime_read ON ops.authorization_operation_rollout

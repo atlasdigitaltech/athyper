@@ -12,7 +12,7 @@
 services:
   telemetry:
     image: grafana/grafana:12.4.3
-    profiles: ["core", "telemetry"]
+    profiles: ["telemetry"]
     user: "9102:9102"
     deploy:
       resources:

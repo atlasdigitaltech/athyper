@@ -1,118 +1,51 @@
-# Database seed packs
+# Canonical three-plane seed inputs
 
-This directory contains data applied after the three-plane DDL foundation.
-Permanent schemas, tables, domains, policies, and triggers belong under
-`server/db/ddl`; seed packs must contain data and assertions only.
+This directory contains only versioned inputs required after the Studio, Neon,
+and Mesh DDL foundations have been installed. Production reference data belongs
+to layer-12 DDL under `server/db/ddl`; demo transactions and historical migration
+evidence do not belong in the active seed path.
 
-## Parent folders
+## Layout
 
-| Folder | Responsibility | Runtime status |
-|---|---|---|
-| `blueprints/` | Reusable tenant-scoped Neon data packs | Executed by tenant provisioning |
-| `tenants/` | Plane and tenant onboarding data | Executed by plane/tenant provisioning |
-| `meta-entity/` | Independently receipted Athyper metadata seed pack | Explicit opt-in command |
-| `entity-operation-permissions/` | Independently applied plane-local permission definitions | Explicit opt-in rollout |
-| `contracts/` | Seed standards, authorization sources, and generated contract artifacts | Build and verification input |
-| `packs/` | Versioned, checksummed application manifests and receipts | Build and provisioning input |
-| `migration/` | Historical movement ledgers and validation receipts | Audit evidence; not runtime seed input |
-
-Parent folders use lowercase nouns or lowercase kebab-case. A leading underscore
-is reserved for child templates such as `tenants/neon/_template`; generated
-contract artifacts belong under `contracts/generated`.
-
-## Blueprint layout
-
-Blueprint payloads execute in dependency order:
-
-1. `blueprints/universal/` — shared Neon tenant foundations.
-2. `blueprints/100_industry_packs/` — explicitly selected industry catalogs.
-3. `blueprints/200_industry_org_structure/` — industry-aware organization templates.
-4. `blueprints/modules/` — optional subscription-gated module packs.
-
-Blueprint application contracts and receipts are under `packs/blueprints-v2`.
-Layer-12 reference data owned by all planes is not duplicated here; it is
-installed from the DDL manifests.
-
-## Tenant layout
-
-| Folder | Scope |
+| Folder | Purpose |
 |---|---|
-| `tenants/admin/` | Athyper administration principals and authority bindings |
-| `tenants/neon/_template/` | Starting point for a new Neon tenant |
-| `tenants/neon/<ordered-code>/` | One explicitly selected Neon tenant |
-| `tenants/mesh/` | Mesh exchange and network fixtures |
+| `manifests/` | Stable tenant coordinates and per-plane pack selection |
+| `contracts/base/` | Seed metadata, convergence, and provenance contract |
+| `contracts/authorization/` | Source, identity, and verification contracts |
+| `contracts/authorization/control/` | Honest implementation boundaries for suspension and emergency controls |
+| `packs/authorization-v2/studio/` | Studio-local authority and assignments |
+| `packs/authorization-v2/neon/` | Neon-local authority and assignments |
+| `packs/authorization-v2/mesh/` | Mesh-local authority and assignments |
 
-Production reference packs must not contain demo principals, transactions, or
-example tenants. Demo fixtures remain explicitly named and opt-in, such as
-`tenants/neon/010_demo`.
+Folder names are lowercase nouns or lowercase kebab-case. Plane-owned runtime
+artifacts always use the exact plane names `studio`, `neon`, and `mesh`.
+`platform` is reserved for a shared source contract that is compiled into
+separate plane-owned outputs; it is never an executable target plane.
+Inherited values such as `wave2.neon-admin.*` are stable semantic version IDs,
+not folder names or runtime plane targets. Changing them requires a separately
+versioned contract migration.
 
-## Seed contract
+`server/db/seed-backup` is historical source material only. Provisioners,
+checks, and generators must never read from it.
 
-Every production pack must declare or enforce:
+## Runtime-only authorization state
 
-- version, provenance, compatible DDL version, plane, and tenant scope;
-- deterministic natural keys and deterministic UUIDs for cross-file identities;
-- idempotent convergence without destructive permanent-data deletion;
-- preservation of `created_*` and conditional changes to `updated_*`;
-- status/effectivity retirement for obsolete reference values;
-- expected-count, orphan, uniqueness, tenant-isolation, and semantic assertions;
-- immutable application receipts containing payload and assertion results.
+Production seeds must not write runtime decisions or credentials. The seed
+contract linter rejects writes to `authz.delegation`,
+`authz.delegation_grant`, `authz.deny_rule`, `authz.override`,
+`authz.record_acl`, and `authz.trusted_device`.
 
-The normative contract and template are under `contracts/base`.
+The linter also rejects static writes to `authz.application_projection`,
+`authz.projection_provider`, and `authz.projection_scope`. Those rows are owned
+by the Studio-to-plane application reconciliation path and must carry its
+publication and rollover lifecycle rather than seed provenance.
 
-## Provisioning
-
-Plan the complete canonical three-plane foundation, tenant, authorization, and
-Keycloak workflow without executing SQL:
-
-```powershell
-pnpm.cmd run db:provision:three-plane:plan
-```
-
-Apply the complete workflow to fresh Studio, Neon, and Mesh databases. Each
-database commits independently; the final Studio receipt records all three
-successful plane applications before Keycloak reconciliation and context
-verification run:
+## Commands
 
 ```powershell
-pnpm.cmd run db:provision:three-plane
-```
-
-For an existing DDL foundation, explicitly skip the fresh-database DDL phase:
-
-```powershell
-pnpm.cmd --dir server/db exec tsx scripts/provision-three-plane.ts --apply --skip-foundation
-```
-
-The canonical manifest is `seed/manifests/three-plane-demo.v1.json`. It owns the
-stable tenant UUIDs for `athyper`, `technostat`, and `cirrusatlantic`. Keycloak
-subjects remain opaque external identities; plane-and-tenant-local principals
-are deterministically derived and connected through
-`master.principal_identity_binding`.
-
-The restored plane commands apply the same manifest and authorization contract
-to one already-founded database:
-
-```powershell
-pnpm.cmd --dir server/db run db:provision:studio
-pnpm.cmd --dir server/db run db:provision:neon
-pnpm.cmd --dir server/db run db:provision:mesh
-```
-
-Apply or check the independent Meta Entity pack:
-
-```powershell
-pnpm.cmd --dir server/db run db:seed:meta-entity
-pnpm.cmd --dir server/db run db:seed:meta-entity:check
-```
-
-Validate seed contracts and pack metadata before runtime application:
-
-```powershell
+pnpm.cmd --dir server/db exec tsx scripts/seed/compile-final-authorization-seed-packs.ts
 pnpm.cmd --dir server/db run db:seed:contract:lint
-pnpm.cmd --dir server/db run db:seed:contract:test
+pnpm.cmd --dir server/db run db:verify:authorization:seeds
+pnpm.cmd --dir server/db run db:verify:authorization:suspension-controls
+pnpm.cmd --dir server/db run db:provision:three-plane:plan
 ```
-
-Tenant provisioning resolves the tenant identifier from the selected folder and
-`master.tenant.code`, then supplies the required `app.seed_*` session settings.
-Do not execute tenant SQL manually without the same scope and principal context.

@@ -77,11 +77,13 @@ export ATHYPER_CONFIG="$ATHYPER_CONFIG_ROOT"
 export ATHYPER_DATA="$ATHYPER_DATA_ROOT"
 
 # .env location: server uses ATHYPER_SECRETS_ROOT/.env; local dev uses stack/env/.env.
-if [[ -n "${ATHYPER_SECRETS_ROOT:-}" ]]; then
+_BOOTSTRAP_ENVIRONMENT="$(read_env_value "$ENV_DIR/.env" ENVIRONMENT || true)"
+if [[ "$_BOOTSTRAP_ENVIRONMENT" != "local" && -n "${ATHYPER_SECRETS_ROOT:-}" ]]; then
   ENV_FILE="$ATHYPER_SECRETS_ROOT/.env"
 else
   ENV_FILE="$ENV_DIR/.env"
 fi
+unset _BOOTSTRAP_ENVIRONMENT
 
 # Build env-file arg list for all docker compose calls.
 # Server mode (ENV_FILE != ENV_DIR/.env): pass bootstrap file first (provides non-secret
@@ -166,7 +168,6 @@ COMPOSE_FILE_ARGS=()
 
 build_compose_file_list() {
   COMPOSE_FILE_ARGS=()
-  local _expected_non_override_count=0
 
   # Activate all profiles so every service is reachable for depends_on
   # validation. The caller is responsible for using --no-deps when it only
@@ -176,50 +177,15 @@ build_compose_file_list() {
   _add_file() {
     if [[ -f "$1" ]]; then
       COMPOSE_FILE_ARGS+=( -f "$1" )
-      # Track only non-override files for the drift check. The active OVERRIDE
-      # is one of several override files on disk, so counting it here would
-      # cause spurious drift warnings.
-      case "$(basename "$1")" in
-        athyper.override*.yml) ;;
-        *) _expected_non_override_count=$(( _expected_non_override_count + 1 )) ;;
-      esac
     else
       echo "WARNING: compose file missing, skipping: $1" >&2
     fi
   }
 
-  _add_file "$COMPOSE_DIR/athyper.base.yml"
-  _add_file "$COMPOSE_DIR/db/athyper-db.yml"
-  _add_file "$COMPOSE_DIR/db/athyper-dbpool-apps.yml"
-  _add_file "$COMPOSE_DIR/db/athyper-dbpool-session.yml"
-  _add_file "$COMPOSE_DIR/security/athyper-socket-proxy-gateway.yml"
-  _add_file "$COMPOSE_DIR/security/athyper-socket-proxy-logshipper.yml"
-  _add_file "$COMPOSE_DIR/gateway/athyper-gateway.yml"
-  _add_file "$COMPOSE_DIR/mail/athyper-mailtrap.yml"
-  _add_file "$COMPOSE_DIR/iam/athyper-iam.yml"
-  _add_file "$COMPOSE_DIR/objectstorage/athyper-objectstorage.yml"
-  _add_file "$COMPOSE_DIR/security/athyper-virusscan.yml"
-  _add_file "$COMPOSE_DIR/memorycache/athyper-memorycache.yml"
-  _add_file "$COMPOSE_DIR/memorycache/athyper-memorycache-exporter.yml"
-  _add_file "$COMPOSE_DIR/telemetry/athyper-alertmanager.yml"
-  _add_file "$COMPOSE_DIR/telemetry/athyper-metrics.yml"
-  _add_file "$COMPOSE_DIR/telemetry/athyper-tracing.yml"
-  _add_file "$COMPOSE_DIR/telemetry/athyper-logging.yml"
-  _add_file "$COMPOSE_DIR/telemetry/athyper-logshipper.yml"
-  _add_file "$COMPOSE_DIR/telemetry/athyper-telemetry.yml"
-  _add_file "$COMPOSE_DIR/apps/athyper-apps.yml"
-  _add_file "$COMPOSE_DIR/render/athyper-docrender.yml"
-  _add_file "$COMPOSE_DIR/render/athyper-docparser.yml"
-  _add_file "$COMPOSE_DIR/search/athyper-searchcore.yml"
-  _add_file "$COMPOSE_DIR/monitoring/athyper-errorcollect.yml"
-  _add_file "$COMPOSE_DIR/monitoring/athyper-cronwatch.yml"
-  _add_file "$COMPOSE_DIR/monitoring/athyper-statuswatch.yml"
-  _add_file "$COMPOSE_DIR/analytics/athyper-analyticsboard.yml"
-  _add_file "$COMPOSE_DIR/security/athyper-secretstore.yml"
-  _add_file "$COMPOSE_DIR/admin/athyper-queueconsole.yml"
-  _add_file "$COMPOSE_DIR/admin/athyper-dbconsole.yml"
-  _add_file "$COMPOSE_DIR/memorycache/athyper-memorycache-jobs.yml"
+  _add_file "$COMPOSE_DIR/compose.yml"
   _add_file "$OVERRIDE"
+  unset -f _add_file
+  return 0
 
   # Drift check: compare non-override files on disk vs the explicit list.
   # Overrides are excluded on both sides (multiple variants live on disk, but

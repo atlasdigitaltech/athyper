@@ -2,16 +2,58 @@ import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { ExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";
 
 export interface ExperienceIdentityRecord {
+  readonly tenantCode: string;
+  readonly tenantDisplayName: string;
   readonly tenantStatus: string;
   readonly tenantRealmKey: string;
   readonly subscriptionPlanId?: string;
   readonly tenantRevision: string;
   readonly principalStatus: string;
+  readonly principalCode: string;
+  readonly principalDisplayName: string;
+  readonly principalSecondaryLabel?: string;
   readonly principalAuthEpoch: number;
   readonly principalRevision: string;
   readonly identityBindingActive: boolean;
   readonly membershipActive: boolean;
   readonly membershipRevision?: string;
+}
+
+export interface ExperienceWorkContextRecord {
+  readonly companyCodeId: string;
+  readonly companyCode: string;
+  readonly companyDisplayName: string;
+  readonly legalEntityId: string;
+  readonly legalEntityCode: string;
+  readonly legalEntityName: string;
+  readonly countryCode?: string;
+  readonly functionalCurrency: string;
+  readonly revision: string;
+}
+
+export interface ExperienceOperatingOrganizationAssignmentRecord {
+  readonly companyCodeId: string;
+  readonly participationRole: string;
+  readonly effectiveFrom: string;
+  readonly effectiveUntil?: string;
+  readonly revision: string;
+}
+
+export interface ExperienceOperatingOrganizationRecord {
+  readonly id: string;
+  readonly code: string;
+  readonly displayName: string;
+  readonly domain: string;
+  readonly parentId?: string;
+  readonly path: readonly string[];
+  readonly procurementProfileConfigured: boolean;
+  readonly salesProfileConfigured: boolean;
+  readonly leadCompanyCodeId?: string;
+  readonly bookingCompanyCodeId?: string;
+  readonly invoicingCompanyCodeId?: string;
+  readonly defaultCurrency?: string;
+  readonly assignments: readonly ExperienceOperatingOrganizationAssignmentRecord[];
+  readonly revision: string;
 }
 
 export interface ExperienceProfileRecord {
@@ -44,6 +86,8 @@ export interface ExperiencePlaneRepository {
   readProfile(context: VerifiedRequestContext): Promise<ExperienceProfileRecord>;
   readCatalog(context: VerifiedRequestContext, subscriptionPlanId: string): Promise<ExperienceCatalogRecord | undefined>;
   readFeatures(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceFeatureRecord[]>;
+  readWorkContexts(context: VerifiedRequestContext): Promise<readonly ExperienceWorkContextRecord[]>;
+  readOperatingOrganizations(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceOperatingOrganizationRecord[]>;
 }
 
 export type ExperienceRepositoryProvider = ExactPlaneRepositoryProvider<ExperiencePlaneRepository>;

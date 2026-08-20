@@ -3,7 +3,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const realmPath = resolve(process.cwd(), "stack/config/iam/realm-athyper.json");
+const realmArgument = process.argv.find((argument) => argument.startsWith("--realm="));
+const realmPath = resolve(process.cwd(), realmArgument?.slice("--realm=".length) || "stack/config/iam/realm-athyper.json");
 const write = process.argv.includes("--write");
 const planes = Object.freeze({
   neon: Object.freeze({ scope: "athyper-neon-plane", role: "NEON_USER" }),
@@ -55,8 +56,12 @@ else if (write) {
 } else if (realmRoleMapper.config?.["id.token.claim"] !== "true" || realmRoleMapper.config?.["access.token.claim"] !== "true") {
   errors.push("Realm roles must be emitted in both ID and access tokens");
 }
-if (!clientRoleMapper || clientRoleMapper.config?.["access.token.claim"] !== "true") {
-  errors.push("Client roles must be emitted in access tokens");
+if (clientRoleMapper && write) {
+  clientRoleMapper.config["id.token.claim"] = "true";
+  clientRoleMapper.config["access.token.claim"] = "true";
+  clientRoleMapper.config["userinfo.token.claim"] = "false";
+} else if (!clientRoleMapper || clientRoleMapper.config?.["id.token.claim"] !== "true" || clientRoleMapper.config?.["access.token.claim"] !== "true") {
+  errors.push("Client roles must be emitted in both ID and access tokens");
 }
 
 for (const plane of Object.keys(planes)) {
@@ -68,11 +73,13 @@ for (const plane of Object.keys(planes)) {
   if (write) {
     client.protocolMappers = (client.protocolMappers ?? []).filter((mapper) => mapper.protocolMapper !== "oidc-group-membership-mapper");
     client.defaultClientScopes = (client.defaultClientScopes ?? []).filter((scope) => scope !== "organization");
+    client.optionalClientScopes = [...new Set([...(client.optionalClientScopes ?? []), "organization"])];
     client.frontchannelLogout = false;
   } else {
     if (client.fullScopeAllowed !== false) errors.push(`${plane}-web must keep fullScopeAllowed=false`);
     if (!(client.defaultClientScopes ?? []).includes(planes[plane].scope)) errors.push(`${plane}-web is missing ${planes[plane].scope}`);
     if ((client.defaultClientScopes ?? []).includes("organization")) errors.push(`${plane}-web must not default the organization scope`);
+    if (!(client.optionalClientScopes ?? []).includes("organization")) errors.push(`${plane}-web must allow the explicitly requested organization scope`);
     if ((client.protocolMappers ?? []).some((mapper) => mapper.protocolMapper === "oidc-group-membership-mapper")) errors.push(`${plane}-web must not emit full group membership`);
     if (client.frontchannelLogout !== false) errors.push(`${plane}-web must disable front-channel logout and use the registered back-channel endpoint`);
     const logoutUrl = client.attributes?.["backchannel.logout.url"] ?? "";
@@ -87,7 +94,12 @@ for (const plane of Object.keys(planes)) {
   }
 }
 
-if (write) {
+normalizeOrVerifyStudioBrowserFlow(realm, errors, write);
+
+if (write && errors.length) {
+  console.error(errors.map((error) => `- ${error}`).join("\n"));
+  process.exitCode = 1;
+} else if (write) {
   writeFileSync(realmPath, `${JSON.stringify(realm, null, 2)}\n`);
   console.log(`Normalized Keycloak plane contract in ${realmPath}`);
 } else if (errors.length) {
@@ -165,4 +177,66 @@ function sameConfig(actual = {}, expected = {}) {
 
 function title(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function normalizeOrVerifyStudioBrowserFlow(realm, errors, write) {
+  const alias = "admin-mfa-required";
+  const flow = realm.authenticationFlows?.find((candidate) => candidate.alias === alias);
+  const forms = realm.authenticationFlows?.find((candidate) => candidate.alias === `${alias} forms`);
+  const secondFactor = realm.authenticationFlows?.find((candidate) => candidate.alias === `${alias} second factor`);
+  const studioClient = realm.clients?.find((candidate) => candidate.clientId === "studio-web");
+
+  if (!flow || !forms || !secondFactor) {
+    errors.push(`${alias} must define the top-level, forms, and second-factor flows`);
+    return;
+  }
+
+  const expectedTopLevel = [
+    ["authenticator", "auth-cookie", "DISABLED"],
+    ["authenticator", "auth-spnego", "DISABLED"],
+    ["authenticator", "identity-provider-redirector", "DISABLED"],
+    ["flowAlias", `${alias} forms`, "REQUIRED"],
+    ["flowAlias", `${alias} second factor`, "REQUIRED"],
+  ];
+  const expectedForms = [["authenticator", "athyper-iam-username-password-form", "REQUIRED"]];
+  const expectedSecondFactor = [
+    // A required OTP execution lets Keycloak schedule CONFIGURE_TOTP for a
+    // Studio administrator who has not enrolled a second factor yet. Two
+    // unconfigured ALTERNATIVE executions make the required subflow fail with
+    // the misleading invalid_user_credentials event.
+    ["authenticator", "athyper-iam-otp-form", "REQUIRED"],
+    ["authenticator", "webauthn-authenticator", "DISABLED"],
+  ];
+
+  if (write) {
+    setRequirements(flow, expectedTopLevel, errors);
+    setRequirements(forms, expectedForms, errors);
+    setRequirements(secondFactor, expectedSecondFactor, errors);
+  } else {
+    verifyRequirements(flow, expectedTopLevel, errors);
+    verifyRequirements(forms, expectedForms, errors);
+    verifyRequirements(secondFactor, expectedSecondFactor, errors);
+  }
+
+  if (studioClient?.authenticationFlowBindingOverrides?.browser !== flow.id) {
+    errors.push("studio-web must bind its browser flow to admin-mfa-required");
+  }
+}
+
+function setRequirements(flow, expected, errors) {
+  for (const [property, value, requirement] of expected) {
+    const execution = flow.authenticationExecutions?.find((candidate) => candidate[property] === value);
+    if (!execution) errors.push(`${flow.alias} is missing ${value}`);
+    else execution.requirement = requirement;
+  }
+}
+
+function verifyRequirements(flow, expected, errors) {
+  for (const [property, value, requirement] of expected) {
+    const execution = flow.authenticationExecutions?.find((candidate) => candidate[property] === value);
+    if (!execution) errors.push(`${flow.alias} is missing ${value}`);
+    else if (execution.requirement !== requirement) {
+      errors.push(`${flow.alias}/${value} must be ${requirement} (found ${execution.requirement})`);
+    }
+  }
 }

@@ -31,7 +31,7 @@ async function mutateAggregate<Transaction>(options: RecordMutationServiceOption
   const descriptor = await safeDescriptor(options.metadata, command);
   if (!descriptor || !options.aggregateExecutor) return { kind: "CapabilityUnavailable", entityCode: command.entityCode };
   const permission = descriptor.operations["aggregate"]?.permissionCode;
-  if (!await allowed(options.authorizer, command, permission)) return { kind: "Forbidden", ...(permission ? { permissionCode: permission } : {}) };
+  if (!await allowed(options.authorizer, command, permission, "aggregate")) return { kind: "Forbidden", ...(permission ? { permissionCode: permission } : {}) };
   if (descriptor.storage.versionField && command.expectedVersion === undefined) return { kind: "VersionRequired" };
   const definitions = new Map((descriptor.aggregate?.collections ?? []).map((collection) => [collection.code, collection]));
   for (const [code, changes] of Object.entries(command.changes.collections)) {
@@ -53,7 +53,7 @@ async function create<Transaction>(options: RecordMutationServiceOptions<Transac
   const invalidIdempotency = idempotencyFailure(command); if (invalidIdempotency) return invalidIdempotency;
   const descriptor = await safeDescriptor(options.metadata, command);
   if (!descriptor) return { kind: "CapabilityUnavailable", entityCode: command.entityCode };
-  if (!await allowed(options.authorizer, command, descriptor.operations["create"]?.permissionCode)) return { kind: "Forbidden", ...(descriptor.operations["create"]?.permissionCode ? { permissionCode: descriptor.operations["create"].permissionCode } : {}) };
+  if (!await allowed(options.authorizer, command, descriptor.operations["create"]?.permissionCode, "create")) return { kind: "Forbidden", ...(descriptor.operations["create"]?.permissionCode ? { permissionCode: descriptor.operations["create"].permissionCode } : {}) };
   const fields = mergeFieldViolations(validateRecordInput(descriptor, "create", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input));
   if (Object.keys(fields).length) return { kind: "FieldsNotWritable", fields };
   return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
@@ -72,7 +72,7 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
   const descriptor = await safeDescriptor(options.metadata, command);
   if (!descriptor) return { kind: "CapabilityUnavailable", entityCode: command.entityCode };
   const permission = descriptor.operations["patch"]?.permissionCode ?? descriptor.operations["update"]?.permissionCode;
-  if (!await allowed(options.authorizer, command, permission)) return { kind: "Forbidden", ...(permission ? { permissionCode: permission } : {}) };
+  if (!await allowed(options.authorizer, command, permission, descriptor.operations["patch"] ? "patch" : "update")) return { kind: "Forbidden", ...(permission ? { permissionCode: permission } : {}) };
   if (descriptor.storage.versionField && command.expectedVersion === undefined) return { kind: "VersionRequired" };
   const fields = mergeFieldViolations(validateRecordInput(descriptor, "patch", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input));
   if (Object.keys(fields).length) return { kind: "FieldsNotWritable", fields };
@@ -92,7 +92,7 @@ async function remove<Transaction>(options: RecordMutationServiceOptions<Transac
   const descriptor = await safeDescriptor(options.metadata, command);
   if (!descriptor) return { kind: "CapabilityUnavailable", entityCode: command.entityCode };
   const permission = descriptor.operations["delete"]?.permissionCode;
-  if (!await allowed(options.authorizer, command, permission)) return { kind: "Forbidden", ...(permission ? { permissionCode: permission } : {}) };
+  if (!await allowed(options.authorizer, command, permission, "delete")) return { kind: "Forbidden", ...(permission ? { permissionCode: permission } : {}) };
   if (descriptor.storage.versionField && command.expectedVersion === undefined) return { kind: "VersionRequired" };
   return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
     return executeRecordCommand(options, command, transaction, "delete", async () => {
@@ -106,5 +106,22 @@ async function remove<Transaction>(options: RecordMutationServiceOptions<Transac
 }
 
 async function safeDescriptor(metadata: MetadataReader, command: { context: CreateRecordCommand["context"]; entityCode: string }) { try { return await descriptorFor(metadata, command.context, command.entityCode); } catch { return null; } }
-async function allowed(authorizer: Authorizer, command: { context: CreateRecordCommand["context"] }, permissionCode: string | undefined): Promise<boolean> { return Boolean(permissionCode && (await authorizer.authorize({ context: command.context, permissionCode })).allowed); }
+async function allowed(
+  authorizer: Authorizer,
+  command: { context: CreateRecordCommand["context"]; entityCode: string; recordId?: string },
+  permissionCode: string | undefined,
+  operationKey: string,
+): Promise<boolean> {
+  return Boolean(permissionCode && (await authorizer.authorize({
+    context: command.context,
+    permissionCode,
+    resource: {
+      tenantId: command.context.tenantId,
+      entityCode: command.entityCode,
+      operationKey,
+      resourceCode: command.entityCode,
+      ...(command.recordId ? { recordId: command.recordId } : {}),
+    },
+  })).allowed);
+}
 function versionOf(descriptor: { storage: { versionField?: string } }, record: Readonly<Record<string, unknown>>): number | undefined { const value = descriptor.storage.versionField ? record[descriptor.storage.versionField] : undefined; return typeof value === "number" ? value : undefined; }

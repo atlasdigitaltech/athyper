@@ -5,3 +5,6 @@ CREATE INDEX trustiam_identity_provisioning_request_status_idx ON trustiam.ident
 CREATE INDEX trustiam_identity_provisioning_request_provider_idx ON trustiam.identity_provisioning_request(provider_subject) WHERE provider_subject IS NOT NULL;
 CREATE UNIQUE INDEX trustiam_identity_provisioning_attempt_open_uq ON trustiam.identity_provisioning_attempt(authority_tenant_id,request_id) WHERE status IN ('claimed','started');
 CREATE INDEX trustiam_identity_provisioning_attempt_lease_idx ON trustiam.identity_provisioning_attempt(lease_expires_at) WHERE status IN ('claimed','started');
+CREATE UNIQUE INDEX trustiam_projection_reconciliation_attempt_open_uq ON trustiam.projection_reconciliation_attempt(authority_tenant_id,projection_id) WHERE status IN ('claimed','running','retrying');
+CREATE INDEX trustiam_projection_reconciliation_attempt_claim_idx ON trustiam.projection_reconciliation_attempt(status,next_attempt_at,lease_expires_at) WHERE status IN ('claimed','running','retrying');
+CREATE INDEX trustiam_projection_reconciliation_attempt_dead_letter_idx ON trustiam.projection_reconciliation_attempt(authority_tenant_id,terminal_at DESC) WHERE status='dead_letter';

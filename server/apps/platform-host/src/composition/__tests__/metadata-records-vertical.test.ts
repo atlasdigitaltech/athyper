@@ -51,7 +51,7 @@ describe("Metadata plus Records host vertical", () => {
     const audit = createInMemoryAuditSink();
     const config = loadConfig();
     registerPlatform(container, { ...config, env: "production", iam: { ...config.iam, defaultRealmKey: "athyper", claimContextMode: "on" } }, {
-      tokenVerifier: { verify: async () => token }, auditSink: audit,
+      tokenVerifier: { verify: async () => token }, resolveIdentityContext: async () => ({ tenantId: "tenant-1", principalId: "principal-1", authEpoch: 1 }), auditSink: audit,
     });
     const persistence = createInMemoryRecordPersistence();
     const metadata: MetadataReader = { getEntityDescriptor: async (_coordinate, entityCode) => entityCode === descriptor.entityCode ? descriptor : null };
@@ -94,6 +94,7 @@ describe("Metadata plus Records host vertical", () => {
     let rejectRecordAudit = true;
     registerPlatform(container, { ...loadConfig(), env: "production", iam: { ...loadConfig().iam, defaultRealmKey: "athyper", claimContextMode: "on" } }, {
       tokenVerifier: { verify: async () => token },
+      resolveIdentityContext: async () => ({ tenantId: "tenant-1", principalId: "principal-1", authEpoch: 1 }),
       auditSink: { async append(event, transaction) {
         if (transaction) {
           (transaction as MemoryRecordTransaction).onCommit(() => persistedAudit.push(event));

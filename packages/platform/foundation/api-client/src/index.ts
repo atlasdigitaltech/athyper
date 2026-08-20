@@ -2,6 +2,8 @@ import { parseApiProblem, type ApiProblem } from "@athyper/contract-platform-api
 export type { ApiProblem } from "@athyper/contract-platform-api";
 export { parseApiProblem } from "@athyper/contract-platform-api";
 export * from "./bootstrap";
+export * from "./work-context";
+export * from "./operating-organization";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type RequestClass = "interactive" | "background" | "upload" | "download" | "stream";
@@ -166,7 +168,13 @@ export const requestStream = (client: HttpClient, path: string, options?: Reques
 
 function relayUrl(prefix: string, path: string, query?: RequestOptions["query"]): string {
   if (/^[a-z][a-z\d+.-]*:/i.test(path) || path.startsWith("//")) throw new TypeError("API client accepts relay paths, not absolute URLs");
-  const relative = path.replace(/^\/+/, ""); const url = `${prefix.replace(/\/$/, "")}/${relative}`;
+  const operationPath = path.replace(/^\/+/, "");
+  // Relay catch-all routes restore the trusted upstream `/api` prefix. Keeping
+  // it here would turn `/api/neon/...` into `/api/relay/api/neon/...`, which
+  // the relay normalizes to the non-allowlisted `/api/api/neon/...` path.
+  const relative = operationPath.startsWith("api/") ? operationPath.slice(4) : operationPath;
+  if (!relative) throw new TypeError("API client operation path cannot be empty");
+  const url = `${prefix.replace(/\/$/, "")}/${relative}`;
   assertRelayPath(url); const params = new URLSearchParams();
   for (const [key, value] of Object.entries(query ?? {})) if (value !== undefined && value !== null) params.append(key, String(value));
   return params.size ? `${url}?${params}` : url;

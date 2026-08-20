@@ -2,7 +2,7 @@ import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { createExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";
 import { validateRuntimeSchema } from "@athyper/server-runtime-http";
 import { describe, expect, it } from "vitest";
-import { experienceBootstrapSchema } from "./contracts.js";
+import { experienceBootstrapSchema, neonOperatingOrganizationCatalogSchema } from "./contracts.js";
 import type { ExperiencePlaneRepository } from "./ports.js";
 import { createExperienceInvalidationHooks, createExperienceService, createMemoryExperienceCache, ExperienceAccessError } from "./service.js";
 
@@ -16,10 +16,12 @@ const context: VerifiedRequestContext = {
 
 function repository(overrides: Partial<ExperiencePlaneRepository> = {}): ExperiencePlaneRepository {
   return {
-    async readIdentity() { return { tenantStatus: "active", tenantRealmKey: "neon", subscriptionPlanId: "40000000-0000-4000-8000-000000000001", tenantRevision: "tenant:1", principalStatus: "active", principalAuthEpoch: 4, principalRevision: "principal:1", identityBindingActive: true, membershipActive: true, membershipRevision: "membership:1" }; },
+    async readIdentity() { return { tenantCode:"tenant",tenantDisplayName:"Tenant Alpha",tenantStatus: "active", tenantRealmKey: "neon", subscriptionPlanId: "40000000-0000-4000-8000-000000000001", tenantRevision: "tenant:1",principalCode:"user.one",principalDisplayName:"User One",principalSecondaryLabel:"user.one", principalStatus: "active", principalAuthEpoch: 4, principalRevision: "principal:1", identityBindingActive: true, membershipActive: true, membershipRevision: "membership:1" }; },
     async readProfile() { return { tenant: { localeCode: "en-MY", timezoneCode: "Asia/Kuala_Lumpur", weekendDays: [0, 6] }, principal: { localeCode: "fr-FR", appearanceMode: "dark", densityCode: "compact" }, revision: "profile:1" }; },
     async readCatalog() { return { planActive: true, planRevision: "plan:1", associations: [{ workspaceCode: "finance", workspaceName: "Finance", workspaceSortOrder: 2, moduleId, moduleCode: "invoicing", moduleName: "Invoicing", moduleSortOrder: 3, primary: true, revision: "catalog:1" }], permissions: [{ code: "finance.invoice.read", moduleId, revision: "permission:1" }] }; },
     async readFeatures() { return [{ id: "feature-1", code: "finance.invoice_v2", moduleId, kind: "release_gate", defaultEnabled: false, overrideEnabled: true, metadata: {}, revision: "flag:1" }, { id: "feature-2", code: "finance.future", moduleId, kind: "release_gate", defaultEnabled: true, metadata: { minimumClientVersion: "2.0.0" }, revision: "flag:2" }]; },
+    async readWorkContexts(){return[];},
+    async readOperatingOrganizations(){return[];},
     ...overrides,
   };
 }
@@ -39,7 +41,7 @@ describe("experience effective-access projection", () => {
   });
 
   it("returns context-not-ready without modules or permissions when provisioning has no plan", async () => {
-    const repo = repository({ async readIdentity() { return { tenantStatus: "active", tenantRealmKey: "neon", tenantRevision: "tenant:1", principalStatus: "active", principalAuthEpoch: 4, principalRevision: "principal:1", identityBindingActive: true, membershipActive: true }; } });
+    const repo = repository({ async readIdentity() { return { tenantCode:"tenant",tenantDisplayName:"Tenant Alpha",tenantStatus: "active", tenantRealmKey: "neon", tenantRevision: "tenant:1",principalCode:"user.one",principalDisplayName:"User One", principalStatus: "active", principalAuthEpoch: 4, principalRevision: "principal:1", identityBindingActive: true, membershipActive: true }; } });
     await expect(service(repo).bootstrap(context)).resolves.toMatchObject({ state: "context_not_ready", workspaces: [], permissions: [], features: {}, nextActions: ["retry_later"] });
   });
 
@@ -66,6 +68,38 @@ describe("experience effective-access projection", () => {
   it("uses safe platform profile defaults only after identity admission succeeds", async () => {
     const result = await service(repository({ async readProfile() { throw new Error("profile unavailable"); } })).bootstrap(context);
     expect(result.profile).toMatchObject({ localeCode: "en-US", timezoneCode: "UTC", appearanceMode: "system", densityCode: "comfortable" });
+  });
+
+  it("returns only Neon companies covered by effective company or legal-entity scope", async()=>{
+    const companyA="50000000-0000-4000-8000-000000000001",companyB="50000000-0000-4000-8000-000000000002",legalA="60000000-0000-4000-8000-000000000001",legalB="60000000-0000-4000-8000-000000000002";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:"finance.invoice.read",tenantWide:false,legalEntityIds:[legalA],companyCodeIds:[],operatingOrganizationIds:[],networkMembershipIds:[],visibility:"team" as const}]}};
+    const repo=repository({async readWorkContexts(){return[{companyCodeId:companyA,companyCode:"alpha",companyDisplayName:"Alpha",legalEntityId:legalA,legalEntityCode:"le-alpha",legalEntityName:"Alpha Legal",countryCode:"MY",functionalCurrency:"MYR",revision:"row:alpha"},{companyCodeId:companyB,companyCode:"beta",companyDisplayName:"Beta",legalEntityId:legalB,legalEntityCode:"le-beta",legalEntityName:"Beta Legal",countryCode:"SG",functionalCurrency:"SGD",revision:"row:beta"}];}});
+    const result=await service(repo).neonWorkContexts(scoped);
+    expect(result.companies).toHaveLength(1);expect(result.companies[0]).toMatchObject({companyCodeId:companyA,capabilityGroups:["finance"]});expect(result.supportsAllPermitted).toBe(false);
+  });
+
+  it("does not expose company master data when the authorization snapshot has no scope",async()=>{
+    const repo=repository({async readWorkContexts(){return[{companyCodeId:"50000000-0000-4000-8000-000000000001",companyCode:"alpha",companyDisplayName:"Alpha",legalEntityId:"60000000-0000-4000-8000-000000000001",legalEntityCode:"le-alpha",legalEntityName:"Alpha Legal",functionalCurrency:"MYR",revision:"row:alpha"}];}});
+    await expect(service(repo).neonWorkContexts(context)).resolves.toMatchObject({companies:[],supportsAllPermitted:false});
+  });
+
+  it("intersects operating-organization and company authorization without member-company propagation",async()=>{
+    const companyA="50000000-0000-4000-8000-000000000001",companyB="50000000-0000-4000-8000-000000000002",legalA="60000000-0000-4000-8000-000000000001",legalB="60000000-0000-4000-8000-000000000002",organizationA="70000000-0000-4000-8000-000000000001",organizationB="70000000-0000-4000-8000-000000000002";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:"neon.procurement.purchase_order.create",tenantWide:false,legalEntityIds:[legalA],companyCodeIds:[],operatingOrganizationIds:[organizationA],networkMembershipIds:[],visibility:"team" as const}]}};
+    const repo=repository({
+      async readWorkContexts(){return[{companyCodeId:companyA,companyCode:"alpha",companyDisplayName:"Alpha",legalEntityId:legalA,legalEntityCode:"le-alpha",legalEntityName:"Alpha Legal",functionalCurrency:"MYR",revision:"company:a"},{companyCodeId:companyB,companyCode:"beta",companyDisplayName:"Beta",legalEntityId:legalB,legalEntityCode:"le-beta",legalEntityName:"Beta Legal",functionalCurrency:"SGD",revision:"company:b"}];},
+      async readOperatingOrganizations(){return[{id:organizationA,code:"global.buy",displayName:"Global Procurement",domain:"procurement",path:["Global Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,leadCompanyCodeId:companyA,assignments:[{companyCodeId:companyA,participationRole:"lead",effectiveFrom:"2026-01-01",revision:"assignment:a"},{companyCodeId:companyB,participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:b"}],revision:"organization:a"},{id:organizationB,code:"other.buy",displayName:"Other Procurement",domain:"procurement",path:["Other Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,assignments:[{companyCodeId:companyA,participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:c"}],revision:"organization:b"}];},
+    });
+    const result=await service(repo).neonOperatingOrganizations(scoped);
+    expect(result.organizations).toHaveLength(1);expect(result.organizations[0]).toMatchObject({id:organizationA,capabilities:["procurement"],defaults:{leadCompanyCodeId:companyA},companyAssignments:[{companyCodeId:companyA}]});
+    expect(validateRuntimeSchema(neonOperatingOrganizationCatalogSchema,result)).toBe(result);
+  });
+
+  it("does not infer company access from an operating-organization grant",async()=>{
+    const organizationId="70000000-0000-4000-8000-000000000001";
+    const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:"neon.procurement.purchase_order.create",tenantWide:false,legalEntityIds:[],companyCodeIds:[],operatingOrganizationIds:[organizationId],networkMembershipIds:[],visibility:"team" as const}]}};
+    const repo=repository({async readOperatingOrganizations(){return[{id:organizationId,code:"global.buy",displayName:"Global Procurement",domain:"procurement",path:["Global Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,assignments:[{companyCodeId:"50000000-0000-4000-8000-000000000001",participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:a"}],revision:"organization:a"}];}});
+    await expect(service(repo).neonOperatingOrganizations(scoped)).resolves.toMatchObject({organizations:[]});
   });
 
   it("keeps rollout cohorts stable and invalidates cached authorization projections", async () => {

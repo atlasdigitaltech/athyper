@@ -12,9 +12,6 @@ CREATE INDEX authorization_operation_rollout_mode_idx
 CREATE UNIQUE INDEX authorization_operation_cutover_drill_passed_uq
   ON ops.authorization_operation_cutover_drill(plane_code,source_entity_operation_id,source_release_hash,source_artifact_hash)
   WHERE outcome='passed';
-CREATE INDEX authorization_legacy_retirement_approval_latest_idx
- ON ops.authorization_legacy_retirement_approval(plane_code,decided_at DESC);
-
 CREATE INDEX authorization_shadow_coordinate_ix
     ON ops.authorization_shadow_comparison
        (plane_code,entity_code,source_entity_operation_id,source_release_hash,source_artifact_hash,observed_at DESC);

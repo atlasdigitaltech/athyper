@@ -70,7 +70,9 @@ ALTER TABLE event.authorization_invalidation_outbox
                 OR scope_kind = 'plane' AND tenant_epoch IS NOT NULL AND tenant_epoch >= 0 AND plane_epoch IS NOT NULL AND plane_epoch > 0))
     ),
     ADD CONSTRAINT authorization_invalidation_outbox_source_chk CHECK (
-        authority_schema = 'authz' AND authority_table ~ '^[a-z][a-z0-9_]*$'
+        (authority_schema = 'authz'
+          OR (authority_schema = 'master' AND authority_table = 'operating_organization_company_assignment'))
+        AND authority_table ~ '^[a-z][a-z0-9_]*$'
         AND authority_operation IN ('I', 'U', 'D')
         AND jsonb_typeof(source_row_key) = 'object' AND source_row_key <> '{}'::jsonb
     ),

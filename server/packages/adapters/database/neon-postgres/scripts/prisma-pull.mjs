@@ -6,17 +6,34 @@
 //   node scripts/prisma-pull.mjs --target=neon   --schema src/prisma/schema.neon.prisma --force
 //   node scripts/prisma-pull.mjs --target=mesh   --schema src/prisma/schema.mesh.prisma --force
 //   node scripts/prisma-pull.mjs --target=studio --schema src/prisma/schema.studio.prisma --force
-import { spawnSync } from "node:child_process";
+import { spawnSync, execSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// 6 levels up from scripts/ reaches the monorepo root (athyper/).
-const PRISMA_CLI = resolve(
-  __dirname,
-  "../../../../../../node_modules/.pnpm/node_modules/prisma/build/index.js"
-);
+// Resolve prisma CLI: check pnpm hoisted store first, then fall back to global npm.
+function resolvePrismaCli() {
+  const candidates = [
+    // pnpm hoisted store (workspace install)
+    resolve(__dirname, "../../../../../../node_modules/.pnpm/node_modules/prisma/build/index.js"),
+    // pnpm flat store
+    resolve(__dirname, "../../../../../../node_modules/prisma/build/index.js"),
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  // Fall back to global npm install
+  try {
+    const globalRoot = execSync("npm root -g", { encoding: "utf-8" }).trim();
+    const globalPath = resolve(globalRoot, "prisma/build/index.js");
+    if (existsSync(globalPath)) return globalPath;
+  } catch {}
+  throw new Error("Cannot locate prisma/build/index.js — install prisma globally or run pnpm install");
+}
+
+const PRISMA_CLI = resolvePrismaCli();
 
 const targetArg = process.argv.find((a) => a.startsWith("--target="));
 const target = targetArg ? targetArg.split("=")[1] : "neon";
@@ -41,11 +58,20 @@ if (!url) {
   process.exit(1);
 }
 
-// NODE_PATH pointing to the pnpm hoisted store so prisma.config.ts can resolve 'prisma/config' if present.
-const PNPM_HOISTED = resolve(__dirname, "../../../../../../node_modules/.pnpm/node_modules");
-const nodePath = process.env.NODE_PATH
-  ? `${PNPM_HOISTED}${process.platform === "win32" ? ";" : ":"}${process.env.NODE_PATH}`
-  : PNPM_HOISTED;
+// NODE_PATH: add pnpm hoisted store (if present) + global npm so prisma.config.ts can resolve 'prisma/config'.
+const sep = process.platform === "win32" ? ";" : ":";
+const extraPaths = [
+  resolve(__dirname, "../../../../../../node_modules/.pnpm/node_modules"),
+  resolve(__dirname, "../../../../../../node_modules"),
+].filter(existsSync);
+try {
+  const globalRoot = execSync("npm root -g", { encoding: "utf-8" }).trim();
+  extraPaths.push(globalRoot);
+} catch {}
+const nodePath = [
+  ...extraPaths,
+  ...(process.env.NODE_PATH ? process.env.NODE_PATH.split(sep) : []),
+].join(sep);
 
 const result = spawnSync(
   process.execPath,

@@ -589,6 +589,15 @@ ALTER TABLE master.operating_organization_company_assignment
 ALTER TABLE master.operating_organization_company_assignment
     ADD CONSTRAINT operating_organization_company_assignment_coordinate_uq
     UNIQUE (tenant_id, operating_organization_id, company_code_id, effective_from);
+ALTER TABLE master.operating_organization_company_assignment
+    ADD CONSTRAINT operating_organization_company_assignment_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        operating_organization_id WITH =,
+        company_code_id WITH =,
+        participation_role WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active');
 
 ALTER TABLE master.org_unit
     ADD CONSTRAINT org_unit_tenant_fk

@@ -115,8 +115,8 @@ fi
 if [[ "$NO_INFRA" == "1" ]]; then
   echo "[2/4] Skipping infra bringup (--no-infra)."
 else
-  echo "[2/4] Starting infra (stack-profile/up.sh core)..."
-  bash "${STACK_DIR}/scripts/stack-profile/up.sh" core
+  echo "[2/4] Starting infra (core + local dev services)..."
+  bash "${STACK_DIR}/scripts/stack-profile/up.sh" dev
 fi
 echo ""
 

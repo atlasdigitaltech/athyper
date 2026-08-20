@@ -37,6 +37,27 @@ CREATE TABLE authz.permission (
 COMMENT ON TABLE authz.permission IS
   'Plane-local seed-owned exact permission catalog. Tenant-defined permission creation is prohibited.';
 
+CREATE TABLE authz.permission_scope_kind (
+    id                    uuid                     NOT NULL DEFAULT shared.uuidv7(),
+    permission_id         uuid                     NOT NULL,
+    scope_kind            authz.scope_kind_d       NOT NULL,
+    propagation_mode      authz.propagation_mode_d NOT NULL DEFAULT 'exact',
+    status                shared.ref_status_d      NOT NULL DEFAULT 'active',
+    created_at            timestamptz              NOT NULL DEFAULT now(),
+    created_by            uuid                     NOT NULL,
+    updated_at            timestamptz,
+    updated_by            uuid,
+
+    CONSTRAINT permission_scope_kind_pkey PRIMARY KEY (id),
+    CONSTRAINT permission_scope_kind_uq
+        UNIQUE (permission_id, scope_kind, propagation_mode),
+    CONSTRAINT permission_scope_kind_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE authz.permission_scope_kind IS
+  'Seed-owned normalized compatibility between a published permission, scope kind, and propagation mode.';
+
 CREATE TABLE authz.plane_membership (
     id                  uuid                       NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid                       NOT NULL,
@@ -582,6 +603,7 @@ CREATE TABLE authz.trusted_device (
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid        NOT NULL,
     principal_id        uuid        NOT NULL,
+    auth_epoch          integer     NOT NULL,
     device_token_hash   text        NOT NULL,
     device_name         text,
     user_agent          text,
@@ -599,6 +621,7 @@ CREATE TABLE authz.trusted_device (
     CONSTRAINT trusted_device_token_uq UNIQUE (tenant_id, device_token_hash),
     CONSTRAINT trusted_device_token_hash_chk
         CHECK (device_token_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT trusted_device_auth_epoch_chk CHECK (auth_epoch >= 0),
     CONSTRAINT trusted_device_name_chk
         CHECK (
             device_name IS NULL
@@ -631,6 +654,8 @@ COMMENT ON TABLE authz.trusted_device IS
   'Plane-local remembered-browser evidence created only after successful IAM step-up. The browser holds the opaque token; only its SHA-256 hash is stored.';
 COMMENT ON COLUMN authz.trusted_device.device_token_hash IS
   'Lowercase SHA-256 digest of the opaque HttpOnly cookie. Raw token material must never be persisted.';
+COMMENT ON COLUMN authz.trusted_device.auth_epoch IS
+  'Principal authorization epoch captured at enrollment; any epoch increment invalidates the remembered-browser evidence.';
 
 -- Athyper-published and reconciled authorization projections.
 CREATE TABLE authz.application_projection (

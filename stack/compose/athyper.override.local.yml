@@ -27,7 +27,7 @@ services:
     cap_add:
       - DAC_OVERRIDE
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     networks:
       internal: null
       edge: null
@@ -93,21 +93,21 @@ services:
 
   db:
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     networks:
       internal: null
       edge: null
 
   dbpool-apps:
     ports:
-      - "6432:6432"
+      - "127.0.0.1:6432:6432"
     networks:
       internal: null
       edge: null
 
   dbpool-session:
     ports:
-      - "6433:6433"
+      - "127.0.0.1:6433:6433"
     networks:
       internal: null
       edge: null

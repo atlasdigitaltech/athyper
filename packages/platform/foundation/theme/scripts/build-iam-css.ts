@@ -3,7 +3,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { COLOR_TOKENS, FOUNDATION_TOKENS, type ColorMode } from "../src/tokens";
+import { COLOR_TOKENS, DENSITY_TOKENS, FOUNDATION_TOKENS, type ColorMode } from "../src/tokens";
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(packageRoot, "../../../..");
@@ -59,6 +59,7 @@ const structural = [
   `--a-motion-fast:${t.motion.fast}`, `--a-motion-normal:${t.motion.normal}`, `--a-motion-slow:${t.motion.slow}`, `--a-easing:${t.motion.easing}`,
   `--a-focus-width:${t.accessibility.focusWidth}`, `--a-focus-offset:${t.accessibility.focusOffset}`,
   `--a-border-width:${t.borders.width}`, `--a-content-sm:${t.sizing.contentSmall}`, `--a-icon-sm:${t.sizing.iconSmall}`, `--a-icon-md:${t.sizing.iconMedium}`, `--a-logo-md:${t.sizing.logoMedium}`,
+  `--a-control-height:${DENSITY_TOKENS.comfortable.controlHeight}`, `--a-touch-target:${DENSITY_TOKENS.comfortable.touchTarget}`,
   `--a-opacity-interactive:${t.opacity.interactive}`, `--a-opacity-disabled:${t.opacity.disabled}`,
 ].map((value) => `  ${value};`);
 

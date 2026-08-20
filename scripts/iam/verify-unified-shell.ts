@@ -50,7 +50,7 @@ function validateCenteredShell(page: string, source: string, failures: string[])
     ["kc-panel-right", "iam-shell"],
     ["kc-form-wrapper", "kc-panel-right"],
     ["kc-form-card", "kc-form-wrapper"],
-    ["kc-footer", "kc-panel-right"],
+    ["kc-footer", "iam-shell"],
   ]);
   const tags = /<\/?div\b[^>]*>/gi;
   let match: RegExpExecArray | null;
@@ -90,6 +90,7 @@ function validateCenteredShell(page: string, source: string, failures: string[])
 
 async function main(): Promise<void> {
   const failures: string[] = [];
+  const footer = await readFile(path.join(loginRoot, "_footer.ftl"), "utf8");
 
   for (const page of REQUIRED_PAGES) {
     const source = await readFile(path.join(loginRoot, page), "utf8");
@@ -108,7 +109,7 @@ async function main(): Promise<void> {
     for (const [label, passed] of checks) {
       if (!passed) failures.push(`${page}: missing ${label}`);
     }
-    validateCenteredShell(page, source, failures);
+    validateCenteredShell(page, source.replace('<#include "_footer.ftl">', footer), failures);
   }
 
   const resolver = await readFile(path.join(loginRoot, "_theme-resolver.ftl"), "utf8");
@@ -136,6 +137,9 @@ async function main(): Promise<void> {
   );
 
   try {
+    assert(loginCss.startsWith('@import url("./iam.tokens.css");\n@import url("./iam.generated.css");'), "login CSS does not load its token and utility dependencies first");
+    assert(loginCss.includes("height: var(--a-logo-md, 1.75rem)"), "IAM wordmark has no safe intrinsic-size fallback");
+    assert(tokenCss.includes("--a-control-height:") && tokenCss.includes("--a-touch-target:"), "IAM token bridge omits control sizing tokens used by login CSS");
     assert(context.includes("client.clientId"), "plane context does not inspect client.clientId");
     assert(context.includes("iamLegacyPlane"), "plane context has no constrained legacy fallback");
     assert(resolver.includes("data-plane"), "resolver does not bind the resolved plane");

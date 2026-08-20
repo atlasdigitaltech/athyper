@@ -27,9 +27,11 @@ Phase 3 makes the browser session a sanitized projection of a server-owned Redis
 - `KEYCLOAK_BASE_URL`, `KEYCLOAK_REALM`, and the plane client ID variables.
 - `APP_ORIGIN`: canonical same-origin application URL used for the callback.
 - `SESSION_TOKEN_ENCRYPTION_KEY`: base64-encoded 32-byte current AES-256-GCM key.
-- `SESSION_KEY_VERSION`: positive current namespace/encryption key version.
+- `SESSION_KEY_VERSION`: positive current encryption-key version.
+- `SESSION_STORE_VERSION`: independent Redis namespace version; change only for an intentional server-session invalidation.
 - `SESSION_TOKEN_PREVIOUS_KEYS`: optional JSON map from previous numeric versions to base64 keys, allowing rolling decryption during rotation.
 - `AUTH_CONFIGURATION_REVISION`: changing this revision allows stale session invalidation policy to be applied consistently.
+- `AUTH_TRUSTED_DEVICE_TTL_DAYS`: persistent remembered-browser lifetime, constrained by the BFF and runtime API to 1-90 days (default 30).
 
 The environment adapter is lazy: builds do not contact Redis or Keycloak. The first authentication request initializes the adapters and fails closed if required configuration, Redis, atomic commands, or verification keys are unavailable.
 

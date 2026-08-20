@@ -126,8 +126,8 @@ REM ----------------------------
 if "!NO_INFRA!"=="1" (
   echo [2/4] Skipping infra bringup ^(--no-infra^).
 ) else (
-  echo [2/4] Starting infra ^(stack-profile/up.bat core^)...
-  call "%STACK_DIR%\scripts\stack-profile\up.bat" core
+  echo [2/4] Starting infra ^(core + local dev services^)...
+  call "%STACK_DIR%\scripts\stack-profile\up.bat" dev
   if errorlevel 1 (
     echo ERROR: infra bringup failed.
     exit /b 1
