@@ -112,6 +112,21 @@ pnpm athyper operations plan lite --json
 athyper plan dev
 ```
 
+The controller owns the lightweight operations lifecycle and its receipts:
+
+```sh
+sh deploy/bootstrap/generate-operations-secrets.sh
+pnpm athyper operations up lite --confirm lite
+pnpm athyper operations down --confirm operations
+```
+
+Lite mode publishes Grafana on `127.0.0.1:53902`, Prometheus on
+`127.0.0.1:53900`, and Alloy's Loki-compatible receiver on
+`127.0.0.1:53901`. A controller-owned host forwarder reads only the selected
+Compose project's `docker logs` streams through the local Docker CLI and pushes
+normalized labels to Alloy. No workload or telemetry container receives the
+Docker socket, and `docker logs` remains available as the fallback authority.
+
 `athyper plan dev` now treats the machine qualification evidence as a hard
 deployment input. Aggregate host qualification and Defender/WSL cold-start
 compatibility must both be explicitly complete; a warm-session or provisional

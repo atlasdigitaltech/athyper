@@ -14,9 +14,10 @@ import { executeStackOperation } from "./execution.mjs";
 import { qualifyDev } from "./dev-qualification.mjs";
 import { inspectCatalog } from "./catalog-inspect.mjs";
 import { createOperationsPlan } from "./operations.mjs";
+import { executeOperationsOperation } from "./operations-execution.mjs";
 
 function usage() {
-  return `ATHYPER Stack v2 controller\n\nUsage:\n  athyper doctor [--json]\n  athyper config render <instance> [--json]\n  athyper plan <instance> [--json]\n  athyper gates inspect [--json]\n  athyper catalog inspect [--json]\n  athyper operations plan <lite|tracing|statuswatch|cronwatch|errorcollect> [--json]\n  athyper qualify dev [--json]\n  athyper up <instance> --confirm <instance> [--json]\n  athyper down <instance> --confirm <instance> [--json]\n  athyper restart <instance> [service] --confirm <instance> [--json]\n  athyper backup <instance> --confirm <instance> [--json]\n  athyper restore <instance> <backup-id> --confirm <instance> --confirm-restore <backup-id> [--json]\n  athyper lifecycle plan <instance> <reset|seed|test|destroy> [--json]\n  athyper rehearsal plan <target> --from <source> [--json]\n  athyper capability plan <instance> <observability|secretstore|analytics|admin-db|admin-queue> [--json]\n  athyper orchestrator assess [--json]\n  athyper policy check [--json]\n`;
+  return `ATHYPER Stack v2 controller\n\nUsage:\n  athyper doctor [--json]\n  athyper config render <instance> [--json]\n  athyper plan <instance> [--json]\n  athyper gates inspect [--json]\n  athyper catalog inspect [--json]\n  athyper operations plan <lite|tracing|statuswatch|cronwatch|errorcollect> [--json]\n  athyper operations up <lite|tracing|statuswatch> --confirm <mode> [--json]\n  athyper operations down --confirm operations [--json]\n  athyper qualify dev [--json]\n  athyper up <instance> --confirm <instance> [--json]\n  athyper down <instance> --confirm <instance> [--json]\n  athyper restart <instance> [service] --confirm <instance> [--json]\n  athyper backup <instance> --confirm <instance> [--json]\n  athyper restore <instance> <backup-id> --confirm <instance> --confirm-restore <backup-id> [--json]\n  athyper lifecycle plan <instance> <reset|seed|test|destroy> [--json]\n  athyper rehearsal plan <target> --from <source> [--json]\n  athyper capability plan <instance> <observability|secretstore|analytics|admin-db|admin-queue> [--json]\n  athyper orchestrator assess [--json]\n  athyper policy check [--json]\n`;
 }
 
 function print(document, json) {
@@ -97,6 +98,18 @@ export async function main(argv = process.argv.slice(2), repoRoot = defaultRepoR
     const report = createOperationsPlan(repoRoot, args[2], dependencies);
     print(report, json);
     return report.blockers.length ? 2 : 0;
+  }
+  if (args[0] === "operations" && ["up", "down"].includes(args[1])) {
+    const operation = args[1];
+    const mode = operation === "up" ? args[2] : undefined;
+    const optionStart = operation === "up" ? 3 : 2;
+    if ((operation === "up" && !mode) || args[optionStart] !== "--confirm" || !args[optionStart + 1] || args.length !== optionStart + 2) {
+      process.stderr.write(usage());
+      return 64;
+    }
+    const receipt = executeOperationsOperation(repoRoot, operation, mode, { confirm: args[optionStart + 1] }, dependencies);
+    print(receipt, json);
+    return 0;
   }
   if (args[0] === "qualify" && args[1] === "dev" && args.length === 2) {
     const result = qualifyDev(repoRoot, dependencies);

@@ -18,6 +18,7 @@ test("laptop-32 operations modes are bounded and mutually exclusive", () => {
     assert.equal(plan.concurrencyPolicy.exactlyOneMode, true);
     assert.equal(plan.concurrencyPolicy.fullObservabilityProhibited, true);
     assert.equal(plan.concurrencyPolicy.simultaneousMonitoringModesProhibited, true);
+    assert.equal(plan.ownershipReceipt.owned, false);
   }
 });
 

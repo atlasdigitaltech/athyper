@@ -27,6 +27,18 @@ function secretProblem(path) {
   return null;
 }
 
+function ownership(root) {
+  const path = join(root, "operations", "receipts", "active.json");
+  if (!existsSync(path)) return { owned: false, path, state: "absent" };
+  try {
+    const receipt = JSON.parse(readFileSync(path, "utf8"));
+    const owned = receipt?.kind === "ActiveInstanceReceipt"
+      && receipt?.metadata?.instance === "operations"
+      && receipt?.spec?.project === "athyper-operations";
+    return { owned, path, state: owned ? receipt.spec.state : "invalid" };
+  } catch { return { owned: false, path, state: "invalid" }; }
+}
+
 export function createOperationsPlan(repoRoot, mode, probes = {}) {
   if (!Object.hasOwn(MODE_PROFILE, mode)) throw new Error(`Unsupported operations mode: ${mode}`);
   const composePath = join(repoRoot, "deploy/compose/operations/compose.yaml");
@@ -48,11 +60,13 @@ export function createOperationsPlan(repoRoot, mode, probes = {}) {
   }
   if (memory > profile.spec.maxContainerMemoryMiB) blockers.push(`Operations mode requires ${memory} MiB; profile permits ${profile.spec.maxContainerMemoryMiB} MiB.`);
   if (cpu > profile.spec.maxContainerCpu) blockers.push(`Operations mode requires ${cpu} CPU; profile permits ${profile.spec.maxContainerCpu}.`);
-  const secretPath = join(probes.runtimeRoot ?? runtimeRoot(), "operations", "secrets", "grafana-admin-password");
+  const root = probes.runtimeRoot ?? runtimeRoot();
+  const secretPath = join(root, "operations", "secrets", "grafana-admin-password");
   const problem = (probes.secretProblem ?? secretProblem)(secretPath);
   if (problem) blockers.push(`Operations secret file ${problem}: grafana-admin-password.`);
   const live = (probes.liveProject ?? (() => runReadOnly("docker", ["ps", "-aq", "--filter", "label=com.docker.compose.project=athyper-operations"]).stdout))();
-  if (live && !probes.owned) blockers.push("Compose project athyper-operations already exists without an operations ownership receipt.");
+  const ownershipReceipt = probes.owned === undefined ? ownership(root) : { owned: probes.owned, path: "probe", state: probes.owned ? "running" : "absent" };
+  if (live && !ownershipReceipt.owned) blockers.push("Compose project athyper-operations already exists without an operations ownership receipt.");
   return {
     apiVersion: "athyper.io/v1alpha1", kind: "OperationsPlan",
     readOnly: true, executionAuthorized: false,
@@ -66,7 +80,7 @@ export function createOperationsPlan(repoRoot, mode, probes = {}) {
       simultaneousMonitoringModesProhibited: true,
       allowedModes: Object.keys(MODE_PROFILE),
     },
-    blockers,
+    blockers, ownershipReceipt,
     actions: ["No action: this command only validates the selected operations mode."],
   };
 }
