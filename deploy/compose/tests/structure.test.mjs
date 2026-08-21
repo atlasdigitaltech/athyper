@@ -82,5 +82,14 @@ test("OIDC uses public HTTPS issuers with private backchannel endpoints", () => 
   assert.match(web, /KEYCLOAK_INTERNAL_BASE_URL=http:\/\/iam:8080/u);
   assert.match(web, /PUBLIC_BASE_URL="https:\/\/\$\{ATHYPER_APP_DOMAIN\}"/u);
   assert.match(runtime, /IAM_ISSUER_URL="https:\/\/iam\.\$\{ATHYPER_DOMAIN_SUFFIX:-dev\.athyper\.test\}\/realms\/athyper"/u);
+  assert.match(runtime, /export KEYCLOAK_REALM=athyper/u);
   assert.match(runtime, /KEYCLOAK_JWKS_URL=http:\/\/iam:8080\/realms\/athyper\/protocol\/openid-connect\/certs/u);
+  const realm = read("stack/config/iam/realm-athyper-clean-slate.json");
+  for (const plane of ["studio", "neon", "mesh"]) {
+    const client = realm.clients.find(({ clientId }) => clientId === `${plane}-web`);
+    const origin = `https://${plane}.dev.athyper.test`;
+    assert.ok(client.redirectUris.includes(`${origin}/api/auth/callback`));
+    assert.ok(client.webOrigins.includes(origin));
+    assert.ok(client.attributes["post.logout.redirect.uris"].split("##").includes(`${origin}/api/auth/logout/callback`));
+  }
 });

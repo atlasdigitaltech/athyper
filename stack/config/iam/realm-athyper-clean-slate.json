@@ -875,7 +875,7 @@
         "https://studio.athyper.local/api/auth/callback",
         "https://studio-stg.athyper.com/api/auth/callback",
         "https://studio.athyper.com/api/auth/callback",
-        "http://studio.dev.athyper.test/api/auth/callback"
+        "https://studio.dev.athyper.test/api/auth/callback"
       ],
       "webOrigins": [
         "http://localhost:3003",
@@ -883,7 +883,7 @@
         "https://studio.athyper.local",
         "https://studio-stg.athyper.com",
         "https://studio.athyper.com",
-        "http://studio.dev.athyper.test"
+        "https://studio.dev.athyper.test"
       ],
       "notBefore": 0,
       "bearerOnly": false,
@@ -900,7 +900,7 @@
         "logout.confirmation.enabled": "false",
         "standard.token.exchange.enabled": "false",
         "frontchannel.logout.session.required": "true",
-        "post.logout.redirect.uris": "http://localhost:3003/api/auth/logout/callback##http://localhost:3103/api/auth/logout/callback##https://studio.athyper.local/api/auth/logout/callback##https://studio-stg.athyper.com/api/auth/logout/callback##https://studio.athyper.com/api/auth/logout/callback",
+        "post.logout.redirect.uris": "http://localhost:3003/api/auth/logout/callback##http://localhost:3103/api/auth/logout/callback##https://studio.athyper.local/api/auth/logout/callback##https://studio-stg.athyper.com/api/auth/logout/callback##https://studio.athyper.com/api/auth/logout/callback##https://studio.dev.athyper.test/api/auth/logout/callback",
         "oauth2.device.authorization.grant.enabled": "false",
         "use.refresh.tokens": "true",
         "realm_client": "false",
@@ -1015,7 +1015,7 @@
         "https://mesh.athyper.local/api/auth/callback",
         "https://mesh-stg.athyper.com/api/auth/callback",
         "https://mesh.athyper.com/api/auth/callback",
-        "http://mesh.dev.athyper.test/api/auth/callback"
+        "https://mesh.dev.athyper.test/api/auth/callback"
       ],
       "webOrigins": [
         "http://localhost:3002",
@@ -1023,7 +1023,7 @@
         "https://mesh.athyper.local",
         "https://mesh-stg.athyper.com",
         "https://mesh.athyper.com",
-        "http://mesh.dev.athyper.test"
+        "https://mesh.dev.athyper.test"
       ],
       "notBefore": 0,
       "bearerOnly": false,
@@ -1040,7 +1040,7 @@
         "logout.confirmation.enabled": "false",
         "standard.token.exchange.enabled": "false",
         "frontchannel.logout.session.required": "true",
-        "post.logout.redirect.uris": "http://localhost:3002/api/auth/logout/callback##http://localhost:3102/api/auth/logout/callback##https://mesh.athyper.local/api/auth/logout/callback##https://mesh-stg.athyper.com/api/auth/logout/callback##https://mesh.athyper.com/api/auth/logout/callback",
+        "post.logout.redirect.uris": "http://localhost:3002/api/auth/logout/callback##http://localhost:3102/api/auth/logout/callback##https://mesh.athyper.local/api/auth/logout/callback##https://mesh-stg.athyper.com/api/auth/logout/callback##https://mesh.athyper.com/api/auth/logout/callback##https://mesh.dev.athyper.test/api/auth/logout/callback",
         "oauth2.device.authorization.grant.enabled": "false",
         "use.refresh.tokens": "true",
         "realm_client": "false",
@@ -1112,7 +1112,7 @@
         "http://localhost:3101/api/auth/callback",
         "https://neon.athyper.com/api/auth/callback",
         "https://neon-stg.athyper.com/api/auth/callback",
-        "http://neon.dev.athyper.test/api/auth/callback"
+        "https://neon.dev.athyper.test/api/auth/callback"
       ],
       "webOrigins": [
         "http://localhost:3000",
@@ -1120,7 +1120,7 @@
         "http://localhost:3101",
         "https://neon.athyper.com",
         "https://neon-stg.athyper.com",
-        "http://neon.dev.athyper.test"
+        "https://neon.dev.athyper.test"
       ],
       "notBefore": 0,
       "bearerOnly": false,
@@ -1138,7 +1138,7 @@
         "client.introspection.response.allow.jwt.claim.enabled": "false",
         "standard.token.exchange.enabled": "false",
         "frontchannel.logout.session.required": "true",
-        "post.logout.redirect.uris": "http://localhost:3000/api/auth/logout/callback##http://localhost:3101/api/auth/logout/callback##https://neon.athyper.local/api/auth/logout/callback##https://neon.athyper.com/api/auth/logout/callback##https://neon-stg.athyper.com/api/auth/logout/callback",
+        "post.logout.redirect.uris": "http://localhost:3000/api/auth/logout/callback##http://localhost:3101/api/auth/logout/callback##https://neon.athyper.local/api/auth/logout/callback##https://neon.athyper.com/api/auth/logout/callback##https://neon-stg.athyper.com/api/auth/logout/callback##https://neon.dev.athyper.test/api/auth/logout/callback",
         "oauth2.device.authorization.grant.enabled": "false",
         "use.refresh.tokens": "true",
         "realm_client": "false",

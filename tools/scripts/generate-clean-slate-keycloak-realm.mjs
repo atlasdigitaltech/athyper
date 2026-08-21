@@ -36,9 +36,16 @@ for (const client of realm.clients ?? []) {
     client.secret = `\${${policy.variable}}`;
     client.attributes ??= {};
     if (policy.host) {
-      const origin = `http://${policy.host}.dev.athyper.test`;
+      const origin = `https://${policy.host}.dev.athyper.test`;
       client.redirectUris = [...new Set([...(client.redirectUris ?? []), `${origin}/api/auth/callback`])];
       client.webOrigins = [...new Set([...(client.webOrigins ?? []), origin])];
+      const logoutRedirect = `${origin}/api/auth/logout/callback`;
+      client.attributes["post.logout.redirect.uris"] = [
+        ...new Set([
+          ...(client.attributes["post.logout.redirect.uris"] ?? "").split("##").filter(Boolean),
+          logoutRedirect,
+        ]),
+      ].join("##");
     }
     // Back-channel logout is activated only after the DEV endpoints expose and
     // pass their logout handlers; importing an unqualified URL blocks Keycloak.
@@ -74,8 +81,8 @@ for (const client of platformRealm.clients ?? []) {
     if (attribute.startsWith("backchannel.logout.")) delete client.attributes[attribute];
   }
   if (client.clientId === "athyper-studio") {
-    client.redirectUris = [...new Set([...(client.redirectUris ?? []), "http://studio.dev.athyper.test/*"])];
-    client.webOrigins = [...new Set([...(client.webOrigins ?? []), "http://studio.dev.athyper.test"])];
+    client.redirectUris = [...new Set([...(client.redirectUris ?? []), "https://studio.dev.athyper.test/*"])];
+    client.webOrigins = [...new Set([...(client.webOrigins ?? []), "https://studio.dev.athyper.test"])];
   }
 }
 writeFileSync(platformOutputPath, `${JSON.stringify(platformRealm, null, 2)}\n`, "utf8");
