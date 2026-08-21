@@ -32,6 +32,7 @@ const args = parseArgs(process.argv.slice(2));
 const container = args.container || process.env.DOCKER_CONTAINER_IAM || "athyper-iam-1";
 const adminUser = args["admin-user"] || process.env.IAM_ADMIN;
 const adminPassword = args["admin-password"] || process.env.IAM_ADMIN_PASSWORD;
+const authenticated = args.authenticated === "1" || args.authenticated === "true";
 const realmFile = args["realm-file"];
 const demoFile = args["demo-file"];
 const forceReconcile = args.reconcile === "1" || args.reconcile === "true" || process.env.IAM_DEMO_RECONCILE === "1";
@@ -39,8 +40,8 @@ const fastReconcile = args.fast === "1" || args.fast === "true";
 const remapExistingUsers = new Set(["catl.admin", "tksa.admin", "ssk.admin", "tegy.admin", "sdtx.admin"]);
 const remapAdmins = args["remap-admins"] === "1" || args["remap-admins"] === "true";
 
-if (!adminUser || !adminPassword || !realmFile || !demoFile) {
-  console.error("Usage: node apply-realm-demo-setup.cjs --container athyper-iam-1 --admin-user USER --admin-password PASS --realm-file realm-neon.json --demo-file realm-neon-demosetup.json");
+if ((!authenticated && (!adminUser || !adminPassword)) || !realmFile || !demoFile) {
+  console.error("Usage: node apply-realm-demo-setup.cjs --container athyper-iam-1 (--admin-user USER --admin-password PASS | --authenticated true) --realm-file realm-neon.json --demo-file realm-neon-demosetup.json");
   process.exit(1);
 }
 
@@ -364,7 +365,9 @@ function retireOrganizationAliases(aliases, organizationsByAlias) {
 }
 
 console.log(`Applying demo setup: realm=${realmName}, file=${path.basename(demoFile)}`);
-kcadm(["config", "credentials", "--server", "http://localhost:8080", "--realm", "master", "--user", adminUser, "--password", adminPassword]);
+if (!authenticated) {
+  kcadm(["config", "credentials", "--server", "http://localhost:8080", "--realm", "master", "--user", adminUser, "--password", adminPassword]);
+}
 
 const groupsByRef = groupMap();
 const usersByUsername = new Map();
