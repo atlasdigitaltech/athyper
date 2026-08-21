@@ -24,6 +24,7 @@ const schemaFiles = Object.freeze({
   StackBackup: "stack-backup.schema.json",
   FoundationMigrationReceipt: "foundation-migration-receipt.schema.json",
   DevQualification: "dev-qualification.schema.json",
+  WorkloadSetCatalog: "workload-set-catalog.schema.json",
 });
 
 export function createValidator(repoRoot) {

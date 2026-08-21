@@ -107,6 +107,7 @@ docker compose \
   -f deploy/compose/instance/compose.yaml \
   config --no-interpolate --quiet
 pnpm stack:v2:test
+pnpm athyper catalog inspect --json
 athyper plan dev
 ```
 
@@ -162,7 +163,8 @@ DEV now selects the `dev-full` preset and adds
 `deploy/compose/instance/compose.parity.yaml` to the core model. The overlay
 contains the three Next.js planes, API, worker, scheduler, ClamAV, Gotenberg,
 Tika, Meilisearch, and development-only Mailpit. The complete envelope,
-including the one-shot clean-slate migration job, is 13,120 MiB and 15.7 CPU
+including database initialization and the one-shot clean-slate migration job,
+is 13,312 MiB and 15.95 CPU
 against laptop-32 limits of 14,336 MiB and 16 CPU.
 
 Runtime, worker, and PostgreSQL owner identities are separate. PgBouncer knows

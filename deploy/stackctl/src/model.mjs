@@ -27,7 +27,8 @@ export function loadModel(repoRoot, instanceId) {
   }
   const catalogFiles = listYaml(join(repoRoot, "deploy/catalog"));
   const catalogs = catalogFiles.map((path) => checkedRead(path, validate));
-  const services = catalogs.flatMap((catalog) => catalog.services);
+  const services = catalogs.filter((catalog) => catalog.kind === "ServiceCatalog")
+    .flatMap((catalog) => catalog.services);
   const selected = services
     .filter((service) => service.presets.includes(instance.spec.preset))
     .sort((left, right) => left.id.localeCompare(right.id));

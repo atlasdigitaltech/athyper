@@ -12,9 +12,10 @@ import { assessOrchestrator } from "./orchestrator.mjs";
 import { inspectRemainingGates } from "./gates.mjs";
 import { executeStackOperation } from "./execution.mjs";
 import { qualifyDev } from "./dev-qualification.mjs";
+import { inspectCatalog } from "./catalog-inspect.mjs";
 
 function usage() {
-  return `ATHYPER Stack v2 controller\n\nUsage:\n  athyper doctor [--json]\n  athyper config render <instance> [--json]\n  athyper plan <instance> [--json]\n  athyper gates inspect [--json]\n  athyper qualify dev [--json]\n  athyper up <instance> --confirm <instance> [--json]\n  athyper down <instance> --confirm <instance> [--json]\n  athyper restart <instance> [service] --confirm <instance> [--json]\n  athyper backup <instance> --confirm <instance> [--json]\n  athyper restore <instance> <backup-id> --confirm <instance> --confirm-restore <backup-id> [--json]\n  athyper lifecycle plan <instance> <reset|seed|test|destroy> [--json]\n  athyper rehearsal plan <target> --from <source> [--json]\n  athyper capability plan <instance> <observability|secretstore|analytics|admin-db|admin-queue> [--json]\n  athyper orchestrator assess [--json]\n  athyper policy check [--json]\n`;
+  return `ATHYPER Stack v2 controller\n\nUsage:\n  athyper doctor [--json]\n  athyper config render <instance> [--json]\n  athyper plan <instance> [--json]\n  athyper gates inspect [--json]\n  athyper catalog inspect [--json]\n  athyper qualify dev [--json]\n  athyper up <instance> --confirm <instance> [--json]\n  athyper down <instance> --confirm <instance> [--json]\n  athyper restart <instance> [service] --confirm <instance> [--json]\n  athyper backup <instance> --confirm <instance> [--json]\n  athyper restore <instance> <backup-id> --confirm <instance> --confirm-restore <backup-id> [--json]\n  athyper lifecycle plan <instance> <reset|seed|test|destroy> [--json]\n  athyper rehearsal plan <target> --from <source> [--json]\n  athyper capability plan <instance> <observability|secretstore|analytics|admin-db|admin-queue> [--json]\n  athyper orchestrator assess [--json]\n  athyper policy check [--json]\n`;
 }
 
 function print(document, json) {
@@ -83,6 +84,11 @@ export async function main(argv = process.argv.slice(2), repoRoot = defaultRepoR
   }
   if (args[0] === "gates" && args[1] === "inspect" && args.length === 2) {
     const report = inspectRemainingGates(repoRoot);
+    print(report, json);
+    return report.blockers.length ? 2 : 0;
+  }
+  if (args[0] === "catalog" && args[1] === "inspect" && args.length === 2) {
+    const report = inspectCatalog(repoRoot);
     print(report, json);
     return report.blockers.length ? 2 : 0;
   }

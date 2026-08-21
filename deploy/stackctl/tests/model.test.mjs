@@ -18,7 +18,7 @@ test("catalog accounts for all 39 resolved Stack v1 services", () => {
   const model = loadModel(defaultRepoRoot, "dev");
   assert.equal(model.services.filter((service) => service.ledger === "resolved-v1").length, 39);
   assert.equal(model.services.filter((service) => service.ledger === "test-fixture").length, 1);
-  assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 3);
+  assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 5);
 });
 
 test("DEV render is project-scoped and uses the laptop-32 envelope", () => {
@@ -118,8 +118,8 @@ test("DEV core Compose is isolated and contains the Phase 6 dependency spine", (
 test("DEV-full parity is bounded and includes every Phase 8 service", () => {
   const plan = createPlan(defaultRepoRoot, "dev");
   assert.equal(plan.preset, "dev-full");
-  assert.equal(plan.resources.memoryMiB, 13_184);
-  assert.equal(plan.resources.cpu, 15.7);
+  assert.equal(plan.resources.memoryMiB, 13_312);
+  assert.equal(plan.resources.cpu, 15.95);
   assert.ok(plan.services.some((service) => service.id === "db-migration"));
   assert.equal(plan.sources.compose.length, 2);
   assert.ok(plan.domains.includes("mail.dev.athyper.test"));
