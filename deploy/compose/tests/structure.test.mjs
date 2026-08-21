@@ -109,7 +109,7 @@ test("Grafana reads the owner-only secret only during privilege-dropping bootstr
   assert.ok(grafana.volumes.includes("./scripts/start-grafana.sh:/athyper/bin/start-grafana.sh:ro"));
   assert.match(bootstrap, /GF_SECURITY_ADMIN_PASSWORD="\$\(<"\$\{secret_file\}"\)"/u);
   assert.match(bootstrap, /unset GF_SECURITY_ADMIN_PASSWORD__FILE/u);
-  assert.match(bootstrap, /exec setpriv --reuid=472 --regid=0 --clear-groups \/run\.sh/u);
+  assert.match(bootstrap, /exec su -p -s \/bin\/bash grafana -c "exec \/run\.sh"/u);
 });
 
 test("web session storage reaches Redis without joining the data network", () => {

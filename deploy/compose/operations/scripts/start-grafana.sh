@@ -12,4 +12,4 @@ fi
 export GF_SECURITY_ADMIN_PASSWORD="$(<"${secret_file}")"
 unset GF_SECURITY_ADMIN_PASSWORD__FILE
 
-exec setpriv --reuid=472 --regid=0 --clear-groups /run.sh
+exec su -p -s /bin/bash grafana -c "exec /run.sh"
