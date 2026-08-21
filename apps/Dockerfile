@@ -1,4 +1,4 @@
-FROM node:24-alpine AS build
+FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS build
 
 WORKDIR /workspace
 RUN corepack enable
@@ -8,6 +8,7 @@ COPY apps ./apps
 COPY packages ./packages
 COPY server ./server
 COPY tools ./tools
+COPY tooling ./tooling
 COPY tsconfig.json ./
 
 ARG APP_PACKAGE
@@ -15,7 +16,7 @@ ARG APP_NAME
 RUN pnpm install --frozen-lockfile \
  && pnpm --filter "${APP_PACKAGE}" build
 
-FROM node:24-alpine AS runtime
+FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 ARG APP_NAME

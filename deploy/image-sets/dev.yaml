@@ -1,0 +1,18 @@
+apiVersion: athyper.io/v1alpha1
+kind: ImageSet
+metadata:
+  id: dev-working-tree
+  channel: development
+spec:
+  sourceRevision: working-tree
+  images:
+    - id: neon-web
+      reference: ghcr.io/atlasdigitaltech/athyper-neon-web:dev
+    - id: mesh-web
+      reference: ghcr.io/atlasdigitaltech/athyper-mesh-web:dev
+    - id: studio-web
+      reference: ghcr.io/atlasdigitaltech/athyper-studio-web:dev
+    - id: runtime-server
+      reference: ghcr.io/atlasdigitaltech/athyper-runtime-server:dev
+    - id: iam
+      reference: ghcr.io/atlasdigitaltech/athyper-keycloak:dev

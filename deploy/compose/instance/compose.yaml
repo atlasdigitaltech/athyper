@@ -1,0 +1,270 @@
+# The controller supplies the project name with `docker compose --project-name`.
+# Secret files are owner-only files below ATHYPER_RUNTIME_ROOT; values never
+# appear in this file, Compose environment variables, or image metadata.
+services:
+  gateway:
+    image: traefik:v3.6.13
+    restart: unless-stopped
+    command:
+      - --api.dashboard=false
+      - --entrypoints.web.address=:8080
+      - --entrypoints.health.address=:8082
+      - --ping=true
+      - --ping.entrypoint=health
+      - --providers.file.filename=/etc/traefik/dynamic.yaml
+      - --providers.file.watch=false
+      - --log.level=INFO
+    ports:
+      - "${ATHYPER_HTTP_BIND:-127.0.0.1:80}:8080"
+    volumes:
+      - ./config/traefik/${ATHYPER_INSTANCE:-dev}.yaml:/etc/traefik/dynamic.yaml:ro
+    networks: [edge, app]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8082/ping]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 256m
+    cpus: 0.5
+
+  gateway-outage:
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./config/nginx/outage.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [app]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/healthz]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    mem_limit: 128m
+    cpus: 0.1
+
+  db:
+    image: postgres:16.13-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    secrets: [postgres-password]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks: [data]
+    ports:
+      - "${ATHYPER_POSTGRES_BIND:-127.0.0.1:5432}:5432"
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres -d postgres]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+    shm_size: 256m
+    security_opt: [no-new-privileges:true]
+    mem_limit: 2048m
+    cpus: 2.0
+
+  db-init:
+    image: postgres:16.13-bookworm
+    restart: no
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: postgres
+    entrypoint: [/bin/bash, /athyper/bin/init-postgres.sh]
+    secrets: [postgres-password, iam-db-password, runtime-db-password, worker-db-password]
+    volumes:
+      - ./scripts/init-postgres.sh:/athyper/bin/init-postgres.sh:ro
+    networks: [data]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 128m
+    cpus: 0.25
+
+  dbpool-apps:
+    image: edoburu/pgbouncer:v1.25.1-p0
+    user: "0:0"
+    restart: unless-stopped
+    depends_on:
+      db-init: { condition: service_completed_successfully }
+    environment:
+      ATHYPER_POOL_MODE: transaction
+    entrypoint: [/bin/sh, /athyper/bin/start-pgbouncer.sh]
+    secrets: [postgres-password, runtime-db-password, worker-db-password]
+    volumes:
+      - ./scripts/start-pgbouncer.sh:/athyper/bin/start-pgbouncer.sh:ro
+    networks: [app, data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 128m
+    cpus: 0.25
+
+  dbpool-session:
+    image: edoburu/pgbouncer:v1.25.1-p0
+    user: "0:0"
+    restart: unless-stopped
+    depends_on:
+      db-init: { condition: service_completed_successfully }
+    environment:
+      ATHYPER_POOL_MODE: session
+    entrypoint: [/bin/sh, /athyper/bin/start-pgbouncer.sh]
+    secrets: [postgres-password, runtime-db-password, worker-db-password]
+    volumes:
+      - ./scripts/start-pgbouncer.sh:/athyper/bin/start-pgbouncer.sh:ro
+    networks: [app, data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -h 127.0.0.1 -p 5432 -U postgres -d postgres]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 128m
+    cpus: 0.25
+
+  memorycache:
+    image: redis:7.4.8-alpine
+    restart: unless-stopped
+    entrypoint: [/bin/sh, /athyper/bin/start-redis.sh]
+    secrets: [redis-password]
+    volumes:
+      - memorycache-data:/data
+      - ./scripts/start-redis.sh:/athyper/bin/start-redis.sh:ro
+    networks: [data]
+    healthcheck:
+      test: [CMD-SHELL, 'redis-cli --no-auth-warning -a "$$(cat /run/secrets/redis-password)" ping | grep -qx PONG']
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 0.5
+
+  objectstorage:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    restart: unless-stopped
+    command: [server, /data, --address, :9000, --console-address, :9001]
+    environment:
+      MINIO_ROOT_USER: athyper-admin
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio-root-password
+    secrets: [minio-root-password]
+    volumes:
+      - objectstorage-data:/data
+    networks: [app, data]
+    healthcheck:
+      test: [CMD, mc, ready, local]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1024m
+    cpus: 1.0
+
+  objectstorage-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    restart: no
+    depends_on:
+      objectstorage: { condition: service_healthy }
+    entrypoint: [/bin/sh, /athyper/bin/init-minio.sh]
+    environment:
+      MC_CONFIG_DIR: /tmp/.mc
+    secrets: [minio-root-password, objectstorage-app-access-key, objectstorage-app-secret-key]
+    volumes:
+      - ./scripts/init-minio.sh:/athyper/bin/init-minio.sh:ro
+    networks: [data]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 64m
+    cpus: 0.1
+
+  iam:
+    image: ${ATHYPER_IMAGE_IAM:-ghcr.io/atlasdigitaltech/athyper-keycloak:dev}
+    restart: unless-stopped
+    depends_on:
+      db-init: { condition: service_completed_successfully }
+    entrypoint: [/bin/bash, /athyper/bin/start-keycloak.sh]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/athyper_iam
+      KC_DB_USERNAME: athyper_iam
+      KC_BOOTSTRAP_ADMIN_USERNAME: athyper-admin
+      KC_HEALTH_ENABLED: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_PORT: "8080"
+      KC_HOSTNAME: http://iam.${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
+      KC_PROXY_HEADERS: xforwarded
+    secrets:
+      - iam-admin-password
+      - iam-db-password
+      - studio-iam-client-secret
+      - neon-iam-client-secret
+      - mesh-iam-client-secret
+      - runtime-iam-client-secret
+    volumes:
+      - iam-data:/opt/keycloak/data
+      - ./scripts/start-keycloak.sh:/athyper/bin/start-keycloak.sh:ro
+    networks: [app, data]
+    healthcheck:
+      test: [CMD-SHELL, 'exec 3<>/dev/tcp/127.0.0.1/9000; printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; grep -q "200 OK" <&3']
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1024m
+    cpus: 1.0
+
+networks:
+  edge: {}
+  app: {}
+  data:
+    internal: true
+  ops:
+    internal: true
+
+volumes:
+  db-data: {}
+  memorycache-data: {}
+  objectstorage-data: {}
+  iam-data: {}
+
+secrets:
+  postgres-password:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/postgres-password
+  redis-password:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/redis-password
+  minio-root-password:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/minio-root-password
+  iam-admin-password:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/iam-admin-password
+  iam-db-password:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/iam-db-password
+  runtime-db-password:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/runtime-db-password
+  worker-db-password:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/worker-db-password
+  objectstorage-app-access-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/objectstorage-app-access-key
+  objectstorage-app-secret-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/objectstorage-app-secret-key

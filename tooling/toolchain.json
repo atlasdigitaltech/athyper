@@ -1,0 +1,5 @@
+{
+  "nodeVersion": "24.19.0",
+  "nodeImage": "node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995",
+  "pnpmVersion": "10.33.0"
+}

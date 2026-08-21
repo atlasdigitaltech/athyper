@@ -21,6 +21,45 @@ export function packageManagerVersion(manifestText) {
   return match[1];
 }
 
+export function nodeEngineVersion(manifestText) {
+  const value = JSON.parse(manifestText).engines?.node;
+  if (!/^\d+\.\d+\.\d+$/u.test(value ?? "")) {
+    throw new Error(`Root engines.node must be an exact version; received: ${value}`);
+  }
+  return value;
+}
+
+export function analyzeNodePins({
+  expectedVersion,
+  expectedImage,
+  nodeVersionFile,
+  dockerfileEntries,
+  workflowEntries,
+}) {
+  const mismatches = [];
+  if (nodeVersionFile.trim() !== expectedVersion) {
+    mismatches.push({ path: ".node-version", actual: nodeVersionFile.trim(), expected: expectedVersion });
+  }
+
+  for (const [path, text] of dockerfileEntries) {
+    for (const match of text.matchAll(/^FROM\s+(node:[^\s]+)\s+/gmu)) {
+      if (match[1] !== expectedImage) mismatches.push({ path, actual: match[1], expected: expectedImage });
+    }
+  }
+
+  for (const [path, text] of workflowEntries) {
+    for (const match of text.matchAll(/^\s*NODE_VERSION:\s*['"]?([^'"\s]+)['"]?\s*$/gmu)) {
+      if (match[1] !== expectedVersion) mismatches.push({ path, actual: match[1], expected: expectedVersion });
+    }
+    for (const match of text.matchAll(/^\s*node-version:\s*['"]?([^'"\s]+)['"]?\s*$/gmu)) {
+      if (!match[1].includes("${{") && match[1] !== expectedVersion) {
+        mismatches.push({ path, actual: match[1], expected: expectedVersion });
+      }
+    }
+  }
+  return { mismatches };
+}
+
 export function analyzeDockerPnpmVersions({
   expectedVersion,
   dockerfileEntries,
@@ -59,9 +98,13 @@ export function analyzeDockerPnpmVersions({
 }
 
 function run() {
-  const expectedVersion = packageManagerVersion(
-    readFileSync(resolve(repositoryRoot, "package.json"), "utf8"),
-  );
+  const manifestText = readFileSync(resolve(repositoryRoot, "package.json"), "utf8");
+  const expectedVersion = packageManagerVersion(manifestText);
+  const expectedNodeVersion = nodeEngineVersion(manifestText);
+  const toolchain = JSON.parse(readFileSync(resolve(repositoryRoot, "tooling", "toolchain.json"), "utf8"));
+  if (toolchain.nodeVersion !== expectedNodeVersion || toolchain.pnpmVersion !== expectedVersion) {
+    throw new Error("tooling/toolchain.json does not match package.json authorities");
+  }
   const dockerfileEntries = dockerfiles(repositoryRoot).map((path) => [
     relative(repositoryRoot, path).replaceAll("\\", "/"),
     readFileSync(path, "utf8"),
@@ -75,6 +118,21 @@ function run() {
     dockerfileEntries,
     workflowText,
   });
+  const workflowDirectory = resolve(repositoryRoot, ".github", "workflows");
+  const workflowEntries = readdirSync(workflowDirectory)
+    .filter((name) => /\.ya?ml$/u.test(name))
+    .sort()
+    .map((name) => [
+      `.github/workflows/${name}`,
+      readFileSync(resolve(workflowDirectory, name), "utf8"),
+    ]);
+  const nodeResult = analyzeNodePins({
+    expectedVersion: expectedNodeVersion,
+    expectedImage: toolchain.nodeImage,
+    nodeVersionFile: readFileSync(resolve(repositoryRoot, ".node-version"), "utf8"),
+    dockerfileEntries,
+    workflowEntries,
+  });
 
   for (const path of result.unpinned) {
     console.error(`${path}: pnpm@latest is not allowed`);
@@ -84,10 +142,13 @@ function run() {
       `${mismatch.path}: pnpm ${mismatch.actual} does not match packageManager ${mismatch.expected}`,
     );
   }
-  if (result.unpinned.length || result.mismatches.length) process.exitCode = 1;
+  for (const mismatch of nodeResult.mismatches) {
+    console.error(`${mismatch.path}: Node ${mismatch.actual} does not match ${mismatch.expected}`);
+  }
+  if (result.unpinned.length || result.mismatches.length || nodeResult.mismatches.length) process.exitCode = 1;
   else {
     console.log(
-      `Docker and CI pnpm pins match packageManager (${expectedVersion}; `
+      `Local, Docker, and CI toolchains match Node ${expectedNodeVersion} / pnpm ${expectedVersion} (`
         + `${dockerfileEntries.length} Dockerfiles inspected).`,
     );
   }

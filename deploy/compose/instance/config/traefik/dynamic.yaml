@@ -1,0 +1,60 @@
+http:
+  routers:
+    iam:
+      rule: Host(`iam.dev.athyper.test`)
+      entryPoints: [web]
+      service: iam
+    api:
+      rule: Host(`api.dev.athyper.test`)
+      entryPoints: [web]
+      service: api
+    neon:
+      rule: Host(`neon.dev.athyper.test`)
+      entryPoints: [web]
+      service: neon
+    mesh:
+      rule: Host(`mesh.dev.athyper.test`)
+      entryPoints: [web]
+      service: mesh
+    studio:
+      rule: Host(`studio.dev.athyper.test`)
+      entryPoints: [web]
+      service: studio
+    mail:
+      rule: Host(`mail.dev.athyper.test`)
+      entryPoints: [web]
+      service: mail
+    fallback:
+      rule: PathPrefix(`/`)
+      entryPoints: [web]
+      service: outage
+      priority: 1
+  services:
+    iam:
+      loadBalancer:
+        servers:
+          - url: http://iam:8080
+    api:
+      loadBalancer:
+        servers:
+          - url: http://api:4000
+    neon:
+      loadBalancer:
+        servers:
+          - url: http://neon-web:3000
+    mesh:
+      loadBalancer:
+        servers:
+          - url: http://mesh-web:3000
+    studio:
+      loadBalancer:
+        servers:
+          - url: http://studio-web:3000
+    mail:
+      loadBalancer:
+        servers:
+          - url: http://mailtrap:8025
+    outage:
+      loadBalancer:
+        servers:
+          - url: http://gateway-outage:8080

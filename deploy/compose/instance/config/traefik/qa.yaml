@@ -1,0 +1,15 @@
+http:
+  routers:
+    iam: { rule: Host(`iam.qa.athyper.test`), service: iam }
+    api: { rule: Host(`api.qa.athyper.test`), service: api }
+    neon: { rule: Host(`neon.qa.athyper.test`), service: neon }
+    mesh: { rule: Host(`mesh.qa.athyper.test`), service: mesh }
+    studio: { rule: Host(`studio.qa.athyper.test`), service: studio }
+    fallback: { rule: PathPrefix(`/`), service: outage, priority: 1 }
+  services:
+    iam: { loadBalancer: { servers: [{ url: http://iam:8080 }] } }
+    api: { loadBalancer: { servers: [{ url: http://api:4000 }] } }
+    neon: { loadBalancer: { servers: [{ url: http://neon-web:3000 }] } }
+    mesh: { loadBalancer: { servers: [{ url: http://mesh-web:3000 }] } }
+    studio: { loadBalancer: { servers: [{ url: http://studio-web:3000 }] } }
+    outage: { loadBalancer: { servers: [{ url: http://gateway-outage:8080 }] } }

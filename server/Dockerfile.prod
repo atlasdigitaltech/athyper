@@ -4,7 +4,7 @@
 # Build context: repository root
 # =============================================================================
 
-FROM node:24-alpine AS base
+FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS base
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /repo
 
@@ -25,18 +25,22 @@ RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
 FROM base AS builder
 COPY --from=installer /repo/ ./
 COPY --from=pruner /repo/out/full/ ./
+COPY tools/scripts/prepare-server-runtime-packages.mjs /tmp/prepare-server-runtime-packages.mjs
 
 # Build workspace dependencies first, then the host
+RUN find server -name '*.tsbuildinfo' -delete
 RUN pnpm --filter "@athyper/server-platform-host^..." --if-present run build
 RUN pnpm --filter "@athyper/server-platform-host" run build
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages
 
 # Deploy the production dependency graph
 RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
     pnpm --filter "@athyper/server-platform-host" --prod deploy --legacy /runtime && \
-    pnpm --filter "@athyper/server-db" --prod deploy --legacy /db-runtime
+    pnpm --filter "@athyper/server-db" --prod deploy --legacy /db-runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages /runtime
 
-FROM node:24-alpine AS runtime
+FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS runtime
 
 RUN apk add --no-cache postgresql-client wget
 

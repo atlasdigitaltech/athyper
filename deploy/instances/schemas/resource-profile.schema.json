@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/resource-profile-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "ResourceProfile" },
+    "metadata": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "type": "string" } } },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hostMemoryMiB", "wslMemoryMiB", "maxContainerMemoryMiB", "maxContainerCpu", "minimumFreeDiskGiB", "diskWarningPercent", "diskCriticalPercent"],
+      "properties": {
+        "hostMemoryMiB": { "type": "integer", "minimum": 8192 },
+        "wslMemoryMiB": { "type": "integer", "minimum": 4096 },
+        "maxContainerMemoryMiB": { "type": "integer", "minimum": 2048 },
+        "maxContainerCpu": { "type": "number", "minimum": 1 },
+        "minimumFreeDiskGiB": { "type": "integer", "minimum": 20 },
+        "diskWarningPercent": { "type": "integer", "minimum": 1, "maximum": 99 },
+        "diskCriticalPercent": { "type": "integer", "minimum": 1, "maximum": 99 }
+      }
+    }
+  }
+}

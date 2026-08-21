@@ -1,4 +1,5 @@
 packages:
+  - "deploy/stackctl"
   - "apps/*"
   - "packages/domain/*/*"
   - "packages/planes/*"

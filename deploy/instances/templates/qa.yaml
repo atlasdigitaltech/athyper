@@ -1,0 +1,23 @@
+apiVersion: athyper.io/v1alpha1
+kind: Instance
+metadata:
+  id: qa
+spec:
+  mode: qa
+  composeProject: athyper-qa
+  domainSuffix: qa.athyper.test
+  preset: qa-standard
+  hostProfile: laptop-32
+  imageSet: image-sets/candidates/qa-example.yaml
+  dataPolicy: disposable
+  integrations: mock
+  debugPorts:
+    http: 127.0.0.1:8080
+    postgres: 127.0.0.1:55432
+  providers:
+    search: internal
+    secrets: file
+    objectStorage: internal
+    mail: internal
+    scanner: internal
+    rendering: internal

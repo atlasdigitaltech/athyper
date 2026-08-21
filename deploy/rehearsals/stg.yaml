@@ -1,0 +1,25 @@
+apiVersion: athyper.io/v1alpha1
+kind: StagingRehearsal
+metadata:
+  id: stg-from-qa
+spec:
+  sourceInstance: qa
+  targetInstance: stg
+  promotion:
+    rebuildAllowed: false
+    requiredImageIds: [iam, mesh-web, neon-web, runtime-server, studio-web]
+    requireExactDigests: true
+    requireSourceRevisionMatch: true
+  data:
+    classification: sanitized
+    manifest: stg/sanitized-data-manifest.json
+    prohibitedContent: [production-data, personal-data, credentials, access-tokens]
+  integrations:
+    defaultAction: deny
+    allowedDestinations: []
+    productionCredentialsAllowed: false
+  migration:
+    backupReceipt: stg/pre-migration-backup.json
+    restoreReceipt: stg/restore-drill.json
+    backupMustPrecedeMigration: true
+    restoreDrillRequired: true

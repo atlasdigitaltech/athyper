@@ -1,0 +1,4 @@
+apiVersion: athyper.io/v1alpha1
+kind: ResourceProfile
+metadata: { id: ci }
+spec: { hostMemoryMiB: 16384, wslMemoryMiB: 16384, maxContainerMemoryMiB: 12288, maxContainerCpu: 4, minimumFreeDiskGiB: 30, diskWarningPercent: 20, diskCriticalPercent: 10 }

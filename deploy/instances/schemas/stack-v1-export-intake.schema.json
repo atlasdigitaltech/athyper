@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/stack-v1-export-intake-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "checkedAt", "exportDirectory", "exportCreatedAt", "databaseCount", "minioInventoryLines", "keycloakExportFileCount", "sha256ManifestDigest", "completionMarkerDigest", "passed"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "StackV1ExportIntake" },
+    "checkedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T" },
+    "exportDirectory": { "type": "string", "pattern": "^athyper-stack-v1-[0-9]{8}T[0-9]{6}Z$" },
+    "exportCreatedAt": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z$" },
+    "databaseCount": { "type": "integer", "minimum": 1 },
+    "minioInventoryLines": { "type": "integer", "minimum": 0 },
+    "keycloakExportFileCount": { "type": "integer", "minimum": 1 },
+    "sha256ManifestDigest": { "type": "string", "pattern": "^(?!0{64}$)[a-f0-9]{64}$" },
+    "completionMarkerDigest": { "type": "string", "pattern": "^(?!0{64}$)[a-f0-9]{64}$" },
+    "passed": { "const": true }
+  }
+}

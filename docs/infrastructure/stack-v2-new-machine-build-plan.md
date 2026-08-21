@@ -1,9 +1,11 @@
 # ATHYPER Stack v2 — Detailed New-Machine Container Build Plan
 
-**Status:** Proposed implementation baseline  
+**Status:** Implementation in progress; read-only foundation implemented, host/security acceptance gates pending
 **Prepared:** 2026-08-20  
 **Scope:** New Windows 11 development workstation, repeatable DEV/QA/STG-rehearsal instances, GitHub image lifecycle, and a controlled path to multi-server K3s/Kubernetes  
 **Source baseline:** Current ATHYPER repository, current Compose model, current GitHub workflows, and the live Docker inventory on the existing workstation
+
+Current new-machine position: Ubuntu 24.04 and source are on `D:`, the laptop-32 WSL envelope is active, Node 24.19.0/pnpm 10.33.0 are normalized, and the v2 schema/catalog/controller tests pass. No ATHYPER Docker resources or secrets have been created. The next gate is intentionally blocked until BitLocker/Secure Boot are verified, Docker Desktop data is moved to `D:\ATHYPER\docker-desktop\data`, and fresh Stack v1 recovery evidence is available.
 
 ---
 
@@ -161,10 +163,10 @@ Windows 11 host
 The outer ingress is stable and is the only component that owns 80/443. It routes by hostname to an instance gateway:
 
 ```text
-neon.dev.athyper.localhost   -> gateway-dev -> neon-web
-api.dev.athyper.localhost    -> gateway-dev -> api
-neon.qa.athyper.localhost    -> gateway-qa  -> neon-web
-api.stg.athyper.localhost    -> gateway-stg -> api
+neon.dev.athyper.test   -> gateway-dev -> neon-web
+api.dev.athyper.test    -> gateway-dev -> api
+neon.qa.athyper.test    -> gateway-qa  -> neon-web
+api.stg.athyper.test    -> gateway-stg -> api
 ```
 
 Recommended implementation:
@@ -194,22 +196,21 @@ Do not encode the ROG model into Compose. Select a host resource profile from de
 | `workstation-128` | 128 GB+ | 80–96 GB | DEV + QA + STG and controlled load work |
 | `ci` | Runner-defined | Job-defined | Ephemeral validation only |
 
-For the planned 64 GB laptop, start with:
+For this 31.6 GB ROG laptop, use the `laptop-32` profile:
 
 ```ini
 [wsl2]
-memory=44GB
+memory=20GB
 processors=24
 swap=8GB
-swapFile=D:\\WSL\\swap\\wsl-swap.vhdx
+swapFile=D:\\ATHYPER\\wsl\\swap\\wsl-swap.vhdx
 localhostForwarding=true
 
 [experimental]
 autoMemoryReclaim=gradual
-sparseVhd=true
 ```
 
-Adjust `processors` to approximately 75% of the actual logical processors, leaving Windows responsive. Apply changes with `wsl --shutdown`.
+This leaves roughly 12 GB for Windows and uses 24 of 32 logical processors. Experimental sparse-VHD mode is intentionally disabled because this WSL build warned that it is disabled due to potential data corruption. Apply changes with `wsl --shutdown`.
 
 ### 5.2 Disk layout
 
@@ -218,9 +219,11 @@ Recommended physical allocation:
 | Path | Purpose | Required headroom |
 |---|---|---:|
 | `C:` | Windows, applications | At least 80 GB free after setup |
-| `D:\WSL\Ubuntu-24.04` | Ubuntu distribution VHD | 100 GB initial headroom |
-| `D:\DockerDesktop` | Docker data VHD | 250 GB initial headroom |
-| `D:\WSL\swap` | WSL swap | 8–16 GB |
+| `D:\ATHYPER\wsl\Ubuntu-24.04` | Ubuntu distribution VHD | 100 GB initial headroom |
+| `D:\ATHYPER\docker-desktop\data` | Docker data VHD | 250 GB initial headroom |
+| `D:\ATHYPER\wsl\swap` | WSL swap | 8 GB |
+| `D:\ATHYPER\migration\stack-v1` | v1 inventories and approved exports | Retention-based |
+| `D:\ATHYPER\qualification` | Machine, performance, and restore evidence | 20 GB working headroom |
 | External/off-device target | Encrypted backups | Capacity based on retention |
 
 Use SSD/NVMe. Do not place live PostgreSQL, Redis, MinIO, Loki, Tempo, or Meilisearch data on `/mnt/c` or `/mnt/d` bind mounts. Their live data belongs in Linux-native Docker volumes.
@@ -246,7 +249,7 @@ In elevated PowerShell:
 wsl --update
 wsl --set-default-version 2
 wsl --list --online
-wsl --install -d Ubuntu-24.04 --location D:\WSL\Ubuntu-24.04
+wsl --install -d Ubuntu-24.04 --location D:\ATHYPER\wsl\Ubuntu-24.04
 ```
 
 Use the exact distribution name returned by `wsl --list --online`. Then:
@@ -276,7 +279,7 @@ Acceptance:
 
 - Use the WSL 2 backend.
 - Enable integration only for the ATHYPER Ubuntu distribution.
-- Move Docker Desktop's disk image to `D:\DockerDesktop` through Docker Desktop settings before importing or building images.
+- Move Docker Desktop's disk image to `D:\ATHYPER\docker-desktop\data` through Docker Desktop settings before importing or building images.
 - Start with 250 GB maximum disk capacity and monitor actual use.
 - Enable automatic start only if the operator wants the platform always available.
 - Do not enable Kubernetes in Docker Desktop for Stack v2 Compose development.
@@ -303,6 +306,8 @@ mkdir -p ~/src ~/.athyper/instances ~/.athyper/backups ~/.athyper/cache
 
 Install the repository-selected exact Node 24 patch and activate the exact `pnpm@10.33.0` from `packageManager`. The implementation must add a single version authority such as `.node-version`; CI and Dockerfiles must consume or be verified against it.
 
+Use `/home/chandravel_natarajan` and its `~/src` / `~/.athyper` roots. Do not create `/home/athyper`; a second Linux identity would add ownership and sudo friction without improving isolation.
+
 #### WM-06 — Clone and qualify source
 
 ```bash
@@ -321,7 +326,7 @@ Do not clone under `/mnt/d`. Linux source placement is required for bind-mount p
 
 - Use a workstation-local development CA, preferably through `mkcert` or an equivalent approved tool.
 - Trust the CA in Windows and the relevant browsers.
-- Issue a wildcard/SAN certificate covering the selected `*.dev.athyper.localhost`, `*.qa.athyper.localhost`, and `*.stg.athyper.localhost` names.
+- Issue a wildcard/SAN certificate covering the selected `*.dev.athyper.test`, `*.qa.athyper.test`, and `*.stg.athyper.test` names.
 - Keep the CA private key outside Git under the instance secret root with restrictive permissions.
 - Never reuse the local CA for staging or production.
 
@@ -398,9 +403,9 @@ metadata:
 spec:
   mode: development
   composeProject: athyper-dev
-  domainSuffix: dev.athyper.localhost
+  domainSuffix: dev.athyper.test
   preset: dev-lite
-  hostProfile: laptop-64
+  hostProfile: laptop-32
   imageSet: image-sets/dev.yaml
   dataPolicy: persistent
   integrations: sandbox
@@ -456,7 +461,7 @@ The application-facing variables remain stable, for example `SEARCHCORE_URL`, `I
 |---|---|---:|
 | `dev-lite` | DB, pools, Redis, MinIO, IAM, gateway dependencies; apps on host | 5–8 GB |
 | `dev-full` | Full apps + scanner + mail + selected debug tools | 10–14 GB |
-| `qa-standard` | Immutable apps + scanner + observability + synthetic data | 10–14 GB |
+| `qa-standard` | Immutable apps + scanner + mock mail + synthetic data | 10–14 GB |
 | `stg-standard` | Production-shaped immutable stack, no debug tools | 10–14 GB |
 | `validation-full` | DEV + QA + STG together | 30–40 GB plus builds |
 
@@ -525,20 +530,20 @@ The controller owns a debug-port registry so a second instance cannot silently r
 Use:
 
 ```text
-neon.dev.athyper.localhost
-mesh.dev.athyper.localhost
-studio.dev.athyper.localhost
-api.dev.athyper.localhost
-iam.dev.athyper.localhost
+neon.dev.athyper.test
+mesh.dev.athyper.test
+studio.dev.athyper.test
+api.dev.athyper.test
+iam.dev.athyper.test
 
-neon.qa.athyper.localhost
-api.qa.athyper.localhost
+neon.qa.athyper.test
+api.qa.athyper.test
 
-neon.stg.athyper.localhost
-api.stg.athyper.localhost
+neon.stg.athyper.test
+api.stg.athyper.test
 ```
 
-The `.localhost` namespace avoids managing a large hosts-file list. HTTPS still requires a locally trusted development certificate.
+Nested `.localhost` names did not resolve reliably on this Windows host, so Stack v2 uses `.athyper.test`. The controller prints the exact loopback mappings; only an explicit bootstrap/apply command may edit the hosts file. HTTPS still requires a locally trusted development certificate.
 
 ---
 
@@ -1230,16 +1235,23 @@ Deliverables:
 - Bring up all capabilities used by the current working stack.
 - Import only supported/sanitized state.
 - Verify Neon, Mesh, Studio, API, worker, scheduler, IAM, object storage, scanning, mail, and telemetry paths.
-- Measure resource peaks and update `laptop-64` limits.
+- Measure resource peaks and update `laptop-32` limits.
 
 Exit gate: all Stack v1 functional smoke tests pass in `athyper-dev`; no hard-coded Windows/container resource names remain in v2.
 
 ### Phase 6 — QA isolation and repeatability
 
+Current implementation status: the static isolation and read-only lifecycle
+contract is complete. Runtime qualification remains gated and is not claimed.
+
 Deliverables:
 
 - `qa-standard` preset using immutable images.
 - QA reset, migration, synthetic seed, test, and destroy lifecycle.
+- Separate `athyper-qa` resources, `*.qa.athyper.test` routes, ports 8080/55432,
+  QA secret paths, and an ownership receipt boundary.
+- Candidate image injection for all five published ATHYPER images; incomplete or
+  all-zero candidate metadata is rejected before any future operation.
 - Cross-instance DNS/network/data isolation tests.
 - Concurrent DEV + QA capacity qualification.
 
@@ -1247,16 +1259,28 @@ Exit gate: resetting or destroying QA changes no DEV volume, secret, route, or d
 
 ### Phase 7 — STG rehearsal and promotion
 
+Current implementation status: the schema-backed, read-only rehearsal contract
+is complete. Runtime migration and restore qualification remain gated and are
+not claimed.
+
 Deliverables:
 
 - `stg-standard` preset with sanitized data and no debug/admin access by default.
 - Image-set promotion from QA to STG without rebuild.
 - Integration allowlist and production-credential denial policy.
 - Backup-before-migration and restore qualification.
+- Default-deny outbound integrations, internal unexposed mail capture, and
+  explicit denial of production credentials.
+- Schema-valid sanitization, backup, and restore receipts with non-zero
+  checksums and backup-to-restore linkage.
 
 Exit gate: exact application digests used in QA run in STG; rollback/restore drill passes.
 
 ### Phase 8 — Optional capabilities and heavy profiles
+
+Current implementation status: the static on-demand composition and read-only
+capacity/security planner are complete. Runtime qualification is gated and no
+optional profile has been started.
 
 Deliverables:
 
@@ -1265,12 +1289,24 @@ Deliverables:
 - ClamAV right-sizing and failure-mode test.
 - Meilisearch snapshot/dump/restore test.
 - Infisical bootstrap/recovery design before enabling it as an authority.
+- Dedicated loopback allocations per instance and no public/backend ports.
+- Dedicated PostgreSQL identities for Infisical and analytics; file-backed
+  secret injection for Infisical, Metabase, Pgweb, and Bull Board.
+- A hard capacity rejection when a profile plus its instance exceeds the host
+  resource envelope.
 
 Exit gate: disabling an optional capability gives the documented degraded/blocked behavior and never silently bypasses security policy.
 
 ### Phase 9 — Remote K3s proof of architecture
 
+Current implementation status: the read-only eligibility/decision gate is
+complete and returns `deferred`. No K3s installation or deployable Kubernetes
+artifact is authorized or implemented.
+
 Deliverables:
+
+- Before any manifest work, schema-valid Compose acceptance and an approved
+  multi-host topology requirement must pass `athyper orchestrator assess`.
 
 - Kubernetes charts/manifests derived from the same catalog contracts.
 - Namespace per environment, network policies, workload identity, resource requests/limits, probes, and persistent storage classes.

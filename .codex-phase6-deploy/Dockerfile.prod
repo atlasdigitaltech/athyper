@@ -7,7 +7,7 @@
 
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-alpine AS base
+FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS base
 
 # pg_dump is required by the backup worker (jobs-backup queue).
 RUN apk add --no-cache postgresql-client wget

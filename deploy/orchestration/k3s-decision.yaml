@@ -1,0 +1,16 @@
+apiVersion: athyper.io/v1alpha1
+kind: OrchestratorDecision
+metadata:
+  id: compose-to-k3s
+spec:
+  currentOrchestrator: compose
+  candidateOrchestrator: k3s
+  composeAcceptanceEvidence: orchestration/compose-acceptance.json
+  topologyRequirementEvidence: orchestration/topology-requirement.json
+  requireDevParity: true
+  requireTwoQaCycles: true
+  requireStgRestore: true
+  requireApprovedMultiHostNeed: true
+  laptopK3sAllowed: false
+  dockerDesktopKubernetesAllowed: false
+  automaticMigrationAllowed: false

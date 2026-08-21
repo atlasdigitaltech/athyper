@@ -1014,15 +1014,18 @@ async function applyMembership(
   await client.query(`
     WITH updated AS (
       UPDATE authz.plane_membership SET status='active',effective_until=NULL,
+        effective_from=LEAST(effective_from, clock_timestamp()),
         metadata=$5::jsonb,updated_by=$6::uuid
       WHERE tenant_id=$2::uuid AND principal_id=$3::uuid AND status<>'revoked'
         AND (status IS DISTINCT FROM 'active' OR metadata IS DISTINCT FROM $5::jsonb OR effective_until IS NOT NULL)
       RETURNING id
     )
     INSERT INTO authz.plane_membership (
-      id,tenant_id,principal_id,membership_kind,source_type,source_ref,status,metadata,created_by
+      id,tenant_id,principal_id,membership_kind,source_type,source_ref,status,
+      effective_from,metadata,created_by
     )
-    SELECT $1::uuid,$2::uuid,$3::uuid,'standard','seed',$4,'active',$5::jsonb,$6::uuid
+    SELECT $1::uuid,$2::uuid,$3::uuid,'standard','seed',$4,'active',
+      transaction_timestamp(),$5::jsonb,$6::uuid
     WHERE NOT EXISTS(SELECT 1 FROM authz.plane_membership WHERE tenant_id=$2::uuid AND principal_id=$3::uuid AND status<>'revoked')
   `, [membership.id, membership.tenantId, membership.principalId,
     SOURCE_REF, JSON.stringify(seedMetadata(inputs, plane)), SYSTEM_PRINCIPAL]);
