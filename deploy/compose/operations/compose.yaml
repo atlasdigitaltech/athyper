@@ -15,7 +15,7 @@ services:
       - metrics-data:/prometheus
       - ./config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - ./config/targets:/etc/prometheus/targets:ro
-    networks: [operations]
+    networks: [operations, host-access]
     healthcheck: { test: [CMD, wget, -q, --spider, http://127.0.0.1:9090/-/ready], interval: 15s, timeout: 5s, retries: 5 }
     security_opt: [no-new-privileges:true]
     read_only: true
@@ -52,7 +52,7 @@ services:
     command: [run, --server.http.listen-addr=0.0.0.0:12345, --storage.path=/tmp/data-alloy, --disable-reporting, /etc/alloy/config.alloy]
     ports: ["127.0.0.1:53901:3500"]
     volumes: [./config/alloy.alloy:/etc/alloy/config.alloy:ro]
-    networks: [operations]
+    networks: [operations, host-access]
     healthcheck: { test: [CMD-SHELL, "bash -ec 'exec 3<>/dev/tcp/127.0.0.1/12345; printf \"GET /-/ready HTTP/1.0\\r\\n\\r\\n\" >&3; head -n 1 <&3 | grep -q \"200\"'"], interval: 15s, timeout: 5s, retries: 5 }
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
@@ -73,7 +73,7 @@ services:
     secrets: [grafana-admin-password]
     ports: ["127.0.0.1:53902:3000"]
     volumes: [telemetry-data:/var/lib/grafana, ./config/grafana:/etc/grafana/provisioning:ro]
-    networks: [operations]
+    networks: [operations, host-access]
     healthcheck: { test: [CMD-SHELL, wget -q --spider http://127.0.0.1:3000/api/health], interval: 15s, timeout: 5s, retries: 10, start_period: 30s }
     security_opt: [no-new-privileges:true]
     mem_limit: 256m
@@ -86,7 +86,7 @@ services:
     command: [-config.file=/etc/tempo/tempo.yaml]
     ports: ["127.0.0.1:53903:4318"]
     volumes: [tracing-data:/var/tempo, ./config/tempo.yaml:/etc/tempo/tempo.yaml:ro]
-    networks: [operations]
+    networks: [operations, host-access]
     healthcheck: { disable: true }
     security_opt: [no-new-privileges:true]
     read_only: true
@@ -100,7 +100,7 @@ services:
     restart: "no"
     ports: ["127.0.0.1:53904:3001"]
     volumes: [statuswatch-data:/app/data]
-    networks: [operations]
+    networks: [operations, host-access]
     healthcheck: { test: [CMD-SHELL, node /app/extra/healthcheck.js], interval: 30s, timeout: 10s, retries: 3, start_period: 30s }
     security_opt: [no-new-privileges:true]
     mem_limit: 192m
@@ -108,6 +108,7 @@ services:
 
 networks:
   operations: { internal: true }
+  host-access: {}
 
 volumes:
   metrics-data: {}

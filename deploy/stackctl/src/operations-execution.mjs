@@ -78,13 +78,13 @@ export function executeOperationsOperation(repoRoot, operation, mode, options = 
     const env = { ...process.env, ATHYPER_RUNTIME_ROOT: root };
     const run = dependencies.run ?? defaultRun;
     const commands = [];
-    const invoke = (args) => {
-      const result = run("docker", args, { cwd: repoRoot, env, encoding: "utf8", timeout: 600_000 });
-      commands.push({ program: "docker", arguments: args, status: result.status ?? (result.ok ? 0 : 1) });
-      if (!result.ok) throw commandError(args, result);
+    const invoke = (program, args) => {
+      const result = run(program, args, { cwd: repoRoot, env, encoding: "utf8", timeout: 600_000 });
+      commands.push({ program, arguments: args, status: result.status ?? (result.ok ? 0 : 1) });
+      if (!result.ok) throw new Error(`${program} ${args.join(" ")} failed: ${result.stderr || result.error || `exit ${result.status}`}`);
       return result;
     };
-    const compose = (args) => invoke(["compose", "--project-name", PROJECT, "--file", composeFile, ...args]);
+    const compose = (args) => invoke("docker", ["compose", "--project-name", PROJECT, "--file", composeFile, ...args]);
     const writeActive = (state) => atomicJson(activePath, validate({ apiVersion: "athyper.io/v1alpha1", kind: "ActiveInstanceReceipt", metadata: { instance: "operations" }, spec: { project: PROJECT, state, updatedAt: now().toISOString(), sourceRevision: revision, composeFiles: [composeFile] } }, activePath));
     const receipt = (status, artifacts, rollback, error) => {
       const document = { apiVersion: "athyper.io/v1alpha1", kind: "StackOperationReceipt", metadata: { instance: "operations", id }, spec: { operation, status, project: PROJECT, startedAt: started.toISOString(), completedAt: now().toISOString(), sourceRevision: revision, commands, artifacts, rollback, ...(error ? { error } : {}) } };
@@ -105,6 +105,9 @@ export function executeOperationsOperation(repoRoot, operation, mode, options = 
         const profiles = plan.composeProfiles.flatMap((profile) => ["--profile", profile]);
         compose([...profiles, "config", "--quiet"]);
         compose([...profiles, "up", "--detach", "--wait", "--remove-orphans"]);
+        compose(["exec", "-T", "metrics", "wget", "-q", "--spider", "http://logging:3100/ready"]);
+        invoke("curl", ["--fail", "--silent", "--show-error", "http://127.0.0.1:53902/api/health"]);
+        invoke("curl", ["--fail", "--silent", "--show-error", "--request", "POST", "--header", "content-type: application/json", "--data", "{\"streams\":[]}", "http://127.0.0.1:53901/loki/api/v1/push"]);
         const pid = (dependencies.startForwarder ?? defaultStartForwarder)(repoRoot, forwarderDirectory, revision);
         artifacts.forwarderPid = pid;
         writeActive("running");

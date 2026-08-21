@@ -14,7 +14,7 @@ schema_config:
 storage_config:
   filesystem: { directory: /loki/chunks }
   tsdb_shipper: { active_index_directory: /loki/index, cache_location: /loki/index-cache }
-compactor: { working_directory: /loki/compactor, retention_enabled: true }
+compactor: { working_directory: /loki/compactor, retention_enabled: true, delete_request_store: filesystem }
 limits_config:
   allow_structured_metadata: true
   retention_period: 24h

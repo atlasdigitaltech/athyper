@@ -84,6 +84,18 @@ test("read-only Alloy stores runtime state only in tmpfs", () => {
   assert.deepEqual(alloy.volumes, ["./config/alloy.alloy:/etc/alloy/config.alloy:ro"]);
 });
 
+test("operations UIs and receiver use loopback ports through a non-internal network", () => {
+  const operations = read("deploy/compose/operations/compose.yaml");
+  assert.equal(operations.networks.operations.internal, true);
+  assert.deepEqual(operations.networks["host-access"], {});
+  for (const service of ["metrics", "logshipper", "telemetry"]) {
+    assert.ok(operations.services[service].networks.includes("operations"));
+    assert.ok(operations.services[service].networks.includes("host-access"));
+    assert.ok(operations.services[service].ports.every((port) => port.startsWith("127.0.0.1:")));
+  }
+  assert.deepEqual(operations.services.logging.networks, ["operations"]);
+});
+
 test("web session storage reaches Redis without joining the data network", () => {
   const instance = read("deploy/compose/instance/compose.yaml");
   const parity = read("deploy/compose/instance/compose.parity.yaml");
