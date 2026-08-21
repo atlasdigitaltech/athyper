@@ -36,7 +36,7 @@ cleanup() { rm -rf -- "$staging"; }
 trap cleanup EXIT INT TERM
 
 random_urlsafe() { openssl rand -base64 48 | tr -d '\r\n' | tr '+/' '-_'; }
-random_hex() { openssl rand -hex 32; }
+random_base64_32() { openssl rand -base64 32 | tr -d '\r\n'; }
 
 for name in \
   iam-admin-password iam-db-password mesh-iam-client-secret minio-root-password \
@@ -46,7 +46,7 @@ for name in \
   random_urlsafe > "$staging/$name"
 done
 openssl rand -hex 10 > "$staging/objectstorage-app-access-key"
-random_hex > "$staging/session-token-encryption-key"
+random_base64_32 > "$staging/session-token-encryption-key"
 
 chmod 600 "$staging"/*
 count="$(find "$staging" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"

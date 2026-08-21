@@ -360,3 +360,13 @@ test("Keycloak optimized builds retain every recorded runtime dependency", () =>
   assert.match(dockerfile, /kc\.sh build --db=postgres/u);
   assert.doesNotMatch(dockerfile, /rm\s+-f[\s\S]*mssql-jdbc/u);
 });
+
+test("DEV browser secrets and proxied realms use deployable formats", () => {
+  const bootstrap = readFileSync(join(defaultRepoRoot, "deploy/bootstrap/generate-dev-secrets.sh"), "utf8");
+  assert.match(bootstrap, /openssl rand -base64 32/u);
+  assert.doesNotMatch(bootstrap, /random_hex > "\$staging\/session-token-encryption-key"/u);
+  for (const realm of ["realm-platform-control.json", "realm-platform-control-clean-slate.json"]) {
+    const document = JSON.parse(readFileSync(join(defaultRepoRoot, "stack/config/iam", realm), "utf8"));
+    assert.equal(document.sslRequired, "external");
+  }
+});

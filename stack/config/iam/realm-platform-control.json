@@ -5,7 +5,7 @@
   "loginTheme": "neon",
   "emailTheme": "neon",
   "enabled": true,
-  "sslRequired": "all",
+  "sslRequired": "external",
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": true,
   "refreshTokenMaxReuse": 0,
