@@ -19,6 +19,7 @@ export interface HostConfig {
   keycloak: {
     issuerUrl: string | undefined;
     audience: string | undefined;
+    jwksUrl: string | undefined;
     jwksCacheTtlMs: number;
   };
   iam: {
@@ -238,6 +239,7 @@ export function loadConfig(): HostConfig {
     );
   }
   const jwksCacheTtlMs = readPositiveInteger("KEYCLOAK_JWKS_CACHE_TTL_MS", 600_000);
+  const keycloakJwksUrl = process.env["KEYCLOAK_JWKS_URL"]?.trim();
   const claimContextMode = readChoice(
     "AUTH_CLAIM_FIRST_CONTEXT",
     env === "production" ? "enforce" : "shadow",
@@ -454,6 +456,7 @@ export function loadConfig(): HostConfig {
     keycloak: {
       issuerUrl: keycloakIssuer,
       audience: keycloakAudience || undefined,
+      jwksUrl: keycloakJwksUrl || undefined,
       jwksCacheTtlMs,
     },
     iam: {

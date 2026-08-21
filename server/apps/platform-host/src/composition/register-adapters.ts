@@ -155,6 +155,7 @@ export function registerAdapters(
       defaultRealm: {
         issuerUrl: config.keycloak.issuerUrl,
         audience: config.keycloak.audience,
+        ...(config.keycloak.jwksUrl ? { jwksUrl: config.keycloak.jwksUrl } : {}),
       },
       jwksCacheTtlMs: config.keycloak.jwksCacheTtlMs,
     });

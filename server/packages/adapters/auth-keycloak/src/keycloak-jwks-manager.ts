@@ -14,6 +14,7 @@ export interface JwksHealthStatus {
 }
 
 export interface KeycloakJwksManagerOptions {
+  readonly jwksUrl?: string;
   readonly cacheTtlMs?: number;
   readonly warmUpTimeoutMs?: number;
   readonly logger?: Pick<Logger, "info" | "warn" | "error">;
@@ -39,7 +40,7 @@ export class KeycloakJwksManager {
   constructor(issuerUrl: string, options: KeycloakJwksManagerOptions = {}) {
     this.#issuerUrl = normalizeIssuerUrl(issuerUrl);
     this.#jwksUrl = new URL(
-      `${this.#issuerUrl}/protocol/openid-connect/certs`,
+      options.jwksUrl ?? `${this.#issuerUrl}/protocol/openid-connect/certs`,
     );
     this.#fetcher = options.fetcher ?? fetch;
     this.#now = options.now ?? Date.now;

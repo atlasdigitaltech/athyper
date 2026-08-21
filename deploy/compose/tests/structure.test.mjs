@@ -72,3 +72,15 @@ test("web session storage reaches Redis without joining the data network", () =>
     assert.ok(parity.services[service].secrets.includes("redis-password"));
   }
 });
+
+test("OIDC uses public HTTPS issuers with private backchannel endpoints", () => {
+  const instance = read("deploy/compose/instance/compose.yaml");
+  const web = readFileSync(join(repoRoot, "deploy/compose/instance/scripts/start-web.sh"), "utf8");
+  const runtime = readFileSync(join(repoRoot, "deploy/compose/instance/scripts/start-runtime.sh"), "utf8");
+  assert.equal(instance.services.iam.environment.KC_HOSTNAME, "https://iam.${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}");
+  assert.match(web, /KEYCLOAK_BASE_URL="https:\/\/iam\.\$\{ATHYPER_DOMAIN_SUFFIX:-dev\.athyper\.test\}"/u);
+  assert.match(web, /KEYCLOAK_INTERNAL_BASE_URL=http:\/\/iam:8080/u);
+  assert.match(web, /PUBLIC_BASE_URL="https:\/\/\$\{ATHYPER_APP_DOMAIN\}"/u);
+  assert.match(runtime, /IAM_ISSUER_URL="https:\/\/iam\.\$\{ATHYPER_DOMAIN_SUFFIX:-dev\.athyper\.test\}\/realms\/athyper"/u);
+  assert.match(runtime, /KEYCLOAK_JWKS_URL=http:\/\/iam:8080\/realms\/athyper\/protocol\/openid-connect\/certs/u);
+});

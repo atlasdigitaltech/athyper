@@ -39,12 +39,13 @@ export function createEnvironmentAuthRuntime(options: EnvironmentAuthOptions): E
 function buildRuntime(options: EnvironmentAuthOptions): EnvironmentAuthRuntime {
   validateSessionTtls(options.idleTtlMs, options.absoluteTtlMs);
   const redisUrl = requiredEnv("REDIS_URL"); const baseUrl = requiredEnv("KEYCLOAK_BASE_URL").replace(/\/$/, "");
+  const internalBaseUrl = (process.env.KEYCLOAK_INTERNAL_BASE_URL?.trim() || baseUrl).replace(/\/$/, "");
   const realmKey = process.env[`${options.plane.toUpperCase()}_KEYCLOAK_REALM`] ?? process.env.KEYCLOAK_REALM ?? "athyper";
   const clientId = process.env[`${options.plane.toUpperCase()}_KEYCLOAK_CLIENT_ID`] ?? options.clientId; const keyVersion = numberEnv("SESSION_KEY_VERSION", 1); const storeVersion = numberEnv("SESSION_STORE_VERSION", 1);
-  const issuer = `${baseUrl}/realms/${realmKey}`; const keyRing = decodeKeyRing(requiredEnv("SESSION_TOKEN_ENCRYPTION_KEY"), keyVersion, process.env.SESSION_TOKEN_PREVIOUS_KEYS);
+  const issuer = `${baseUrl}/realms/${realmKey}`; const internalIssuer = `${internalBaseUrl}/realms/${realmKey}`; const keyRing = decodeKeyRing(requiredEnv("SESSION_TOKEN_ENCRYPTION_KEY"), keyVersion, process.env.SESSION_TOKEN_PREVIOUS_KEYS);
   const trustedDeviceTtlMs = options.trustedDeviceTtlMs ?? numberEnv("AUTH_TRUSTED_DEVICE_TTL_DAYS", 30) * 24 * 60 * 60_000;
   const store = createRedisSessionStore({ redis: createRedisClient(redisUrl), namespace: process.env.SESSION_REDIS_NAMESPACE ?? "athyper:session", namespaceVersion: storeVersion, observe: (metric) => process.stderr.write(`${JSON.stringify({ level: metric.outcome === "unavailable" ? "error" : "info", event: "auth.session_store", plane: options.plane, operation: metric.operation, outcome: metric.outcome, durationMs: metric.durationMs })}\n`) });
-  const provider = keycloakProvider({ issuer, clientId, clientSecret: process.env[`${options.plane.toUpperCase()}_KEYCLOAK_CLIENT_SECRET`] ?? process.env.KEYCLOAK_CLIENT_SECRET, keyRing, plane: options.plane });
+  const provider = keycloakProvider({ issuer, internalIssuer, clientId, clientSecret: process.env[`${options.plane.toUpperCase()}_KEYCLOAK_CLIENT_SECRET`] ?? process.env.KEYCLOAK_CLIENT_SECRET, keyRing, plane: options.plane });
   const configurationRevision = options.configurationRevision ?? process.env.AUTH_CONFIGURATION_REVISION ?? "1"; const production = process.env.NODE_ENV === "production"; const binding: SessionBinding = { plane: options.plane, realmKey }; const sessionCookie = production ? "__Host-athyper-session" : "athyper-session";
   const deriveCsrfToken = (opaqueId: string) => createHmac("sha256", keyRing.keys.get(keyRing.currentVersion)!).update(`csrf:${opaqueId}`, "utf8").digest("base64url");
   const deriveAcceptedCsrfTokens = (opaqueId: string) => [...keyRing.keys.values()].map((key) => createHmac("sha256", key).update(`csrf:${opaqueId}`, "utf8").digest("base64url"));
@@ -54,12 +55,12 @@ function buildRuntime(options: EnvironmentAuthOptions): EnvironmentAuthRuntime {
 }
 
 interface EncryptionKeyRing { readonly currentVersion: number; readonly keys: ReadonlyMap<number, Buffer>; }
-function keycloakProvider(input: { issuer: string; clientId: string; clientSecret?: string; keyRing: EncryptionKeyRing; plane: SessionPlane }): AuthProvider {
-  const jwks = createRemoteJWKSet(new URL(`${input.issuer}/protocol/openid-connect/certs`));
+function keycloakProvider(input: { issuer: string; internalIssuer: string; clientId: string; clientSecret?: string; keyRing: EncryptionKeyRing; plane: SessionPlane }): AuthProvider {
+  const jwks = createRemoteJWKSet(new URL(`${input.internalIssuer}/protocol/openid-connect/certs`));
   const verify = (token: string) => jwtVerify(token, jwks, { issuer: input.issuer, audience: input.clientId, algorithms: ["RS256"] });
   const tokenRequest = async (body: URLSearchParams, previous?: TokenResult): Promise<TokenResult> => {
     body.set("client_id", input.clientId); if (input.clientSecret) body.set("client_secret", input.clientSecret);
-    const response = await fetch(`${input.issuer}/protocol/openid-connect/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" }, body, cache: "no-store" });
+    const response = await fetch(`${input.internalIssuer}/protocol/openid-connect/token`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" }, body, cache: "no-store" });
     if (!response.ok) { const error = await response.json().catch(() => ({})) as Record<string, unknown>; if (error.error === "invalid_grant") throw new AuthFlowError("auth.refresh_rejected", 401, "The identity-provider grant is no longer available"); throw new Error(`Identity provider token exchange failed (${response.status})`); } const value = await response.json() as Record<string, unknown>;
     return { accessToken: text(value.access_token, "access_token"), refreshToken: optionalText(value.refresh_token) ?? previous?.refreshToken, idToken: optionalText(value.id_token) ?? previous?.idToken ?? text(value.id_token, "id_token"), accessTokenExpiresAt: Date.now() + number(value.expires_in, "expires_in") * 1_000 };
   };

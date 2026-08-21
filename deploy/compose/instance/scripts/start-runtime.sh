@@ -28,7 +28,8 @@ SEARCHCORE_MASTER_KEY="$(cat /run/secrets/search-master-key)"
 export IAM_CLIENT_SECRET APP_S3_ACCESS_KEY APP_S3_SECRET_KEY SEARCHCORE_MASTER_KEY
 
 export ATHYPER_ENV=local PORT=4000 LOG_LEVEL=info SHUTDOWN_TIMEOUT_MS=20000
-export IAM_ISSUER_URL=http://iam:8080/realms/athyper IAM_CLIENT_ID=athyper-api-runtime
+export IAM_ISSUER_URL="https://iam.${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}/realms/athyper" IAM_CLIENT_ID=athyper-api-runtime
+export KEYCLOAK_JWKS_URL=http://iam:8080/realms/athyper/protocol/openid-connect/certs
 export S3_ENDPOINT=http://objectstorage:9000 S3_REGION=us-east-1 S3_BUCKET=athyper-documents S3_USE_SSL=false
 export CLAMD_HOST=virusscan CLAMD_PORT=3310 CLAMD_ON_UNAVAILABLE=fail-closed
 export DOCRENDER_BASE_URL=http://docrender:3000 DOCPARSER_URL=http://docparser:9998
