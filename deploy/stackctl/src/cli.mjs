@@ -11,9 +11,10 @@ import { createCapabilityPlan } from "./capability.mjs";
 import { assessOrchestrator } from "./orchestrator.mjs";
 import { inspectRemainingGates } from "./gates.mjs";
 import { executeStackOperation } from "./execution.mjs";
+import { qualifyDev } from "./dev-qualification.mjs";
 
 function usage() {
-  return `ATHYPER Stack v2 controller\n\nUsage:\n  athyper doctor [--json]\n  athyper config render <instance> [--json]\n  athyper plan <instance> [--json]\n  athyper gates inspect [--json]\n  athyper up <instance> --confirm <instance> [--json]\n  athyper down <instance> --confirm <instance> [--json]\n  athyper restart <instance> [service] --confirm <instance> [--json]\n  athyper backup <instance> --confirm <instance> [--json]\n  athyper restore <instance> <backup-id> --confirm <instance> --confirm-restore <backup-id> [--json]\n  athyper lifecycle plan <instance> <reset|seed|test|destroy> [--json]\n  athyper rehearsal plan <target> --from <source> [--json]\n  athyper capability plan <instance> <observability|secretstore|analytics|admin-db|admin-queue> [--json]\n  athyper orchestrator assess [--json]\n  athyper policy check [--json]\n`;
+  return `ATHYPER Stack v2 controller\n\nUsage:\n  athyper doctor [--json]\n  athyper config render <instance> [--json]\n  athyper plan <instance> [--json]\n  athyper gates inspect [--json]\n  athyper qualify dev [--json]\n  athyper up <instance> --confirm <instance> [--json]\n  athyper down <instance> --confirm <instance> [--json]\n  athyper restart <instance> [service] --confirm <instance> [--json]\n  athyper backup <instance> --confirm <instance> [--json]\n  athyper restore <instance> <backup-id> --confirm <instance> --confirm-restore <backup-id> [--json]\n  athyper lifecycle plan <instance> <reset|seed|test|destroy> [--json]\n  athyper rehearsal plan <target> --from <source> [--json]\n  athyper capability plan <instance> <observability|secretstore|analytics|admin-db|admin-queue> [--json]\n  athyper orchestrator assess [--json]\n  athyper policy check [--json]\n`;
 }
 
 function print(document, json) {
@@ -84,6 +85,11 @@ export async function main(argv = process.argv.slice(2), repoRoot = defaultRepoR
     const report = inspectRemainingGates(repoRoot);
     print(report, json);
     return report.blockers.length ? 2 : 0;
+  }
+  if (args[0] === "qualify" && args[1] === "dev" && args.length === 2) {
+    const result = qualifyDev(repoRoot, dependencies);
+    print({ ...result.document, evidencePath: result.path }, json);
+    return result.document.spec.status === "passed" ? 0 : 2;
   }
   if (["up", "down", "restart", "backup", "restore"].includes(args[0])) {
     const { positional, options } = parseExecution(args);

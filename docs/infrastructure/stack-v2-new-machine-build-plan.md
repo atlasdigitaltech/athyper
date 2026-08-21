@@ -1,6 +1,6 @@
 # ATHYPER Stack v2 — Detailed New-Machine Container Build Plan
 
-**Status:** Implementation in progress; DEV core deployed and PostgreSQL recovery qualified
+**Status:** Implementation in progress; DEV runtime qualification is evidence-backed and blocked
 **Prepared:** 2026-08-20  
 **Scope:** New Windows 11 development workstation, repeatable DEV/QA/STG-rehearsal instances, GitHub image lifecycle, and a controlled path to multi-server K3s/Kubernetes  
 **Source baseline:** Current ATHYPER repository, current Compose model, current GitHub workflows, and the live Docker inventory on the existing workstation
@@ -8,23 +8,21 @@
 Current new-machine position (2026-08-21): Ubuntu 24.04 and source are on `D:`,
 the laptop-32 WSL envelope is active, Node 24.19.0/pnpm 10.33.0 are
 normalized, machine-phase and clean-slate disposition evidence exist, and the
-Stack v2 controller/Compose suite passes 33/33. The elevated cold-start evidence
+Stack v2 controller/Compose suite passes 35/35. The elevated cold-start evidence
 passes with Defender platform `4.18.25080.5`, Docker Engine `29.7.2`, BitLocker,
 Secure Boot, Ubuntu, and Docker-distribution checks all valid. The previous
 unmanaged `athyper-dev` resources were checksummed into an owner-only quarantine
 archive before removal. Controller-owned platform and DEV core deployment,
 fresh-database migration, active ownership receipts, logical PostgreSQL backup,
 and isolated new-volume restore have all completed successfully.
-All five ATHYPER application images also build locally through the checked-in
-Bake matrix, pass non-root/read-only structure and smoke checks, and pass the
-publication-equivalent Trivy 0.70.0 gate with zero fixed HIGH/CRITICAL findings.
-This qualification is explicitly marked dirty and non-publishable; immutable
-GHCR publication must use a reviewed clean commit so its revision and
-attestation describe the exact image inputs.
+All five ATHYPER application images are published at immutable GHCR digests for
+source revision `d3a77f476c1c9639f21fb0ddb7a31316beea1591`. The publication
+matrix passed structure, smoke, Trivy, SBOM, and provenance gates and emitted a
+complete candidate image-set manifest.
 
 The operational boundary has moved forward: DEV core is live, but release
-completion remains blocked on immutable ATHYPER application image publication,
-the full DEV functional/resource matrix, two isolated QA runs, and STG promotion
+completion remains blocked on the full DEV functional/resource matrix, two
+isolated QA runs, and STG promotion
 plus recovery rehearsal. Cutover and K3s remain deferred.
 
 ### 0.1 Completion checkpoint and required order
@@ -40,11 +38,11 @@ Continue in this order:
 1. **Complete:** Docker Desktop integration is available in `Ubuntu-24.04`.
 2. **Complete:** Defender recovery and valid elevated cold-start evidence.
 3. **Complete in implementation:** make `plan` consume the mandatory admission gates used by `up`.
-4. **Complete in implementation:** deterministic controller/Compose suite passes 33/33.
+4. **Complete in implementation:** deterministic controller/Compose suite passes 35/35.
 5. **Complete:** `athyper up dev --confirm dev` produced active and migration receipts.
 6. **Complete:** live backup `20260821T081919Z` restored successfully into isolated volume `athyper-dev-restore-20260821t081919z_db-data`.
-7. **In progress:** local five-image build and scan qualification is complete; clean-commit GHCR publication remains externally authorized only.
-8. **Pending:** complete the DEV functional and resource matrix.
+7. **Complete:** five immutable application digests and the candidate image-set were published from revision `d3a77f476c1c9639f21fb0ddb7a31316beea1591`.
+8. **In progress:** `athyper qualify dev` records owner-only checksummed evidence. The current run passes 10/20 checks and is blocked by deployment source drift, an API restart, API readiness, and seven fixture-dependent functional paths.
 9. **Pending:** execute QA twice and retain isolation proof.
 10. **Pending:** perform STG promotion and recovery rehearsal.
 11. **Deferred:** consider cutover or K3s only after every prior gate passes.
@@ -1280,14 +1278,13 @@ Exit gate: infrastructure smoke tests pass; only outer ingress publishes 80/443;
 
 ### Phase 4 — ATHYPER application images
 
-Current implementation status (2026-08-21): the five-target local Bake matrix
-builds Neon, Mesh, Studio, runtime-server, and customized Keycloak 26.7.2.
-Structure/smoke checks and the same Trivy version selected by the publication
-workflow pass with zero fixed HIGH/CRITICAL findings. Owner-only checksummed
-evidence is retained under
-`~/.athyper/qualification/images/20260821T083400Z/`. Publication remains pending
-because the qualified working tree is dirty and therefore cannot produce a
-truthful immutable source-revision attestation.
+Current implementation status (2026-08-21): the five-target Bake matrix has
+published Neon, Mesh, Studio, runtime-server, and customized Keycloak 26.7.2 at
+immutable GHCR digests from clean source revision
+`d3a77f476c1c9639f21fb0ddb7a31316beea1591`. Structure/smoke checks and Trivy
+0.70.0 passed with zero fixed HIGH/CRITICAL findings. The successful candidate
+workflow emitted the complete schema-compatible image-set after all image jobs
+passed.
 
 Deliverables:
 
@@ -1300,6 +1297,18 @@ Deliverables:
 Exit gate: a clean machine pulls and runs images without source mounts or local builds.
 
 ### Phase 5 — DEV parity
+
+Current implementation status (2026-08-21): `athyper qualify dev` now evaluates
+controller ownership, deployed source, catalog topology, health/restarts, seven
+public endpoints, the laptop-32 envelope, and the functional acceptance paths.
+Its evidence is schema-validated, SHA-256 checksummed, and written with owner-only
+permissions under `~/.athyper/qualification/dev/`. The latest live run passes
+10/20 checks. Catalog topology, container health, Neon/Mesh/Studio, API
+liveness, IAM discovery, Mailpit, and the declared 12,544 MiB/14.6 CPU envelope
+pass. Qualification remains blocked because the deployment predates the current
+revision, API restarted once after a Docker/WSL clock discontinuity, API
+readiness returns 503, and isolated fixtures for authentication, worker,
+scheduler, document pipeline, mail webhook, and telemetry have not been proven.
 
 Deliverables:
 

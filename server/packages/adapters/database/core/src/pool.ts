@@ -49,9 +49,19 @@ export function createPostgresPool(
       config.connectionTimeoutMillis ?? DEFAULT_CONNECTION_TIMEOUT_MS,
   });
 
-  if (observer.onPoolError) {
-    pool.on("error", observer.onPoolError);
-  }
+  const observedErrors = new WeakSet<Error>();
+  const reportError = (error: Error) => {
+    if (observedErrors.has(error)) return;
+    observedErrors.add(error);
+    observer.onPoolError?.(error);
+  };
+  // pg-pool temporarily removes its idle-client listener while a client is
+  // checked out. A transport failure in that window still emits on the Client;
+  // retain a client-level listener so a PgBouncer/network reset cannot crash
+  // the process with an unhandled error event. The pool listener remains the
+  // authority for evicting broken idle clients.
+  pool.on("error", reportError);
+  pool.on("connect", (client) => client.on("error", reportError));
   if (observer.onPoolStats) {
     const observe = () => observer.onPoolStats!(getPostgresPoolStats(pool, config.max ?? DEFAULT_MAX));
     pool.on("connect", observe);

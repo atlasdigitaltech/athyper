@@ -23,6 +23,7 @@ const schemaFiles = Object.freeze({
   StackOperationReceipt: "stack-operation-receipt.schema.json",
   StackBackup: "stack-backup.schema.json",
   FoundationMigrationReceipt: "foundation-migration-receipt.schema.json",
+  DevQualification: "dev-qualification.schema.json",
 });
 
 export function createValidator(repoRoot) {

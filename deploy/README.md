@@ -172,10 +172,18 @@ applications never receive the root credential. Compose-mounted secrets and
 CPU/memory limits must exactly match the service catalog or policy validation
 fails.
 
-This is composition readiness, not functional parity evidence. The functional
-smoke matrix remains blocked until host qualification, Stack v1 recovery,
-secrets, immutable image publication, database migration, and container health
-gates pass.
+Live DEV qualification is read-only and produces owner-only, schema-validated,
+checksummed evidence:
+
+```sh
+pnpm athyper qualify dev --json
+```
+
+Exit code `0` means every recorded acceptance check passed. Exit code `2` means
+the receipt was written but one or more checks remain blocked. A healthy
+container is not treated as proof of authenticated sessions, exactly-once jobs,
+document processing, mail webhooks, or telemetry; those paths require isolated
+qualification fixtures.
 
 ## Phase 9 QA isolation contract
 
