@@ -131,6 +131,10 @@ export interface HostConfig {
     indexUid: string;
     timeoutMs: number;
   };
+  verification: {
+    enabled: boolean;
+    grafanaUrl: string | undefined;
+  };
   publication: {
     apiEnabled: boolean;
     compileEnabled: boolean;
@@ -558,6 +562,7 @@ export function loadConfig(): HostConfig {
     },
     contentExtraction:{baseUrl:docParserBaseUrl||undefined,timeoutMs:docParserTimeoutMs,maxInputBytes:docParserMaxInputBytes,maxTextChars:docParserMaxTextChars},
     search:{baseUrl:searchBaseUrl||undefined,apiKey:searchApiKey||undefined,indexUid:searchIndexUid,timeoutMs:searchTimeoutMs},
+    verification:{enabled:readBoolean("PLATFORM_VERIFICATION_ENABLED",env==="local"),grafanaUrl:process.env["PLATFORM_VERIFICATION_GRAFANA_URL"]?.trim()||(env==="local"?"http://127.0.0.1:53902":undefined)},
     publication:{apiEnabled:publicationApiEnabled,compileEnabled:publicationCompileEnabled,dispatchEnabled:publicationDispatchEnabled,applyEnabled:publicationApplyEnabled,recoveryEnabled:publicationRecoveryEnabled,targetPlanes:publicationTargetPlanes,requireSignature:true,signingKeyId:publicationSigningKeyId||undefined,privateKeyReference:publicationPrivateKeyReference||undefined,publicKeyReference:publicationPublicKeyReference||undefined,runtimeVersion:publicationRuntimeVersion,recoveryIntervalMs:publicationRecoveryIntervalMs},
     infisical:{endpoint:infisicalEndpoint||undefined,token:infisicalToken||undefined,workspaceId:infisicalWorkspaceId||undefined,environment:process.env["INFISICAL_ENVIRONMENT"]?.trim()||env,secretPath:process.env["INFISICAL_SECRET_PATH"]?.trim()||"/publication"},
     wave0:{financeRoutesEnabled:readBoolean("WAVE0_FINANCE_ROUTES_ENABLED",false),financeF2Enabled:readBoolean("FINANCE_F2_ENABLED",false),financeF3Enabled:readBoolean("FINANCE_F3_ENABLED",false),financeF4Enabled:readBoolean("FINANCE_F4_ENABLED",false),financeF5Enabled:readBoolean("FINANCE_F5_ENABLED",false),financeF6Enabled:readBoolean("FINANCE_F6_ENABLED",false),governanceRoutesEnabled:readBoolean("WAVE0_GOVERNANCE_ROUTES_ENABLED",false),controlAdminTenantOverridesEnabled:readBoolean("WAVE0_CONTROL_ADMIN_TENANT_OVERRIDES_ENABLED",false),controlAdminLookupRoundingEnabled:readBoolean("WAVE0_CONTROL_ADMIN_LOOKUP_ROUNDING_ENABLED",false),controlAdminConnectorLifecycleEnabled:readBoolean("WAVE0_CONTROL_ADMIN_CONNECTOR_LIFECYCLE_ENABLED",false),controlAdminCycleConfigEnabled:readBoolean("WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED",false),controlAdminLocalCatalogReadsEnabled:readBoolean("WAVE0_CONTROL_ADMIN_LOCAL_CATALOG_READS_ENABLED",false),controlAdminCatalogAuthoringEnabled:readBoolean("WAVE0_CONTROL_ADMIN_CATALOG_AUTHORING_ENABLED",false),controlAdminRuntimeCommandsEnabled:readBoolean("WAVE0_CONTROL_ADMIN_RUNTIME_COMMANDS_ENABLED",false),recordSnapshotRoutesEnabled:readBoolean("WAVE0_RECORD_SNAPSHOT_ROUTES_ENABLED",false),authorizationManagementRoutesEnabled:readBoolean("AUTHORIZATION_MANAGEMENT_ROUTES_ENABLED",false),authorizationManagementMutationsEnabled:readBoolean("AUTHORIZATION_MANAGEMENT_MUTATIONS_ENABLED",false),authorizationManagementMode:readChoice("AUTHORIZATION_V2_MODE","legacy",["legacy","shadow","enforce"] as const),authorizationGoldenEvaluatorCorpusQualified:readBoolean("AUTHORIZATION_GOLDEN_EVALUATOR_CORPUS_QUALIFIED",false),authorizationDdlEpochIntegrationQualified:readBoolean("AUTHORIZATION_DDL_EPOCH_INTEGRATION_QUALIFIED",false),authorizationWriterSwitchQualified:readBoolean("AUTHORIZATION_WRITER_SWITCH_QUALIFIED",false)},

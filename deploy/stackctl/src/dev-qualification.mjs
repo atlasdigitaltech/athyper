@@ -15,6 +15,14 @@ const manualAcceptance = Object.freeze([
   ["telemetry-dimensions", "The dev-full preset does not select the observability services needed to prove telemetry dimensions."],
 ]);
 
+const automatedVerificationChecks = Object.freeze({
+  "api-authenticated-request": ["identity.session", "identity.iam"],
+  "worker-exactly-once": ["runtime.worker"],
+  "scheduler-no-duplication": ["runtime.scheduler"],
+  "document-pipeline": ["document.storage-round-trip", "document.clean-scan", "document.extract", "document.render", "search.round-trip"],
+  "mail-webhook": ["mail.delivery"],
+});
+
 const check = (ok, id, category, success, failure, evidence) => ({
   id, category, status: ok ? "pass" : "blocked", message: ok ? success : failure,
   ...(evidence === undefined ? {} : { evidence }),
@@ -72,7 +80,7 @@ function writeEvidence(repoRoot, document, now) {
   return path;
 }
 
-export function evaluateDevQualification({ model, receipt, revision, containers, endpoints, qualifiedAt }) {
+export function evaluateDevQualification({ model, receipt, revision, containers, endpoints, qualifiedAt, verification }) {
   const checks = [];
   const expected = model.selected.filter((service) => ["long-running", "stateful"].includes(service.lifecycle));
   const expectedIds = expected.map((service) => service.id);
@@ -90,7 +98,16 @@ export function evaluateDevQualification({ model, receipt, revision, containers,
   const restarted = expectedContainers.filter((item) => item.restartCount > 0);
   checks.push(check(!restarted.length, "container-restarts", "topology", "No DEV container has restarted since deployment.", "Container restarts prevent clean-run qualification.", restarted.map(({ service, restartCount }) => ({ service, restartCount }))));
   for (const endpoint of endpoints) checks.push(check(endpoint.ok, endpoint.id, "functional", `${endpoint.label} returned HTTP 200.`, `${endpoint.label} did not return HTTP 200.`, { status: endpoint.status, ...(endpoint.details ? { details: endpoint.details } : {}), ...(endpoint.error ? { error: endpoint.error } : {}) }));
-  for (const [id, message] of manualAcceptance) checks.push(check(false, id, "functional", "", message));
+  for (const [id, message] of manualAcceptance) {
+    const required = automatedVerificationChecks[id];
+    if (!required || !verification?.document) {
+      checks.push(check(false, id, "functional", "", verification?.error && required ? `Automated platform verification failed: ${verification.error}` : message));
+      continue;
+    }
+    const results = new Map(verification.document.checks.map((item) => [item.id, item]));
+    const missing = required.filter((checkId) => results.get(checkId)?.status !== "passed");
+    checks.push(check(!missing.length, id, "functional", "Authenticated platform verification supplied isolated fixture evidence.", "Authenticated platform verification did not pass every required fixture.", { runId: verification.document.runId, required, missing }));
+  }
   const declaredMemoryMiB = expected.reduce((sum, item) => sum + item.resources.memoryMiB, 0);
   const declaredCpu = expected.reduce((sum, item) => sum + item.resources.cpu, 0);
   const limits = model.resources.spec;
@@ -125,7 +142,16 @@ export function qualifyDev(repoRoot, dependencies = {}) {
     ["mail-sandbox", "Mail sandbox", "mail.dev.athyper.test", "/livez"],
   ];
   const endpoints = endpointSpecs.map(([id, label, host, path, capture]) => ({ id, label, ...curlProbe(run, host, path, capture) }));
-  const document = evaluateDevQualification({ model, receipt, revision: revisionResult.stdout, containers, endpoints, qualifiedAt });
+  const verification = (dependencies.runVerification ?? runVerification)(run, repoRoot);
+  const document = evaluateDevQualification({ model, receipt, revision: revisionResult.stdout, containers, endpoints, qualifiedAt, verification });
   const path = (dependencies.writeEvidence ?? writeEvidence)(repoRoot, document, qualifiedAt);
   return { document, path };
+}
+
+function runVerification(run, repoRoot) {
+  if (!process.env.VERIFICATION_ACCESS_TOKEN) return undefined;
+  const result = run(process.execPath, [join(repoRoot, "scripts", "verification", "run-platform-verification.mjs"), "--api-url", process.env.VERIFICATION_API_URL ?? "https://api.dev.athyper.test", "--plane", process.env.VERIFICATION_PLANE ?? "studio", "--mode", "functional"], { cwd: repoRoot, timeout: 130_000 });
+  if (!result.ok) return { error: result.stderr || result.error || `runner exited ${result.status}` };
+  try { return { document: JSON.parse(result.stdout) }; }
+  catch { return { error: "runner returned invalid JSON" }; }
 }

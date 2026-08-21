@@ -1911,6 +1911,23 @@
       "workspaceActive": true
     },
     {
+      "packageName": "@athyper/platform-verification",
+      "physicalPath": "packages/platform/verification/package.json",
+      "currentConsumers": [
+        "apps/mesh/package.json",
+        "apps/neon/package.json",
+        "apps/studio/package.json"
+      ],
+      "intendedOwner": "Shared Platform",
+      "runtimePlane": "Build plane",
+      "deploymentTargets": "neon, studio, mesh, server as consumed",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "packages/platform/verification/package.json",
+      "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Shared platform",
+      "workspaceActive": true
+    },
+    {
       "packageName": "@athyper/platform-shell-content-hub",
       "physicalPath": "packages/platform/shell/content-hub/package.json",
       "currentConsumers": [],
@@ -3727,6 +3744,19 @@
       "duplicateStatus": "Unique active package",
       "proposedFinalLocation": "tooling/config/package.json",
       "migrationStatus": "Inventory complete; no move in Phase 1",
+      "classification": "Shared platform",
+      "workspaceActive": true
+    },
+    {
+      "packageName": "@athyper/stackctl",
+      "physicalPath": "deploy/stackctl/package.json",
+      "currentConsumers": [],
+      "intendedOwner": "Build Platform",
+      "runtimePlane": "Deployment control plane",
+      "deploymentTargets": "DEV, QA, STG",
+      "duplicateStatus": "Unique active package",
+      "proposedFinalLocation": "deploy/stackctl/package.json",
+      "migrationStatus": "Stack v2 authority",
       "classification": "Shared platform",
       "workspaceActive": true
     },

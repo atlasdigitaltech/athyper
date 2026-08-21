@@ -8,6 +8,7 @@
   "scripts": {
     "athyper": "node deploy/stackctl/src/cli.mjs",
     "stack:v2:test": "node --test deploy/stackctl/tests/*.test.mjs deploy/compose/tests/*.test.mjs",
+    "verify:platform": "node scripts/verification/run-platform-verification.mjs",
     "images:v2:build": "docker buildx bake --file docker-bake.hcl",
     "policy:stack-v2": "node deploy/stackctl/src/cli.mjs policy check",
     "dev": "turbo dev",

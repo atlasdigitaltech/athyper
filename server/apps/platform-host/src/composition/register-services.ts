@@ -129,6 +129,7 @@ import {
 import type { PublicationPlane } from "@athyper/server-contract-publication";
 import type { HostConfig } from "../config/index.js";
 import type { Container } from "./create-container.js";
+import { registerVerification } from "./verification-routes.js";
 import {createHash,randomUUID}from"node:crypto";
 
 type RecordTransaction = Transaction<Record<string, never>>;
@@ -544,6 +545,7 @@ export function registerServices(
     container.services.documents = documents;
     container.platform.httpRegistrars.push((application) => registerDocumentRoutes(application, { authenticate:createIamAuthenticationMiddleware(iam), readContext:readVerifiedRequestContext, documents }));
   }
+  if(config)registerVerification(container,config);
 }
 
 export function registerAtlas(

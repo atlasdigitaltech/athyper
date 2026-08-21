@@ -65,6 +65,9 @@ importers:
       '@athyper/platform-theme':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/theme
+      '@athyper/platform-verification':
+        specifier: workspace:*
+        version: link:../../packages/platform/verification
       '@athyper/product-mesh-shell':
         specifier: workspace:*
         version: link:../../packages/planes/mesh/shell
@@ -123,6 +126,9 @@ importers:
       '@athyper/platform-theme':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/theme
+      '@athyper/platform-verification':
+        specifier: workspace:*
+        version: link:../../packages/platform/verification
       '@athyper/product-neon-procurement':
         specifier: workspace:*
         version: link:../../packages/planes/neon/modules/procurement
@@ -184,6 +190,9 @@ importers:
       '@athyper/platform-theme':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/theme
+      '@athyper/platform-verification':
+        specifier: workspace:*
+        version: link:../../packages/platform/verification
       '@athyper/product-studio-shell':
         specifier: workspace:*
         version: link:../../packages/planes/studio/shell
@@ -1274,6 +1283,28 @@ importers:
       '@athyper/config':
         specifier: workspace:*
         version: link:../../../../tooling/config
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      react:
+        specifier: ^19.2.5
+        version: 19.2.8
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/platform/verification:
+    dependencies:
+      '@athyper/platform-api-client':
+        specifier: workspace:*
+        version: link:../foundation/api-client
+      '@athyper/platform-shell-app-foundation':
+        specifier: workspace:*
+        version: link:../shell/app-foundation
+    devDependencies:
+      '@athyper/config':
+        specifier: workspace:*
+        version: link:../../../tooling/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14

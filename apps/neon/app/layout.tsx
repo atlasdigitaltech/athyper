@@ -1,6 +1,7 @@
 import "@athyper/platform-theme/styles.css";
 import "@athyper/platform-iam-identity-gate/styles.css";
 import "@athyper/product-neon-shell/styles.css";
+import "@athyper/platform-verification/styles.css";
 import { getPlaneWebMetadata } from "@athyper/platform-iam-identity-gate";
 import { ThemeScript } from "@athyper/platform-theme";
 import { GeistSans } from "geist/font/sans";
