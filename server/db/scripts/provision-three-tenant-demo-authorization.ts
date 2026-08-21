@@ -173,7 +173,8 @@ async function ensureRole(client: QueryClient, plane: ProvisionPlane, tenantId: 
 async function ensureGrant(client: QueryClient, plane: ProvisionPlane, tenantId: string, roleId: string, actorId: string, grant: Grant): Promise<void> {
   const principal = await one<{ id: string }>(client, `SELECT binding.principal_id::text AS id FROM master.principal_identity_binding binding
     JOIN authz.plane_membership membership ON membership.tenant_id=binding.tenant_id AND membership.principal_id=binding.principal_id AND membership.status='active'
-    WHERE binding.tenant_id=$1::uuid AND binding.provider_code='keycloak' AND binding.subject_id=$2 AND binding.status='active'`, [tenantId, grant.subjectId]);
+    WHERE binding.tenant_id=$1::uuid AND binding.provider_code='keycloak'
+      AND lower(binding.username)=lower($2) AND binding.status='active'`, [tenantId, grant.username]);
   const groupCode = `demo.${plane}.${grant.username}`;
   const groupId = deterministicUuid("demo-auth", plane, tenantId, "group", grant.subjectId);
   await client.query(`INSERT INTO authz.principal_group(id,tenant_id,code,name,group_kind,source_type,source_ref,metadata,status,created_by)
