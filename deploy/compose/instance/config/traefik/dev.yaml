@@ -6,6 +6,7 @@ http:
     mesh: { rule: Host(`mesh.dev.athyper.test`), service: mesh }
     studio: { rule: Host(`studio.dev.athyper.test`), service: studio }
     mail: { rule: Host(`mail.dev.athyper.test`), service: mail }
+    minio: { rule: Host(`minio.dev.athyper.test`), service: minio }
     fallback: { rule: PathPrefix(`/`), service: outage, priority: 1 }
   services:
     iam: { loadBalancer: { servers: [{ url: http://iam:8080 }] } }
@@ -14,4 +15,5 @@ http:
     mesh: { loadBalancer: { servers: [{ url: http://mesh-web:3000 }] } }
     studio: { loadBalancer: { servers: [{ url: http://studio-web:3000 }] } }
     mail: { loadBalancer: { servers: [{ url: http://mailtrap:8025 }] } }
+    minio: { loadBalancer: { servers: [{ url: http://objectstorage:9001 }] } }
     outage: { loadBalancer: { servers: [{ url: http://gateway-outage:8080 }] } }

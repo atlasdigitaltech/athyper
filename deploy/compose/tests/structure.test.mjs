@@ -63,6 +63,18 @@ test("MinIO bootstrap has enough memory for concurrent full-stack startup", () =
   assert.equal(service.resources.memoryMiB, 128);
 });
 
+test("DEV exposes only the MinIO console through the TLS gateway", () => {
+  const dynamic = read("deploy/compose/instance/config/traefik/dev.yaml");
+  assert.equal(dynamic.http.routers.minio.rule, "Host(`minio.dev.athyper.test`)");
+  assert.equal(dynamic.http.services.minio.loadBalancer.servers[0].url, "http://objectstorage:9001");
+  assert.equal(JSON.stringify(dynamic).includes("http://objectstorage:9000"), false);
+  for (const environment of ["qa", "stg"]) {
+    const routes = read(`deploy/compose/instance/config/traefik/${environment}.yaml`);
+    assert.equal(routes.http.routers.minio, undefined);
+    assert.equal(routes.http.services.minio, undefined);
+  }
+});
+
 test("web session storage reaches Redis without joining the data network", () => {
   const instance = read("deploy/compose/instance/compose.yaml");
   const parity = read("deploy/compose/instance/compose.parity.yaml");

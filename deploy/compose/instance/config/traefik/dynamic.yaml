@@ -24,6 +24,10 @@ http:
       rule: Host(`mail.dev.athyper.test`)
       entryPoints: [web]
       service: mail
+    minio:
+      rule: Host(`minio.dev.athyper.test`)
+      entryPoints: [web]
+      service: minio
     fallback:
       rule: PathPrefix(`/`)
       entryPoints: [web]
@@ -54,6 +58,10 @@ http:
       loadBalancer:
         servers:
           - url: http://mailtrap:8025
+    minio:
+      loadBalancer:
+        servers:
+          - url: http://objectstorage:9001
     outage:
       loadBalancer:
         servers:
