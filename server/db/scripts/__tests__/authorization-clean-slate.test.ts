@@ -58,3 +58,11 @@ test("accepts an explicit authorization-pack database target", async () => {
   assert.match(applicator, /databaseUrl: option\(args, "--database-url"\)/);
   assert.match(planeApplicator, /assertTarget\(client, plane, definition\.databaseName\)/);
 });
+
+test("limits scope reconciliation to authorization-pack-owned permissions", async () => {
+  const applicator = await readFile(resolve(dbRoot, "scripts/provisioning/authorization-pack-applicator.ts"), "utf8");
+  const ownershipFilters = applicator.match(/permission\.metadata #>> '\{_seed,source\}'=\$\d/g) ?? [];
+  assert.equal(ownershipFilters.length, 2);
+  assert.match(applicator, /\[JSON\.stringify\(declarations\), SYSTEM_PRINCIPAL, SOURCE_REF\]/);
+  assert.match(applicator, /published permissions lack exact scope declarations/);
+});

@@ -866,6 +866,7 @@ async function applyPermissionScopeCompatibility(
          SET status='suspended',updated_by=$2::uuid
         FROM authz.permission permission
        WHERE permission.id=compatibility.permission_id
+         AND permission.metadata #>> '{_seed,source}'=$3
          AND compatibility.status='active'
          AND NOT EXISTS (
            SELECT 1 FROM declared
@@ -885,17 +886,18 @@ async function applyPermissionScopeCompatibility(
     ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE
       SET status='active',updated_by=EXCLUDED.created_by
       WHERE authz.permission_scope_kind.status<>'active'
-  `, [JSON.stringify(declarations), SYSTEM_PRINCIPAL]);
+  `, [JSON.stringify(declarations), SYSTEM_PRINCIPAL, SOURCE_REF]);
   const missing = await client.query<{ canonical_code: string }>(`
     SELECT permission.canonical_code
     FROM authz.permission permission
     WHERE permission.status='published'
+      AND permission.metadata #>> '{_seed,source}'=$1
       AND NOT EXISTS (
         SELECT 1 FROM authz.permission_scope_kind compatibility
         WHERE compatibility.permission_id=permission.id AND compatibility.status='active'
       )
     ORDER BY permission.canonical_code
-  `);
+  `, [SOURCE_REF]);
   if (missing.rowCount) throw new Error(`${plane} published permissions lack exact scope declarations: ${missing.rows.map((row) => row.canonical_code).join(",")}`);
 }
 
