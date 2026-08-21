@@ -91,6 +91,7 @@ apply_plane mesh
 # can never inherit a partially built privilege contract.
 psql --no-psqlrc --set ON_ERROR_STOP=1 --dbname postgres <<'SQL'
 GRANT athyperapp TO athyper_runtime;
+GRANT athyper_trustiam_service TO athyper_runtime;
 GRANT athyper_jobs_service TO athyper_worker;
 SQL
 

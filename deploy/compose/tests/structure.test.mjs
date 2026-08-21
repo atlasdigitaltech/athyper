@@ -48,8 +48,10 @@ test("database role membership is granted only after foundation roles exist", ()
   const init = readFileSync(join(repoRoot, "deploy/compose/instance/scripts/init-postgres.sh"), "utf8");
   const foundation = readFileSync(join(repoRoot, "deploy/compose/instance/scripts/run-foundation.sh"), "utf8");
   assert.doesNotMatch(init, /GRANT athyperapp TO athyper_runtime/u);
+  assert.doesNotMatch(init, /GRANT athyper_trustiam_service TO athyper_runtime/u);
   assert.doesNotMatch(init, /GRANT athyper_jobs_service TO athyper_worker/u);
   assert.match(foundation, /apply_plane mesh[\s\S]*GRANT athyperapp TO athyper_runtime/u);
+  assert.match(foundation, /apply_plane mesh[\s\S]*GRANT athyper_trustiam_service TO athyper_runtime/u);
   assert.match(foundation, /apply_plane mesh[\s\S]*GRANT athyper_jobs_service TO athyper_worker/u);
 });
 

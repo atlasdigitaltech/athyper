@@ -357,7 +357,10 @@ export function registerServices(
     const database=metadataDatabases[planeKey];
     container.runtimes.health.register(`governance.${planeKey}.compliance-ddl`,async()=>{if(!database)return{status:"unhealthy",message:`Governance compliance database is unavailable: ${planeKey}`} as const;try{await governanceComplianceDatabaseHealth(database);return{status:"healthy"}as const;}catch{return{status:"unhealthy",message:`Governance compliance DDL is unavailable or outdated: ${planeKey}`}as const;}});
     container.runtimes.health.register(`governance.${planeKey}.object-storage`,async()=>dependencyHealth(objectStorage!==undefined&&objectStorage.putIfAbsent!==undefined,dependencies.governanceCompliance?.objectStorageHealth,"Immutable object storage is unavailable"));
-    container.runtimes.health.register(`governance.${planeKey}.retention`,async()=>dependencyHealth(dependencies.governanceCompliance?.retention!==undefined,dependencies.governanceCompliance?.retentionHealth,"Legal-hold retention adapter is unavailable"));
+    container.runtimes.health.register(`governance.${planeKey}.retention`,async()=>{
+      if(!(config?.wave0.governanceRoutesEnabled??false))return{status:"healthy",message:"Governance compliance routes are disabled"}as const;
+      return dependencyHealth(dependencies.governanceCompliance?.retention!==undefined,dependencies.governanceCompliance?.retentionHealth,"Legal-hold retention adapter is unavailable");
+    });
   }
   if(hasGovernanceDatabase&&consent&&moderation&&cycleConfig){
     const cycleOptions={authorizer,repositories:executionRepositories,...(cycleReadinessSource?{readinessSource:cycleReadinessSource}:{})};
@@ -591,7 +594,7 @@ function registerStudioAuthoring(container:Container,config:HostConfig|undefined
 function registerStudioOnboarding(container:Container,database:Kysely<Record<string,never>>|undefined,transport:ProvisioningCommandTransport|undefined,iam:NonNullable<Container["platform"]["iam"]>,authorizer:NonNullable<Container["platform"]["authorizer"]>):void{
   container.runtimes.health.register("studio.onboarding-authority",async()=>{
     if(!database)return{status:"unhealthy",message:"Studio onboarding database is unavailable"};
-    if(!transport)return{status:"unhealthy",message:"Authenticated onboarding provisioning transport is unavailable"};
+    if(!transport)return{status:"healthy",message:"Studio onboarding routes are disabled"};
     try{await sql`SELECT 1 FROM onboarding.onboarding_case LIMIT 1`.execute(database);return{status:"healthy"};}catch{return{status:"unhealthy",message:"Studio onboarding schema is unavailable"};}
   });
   if(!database||!transport||!container.adapters.athyperDatabase)return;
