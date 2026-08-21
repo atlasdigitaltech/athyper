@@ -31,7 +31,7 @@ BEGIN
                master.external_reference
             TO athyperapp;
 
-        GRANT SELECT ON master.principal TO athyperapp;
+        GRANT SELECT ON master.principal, master.principal_identity_binding TO athyperapp;
         GRANT SELECT ON
             master.team,
             master.team_member

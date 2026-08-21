@@ -234,8 +234,18 @@ export function registerServices(
     ...(container.adapters.athyperDatabase ? { studio: container.adapters.athyperDatabase.database } : {}),
   } as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>;
   if (Object.keys(metadataDatabases).length > 0) {
+    const experienceAdapters = {
+      ...(container.adapters.neonDatabase ? { neon: container.adapters.neonDatabase } : {}),
+      ...(container.adapters.meshDatabase ? { mesh: container.adapters.meshDatabase } : {}),
+      ...(container.adapters.athyperDatabase ? { studio: container.adapters.athyperDatabase } : {}),
+    };
     const experienceRepositories = createExactPlaneRepositoryProvider(Object.fromEntries(
-      Object.entries(metadataDatabases).map(([planeKey, database]) => [planeKey, new KyselyExperiencePlaneRepository(database)]),
+      Object.entries(metadataDatabases).map(([planeKey, database]) => {
+        const adapter = experienceAdapters[planeKey as keyof typeof experienceAdapters];
+        if (!adapter) throw new Error(`Experience database adapter is missing for ${planeKey}`);
+        return [planeKey, new KyselyExperiencePlaneRepository(database, (_context, work) =>
+          adapter.withTenantTransaction((transaction) => work(transaction as unknown as Kysely<Record<string, never>>)))];
+      }),
     ) as Partial<Record<PlaneKey, KyselyExperiencePlaneRepository>>, { unavailableCode: "EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" });
     const experienceCache = createMemoryExperienceCache();
     const experience = createExperienceService({ repositories: experienceRepositories, cache: experienceCache });

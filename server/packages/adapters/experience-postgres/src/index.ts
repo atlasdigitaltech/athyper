@@ -3,12 +3,21 @@ import type { ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceIdenti
 import { sql, type Kysely } from "kysely";
 
 type Database = Kysely<Record<string, never>>;
+export type ExperienceDatabaseRunner = <Result>(
+  context: VerifiedRequestContext,
+  work: (database: Database) => Promise<Result>,
+) => Promise<Result>;
 
 /** DDL-native, read-only projection. The supplied database must be the exact physical plane selected by the host. */
 export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepository {
-  constructor(private readonly database: Database) {}
+  constructor(private readonly database: Database, private readonly runner?: ExperienceDatabaseRunner) {}
+
+  private withContext<Result>(context: VerifiedRequestContext, work: (database: Database) => Promise<Result>): Promise<Result> {
+    return this.runner ? this.runner(context, work) : work(this.database);
+  }
 
   async readIdentity(context: VerifiedRequestContext, at: Date): Promise<ExperienceIdentityRecord | undefined> {
+    return this.withContext(context, async (database) => {
     const result = await sql<{
       tenantCode: string; tenantDisplayName: string;
       tenantStatus: string; tenantRealmKey: string; subscriptionPlanId: string | null; tenantRevision: string;
@@ -41,13 +50,15 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       LEFT JOIN master.principal_profile pp ON pp.tenant_id=p.tenant_id AND pp.principal_id=p.id
       WHERE t.id = ${context.tenantId}::uuid
       LIMIT 1
-    `.execute(this.database);
+    `.execute(database);
     const row = result.rows[0];
     if (!row) return undefined;
     return { tenantCode: row.tenantCode, tenantDisplayName: row.tenantDisplayName, tenantStatus: row.tenantStatus, tenantRealmKey: row.tenantRealmKey, ...(row.subscriptionPlanId ? { subscriptionPlanId: row.subscriptionPlanId } : {}), tenantRevision: row.tenantRevision, principalCode: row.principalCode, principalDisplayName: row.principalDisplayName, ...(row.principalSecondaryLabel ? { principalSecondaryLabel: row.principalSecondaryLabel } : {}), principalStatus: row.principalStatus, principalAuthEpoch: row.principalAuthEpoch, principalRevision: row.principalRevision, identityBindingActive: row.identityBindingActive, membershipActive: row.membershipActive, ...(row.membershipRevision ? { membershipRevision: row.membershipRevision } : {}) };
+    });
   }
 
   async readProfile(context: VerifiedRequestContext): Promise<ExperienceProfileRecord> {
+    return this.withContext(context, async (database) => {
     const result = await sql<{ tenant: Record<string, unknown> | null; principal: Record<string, unknown> | null; revision: string }>`
       SELECT CASE WHEN tp.id IS NULL THEN NULL ELSE jsonb_build_object(
                'localeCode', tp.locale_code, 'languageCode', tp.language_code, 'timezoneCode', tp.timezone_code,
@@ -62,14 +73,16 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       LEFT JOIN master.principal_ui_profile up ON up.tenant_id = t.id AND up.principal_id = ${context.principalId}::uuid
       WHERE t.id = ${context.tenantId}::uuid
       LIMIT 1
-    `.execute(this.database);
+    `.execute(database);
     const row = result.rows[0];
     return { ...(row?.tenant ? { tenant: row.tenant } : {}), ...(row?.principal ? { principal: row.principal } : {}), revision: row?.revision ?? "profile:missing" };
+    });
   }
 
   async readCatalog(context: VerifiedRequestContext, subscriptionPlanId: string): Promise<ExperienceCatalogRecord | undefined> {
+    return this.withContext(context, async (database) => {
     const [planResult, associationResult, permissionResult] = await Promise.all([
-      sql<{ active: boolean; revision: string }>`SELECT is_active AS active, COALESCE(updated_at, created_at)::text AS revision FROM control.subscription_plan WHERE id = ${subscriptionPlanId}::uuid LIMIT 1`.execute(this.database),
+      sql<{ active: boolean; revision: string }>`SELECT is_active AS active, COALESCE(updated_at, created_at)::text AS revision FROM control.subscription_plan WHERE id = ${subscriptionPlanId}::uuid LIMIT 1`.execute(database),
       sql<{ workspaceCode: string; workspaceName: string; workspaceIconKey: string | null; workspaceSortOrder: number; moduleId: string; moduleCode: string; moduleName: string; moduleIconKey: string | null; moduleSortOrder: number; primary: boolean; revision: string }>`
         SELECT w.code AS "workspaceCode", w.name AS "workspaceName", w.icon_key AS "workspaceIconKey", w.sort_order AS "workspaceSortOrder",
                m.id::text AS "moduleId", m.code AS "moduleCode", m.name AS "moduleName", m.icon_key AS "moduleIconKey",
@@ -81,11 +94,11 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         JOIN control.workspace w ON w.id = wm.workspace_id AND w.is_active
         WHERE spm.subscription_plan_id = ${subscriptionPlanId}::uuid AND spm.is_active AND spm.entitlement_mode = 'included'
         ORDER BY w.sort_order, w.code, wm.sort_order, m.code
-      `.execute(this.database),
+      `.execute(database),
       sql<{ code: string; moduleId: string; revision: string }>`
         SELECT p.canonical_code AS code, p.module_id::text AS "moduleId", COALESCE(p.updated_at, p.created_at)::text AS revision
         FROM authz.permission p WHERE p.status = 'active' ORDER BY p.canonical_code
-      `.execute(this.database),
+      `.execute(database),
     ]);
     const plan = planResult.rows[0];
     if (!plan) return undefined;
@@ -94,9 +107,11 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       associations: associationResult.rows.map((row) => ({ workspaceCode: row.workspaceCode, workspaceName: row.workspaceName, ...(row.workspaceIconKey ? { workspaceIconKey: row.workspaceIconKey } : {}), workspaceSortOrder: row.workspaceSortOrder, moduleId: row.moduleId, moduleCode: row.moduleCode, moduleName: row.moduleName, ...(row.moduleIconKey ? { moduleIconKey: row.moduleIconKey } : {}), moduleSortOrder: row.moduleSortOrder, primary: row.primary, revision: row.revision })),
       permissions: permissionResult.rows,
     };
+    });
   }
 
   async readFeatures(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceFeatureRecord[]> {
+    return this.withContext(context, async (database) => {
     const result = await sql<{
       id: string; code: string; moduleId: string | null; kind: "release_gate" | "kill_switch" | "experiment";
       defaultEnabled: boolean; rolloutPct: number | null; overrideEnabled: boolean | null; metadata: Record<string, unknown>; revision: string;
@@ -109,12 +124,14 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         AND o.is_active AND o.effective_from <= ${at} AND (o.effective_until IS NULL OR o.effective_until > ${at})
       WHERE f.is_active AND f.effective_from <= ${at} AND (f.effective_until IS NULL OR f.effective_until > ${at})
       ORDER BY f.code
-    `.execute(this.database);
+    `.execute(database);
     return result.rows.map((row) => ({ id: row.id, code: row.code, ...(row.moduleId ? { moduleId: row.moduleId } : {}), kind: row.kind, defaultEnabled: row.defaultEnabled, ...(row.rolloutPct === null ? {} : { rolloutPct: row.rolloutPct }), ...(row.overrideEnabled === null ? {} : { overrideEnabled: row.overrideEnabled }), metadata: row.metadata, revision: row.revision }));
+    });
   }
 
   async readWorkContexts(context: VerifiedRequestContext): Promise<readonly ExperienceWorkContextRecord[]> {
     if (context.planeKey !== "neon") return [];
+    return this.withContext(context, async (database) => {
     const result = await sql<{ companyCodeId:string; companyCode:string; companyDisplayName:string; legalEntityId:string; legalEntityCode:string; legalEntityName:string; countryCode:string|null; functionalCurrency:string; revision:string }>`
       SELECT c.id::text AS "companyCodeId", c.code AS "companyCode", COALESCE(NULLIF(btrim(c.display_name),''),c.name,c.code) AS "companyDisplayName",
              le.id::text AS "legalEntityId", le.code AS "legalEntityCode", COALESCE(NULLIF(btrim(le.display_name),''),le.name,le.code) AS "legalEntityName",
@@ -122,12 +139,14 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
              concat_ws(':',COALESCE(c.updated_at,c.created_at)::text,COALESCE(le.updated_at,le.created_at)::text) AS revision
       FROM master.company_code c JOIN master.legal_entity le ON le.tenant_id=c.tenant_id AND le.id=c.legal_entity_id AND le.status='active'
       WHERE c.tenant_id=${context.tenantId}::uuid AND c.status='active' ORDER BY c.code,c.id
-    `.execute(this.database);
+    `.execute(database);
     return result.rows.map((row)=>({ companyCodeId:row.companyCodeId,companyCode:row.companyCode,companyDisplayName:row.companyDisplayName,legalEntityId:row.legalEntityId,legalEntityCode:row.legalEntityCode,legalEntityName:row.legalEntityName,...(row.countryCode?{countryCode:row.countryCode}:{}),functionalCurrency:row.functionalCurrency.trim(),revision:row.revision }));
+    });
   }
 
   async readOperatingOrganizations(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceOperatingOrganizationRecord[]> {
     if (context.planeKey !== "neon") return [];
+    return this.withContext(context, async (database) => {
     const result = await sql<{
       id:string;code:string;displayName:string;domain:string;parentId:string|null;path:string[];
       procurementProfileConfigured:boolean;salesProfileConfigured:boolean;leadCompanyCodeId:string|null;bookingCompanyCodeId:string|null;invoicingCompanyCodeId:string|null;defaultCurrency:string|null;
@@ -168,7 +187,7 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         LEFT JOIN master.procurement_organization_profile procurement ON procurement.tenant_id=organization.tenant_id AND procurement.operating_organization_id=organization.id
         LEFT JOIN master.sales_organization_profile sales ON sales.tenant_id=organization.tenant_id AND sales.operating_organization_id=organization.id
        ORDER BY hierarchy.path,organization.code,assignment.participation_role,company.code
-    `.execute(this.database);
+    `.execute(database);
     const organizations=new Map<string,ExperienceOperatingOrganizationRecord>();
     for(const row of result.rows){
       const current=organizations.get(row.id);
@@ -177,5 +196,6 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       organizations.set(row.id,Object.freeze({id:row.id,code:row.code,displayName:row.displayName,domain:row.domain,...(row.parentId?{parentId:row.parentId}:{}),path:Object.freeze([...row.path]),procurementProfileConfigured:row.procurementProfileConfigured,salesProfileConfigured:row.salesProfileConfigured,...(row.leadCompanyCodeId?{leadCompanyCodeId:row.leadCompanyCodeId}:{}),...(row.bookingCompanyCodeId?{bookingCompanyCodeId:row.bookingCompanyCodeId}:{}),...(row.invoicingCompanyCodeId?{invoicingCompanyCodeId:row.invoicingCompanyCodeId}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency.trim()}:{}),assignments:Object.freeze([assignment]),revision:`${row.organizationRevision}:${row.assignmentRevision}`}));
     }
     return Object.freeze([...organizations.values()]);
+    });
   }
 }
