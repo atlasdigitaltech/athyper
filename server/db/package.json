@@ -33,6 +33,7 @@
     "db:operate:authorization": "tsx scripts/operations/authorization/manage-authorization-operation-activation.ts",
     "db:repair:authorization:projection-owner-read-grants": "tsx scripts/operations/authorization/repair-projection-owner-read-grants.ts",
     "db:operate:authorization:clean-slate-reset": "tsx scripts/operations/authorization/reset-authorization-clean-slate.ts",
+    "db:reconcile:iam-runtime-subjects": "tsx scripts/operations/iam/reconcile-runtime-subjects.ts",
     "db:operate:mesh:sync-shared": "tsx scripts/operations/mesh/sync-shared-to-mesh.ts",
     "db:operate:repair:tenant-ledgers": "tsx scripts/operations/repair/repair-tenant-ledger-hashes.ts",
     "db:operate:studio:meta-entity-authority": "tsx scripts/operations/studio/provision-meta-entity-authority.ts",

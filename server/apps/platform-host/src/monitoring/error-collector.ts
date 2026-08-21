@@ -31,7 +31,13 @@ export function captureOperationalError(
   error: unknown,
   tags: Readonly<Record<string, string>> = {},
 ): void {
-  if (!enabled) return;
+  if (!enabled) {
+    const detail = error instanceof Error
+      ? { name: error.name, message: error.message, stack: error.stack }
+      : { message: String(error) };
+    process.stderr.write(`${JSON.stringify({ level: "error", event: "operational_error", ...tags, error: detail })}\n`);
+    return;
+  }
   Sentry.withScope((scope) => {
     for (const [key, value] of Object.entries(tags)) scope.setTag(key, value);
     Sentry.captureException(error);
