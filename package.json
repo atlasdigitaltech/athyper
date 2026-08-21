@@ -7,7 +7,8 @@
   },
   "scripts": {
     "athyper": "node deploy/stackctl/src/cli.mjs",
-    "stack:v2:test": "node --test deploy/stackctl/tests/*.test.mjs",
+    "stack:v2:test": "node --test deploy/stackctl/tests/*.test.mjs deploy/compose/tests/*.test.mjs",
+    "images:v2:build": "docker buildx bake --file docker-bake.hcl",
     "policy:stack-v2": "node deploy/stackctl/src/cli.mjs policy check",
     "dev": "turbo dev",
     "build": "turbo build --concurrency 1",
@@ -177,6 +178,9 @@
     "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:typography && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:server-rebuild-boundaries && pnpm inventory:server-rebuild:check && pnpm routes:server-manifest:check && pnpm policy:server-docker-workspaces && pnpm policy:docker-toolchain && pnpm policy:canonical-packages && pnpm policy:frontend-spine && pnpm policy:foundation-phase1 && pnpm policy:api-client-phase2 && pnpm policy:shared-purity && pnpm policy:no-source-junctions && pnpm policy:deployment-profiles && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries && pnpm policy:shared-ownership && pnpm policy:shared-naming && pnpm policy:shared-grouping && pnpm policy:legacy-package-ids && pnpm policy:legacy-runtime-retirement && pnpm policy:runtime-api-paths && pnpm policy:meta-entity"
   },
   "pnpm": {
+    "overrides": {
+      "brace-expansion@2.0.3": "2.1.4"
+    },
     "onlyBuiltDependencies": [
       "@prisma/engines",
       "@sentry/cli",

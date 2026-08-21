@@ -22,7 +22,7 @@
   "dependencies": {
     "@athyper/server-adapter-db-core": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
-    "kysely": "^0.28.16"
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
     "@mrleebo/prisma-ast": "^0.13.1",

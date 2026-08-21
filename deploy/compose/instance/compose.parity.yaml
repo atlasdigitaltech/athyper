@@ -145,6 +145,31 @@ services:
     mem_limit: 384m
     cpus: 0.5
 
+  # The current runner is deliberately a clean-database foundation build. It
+  # refuses non-empty databases; forward migrations require a later contract.
+  db-migration:
+    <<: *runtime-common
+    profiles: [migration]
+    restart: "no"
+    depends_on:
+      db-init: { condition: service_completed_successfully }
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: postgres
+      ATHYPER_DDL_SHA256: ${ATHYPER_DDL_SHA256:?set ATHYPER_DDL_SHA256}
+    entrypoint: [/bin/sh, /athyper/bin/run-foundation.sh]
+    secrets: [postgres-password]
+    volumes:
+      - ./scripts/run-foundation.sh:/athyper/bin/run-foundation.sh:ro
+      - ../../../server/db/ddl:/athyper/ddl:ro
+    networks: [data]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 512m
+    cpus: 1.0
+
   virusscan:
     image: clamav/clamav:1.5.2
     restart: unless-stopped

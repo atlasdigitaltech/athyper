@@ -4162,7 +4162,7 @@
     "scimApiEnabled": "false",
     "acr.loa.map": "{}"
   },
-  "keycloakVersion": "26.6.1",
+  "keycloakVersion": "26.7.2",
   "userManagedAccessAllowed": false,
   "organizationsEnabled": true,
   "verifiableCredentialsEnabled": false,

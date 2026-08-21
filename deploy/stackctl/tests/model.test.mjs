@@ -30,11 +30,27 @@ test("DEV render is project-scoped and uses the laptop-32 envelope", () => {
 });
 
 test("DEV plan is bounded and names only project-scoped resources", () => {
-  const plan = createPlan(defaultRepoRoot, "dev");
+  const plan = createPlan(defaultRepoRoot, "dev", {
+    infrastructureGates: {
+      blockers: [],
+      qualification: { path: "/qualification/phase-status.yaml" },
+      cold: { path: "/qualification/cold-start.json" },
+      disposition: { path: "/qualification/disposition.json" },
+      intake: { path: "/qualification/export-intake.json" },
+      restore: { path: "/qualification/restore-receipt.json" },
+    },
+    policy: { errors: [] },
+    runtimeRoot: "/runtime/fixture",
+    secretProblem: () => null,
+    listeningPorts: () => new Set([5432]),
+    liveProjectObjects: () => ({ containers: ["fixture-container"], networks: [], volumes: [] }),
+  });
   assert.ok(plan.resources.memoryMiB <= plan.resources.limitMemoryMiB);
   assert.ok(plan.resources.cpu <= plan.resources.limitCpu);
   assert.ok(plan.networks.every((name) => name.startsWith("athyper-dev_")));
   assert.ok(plan.volumes.every((name) => name.startsWith("athyper-dev_")));
+  assert.equal(plan.platform.project, "athyper-platform");
+  assert.equal(plan.platform.gatewayAlias, "gateway-dev");
   assert.deepEqual(plan.actions, ["No action: this command only validates and reports."]);
   assert.equal(plan.status, "blocked");
   assert.ok(plan.blockers.some((message) => message.includes("already listening")));
@@ -44,8 +60,43 @@ test("DEV plan is bounded and names only project-scoped resources", () => {
   assert.equal(plan.deferredPreflights.length, 4);
 });
 
+test("DEV plan accepts live resources owned by its valid controller receipt", () => {
+  const plan = createPlan(defaultRepoRoot, "dev", {
+    infrastructureGates: {
+      blockers: [],
+      qualification: { path: "/qualification/phase-status.yaml" },
+      cold: { path: "/qualification/cold-start.json" },
+      disposition: { path: "/qualification/disposition.json" },
+      intake: { path: "/qualification/export-intake.json" },
+      restore: { path: "/qualification/restore-receipt.json" },
+    },
+    policy: { errors: [] },
+    runtimeRoot: "/runtime/fixture",
+    secretProblem: () => null,
+    listeningPorts: () => new Set(),
+    liveProjectObjects: () => ({ containers: ["fixture-container"], networks: ["fixture-network"], volumes: [] }),
+    projectOwnership: { owned: true, path: "/runtime/fixture/instances/dev/receipts/active.json", state: "running" },
+  });
+  assert.equal(plan.status, "ready");
+  assert.equal(plan.ownershipReceipt.owned, true);
+  assert.ok(!plan.blockers.some((message) => message.includes("already owns Docker resources")));
+});
+
 test("remaining-gate inspection is read-only and evidence-backed", () => {
-  const report = inspectRemainingGates(defaultRepoRoot);
+  const cleanSlate = { path: "/qualification/disposition.json", document: { decision: "clean-slate" }, problem: null };
+  const report = inspectRemainingGates(defaultRepoRoot, {
+    qualification: { path: "/qualification/phase-status.yaml", failures: [] },
+    cold: { path: "/qualification/cold-start.json", document: {}, problem: null },
+    disposition: cleanSlate,
+    intake: { path: "/qualification/export-intake.json", document: null, problem: "fixture absent" },
+    restore: { path: "/qualification/restore-receipt.json", document: null, problem: "fixture absent" },
+    devPlan: { blockers: [], requiredSecrets: [], sources: { imageSet: "/images/dev.yaml" } },
+    qaPlan: {
+      blockers: ["Release image set is incomplete: fixture is absent."],
+      requiredSecrets: [],
+      sources: { imageSet: "/images/qa.yaml" },
+    },
+  });
   assert.equal(report.readOnly, true);
   assert.equal(report.executionAuthorized, false);
   assert.equal(report.status, "blocked");
@@ -67,8 +118,9 @@ test("DEV core Compose is isolated and contains the Phase 6 dependency spine", (
 test("DEV-full parity is bounded and includes every Phase 8 service", () => {
   const plan = createPlan(defaultRepoRoot, "dev");
   assert.equal(plan.preset, "dev-full");
-  assert.equal(plan.resources.memoryMiB, 12_608);
-  assert.equal(plan.resources.cpu, 14.7);
+  assert.equal(plan.resources.memoryMiB, 13_184);
+  assert.equal(plan.resources.cpu, 15.7);
+  assert.ok(plan.services.some((service) => service.id === "db-migration"));
   assert.equal(plan.sources.compose.length, 2);
   assert.ok(plan.domains.includes("mail.dev.athyper.test"));
   for (const id of [
@@ -84,7 +136,8 @@ test("QA plan is independently addressed and rejects placeholder candidate image
   assert.equal(plan.project, "athyper-qa");
   assert.equal(plan.preset, "qa-standard");
   assert.equal(plan.sources.compose.length, 2);
-  assert.deepEqual(plan.debugPorts, { http: "127.0.0.1:8080", postgres: "127.0.0.1:55432" });
+  assert.deepEqual(plan.debugPorts, { postgres: "127.0.0.1:55432" });
+  assert.deepEqual(plan.platform.ingressPorts, ["127.0.0.1:80", "127.0.0.1:443"]);
   assert.ok(plan.networks.every((name) => name.startsWith("athyper-qa_")));
   assert.ok(plan.volumes.every((name) => name.startsWith("athyper-qa_")));
   assert.ok(plan.domains.every((name) => name.endsWith(".qa.athyper.test")));
@@ -111,7 +164,7 @@ test("QA lifecycle plans are read-only and cannot target DEV", () => {
       assert.ok(stage.command.arguments.includes("athyper-qa"));
       assert.ok(!stage.command.arguments.includes("athyper-dev"));
       assert.equal(stage.command.environment.ATHYPER_INSTANCE, "qa");
-      assert.equal(stage.command.environment.ATHYPER_HTTP_BIND, "127.0.0.1:8080");
+      assert.equal(stage.command.environment.ATHYPER_HTTP_BIND, undefined);
       assert.equal(stage.command.environment.ATHYPER_POSTGRES_BIND, "127.0.0.1:55432");
       assert.match(stage.command.environment.ATHYPER_IMAGE_RUNTIME_SERVER, /@sha256:0{64}$/u);
     }
@@ -154,7 +207,7 @@ test("STG rehearsal is digest-preserving, sanitized, backup-first, and read-only
   assert.deepEqual(plan.integrationPolicy.allowedDestinations, []);
   assert.equal(plan.isolation.project, "athyper-stg");
   assert.deepEqual(plan.isolation.protectedProjects, ["athyper-dev", "athyper-qa"]);
-  assert.deepEqual(plan.isolation.hostBindings, { http: "127.0.0.1:8180", postgres: "127.0.0.1:56432" });
+  assert.deepEqual(plan.isolation.hostBindings, { postgres: "127.0.0.1:56432" });
   assert.ok(plan.blockers.some((message) => message.includes("Promotion digest mismatch or absence")));
   assert.ok(plan.blockers.some((message) => message.includes("sanitizedDataManifest")));
   const stageIds = plan.stages.map(({ id }) => id);
@@ -206,7 +259,11 @@ test("optional capability plans are profile-scoped, bounded, and read-only", () 
 });
 
 test("K3s remains deferred until runtime acceptance and approved multi-host need", () => {
-  const assessment = assessOrchestrator(defaultRepoRoot);
+  const assessment = assessOrchestrator(defaultRepoRoot, {
+    qualificationPath: "/qualification/fixture/missing-machine.yaml",
+    qualificationRoot: "/qualification/fixture",
+    exists: () => false,
+  });
   assert.equal(assessment.readOnly, true);
   assert.equal(assessment.executionAuthorized, false);
   assert.equal(assessment.status, "deferred");
@@ -216,9 +273,7 @@ test("K3s remains deferred until runtime acceptance and approved multi-host need
   assert.equal(assessment.policy.laptopK3sAllowed, false);
   assert.equal(assessment.policy.dockerDesktopKubernetesAllowed, false);
   assert.equal(assessment.policy.automaticMigrationAllowed, false);
-  assert.ok(assessment.blockers.some((message) => message.includes("DEV functional parity has not passed")));
-  assert.ok(assessment.blockers.some((message) => message.includes("two repeatable QA isolation cycles has not passed")));
-  assert.ok(assessment.blockers.some((message) => message.includes("STG backup/migration/restore rehearsal has not passed")));
+  assert.ok(assessment.blockers.some((message) => message.includes("Machine phase evidence is absent")));
   assert.ok(assessment.blockers.some((message) => message.includes("Compose acceptance evidence is absent")));
   assert.ok(assessment.blockers.some((message) => message.includes("Approved multi-host topology requirement evidence is absent")));
   assert.ok(assessment.prohibitedOutputsWhileDeferred.includes("K3s installation"));

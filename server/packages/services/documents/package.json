@@ -17,13 +17,13 @@
     "@athyper/server-contract-content-extraction": "workspace:*",
     "@athyper/server-contract-documents": "workspace:*",
     "@athyper/server-contract-events": "workspace:*",
-    "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-malware-scanning": "workspace:*",
+    "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-object-storage": "workspace:*",
     "@athyper/server-contract-rendering": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "express": "^5.0.0",
-    "kysely": "^0.28.16"
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",

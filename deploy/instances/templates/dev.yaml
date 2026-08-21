@@ -12,7 +12,6 @@ spec:
   dataPolicy: persistent
   integrations: sandbox
   debugPorts:
-    http: 127.0.0.1:80
     postgres: 127.0.0.1:5432
   providers:
     search: internal

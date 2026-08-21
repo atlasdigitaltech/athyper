@@ -13,7 +13,7 @@ restore, DEV parity, QA isolation, and STG rehearsal gates pass.
 Use the developer's normal Linux home. Do not create `/home/athyper`; that would
 introduce a second identity and unnecessary ownership/sudo friction.
 
-## Read-only milestone
+## Inspection commands
 
 ```sh
 athyper doctor
@@ -26,28 +26,79 @@ These commands only read configuration, machine state, and Docker metadata. They
 do not create or modify containers, images, networks, volumes, secrets, routes,
 or host mappings. `plan` exits non-zero when a mandatory preflight is incomplete.
 
+## Controlled execution
+
+The controller now owns the mutating Compose path. Every mutation requires the
+instance ID to be repeated explicitly; restore also requires the backup ID to be
+repeated:
+
+```sh
+athyper up dev --confirm dev
+athyper restart dev --confirm dev
+athyper restart dev api --confirm dev
+athyper backup dev --confirm dev
+athyper restore dev 20260821T123456Z --confirm dev --confirm-restore 20260821T123456Z
+athyper down dev --confirm dev
+```
+
+`up` evaluates policy, machine/recovery evidence, instance secrets, image policy,
+ports, and resource limits before mutation. It renders both Compose projects,
+starts `athyper-platform` first, then starts the instance with `--wait`. Existing
+platform or instance Docker resources are adopted only when their exact
+controller ownership receipt exists. If instance startup fails, the controller
+runs instance `down --remove-orphans`; it does not stop the shared platform or
+delete volumes. A runtime-root controller lock serializes all mutations across
+instances so concurrent platform or migration operations cannot race.
+
+Receipts are written owner-only beneath
+`~/.athyper/instances/<id>/receipts/`; platform ownership is recorded beneath
+`~/.athyper/platform/receipts/`. `down` never passes `--volumes`. PostgreSQL
+backups are owner-only, custom-format dumps for each ATHYPER database plus a
+global-role metadata export under `~/.athyper/backups/<id>/<backup-id>/`.
+Restore verifies every size and SHA-256, initializes a new isolated Compose
+project, restores global roles and memberships before initializing database
+credentials, restores the four database dumps, verifies PostgreSQL, removes
+temporary dump files, stops the temporary containers, and retains the newly
+named volume for inspection or a separately authorized cutover. It never
+restores over the active volume.
+
+Application-schema migration remains a separate release readiness boundary. DEV
+now has an executable, advisory-locked `db-migration` service that applies the
+tracked DDL manifests only to empty databases; it refuses partial or populated
+schemas. `up` starts only PostgreSQL/bootstrap, runs that job, and starts the
+applications only after success. QA/STG remain blocked because they deliberately
+do not select this source-mounted clean-slate runner. Forward-migration
+compatibility policy and a candidate-image-contained migration role are still
+required before imported, schema-changing, QA, or STG rollout is operational.
+
 Current DEV domains use `*.dev.athyper.test` because nested `.localhost` names did
 not resolve reliably on the qualified Windows host. The future ingress bootstrap
 must install the exact mappings printed by `plan`; planning never edits `hosts`.
 
 ## Current acceptance boundary
 
-The schemas, 39-service ledger, provider contracts, resource profiles, and
-read-only controller are implemented. Deployment remains blocked until:
-
-1. BitLocker and Secure Boot are verified from elevated PowerShell.
-2. Docker Desktop's data VHD is moved to `D:\ATHYPER\docker-desktop\data`.
-3. Owner-only DEV secret files are created after storage encryption is verified.
-4. A fresh Stack v1 export and tested database restore are obtained from the old workstation.
+The schemas, 39-service ledger, provider contracts, resource profiles, guarded
+controller execution, and receipt contracts are implemented. Current machine,
+cold-start, clean-slate disposition, and DEV secret gates pass, and `plan dev` is
+ready. Global release readiness remains blocked by the placeholder/incomplete QA
+candidate image set. A live DEV mutation also requires valid platform TLS files
+and a reachable Docker/Compose runtime; implementation tests do not substitute
+for that live qualification.
 
 ## Phase 6 DEV-core preflight
 
-The non-mutating Phase 6 composition now covers Traefik ingress and its outage
+The non-mutating Phase 6 composition now covers the per-instance Traefik gateway and its outage
 fallback, PostgreSQL and its idempotent database initializer, transaction and
 session PgBouncer pools, Redis, MinIO and its bucket initializer, and IAM. It
 uses project-scoped networks and volumes, an internal-only data network,
 loopback-only host ports, resource limits, health checks, and file-backed
 Compose secrets.
+
+The shared `athyper-platform` ingress definition lives in
+`deploy/compose/platform`. It is the only v2 project that publishes loopback
+ports 80 and 443. Instance gateways attach to its deliberately shared network
+as `gateway-dev`, `gateway-qa`, or `gateway-stg`; they publish no host HTTP port
+and have no Docker socket access.
 
 Validate without pulling an image or creating a Docker object:
 
@@ -62,9 +113,9 @@ athyper plan dev
 `athyper plan dev` now treats the machine qualification evidence as a hard
 deployment input. Aggregate host qualification and Defender/WSL cold-start
 compatibility must both be explicitly complete; a warm-session or provisional
-pass cannot authorize deployment. The implementation deliberately provides no
-mutating controller command while any host, recovery, or secret gate remains
-incomplete.
+pass cannot authorize deployment. Mutating controller commands now exist, but
+`up` refuses mutation while any applicable host, recovery, instance, or secret
+gate remains incomplete.
 
 `athyper gates inspect` validates the cold-start JSON, Stack v1 export-intake
 and cleanup-confirmed restore receipts, DEV secret-file policy, candidate image
@@ -72,6 +123,23 @@ immutability, and machine phase status. It reports external authorizations
 separately and never converts conversational intent into deployment authority.
 
 ## Phase 7 image publication foundation
+
+Build all five local qualification images from the repository root without
+publishing them:
+
+```sh
+LOCAL_TAG=qualification-local \
+SOURCE_REVISION="$(git rev-parse HEAD)-dirty" \
+pnpm images:v2:build
+```
+
+`docker-bake.hcl` is the local authority for the five targets and mirrors the
+workflow matrix. The web and runtime final stages remove package-manager tooling
+that is not needed at runtime. The IAM target uses digest-pinned Keycloak 26.7.2,
+builds and tests the ATHYPER provider extension, and retains only the PostgreSQL
+database driver required by this deployment. Local images from a dirty tree are
+qualification artifacts only and must never be pushed as if they represented a
+clean Git revision.
 
 `.github/workflows/stack-v2-images.yml` is a manual-only, explicitly confirmed
 publication workflow for the Neon, Mesh, Studio, runtime-server, and IAM images.
@@ -93,8 +161,9 @@ workflow: an operator must dispatch it with `confirm_publish=true`.
 DEV now selects the `dev-full` preset and adds
 `deploy/compose/instance/compose.parity.yaml` to the core model. The overlay
 contains the three Next.js planes, API, worker, scheduler, ClamAV, Gotenberg,
-Tika, Meilisearch, and development-only Mailpit. The complete envelope is
-12,544 MiB and 14.7 CPU against laptop-32 limits of 14,336 MiB and 16 CPU.
+Tika, Meilisearch, and development-only Mailpit. The complete envelope,
+including the one-shot clean-slate migration job, is 13,120 MiB and 15.7 CPU
+against laptop-32 limits of 14,336 MiB and 16 CPU.
 
 Runtime, worker, and PostgreSQL owner identities are separate. PgBouncer knows
 all three identities, while the scheduler receives only database and Redis
@@ -111,7 +180,7 @@ gates pass.
 ## Phase 9 QA isolation contract
 
 QA uses the independent `athyper-qa` Compose project, `*.qa.athyper.test`
-routes, HTTP port 8080, PostgreSQL port 55432, and QA-only secret and receipt
+routes through the shared ingress, PostgreSQL port 55432, and QA-only secret and receipt
 paths. Its standard preset reuses the Phase 8 parity composition but excludes
 DEV Mailpit and Phase 11 observability capabilities.
 
@@ -135,8 +204,8 @@ no lifecycle command executes Docker in this phase.
 
 ## Phase 10 STG rehearsal contract
 
-STG uses project `athyper-stg`, routes under `*.stg.athyper.test`, HTTP port
-8180, PostgreSQL port 56432, and an internal mail capture service whose UI is
+STG uses project `athyper-stg`, routes under `*.stg.athyper.test` through the
+shared ingress, PostgreSQL port 56432, and an internal mail capture service whose UI is
 not exposed. Outbound integrations are default-deny and production credentials
 are prohibited.
 

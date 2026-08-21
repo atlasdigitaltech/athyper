@@ -26,7 +26,7 @@ export function runReadOnly(command, args, options = {}) {
     encoding: "utf8",
     timeout: options.timeout ?? 8_000,
     windowsHide: true,
-    env: process.env,
+    env: options.env ?? process.env,
   });
   return {
     ok: result.status === 0,
@@ -38,7 +38,7 @@ export function runReadOnly(command, args, options = {}) {
 }
 
 export function runtimeRoot() {
-  return join(homedir(), ".athyper");
+  return process.env.ATHYPER_RUNTIME_ROOT || join(homedir(), ".athyper");
 }
 
 export function modeBits(path) {

@@ -17,7 +17,7 @@
     "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
     "@athyper/server-service-finance": "workspace:*",
-    "kysely": "^0.28.16"
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

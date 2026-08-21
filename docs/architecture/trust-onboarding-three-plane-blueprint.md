@@ -3,7 +3,7 @@
 Status: **Wave 1 implementation contract**  
 Architecture status: **frozen**  
 DDL baseline: `server/db/ddl/planes/{athyper,neon,mesh}/_manifest.txt`  
-TrustIAM authentication adapter baseline: Keycloak `26.6.1`
+TrustIAM authentication adapter baseline: Keycloak `26.7.2`
 
 ## 1. Decision and scope
 

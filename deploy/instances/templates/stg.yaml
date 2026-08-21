@@ -12,7 +12,6 @@ spec:
   dataPolicy: sanitized
   integrations: allowlisted
   debugPorts:
-    http: 127.0.0.1:8180
     postgres: 127.0.0.1:56432
   providers:
     search: internal

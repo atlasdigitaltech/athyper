@@ -18,6 +18,9 @@ export function checkPolicy(repoRoot) {
   const baseModel = readYaml(composePath);
   const parityModel = YAML.parse(parity, { merge: true });
   const optionalModel = YAML.parse(optional, { merge: true });
+  const platformPath = join(repoRoot, "deploy/compose/platform/compose.yaml");
+  const platform = readFileSync(platformPath, "utf8");
+  const platformModel = readYaml(platformPath);
   const composeModel = {
     ...baseModel,
     services: { ...baseModel.services, ...parityModel.services, ...optionalModel.services },
@@ -27,12 +30,13 @@ export function checkPolicy(repoRoot) {
   };
   const defaultImage = (value) => String(value).match(/^\$\{[A-Z0-9_]+:-(.+)\}$/u)?.[1] ?? value;
   const forbidden = [
-    [/^\s*name\s*:/mu, "top-level/fixed name"],
     [/\bcontainer_name\s*:/u, "container_name"],
-    [/\bexternal\s*:\s*true/u, "undocumented external resource"],
   ];
   for (const [pattern, label] of forbidden) {
     if (pattern.test(`${compose}\n${parity}\n${optional}`)) errors.push(`${composePath}: forbidden ${label}`);
+  }
+  for (const [source, document] of [[composePath, baseModel], [parityPath, parityModel], [optionalPath, optionalModel]]) {
+    if (document.name) errors.push(`${source}: forbidden top-level/fixed name`);
   }
   const requiredCore = [
     "gateway", "gateway-outage", "db", "db-init", "dbpool-apps",
@@ -92,6 +96,33 @@ export function checkPolicy(repoRoot) {
       }
     }
   }
+  for (const [id, network] of Object.entries(composeModel.networks ?? {})) {
+    if (network?.external === true && !(id === "platform-ingress" && network.name === "athyper-platform-ingress")) {
+      errors.push(`${composePath}: ${id} is an undocumented external network`);
+    }
+    if (network?.name && id !== "platform-ingress") {
+      errors.push(`${composePath}: ${id} explicitly names a normal instance network`);
+    }
+  }
+  for (const [id, volume] of Object.entries(composeModel.volumes ?? {})) {
+    if (volume?.name) errors.push(`${composePath}: ${id} explicitly names a normal instance volume`);
+    if (volume?.external === true) errors.push(`${composePath}: ${id} is an undocumented external volume`);
+  }
+  const gateway = composeModel.services?.gateway;
+  if ((gateway?.ports ?? []).length > 0) errors.push(`${composePath}: instance gateway must not publish host ports`);
+  if (!gateway?.networks?.["platform-ingress"]) {
+    errors.push(`${composePath}: instance gateway must join platform-ingress`);
+  }
+  const platformIngress = platformModel.services?.ingress;
+  if (!platformIngress) errors.push(`${platformPath}: missing outer ingress service`);
+  if (platformModel.networks?.["platform-ingress"]?.name !== "athyper-platform-ingress") {
+    errors.push(`${platformPath}: shared ingress network name is not canonical`);
+  }
+  const platformPorts = (platformIngress?.ports ?? []).map(String).sort();
+  if (JSON.stringify(platformPorts) !== JSON.stringify(["127.0.0.1:443:8443", "127.0.0.1:80:8080"])) {
+    errors.push(`${platformPath}: outer ingress must be the sole loopback owner of ports 80 and 443`);
+  }
+  if (platform.includes("docker.sock")) errors.push(`${platformPath}: outer ingress mounts the Docker socket`);
   return {
     apiVersion: "athyper.io/v1alpha1",
     kind: "PolicyReport",

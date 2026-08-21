@@ -14,11 +14,14 @@ services:
       - --providers.file.filename=/etc/traefik/dynamic.yaml
       - --providers.file.watch=false
       - --log.level=INFO
-    ports:
-      - "${ATHYPER_HTTP_BIND:-127.0.0.1:80}:8080"
     volumes:
       - ./config/traefik/${ATHYPER_INSTANCE:-dev}.yaml:/etc/traefik/dynamic.yaml:ro
-    networks: [edge, app]
+    networks:
+      edge: {}
+      app: {}
+      platform-ingress:
+        aliases:
+          - gateway-${ATHYPER_INSTANCE:-dev}
     healthcheck:
       test: [CMD, wget, -q, --spider, http://127.0.0.1:8082/ping]
       interval: 10s
@@ -195,7 +198,7 @@ services:
     security_opt: [no-new-privileges:true]
     read_only: true
     tmpfs: [/tmp]
-    mem_limit: 64m
+    mem_limit: 128m
     cpus: 0.1
 
   iam:
@@ -242,6 +245,11 @@ networks:
     internal: true
   ops:
     internal: true
+  # The one deliberate cross-project network. It is created and owned by the
+  # athyper-platform Compose project; instance projects only attach gateways.
+  platform-ingress:
+    external: true
+    name: athyper-platform-ingress
 
 volumes:
   db-data: {}

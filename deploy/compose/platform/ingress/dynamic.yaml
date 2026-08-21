@@ -1,0 +1,35 @@
+tls:
+  certificates:
+    - certFile: /run/secrets/platform-tls-certificate
+      keyFile: /run/secrets/platform-tls-private-key
+  options:
+    default:
+      minVersion: VersionTLS12
+
+http:
+  routers:
+    dev:
+      rule: HostRegexp(`[a-z0-9-]+\.dev\.athyper\.test`)
+      entryPoints: [websecure]
+      service: gateway-dev
+      tls: {}
+    qa:
+      rule: HostRegexp(`[a-z0-9-]+\.qa\.athyper\.test`)
+      entryPoints: [websecure]
+      service: gateway-qa
+      tls: {}
+    stg:
+      rule: HostRegexp(`[a-z0-9-]+\.stg\.athyper\.test`)
+      entryPoints: [websecure]
+      service: gateway-stg
+      tls: {}
+  services:
+    gateway-dev:
+      loadBalancer:
+        servers: [{ url: http://gateway-dev:8080 }]
+    gateway-qa:
+      loadBalancer:
+        servers: [{ url: http://gateway-qa:8080 }]
+    gateway-stg:
+      loadBalancer:
+        servers: [{ url: http://gateway-stg:8080 }]

@@ -1,9 +1,11 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { RELEASE_MODES } from "./constants.mjs";
+import { inspectInfrastructureGates } from "./infrastructure-gates.mjs";
 import { loadInstanceTemplates, loadModel } from "./model.mjs";
 import { runReadOnly, runtimeRoot } from "./io.mjs";
-import { qualificationGateFailures } from "./qualification.mjs";
+import { checkPolicy } from "./policy.mjs";
+import { createValidator } from "./schema.mjs";
 
 const PUBLISHED_IMAGE_IDS = ["iam", "mesh-web", "neon-web", "runtime-server", "studio-web"];
 const PARITY_PRESETS = new Set(["dev-full", "qa-standard", "stg-standard", "validation-full"]);
@@ -39,6 +41,18 @@ function liveProjectObjects(project) {
     const result = runReadOnly("docker", args);
     return [kind, result.ok && result.stdout ? result.stdout.split(/\r?\n/u).filter(Boolean).sort() : []];
   }));
+}
+
+function projectOwnership(repoRoot, root, instanceId, project) {
+  const path = join(root, "instances", instanceId, "receipts", "active.json");
+  if (!existsSync(path)) return { owned: false, path, state: null };
+  try {
+    const receipt = createValidator(repoRoot)(JSON.parse(readFileSync(path, "utf8")), path);
+    const owned = receipt.metadata.instance === instanceId && receipt.spec.project === project;
+    return { owned, path, state: owned ? receipt.spec.state : null };
+  } catch (error) {
+    return { owned: false, path, state: null, problem: error.message };
+  }
 }
 
 function secretProblem(path) {
@@ -84,15 +98,20 @@ export function renderConfig(repoRoot, instanceId) {
   };
 }
 
-export function createPlan(repoRoot, instanceId) {
+export function createPlan(repoRoot, instanceId, probes = {}) {
   const model = loadModel(repoRoot, instanceId);
   const instance = model.instance;
   const collisions = staticCollisionChecks(repoRoot);
   const memoryMiB = model.selected.reduce((total, service) => total + service.resources.memoryMiB, 0);
   const cpu = model.selected.reduce((total, service) => total + service.resources.cpu, 0);
   const blockers = [];
-  const qualification = qualificationGateFailures();
-  for (const failure of qualification.failures) blockers.push(`Host qualification gate incomplete: ${failure}`);
+  const infrastructure = probes.infrastructureGates ?? inspectInfrastructureGates(repoRoot, {
+    qualification: probes.qualification,
+    cold: probes.coldStart,
+  });
+  const policy = probes.policy ?? checkPolicy(repoRoot);
+  blockers.push(...policy.errors);
+  blockers.push(...infrastructure.blockers);
   for (const [kind, values] of Object.entries(collisions)) {
     if (values.length) blockers.push(`Template ${kind} collide: ${values.join(", ")}`);
   }
@@ -115,20 +134,36 @@ export function createPlan(repoRoot, instanceId) {
       if (/@sha256:0{64}$/u.test(image.reference)) blockers.push(`Release image digest is an all-zero placeholder: ${image.id}`);
     }
   }
+  if (!model.selected.some(({ id }) => id === "db-migration")) {
+    blockers.push("No executable db-migration service is selected; application startup cannot bypass the migration gate.");
+  }
 
   const requiredSecrets = [...new Set(model.selected.flatMap((service) => service.secrets ?? []))].sort();
   const secretProblems = requiredSecrets.map((secret) => ({
     secret,
-    problem: secretProblem(join(runtimeRoot(), "instances", instanceId, "secrets", secret)),
+    problem: (probes.secretProblem ?? secretProblem)(join(
+      probes.runtimeRoot ?? runtimeRoot(),
+      "instances",
+      instanceId,
+      "secrets",
+      secret,
+    )),
   })).filter(({ problem }) => problem);
   for (const { secret, problem } of secretProblems) blockers.push(`Required secret file ${problem}: ${secret}`);
-  const occupiedPorts = listeningPorts();
+  const occupiedPorts = probes.listeningPorts?.() ?? listeningPorts();
   for (const [name, binding] of Object.entries(instance.spec.debugPorts ?? {})) {
     const port = Number(binding.slice(binding.lastIndexOf(":") + 1));
     if (occupiedPorts.has(port)) blockers.push(`Debug port ${binding} for ${name} is already listening.`);
   }
-  const live = liveProjectObjects(instance.spec.composeProject);
-  if (Object.values(live).some((values) => values.length)) {
+  const live = probes.liveProjectObjects?.(instance.spec.composeProject)
+    ?? liveProjectObjects(instance.spec.composeProject);
+  const ownership = probes.projectOwnership ?? projectOwnership(
+    repoRoot,
+    probes.runtimeRoot ?? runtimeRoot(),
+    instanceId,
+    instance.spec.composeProject,
+  );
+  if (Object.values(live).some((values) => values.length) && !ownership.owned) {
     blockers.push(`Compose project ${instance.spec.composeProject} already owns Docker resources; adopt it with a receipt or choose another ID.`);
   }
 
@@ -156,6 +191,7 @@ export function createPlan(repoRoot, instanceId) {
     preset: instance.spec.preset,
     hostProfile: instance.spec.hostProfile,
     sources: {
+      platformCompose: join(repoRoot, "deploy/compose/platform/compose.yaml"),
       instance: model.instancePath,
       resourceProfile: model.resourcePath,
       imageSet: model.imageSetPath,
@@ -167,7 +203,17 @@ export function createPlan(repoRoot, instanceId) {
           ? [join(repoRoot, "deploy/compose/instance/compose.parity.yaml")]
           : []),
       ],
-      qualification: qualification.path,
+      qualification: infrastructure.qualification.path,
+      coldStart: infrastructure.cold.path,
+      stackV1Disposition: infrastructure.disposition.path,
+      stackV1ExportIntake: infrastructure.intake.path,
+      stackV1Restore: infrastructure.restore.path,
+    },
+    platform: {
+      project: "athyper-platform",
+      network: "athyper-platform-ingress",
+      ingressPorts: ["127.0.0.1:80", "127.0.0.1:443"],
+      gatewayAlias: `gateway-${instanceId}`,
     },
     services: model.selected.map((service) => ({
       id: service.id,
@@ -184,6 +230,7 @@ export function createPlan(repoRoot, instanceId) {
     hostMappings: domains.map((domain) => `127.0.0.1 ${domain}`),
     requiredSecrets,
     liveProjectObjects: live,
+    ownershipReceipt: ownership,
     actions: ["No action: this command only validates and reports."],
   };
 }

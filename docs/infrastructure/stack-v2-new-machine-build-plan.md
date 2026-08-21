@@ -1,11 +1,53 @@
 # ATHYPER Stack v2 — Detailed New-Machine Container Build Plan
 
-**Status:** Implementation in progress; read-only foundation implemented, host/security acceptance gates pending
+**Status:** Implementation in progress; DEV core deployed and PostgreSQL recovery qualified
 **Prepared:** 2026-08-20  
 **Scope:** New Windows 11 development workstation, repeatable DEV/QA/STG-rehearsal instances, GitHub image lifecycle, and a controlled path to multi-server K3s/Kubernetes  
 **Source baseline:** Current ATHYPER repository, current Compose model, current GitHub workflows, and the live Docker inventory on the existing workstation
 
-Current new-machine position: Ubuntu 24.04 and source are on `D:`, the laptop-32 WSL envelope is active, Node 24.19.0/pnpm 10.33.0 are normalized, and the v2 schema/catalog/controller tests pass. No ATHYPER Docker resources or secrets have been created. The next gate is intentionally blocked until BitLocker/Secure Boot are verified, Docker Desktop data is moved to `D:\ATHYPER\docker-desktop\data`, and fresh Stack v1 recovery evidence is available.
+Current new-machine position (2026-08-21): Ubuntu 24.04 and source are on `D:`,
+the laptop-32 WSL envelope is active, Node 24.19.0/pnpm 10.33.0 are
+normalized, machine-phase and clean-slate disposition evidence exist, and the
+Stack v2 controller/Compose suite passes 33/33. The elevated cold-start evidence
+passes with Defender platform `4.18.25080.5`, Docker Engine `29.7.2`, BitLocker,
+Secure Boot, Ubuntu, and Docker-distribution checks all valid. The previous
+unmanaged `athyper-dev` resources were checksummed into an owner-only quarantine
+archive before removal. Controller-owned platform and DEV core deployment,
+fresh-database migration, active ownership receipts, logical PostgreSQL backup,
+and isolated new-volume restore have all completed successfully.
+All five ATHYPER application images also build locally through the checked-in
+Bake matrix, pass non-root/read-only structure and smoke checks, and pass the
+publication-equivalent Trivy 0.70.0 gate with zero fixed HIGH/CRITICAL findings.
+This qualification is explicitly marked dirty and non-publishable; immutable
+GHCR publication must use a reviewed clean commit so its revision and
+attestation describe the exact image inputs.
+
+The operational boundary has moved forward: DEV core is live, but release
+completion remains blocked on immutable ATHYPER application image publication,
+the full DEV functional/resource matrix, two isolated QA runs, and STG promotion
+plus recovery rehearsal. Cutover and K3s remain deferred.
+
+### 0.1 Completion checkpoint and required order
+
+The first milestone, safe deterministic `athyper plan dev`, is structurally
+complete. `plan` and `up` now consume the same machine, cold-start, Stack v1
+disposition/export/restore, static-policy, secret, collision, capacity, and
+migration-selection gates. Tests use injected evidence fixtures rather than
+mutable workstation artifacts.
+
+Continue in this order:
+
+1. **Complete:** Docker Desktop integration is available in `Ubuntu-24.04`.
+2. **Complete:** Defender recovery and valid elevated cold-start evidence.
+3. **Complete in implementation:** make `plan` consume the mandatory admission gates used by `up`.
+4. **Complete in implementation:** deterministic controller/Compose suite passes 33/33.
+5. **Complete:** `athyper up dev --confirm dev` produced active and migration receipts.
+6. **Complete:** live backup `20260821T081919Z` restored successfully into isolated volume `athyper-dev-restore-20260821t081919z_db-data`.
+7. **In progress:** local five-image build and scan qualification is complete; clean-commit GHCR publication remains externally authorized only.
+8. **Pending:** complete the DEV functional and resource matrix.
+9. **Pending:** execute QA twice and retain isolation proof.
+10. **Pending:** perform STG promotion and recovery rehearsal.
+11. **Deferred:** consider cutover or K3s only after every prior gate passes.
 
 ---
 
@@ -816,6 +858,26 @@ Before `up`, print:
 
 After success, write a receipt. Never print secret values.
 
+Implementation update (2026-08-21): guarded `up`, `down`, `restart`, `backup`,
+and new-volume `restore` execution is implemented in `deploy/stackctl`. Mutating
+commands require exact repeated identifiers. The controller validates both
+Compose models before startup, starts the shared platform before an instance,
+requires ownership receipts before adopting existing projects, retains volumes
+on shutdown/rollback, and writes schema-validated owner-only operation receipts.
+PostgreSQL backup emits custom-format dumps for all four application databases
+plus global-role metadata; restore verifies all hashes and sizes and targets a
+new project/volume. Live Docker qualification completed on 2026-08-21: DEV and
+the shared platform are controller-owned and healthy, backup `20260821T081919Z`
+was restored into a retained isolated volume, and receipt
+`20260821T082343Z-restore` records success. Restore applies archived roles and
+memberships before database ownership and ACLs, then refreshes runtime login
+credentials through `db-init`. DEV selects a fresh-database-only,
+advisory-locked DDL runner and starts
+applications only after it succeeds. The runner refuses populated schemas.
+Forward migration, QA, and STG remain blocked until the candidate runtime image
+contains the migration role and supplies compatibility policy plus its own
+receipt; controlled DEV execution does not waive that Phase 15 release gate.
+
 ---
 
 ## 13. Configuration and secrets design
@@ -1218,6 +1280,15 @@ Exit gate: infrastructure smoke tests pass; only outer ingress publishes 80/443;
 
 ### Phase 4 — ATHYPER application images
 
+Current implementation status (2026-08-21): the five-target local Bake matrix
+builds Neon, Mesh, Studio, runtime-server, and customized Keycloak 26.7.2.
+Structure/smoke checks and the same Trivy version selected by the publication
+workflow pass with zero fixed HIGH/CRITICAL findings. Owner-only checksummed
+evidence is retained under
+`~/.athyper/qualification/images/20260821T083400Z/`. Publication remains pending
+because the qualified working tree is dirty and therefore cannot produce a
+truthful immutable source-revision attestation.
+
 Deliverables:
 
 - Production Dockerfiles for Neon, Mesh, Studio, runtime server, and customized Keycloak.
@@ -1248,7 +1319,7 @@ Deliverables:
 
 - `qa-standard` preset using immutable images.
 - QA reset, migration, synthetic seed, test, and destroy lifecycle.
-- Separate `athyper-qa` resources, `*.qa.athyper.test` routes, ports 8080/55432,
+- Separate `athyper-qa` resources, `*.qa.athyper.test` routes through the shared ingress, PostgreSQL debug port 55432,
   QA secret paths, and an ownership receipt boundary.
 - Candidate image injection for all five published ATHYPER images; incomplete or
   all-zero candidate metadata is rejected before any future operation.
@@ -1446,13 +1517,18 @@ Begin with one infrastructure pull request containing only additive v2 foundatio
 9. Add backup/restore qualification before importing current state.
 10. Only then add IAM, applications, scanner, observability, and optional capabilities.
 
-The first technical milestone is complete when this command is safe and deterministic on a clean laptop:
+The first technical milestone is structurally complete: this command is
+read-only, deterministic under fixture evidence, and reports live workstation
+admission failures without mutation:
 
 ```text
 athyper plan dev
 ```
 
-It must show a fully resolved, collision-free, resource-bounded deployment without creating a container, network, volume, or secret.
+When the host gates pass, it must show a fully resolved, collision-free,
+resource-bounded deployment without creating a container, network, volume, or
+secret. Until then, a blocked plan is the required safe result, not a deployment
+readiness claim.
 
 ---
 

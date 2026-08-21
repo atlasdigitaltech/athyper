@@ -10,29 +10,35 @@ const RUNTIME_GATES = Object.freeze({
   phase10StgRehearsal: "STG backup/migration/restore rehearsal",
 });
 
-function loadJsonEvidence(path, validate, blockers, label) {
-  if (!existsSync(path)) {
+function loadJsonEvidence(path, validate, blockers, label, evidenceIo) {
+  if (!evidenceIo.exists(path)) {
     blockers.push(`${label} evidence is absent: ${path}.`);
     return null;
   }
   try {
-    return validate(JSON.parse(readFileSync(path, "utf8")), path);
+    return validate(JSON.parse(evidenceIo.read(path, "utf8")), path);
   } catch (error) {
     blockers.push(`${label} evidence is invalid: ${error.message}.`);
     return null;
   }
 }
 
-export function assessOrchestrator(repoRoot) {
+export function assessOrchestrator(repoRoot, evidence = {}) {
   const validate = createValidator(repoRoot);
   const contractPath = join(repoRoot, "deploy/orchestration/k3s-decision.yaml");
   const contract = validate(readYaml(contractPath), contractPath);
   const blockers = [];
-  const qualificationPath = hostQualificationPath();
-  if (!existsSync(qualificationPath)) {
+  const qualificationPath = evidence.qualificationPath ?? hostQualificationPath();
+  const evidenceRoot = evidence.qualificationRoot ?? qualificationRoot();
+  const evidenceIo = {
+    exists: evidence.exists ?? existsSync,
+    read: evidence.read ?? readFileSync,
+    readYaml: evidence.readYaml ?? readYaml,
+  };
+  if (!evidenceIo.exists(qualificationPath)) {
     blockers.push(`Machine phase evidence is absent: ${qualificationPath}.`);
   } else {
-    const phaseStatus = readYaml(qualificationPath).status ?? {};
+    const phaseStatus = evidenceIo.readYaml(qualificationPath).status ?? {};
     for (const [id, label] of Object.entries(RUNTIME_GATES)) {
       if (!String(phaseStatus[id] ?? "absent").startsWith("complete-runtime")) {
         blockers.push(`${label} has not passed (${id}=${String(phaseStatus[id] ?? "absent")}).`);
@@ -40,19 +46,21 @@ export function assessOrchestrator(repoRoot) {
     }
   }
 
-  const composeAcceptancePath = join(qualificationRoot(), contract.spec.composeAcceptanceEvidence);
-  const topologyRequirementPath = join(qualificationRoot(), contract.spec.topologyRequirementEvidence);
+  const composeAcceptancePath = join(evidenceRoot, contract.spec.composeAcceptanceEvidence);
+  const topologyRequirementPath = join(evidenceRoot, contract.spec.topologyRequirementEvidence);
   const composeAcceptance = loadJsonEvidence(
     composeAcceptancePath,
     validate,
     blockers,
     "Compose acceptance",
+    evidenceIo,
   );
   const topologyRequirement = loadJsonEvidence(
     topologyRequirementPath,
     validate,
     blockers,
     "Approved multi-host topology requirement",
+    evidenceIo,
   );
   for (const [label, timestamp] of [
     ["Compose acceptance", composeAcceptance?.metadata.recordedAt],

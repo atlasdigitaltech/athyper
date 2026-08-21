@@ -117,5 +117,5 @@ http://localhost/auth
 - Demo fixture applier: `tools/scripts/apply-realm-demo-setup.cjs`
 
 Last updated: 2026-05-25
-Keycloak version: 26.6.1
+Keycloak version: 26.7.2
 Realms: athyper, platform-control

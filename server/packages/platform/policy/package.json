@@ -17,7 +17,7 @@
     "@athyper/server-contract-policy": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "express": "^5.0.0",
-    "kysely": "^0.28.16"
+    "kysely": "^0.28.17"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",

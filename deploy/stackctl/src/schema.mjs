@@ -19,6 +19,10 @@ const schemaFiles = Object.freeze({
   StackV1ExportIntake: "stack-v1-export-intake.schema.json",
   StackV1RestoreReceipt: "stack-v1-restore-receipt.schema.json",
   StackV1Disposition: "stack-v1-disposition.schema.json",
+  ActiveInstanceReceipt: "active-instance-receipt.schema.json",
+  StackOperationReceipt: "stack-operation-receipt.schema.json",
+  StackBackup: "stack-backup.schema.json",
+  FoundationMigrationReceipt: "foundation-migration-receipt.schema.json",
 });
 
 export function createValidator(repoRoot) {

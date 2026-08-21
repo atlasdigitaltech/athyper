@@ -22,8 +22,6 @@ ALTER ROLE athyper_runtime PASSWORD :'runtime_password';
 SELECT 'CREATE ROLE athyper_worker LOGIN'
 WHERE NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'athyper_worker')\gexec
 ALTER ROLE athyper_worker PASSWORD :'worker_password';
-GRANT athyperapp TO athyper_runtime;
-GRANT athyper_jobs_service TO athyper_worker;
 SELECT 'CREATE DATABASE athyper_iam OWNER athyper_iam'
 WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'athyper_iam')\gexec
 SELECT 'CREATE DATABASE athyper_neon OWNER athyper_runtime'

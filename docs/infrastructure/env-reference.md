@@ -368,7 +368,7 @@ Consumed by Traefik router rules and upstream URL configs. All values are DNS na
 
 | Variable | Description | Local | Staging | Production |
 |---|---|---|---|---|
-| `KEYCLOAK_IMAGE_TAG` | Keycloak Docker image version. Single source — bump here when upgrading. | `26.6.1` | `26.6.1` | `26.6.1` |
+| `KEYCLOAK_IMAGE_TAG` | Keycloak Docker image version. Single source — bump here when upgrading. | `26.7.2` | `26.7.2` | `26.7.2` |
 | `IAM_ADMIN` / `IAM_ADMIN_PASSWORD` | Keycloak bootstrap admin credentials. After first boot KC stores its own hashes — rotating requires `kcadm.sh`. ⚡ | `athyperadmin` | `secrets/.env` | `secrets/.env` |
 | `KEYCLOAK_ADMIN_USERNAME` / `KEYCLOAK_ADMIN_PASSWORD` | KC admin API credentials used by Neon BFF for server-side org enrichment. Must match `IAM_ADMIN*`. ⚡ | `athyperadmin` | `secrets/.env` | `secrets/.env` |
 | `IAM_DB_URL` | Keycloak JDBC URL (uses PgBouncer session pool, port 6433). | `jdbc:postgresql://dbpool-session:6433/athyper_iam?preferQueryMode=simple` | same pattern | same pattern |
