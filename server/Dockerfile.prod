@@ -28,6 +28,7 @@ COPY --from=pruner /repo/out/full/ ./
 COPY tools/scripts/prepare-server-runtime-packages.mjs /tmp/prepare-server-runtime-packages.mjs
 
 # Build workspace dependencies first, then the host
+RUN pnpm --filter "@athyper/server-adapter-db-neon" run codegen
 RUN find server -name '*.tsbuildinfo' -delete
 RUN pnpm --filter "@athyper/server-platform-host^..." --if-present run build
 RUN pnpm --filter "@athyper/server-platform-host" run build
