@@ -10,7 +10,7 @@ WORKDIR /repo
 
 FROM base AS pruner
 COPY . .
-RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
     pnpm dlx turbo@2.9.6 prune "@athyper/server-platform-host" "@athyper/server-db" --docker
 
@@ -18,7 +18,7 @@ FROM base AS installer
 COPY --from=pruner /repo/out/json/ ./
 COPY --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY server/tsconfig.json ./server/tsconfig.json
-RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
     pnpm install --frozen-lockfile
 
@@ -35,7 +35,7 @@ RUN pnpm --filter "@athyper/server-platform-host" run build
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages
 
 # Deploy the production dependency graph
-RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharing=locked \
     pnpm config set store-dir /pnpm/store && \
     pnpm --filter "@athyper/server-platform-host" --prod deploy --legacy /runtime && \
     pnpm --filter "@athyper/server-db" --prod deploy --legacy /db-runtime && \
